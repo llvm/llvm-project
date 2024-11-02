@@ -22,7 +22,7 @@ define void @process_nodes(ptr %0) nounwind {
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    fli.s fa0, 1.0
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    call do_it@plt
+; RV32-NEXT:    call do_it
 ; RV32-NEXT:    lw s0, 0(s0)
 ; RV32-NEXT:    bnez s0, .LBB0_2
 ; RV32-NEXT:  # %bb.3:
@@ -44,7 +44,7 @@ define void @process_nodes(ptr %0) nounwind {
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    fli.s fa0, 1.0
 ; RV64-NEXT:    mv a0, s0
-; RV64-NEXT:    call do_it@plt
+; RV64-NEXT:    call do_it
 ; RV64-NEXT:    ld s0, 0(s0)
 ; RV64-NEXT:    bnez s0, .LBB0_2
 ; RV64-NEXT:  # %bb.3:

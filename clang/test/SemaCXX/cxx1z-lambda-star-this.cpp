@@ -46,7 +46,7 @@ public:
   template <class T = int>
   void foo() {
     (void)[this] { return x; };
-    (void)[*this] { return x; }; //expected-error2{{call to deleted}} expected-note {{while substituting into a lambda}}
+    (void)[*this] { return x; }; //expected-error2{{call to deleted}}
   }
 
   B() = default;
@@ -63,7 +63,7 @@ class B {
 public:
   template <class T = int>
   auto foo() {
-    const auto &L = [*this](auto a) mutable { //expected-error{{call to deleted}} expected-note {{while substituting into a lambda}}
+    const auto &L = [*this](auto a) mutable { //expected-error{{call to deleted}}
       d += a;
       return [this](auto b) { return d += b; };
     };

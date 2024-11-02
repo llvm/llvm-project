@@ -14,8 +14,8 @@ define half @vectorize_v2f16_loop(ptr addrspace(1) noalias %s) {
 ; GFX9-NEXT:    [[VEC_PHI:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; GFX9-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; GFX9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[S:%.*]], i64 [[INDEX]]
-; GFX9-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 2
 ; GFX9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[TMP0]], i64 2
+; GFX9-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 2
 ; GFX9-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP2]], align 2
 ; GFX9-NEXT:    [[TMP4]] = fadd fast <2 x half> [[VEC_PHI]], [[WIDE_LOAD]]
 ; GFX9-NEXT:    [[TMP5]] = fadd fast <2 x half> [[VEC_PHI1]], [[WIDE_LOAD2]]
@@ -44,8 +44,8 @@ define half @vectorize_v2f16_loop(ptr addrspace(1) noalias %s) {
 ; VI-NEXT:    [[VEC_PHI:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; VI-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x half> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; VI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[S:%.*]], i64 [[INDEX]]
-; VI-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 2
 ; VI-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[TMP0]], i64 2
+; VI-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 2
 ; VI-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP2]], align 2
 ; VI-NEXT:    [[TMP4]] = fadd fast <2 x half> [[VEC_PHI]], [[WIDE_LOAD]]
 ; VI-NEXT:    [[TMP5]] = fadd fast <2 x half> [[VEC_PHI1]], [[WIDE_LOAD2]]

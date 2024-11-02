@@ -693,8 +693,8 @@ func.func @conv1d_no_symbols(%in : memref<?xf32>, %filter : memref<?xf32>, %out 
 //  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?xf32>
-//       CHECK: %[[c0:.*]] = arith.constant 0 : index
-//       CHECK: %[[c1:.*]] = arith.constant 1 : index
+//   CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
 //       CHECK: %[[dim0:.*]] = memref.dim %[[arg1]], %[[c0]] : memref<?xf32>
 //       CHECK: %[[dim1:.*]] = memref.dim %[[arg2]], %[[c0]] : memref<?xf32>
 //       CHECK: scf.for %[[b:.*]] = %[[c0]] to %[[dim1]] step %[[c1]] {
@@ -711,8 +711,8 @@ func.func @conv1d_no_symbols(%in : memref<?xf32>, %filter : memref<?xf32>, %out 
 //  CHECKPARALLEL-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECKPARALLEL-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECKPARALLEL-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?xf32>
-//       CHECKPARALLEL: %[[c0:.*]] = arith.constant 0 : index
-//       CHECKPARALLEL: %[[c1:.*]] = arith.constant 1 : index
+//   CHECKPARALLEL-DAG: %[[c0:.*]] = arith.constant 0 : index
+//   CHECKPARALLEL-DAG: %[[c1:.*]] = arith.constant 1 : index
 //       CHECKPARALLEL: %[[dim0:.*]] = memref.dim %[[arg1]], %[[c0]] : memref<?xf32>
 //       CHECKPARALLEL: %[[dim1:.*]] = memref.dim %[[arg2]], %[[c0]] : memref<?xf32>
 //       CHECKPARALLEL: scf.parallel (%[[b:.*]]) = (%[[c0]]) to (%[[dim1]]) step (%[[c1]]) {
@@ -735,8 +735,8 @@ func.func @conv2d_no_symbols(%in : memref<?x?xf32>, %filter : memref<?x?xf32>, %
 //  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?x?xf32>
 //  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?x?xf32>
 //  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?xf32>
-//       CHECK: %[[c0:.*]] = arith.constant 0 : index
-//       CHECK: %[[c1:.*]] = arith.constant 1 : index
+//   CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
 //       CHECK: %[[dim0:.*]] = memref.dim %[[arg1]], %[[c0]] : memref<?x?xf32>
 //       CHECK: %[[dim1:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?xf32>
 //       CHECK: %[[dim2:.*]] = memref.dim %[[arg2]], %[[c0]] : memref<?x?xf32>
@@ -760,8 +760,8 @@ func.func @conv2d_no_symbols(%in : memref<?x?xf32>, %filter : memref<?x?xf32>, %
 //  CHECKPARALLEL-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?x?xf32>
 //  CHECKPARALLEL-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?x?xf32>
 //  CHECKPARALLEL-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?xf32>
-//       CHECKPARALLEL: %[[c0:.*]] = arith.constant 0 : index
-//       CHECKPARALLEL: %[[c1:.*]] = arith.constant 1 : index
+//   CHECKPARALLEL-DAG: %[[c0:.*]] = arith.constant 0 : index
+//   CHECKPARALLEL-DAG: %[[c1:.*]] = arith.constant 1 : index
 //       CHECKPARALLEL: %[[dim0:.*]] = memref.dim %[[arg1]], %[[c0]] : memref<?x?xf32>
 //       CHECKPARALLEL: %[[dim1:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?xf32>
 //       CHECKPARALLEL: %[[dim2:.*]] = memref.dim %[[arg2]], %[[c0]] : memref<?x?xf32>

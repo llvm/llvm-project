@@ -115,12 +115,6 @@ static bool preservesValueOf(MachineInstr &MI, unsigned Reg) {
   case SystemZ::LTR:
   case SystemZ::LTGR:
   case SystemZ::LTGFR:
-  case SystemZ::LER:
-  case SystemZ::LDR:
-  case SystemZ::LXR:
-  case SystemZ::LTEBR:
-  case SystemZ::LTDBR:
-  case SystemZ::LTXBR:
     if (MI.getOperand(1).getReg() == Reg)
       return true;
   }
@@ -498,18 +492,10 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
 
 // Return true if Compare is a comparison against zero.
 static bool isCompareZero(MachineInstr &Compare) {
-  switch (Compare.getOpcode()) {
-  case SystemZ::LTEBRCompare:
-  case SystemZ::LTDBRCompare:
-  case SystemZ::LTXBRCompare:
+  if (isLoadAndTestAsCmp(Compare))
     return true;
-
-  default:
-    if (isLoadAndTestAsCmp(Compare))
-      return true;
-    return Compare.getNumExplicitOperands() == 2 &&
-           Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
-  }
+  return Compare.getNumExplicitOperands() == 2 &&
+    Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
 }
 
 // Try to optimize cases where comparison instruction Compare is testing
@@ -569,7 +555,7 @@ bool SystemZElimCompare::optimizeCompareZero(
 
   // Also do a forward search to handle cases where an instruction after the
   // compare can be converted, like
-  // LTEBRCompare %f0s, %f0s; %f2s = LER %f0s  =>  LTEBRCompare %f2s, %f0s
+  // CGHI %r0d, 0; %r1d = LGR %r0d  =>  LTGR %r1d, %r0d
   auto MIRange = llvm::make_range(
       std::next(MachineBasicBlock::iterator(&Compare)), MBB.end());
   for (MachineInstr &MI : llvm::make_early_inc_range(MIRange)) {

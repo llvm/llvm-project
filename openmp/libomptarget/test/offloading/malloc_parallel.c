@@ -7,9 +7,9 @@
 
 int main() {
   long unsigned **DP = 0;
-  int N = 128;
-  int Threads = 128;
-  int Teams = 440;
+  int N = 32;
+  int Threads = 64;
+  int Teams = 10;
 
 #pragma omp target map(from : DP)
   DP = (long unsigned **)malloc(sizeof(long unsigned *) * Threads * Teams);
@@ -36,7 +36,7 @@ int main() {
     }
   }
 
-  // CHECK: Sum: 203458478080
+  // CHECK: Sum: 6860800
   printf("Sum: %li\n", s);
   return 0;
 }

@@ -773,7 +773,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-NEXT:  .LBB20_5: # %for.body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call f@plt
+; RV32I-NEXT:    call f
 ; RV32I-NEXT:    lw a0, 12(s7)
 ; RV32I-NEXT:    lw a1, 8(s7)
 ; RV32I-NEXT:    add a0, a0, s4
@@ -838,7 +838,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-MEDIUM-NEXT:  .LBB20_5: # %for.body
 ; RV32I-MEDIUM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-MEDIUM-NEXT:    mv a0, s0
-; RV32I-MEDIUM-NEXT:    call f@plt
+; RV32I-MEDIUM-NEXT:    call f
 ; RV32I-MEDIUM-NEXT:    lw a0, 12(s7)
 ; RV32I-MEDIUM-NEXT:    lw a1, 8(s7)
 ; RV32I-MEDIUM-NEXT:    add a0, a0, s4
@@ -885,7 +885,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV64I-NEXT:  .LBB20_2: # %for.body
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call f@plt
+; RV64I-NEXT:    call f
 ; RV64I-NEXT:    ld a0, 8(s3)
 ; RV64I-NEXT:    addi s1, s1, -1
 ; RV64I-NEXT:    add s2, a0, s2
@@ -921,7 +921,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV64I-MEDIUM-NEXT:  .LBB20_2: # %for.body
 ; RV64I-MEDIUM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-MEDIUM-NEXT:    mv a0, s0
-; RV64I-MEDIUM-NEXT:    call f@plt
+; RV64I-MEDIUM-NEXT:    call f
 ; RV64I-MEDIUM-NEXT:    ld a0, 8(s3)
 ; RV64I-MEDIUM-NEXT:    addi s1, s1, -1
 ; RV64I-MEDIUM-NEXT:    add s2, a0, s2

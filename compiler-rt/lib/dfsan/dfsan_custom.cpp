@@ -2893,13 +2893,13 @@ int __dfso___isoc99_sscanf(char *str, const char *format, dfsan_label str_label,
 }
 
 static void BeforeFork() {
-  StackDepotLockAll();
-  GetChainedOriginDepot()->LockAll();
+  StackDepotLockBeforeFork();
+  ChainedOriginDepotLockBeforeFork();
 }
 
-static void AfterFork() {
-  GetChainedOriginDepot()->UnlockAll();
-  StackDepotUnlockAll();
+static void AfterFork(bool fork_child) {
+  ChainedOriginDepotUnlockAfterFork(fork_child);
+  StackDepotUnlockAfterFork(fork_child);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -2913,7 +2913,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 pid_t __dfso_fork(dfsan_label *ret_label, dfsan_origin *ret_origin) {
   BeforeFork();
   pid_t pid = __dfsw_fork(ret_label);
-  AfterFork();
+  AfterFork(/* fork_child= */ pid == 0);
   return pid;
 }
 

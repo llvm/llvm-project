@@ -67,8 +67,8 @@ define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; FIXED-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
@@ -171,8 +171,8 @@ define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; FIXED-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
@@ -275,8 +275,8 @@ define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = urem <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; FIXED-NEXT:    [[TMP7:%.*]] = urem <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
@@ -379,8 +379,8 @@ define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = srem <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; FIXED-NEXT:    [[TMP7:%.*]] = srem <4 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
@@ -493,8 +493,8 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
@@ -627,8 +627,8 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
@@ -756,8 +756,8 @@ define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
 ; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
@@ -883,8 +883,8 @@ define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD]], <i64 42, i64 42, i64 42, i64 42>
 ; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i64> [[WIDE_LOAD1]], <i64 42, i64 42, i64 42, i64 42>
@@ -1011,8 +1011,8 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[TMP4]], align 1
 ; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 32
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[TMP4]], align 1
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <32 x i8>, ptr [[TMP5]], align 1
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
 ; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <32 x i8> [[WIDE_LOAD1]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>

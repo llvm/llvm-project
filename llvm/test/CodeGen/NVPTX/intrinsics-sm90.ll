@@ -133,6 +133,16 @@ define void @test_barrier_cluster() {
        ret void
 }
 
+; CHECK-LABEL: test_barrier_cluster_aligned(
+define void @test_barrier_cluster_aligned() {
+; CHECK: barrier.cluster.arrive.aligned;
+       call void @llvm.nvvm.barrier.cluster.arrive.aligned()
+; CHECK: barrier.cluster.arrive.relaxed.aligned;
+       call void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+; CHECK: barrier.cluster.wait.aligned;
+       call void @llvm.nvvm.barrier.cluster.wait.aligned()
+       ret void
+}
 
 declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr %p);
 declare ptr @llvm.nvvm.mapa(ptr %p, i32 %r);
@@ -153,4 +163,7 @@ declare i1 @llvm.nvvm.is_explicit_cluster()
 declare void @llvm.nvvm.barrier.cluster.arrive()
 declare void @llvm.nvvm.barrier.cluster.arrive.relaxed()
 declare void @llvm.nvvm.barrier.cluster.wait()
+declare void @llvm.nvvm.barrier.cluster.arrive.aligned()
+declare void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+declare void @llvm.nvvm.barrier.cluster.wait.aligned()
 declare void @llvm.nvvm.fence.sc.cluster()

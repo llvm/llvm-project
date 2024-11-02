@@ -460,8 +460,8 @@ static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
     return false;
 
   // If we have 96-bit memory operations, we shouldn't touch them. Note we may
-  // end up widening these for a scalar load during RegBankSelect, since there
-  // aren't 96-bit scalar loads.
+  // end up widening these for a scalar load during RegBankSelect, if we don't
+  // have 96-bit scalar loads.
   if (SizeInBits == 96 && ST.hasDwordx3LoadStores())
     return false;
 
@@ -633,6 +633,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT PrivatePtr = GetAddrSpacePtr(AMDGPUAS::PRIVATE_ADDRESS);
   const LLT BufferFatPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_FAT_POINTER);
   const LLT RsrcPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_RESOURCE);
+  const LLT BufferStridedPtr =
+      GetAddrSpacePtr(AMDGPUAS::BUFFER_STRIDED_POINTER);
 
   const LLT CodePtr = FlatPtr;
 
@@ -699,13 +701,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .maxScalar(0, S32);
     }
 
-    getActionDefinitionsBuilder(G_MUL)
-      .legalFor({S32, S16, V2S16})
-      .clampMaxNumElementsStrict(0, S16, 2)
-      .scalarize(0)
-      .minScalar(0, S16)
-      .widenScalarToNextMultipleOf(0, 32)
-      .custom();
+    if (ST.hasScalarSMulU64()) {
+      getActionDefinitionsBuilder(G_MUL)
+          .legalFor({S64, S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .custom();
+    } else {
+      getActionDefinitionsBuilder(G_MUL)
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .custom();
+    }
     assert(ST.hasMad64_32());
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
@@ -1113,7 +1125,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-      .unsupportedFor({BufferFatPtr, RsrcPtr})
+      .unsupportedFor({BufferFatPtr, BufferStridedPtr, RsrcPtr})
       .legalIf(all(isPointer(0), sameSize(0, 1)))
       .scalarize(0)
       .scalarSameSizeAs(1, 0);
@@ -1403,7 +1415,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // The custom pointers (fat pointers, buffer resources) don't work with load
     // and store at this level. Fat pointers should have been lowered to
     // intrinsics before the translation to MIR.
-    Actions.unsupportedIf(typeInSet(1, {BufferFatPtr, RsrcPtr}));
+    Actions.unsupportedIf(
+        typeInSet(1, {BufferFatPtr, BufferStridedPtr, RsrcPtr}));
 
     // Address space 8 pointers are handled by a 4xs32 load, bitcast, and
     // ptrtoint. This is needed to account for the fact that we can't have i128
@@ -1987,12 +2000,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
     .unsupported();
 
+  getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 
-bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                         MachineInstr &MI) const {
+bool AMDGPULegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
 
@@ -5412,7 +5428,7 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
 std::pair<Register, unsigned>
 AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
                                         Register OrigOffset) const {
-  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset();
+  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset(ST);
   Register BaseReg;
   unsigned ImmOffset;
   const LLT S32 = LLT::scalar(32);
@@ -6151,7 +6167,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     return false;
   }
 
-  const unsigned NSAMaxSize = ST.getNSAMaxSize();
+  const unsigned NSAMaxSize = ST.getNSAMaxSize(BaseOpcode->Sampler);
   const unsigned HasPartialNSA = ST.hasPartialNSAEncoding();
 
   if (IsA16 || IsG16) {
@@ -6211,7 +6227,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     // SIShrinkInstructions will convert NSA encodings to non-NSA after register
     // allocation when possible.
     //
-    // Partial NSA is allowed on GFX11 where the final register is a contiguous
+    // Partial NSA is allowed on GFX11+ where the final register is a contiguous
     // set of the remaining addresses.
     const bool UseNSA = ST.hasNSAEncoding() &&
                         CorrectedNumVAddrs >= ST.getNSAThreshold(MF) &&
@@ -6467,10 +6483,10 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
       MemSize, MemAlign);
   MI.addMemOperand(MF, MMO);
 
-  // There are no 96-bit result scalar loads, but widening to 128-bit should
+  // If we don't have 96-bit result scalar loads, widening to 128-bit should
   // always be legal. We may need to restore this to a 96-bit result if it turns
   // out this needs to be converted to a vector load during RegBankSelect.
-  if (!isPowerOf2_32(Size)) {
+  if (!isPowerOf2_32(Size) && (Size != 96 || !ST.hasScalarDwordx3Loads())) {
     if (Ty.isVector())
       Helper.moreElementsVectorDst(MI, getPow2VectorType(Ty), 0);
     else
@@ -6635,13 +6651,17 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     return false;
   }
 
+  const bool IsGFX11 = AMDGPU::isGFX11(ST);
   const bool IsGFX11Plus = AMDGPU::isGFX11Plus(ST);
+  const bool IsGFX12Plus = AMDGPU::isGFX12Plus(ST);
   const bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
   const bool Is64 = MRI.getType(NodePtr).getSizeInBits() == 64;
   const unsigned NumVDataDwords = 4;
   const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
   const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
-  const bool UseNSA = ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize();
+  const bool UseNSA =
+      IsGFX12Plus || (ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize());
+
   const unsigned BaseOpcodes[2][2] = {
       {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
       {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -6649,14 +6669,16 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   int Opcode;
   if (UseNSA) {
     Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                   IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
+                                   IsGFX12Plus ? AMDGPU::MIMGEncGfx12
+                                   : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
                                                : AMDGPU::MIMGEncGfx10NSA,
                                    NumVDataDwords, NumVAddrDwords);
   } else {
-    Opcode = AMDGPU::getMIMGOpcode(
-        BaseOpcodes[Is64][IsA16],
-        IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default : AMDGPU::MIMGEncGfx10Default,
-        NumVDataDwords, NumVAddrDwords);
+    assert(!IsGFX12Plus);
+    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                   IsGFX11 ? AMDGPU::MIMGEncGfx11Default
+                                           : AMDGPU::MIMGEncGfx10Default,
+                                   NumVDataDwords, NumVAddrDwords);
   }
   assert(Opcode != -1);
 

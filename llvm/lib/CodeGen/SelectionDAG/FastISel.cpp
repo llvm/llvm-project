@@ -560,15 +560,13 @@ bool FastISel::selectGetElementPtr(const User *I) {
         }
       }
     } else {
-      Type *Ty = GTI.getIndexedType();
-
       // If this is a constant subscript, handle it quickly.
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
         if (CI->isZero())
           continue;
         // N = N + Offset
         uint64_t IdxN = CI->getValue().sextOrTrunc(64).getSExtValue();
-        TotalOffs += DL.getTypeAllocSize(Ty) * IdxN;
+        TotalOffs += GTI.getSequentialElementStride(DL) * IdxN;
         if (TotalOffs >= MaxOffs) {
           N = fastEmit_ri_(VT, ISD::ADD, N, TotalOffs, VT);
           if (!N) // Unhandled operand. Halt "fast" selection and bail.
@@ -585,7 +583,7 @@ bool FastISel::selectGetElementPtr(const User *I) {
       }
 
       // N = N + Idx * ElementSize;
-      uint64_t ElementSize = DL.getTypeAllocSize(Ty);
+      uint64_t ElementSize = GTI.getSequentialElementStride(DL);
       Register IdxN = getRegForGEPIndex(Idx);
       if (!IdxN) // Unhandled operand. Halt "fast" selection and bail.
         return false;
@@ -1000,8 +998,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   if (!CanLowerReturn)
     return false;
 
-  for (unsigned I = 0, E = RetTys.size(); I != E; ++I) {
-    EVT VT = RetTys[I];
+  for (EVT VT : RetTys) {
     MVT RegisterVT = TLI.getRegisterType(CLI.RetTy->getContext(), VT);
     unsigned NumRegs = TLI.getNumRegisters(CLI.RetTy->getContext(), VT);
     for (unsigned i = 0; i != NumRegs; ++i) {
@@ -1183,6 +1180,184 @@ bool FastISel::selectCall(const User *I) {
   return lowerCall(Call);
 }
 
+void FastISel::handleDbgInfo(const Instruction *II) {
+  if (!II->hasDbgValues())
+    return;
+
+  // Clear any metadata.
+  MIMD = MIMetadata();
+
+  // Reverse order of debug records, because fast-isel walks through backwards.
+  for (DPValue &DPV : llvm::reverse(II->getDbgValueRange())) {
+    flushLocalValueMap();
+    recomputeInsertPt();
+
+    Value *V = nullptr;
+    if (!DPV.hasArgList())
+      V = DPV.getVariableLocationOp(0);
+
+    bool Res = false;
+    if (DPV.getType() == DPValue::LocationType::Value) {
+      Res = lowerDbgValue(V, DPV.getExpression(), DPV.getVariable(),
+                          DPV.getDebugLoc());
+    } else {
+      assert(DPV.getType() == DPValue::LocationType::Declare);
+      if (FuncInfo.PreprocessedDPVDeclares.contains(&DPV))
+        continue;
+      Res = lowerDbgDeclare(V, DPV.getExpression(), DPV.getVariable(),
+                            DPV.getDebugLoc());
+    }
+
+    if (!Res)
+      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DPV << "\n";);
+  }
+}
+
+bool FastISel::lowerDbgValue(const Value *V, DIExpression *Expr,
+                             DILocalVariable *Var, const DebugLoc &DL) {
+  // This form of DBG_VALUE is target-independent.
+  const MCInstrDesc &II = TII.get(TargetOpcode::DBG_VALUE);
+  if (!V || isa<UndefValue>(V)) {
+    // DI is either undef or cannot produce a valid DBG_VALUE, so produce an
+    // undef DBG_VALUE to terminate any prior location.
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II, false, 0U, Var, Expr);
+    return true;
+  }
+  if (const auto *CI = dyn_cast<ConstantInt>(V)) {
+    // See if there's an expression to constant-fold.
+    if (Expr)
+      std::tie(Expr, CI) = Expr->constantFold(CI);
+    if (CI->getBitWidth() > 64)
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II)
+          .addCImm(CI)
+          .addImm(0U)
+          .addMetadata(Var)
+          .addMetadata(Expr);
+    else
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II)
+          .addImm(CI->getZExtValue())
+          .addImm(0U)
+          .addMetadata(Var)
+          .addMetadata(Expr);
+    return true;
+  }
+  if (const auto *CF = dyn_cast<ConstantFP>(V)) {
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II)
+        .addFPImm(CF)
+        .addImm(0U)
+        .addMetadata(Var)
+        .addMetadata(Expr);
+    return true;
+  }
+  if (const auto *Arg = dyn_cast<Argument>(V);
+      Arg && Expr && Expr->isEntryValue()) {
+    // As per the Verifier, this case is only valid for swift async Args.
+    assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
+
+    Register Reg = getRegForValue(Arg);
+    for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
+      if (Reg == VirtReg || Reg == PhysReg) {
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II, false /*IsIndirect*/,
+                PhysReg, Var, Expr);
+        return true;
+      }
+
+    LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
+                         "couldn't find a physical register\n");
+    return false;
+  }
+  if (auto SI = FuncInfo.StaticAllocaMap.find(dyn_cast<AllocaInst>(V));
+      SI != FuncInfo.StaticAllocaMap.end()) {
+    MachineOperand FrameIndexOp = MachineOperand::CreateFI(SI->second);
+    bool IsIndirect = false;
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II, IsIndirect, FrameIndexOp,
+            Var, Expr);
+    return true;
+  }
+  if (Register Reg = lookUpRegForValue(V)) {
+    // FIXME: This does not handle register-indirect values at offset 0.
+    if (!FuncInfo.MF->useDebugInstrRef()) {
+      bool IsIndirect = false;
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL, II, IsIndirect, Reg, Var,
+              Expr);
+      return true;
+    }
+    // If using instruction referencing, produce this as a DBG_INSTR_REF,
+    // to be later patched up by finalizeDebugInstrRefs.
+    SmallVector<MachineOperand, 1> MOs({MachineOperand::CreateReg(
+        /* Reg */ Reg, /* isDef */ false, /* isImp */ false,
+        /* isKill */ false, /* isDead */ false,
+        /* isUndef */ false, /* isEarlyClobber */ false,
+        /* SubReg */ 0, /* isDebug */ true)});
+    SmallVector<uint64_t, 2> Ops({dwarf::DW_OP_LLVM_arg, 0});
+    auto *NewExpr = DIExpression::prependOpcodes(Expr, Ops);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL,
+            TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, MOs,
+            Var, NewExpr);
+    return true;
+  }
+  return false;
+}
+
+bool FastISel::lowerDbgDeclare(const Value *Address, DIExpression *Expr,
+                               DILocalVariable *Var, const DebugLoc &DL) {
+  if (!Address || isa<UndefValue>(Address)) {
+    LLVM_DEBUG(dbgs() << "Dropping debug info (bad/undef address)\n");
+    return false;
+  }
+
+  std::optional<MachineOperand> Op;
+  if (Register Reg = lookUpRegForValue(Address))
+    Op = MachineOperand::CreateReg(Reg, false);
+
+  // If we have a VLA that has a "use" in a metadata node that's then used
+  // here but it has no other uses, then we have a problem. E.g.,
+  //
+  //   int foo (const int *x) {
+  //     char a[*x];
+  //     return 0;
+  //   }
+  //
+  // If we assign 'a' a vreg and fast isel later on has to use the selection
+  // DAG isel, it will want to copy the value to the vreg. However, there are
+  // no uses, which goes counter to what selection DAG isel expects.
+  if (!Op && !Address->use_empty() && isa<Instruction>(Address) &&
+      (!isa<AllocaInst>(Address) ||
+       !FuncInfo.StaticAllocaMap.count(cast<AllocaInst>(Address))))
+    Op = MachineOperand::CreateReg(FuncInfo.InitializeRegForValue(Address),
+                                   false);
+
+  if (Op) {
+    assert(Var->isValidLocationForIntrinsic(DL) &&
+           "Expected inlined-at fields to agree");
+    if (FuncInfo.MF->useDebugInstrRef() && Op->isReg()) {
+      // If using instruction referencing, produce this as a DBG_INSTR_REF,
+      // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
+      // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
+      SmallVector<uint64_t, 3> Ops(
+          {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_deref});
+      auto *NewExpr = DIExpression::prependOpcodes(Expr, Ops);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL,
+              TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, *Op,
+              Var, NewExpr);
+      return true;
+    }
+
+    // A dbg.declare describes the address of a source variable, so lower it
+    // into an indirect DBG_VALUE.
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL,
+            TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true, *Op, Var,
+            Expr);
+    return true;
+  }
+
+  // We can't yet handle anything else here because it would require
+  // generating code, thus altering codegen because of debug info.
+  LLVM_DEBUG(
+      dbgs() << "Dropping debug info (no materialized reg for address)\n");
+  return false;
+}
+
 bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
   default:
@@ -1212,153 +1387,28 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
       return true;
 
     const Value *Address = DI->getAddress();
-    if (!Address || isa<UndefValue>(Address)) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI
-                        << " (bad/undef address)\n");
-      return true;
-    }
+    if (!lowerDbgDeclare(Address, DI->getExpression(), DI->getVariable(),
+                         MIMD.getDL()))
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI);
 
-    std::optional<MachineOperand> Op;
-    if (Register Reg = lookUpRegForValue(Address))
-      Op = MachineOperand::CreateReg(Reg, false);
-
-    // If we have a VLA that has a "use" in a metadata node that's then used
-    // here but it has no other uses, then we have a problem. E.g.,
-    //
-    //   int foo (const int *x) {
-    //     char a[*x];
-    //     return 0;
-    //   }
-    //
-    // If we assign 'a' a vreg and fast isel later on has to use the selection
-    // DAG isel, it will want to copy the value to the vreg. However, there are
-    // no uses, which goes counter to what selection DAG isel expects.
-    if (!Op && !Address->use_empty() && isa<Instruction>(Address) &&
-        (!isa<AllocaInst>(Address) ||
-         !FuncInfo.StaticAllocaMap.count(cast<AllocaInst>(Address))))
-      Op = MachineOperand::CreateReg(FuncInfo.InitializeRegForValue(Address),
-                                     false);
-
-    if (Op) {
-      assert(DI->getVariable()->isValidLocationForIntrinsic(MIMD.getDL()) &&
-             "Expected inlined-at fields to agree");
-      if (FuncInfo.MF->useDebugInstrRef() && Op->isReg()) {
-        // If using instruction referencing, produce this as a DBG_INSTR_REF,
-        // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
-        // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
-        SmallVector<uint64_t, 3> Ops(
-            {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_deref});
-        auto *NewExpr = DIExpression::prependOpcodes(DI->getExpression(), Ops);
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
-                TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, *Op,
-                DI->getVariable(), NewExpr);
-      } else {
-        // A dbg.declare describes the address of a source variable, so lower it
-        // into an indirect DBG_VALUE.
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
-                TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true, *Op,
-                DI->getVariable(), DI->getExpression());
-      }
-    } else {
-      // We can't yet handle anything else here because it would require
-      // generating code, thus altering codegen because of debug info.
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI
-                        << " (no materialized reg for address)\n");
-    }
     return true;
   }
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);
-    const MCInstrDesc &II = TII.get(TargetOpcode::DBG_VALUE);
     const Value *V = DI->getValue();
     DIExpression *Expr = DI->getExpression();
     DILocalVariable *Var = DI->getVariable();
+    if (DI->hasArgList())
+      // Signal that we don't have a location for this.
+      V = nullptr;
+
     assert(Var->isValidLocationForIntrinsic(MIMD.getDL()) &&
            "Expected inlined-at fields to agree");
-    if (!V || isa<UndefValue>(V) || DI->hasArgList()) {
-      // DI is either undef or cannot produce a valid DBG_VALUE, so produce an
-      // undef DBG_VALUE to terminate any prior location.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II, false, 0U,
-              Var, Expr);
-      return true;
-    }
-    if (const auto *CI = dyn_cast<ConstantInt>(V)) {
-      // See if there's an expression to constant-fold.
-      if (Expr)
-        std::tie(Expr, CI) = Expr->constantFold(CI);
-      if (CI->getBitWidth() > 64)
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-            .addCImm(CI)
-            .addImm(0U)
-            .addMetadata(Var)
-            .addMetadata(Expr);
-      else
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-            .addImm(CI->getZExtValue())
-            .addImm(0U)
-            .addMetadata(Var)
-            .addMetadata(Expr);
-      return true;
-    }
-    if (const auto *CF = dyn_cast<ConstantFP>(V)) {
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-          .addFPImm(CF)
-          .addImm(0U)
-          .addMetadata(Var)
-          .addMetadata(Expr);
-      return true;
-    }
-    if (const auto *Arg = dyn_cast<Argument>(V);
-        Arg && Expr && Expr->isEntryValue()) {
-      // As per the Verifier, this case is only valid for swift async Args.
-      assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
 
-      Register Reg = getRegForValue(Arg);
-      for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
-        if (Reg == VirtReg || Reg == PhysReg) {
-          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II,
-                  false /*IsIndirect*/, PhysReg, Var, Expr);
-          return true;
-        }
+    if (!lowerDbgValue(V, Expr, Var, MIMD.getDL()))
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
 
-      LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
-                           "couldn't find a physical register\n"
-                        << *DI << "\n");
-      return true;
-    }
-    if (auto SI = FuncInfo.StaticAllocaMap.find(dyn_cast<AllocaInst>(V));
-        SI != FuncInfo.StaticAllocaMap.end()) {
-      MachineOperand FrameIndexOp = MachineOperand::CreateFI(SI->second);
-      bool IsIndirect = false;
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II, IsIndirect,
-              FrameIndexOp, Var, Expr);
-      return true;
-    }
-    if (Register Reg = lookUpRegForValue(V)) {
-      // FIXME: This does not handle register-indirect values at offset 0.
-      if (!FuncInfo.MF->useDebugInstrRef()) {
-        bool IsIndirect = false;
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II, IsIndirect,
-                Reg, Var, Expr);
-        return true;
-      }
-      // If using instruction referencing, produce this as a DBG_INSTR_REF,
-      // to be later patched up by finalizeDebugInstrRefs.
-      SmallVector<MachineOperand, 1> MOs({MachineOperand::CreateReg(
-          /* Reg */ Reg, /* isDef */ false, /* isImp */ false,
-          /* isKill */ false, /* isDead */ false,
-          /* isUndef */ false, /* isEarlyClobber */ false,
-          /* SubReg */ 0, /* isDebug */ true)});
-      SmallVector<uint64_t, 2> Ops({dwarf::DW_OP_LLVM_arg, 0});
-      auto *NewExpr = DIExpression::prependOpcodes(Expr, Ops);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
-              TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, MOs,
-              Var, NewExpr);
-      return true;
-    }
-    // We don't know how to handle other cases, so we drop.
-    LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
     return true;
   }
   case Intrinsic::dbg_label: {
@@ -2160,15 +2210,12 @@ Register FastISel::fastEmitZExtFromI1(MVT VT, unsigned Op0) {
 /// might result in multiple MBB's for one BB.  As such, the start of the
 /// BB might correspond to a different MBB than the end.
 bool FastISel::handlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
-  const Instruction *TI = LLVMBB->getTerminator();
-
   SmallPtrSet<MachineBasicBlock *, 4> SuccsHandled;
   FuncInfo.OrigNumPHINodesToUpdate = FuncInfo.PHINodesToUpdate.size();
 
   // Check successor nodes' PHI nodes that expect a constant to be available
   // from this block.
-  for (unsigned succ = 0, e = TI->getNumSuccessors(); succ != e; ++succ) {
-    const BasicBlock *SuccBB = TI->getSuccessor(succ);
+  for (const BasicBlock *SuccBB : successors(LLVMBB)) {
     if (!isa<PHINode>(SuccBB->begin()))
       continue;
     MachineBasicBlock *SuccMBB = FuncInfo.MBBMap[SuccBB];

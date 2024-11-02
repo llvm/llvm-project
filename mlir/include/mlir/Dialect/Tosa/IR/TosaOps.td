@@ -1678,6 +1678,7 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose"> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1847,7 +1848,7 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     I32Attr:$input_zp,
     I32Attr:$output_zp,
     DenseI32ArrayAttr:$multiplier,
-    DenseI32ArrayAttr:$shift,
+    DenseI8ArrayAttr:$shift,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
     BoolAttr:$per_channel

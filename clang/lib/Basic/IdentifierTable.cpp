@@ -628,8 +628,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
     return OMF_performSelector;
 
   // The other method families may begin with a prefix of underscores.
-  while (!name.empty() && name.front() == '_')
-    name = name.substr(1);
+  name = name.ltrim('_');
 
   if (name.empty()) return OMF_None;
   switch (name.front()) {

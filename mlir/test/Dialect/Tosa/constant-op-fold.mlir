@@ -1080,9 +1080,9 @@ func.func @reduce_sum_constant_aggressive() -> tensor<1x3xi32> {
 
 func.func @reduce_sum_constant_aggressive() -> tensor<2x3xi32> {
   // AGGRESIVE-LABEL:     func.func @reduce_sum_constant_aggressive() -> tensor<2x3xi32> {
-  // AGGRESIVE:           %[[VAL_0:.*]] = "tosa.const"() <{value = dense<2> : tensor<1x2x3xi32>}> : () -> tensor<1x2x3xi32>
-  // AGGRESIVE:           %[[VAL_1:.*]] = "tosa.const"() <{value = dense<1> : tensor<2x2x3xi32>}> : () -> tensor<2x2x3xi32>
-  // AGGRESIVE:           %[[VAL_2:.*]] = "tosa.const"() <{value = dense<2> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
+  // AGGRESIVE-DAG:       %[[VAL_0:.*]] = "tosa.const"() <{value = dense<2> : tensor<1x2x3xi32>}> : () -> tensor<1x2x3xi32>
+  // AGGRESIVE-DAG:       %[[VAL_1:.*]] = "tosa.const"() <{value = dense<1> : tensor<2x2x3xi32>}> : () -> tensor<2x2x3xi32>
+  // AGGRESIVE-DAG:       %[[VAL_2:.*]] = "tosa.const"() <{value = dense<2> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
   // AGGRESIVE:           %[[VAL_3:.*]] = tosa.argmax %[[VAL_0]] {axis = 0 : i32} : (tensor<1x2x3xi32>) -> tensor<2x3xi32>
   // AGGRESIVE:           %[[VAL_4:.*]] = tosa.argmax %[[VAL_1]] {axis = 0 : i32} : (tensor<2x2x3xi32>) -> tensor<2x3xi32>
   // AGGRESIVE:           %[[VAL_5:.*]] = tosa.add %[[VAL_3]], %[[VAL_2]] : (tensor<2x3xi32>, tensor<2x3xi32>) -> tensor<2x3xi32>

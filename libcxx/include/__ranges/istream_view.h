@@ -66,8 +66,7 @@ public:
   using difference_type  = ptrdiff_t;
   using value_type       = _Val;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(
-      basic_istream_view<_Val, _CharT, _Traits>& __parent) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(basic_istream_view<_Val, _CharT, _Traits>& __parent) noexcept
       : __parent_(std::addressof(__parent)) {}
 
   __iterator(const __iterator&)                  = delete;

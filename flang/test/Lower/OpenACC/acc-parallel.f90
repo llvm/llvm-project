@@ -62,7 +62,7 @@ subroutine acc_parallel
 
 ! CHECK:      acc.parallel {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncAttr}
+! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
 
   !$acc parallel async(1)
   !$acc end parallel
@@ -85,13 +85,13 @@ subroutine acc_parallel
 
 ! CHECK:      acc.parallel {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {waitAttr}
+! CHECK-NEXT: } attributes {waitOnly = [#acc.device_type<none>]}
 
   !$acc parallel wait(1)
   !$acc end parallel
 
 ! CHECK:      [[WAIT1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.parallel wait([[WAIT1]] : i32) {
+! CHECK:      acc.parallel wait({[[WAIT1]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -100,7 +100,7 @@ subroutine acc_parallel
 
 ! CHECK:      [[WAIT2:%.*]] = arith.constant 1 : i32
 ! CHECK:      [[WAIT3:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.parallel wait([[WAIT2]], [[WAIT3]] : i32, i32) {
+! CHECK:      acc.parallel wait({[[WAIT2]] : i32, [[WAIT3]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -109,7 +109,7 @@ subroutine acc_parallel
 
 ! CHECK:      [[WAIT4:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:      [[WAIT5:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.parallel wait([[WAIT4]], [[WAIT5]] : i32, i32) {
+! CHECK:      acc.parallel wait({[[WAIT4]] : i32, [[WAIT5]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -117,7 +117,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 ! CHECK:      [[NUMGANGS1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.parallel num_gangs([[NUMGANGS1]] : i32) {
+! CHECK:      acc.parallel num_gangs({[[NUMGANGS1]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -125,14 +125,14 @@ subroutine acc_parallel
   !$acc end parallel
 
 ! CHECK:      [[NUMGANGS2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.parallel num_gangs([[NUMGANGS2]] : i32) {
+! CHECK:      acc.parallel num_gangs({[[NUMGANGS2]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
   !$acc parallel num_gangs(1, 1, 1)
   !$acc end parallel
 
-! CHECK:      acc.parallel num_gangs(%{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32) {
+! CHECK:      acc.parallel num_gangs({%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 

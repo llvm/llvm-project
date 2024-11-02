@@ -3241,7 +3241,7 @@ TEST(MemorySanitizer, dlopenFailed) {
 
 #endif // MSAN_TEST_DISABLE_DLOPEN
 
-#if !defined(__FreeBSD__) && !defined(__NetBSD__)
+#if !defined(__NetBSD__)
 TEST(MemorySanitizer, sched_getaffinity) {
   cpu_set_t mask;
   if (sched_getaffinity(getpid(), sizeof(mask), &mask) == 0)

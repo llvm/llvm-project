@@ -173,14 +173,14 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedUseBitsIntrinsic(
 }
 
 std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
-    IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts, APInt &UndefElts2,
-    APInt &UndefElts3,
+    IntrinsicInst &II, APInt DemandedElts, APInt &PoisonElts,
+    APInt &PoisonElts2, APInt &PoisonElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
     return TTI.simplifyDemandedVectorEltsIntrinsic(
-        *this, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
+        *this, II, DemandedElts, PoisonElts, PoisonElts2, PoisonElts3,
         SimplifyAndSetOp);
   }
   return std::nullopt;
@@ -411,6 +411,14 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         getComplexity(I.getOperand(1)))
       Changed = !I.swapOperands();
 
+    if (I.isCommutative()) {
+      if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+        replaceOperand(I, 0, Pair->first);
+        replaceOperand(I, 1, Pair->second);
+        Changed = true;
+      }
+    }
+
     BinaryOperator *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
     BinaryOperator *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1));
 
@@ -610,7 +618,7 @@ static Value *getIdentityValue(Instruction::BinaryOps Opcode, Value *V) {
 /// allow more factorization opportunities.
 static Instruction::BinaryOps
 getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
-                          Value *&LHS, Value *&RHS) {
+                          Value *&LHS, Value *&RHS, BinaryOperator *OtherOp) {
   assert(Op && "Expected a binary operator");
   LHS = Op->getOperand(0);
   RHS = Op->getOperand(1);
@@ -622,6 +630,13 @@ getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
       return Instruction::Mul;
     }
     // TODO: We can add other conversions e.g. shr => div etc.
+  }
+  if (Instruction::isBitwiseLogicOp(TopOpcode)) {
+    if (OtherOp && OtherOp->getOpcode() == Instruction::AShr &&
+        match(Op, m_LShr(m_NonNegative(), m_Value()))) {
+      // lshr nneg C, X --> ashr nneg C, X
+      return Instruction::AShr;
+    }
   }
   return Op->getOpcode();
 }
@@ -723,6 +738,93 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
     }
   }
   return RetVal;
+}
+
+// If `I` has one Const operand and the other matches `(ctpop (not x))`,
+// replace `(ctpop (not x))` with `(sub nuw nsw BitWidth(x), (ctpop x))`.
+// This is only useful is the new subtract can fold so we only handle the
+// following cases:
+//    1) (add/sub/disjoint_or C, (ctpop (not x))
+//        -> (add/sub/disjoint_or C', (ctpop x))
+//    1) (cmp pred C, (ctpop (not x))
+//        -> (cmp pred C', (ctpop x))
+Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
+  unsigned Opc = I->getOpcode();
+  unsigned ConstIdx = 1;
+  switch (Opc) {
+  default:
+    return nullptr;
+    // (ctpop (not x)) <-> (sub nuw nsw BitWidth(x) - (ctpop x))
+    // We can fold the BitWidth(x) with add/sub/icmp as long the other operand
+    // is constant.
+  case Instruction::Sub:
+    ConstIdx = 0;
+    break;
+  case Instruction::ICmp:
+    // Signed predicates aren't correct in some edge cases like for i2 types, as
+    // well since (ctpop x) is known [0, log2(BitWidth(x))] almost all signed
+    // comparisons against it are simplfied to unsigned.
+    if (cast<ICmpInst>(I)->isSigned())
+      return nullptr;
+    break;
+  case Instruction::Or:
+    if (!match(I, m_DisjointOr(m_Value(), m_Value())))
+      return nullptr;
+    [[fallthrough]];
+  case Instruction::Add:
+    break;
+  }
+
+  Value *Op;
+  // Find ctpop.
+  if (!match(I->getOperand(1 - ConstIdx),
+             m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(Op)))))
+    return nullptr;
+
+  Constant *C;
+  // Check other operand is ImmConstant.
+  if (!match(I->getOperand(ConstIdx), m_ImmConstant(C)))
+    return nullptr;
+
+  Type *Ty = Op->getType();
+  Constant *BitWidthC = ConstantInt::get(Ty, Ty->getScalarSizeInBits());
+  // Need extra check for icmp. Note if this check is true, it generally means
+  // the icmp will simplify to true/false.
+  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality() &&
+      !ConstantExpr::getICmp(ICmpInst::ICMP_UGT, C, BitWidthC)->isZeroValue())
+    return nullptr;
+
+  // Check we can invert `(not x)` for free.
+  bool Consumes = false;
+  if (!isFreeToInvert(Op, Op->hasOneUse(), Consumes) || !Consumes)
+    return nullptr;
+  Value *NotOp = getFreelyInverted(Op, Op->hasOneUse(), &Builder);
+  assert(NotOp != nullptr &&
+         "Desync between isFreeToInvert and getFreelyInverted");
+
+  Value *CtpopOfNotOp = Builder.CreateIntrinsic(Ty, Intrinsic::ctpop, NotOp);
+
+  Value *R = nullptr;
+
+  // Do the transformation here to avoid potentially introducing an infinite
+  // loop.
+  switch (Opc) {
+  case Instruction::Sub:
+    R = Builder.CreateAdd(CtpopOfNotOp, ConstantExpr::getSub(C, BitWidthC));
+    break;
+  case Instruction::Or:
+  case Instruction::Add:
+    R = Builder.CreateSub(ConstantExpr::getAdd(C, BitWidthC), CtpopOfNotOp);
+    break;
+  case Instruction::ICmp:
+    R = Builder.CreateICmp(cast<ICmpInst>(I)->getSwappedPredicate(),
+                           CtpopOfNotOp, ConstantExpr::getSub(BitWidthC, C));
+    break;
+  default:
+    llvm_unreachable("Unhandled Opcode");
+  }
+  assert(R != nullptr);
+  return replaceInstUsesWith(*I, R);
 }
 
 // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
@@ -963,9 +1065,9 @@ Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
   Instruction::BinaryOps LHSOpcode, RHSOpcode;
 
   if (Op0)
-    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
+    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B, Op1);
   if (Op1)
-    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
+    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D, Op0);
 
   // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
   // a common term.
@@ -1089,6 +1191,70 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
+static std::optional<std::pair<Value *, Value *>>
+matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
+  if (LHS->getParent() != RHS->getParent())
+    return std::nullopt;
+
+  if (LHS->getNumIncomingValues() < 2)
+    return std::nullopt;
+
+  if (!equal(LHS->blocks(), RHS->blocks()))
+    return std::nullopt;
+
+  Value *L0 = LHS->getIncomingValue(0);
+  Value *R0 = RHS->getIncomingValue(0);
+
+  for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
+    Value *L1 = LHS->getIncomingValue(I);
+    Value *R1 = RHS->getIncomingValue(I);
+
+    if ((L0 == L1 && R0 == R1) || (L0 == R1 && R0 == L1))
+      continue;
+
+    return std::nullopt;
+  }
+
+  return std::optional(std::pair(L0, R0));
+}
+
+std::optional<std::pair<Value *, Value *>>
+InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
+  Instruction *LHSInst = dyn_cast<Instruction>(LHS);
+  Instruction *RHSInst = dyn_cast<Instruction>(RHS);
+  if (!LHSInst || !RHSInst || LHSInst->getOpcode() != RHSInst->getOpcode())
+    return std::nullopt;
+  switch (LHSInst->getOpcode()) {
+  case Instruction::PHI:
+    return matchSymmetricPhiNodesPair(cast<PHINode>(LHS), cast<PHINode>(RHS));
+  case Instruction::Select: {
+    Value *Cond = LHSInst->getOperand(0);
+    Value *TrueVal = LHSInst->getOperand(1);
+    Value *FalseVal = LHSInst->getOperand(2);
+    if (Cond == RHSInst->getOperand(0) && TrueVal == RHSInst->getOperand(2) &&
+        FalseVal == RHSInst->getOperand(1))
+      return std::pair(TrueVal, FalseVal);
+    return std::nullopt;
+  }
+  case Instruction::Call: {
+    // Match min(a, b) and max(a, b)
+    MinMaxIntrinsic *LHSMinMax = dyn_cast<MinMaxIntrinsic>(LHSInst);
+    MinMaxIntrinsic *RHSMinMax = dyn_cast<MinMaxIntrinsic>(RHSInst);
+    if (LHSMinMax && RHSMinMax &&
+        LHSMinMax->getPredicate() ==
+            ICmpInst::getSwappedPredicate(RHSMinMax->getPredicate()) &&
+        ((LHSMinMax->getLHS() == RHSMinMax->getLHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getRHS()) ||
+         (LHSMinMax->getLHS() == RHSMinMax->getRHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getLHS())))
+      return std::pair(LHSMinMax->getLHS(), LHSMinMax->getRHS());
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
@@ -1132,14 +1298,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
-    // op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
-    if (I.isCommutative() && B == F && C == E) {
-      Value *BI = Builder.CreateBinOp(I.getOpcode(), B, E);
-      if (auto *BO = dyn_cast<BinaryOperator>(BI))
-        BO->copyIRFlags(&I);
-      return BI;
-    }
-
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
     True = simplifyBinOp(Opcode, B, E, FMF, Q);
@@ -1721,8 +1879,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
-  if (match(LHS, m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))) &&
-      match(RHS, m_Shuffle(m_Value(V2), m_Undef(), m_SpecificMask(Mask))) &&
+  if (match(LHS, m_Shuffle(m_Value(V1), m_Poison(), m_Mask(Mask))) &&
+      match(RHS, m_Shuffle(m_Value(V2), m_Poison(), m_SpecificMask(Mask))) &&
       V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
@@ -1763,9 +1921,9 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   Constant *C;
   auto *InstVTy = dyn_cast<FixedVectorType>(Inst.getType());
   if (InstVTy &&
-      match(&Inst,
-            m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))),
-                      m_ImmConstant(C))) &&
+      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+                                                m_Mask(Mask))),
+                             m_ImmConstant(C))) &&
       cast<FixedVectorType>(V1->getType())->getNumElements() <=
           InstVTy->getNumElements()) {
     assert(InstVTy->getScalarType() == V1->getType()->getScalarType() &&
@@ -1780,8 +1938,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     ArrayRef<int> ShMask = Mask;
     unsigned SrcVecNumElts =
         cast<FixedVectorType>(V1->getType())->getNumElements();
-    UndefValue *UndefScalar = UndefValue::get(C->getType()->getScalarType());
-    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, UndefScalar);
+    PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
+    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, PoisonScalar);
     bool MayChange = true;
     unsigned NumElts = InstVTy->getNumElements();
     for (unsigned I = 0; I < NumElts; ++I) {
@@ -1794,29 +1952,29 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
         // 2. The shuffle needs an element of the constant vector that can't
         //    be mapped to a new constant vector.
         // 3. This is a widening shuffle that copies elements of V1 into the
-        //    extended elements (extending with undef is allowed).
-        if (!CElt || (!isa<UndefValue>(NewCElt) && NewCElt != CElt) ||
+        //    extended elements (extending with poison is allowed).
+        if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
             I >= SrcVecNumElts) {
           MayChange = false;
           break;
         }
         NewVecC[ShMask[I]] = CElt;
       }
-      // If this is a widening shuffle, we must be able to extend with undef
-      // elements. If the original binop does not produce an undef in the high
+      // If this is a widening shuffle, we must be able to extend with poison
+      // elements. If the original binop does not produce a poison in the high
       // lanes, then this transform is not safe.
-      // Similarly for undef lanes due to the shuffle mask, we can only
-      // transform binops that preserve undef.
-      // TODO: We could shuffle those non-undef constant values into the
-      //       result by using a constant vector (rather than an undef vector)
+      // Similarly for poison lanes due to the shuffle mask, we can only
+      // transform binops that preserve poison.
+      // TODO: We could shuffle those non-poison constant values into the
+      //       result by using a constant vector (rather than an poison vector)
       //       as operand 1 of the new binop, but that might be too aggressive
       //       for target-independent shuffle creation.
       if (I >= SrcVecNumElts || ShMask[I] < 0) {
-        Constant *MaybeUndef =
+        Constant *MaybePoison =
             ConstOp1
-                ? ConstantFoldBinaryOpOperands(Opcode, UndefScalar, CElt, DL)
-                : ConstantFoldBinaryOpOperands(Opcode, CElt, UndefScalar, DL);
-        if (!MaybeUndef || !match(MaybeUndef, m_Undef())) {
+                ? ConstantFoldBinaryOpOperands(Opcode, PoisonScalar, CElt, DL)
+                : ConstantFoldBinaryOpOperands(Opcode, CElt, PoisonScalar, DL);
+        if (!MaybePoison || !isa<PoisonValue>(MaybePoison)) {
           MayChange = false;
           break;
         }
@@ -1824,9 +1982,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     }
     if (MayChange) {
       Constant *NewC = ConstantVector::get(NewVecC);
-      // It may not be safe to execute a binop on a vector with undef elements
+      // It may not be safe to execute a binop on a vector with poison elements
       // because the entire instruction can be folded to undef or create poison
       // that did not exist in the original code.
+      // TODO: The shift case should not be necessary.
       if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
@@ -2190,16 +2349,6 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     return nullptr;
   }
 
-  // Treat lshr with non-negative operand as ashr.
-  if (match(V, m_LShr(m_Value(A), m_Value(B))) &&
-      isKnownNonNegative(A, SQ.getWithInstruction(cast<Instruction>(V)),
-                         Depth)) {
-    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
-                                         DoesConsume, Depth))
-      return Builder ? Builder->CreateAShr(AV, B) : NonNull;
-    return nullptr;
-  }
-
   Value *Cond;
   // LogicOps are special in that we canonicalize them at the cost of an
   // instruction.
@@ -2244,10 +2393,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // compile-time.
   if (auto *GEPFVTy = dyn_cast<FixedVectorType>(GEPType)) {
     auto VWidth = GEPFVTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
+    APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
-                                              UndefElts)) {
+                                              PoisonElts)) {
       if (V != &GEP)
         return replaceInstUsesWith(GEP, V);
       return &GEP;
@@ -2418,31 +2567,43 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         DL.getIndexSizeInBits(AS)) {
       uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
 
-      bool Matched = false;
-      uint64_t C;
-      Value *V = nullptr;
       if (TyAllocSize == 1) {
-        V = GEP.getOperand(1);
-        Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_AShr(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == 1ULL << C)
-          Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_SDiv(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == C)
-          Matched = true;
+        // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y),
+        // but only if the result pointer is only used as if it were an integer,
+        // or both point to the same underlying object (otherwise provenance is
+        // not necessarily retained).
+        Value *X = GEP.getPointerOperand();
+        Value *Y;
+        if (match(GEP.getOperand(1),
+                  m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+            GEPType == Y->getType()) {
+          bool HasSameUnderlyingObject =
+              getUnderlyingObject(X) == getUnderlyingObject(Y);
+          bool Changed = false;
+          GEP.replaceUsesWithIf(Y, [&](Use &U) {
+            bool ShouldReplace = HasSameUnderlyingObject ||
+                                 isa<ICmpInst>(U.getUser()) ||
+                                 isa<PtrToIntInst>(U.getUser());
+            Changed |= ShouldReplace;
+            return ShouldReplace;
+          });
+          return Changed ? &GEP : nullptr;
+        }
+      } else {
+        // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
+        Value *V;
+        if ((has_single_bit(TyAllocSize) &&
+             match(GEP.getOperand(1),
+                   m_Exact(m_AShr(m_Value(V),
+                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+            match(GEP.getOperand(1),
+                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+              Builder.getInt8Ty(), GEP.getPointerOperand(), V);
+          NewGEP->setIsInBounds(GEP.isInBounds());
+          return NewGEP;
+        }
       }
-
-      // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y), but
-      // only if both point to the same underlying object (otherwise provenance
-      // is not necessarily retained).
-      Value *Y;
-      Value *X = GEP.getOperand(0);
-      if (Matched &&
-          match(V, m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
-          getUnderlyingObject(X) == getUnderlyingObject(Y))
-        return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
     }
   }
   // We do not handle pointer-vector geps here.
@@ -2465,7 +2626,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                        Idx2);
     }
     ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExt(m_OneUse(m_NSWAdd(
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
                                      m_Value(Idx1), m_ConstantInt(C))))))) {
       // %add = add nsw i32 %idx1, idx2
       // %sidx = sext i32 %add to i64
@@ -3132,6 +3293,64 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       Case.setValue(cast<ConstantInt>(NewCase));
     }
     return replaceOperand(SI, 0, Op0);
+  }
+
+  ConstantInt *SubLHS;
+  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
+    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
+    for (auto Case : SI.cases()) {
+      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
+      assert(isa<ConstantInt>(NewCase) &&
+             "Result of expression should be constant");
+      Case.setValue(cast<ConstantInt>(NewCase));
+    }
+    return replaceOperand(SI, 0, Op0);
+  }
+
+  uint64_t ShiftAmt;
+  if (match(Cond, m_Shl(m_Value(Op0), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < Op0->getType()->getScalarSizeInBits() &&
+      all_of(SI.cases(), [&](const auto &Case) {
+        return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
+      })) {
+    // Change 'switch (X << 2) case 4:' into 'switch (X) case 1:'.
+    OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(Cond);
+    if (Shl->hasNoUnsignedWrap() || Shl->hasNoSignedWrap() ||
+        Shl->hasOneUse()) {
+      Value *NewCond = Op0;
+      if (!Shl->hasNoUnsignedWrap() && !Shl->hasNoSignedWrap()) {
+        // If the shift may wrap, we need to mask off the shifted bits.
+        unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+        NewCond = Builder.CreateAnd(
+            Op0, APInt::getLowBitsSet(BitWidth, BitWidth - ShiftAmt));
+      }
+      for (auto Case : SI.cases()) {
+        const APInt &CaseVal = Case.getCaseValue()->getValue();
+        APInt ShiftedCase = Shl->hasNoSignedWrap() ? CaseVal.ashr(ShiftAmt)
+                                                   : CaseVal.lshr(ShiftAmt);
+        Case.setValue(ConstantInt::get(SI.getContext(), ShiftedCase));
+      }
+      return replaceOperand(SI, 0, NewCond);
+    }
+  }
+
+  // Fold switch(zext/sext(X)) into switch(X) if possible.
+  if (match(Cond, m_ZExtOrSExt(m_Value(Op0)))) {
+    bool IsZExt = isa<ZExtInst>(Cond);
+    Type *SrcTy = Op0->getType();
+    unsigned NewWidth = SrcTy->getScalarSizeInBits();
+
+    if (all_of(SI.cases(), [&](const auto &Case) {
+          const APInt &CaseVal = Case.getCaseValue()->getValue();
+          return IsZExt ? CaseVal.isIntN(NewWidth)
+                        : CaseVal.isSignedIntN(NewWidth);
+        })) {
+      for (auto &Case : SI.cases()) {
+        APInt TruncatedCase = Case.getCaseValue()->getValue().trunc(NewWidth);
+        Case.setValue(ConstantInt::get(SI.getContext(), TruncatedCase));
+      }
+      return replaceOperand(SI, 0, Op0);
+    }
   }
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);

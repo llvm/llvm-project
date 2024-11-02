@@ -28,36 +28,36 @@
 # CHECK-NEXT:         R_RISCV_RELAX *ABS*
 # CHECK-EMPTY:
 # CHECK-NEXT: <f>:
-# CHECK-NEXT:     jalr zero, 0(ra)
+# CHECK-NEXT:     jalr zero, 0x0(ra)
 # CHECK-NEXT:         R_RISCV_ALIGN *ABS*+0x4
 
 # CHECKR:      <_start>:
-# CHECKR-NEXT:     auipc ra, 0
+# CHECKR-NEXT:     auipc ra, 0x0
 # CHECKR-NEXT:         R_RISCV_CALL_PLT f
 # CHECKR-NEXT:         R_RISCV_RELAX *ABS*
-# CHECKR-NEXT:     jalr ra, 0(ra)
-# CHECKR-NEXT:     auipc ra, 0
+# CHECKR-NEXT:     jalr ra, 0x0(ra)
+# CHECKR-NEXT:     auipc ra, 0x0
 # CHECKR-NEXT:         R_RISCV_CALL_PLT f
 # CHECKR-NEXT:         R_RISCV_RELAX *ABS*
-# CHECKR-NEXT:     jalr ra, 0(ra)
-# CHECKR-NEXT:     addi zero, zero, 0
+# CHECKR-NEXT:     jalr ra, 0x0(ra)
+# CHECKR-NEXT:     addi zero, zero, 0x0
 # CHECKR-NEXT:         R_RISCV_ALIGN *ABS*+0x4
 # CHECKR-EMPTY:
 # CHECKR-NEXT: <f>:
-# CHECKR-NEXT:     jalr zero, 0(ra)
+# CHECKR-NEXT:     jalr zero, 0x0(ra)
 
 # CHECKNORELAX:      <_start>:
-# CHECKNORELAX-NEXT:     auipc ra, 0
+# CHECKNORELAX-NEXT:     auipc ra, 0x0
 # CHECKNORELAX-NEXT:         R_RISCV_CALL_PLT f
 # CHECKNORELAX-NEXT:         R_RISCV_RELAX *ABS*
-# CHECKNORELAX-NEXT:     jalr ra, 16(ra)
-# CHECKNORELAX-NEXT:     auipc ra, 0
+# CHECKNORELAX-NEXT:     jalr ra, 0x10(ra)
+# CHECKNORELAX-NEXT:     auipc ra, 0x0
 # CHECKNORELAX-NEXT:         R_RISCV_CALL_PLT f
 # CHECKNORELAX-NEXT:         R_RISCV_RELAX *ABS*
-# CHECKNORELAX-NEXT:     jalr ra, 8(ra)
+# CHECKNORELAX-NEXT:     jalr ra, 0x8(ra)
 # CHECKNORELAX-EMPTY:
 # CHECKNORELAX-NEXT: <f>:
-# CHECKNORELAX-NEXT:     jalr zero, 0(ra)
+# CHECKNORELAX-NEXT:     jalr zero, 0x0(ra)
 # CHECKNORELAX-NEXT:         R_RISCV_ALIGN *ABS*+0x4
 
 .global _start

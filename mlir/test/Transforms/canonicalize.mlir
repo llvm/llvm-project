@@ -1224,3 +1224,14 @@ func.func @clone_nested_region(%arg0: index, %arg1: index, %arg2: index) -> memr
 // CHECK-NEXT: scf.yield %[[ALLOC3_2]]
 //      CHECK: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: return %[[ALLOC2]]
+
+// -----
+
+// CHECK-LABEL: func @test_materialize_failure
+func.func @test_materialize_failure() -> i64 {
+  %const = index.constant 1234
+  // Cannot materialize this castu's output constant.
+  // CHECK: index.castu
+  %u = index.castu %const : index to i64
+  return %u: i64
+}

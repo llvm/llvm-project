@@ -282,7 +282,7 @@ class CorrectionCandidateCallback {
 public:
   static const unsigned InvalidDistance = TypoCorrection::InvalidDistance;
 
-  explicit CorrectionCandidateCallback(const IdentifierInfo *Typo = nullptr,
+  explicit CorrectionCandidateCallback(IdentifierInfo *Typo = nullptr,
                                        NestedNameSpecifier *TypoNNS = nullptr)
       : Typo(Typo), TypoNNS(TypoNNS) {}
 
@@ -319,7 +319,7 @@ public:
   /// this method.
   virtual std::unique_ptr<CorrectionCandidateCallback> clone() = 0;
 
-  void setTypoName(const IdentifierInfo *II) { Typo = II; }
+  void setTypoName(IdentifierInfo *II) { Typo = II; }
   void setTypoNNS(NestedNameSpecifier *NNS) { TypoNNS = NNS; }
 
   // Flags for context-dependent keywords. WantFunctionLikeCasts is only
@@ -345,13 +345,13 @@ protected:
            candidate.getCorrectionSpecifier() == TypoNNS;
   }
 
-  const IdentifierInfo *Typo;
+  IdentifierInfo *Typo;
   NestedNameSpecifier *TypoNNS;
 };
 
 class DefaultFilterCCC final : public CorrectionCandidateCallback {
 public:
-  explicit DefaultFilterCCC(const IdentifierInfo *Typo = nullptr,
+  explicit DefaultFilterCCC(IdentifierInfo *Typo = nullptr,
                             NestedNameSpecifier *TypoNNS = nullptr)
       : CorrectionCandidateCallback(Typo, TypoNNS) {}
 
@@ -365,10 +365,6 @@ public:
 template <class C>
 class DeclFilterCCC final : public CorrectionCandidateCallback {
 public:
-  explicit DeclFilterCCC(const IdentifierInfo *Typo = nullptr,
-                         NestedNameSpecifier *TypoNNS = nullptr)
-      : CorrectionCandidateCallback(Typo, TypoNNS) {}
-
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     return candidate.getCorrectionDeclAs<C>();
   }

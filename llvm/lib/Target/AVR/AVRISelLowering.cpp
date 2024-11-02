@@ -298,8 +298,7 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     SDValue SrcHi =
         DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i16, Op.getOperand(0),
                     DAG.getConstant(1, dl, MVT::i16));
-    uint64_t ShiftAmount =
-        cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    uint64_t ShiftAmount = N->getConstantOperandVal(1);
     if (ShiftAmount == 16) {
       // Special case these two operations because they appear to be used by the
       // generic codegen parts to lower 32-bit numbers.
@@ -367,7 +366,7 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  uint64_t ShiftAmount = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  uint64_t ShiftAmount = N->getConstantOperandVal(1);
   SDValue Victim = N->getOperand(0);
 
   switch (Op.getOpcode()) {
@@ -661,7 +660,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
   SDValue Cmp;
 
   if (LHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(RHS)) {
-    uint64_t Imm = cast<ConstantSDNode>(RHS)->getZExtValue();
+    uint64_t Imm = RHS->getAsZExtVal();
     // Generate a CPI/CPC pair if RHS is a 16-bit constant. Use the zero
     // register for the constant RHS if its lower or higher byte is zero.
     SDValue LHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
@@ -681,7 +680,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
   } else if (RHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(LHS)) {
     // Generate a CPI/CPC pair if LHS is a 16-bit constant. Use the zero
     // register for the constant LHS if its lower or higher byte is zero.
-    uint64_t Imm = cast<ConstantSDNode>(LHS)->getZExtValue();
+    uint64_t Imm = LHS->getAsZExtVal();
     SDValue LHSlo = (Imm & 0xff) == 0
                         ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
                         : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,

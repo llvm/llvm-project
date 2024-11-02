@@ -341,15 +341,14 @@ __sanitizer_symbolize_set_inline_frames(bool InlineFrames);
 class InternalSymbolizer final : public SymbolizerTool {
  public:
   static InternalSymbolizer *get(LowLevelAllocator *alloc) {
-    if (&__sanitizer_symbolize_set_demangle)
-      CHECK(__sanitizer_symbolize_set_demangle(common_flags()->demangle));
-    if (&__sanitizer_symbolize_set_inline_frames)
-      CHECK(__sanitizer_symbolize_set_inline_frames(
-          common_flags()->symbolize_inline_frames));
-    // These are essential, we don't have InternalSymbolizer without them.
-    if (&__sanitizer_symbolize_code && &__sanitizer_symbolize_data)
-      return new (*alloc) InternalSymbolizer();
-    return 0;
+    // These one is the most used one, so we will use it to detect a presence of
+    // internal symbolizer.
+    if (&__sanitizer_symbolize_code == nullptr)
+      return nullptr;
+    CHECK(__sanitizer_symbolize_set_demangle(common_flags()->demangle));
+    CHECK(__sanitizer_symbolize_set_inline_frames(
+        common_flags()->symbolize_inline_frames));
+    return new (*alloc) InternalSymbolizer();
   }
 
   bool SymbolizePC(uptr addr, SymbolizedStack *stack) override {
@@ -371,8 +370,6 @@ class InternalSymbolizer final : public SymbolizerTool {
   }
 
   bool SymbolizeFrame(uptr addr, FrameInfo *info) override {
-    if (&__sanitizer_symbolize_frame == nullptr)
-      return false;
     bool result = __sanitizer_symbolize_frame(info->module, info->module_offset,
                                               buffer_, sizeof(buffer_));
     if (result)
@@ -380,14 +377,10 @@ class InternalSymbolizer final : public SymbolizerTool {
     return result;
   }
 
-  void Flush() override {
-    if (&__sanitizer_symbolize_flush)
-      __sanitizer_symbolize_flush();
-  }
+  void Flush() override { __sanitizer_symbolize_flush(); }
 
   const char *Demangle(const char *name) override {
-    if (&__sanitizer_symbolize_demangle &&
-        __sanitizer_symbolize_demangle(name, buffer_, sizeof(buffer_))) {
+    if (__sanitizer_symbolize_demangle(name, buffer_, sizeof(buffer_))) {
       char *res_buff = nullptr;
       ExtractToken(buffer_, "", &res_buff);
       return res_buff;

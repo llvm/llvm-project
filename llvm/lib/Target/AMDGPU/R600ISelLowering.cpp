@@ -424,8 +424,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     return lowerADDRSPACECAST(Op, DAG);
   case ISD::INTRINSIC_VOID: {
     SDValue Chain = Op.getOperand(0);
-    unsigned IntrinsicID =
-                         cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    unsigned IntrinsicID = Op.getConstantOperandVal(1);
     switch (IntrinsicID) {
     case Intrinsic::r600_store_swizzle: {
       SDLoc DL(Op);
@@ -449,8 +448,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IntrinsicID =
-                         cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned IntrinsicID = Op.getConstantOperandVal(0);
     EVT VT = Op.getValueType();
     SDLoc DL(Op);
     switch (IntrinsicID) {
@@ -1621,8 +1619,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
   for (unsigned i = 0; i < 4; i++) {
     RemapSwizzle[i] = i;
     if (NewBldVec[i].getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      unsigned Idx = cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
-          ->getZExtValue();
+      unsigned Idx = NewBldVec[i].getConstantOperandVal(1);
       if (i == Idx)
         isUnmovable[Idx] = true;
     }
@@ -1630,8 +1627,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
 
   for (unsigned i = 0; i < 4; i++) {
     if (NewBldVec[i].getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      unsigned Idx = cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
-          ->getZExtValue();
+      unsigned Idx = NewBldVec[i].getConstantOperandVal(1);
       if (isUnmovable[Idx])
         continue;
       // Swap i and Idx
@@ -1653,7 +1649,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
 
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
-    unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
+    unsigned Idx = Swz[i]->getAsZExtVal();
     if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
@@ -1661,7 +1657,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   SwizzleRemap.clear();
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
-    unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
+    unsigned Idx = Swz[i]->getAsZExtVal();
     if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
@@ -1782,7 +1778,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     // Check that we know which element is being inserted
     if (!isa<ConstantSDNode>(EltNo))
       return SDValue();
-    unsigned Elt = cast<ConstantSDNode>(EltNo)->getZExtValue();
+    unsigned Elt = EltNo->getAsZExtVal();
 
     // Check that the operand is a BUILD_VECTOR (or UNDEF, which can essentially
     // be converted to a BUILD_VECTOR).  Fill in the Ops vector with the
@@ -2004,9 +2000,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
       if (RegisterSDNode *Reg =
           dyn_cast<RegisterSDNode>(ParentNode->getOperand(OtherSrcIdx))) {
         if (Reg->getReg() == R600::ALU_CONST) {
-          ConstantSDNode *Cst
-            = cast<ConstantSDNode>(ParentNode->getOperand(OtherSelIdx));
-          Consts.push_back(Cst->getZExtValue());
+          Consts.push_back(ParentNode->getConstantOperandVal(OtherSelIdx));
         }
       }
     }
@@ -2023,7 +2017,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
   }
   case R600::MOV_IMM_GLOBAL_ADDR:
     // Check if the Imm slot is used. Taken from below.
-    if (cast<ConstantSDNode>(Imm)->getZExtValue())
+    if (Imm->getAsZExtVal())
       return false;
     Imm = Src.getOperand(0);
     Src = DAG.getRegister(R600::ALU_LITERAL_X, MVT::i32);
@@ -2046,8 +2040,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
         ImmValue = FPC->getValueAPF().bitcastToAPInt().getZExtValue();
       }
     } else {
-      ConstantSDNode *C = cast<ConstantSDNode>(Src.getOperand(0));
-      uint64_t Value = C->getZExtValue();
+      uint64_t Value = Src.getConstantOperandVal(0);
       if (Value == 0) {
         ImmReg = R600::ZERO;
       } else if (Value == 1) {

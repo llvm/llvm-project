@@ -23,6 +23,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-LINUX %s
 //
+// CHECK-ASAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.asan_static-x86_64
 // CHECK-ASAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.asan-x86_64
 
 // RUN: %clang -fsanitize=address -fno-sanitize-link-runtime -### %s 2>&1 \
@@ -31,6 +32,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-NO-LINK-RUNTIME-DARWIN %s
 //
+// CHECK-ASAN-NO-LINK-RUNTIME-DARWIN-NOT: libclang_rt.asan_static
 // CHECK-ASAN-NO-LINK-RUNTIME-DARWIN-NOT: libclang_rt.asan
 
 // RUN: %clang -fsanitize=address -### %s 2>&1 \
@@ -894,7 +896,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SCUDO-LINUX %s
 // CHECK-SCUDO-LINUX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-SCUDO-LINUX: "-pie"
 // CHECK-SCUDO-LINUX: "--whole-archive" "{{.*}}libclang_rt.scudo_standalone-i386.a" "--no-whole-archive"
 // CHECK-SCUDO-LINUX-NOT: "-lstdc++"
 // CHECK-SCUDO-LINUX: "-lpthread"

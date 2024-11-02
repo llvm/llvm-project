@@ -35,14 +35,6 @@ add_definitions(-DTARGET_NAME=AMDGPU)
 # requires changing the original plugins.
 add_definitions(-DDEBUG_PREFIX="TARGET AMDGPU RTL")
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(ppc64le)|(aarch64)$")
-   add_definitions(-DLITTLEENDIAN_CPU=1)
-endif()
-
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  add_definitions(-DDEBUG)
-endif()
-
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
 

@@ -51,7 +51,7 @@ declare <vscale x 4 x i32> @llvm.riscv.sf.vqmaccu.2x8x2.nxv4i32.nxv8i8.nxv16i8(
 define <vscale x 4 x i32> @intrinsic_vqmaccu_2x8x2_tu_i32m2(<vscale x 4 x i32> %0, <vscale x 8 x i8> %1, <vscale x 16 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccu_2x8x2_tu_i32m2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
 ; CHECK-NEXT:    sf.vqmaccu.2x8x2 v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
@@ -67,7 +67,7 @@ entry:
 define <vscale x 4 x i32> @intrinsic_vqmaccu_2x8x2_ta_i32m2(<vscale x 4 x i32> %0, <vscale x 8 x i8> %1, <vscale x 16 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccu_2x8x2_ta_i32m2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    sf.vqmaccu.2x8x2 v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
@@ -89,7 +89,7 @@ declare <vscale x 8 x i32> @llvm.riscv.sf.vqmaccu.2x8x2.nxv8i32.nxv8i8.nxv32i8(
 define <vscale x 8 x i32> @intrinsic_vqmaccu_2x8x2_tu_i32m4(<vscale x 8 x i32> %0, <vscale x 8 x i8> %1, <vscale x 32 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccu_2x8x2_tu_i32m4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
 ; CHECK-NEXT:    sf.vqmaccu.2x8x2 v8, v12, v16
 ; CHECK-NEXT:    ret
 entry:
@@ -105,7 +105,7 @@ entry:
 define <vscale x 8 x i32> @intrinsic_vqmaccu_2x8x2_ta_i32m4(<vscale x 8 x i32> %0, <vscale x 8 x i8> %1, <vscale x 32 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccu_2x8x2_ta_i32m4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    sf.vqmaccu.2x8x2 v8, v12, v16
 ; CHECK-NEXT:    ret
 entry:
@@ -128,7 +128,7 @@ define <vscale x 16 x i32> @intrinsic_vqmaccu_2x8x2_tu_i32m8(<vscale x 16 x i32>
 ; CHECK-LABEL: intrinsic_vqmaccu_2x8x2_tu_i32m8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl8r.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    sf.vqmaccu.2x8x2 v8, v16, v24
 ; CHECK-NEXT:    ret
 entry:
@@ -145,7 +145,7 @@ define <vscale x 16 x i32> @intrinsic_vqmaccu_2x8x2_ta_i32m8(<vscale x 16 x i32>
 ; CHECK-LABEL: intrinsic_vqmaccu_2x8x2_ta_i32m8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vl8r.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    sf.vqmaccu.2x8x2 v8, v16, v24
 ; CHECK-NEXT:    ret
 entry:

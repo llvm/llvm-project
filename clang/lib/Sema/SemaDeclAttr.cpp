@@ -3369,6 +3369,22 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
+static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  SourceLocation LiteralLoc;
+  // Check that it is a string.
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
+    return;
+
+  llvm::CodeModel::Model CM;
+  if (!CodeModelAttr::ConvertStrToModel(Str, CM)) {
+    S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) CodeModelAttr(S.Context, AL, CM));
+}
+
 // This is used for `__declspec(code_seg("segname"))` on a decl.
 // `#pragma code_seg("segname")` uses checkSectionName() instead.
 static bool checkCodeSegName(Sema &S, SourceLocation LiteralLoc,
@@ -5825,8 +5841,7 @@ struct IntrinToName {
 static bool ArmBuiltinAliasValid(unsigned BuiltinID, StringRef AliasName,
                                  ArrayRef<IntrinToName> Map,
                                  const char *IntrinNames) {
-  if (AliasName.starts_with("__arm_"))
-    AliasName = AliasName.substr(6);
+  AliasName.consume_front("__arm_");
   const IntrinToName *It =
       llvm::lower_bound(Map, BuiltinID, [](const IntrinToName &L, unsigned Id) {
         return L.Id < Id;
@@ -8445,92 +8460,6 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
 }
 
-static void handleCountedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!AL.isArgIdent(0)) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
-        << AL << AANT_ArgumentIdentifier;
-    return;
-  }
-
-  IdentifierLoc *IL = AL.getArgAsIdent(0);
-  CountedByAttr *CBA =
-      ::new (S.Context) CountedByAttr(S.Context, AL, IL->Ident);
-  CBA->setCountedByFieldLoc(IL->Loc);
-  D->addAttr(CBA);
-}
-
-bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
-  const auto *CBA = FD->getAttr<CountedByAttr>();
-  const IdentifierInfo *FieldName = CBA->getCountedByField();
-  DeclarationNameInfo NameInfo(FieldName,
-                               CBA->getCountedByFieldLoc().getBegin());
-
-  LookupResult MemResult(*this, NameInfo, Sema::LookupMemberName);
-  LookupName(MemResult, S);
-
-  if (MemResult.empty()) {
-    // The "counted_by" field needs to exist within the struct.
-    LookupResult OrdResult(*this, NameInfo, Sema::LookupOrdinaryName);
-    LookupName(OrdResult, S);
-
-    if (!OrdResult.empty()) {
-      SourceRange SR = FD->getLocation();
-      Diag(SR.getBegin(), diag::err_counted_by_must_be_in_structure)
-          << FieldName << SR;
-
-      if (auto *ND = OrdResult.getAsSingle<NamedDecl>()) {
-        SR = ND->getLocation();
-        Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
-            << ND << SR;
-      }
-      return true;
-    }
-
-    CXXScopeSpec SS;
-    DeclFilterCCC<FieldDecl> Filter(FieldName);
-    return DiagnoseEmptyLookup(S, SS, MemResult, Filter, nullptr, std::nullopt,
-                               const_cast<DeclContext *>(FD->getDeclContext()));
-  }
-
-  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
-
-  if (!Decl::isFlexibleArrayMemberLike(Context, FD, FD->getType(),
-                                       StrictFlexArraysLevel, true)) {
-    // The "counted_by" attribute must be on a flexible array member.
-    SourceRange SR = FD->getLocation();
-    Diag(SR.getBegin(), diag::err_counted_by_attr_not_on_flexible_array_member)
-        << SR;
-    return true;
-  }
-
-  if (const FieldDecl *Field = MemResult.getAsSingle<FieldDecl>()) {
-    if (Field->hasAttr<CountedByAttr>()) {
-      // The "counted_by" field can't point to the flexible array member.
-      SourceRange SR = CBA->getCountedByFieldLoc();
-      Diag(SR.getBegin(), diag::err_counted_by_attr_refers_to_flexible_array)
-          << CBA->getCountedByField() << SR;
-      return true;
-    }
-
-    if (!Field->getType()->isIntegerType() ||
-        Field->getType()->isBooleanType()) {
-      // The "counted_by" field must have an integer type.
-      SourceRange SR = CBA->getCountedByFieldLoc();
-      Diag(SR.getBegin(),
-           diag::err_flexible_array_counted_by_attr_field_not_integer)
-          << CBA->getCountedByField() << SR;
-
-      SR = Field->getLocation();
-      Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
-          << Field << SR;
-      return true;
-    }
-  }
-
-  return false;
-}
-
 static void handleFunctionReturnThunksAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
   StringRef KindStr;
@@ -8893,26 +8822,74 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
+static bool checkArmNewAttrMutualExclusion(
+    Sema &S, const ParsedAttr &AL, const FunctionProtoType *FPT,
+    FunctionType::ArmStateValue CurrentState, StringRef StateName) {
+  auto CheckForIncompatibleAttr =
+      [&](FunctionType::ArmStateValue IncompatibleState,
+          StringRef IncompatibleStateName) {
+        if (CurrentState == IncompatibleState) {
+          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+              << (std::string("'__arm_new(\"") + StateName.str() + "\")'")
+              << (std::string("'") + IncompatibleStateName.str() + "(\"" +
+                  StateName.str() + "\")'")
+              << true;
+          AL.setInvalid();
+        }
+      };
 
-static void handleArmNewZaAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  CheckForIncompatibleAttr(FunctionType::ARM_In, "__arm_in");
+  CheckForIncompatibleAttr(FunctionType::ARM_Out, "__arm_out");
+  CheckForIncompatibleAttr(FunctionType::ARM_InOut, "__arm_inout");
+  CheckForIncompatibleAttr(FunctionType::ARM_Preserves, "__arm_preserves");
+  return AL.isInvalid();
+}
+
+static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.getNumArgs()) {
+    S.Diag(AL.getLoc(), diag::err_missing_arm_state) << AL;
+    AL.setInvalid();
+    return;
+  }
+
+  std::vector<StringRef> NewState;
+  if (const auto *ExistingAttr = D->getAttr<ArmNewAttr>()) {
+    for (StringRef S : ExistingAttr->newArgs())
+      NewState.push_back(S);
+  }
+
+  bool HasZA = false;
+  for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(AL, I, StateName, &LiteralLoc))
+      return;
+
+    if (StateName == "za")
+      HasZA = true;
+    else {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      AL.setInvalid();
+      return;
+    }
+
+    if (std::find(NewState.begin(), NewState.end(), StateName) ==
+        NewState.end()) { // Avoid adding duplicates.
+      NewState.push_back(StateName);
+    }
+  }
+
   if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZASharedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_shared_za'" << true;
-      AL.setInvalid();
-    }
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZAPreservedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_preserves_za'" << true;
-      AL.setInvalid();
-    }
-    if (AL.isInvalid())
+    FunctionType::ArmStateValue ZAState =
+        FunctionType::getArmZAState(FPT->getAArch64SMEAttributes());
+    if (HasZA && ZAState != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZAState, "za"))
       return;
   }
 
-  handleSimpleAttribute<ArmNewZAAttr>(S, D, AL);
+  D->dropAttr<ArmNewAttr>();
+  D->addAttr(::new (S.Context)
+                 ArmNewAttr(S.Context, AL, NewState.data(), NewState.size()));
 }
 
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
@@ -9340,6 +9317,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_CodeModel:
+    handleCodeModelAttr(S, D, AL);
+    break;
   case ParsedAttr::AT_RandomizeLayout:
     handleRandomizeLayoutAttr(S, D, AL);
     break;
@@ -9486,10 +9466,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:
     handleAvailableOnlyInDefaultEvalMethod(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_CountedBy:
-    handleCountedByAttr(S, D, AL);
     break;
 
   // Microsoft attributes:
@@ -9691,8 +9667,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleSimpleAttribute<ArmLocallyStreamingAttr>(S, D, AL);
     break;
 
-  case ParsedAttr::AT_ArmNewZA:
-    handleArmNewZaAttr(S, D, AL);
+  case ParsedAttr::AT_ArmNew:
+    handleArmNewAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AcquireHandle:

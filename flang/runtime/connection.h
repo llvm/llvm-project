@@ -111,10 +111,12 @@ class SavedPosition {
 public:
   explicit SavedPosition(IoStatementState &);
   ~SavedPosition();
+  void Cancel() { cancelled_ = true; }
 
 private:
   IoStatementState &io_;
   ConnectionState saved_;
+  bool cancelled_{false};
 };
 
 } // namespace Fortran::runtime::io

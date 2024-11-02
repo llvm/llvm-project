@@ -1011,6 +1011,12 @@ public:
     return *Callsites;
   }
 
+  void addCallsite(CallsiteInfo &Callsite) {
+    if (!Callsites)
+      Callsites = std::make_unique<CallsitesTy>();
+    Callsites->push_back(Callsite);
+  }
+
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;

@@ -67,7 +67,7 @@ constexpr bool test() {
     // simple-view: const and non-const have the same iterator/sentinel type
     std::ranges::zip_view v{SimpleNonCommon(buffer1), SimpleNonCommon(buffer2), SimpleNonCommon(buffer3)};
     static_assert(!std::ranges::common_range<decltype(v)>);
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<decltype(v)>);
+    static_assert(simple_view<decltype(v)>);
 
     assert(v.begin() != v.end());
     assert(v.begin() + 1 != v.end());
@@ -80,7 +80,7 @@ constexpr bool test() {
     // !simple-view: const and non-const have different iterator/sentinel types
     std::ranges::zip_view v{NonSimpleNonCommon(buffer1), SimpleNonCommon(buffer2), SimpleNonCommon(buffer3)};
     static_assert(!std::ranges::common_range<decltype(v)>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<decltype(v)>);
+    static_assert(!simple_view<decltype(v)>);
 
     assert(v.begin() != v.end());
     assert(v.begin() + 4 == v.end());
@@ -105,7 +105,7 @@ constexpr bool test() {
     // underlying const/non-const sentinel can be compared with both const/non-const iterator
     std::ranges::zip_view v{ComparableView(buffer1), ComparableView(buffer2)};
     static_assert(!std::ranges::common_range<decltype(v)>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<decltype(v)>);
+    static_assert(!simple_view<decltype(v)>);
 
     assert(v.begin() != v.end());
     assert(v.begin() + 4 == v.end());
@@ -130,7 +130,7 @@ constexpr bool test() {
     // underlying const/non-const sentinel cannot be compared with non-const/const iterator
     std::ranges::zip_view v{ComparableView(buffer1), ConstIncompatibleView{}};
     static_assert(!std::ranges::common_range<decltype(v)>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<decltype(v)>);
+    static_assert(!simple_view<decltype(v)>);
 
     using Iter = std::ranges::iterator_t<decltype(v)>;
     using ConstIter = std::ranges::iterator_t<const decltype(v)>;

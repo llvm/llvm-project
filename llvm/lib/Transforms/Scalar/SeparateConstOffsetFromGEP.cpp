@@ -843,7 +843,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
         AccumulativeByteOffset +=
-            ConstantOffset * DL->getTypeAllocSize(GTI.getIndexedType());
+            ConstantOffset * GTI.getSequentialElementStride(*DL);
       }
     } else if (LowerGEP) {
       StructType *StTy = GTI.getStructType();
@@ -884,7 +884,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
           continue;
 
       APInt ElementSize = APInt(PtrIndexTy->getIntegerBitWidth(),
-                                DL->getTypeAllocSize(GTI.getIndexedType()));
+                                GTI.getSequentialElementStride(*DL));
       // Scale the index by element size.
       if (ElementSize != 1) {
         if (ElementSize.isPowerOf2()) {
@@ -896,8 +896,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
         }
       }
       // Create an ugly GEP with a single index for each index.
-      ResultPtr =
-          Builder.CreateGEP(Builder.getInt8Ty(), ResultPtr, Idx, "uglygep");
+      ResultPtr = Builder.CreatePtrAdd(ResultPtr, Idx, "uglygep");
       if (FirstResult == nullptr)
         FirstResult = ResultPtr;
     }
@@ -906,8 +905,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   // Create a GEP with the constant offset index.
   if (AccumulativeByteOffset != 0) {
     Value *Offset = ConstantInt::get(PtrIndexTy, AccumulativeByteOffset);
-    ResultPtr =
-        Builder.CreateGEP(Builder.getInt8Ty(), ResultPtr, Offset, "uglygep");
+    ResultPtr = Builder.CreatePtrAdd(ResultPtr, Offset, "uglygep");
   } else
     isSwapCandidate = false;
 
@@ -946,7 +944,7 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
           continue;
 
       APInt ElementSize = APInt(IntPtrTy->getIntegerBitWidth(),
-                                DL->getTypeAllocSize(GTI.getIndexedType()));
+                                GTI.getSequentialElementStride(*DL));
       // Scale the index by element size.
       if (ElementSize != 1) {
         if (ElementSize.isPowerOf2()) {
@@ -1093,67 +1091,24 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // => add the offset
   //
   //   %gep2                       ; clone of %gep
-  //   %new.gep = gep %gep2, <offset / sizeof(*%gep)>
+  //   %new.gep = gep i8, %gep2, %offset
   //   %gep                        ; will be removed
   //   ... %gep ...
   //
   // => replace all uses of %gep with %new.gep and remove %gep
   //
   //   %gep2                       ; clone of %gep
-  //   %new.gep = gep %gep2, <offset / sizeof(*%gep)>
-  //   ... %new.gep ...
-  //
-  // If AccumulativeByteOffset is not a multiple of sizeof(*%gep), we emit an
-  // uglygep (http://llvm.org/docs/GetElementPtr.html#what-s-an-uglygep):
-  // bitcast %gep2 to i8*, add the offset, and bitcast the result back to the
-  // type of %gep.
-  //
-  //   %gep2                       ; clone of %gep
-  //   %0       = bitcast %gep2 to i8*
-  //   %uglygep = gep %0, <offset>
-  //   %new.gep = bitcast %uglygep to <type of %gep>
+  //   %new.gep = gep i8, %gep2, %offset
   //   ... %new.gep ...
   Instruction *NewGEP = GEP->clone();
   NewGEP->insertBefore(GEP);
 
-  // Per ANSI C standard, signed / unsigned = unsigned and signed % unsigned =
-  // unsigned.. Therefore, we cast ElementTypeSizeOfGEP to signed because it is
-  // used with unsigned integers later.
-  int64_t ElementTypeSizeOfGEP = static_cast<int64_t>(
-      DL->getTypeAllocSize(GEP->getResultElementType()));
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
-  if (AccumulativeByteOffset % ElementTypeSizeOfGEP == 0) {
-    // Very likely. As long as %gep is naturally aligned, the byte offset we
-    // extracted should be a multiple of sizeof(*%gep).
-    int64_t Index = AccumulativeByteOffset / ElementTypeSizeOfGEP;
-    NewGEP = GetElementPtrInst::Create(GEP->getResultElementType(), NewGEP,
-                                       ConstantInt::get(PtrIdxTy, Index, true),
-                                       GEP->getName(), GEP);
-    NewGEP->copyMetadata(*GEP);
-    // Inherit the inbounds attribute of the original GEP.
-    cast<GetElementPtrInst>(NewGEP)->setIsInBounds(GEPWasInBounds);
-  } else {
-    // Unlikely but possible. For example,
-    // #pragma pack(1)
-    // struct S {
-    //   int a[3];
-    //   int64 b[8];
-    // };
-    // #pragma pack()
-    //
-    // Suppose the gep before extraction is &s[i + 1].b[j + 3]. After
-    // extraction, it becomes &s[i].b[j] and AccumulativeByteOffset is
-    // sizeof(S) + 3 * sizeof(int64) = 100, which is not a multiple of
-    // sizeof(int64).
-    //
-    // Emit an uglygep in this case.
-    IRBuilder<> Builder(GEP);
-    NewGEP = cast<Instruction>(Builder.CreateGEP(
-        Builder.getInt8Ty(), NewGEP,
-        {ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true)}, "uglygep",
-        GEPWasInBounds));
-    NewGEP->copyMetadata(*GEP);
-  }
+  IRBuilder<> Builder(GEP);
+  NewGEP = cast<Instruction>(Builder.CreatePtrAdd(
+      NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true),
+      GEP->getName(), GEPWasInBounds));
+  NewGEP->copyMetadata(*GEP);
 
   GEP->replaceAllUsesWith(NewGEP);
   GEP->eraseFromParent();

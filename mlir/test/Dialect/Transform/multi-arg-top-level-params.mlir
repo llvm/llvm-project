@@ -4,9 +4,9 @@
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op, %arg1: !transform.param<i64>, %arg2: !transform.param<i64>):
   // expected-remark @below {{1 : i64, 2 : i64, 3 : i64}}
-  transform.test_print_param %arg1 : !transform.param<i64>
+  transform.debug.emit_param_as_remark %arg1 : !transform.param<i64>
   // expected-remark @below {{42 : i64, 45 : i64}}
-  transform.test_print_param %arg2 : !transform.param<i64>
+  transform.debug.emit_param_as_remark %arg2 : !transform.param<i64>
 }
 
 // -----

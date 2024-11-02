@@ -2370,4 +2370,3 @@ define <vscale x 8 x double> @splice_nxv8f64_offset_max(<vscale x 8 x double> %a
 }
 
 attributes #0 = { vscale_range(2,0) }
-

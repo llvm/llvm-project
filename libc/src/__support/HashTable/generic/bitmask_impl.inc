@@ -113,7 +113,8 @@ struct Group {
   }
 
   LIBC_INLINE IteratableBitMask occupied() const {
-    return {static_cast<bitmask_t>(mask_available().word ^ repeat_byte(0x80))};
+    return {
+        {static_cast<bitmask_t>(mask_available().word ^ repeat_byte(0x80))}};
   }
 };
 } // namespace internal

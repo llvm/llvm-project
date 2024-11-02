@@ -198,6 +198,10 @@ OPTIONS
   Enable/disable target-specific attributes. Specify ``--mattr=help`` to display
   the available attributes.
 
+.. option:: -mllvm <arg>
+
+   Specify an argument to forward to LLVM's CommandLine library.
+
 .. option:: --no-leading-addr, --no-addresses
 
   When disassembling, do not print leading addresses for instructions or inline

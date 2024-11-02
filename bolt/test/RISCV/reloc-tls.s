@@ -4,10 +4,10 @@
 // RUN:    | FileCheck %s
 
 // CHECK-LABEL: Binary Function "tls_le{{.*}}" after building cfg {
-// CHECK:      lui a5, 0
+// CHECK:      lui a5, 0x0
 // CHECK-NEXT: add a5, a5, tp
-// CHECK-NEXT: lw t0, 0(a5)
-// CHECK-NEXT: sw t0, 0(a5)
+// CHECK-NEXT: lw t0, 0x0(a5)
+// CHECK-NEXT: sw t0, 0x0(a5)
 
 // CHECK-LABEL: Binary Function "tls_ie" after building cfg {
 // CHECK-LABEL: .LBB01

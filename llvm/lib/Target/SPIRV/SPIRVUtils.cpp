@@ -228,8 +228,8 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
-  if (auto *GI = dyn_cast<GIntrinsic>(&MI))
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
+  if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->is(IntrinsicID);
   return false;
 }
@@ -279,7 +279,7 @@ static bool isKernelQueryBI(const StringRef MangledName) {
 }
 
 static bool isNonMangledOCLBuiltin(StringRef Name) {
-  if (!Name.startswith("__"))
+  if (!Name.starts_with("__"))
     return false;
 
   return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
@@ -289,8 +289,8 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
-  bool IsNonMangledSPIRV = Name.startswith("__spirv_");
-  bool IsMangled = Name.startswith("_Z");
+  bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
+  bool IsMangled = Name.starts_with("_Z");
 
   if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
     return std::string();
@@ -311,7 +311,7 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   // Similar to ::std:: in C++.
   size_t Start, Len = 0;
   size_t DemangledNameLenStart = 2;
-  if (Name.startswith("_ZN")) {
+  if (Name.starts_with("_ZN")) {
     // Skip CV and ref qualifiers.
     size_t NameSpaceStart = Name.find_first_not_of("rVKRO", 3);
     // All built-ins are in the ::cl:: namespace.

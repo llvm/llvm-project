@@ -434,20 +434,54 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
   return ExpressionContext::Variable;
 }
 
-void DAP::RunLLDBCommands(llvm::StringRef prefix,
-                          const std::vector<std::string> &commands) {
-  SendOutput(OutputType::Console,
-             llvm::StringRef(::RunLLDBCommands(prefix, commands)));
+bool DAP::RunLLDBCommands(llvm::StringRef prefix,
+                          llvm::ArrayRef<std::string> commands) {
+  bool required_command_failed = false;
+  std::string output =
+      ::RunLLDBCommands(prefix, commands, required_command_failed);
+  SendOutput(OutputType::Console, output);
+  return !required_command_failed;
 }
 
-void DAP::RunInitCommands() {
-  RunLLDBCommands("Running initCommands:", init_commands);
+static llvm::Error createRunLLDBCommandsErrorMessage(llvm::StringRef category) {
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      llvm::formatv(
+          "Failed to run {0} commands. See the Debug Console for more details.",
+          category)
+          .str()
+          .c_str());
 }
 
-void DAP::RunPreRunCommands() {
-  RunLLDBCommands("Running preRunCommands:", pre_run_commands);
+llvm::Error
+DAP::RunAttachCommands(llvm::ArrayRef<std::string> attach_commands) {
+  if (!RunLLDBCommands("Running attachCommands:", attach_commands))
+    return createRunLLDBCommandsErrorMessage("attach");
+  return llvm::Error::success();
 }
 
+llvm::Error
+DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
+  if (!RunLLDBCommands("Running launchCommands:", launch_commands))
+    return createRunLLDBCommandsErrorMessage("launch");
+  return llvm::Error::success();
+}
+
+llvm::Error DAP::RunInitCommands() {
+  if (!RunLLDBCommands("Running initCommands:", init_commands))
+    return createRunLLDBCommandsErrorMessage("initCommands");
+  return llvm::Error::success();
+}
+
+llvm::Error DAP::RunPreRunCommands() {
+  if (!RunLLDBCommands("Running preRunCommands:", pre_run_commands))
+    return createRunLLDBCommandsErrorMessage("preRunCommands");
+  return llvm::Error::success();
+}
+
+void DAP::RunPostRunCommands() {
+  RunLLDBCommands("Running postRunCommands:", post_run_commands);
+}
 void DAP::RunStopCommands() {
   RunLLDBCommands("Running stopCommands:", stop_commands);
 }

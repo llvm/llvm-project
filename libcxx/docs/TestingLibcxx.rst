@@ -325,18 +325,98 @@ This macro is in a different header as ``assert_macros.h`` since it pulls in
 additional headers.
 
  .. note: This macro can only be used in test using C++20 or newer. The macro
-          was added at a time where most of lib++'s C++17 support was complete.
+          was added at a time where most of libc++'s C++17 support was complete.
           Since it is not expected to add this to existing tests no effort was
           taken to make it work in earlier language versions.
 
 
-Additional reading
-------------------
+Test names
+----------
 
-The function ``CxxStandardLibraryTest`` in the file
-``libcxx/utils/libcxx/test/format.py`` has documentation about writing test. It
-explains the difference between the test named  ``foo.pass.cpp`` and named
-``foo.verify.cpp`` are.
+The names of test files have meaning for the libc++-specific configuration of
+Lit. Based on the pattern that matches the name of a test file, Lit will test
+the code contained therein in different ways. Refer to the `Lit Meaning of libc++
+Test Filenames`_ when determining the names for new test files.
+
+.. _Lit Meaning of libc++ Test Filenames:
+.. list-table:: Lit Meaning of libc++ Test Filenames
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Name Pattern
+     - Meaning
+   * - ``FOO.pass.cpp``
+     - Checks whether the C++ code in the file compiles, links and runs successfully.
+   * - ``FOO.pass.mm``
+     - Same as ``FOO.pass.cpp``, but for Objective-C++.
+
+   * - ``FOO.compile.pass.cpp``
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests, 
+       subject to the specific recommendations, below, for when to write ``verify`` tests.
+   * - ``FOO.compile.pass.mm``
+     - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
+   * - ``FOO.compile.fail.cpp``
+     - Checks that the code in the file does *not* compile successfully.
+
+   * - ``FOO.verify.cpp``
+     - Compiles with clang-verify. This type of test is automatically marked as UNSUPPORTED if the compiler does not support clang-verify.
+       For additional information about how to write ``verify`` tests, see the `Internals Manual <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_.
+       Prefer `verify` tests over ``compile`` tests to test that compilation fails for a particular reason. For example, use a ``verify`` test
+       to ensure that
+
+       * an expected ``static_assert`` is triggered;
+       * the use of deprecated functions generates the proper warning;
+       * removed functions are no longer usable; or
+       * return values from functions marked ``[[nodiscard]]`` are stored.
+
+   * - ``FOO.link.pass.cpp``
+     - Checks that the C++ code in the file compiles and links successfully -- no run attempted.
+   * - ``FOO.link.pass.mm``
+     - Same as ``FOO.link.pass.cpp``, but for Objective-C++.
+   * - ``FOO.link.fail.cpp``
+     - Checks whether the C++ code in the file fails to link after successful compilation.
+   * - ``FOO.link.fail.mm``
+     - Same as ``FOO.link.fail.cpp``, but for Objective-C++.
+
+   * - ``FOO.sh.<anything>``
+     - A *builtin Lit Shell* test.
+   * - ``FOO.gen.<anything>``
+     - A variant of a *Lit Shell* test that generates one or more Lit tests on the fly. Executing this test must generate one or more files as expected
+       by LLVM split-file. Each generated file will drive an invocation of a separate Lit test. The format of the generated file will determine the type
+       of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
+       in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
+
+
+libc++-Specific Lit Features
+----------------------------
+
+Custom Directives
+~~~~~~~~~~~~~~~~~
+
+Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
+writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES`` and ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific directives.
+
+.. _libc++-specific Lit Directives:
+.. list-table:: libc++-specific Lit Directives
+   :widths: 20 35 45
+   :header-rows: 1
+
+   * - Directive
+     - Parameters
+     - Usage
+   * - ``FILE_DEPENDENCIES``
+     - ``// FILE_DEPENDENCIES: file, directory, /path/to/file, ...``
+     - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. For example, a test that requires some test
+       input stored in a data file would use this libc++-specific Lit directive. When a test file contains the ``FILE_DEPENDENCIES`` directive, Lit will collect the named files and copy
+       them to the directory represented by the ``%T`` substitution before the test executes. The copy is performed from the directory represented by the ``%S`` substitution
+       (i.e. the source directory of the test being executed) which makes it possible to use relative paths to specify the location of dependency files. After Lit copies
+       all the dependent files to the directory specified by the ``%T`` substitution, that directory should contain *all* the necessary inputs to run. In other words,
+       it should be possible to copy the contents of the directory specified by the ``%T`` substitution to a remote host where the execution of the test will actually occur.
+   * - ``ADDITIONAL_COMPILE_FLAGS``
+     - ``// ADDITIONAL_COMPILE_FLAGS: flag1 flag2 ...``
+     - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
+       substitution for the test that contains it. This libc++-specific Lit directive makes it possible to add special compilation flags without having to resort to writing a ``.sh.cpp`` test (see
+       `Lit Meaning of libc++ Test Filenames`_), more powerful but perhaps overkill.
 
 Benchmarks
 ==========

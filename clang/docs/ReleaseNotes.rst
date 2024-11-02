@@ -37,6 +37,35 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Fix a bug in reversed argument for templated operators.
+  This breaks code in C++20 which was previously accepted in C++17.
+  Clang did not properly diagnose such casese in C++20 before this change. Eg:
+
+  .. code-block:: cpp
+
+    struct P {};
+    template<class S> bool operator==(const P&, const S&);
+
+    struct A : public P {};
+    struct B : public P {};
+
+    // This equality is now ambiguous in C++20.
+    bool ambiguous(A a, B b) { return a == b; }
+
+    template<class S> bool operator!=(const P&, const S&);
+    // Ok. Found a matching operator!=.
+    bool fine(A a, B b) { return a == b; }
+
+  To reduce such widespread breakages, as an extension, Clang accepts this code
+  with an existing warning ``-Wambiguous-reversed-operator`` warning.
+  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
+
+- The CMake variable ``GCC_INSTALL_PREFIX`` (which sets the default
+  ``--gcc-toolchain=``) is deprecated and will be removed. Specify
+  ``--gcc-install-dir=`` or ``--gcc-triple=`` in a `configuration file
+  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>` as a
+  replacement.
+  (`#77537 <https://github.com/llvm/llvm-project/pull/77537>`_)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -67,6 +96,10 @@ C/C++ Language Potentially Breaking Changes
 - Fixed a bug in finding matching `operator!=` while adding reversed `operator==` as
   outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
   Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
+
+- Remove the hardcoded path to the imported modules for C++20 named modules. Now we
+  require all the dependent modules to specified from the command line.
+  See (`#62707: <https://github.com/llvm/llvm-project/issues/62707>`_).
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -199,11 +232,6 @@ C Language Changes
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
   constant expressions.  This change is more consistent with the behavior of
   GCC.
-- Clang now supports the C-only attribute ``counted_by``. When applied to a
-  struct's flexible array member, it points to the struct field that holds the
-  number of elements in the flexible array member. This information can improve
-  the results of the array bound sanitizer and the
-  ``__builtin_dynamic_object_size`` builtin.
 - Enums will now be represented in TBAA metadata using their actual underlying
   integer type. Previously they were treated as chars, which meant they could
   alias with all other types.
@@ -258,7 +286,7 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 * ``-fassume-nothrow-exception-dtor`` is added to assume that the destructor of
-  an thrown exception object will not throw. The generated code for catch
+  a thrown exception object will not throw. The generated code for catch
   handlers will be smaller. A throw expression of a type with a
   potentially-throwing destructor will lead to an error.
 
@@ -362,6 +390,7 @@ Attribute Changes in Clang
 - Clang now introduced ``[[clang::coro_lifetimebound]]`` attribute.
   All parameters of a function are considered to be lifetime bound if the function
   returns a type annotated with ``[[clang::coro_lifetimebound]]`` and ``[[clang::coro_return_type]]``.
+  This analysis can be disabled for a function by annotating the function with ``[[clang::coro_disable_lifetimebound]]``.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -521,6 +550,12 @@ Improvements to Clang's diagnostics
           |               ~~~~~~~^~~~~
 
 - Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
+- Clang now diagnoses narrowing conversions involving const references.
+  (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
+- Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
+- Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
+  converted constant expression and not as a reference to subobject.
+
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -609,7 +644,9 @@ Bug Fixes in This Version
 - Clang will correctly evaluate ``noexcept`` expression for template functions
   of template classes. Fixes
   (`#68543 <https://github.com/llvm/llvm-project/issues/68543>`_,
-  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_)
+  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_,
+  `#77071 <https://github.com/llvm/llvm-project/issues/77071>`_,
+  `#77411 <https://github.com/llvm/llvm-project/issues/77411>`_)
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
@@ -685,9 +722,32 @@ Bug Fixes in This Version
   (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
   (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
-- Fixed false positive error emitted when templated alias inside a class
-  used private members of the same class.
-  Fixes (`#41693 <https://github.com/llvm/llvm-project/issues/41693>`_)
+- Fix an issue where clang doesn't respect detault template arguments that
+  are added in a later redeclaration for CTAD.
+  Fixes (`#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
+- Fix an issue where CTAD fails for explicit type conversion.
+  Fixes (`#64347 <https://github.com/llvm/llvm-project/issues/64347>`_)
+- Fix crash when using C++ only tokens like ``::`` in C compiler clang.
+  Fixes (`#73559 <https://github.com/llvm/llvm-project/issues/73559>`_)
+- Clang now accepts recursive non-dependent calls to functions with deduced
+  return type.
+  Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
+- Fix assertion failure when initializing union containing struct with
+  flexible array member using empty initializer list.
+  Fixes (`#77085 <https://github.com/llvm/llvm-project/issues/77085>`_)
+- Fix assertion crash due to failed scope restoring caused by too-early VarDecl
+  invalidation by invalid initializer Expr.
+  Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
+- Clang now emits correct source location for code-coverage regions in `if constexpr`
+  and `if consteval` branches.
+  Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
+- Fix assertion failure when declaring a template friend function with
+  a constrained parameter in a template class that declares a class method
+  or lambda at different depth.
+  Fixes (`#75426 <https://github.com/llvm/llvm-project/issues/75426>`_)
+- Fix an issue where clang cannot find conversion function with template
+  parameter when instantiation of template class.
+  Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -715,7 +775,8 @@ Bug Fixes to C++ Support
 
 - Clang emits an error on substitution failure within lambda body inside a
   requires-expression. This fixes:
-  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_).
+  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>`_) and
+  (`#71684 <https://github.com/llvm/llvm-project/issues/71684>`_).
 
 - Update ``FunctionDeclBitfields.NumFunctionDeclBits``. This fixes:
   (`#64171 <https://github.com/llvm/llvm-project/issues/64171>`_).
@@ -842,6 +903,16 @@ Bug Fixes to C++ Support
 - Fix crash when parsing nested requirement. Fixes:
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
 
+- Fixed a crash caused by using return type requirement in a lambda. Fixes:
+  (`#63808 <https://github.com/llvm/llvm-project/issues/63808>`_)
+  (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
+  (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
+
+- Fixed a regression where clang forgets how to substitute into constraints on template-template
+  parameters. Fixes:
+  (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
+  (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -855,6 +926,12 @@ Bug Fixes to AST Handling
 - Fixed a bug where RecursiveASTVisitor fails to visit the
   initializer of a bitfield.
   `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
+- Fixed a bug where range-loop-analysis checks for trivial copyability,
+  rather than trivial copy-constructibility
+  `Issue 47355 <https://github.com/llvm/llvm-project/issues/47355>`_
+- Fixed a bug where Template Instantiation failed to handle Lambda Expressions
+  with certain types of Attributes.
+  (`#76521 <https://github.com/llvm/llvm-project/issues/76521>`_)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -876,6 +953,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when a lambda marked as ``static`` referenced a captured
   variable in an expression.
   `Issue 74608 <https://github.com/llvm/llvm-project/issues/74608>`_
+- Fixed a crash with modules and a ``constexpr`` destructor.
+  `Issue 68702 <https://github.com/llvm/llvm-project/issues/68702>`_
 
 
 OpenACC Specific Changes
@@ -909,6 +988,15 @@ X86 Support
   * Support intrinsic of ``_uwrmsr``.
 - Support ISA of ``AVX10.1``.
 - ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
+- Added ABI handling for ``__float128`` to match with GCC.
+- Emit warnings for options to enable knl/knm specific ISAs: AVX512PF, AVX512ER
+  and PREFETCHWT1. From next version (LLVM 19), these ISAs' intrinsic supports
+  will be deprecated:
+  * intrinsic series of *_exp2a23_*
+  * intrinsic series of *_rsqrt28_*
+  * intrinsic series of *_rcp28_*
+  * intrinsic series of *_prefetch_i[3|6][2|4]gather_*
+  * intrinsic series of *_prefetch_i[3|6][2|4]scatter_*
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -970,6 +1058,9 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
+
+- Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
+  for RV64.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1037,6 +1128,9 @@ clang-format
 - Add ``BreakAdjacentStringLiterals`` option.
 - Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
   attributes (like ``nonatomic, strong, nullable``).
+- Add ``PenaltyBreakScopeResolution`` option.
+- Add ``.clang-format-ignore`` files.
+- Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 
 libclang
 --------
@@ -1048,18 +1142,124 @@ libclang
 Static Analyzer
 ---------------
 
+New features
+^^^^^^^^^^^^
+
+- Implemented the ``[[clang::suppress]]`` attribute for suppressing diagnostics
+  of static analysis tools, such as the Clang Static Analyzer.
+  `Documentation <https://clang.llvm.org/docs/AttributeReference.html#suppress>`__.
+
+- Added support for the ``cleanup`` attribute.
+  `Documentation <https://clang.llvm.org/docs/AttributeReference.html#cleanup>`__.
+
+- Support "Deducing this" (P0847R7). (Worked out of the box)
+  (`af4751738db8 <https://github.com/llvm/llvm-project/commit/af4751738db89a142a8880c782d12d4201b222a8>`__)
+
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#core-bitwiseshift-c-c>`__.
 
-- Move checker ``alpha.unix.Errno`` out of the ``alpha`` package
-  to ``unix.Errno``.
+- Added a new experimental checker ``alpha.core.StdVariant`` to detect variant
+  accesses via wrong alternatives.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#alpha-core-stdvariant-c>`__.
+  (`#66481 <https://github.com/llvm/llvm-project/pull/66481>`_)
 
-- Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
-  to ``unix.StdCLibraryFunctions``.
+- Added a new experimental checker ``alpha.cplusplus.ArrayDelete`` to detect
+  destructions of arrays of polymorphic objects that are destructed as their
+  base class (`CERT EXP51-CPP <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_).
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#alpha-cplusplus-arraydelete-c>`__.
+  (`0e246bb67573 <https://github.com/llvm/llvm-project/commit/0e246bb67573799409d0085b89902a330998ddcc>`_)
+
+- Added a new checker configuration option ``InvalidatingGetEnv=[true,false]`` to
+  ``security.cert.env.InvalidPtr``. It's not set by default.
+  If set, ``getenv`` calls won't invalidate previously returned pointers.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`__.
+  (`#67663 <https://github.com/llvm/llvm-project/pull/67663>`_)
+
+Crash and bug fixes
+^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash caused by ``builtin_bit_cast``.
+  (`#69922 <https://github.com/llvm/llvm-project/issues/69922>`_)
+
+- Fixed a ``core.StackAddressEscape`` crash on temporary object fields.
+  (`#66221 <https://github.com/llvm/llvm-project/issues/66221>`_)
+
+- A few crashes have been found and fixed using randomized testing related
+  to the use of ``_BitInt()`` in tidy checks and in clang analysis.
+  (`#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
+  `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
+  `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
+  `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_,
+  `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_)
+
+- Fixed note links of the HTML output.
+  (`#64054 <https://github.com/llvm/llvm-project/issues/64054>`_)
+
+- Allow widening rage-based for loops.
+  (`#70190 <https://github.com/llvm/llvm-project/pull/70190>`_)
+
+- Fixed uninitialized base class with initializer list when ctor is not
+  declared in the base class.
+  (`#70464 <https://github.com/llvm/llvm-project/issues/70464>`_,
+  `#59493 <https://github.com/llvm/llvm-project/issues/59493>`_,
+  `#54533 <https://github.com/llvm/llvm-project/issues/54533>`_)
+
+- Fixed an ``alpha.unix.cstring`` crash on variadic functions.
+  (`#74269 <https://github.com/llvm/llvm-project/issues/74269>`_)
 
 - Fix false positive in mutation check when using pointer to member function.
-  (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).
+  (`#66204 <https://github.com/llvm/llvm-project/issues/66204>`_)
+
+Improvements
+^^^^^^^^^^^^
+
+- Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
+  functions like ``send``, ``recv``, ``readlink``, ``fflush``, ``mkdtemp``,
+  ``getcwd`` and ``errno`` behavior.
+  (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
+  `#77040 <https://github.com/llvm/llvm-project/pull/77040>`_,
+  `#76671 <https://github.com/llvm/llvm-project/pull/76671>`_,
+  `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
+  `#76557 <https://github.com/llvm/llvm-project/pull/76557>`_,
+  `#71392 <https://github.com/llvm/llvm-project/pull/71392>`_)
+
+- Fixed a false negative for when accessing a nonnull property (ObjC).
+  (`1dceba3a3684 <https://github.com/llvm/llvm-project/commit/1dceba3a3684d12394731e09a6cf3efcebf07a3a>`_)
+
+- ``security.insecureAPI.DeprecatedOrUnsafeBufferHandling`` now considers
+  ``fprintf`` calls unsafe.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-deprecatedorunsafebufferhandling-c>`__.
+
+- Improved the diagnostics of the ``optin.core.EnumCastOutOfRange`` checker.
+  It will display the name and the declaration of the enumeration along with
+  the concrete value being cast to the enum.
+  (`#74503 <https://github.com/llvm/llvm-project/pull/74503>`_)
+
+- Improved the ``alpha.security.ArrayBoundV2`` checker for detecting buffer
+  accesses prior the buffer; and also reworked the diagnostic messages.
+  (`3e014038b373 <https://github.com/llvm/llvm-project/commit/3e014038b373e5a4a96d89d46cea17e4d2456a04>`_,
+  `#70056 <https://github.com/llvm/llvm-project/pull/70056>`_,
+  `#72107 <https://github.com/llvm/llvm-project/pull/72107>`_)
+
+- Improved the ``alpha.unix.cstring.OutOfBounds`` checking both ends of the
+  buffers in more cases.
+  (`c3a87ddad62a <https://github.com/llvm/llvm-project/commit/c3a87ddad62a6cc01acaccc76592bc6730c8ac3c>`_,
+  `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
+
+- Improved the ``alpha.unix.Stream`` checker by modeling more functions
+  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``
+  and no not recognize alternative ``fopen`` and ``tmpfile`` implementations.
+  (`#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
+  `#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
+  `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
+  `#72627 <https://github.com/llvm/llvm-project/pull/72627>`_,
+  `#71518 <https://github.com/llvm/llvm-project/pull/71518>`_,
+  `#72016 <https://github.com/llvm/llvm-project/pull/72016>`_,
+  `#70540 <https://github.com/llvm/llvm-project/pull/70540>`_,
+  `#73638 <https://github.com/llvm/llvm-project/pull/73638>`_,
+  `#77331 <https://github.com/llvm/llvm-project/pull/77331>`_)
 
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked
@@ -1068,16 +1268,32 @@ Static Analyzer
   Read the PR for the details.
   (`#66086 <https://github.com/llvm/llvm-project/pull/66086>`_)
 
-- A few crashes have been found and fixed using randomized testing related
-  to the use of ``_BitInt()`` in tidy checks and in clang analysis. See
-  `#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
-  `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
-  `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
-  `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
-  `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
+- Other taint-related improvements.
+  (`#66358 <https://github.com/llvm/llvm-project/pull/66358>`_,
+  `#66074 <https://github.com/llvm/llvm-project/pull/66074>`_,
+  `#66358 <https://github.com/llvm/llvm-project/pull/66358>`_)
+
+- Checkers can query constraint bounds to improve diagnostic messages.
+  (`#74141 <https://github.com/llvm/llvm-project/pull/74141>`_)
+
+Moved checkers
+^^^^^^^^^^^^^^
+
+- Move checker ``alpha.unix.Errno`` out of the ``alpha`` package
+  to ``unix.Errno``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-errno-c>`__.
+
+- Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
+  to ``unix.StdCLibraryFunctions``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions-c>`__.
+
+- Move checker ``alpha.security.cert.env.InvalidPtr`` out of the ``alpha``
+  package to ``security.cert.env.InvalidPtr``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`__.
 
 - Move checker ``alpha.cplusplus.EnumCastOutOfRange`` out of the ``alpha``
   package to ``optin.core.EnumCastOutOfRange``.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#optin-core-enumcastoutofrange-c-c>`__.
 
 .. _release-notes-sanitizers:
 

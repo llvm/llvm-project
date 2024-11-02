@@ -529,7 +529,8 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (!Mod)
     return true;
 
-  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty()) {
+  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty() &&
+      !getLangOpts().ObjC) {
     Diag(ImportLoc, diag::err_module_import_non_interface_nor_parition)
         << ModuleName;
     return true;

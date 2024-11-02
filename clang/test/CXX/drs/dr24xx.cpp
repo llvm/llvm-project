@@ -45,7 +45,7 @@ void fallthrough(int n) {
 #endif
 }
 
-namespace dr2450 { // dr2450: 18 drafting
+namespace dr2450 { // dr2450: 18 review
 #if __cplusplus >= 202302L
 struct S {int a;};
 template <S s>

@@ -167,8 +167,6 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = call float @coldcc(float 1.0)
   store float %val, ptr addrspace(1) undef
@@ -231,8 +229,6 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = call float @fastcc(float 1.0)
   store float %val, ptr addrspace(1) undef
@@ -431,7 +427,7 @@ define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
 ;
 ; GFX11-LABEL: ps_mesa_v2i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_pk_sub_u16 v0, v0, -1 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, 1 op_sel_hi:[1,0]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -468,7 +464,7 @@ define amdgpu_ps void @ps_mesa_inreg_v2i16(<2 x i16> inreg %arg0) {
 ;
 ; GFX11-LABEL: ps_mesa_inreg_v2i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_pk_sub_u16 v0, s0, -1 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_u16 v0, s0, 1 op_sel_hi:[1,0]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

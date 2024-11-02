@@ -133,6 +133,24 @@ define i8 @sub_2(i8 %a, i1 %c, i8 %x, i8 %y) {
   ret i8 %not_ab
 }
 
+; Same as above but with a type larger than i64 to make sure we create -2
+; correctly.
+define i128 @sub_3(i128 %a, i1 %c, i128 %x, i128 %y) {
+; CHECK-LABEL: @sub_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i128 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i128 [[X:%.*]], i128 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i128 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = sub i128 -2, [[TMP3]]
+; CHECK-NEXT:    ret i128 [[NOT_AB]]
+;
+  %nx = xor i128 %x, -1
+  %yy = xor i128 %y, 123
+  %b = select i1 %c, i128 %nx, i128 %yy
+  %ab = sub i128 %a, %b
+  %not_ab = xor i128 %ab, -1
+  ret i128 %not_ab
+}
+
 define i8 @sub_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_fail(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1

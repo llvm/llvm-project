@@ -438,6 +438,61 @@ def CastOp : TransformDialectOp<"cast",
   }];
 }
 
+def NumAssociationsOp : TransformDialectOp<"num_associations",
+    [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     MatchOpInterface]> {
+  let summary =
+    "Returns the number of payload objects associated with the argument";
+  let description = [{
+    Given an argument, handle or parameter, returns a new parameter associated
+    with a single 64-bit number that corresponds to the number of payload
+    objects (operations or values for a handle, attributes for a parameter)
+    associated with the argument.
+
+    Always succeeds.
+  }];
+  let arguments = (ins Transform_AnyHandleOrParamType:$handle);
+  let results = (outs TransformParamTypeInterface:$num);
+  let assemblyFormat = [{
+    $handle attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
+def CollectMatchingOp : TransformDialectOp<"collect_matching", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+    DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Collects all payload ops that match the given named matcher";
+  let description = [{
+    Collects operations or other payload IR objects nested under `root`
+    (inclusive) that match the given matcher expressed as a named sequence. The
+    matcher sequence must accept exactly one argument that it is not allowed to
+    modify. It must yield as many values as this op has results. Each of the
+    yielded values must be associated with exactly one payload object. If any
+    operation in the matcher sequence produces a silenceable failure, the
+    matcher advances to the next payload operation in the walk order without
+    finishing the sequence.
+
+    The i-th result of this operation is constructed by concatenating the i-th
+    yielded payload IR objects of all successful matcher sequence applications.
+    All results are guaranteed to be mapped to the same number of payload IR
+    objects.
+
+    The operation succeeds unless the matcher sequence produced a definite
+    failure for any invocation.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root,
+                       SymbolRefAttr:$matcher);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
+
+  let assemblyFormat = [{
+    $matcher `in` $root attr-dict `:` functional-type($root, $results)
+  }];
+}
+
 def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
@@ -652,7 +707,7 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
 
 def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
-     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+     NavigationTransformOpTrait, MatchOpInterface, MemoryEffectsOpInterface]> {
   let summary = "Get handle to the producer of this operation's operand number";
   let description = [{
     The handle defined by this Transform op corresponds to operation that

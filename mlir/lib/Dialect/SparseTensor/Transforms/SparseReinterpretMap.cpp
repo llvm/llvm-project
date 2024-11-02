@@ -373,7 +373,7 @@ public:
                           PatternRewriter &rewriter) const {
     // Only rewrite single output operations with pure (sparse) tensor
     // semantics.
-    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasTensorSemantics() ||
+    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
         !hasAnySparseOperandOrResult(linalgOp) ||
         !hasAnyNonIdentityOperandsOrResults(linalgOp))
       return failure();
@@ -411,7 +411,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(linalg::GenericOp linalgOp,
                                 PatternRewriter &rewriter) const override {
-    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasTensorSemantics() ||
+    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
         hasAnyNonIdentityOperandsOrResults(linalgOp) || // need demap first
         !hasAnySparseOperandOrResult(linalgOp)) {
       return failure();

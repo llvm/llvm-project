@@ -441,3 +441,41 @@ llvm.func @_QPopenmp_target_use_dev_both() {
 // CHECK:         ret void
 
 // -----
+
+llvm.func @_QPopenmp_target_data_update() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_dataEi"} : (i64) -> !llvm.ptr
+  %2 = omp.map_info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  omp.target_data map_entries(%2 : !llvm.ptr) {
+    %3 = llvm.mlir.constant(99 : i32) : i32
+    llvm.store %3, %1 : i32, !llvm.ptr
+    omp.terminator
+  }
+
+  omp.target_update_data motion_entries(%2 : !llvm.ptr)
+
+  llvm.return
+}
+
+// CHECK-LABEL: define void @_QPopenmp_target_data_update
+
+// CHECK-DAG:     %[[OFFLOAD_BASEPTRS:.*]] = alloca [1 x ptr], align 8
+// CHECK-DAG:     %[[OFFLOAD_PTRS:.*]] = alloca [1 x ptr], align 8
+// CHECK-DAG:     %[[INT_ALLOCA:.*]] = alloca i32, i64 1, align 4
+// CHECK-DAG:     %[[OFFLOAD_MAPPERS:.*]] = alloca [1 x ptr], align 8
+
+// CHECK:         call void @__tgt_target_data_begin_mapper
+// CHECK:         store i32 99, ptr %[[INT_ALLOCA]], align 4
+// CHECK:         call void @__tgt_target_data_end_mapper
+
+// CHECK:         %[[BASEPTRS_VAL:.*]] = getelementptr inbounds [1 x ptr], ptr %[[OFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK:         store ptr %[[INT_ALLOCA]], ptr %[[BASEPTRS_VAL]], align 8
+// CHECK:         %[[PTRS_VAL:.*]] = getelementptr inbounds [1 x ptr], ptr %[[OFFLOAD_PTRS]], i32 0, i32 0
+// CHECK:         store ptr %[[INT_ALLOCA]], ptr %[[PTRS_VAL]], align 8
+// CHECK:         %[[MAPPERS_VAL:.*]] = getelementptr inbounds [1 x ptr], ptr %[[OFFLOAD_MAPPERS]], i64 0, i64 0
+// CHECK:         store ptr null, ptr %[[MAPPERS_VAL]], align 8
+// CHECK:         %[[BASEPTRS_VAL_2:.*]] = getelementptr inbounds [1 x ptr], ptr %[[OFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK:         %[[PTRS_VAL_2:.*]] = getelementptr inbounds [1 x ptr], ptr %[[OFFLOAD_PTRS]], i32 0, i32 0
+// CHECK:         call void @__tgt_target_data_update_mapper(ptr @2, i64 -1, i32 1, ptr %[[BASEPTRS_VAL_2]], ptr %[[PTRS_VAL_2]], ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr null)
+
+// CHECK:         ret void

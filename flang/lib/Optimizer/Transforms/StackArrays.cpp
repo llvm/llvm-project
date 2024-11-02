@@ -449,7 +449,7 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     const LatticePoint *lattice = solver.lookupState<LatticePoint>(op);
     // there will be no lattice for an unreachable block
     if (lattice)
-      point.join(*lattice);
+      (void)point.join(*lattice);
   };
   func->walk([&](mlir::func::ReturnOp child) { joinOperationLattice(child); });
   func->walk([&](fir::UnreachableOp child) { joinOperationLattice(child); });

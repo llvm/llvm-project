@@ -36,7 +36,7 @@
 #
 # CHECK:      BOLT: 3 out of 7 functions were overwritten.
 # CHECK:      BOLT-INFO: Wrote 6 BAT maps
-# CHECK:      BOLT-INFO: Wrote 3 BAT cold-to-hot entries
+# CHECK:      BOLT-INFO: BAT section size (bytes): 404
 #
 # usqrt mappings (hot part). We match against any key (left side containing
 # the bolted binary offsets) because BOLT may change where it puts instructions

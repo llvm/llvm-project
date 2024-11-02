@@ -12,8 +12,8 @@ define i32 @test1(i32 %num) {
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ poison, [[FOR_INC]] ]
 ; CHECK-NEXT:    switch i32 [[STATE]], label [[FOR_INC_JT1:%.*]] [
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       for.body.jt2:
 ; CHECK-NEXT:    [[COUNT_JT2:%.*]] = phi i32 [ [[INC_JT2:%.*]], [[FOR_INC_JT2:%.*]] ]
@@ -127,11 +127,11 @@ define i32 @test2(i32 %init) {
 ; CHECK:       loop.3:
 ; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ [[STATE_2]], [[LOOP_2]] ]
 ; CHECK-NEXT:    switch i32 [[STATE]], label [[INFLOOP_I:%.*]] [
-; CHECK-NEXT:    i32 2, label [[CASE2:%.*]]
-; CHECK-NEXT:    i32 3, label [[CASE3:%.*]]
-; CHECK-NEXT:    i32 4, label [[CASE4:%.*]]
-; CHECK-NEXT:    i32 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:      i32 3, label [[CASE3:%.*]]
+; CHECK-NEXT:      i32 4, label [[CASE4:%.*]]
+; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop.3.jt2:
 ; CHECK-NEXT:    [[STATE_JT2:%.*]] = phi i32 [ [[STATE_2_JT2]], [[LOOP_2_JT2]] ]
@@ -231,4 +231,64 @@ infloop.i:
 
 exit:
   ret i32 0
+}
+
+define void @pr78059_bitwidth() {
+; CHECK-LABEL: @pr78059_bitwidth(
+; CHECK-NEXT:  .split.preheader:
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i128 [ 0, [[DOTSPLIT_PREHEADER:%.*]] ]
+; CHECK-NEXT:    switch i128 [[TMP0]], label [[END:%.*]] [
+; CHECK-NEXT:      i128 -1, label [[END]]
+; CHECK-NEXT:      i128 0, label [[DOTSPLIT_JT18446744073709551615:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       .split.jt18446744073709551615:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i128 [ -1, [[DOTSPLIT]] ]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+.split.preheader:
+  br label %.split
+
+.split:
+  %0 = phi i128 [ 0, %.split.preheader ], [ -1, %.split ]
+  switch i128 %0, label %end [
+  i128 -1, label %end
+  i128 0, label %.split
+  ]
+
+end:
+  ret void
+}
+
+define void @self-reference() {
+; CHECK-LABEL: @self-reference(
+; CHECK-NEXT:  .split.preheader:
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[DOTSPLIT_PREHEADER:%.*]] ]
+; CHECK-NEXT:    switch i32 [[TMP0]], label [[END:%.*]] [
+; CHECK-NEXT:      i32 -1, label [[END]]
+; CHECK-NEXT:      i32 0, label [[DOTSPLIT_JT4294967295:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       .split.jt4294967295:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ -1, [[DOTSPLIT]] ]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+.split.preheader:
+  br label %.split
+
+.split:
+  %0 = phi i32 [ 0, %.split.preheader ], [ -1, %.split ]
+  switch i32 %0, label %end [
+  i32 -1, label %end
+  i32 0, label %.split
+  ]
+
+end:
+  ret void
 }

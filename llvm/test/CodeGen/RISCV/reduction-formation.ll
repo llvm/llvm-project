@@ -100,4 +100,3 @@ define i32 @reduce_or_4xi32(<4 x i32> %v) {
   %or2 = or i32 %or1, %e3
   ret i32 %or2
 }
-

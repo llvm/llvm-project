@@ -571,7 +571,7 @@ define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x) {
 ; CHECK-LABEL: @vec_select_no_equivalence(
-; CHECK-NEXT:    [[X10:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[X10:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[X10]], <2 x i32> [[X]]
 ; CHECK-NEXT:    ret <2 x i32> [[S]]

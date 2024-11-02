@@ -510,7 +510,7 @@ static void PrivateAutoCompleteMembers(
           i, member_name, nullptr, nullptr, nullptr);
 
       if (partial_member_name.empty() ||
-          llvm::StringRef(member_name).startswith(partial_member_name)) {
+          llvm::StringRef(member_name).starts_with(partial_member_name)) {
         if (member_name == partial_member_name) {
           PrivateAutoComplete(
               frame, partial_path,
@@ -685,7 +685,7 @@ static void PrivateAutoComplete(
               continue;
 
             llvm::StringRef variable_name = var_sp->GetName().GetStringRef();
-            if (variable_name.startswith(token)) {
+            if (variable_name.starts_with(token)) {
               if (variable_name == token) {
                 Type *variable_type = var_sp->GetType();
                 if (variable_type) {

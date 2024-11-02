@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -335,53 +336,44 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
     SmallVector<Register, 4> Ext1UnmergeReg;
     SmallVector<Register, 4> Ext2UnmergeReg;
     if (SrcTy.getNumElements() % 16 != 0) {
-      // Unmerge source to v8i8, append a new v8i8 of 0s and the merge to v16s
-      SmallVector<Register, 4> PadUnmergeDstReg1;
-      SmallVector<Register, 4> PadUnmergeDstReg2;
-      unsigned NumOfVec = SrcTy.getNumElements() / 8;
+      SmallVector<Register> Leftover1;
+      SmallVector<Register> Leftover2;
 
-      // Unmerge the source to v8i8
-      MachineInstr *PadUnmerge1 =
-          Builder.buildUnmerge(LLT::fixed_vector(8, 8), Ext1SrcReg);
-      MachineInstr *PadUnmerge2 =
-          Builder.buildUnmerge(LLT::fixed_vector(8, 8), Ext2SrcReg);
-      for (unsigned i = 0; i < NumOfVec; i++) {
-        PadUnmergeDstReg1.push_back(PadUnmerge1->getOperand(i).getReg());
-        PadUnmergeDstReg2.push_back(PadUnmerge2->getOperand(i).getReg());
+      // Split the elements into v16i8 and v8i8
+      LLT MainTy = LLT::fixed_vector(16, 8);
+      LLT LeftoverTy1, LeftoverTy2;
+      if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
+                         LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
+                         MRI)) ||
+          (!extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
+                         LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder,
+                         MRI))) {
+        llvm_unreachable("Unable to split this vector properly");
       }
 
-      // Pad the vectors with a v8i8 constant of 0s
-      MachineInstr *v8Zeroes =
-          Builder.buildConstant(LLT::fixed_vector(8, 8), 0);
-      PadUnmergeDstReg1.push_back(v8Zeroes->getOperand(0).getReg());
-      PadUnmergeDstReg2.push_back(v8Zeroes->getOperand(0).getReg());
+      // Pad the leftover v8i8 vector with register of 0s of type v8i8
+      Register v8Zeroes = Builder.buildConstant(LLT::fixed_vector(8, 8), 0)
+                              ->getOperand(0)
+                              .getReg();
 
-      // Merge them all back to v16i8
-      NumOfVec = (NumOfVec + 1) / 2;
-      for (unsigned i = 0; i < NumOfVec; i++) {
-        Ext1UnmergeReg.push_back(
-            Builder
-                .buildMergeLikeInstr(
-                    LLT::fixed_vector(16, 8),
-                    {PadUnmergeDstReg1[i * 2], PadUnmergeDstReg1[(i * 2) + 1]})
-                .getReg(0));
-        Ext2UnmergeReg.push_back(
-            Builder
-                .buildMergeLikeInstr(
-                    LLT::fixed_vector(16, 8),
-                    {PadUnmergeDstReg2[i * 2], PadUnmergeDstReg2[(i * 2) + 1]})
-                .getReg(0));
-      }
+      Ext1UnmergeReg.push_back(
+          Builder
+              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+                                   {Leftover1[0], v8Zeroes})
+              .getReg(0));
+      Ext2UnmergeReg.push_back(
+          Builder
+              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+                                   {Leftover2[0], v8Zeroes})
+              .getReg(0));
+
     } else {
       // Unmerge the source vectors to v16i8
-      MachineInstr *Ext1Unmerge =
-          Builder.buildUnmerge(LLT::fixed_vector(16, 8), Ext1SrcReg);
-      MachineInstr *Ext2Unmerge =
-          Builder.buildUnmerge(LLT::fixed_vector(16, 8), Ext2SrcReg);
-      for (unsigned i = 0, e = SrcTy.getNumElements() / 16; i < e; i++) {
-        Ext1UnmergeReg.push_back(Ext1Unmerge->getOperand(i).getReg());
-        Ext2UnmergeReg.push_back(Ext2Unmerge->getOperand(i).getReg());
-      }
+      unsigned SrcNumElts = SrcTy.getNumElements();
+      extractParts(Ext1SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
+                   Ext1UnmergeReg, Builder, MRI);
+      extractParts(Ext2SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
+                   Ext2UnmergeReg, Builder, MRI);
     }
 
     // Build the UDOT instructions
@@ -415,6 +407,150 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
 
   // Erase the dead instructions
+  MI.eraseFromParent();
+}
+
+// Matches {U/S}ADDV(ext(x)) => {U/S}ADDLV(x)
+// Ensure that the type coming from the extend instruction is the right size
+bool matchExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           std::pair<Register, bool> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
+         "Expected G_VECREDUCE_ADD Opcode");
+
+  // Check if the last instruction is an extend
+  MachineInstr *ExtMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  auto ExtOpc = ExtMI->getOpcode();
+
+  if (ExtOpc == TargetOpcode::G_ZEXT)
+    std::get<1>(MatchInfo) = 0;
+  else if (ExtOpc == TargetOpcode::G_SEXT)
+    std::get<1>(MatchInfo) = 1;
+  else
+    return false;
+
+  // Check if the source register is a valid type
+  Register ExtSrcReg = ExtMI->getOperand(1).getReg();
+  LLT ExtSrcTy = MRI.getType(ExtSrcReg);
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if ((DstTy.getScalarSizeInBits() == 16 &&
+       ExtSrcTy.getNumElements() % 8 == 0 && ExtSrcTy.getNumElements() < 256) ||
+      (DstTy.getScalarSizeInBits() == 32 &&
+       ExtSrcTy.getNumElements() % 4 == 0) ||
+      (DstTy.getScalarSizeInBits() == 64 &&
+       ExtSrcTy.getNumElements() % 4 == 0)) {
+    std::get<0>(MatchInfo) = ExtSrcReg;
+    return true;
+  }
+  return false;
+}
+
+void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B, GISelChangeObserver &Observer,
+                           std::pair<Register, bool> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
+         "Expected G_VECREDUCE_ADD Opcode");
+
+  unsigned Opc = std::get<1>(MatchInfo) ? AArch64::G_SADDLV : AArch64::G_UADDLV;
+  Register SrcReg = std::get<0>(MatchInfo);
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+  LLT DstTy = MRI.getType(DstReg);
+
+  // If SrcTy has more elements than expected, split them into multiple
+  // insructions and sum the results
+  LLT MainTy;
+  SmallVector<Register, 1> WorkingRegisters;
+  unsigned SrcScalSize = SrcTy.getScalarSizeInBits();
+  unsigned SrcNumElem = SrcTy.getNumElements();
+  if ((SrcScalSize == 8 && SrcNumElem > 16) ||
+      (SrcScalSize == 16 && SrcNumElem > 8) ||
+      (SrcScalSize == 32 && SrcNumElem > 4)) {
+
+    LLT LeftoverTy;
+    SmallVector<Register, 4> LeftoverRegs;
+    if (SrcScalSize == 8)
+      MainTy = LLT::fixed_vector(16, 8);
+    else if (SrcScalSize == 16)
+      MainTy = LLT::fixed_vector(8, 16);
+    else if (SrcScalSize == 32)
+      MainTy = LLT::fixed_vector(4, 32);
+    else
+      llvm_unreachable("Source's Scalar Size not supported");
+
+    // Extract the parts and put each extracted sources through U/SADDLV and put
+    // the values inside a small vec
+    extractParts(SrcReg, SrcTy, MainTy, LeftoverTy, WorkingRegisters,
+                 LeftoverRegs, B, MRI);
+    for (unsigned I = 0; I < LeftoverRegs.size(); I++) {
+      WorkingRegisters.push_back(LeftoverRegs[I]);
+    }
+  } else {
+    WorkingRegisters.push_back(SrcReg);
+    MainTy = SrcTy;
+  }
+
+  unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
+  LLT MidScalarLLT = LLT::scalar(MidScalarSize);
+  Register zeroReg = B.buildConstant(LLT::scalar(64), 0).getReg(0);
+  for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
+    // If the number of elements is too small to build an instruction, extend
+    // its size before applying addlv
+    LLT WorkingRegTy = MRI.getType(WorkingRegisters[I]);
+    if ((WorkingRegTy.getScalarSizeInBits() == 8) &&
+        (WorkingRegTy.getNumElements() == 4)) {
+      WorkingRegisters[I] =
+          B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
+                                              : TargetOpcode::G_ZEXT,
+                       {LLT::fixed_vector(4, 16)}, {WorkingRegisters[I]})
+              .getReg(0);
+    }
+
+    // Generate the {U/S}ADDLV instruction, whose output is always double of the
+    // Src's Scalar size
+    LLT addlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
+                                      : LLT::fixed_vector(2, 64);
+    Register addlvReg =
+        B.buildInstr(Opc, {addlvTy}, {WorkingRegisters[I]}).getReg(0);
+
+    // The output from {U/S}ADDLV gets placed in the lowest lane of a v4i32 or
+    // v2i64 register.
+    //     i16, i32 results uses v4i32 registers
+    //     i64      results uses v2i64 registers
+    // Therefore we have to extract/truncate the the value to the right type
+    if (MidScalarSize == 32 || MidScalarSize == 64) {
+      WorkingRegisters[I] = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
+                                         {MidScalarLLT}, {addlvReg, zeroReg})
+                                .getReg(0);
+    } else {
+      Register extractReg = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
+                                         {LLT::scalar(32)}, {addlvReg, zeroReg})
+                                .getReg(0);
+      WorkingRegisters[I] =
+          B.buildTrunc({MidScalarLLT}, {extractReg}).getReg(0);
+    }
+  }
+
+  Register outReg;
+  if (WorkingRegisters.size() > 1) {
+    outReg = B.buildAdd(MidScalarLLT, WorkingRegisters[0], WorkingRegisters[1])
+                 .getReg(0);
+    for (unsigned I = 2; I < WorkingRegisters.size(); I++) {
+      outReg = B.buildAdd(MidScalarLLT, outReg, WorkingRegisters[I]).getReg(0);
+    }
+  } else {
+    outReg = WorkingRegisters[0];
+  }
+
+  if (DstTy.getScalarSizeInBits() > MidScalarSize) {
+    // Handle the scalar value if the DstTy's Scalar Size is more than double
+    // Src's ScalarType
+    B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
+                                        : TargetOpcode::G_ZEXT,
+                 {DstReg}, {outReg});
+  } else {
+    B.buildCopy(DstReg, outReg);
+  }
+
   MI.eraseFromParent();
 }
 

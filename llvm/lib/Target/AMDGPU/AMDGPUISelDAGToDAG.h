@@ -50,15 +50,13 @@ static inline bool getConstantValue(SDValue N, uint32_t &Out) {
 }
 
 // TODO: Handle undef as zero
-static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG,
-                                        bool Negate = false) {
+static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::BUILD_VECTOR && N->getNumOperands() == 2);
   uint32_t LHSVal, RHSVal;
   if (getConstantValue(N->getOperand(0), LHSVal) &&
       getConstantValue(N->getOperand(1), RHSVal)) {
     SDLoc SL(N);
-    uint32_t K = Negate ? (-LHSVal & 0xffff) | (-RHSVal << 16)
-                        : (LHSVal & 0xffff) | (RHSVal << 16);
+    uint32_t K = (LHSVal & 0xffff) | (RHSVal << 16);
     return DAG.getMachineNode(AMDGPU::S_MOV_B32, SL, N->getValueType(0),
                               DAG.getTargetConstant(K, SL, MVT::i32));
   }
@@ -66,9 +64,6 @@ static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG,
   return nullptr;
 }
 
-static inline SDNode *packNegConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
-  return packConstantV2I16(N, DAG, true);
-}
 } // namespace
 
 /// AMDGPU specific code to select AMDGPU machine instructions for
@@ -110,10 +105,7 @@ protected:
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
-  bool isInlineImmediate(const SDNode *N, bool Negated = false) const;
-  bool isNegInlineImmediate(const SDNode *N) const {
-    return isInlineImmediate(N, true);
-  }
+  bool isInlineImmediate(const SDNode *N) const;
 
   bool isInlineImmediate16(int64_t Imm) const {
     return AMDGPU::isInlinableLiteral16(Imm, Subtarget->hasInv2PiInlineImm());
@@ -179,6 +171,7 @@ private:
 
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset) const;
+  bool SelectBUFSOffset(SDValue Addr, SDValue &SOffset) const;
 
   bool SelectFlatOffsetImpl(SDNode *N, SDValue Addr, SDValue &VAddr,
                             SDValue &Offset, uint64_t FlatVariant) const;
@@ -244,7 +237,7 @@ private:
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
-  bool SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsNeg(SDValue In, SDValue &Src) const;
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;

@@ -14,10 +14,6 @@
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "RelocationMap.h"
-#include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
-#include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
@@ -25,6 +21,8 @@
 #include <optional>
 
 namespace llvm {
+using namespace dwarf_linker;
+
 namespace dsymutil {
 
 /// DwarfLinkerForBinaryRelocationMap contains the logic to handle the
@@ -55,12 +53,12 @@ public:
   DwarfLinkerForBinaryRelocationMap() = default;
 };
 
-template <typename OutDwarfFile> struct ObjectWithRelocMap {
+struct ObjectWithRelocMap {
   ObjectWithRelocMap(
-      std::unique_ptr<OutDwarfFile> Object,
+      std::unique_ptr<DWARFFile> Object,
       std::shared_ptr<DwarfLinkerForBinaryRelocationMap> OutRelocs)
       : Object(std::move(Object)), OutRelocs(OutRelocs) {}
-  std::unique_ptr<OutDwarfFile> Object;
+  std::unique_ptr<DWARFFile> Object;
   std::shared_ptr<DwarfLinkerForBinaryRelocationMap> OutRelocs;
 };
 
@@ -104,8 +102,7 @@ public:
 private:
 
   /// Keeps track of relocations.
-  template <typename AddressesMapBase>
-  class AddressManager : public AddressesMapBase {
+  class AddressManager : public dwarf_linker::AddressesMap {
 
     const DwarfLinkerForBinary &Linker;
 
@@ -241,8 +238,7 @@ private:
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);
-  template <typename OutDWARFFile, typename AddressesMap>
-  ErrorOr<std::unique_ptr<OutDWARFFile>>
+  ErrorOr<std::unique_ptr<dwarf_linker::DWARFFile>>
   loadObject(const DebugMapObject &Obj, const DebugMap &DebugMap,
              remarks::RemarkLinker &RL,
              std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM);
@@ -264,14 +260,12 @@ private:
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply);
 
-  template <typename Linker, typename OutDwarfFile, typename AddressMapBase>
+  template <typename Linker>
   bool linkImpl(const DebugMap &Map,
                 typename Linker::OutputFileType ObjectType);
 
-  template <typename OutDwarfFile, typename AddressMap>
-  Error emitRelocations(
-      const DebugMap &DM,
-      std::vector<ObjectWithRelocMap<OutDwarfFile>> &ObjectsForLinking);
+  Error emitRelocations(const DebugMap &DM,
+                        std::vector<ObjectWithRelocMap> &ObjectsForLinking);
 
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;

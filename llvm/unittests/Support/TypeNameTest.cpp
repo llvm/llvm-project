@@ -35,7 +35,7 @@ TEST(TypeNameTest, Names) {
 #ifdef __clang__
   EXPECT_TRUE(S2Name.ends_with("S2")) << S2Name.str();
 #else
-  EXPECT_TRUE(S2Name.endswith("::S2")) << S2Name.str();
+  EXPECT_TRUE(S2Name.ends_with("::S2")) << S2Name.str();
 #endif
 #else
   EXPECT_EQ("UNKNOWN_TYPE", S1Name);

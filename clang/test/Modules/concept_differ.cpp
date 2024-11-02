@@ -2,9 +2,9 @@
 // RUN: mkdir %t
 // RUN: split-file %s %t
 //
-// RUN: %clang_cc1 -x c++ -std=c++20 -fmodules -fmodules-cache-path=%t -fmodule-map-file=%t/module.map %t/foo.cpp -verify
+// RUN: %clang_cc1 -x c++ -std=c++20 -fmodules -fmodules-cache-path=%t -fmodule-map-file=%t/module.modulemap %t/foo.cpp -verify
 
-//--- module.map
+//--- module.modulemap
 module "foo" {
   export * 
   header "foo.h"

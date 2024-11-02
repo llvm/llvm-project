@@ -127,7 +127,7 @@ void matrix_template_reference(MatrixClassTemplate<Ty, Rows, Cols> &a, MatrixCla
 }
 
 MatrixClassTemplate<float, 10, 15> matrix_template_reference_caller(float *Data) {
-  // CHECK-LABEL: define{{.*}} void @_Z32matrix_template_reference_callerPf(ptr noalias sret(%class.MatrixClassTemplate) align 8 %agg.result, ptr %Data
+  // CHECK-LABEL: define{{.*}} void @_Z32matrix_template_reference_callerPf(ptr dead_on_unwind noalias writable sret(%class.MatrixClassTemplate) align 8 %agg.result, ptr %Data
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %Data.addr = alloca ptr, align 8
   // CHECK-NEXT:    %Arg = alloca %class.MatrixClassTemplate, align 8

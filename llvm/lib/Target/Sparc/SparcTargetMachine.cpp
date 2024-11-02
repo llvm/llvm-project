@@ -116,10 +116,13 @@ SparcTargetMachine::~SparcTargetMachine() = default;
 const SparcSubtarget *
 SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
@@ -137,8 +140,8 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<SparcSubtarget>(TargetTriple, CPU, FS, *this,
-                                          this->is64Bit);
+    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this,
+                                         this->is64Bit);
   }
   return I.get();
 }

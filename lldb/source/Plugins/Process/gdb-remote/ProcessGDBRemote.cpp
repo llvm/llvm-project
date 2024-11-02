@@ -4472,7 +4472,7 @@ bool ParseRegisters(
           // and a simple type. Just in case, look for that too (setting both
           // does no harm).
           if (!gdb_type.empty() && !(encoding_set || format_set)) {
-            if (llvm::StringRef(gdb_type).startswith("int")) {
+            if (llvm::StringRef(gdb_type).starts_with("int")) {
               reg_info.format = eFormatHex;
               reg_info.encoding = eEncodingUint;
             } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
@@ -4482,7 +4482,7 @@ bool ParseRegisters(
               reg_info.format = eFormatFloat;
               reg_info.encoding = eEncodingIEEE754;
             } else if (gdb_type == "aarch64v" ||
-                       llvm::StringRef(gdb_type).startswith("vec") ||
+                       llvm::StringRef(gdb_type).starts_with("vec") ||
                        gdb_type == "i387_ext" || gdb_type == "uint128") {
               // lldb doesn't handle 128-bit uints correctly (for ymm*h), so
               // treat them as vector (similarly to xmm/ymm)

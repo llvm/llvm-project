@@ -304,6 +304,7 @@ class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
   bool inNamelistSequence() const { return inNamelistSequence_; }
+  int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
@@ -317,6 +318,9 @@ public:
   // NAMELIST input item.
   void ResetForNextNamelistItem(bool inNamelistSequence) {
     remaining_ = 0;
+    if (repeatPosition_) {
+      repeatPosition_->Cancel();
+    }
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
     inNamelistSequence_ = inNamelistSequence;
@@ -399,6 +403,7 @@ public:
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  int EndIoStatement();
 
 private:
   IoStatementState ioStatementState_; // points to *this
@@ -474,6 +479,7 @@ class ExternalListIoStatementState : public ExternalIoStatementState<DIR>,
 public:
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  int EndIoStatement();
 };
 
 template <Direction DIR>
@@ -532,6 +538,7 @@ class ChildListIoStatementState : public ChildIoStatementState<DIR>,
 public:
   using ChildIoStatementState<DIR>::ChildIoStatementState;
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  int EndIoStatement();
 };
 
 template <Direction DIR>

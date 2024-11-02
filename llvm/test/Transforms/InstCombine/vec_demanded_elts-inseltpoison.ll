@@ -145,7 +145,7 @@ define <2 x i64> @PR24922(<2 x i64> %v) {
 
 define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand(
-; CHECK-NEXT:    ret <4 x float> undef
+; CHECK-NEXT:    ret <4 x float> poison
 ;
   %out1 = insertelement <4 x float> poison, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -158,7 +158,7 @@ define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
 
 define <4 x float> @inselt_shuf_no_demand_commute(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_commute(
-; CHECK-NEXT:    ret <4 x float> undef
+; CHECK-NEXT:    ret <4 x float> poison
 ;
   %out1 = insertelement <4 x float> poison, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -627,7 +627,7 @@ define <2 x ptr> @gep_all_lanes_undef(ptr %base, i64 %idx) {;
 
 define ptr @gep_demanded_lane_undef(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_demanded_lane_undef(
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    ret ptr poison
 ;
   %basevec = insertelement <2 x ptr> poison, ptr %base, i32 0
   %idxvec = insertelement <2 x i64> poison, i64 %idx, i32 1

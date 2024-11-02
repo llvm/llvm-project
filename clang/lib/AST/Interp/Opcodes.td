@@ -379,6 +379,7 @@ def CheckGlobalCtor : Opcode {}
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
+def GetGlobalUnchecked : AccessOpcode;
 // [Value] -> []
 def InitGlobal : AccessOpcode;
 // [Value] -> []

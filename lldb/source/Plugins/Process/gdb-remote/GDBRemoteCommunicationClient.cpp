@@ -4042,7 +4042,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
           return;
         } else {
           llvm::StringRef response_str(response.GetStringRef());
-          if (response_str.startswith("qSymbol:")) {
+          if (response_str.starts_with("qSymbol:")) {
             response.SetFilePos(strlen("qSymbol:"));
             std::string symbol_name;
             if (response.GetHexByteString(symbol_name)) {

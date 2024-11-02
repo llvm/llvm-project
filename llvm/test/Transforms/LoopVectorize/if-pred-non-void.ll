@@ -562,8 +562,8 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope !32
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[WIDE_LOAD]], <i32 23, i32 23>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], <i32 100, i32 100>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], <i32 200, i32 200>
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>, !dbg [[DBG34:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], <i32 200, i32 200>
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP8]], <2 x i1> [[TMP7]], <2 x i1> zeroinitializer, !dbg [[DBG35:![0-9]+]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i1> [[TMP9]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
@@ -652,10 +652,10 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP5]], 23
 ; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = icmp slt i32 [[TMP4]], 100
 ; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP5]], 100
-; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = icmp sge i32 [[TMP4]], 200
-; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = icmp sge i32 [[TMP5]], 200
 ; UNROLL-NO-VF-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP12]], true, !dbg [[DBG34:![0-9]+]]
 ; UNROLL-NO-VF-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP13]], true, !dbg [[DBG34]]
+; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = icmp sge i32 [[TMP4]], 200
+; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = icmp sge i32 [[TMP5]], 200
 ; UNROLL-NO-VF-NEXT:    [[TMP18:%.*]] = select i1 [[TMP16]], i1 [[TMP14]], i1 false, !dbg [[DBG35:![0-9]+]]
 ; UNROLL-NO-VF-NEXT:    [[TMP19:%.*]] = select i1 [[TMP17]], i1 [[TMP15]], i1 false, !dbg [[DBG35]]
 ; UNROLL-NO-VF-NEXT:    [[TMP20:%.*]] = or i1 [[TMP18]], [[TMP12]]

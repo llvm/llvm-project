@@ -1353,6 +1353,19 @@ std::optional<bool> AreEquivalentInInterface(
   }
 }
 
+bool CheckForCoindexedObject(parser::ContextualMessages &messages,
+    const std::optional<ActualArgument> &arg, const std::string &procName,
+    const std::string &argName) {
+  if (arg && ExtractCoarrayRef(arg->UnwrapExpr())) {
+    messages.Say(arg->sourceLocation(),
+        "'%s' argument to '%s' may not be a coindexed object"_err_en_US,
+        argName, procName);
+    return false;
+  } else {
+    return true;
+  }
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1690,7 +1703,7 @@ bool IsDummy(const Symbol &symbol) {
 bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
-  return object && object->CanBeAssumedShape() &&
+  return object && object->IsAssumedShape() &&
       !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
@@ -1724,9 +1737,13 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 }
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
-  return derived && !IsIsoCType(derived) &&
-      !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
-      !derived->typeSymbol().get<DerivedTypeDetails>().sequence();
+  return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived);
+}
+
+bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {
+  return derived &&
+      (derived->typeSymbol().attrs().test(Attr::BIND_C) ||
+          derived->typeSymbol().get<DerivedTypeDetails>().sequence());
 }
 
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
@@ -1759,6 +1776,10 @@ bool IsEventType(const DerivedTypeSpec *derived) {
 
 bool IsLockType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "lock_type");
+}
+
+bool IsNotifyType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "notify_type");
 }
 
 bool IsTeamType(const DerivedTypeSpec *derived) {

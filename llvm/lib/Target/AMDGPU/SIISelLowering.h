@@ -146,6 +146,7 @@ private:
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
 
@@ -415,6 +416,9 @@ public:
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;

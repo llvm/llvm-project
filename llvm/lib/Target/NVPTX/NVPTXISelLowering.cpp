@@ -37,6 +37,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -639,6 +640,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
   setOperationAction(ISD::ConstantFP, MVT::bf16, Legal);
 
+  // Lowering of DYNAMIC_STACKALLOC is unsupported.
+  // Custom lower to produce an error.
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
+
   // TRAP can be lowered to PTX trap
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
@@ -848,6 +854,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   setMinCmpXchgSizeInBits(32);
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -2012,9 +2019,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         DL, RetTy, Args, Outs, retAlignment,
         HasVAArgs
             ? std::optional<std::pair<unsigned, const APInt &>>(std::make_pair(
-                  CLI.NumFixedArgs,
-                  cast<ConstantSDNode>(VADeclareParam->getOperand(1))
-                      ->getAPIntValue()))
+                  CLI.NumFixedArgs, VADeclareParam->getConstantOperandAPInt(1)))
             : std::nullopt,
         *CB, UniqueCallSite);
     const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
@@ -2209,6 +2214,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   return Chain;
 }
 
+SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+
+  DiagnosticInfoUnsupported NoDynamicAlloca(
+      Fn, "dynamic alloca unsupported by NVPTX backend",
+      SDLoc(Op).getDebugLoc());
+  DAG.getContext()->diagnose(NoDynamicAlloca);
+  auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()), Op.getOperand(0)};
+  return DAG.getMergeValues(Ops, SDLoc());
+}
+
 // By default CONCAT_VECTORS is lowered by ExpandVectorBuildThroughStack()
 // (see LegalizeDAG.cpp). This is slow and uses local memory.
 // We use extract/insert/build vector just as what LegalizeOp() does in llvm 2.5
@@ -2278,7 +2295,7 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (VT == MVT::v2f16 || VT == MVT::v2bf16)
       Value = cast<ConstantFPSDNode>(Operand)->getValueAPF().bitcastToAPInt();
     else if (VT == MVT::v2i16 || VT == MVT::v4i8)
-      Value = cast<ConstantSDNode>(Operand)->getAPIntValue();
+      Value = Operand->getAsAPIntVal();
     else
       llvm_unreachable("Unsupported type");
     // i8 values are carried around as i16, so we need to zero out upper bits,
@@ -2700,6 +2717,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SREM:
   case ISD::UREM:
     return LowerVectorArith(Op, DAG);
+  case ISD::DYNAMIC_STACKALLOC:
+    return LowerDYNAMIC_STACKALLOC(Op, DAG);
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
@@ -5243,9 +5262,7 @@ static SDValue PerformANDCombine(SDNode *N,
       return SDValue();
     }
 
-    unsigned ExtType =
-      cast<ConstantSDNode>(Val->getOperand(Val->getNumOperands()-1))->
-        getZExtValue();
+    unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
     if (ExtType == ISD::SEXTLOAD) {
       // If for some reason the load is a sextload, the and is needed to zero
       // out the high 8 bits
@@ -5791,7 +5808,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   // Get the intrinsic ID
-  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  unsigned IntrinNo = Intrin.getNode()->getAsZExtVal();
   switch (IntrinNo) {
   default:
     return;

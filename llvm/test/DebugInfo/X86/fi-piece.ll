@@ -1,4 +1,5 @@
 ; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 ; Test that multi-DW_OP_piece expressions are emitted for FI variables.
 ;
 ; CHECK: .debug_info contents:

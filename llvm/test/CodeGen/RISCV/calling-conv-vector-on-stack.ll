@@ -31,7 +31,7 @@ define void @bar() nounwind {
 ; CHECK-NEXT:    li a6, 0
 ; CHECK-NEXT:    li a7, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    call foo@plt
+; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    addi sp, s0, -96
 ; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload

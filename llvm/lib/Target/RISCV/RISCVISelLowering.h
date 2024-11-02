@@ -253,6 +253,11 @@ enum NodeType : unsigned {
   SSUBSAT_VL,
   USUBSAT_VL,
 
+  // Averaging adds of unsigned integers.
+  AVGFLOORU_VL,
+  // Rounding averaging adds of unsigned integers.
+  AVGCEILU_VL,
+
   MULHS_VL,
   MULHU_VL,
   FADD_VL,
@@ -330,12 +335,9 @@ enum NodeType : unsigned {
   // operand is VL.
   SETCC_VL,
 
-  // Vector select with an additional VL operand. This operation is unmasked.
-  VSELECT_VL,
-  // Vector select with operand #2 (the value when the condition is false) tied
-  // to the destination and an additional VL operand. This operation is
-  // unmasked.
-  VP_MERGE_VL,
+  // General vmerge node with mask, true, false, passthru, and vl operands.
+  // Tail agnostic vselect can be implemented by setting passthru to undef.
+  VMERGE_VL,
 
   // Mask binary operators.
   VMAND_VL,
@@ -528,7 +530,8 @@ public:
 
   InstructionCost getVRGatherVVCost(MVT VT) const;
   InstructionCost getVRGatherVICost(MVT VT) const;
-  InstructionCost getVSlideCost(MVT VT) const;
+  InstructionCost getVSlideVXCost(MVT VT) const;
+  InstructionCost getVSlideVICost(MVT VT) const;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -630,9 +633,7 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
-  ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
-    return ISD::SIGN_EXTEND;
-  }
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;
@@ -776,8 +777,7 @@ public:
   bool isVScaleKnownToBeAPowerOfTwo() const override;
 
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
-                              ISD::MemIndexedMode &AM, bool &IsInc,
-                              SelectionDAG &DAG) const;
+                              ISD::MemIndexedMode &AM, SelectionDAG &DAG) const;
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
                                  ISD::MemIndexedMode &AM,
                                  SelectionDAG &DAG) const override;
@@ -905,11 +905,13 @@ private:
   SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
                                             SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerUnsignedAvgFloor(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;

@@ -126,7 +126,7 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
         // Since most private -> public mappings happen in a verbatim way, we
         // check textually here. This might go wrong in presence of symlinks or
         // header mappings. But that's not different than rest of the places.
-        if (MainFile->tryGetRealPathName().endswith(PHeader))
+        if (MainFile->tryGetRealPathName().ends_with(PHeader))
           continue;
       }
     }

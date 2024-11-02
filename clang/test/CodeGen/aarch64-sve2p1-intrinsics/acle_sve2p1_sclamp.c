@@ -10,8 +10,20 @@
 // RUN:   -S -Werror -emit-llvm -disable-O0-optnone -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 \
 // RUN:   -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 \
+// RUN:   -S -DTEST_SME2 -Werror -emit-llvm -disable-O0-optnone -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 \
+// RUN:   -S -DTEST_SME2 -Werror -emit-llvm -disable-O0-optnone -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 \
+// RUN:   -S -DTEST_SME2 -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
+
+#ifndef TEST_SME2
+#define ATTR
+#else
+#define ATTR __arm_streaming
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -30,7 +42,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sclamp.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svint8_t test_svclamp_s8(svint8_t op1, svint8_t op2, svint8_t op3) {
+svint8_t test_svclamp_s8(svint8_t op1, svint8_t op2, svint8_t op3) ATTR  {
   return SVE_ACLE_FUNC(svclamp, _s8, , )(op1, op2, op3);
 }
 
@@ -44,7 +56,7 @@ svint8_t test_svclamp_s8(svint8_t op1, svint8_t op2, svint8_t op3) {
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sclamp.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-svint16_t test_svclamp_s16(svint16_t op1, svint16_t op2, svint16_t op3) {
+svint16_t test_svclamp_s16(svint16_t op1, svint16_t op2, svint16_t op3) ATTR  {
   return SVE_ACLE_FUNC(svclamp, _s16, , )(op1, op2, op3);
 }
 
@@ -58,7 +70,7 @@ svint16_t test_svclamp_s16(svint16_t op1, svint16_t op2, svint16_t op3) {
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sclamp.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svclamp_s32(svint32_t op1, svint32_t op2, svint32_t op3) {
+svint32_t test_svclamp_s32(svint32_t op1, svint32_t op2, svint32_t op3) ATTR  {
   return SVE_ACLE_FUNC(svclamp, _s32, , )(op1, op2, op3);
 }
 
@@ -72,7 +84,7 @@ svint32_t test_svclamp_s32(svint32_t op1, svint32_t op2, svint32_t op3) {
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sclamp.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i64> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svint64_t test_svclamp_s64(svint64_t op1, svint64_t op2, svint64_t op3) {
+svint64_t test_svclamp_s64(svint64_t op1, svint64_t op2, svint64_t op3) ATTR  {
   return SVE_ACLE_FUNC(svclamp, _s64, , )(op1, op2, op3);
 }
 

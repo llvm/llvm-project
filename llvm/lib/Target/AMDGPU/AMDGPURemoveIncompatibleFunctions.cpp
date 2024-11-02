@@ -105,7 +105,8 @@ constexpr unsigned FeaturesToCheck[] = {AMDGPU::FeatureGFX11Insts,
                                         AMDGPU::FeatureDot8Insts,
                                         AMDGPU::FeatureExtendedImageInsts,
                                         AMDGPU::FeatureSMemRealTime,
-                                        AMDGPU::FeatureSMemTimeInst};
+                                        AMDGPU::FeatureSMemTimeInst,
+                                        AMDGPU::FeatureGWS};
 
 FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
   FeatureBitset Result = Features;

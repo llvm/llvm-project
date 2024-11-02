@@ -18328,9 +18328,7 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
   }
 
   // SME attributes must match when overriding a function declaration.
-  if (IsInvalidSMECallConversion(
-          Old->getType(), New->getType(),
-          AArch64SMECallConversionKind::MayAddPreservesZA)) {
+  if (IsInvalidSMECallConversion(Old->getType(), New->getType())) {
     Diag(New->getLocation(), diag::err_conflicting_overriding_attributes)
         << New << New->getType() << Old->getType();
     Diag(Old->getLocation(), diag::note_overridden_virtual_function);

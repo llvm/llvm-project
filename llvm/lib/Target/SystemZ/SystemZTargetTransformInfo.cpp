@@ -1236,7 +1236,6 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
     // dst vector for vperm (S.A.).
     unsigned NumSrcVecs = std::min(NumEltsPerVecReg, Factor);
     unsigned NumDstVecs = NumVectorMemOps;
-    assert (NumSrcVecs > 1 && "Expected at least two source vectors.");
     NumPermutes += (NumDstVecs * NumSrcVecs) - NumDstVecs;
   }
 

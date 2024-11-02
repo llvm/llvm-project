@@ -374,7 +374,7 @@ define void @bext_i32_trunc(i32 signext %0, i32 signext %1) {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB19_2:
-; RV64I-NEXT:    tail bar@plt
+; RV64I-NEXT:    tail bar
 ;
 ; RV64ZBS-LABEL: bext_i32_trunc:
 ; RV64ZBS:       # %bb.0:
@@ -383,7 +383,7 @@ define void @bext_i32_trunc(i32 signext %0, i32 signext %1) {
 ; RV64ZBS-NEXT:  # %bb.1:
 ; RV64ZBS-NEXT:    ret
 ; RV64ZBS-NEXT:  .LBB19_2:
-; RV64ZBS-NEXT:    tail bar@plt
+; RV64ZBS-NEXT:    tail bar
   %3 = shl i32 1, %1
   %4 = and i32 %3, %0
   %5 = icmp eq i32 %4, 0

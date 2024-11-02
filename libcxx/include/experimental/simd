@@ -78,7 +78,6 @@ inline namespace parallelism_v2 {
 #endif
 
 #include <experimental/__config>
-#include <experimental/__simd/abi_tag.h>
 #include <experimental/__simd/aligned_tag.h>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/scalar.h>

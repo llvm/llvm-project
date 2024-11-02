@@ -38,13 +38,13 @@ define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP4]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> [[WIDE_LOAD]], <8 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> [[WIDE_LOAD8]], <8 x i16> [[BROADCAST_SPLAT]])
-; CHECK-NEXT:    store <8 x i16> [[TMP6]], ptr [[NEXT_GEP6]], align 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[NEXT_GEP6]], i64 8
+; CHECK-NEXT:    store <8 x i16> [[TMP6]], ptr [[NEXT_GEP6]], align 2
 ; CHECK-NEXT:    store <8 x i16> [[TMP7]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -121,13 +121,13 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i8>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.umin.v16i8(<16 x i8> [[WIDE_LOAD]], <16 x i8> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.umin.v16i8(<16 x i8> [[WIDE_LOAD5]], <16 x i8> [[BROADCAST_SPLAT]])
-; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[NEXT_GEP3]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 16
+; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[NEXT_GEP3]], align 2
 ; CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

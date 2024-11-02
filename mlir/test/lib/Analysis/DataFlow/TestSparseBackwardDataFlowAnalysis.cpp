@@ -50,7 +50,10 @@ struct WrittenTo : public AbstractSparseLattice {
 /// is eventually written to.
 class WrittenToAnalysis : public SparseBackwardDataFlowAnalysis<WrittenTo> {
 public:
-  using SparseBackwardDataFlowAnalysis::SparseBackwardDataFlowAnalysis;
+  WrittenToAnalysis(DataFlowSolver &solver, SymbolTableCollection &symbolTable,
+                    bool assumeFuncWrites)
+      : SparseBackwardDataFlowAnalysis(solver, symbolTable),
+        assumeFuncWrites(assumeFuncWrites) {}
 
   void visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
                       ArrayRef<const WrittenTo *> results) override;
@@ -59,7 +62,13 @@ public:
 
   void visitCallOperand(OpOperand &operand) override;
 
+  void visitExternalCall(CallOpInterface call, ArrayRef<WrittenTo *> operands,
+                         ArrayRef<const WrittenTo *> results) override;
+
   void setToExitState(WrittenTo *lattice) override { lattice->writes.clear(); }
+
+private:
+  bool assumeFuncWrites;
 };
 
 void WrittenToAnalysis::visitOperation(Operation *op,
@@ -99,6 +108,26 @@ void WrittenToAnalysis::visitCallOperand(OpOperand &operand) {
   propagateIfChanged(lattice, lattice->addWrites(newWrites));
 }
 
+void WrittenToAnalysis::visitExternalCall(CallOpInterface call,
+                                          ArrayRef<WrittenTo *> operands,
+                                          ArrayRef<const WrittenTo *> results) {
+  if (!assumeFuncWrites) {
+    return SparseBackwardDataFlowAnalysis::visitExternalCall(call, operands,
+                                                             results);
+  }
+
+  for (WrittenTo *lattice : operands) {
+    SetVector<StringAttr> newWrites;
+    StringAttr name = call->getAttrOfType<StringAttr>("tag_name");
+    if (!name) {
+      name = StringAttr::get(call->getContext(),
+                             call.getOperation()->getName().getStringRef());
+    }
+    newWrites.insert(name);
+    propagateIfChanged(lattice, lattice->addWrites(newWrites));
+  }
+}
+
 } // end anonymous namespace
 
 namespace {
@@ -106,17 +135,31 @@ struct TestWrittenToPass
     : public PassWrapper<TestWrittenToPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestWrittenToPass)
 
+  TestWrittenToPass() = default;
+  TestWrittenToPass(const TestWrittenToPass &other) : PassWrapper(other) {
+    interprocedural = other.interprocedural;
+    assumeFuncWrites = other.assumeFuncWrites;
+  }
+
   StringRef getArgument() const override { return "test-written-to"; }
+
+  Option<bool> interprocedural{
+      *this, "interprocedural", llvm::cl::init(true),
+      llvm::cl::desc("perform interprocedural analysis")};
+  Option<bool> assumeFuncWrites{
+      *this, "assume-func-writes", llvm::cl::init(false),
+      llvm::cl::desc(
+          "assume external functions have write effect on all arguments")};
 
   void runOnOperation() override {
     Operation *op = getOperation();
 
     SymbolTableCollection symbolTable;
 
-    DataFlowSolver solver;
+    DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
     solver.load<DeadCodeAnalysis>();
     solver.load<SparseConstantPropagation>();
-    solver.load<WrittenToAnalysis>(symbolTable);
+    solver.load<WrittenToAnalysis>(symbolTable, assumeFuncWrites);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 

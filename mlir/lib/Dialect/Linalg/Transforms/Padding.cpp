@@ -168,7 +168,7 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
   }
 
   // TODO: there are cases where we may still want to pad to larger sizes.
-  if (!opToPad.hasTensorSemantics())
+  if (!opToPad.hasPureTensorSemantics())
     return rewriter.notifyMatchFailure(opToPad,
                                        "expected operation on tensors");
 
@@ -265,7 +265,7 @@ mlir::linalg::padAndHoistLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
   assert(options.copyBackOp == LinalgPaddingOptions::CopyBackOp::None &&
          "invalid options");
 
-  if (!linalgOp.hasTensorSemantics())
+  if (!linalgOp.hasPureTensorSemantics())
     return rewriter.notifyMatchFailure(
         linalgOp, "only applies to Linalg ops with tensor semantics");
 

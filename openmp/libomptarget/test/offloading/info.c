@@ -5,6 +5,9 @@
 // RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-amdgcn-amd-amdhsa 2>&1 | \
 // RUN:   %fcheck-amdgcn-amd-amdhsa -allow-empty -check-prefixes=INFO,AMDGPU
 
+// FIXME: Fails due to optimized debugging in 'ptxas'.
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+
 #include <omp.h>
 #include <stdio.h>
 

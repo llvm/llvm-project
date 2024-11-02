@@ -12,22 +12,24 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[CONV]], i32 1
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x float> [ [[TMP1]], [[BB1]] ], [ [[TMP10:%.*]], [[BB3:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x float> [ [[TMP1]], [[BB1]] ], [ [[TMP14:%.*]], [[BB3:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB3]], label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
 ; CHECK-NEXT:    [[CONV2:%.*]] = uitofp i16 undef to double
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd double [[TMP3]], [[CONV2]]
-; CHECK-NEXT:    [[SUB1:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> <double poison, double poison, double undef, double undef>, double [[SUB1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[ADD1]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <4 x double> [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fptrunc <4 x double> [[TMP6]] to <4 x float>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP7]], <4 x float> [[TMP2]], <4 x float> [[TMP8]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[CONV2]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = fcmp ogt <4 x double> [[TMP10]], [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fptrunc <4 x double> [[TMP10]] to <4 x float>
+; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x float> [[TMP2]], <4 x float> [[TMP12]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP10]] = phi <4 x float> [ [[TMP9]], [[BB4]] ], [ [[TMP2]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP14]] = phi <4 x float> [ [[TMP13]], [[BB4]] ], [ [[TMP2]], [[BB2]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 entry:

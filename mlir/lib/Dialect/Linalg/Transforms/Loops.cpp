@@ -128,7 +128,7 @@ template <typename LoadOpTy, typename StoreOpTy>
 static void emitScalarImplementation(OpBuilder &b, Location loc,
                                      ArrayRef<Value> allIvs,
                                      LinalgOp linalgOp) {
-  assert(linalgOp.hasBufferSemantics() &&
+  assert(linalgOp.hasPureBufferSemantics() &&
          "expected linalg op with buffer semantics");
   SmallVector<Value> indexedValues;
   indexedValues.reserve(linalgOp->getNumOperands());
@@ -218,7 +218,7 @@ static FailureOr<LinalgLoops> linalgOpToLoopsImpl(RewriterBase &rewriter,
 
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (which is asserted in the inverse calculation).
-  assert(linalgOp.hasBufferSemantics() &&
+  assert(linalgOp.hasPureBufferSemantics() &&
          "expected linalg op with buffer semantics");
 
   auto loopRanges = linalgOp.createLoopRanges(rewriter, linalgOp.getLoc());
@@ -264,7 +264,7 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!isa<LinalgOp>(op) || !linalgOp.hasBufferSemantics()) {
+    if (!isa<LinalgOp>(op) || !linalgOp.hasPureBufferSemantics()) {
       return rewriter.notifyMatchFailure(
           op, "expected linalg op with buffer semantics");
     }

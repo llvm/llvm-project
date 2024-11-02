@@ -1,4 +1,5 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-LE" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-BE" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !---------
@@ -1316,10 +1317,11 @@ subroutine vec_cvf_test_r4r8(arg1)
 
 ! LLVMIR: %[[arg:.*]] = load <2 x double>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[call:.*]] = call contract <4 x float> @llvm.ppc.vsx.xvcvdpsp(<2 x double> %[[arg]])
-! LLVMIR: %[[b:.*]] = bitcast <4 x float> %[[call]] to <16 x i8>
-! LLVMIR: %[[sh:.*]] = shufflevector <16 x i8> %[[b]], <16 x i8> %[[b]], <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
-! LLVMIR: %[[r:.*]] = bitcast <16 x i8> %[[sh]] to <4 x float>
-! LLVMIR: store <4 x float> %[[r]], ptr %{{.*}}, align 16
+! LLVMIR-LE: %[[b:.*]] = bitcast <4 x float> %[[call]] to <16 x i8>
+! LLVMIR-LE: %[[sh:.*]] = shufflevector <16 x i8> %[[b]], <16 x i8> %[[b]], <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
+! LLVMIR-LE: %[[r:.*]] = bitcast <16 x i8> %[[sh]] to <4 x float>
+! LLVMIR-LE: store <4 x float> %[[r]], ptr %{{.*}}, align 16
+! LLVMIR-BE: store <4 x float> %[[call]], ptr %{{.*}}, align 16
 end subroutine vec_cvf_test_r4r8
 
 ! CHECK-LABEL: vec_cvf_test_r8r4
@@ -1329,10 +1331,12 @@ subroutine vec_cvf_test_r8r4(arg1)
   r = vec_cvf(arg1)
 
 ! LLVMIR: %[[arg:.*]] = load <4 x float>, ptr %{{.*}}, align 16
-! LLVMIR: %[[bfi:.*]] = bitcast <4 x float> %[[arg]] to <16 x i8>
-! LLVMIR: %[[sh:.*]] = shufflevector <16 x i8> %[[bfi]], <16 x i8> %[[bfi]], <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
-! LLVMIR: %[[bif:.*]] = bitcast <16 x i8> %[[sh]] to <4 x float>
-! LLVMIR: %[[r:.*]] = call contract <2 x double> @llvm.ppc.vsx.xvcvspdp(<4 x float> %[[bif]])
-! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
+! LLVMIR-LE: %[[bfi:.*]] = bitcast <4 x float> %[[arg]] to <16 x i8>
+! LLVMIR-LE: %[[sh:.*]] = shufflevector <16 x i8> %[[bfi]], <16 x i8> %[[bfi]], <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
+! LLVMIR-LE: %[[bif:.*]] = bitcast <16 x i8> %[[sh]] to <4 x float>
+! LLVMIR-LE: %[[r:.*]] = call contract <2 x double> @llvm.ppc.vsx.xvcvspdp(<4 x float> %[[bif]])
+! LLVMIR-LE: store <2 x double> %[[r]], ptr %{{.*}}, align 16
+! LLVMIR-BE: %[[r:.*]] = call contract <2 x double> @llvm.ppc.vsx.xvcvspdp(<4 x float> %[[arg]])
+! LLVMIR-BE: store <2 x double> %[[call]], ptr %{{.*}}, align 16
 end subroutine vec_cvf_test_r8r4
 

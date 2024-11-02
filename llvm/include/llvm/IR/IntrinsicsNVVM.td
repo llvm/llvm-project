@@ -1372,6 +1372,14 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier_cluster_wait :
       Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
 
+  // 'aligned' versions of the above barrier.cluster.* intrinsics
+  def int_nvvm_barrier_cluster_arrive_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_arrive_relaxed_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_wait_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+
   // Membar
   def int_nvvm_membar_cta : ClangBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], [IntrNoCallback]>;
@@ -4709,5 +4717,15 @@ def int_nvvm_is_explicit_cluster
   : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
               [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.is_explicit_cluster">;
+
+// Setmaxnreg inc/dec intrinsics
+def int_nvvm_setmaxnreg_inc_sync_aligned_u32
+  : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
+              "llvm.nvvm.setmaxnreg.inc.sync.aligned.u32">;
+def int_nvvm_setmaxnreg_dec_sync_aligned_u32
+  : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
+              "llvm.nvvm.setmaxnreg.dec.sync.aligned.u32">;
 
 } // let TargetPrefix = "nvvm"

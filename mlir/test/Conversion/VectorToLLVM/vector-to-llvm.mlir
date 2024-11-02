@@ -196,10 +196,10 @@ func.func @broadcast_vec3d_from_vec1d(%arg0: vector<2xf32>) -> vector<4x3x2xf32>
 }
 // CHECK-LABEL: @broadcast_vec3d_from_vec1d(
 // CHECK-SAME:  %[[A:.*]]: vector<2xf32>)
-// CHECK:       %[[T0:.*]] = arith.constant dense<0.000000e+00> : vector<3x2xf32>
-// CHECK:       %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<3x2xf32> to !llvm.array<3 x vector<2xf32>>
-// CHECK:       %[[T1:.*]] = arith.constant dense<0.000000e+00> : vector<4x3x2xf32>
-// CHECK:       %[[T6:.*]] = builtin.unrealized_conversion_cast %[[T1]] : vector<4x3x2xf32> to !llvm.array<4 x array<3 x vector<2xf32>>>
+// CHECK-DAG:   %[[T0:.*]] = arith.constant dense<0.000000e+00> : vector<3x2xf32>
+// CHECK-DAG:   %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T0]] : vector<3x2xf32> to !llvm.array<3 x vector<2xf32>>
+// CHECK-DAG:   %[[T1:.*]] = arith.constant dense<0.000000e+00> : vector<4x3x2xf32>
+// CHECK-DAG:   %[[T6:.*]] = builtin.unrealized_conversion_cast %[[T1]] : vector<4x3x2xf32> to !llvm.array<4 x array<3 x vector<2xf32>>>
 
 // CHECK:       %[[T3:.*]] = llvm.insertvalue %[[A]], %[[T2]][0] : !llvm.array<3 x vector<2xf32>>
 // CHECK:       %[[T4:.*]] = llvm.insertvalue %[[A]], %[[T3]][1] : !llvm.array<3 x vector<2xf32>>
@@ -443,27 +443,27 @@ func.func @masked_float_mul_outerprod(%arg0: vector<2xf32>, %arg1: f32, %arg2: v
 // -----
 
 func.func @masked_float_max_outerprod(%arg0: vector<2xf32>, %arg1: f32, %arg2: vector<2xf32>, %m: vector<2xi1>) -> vector<2xf32> {
-  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<maxf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
+  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<maxnumf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
 
 // CHECK-LABEL:   func.func @masked_float_max_outerprod(
 // CHECK-SAME:                                          %[[VAL_0:.*]]: vector<2xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<2xf32>, %[[VAL_3:.*]]: vector<2xi1>) -> vector<2xf32> {
 // CHECK:           %[[VAL_8:.*]] = arith.mulf %[[VAL_0]], %{{.*}} : vector<2xf32>
-// CHECK:           %[[VAL_9:.*]] = arith.maximumf %[[VAL_8]], %[[VAL_2]] : vector<2xf32>
+// CHECK:           %[[VAL_9:.*]] = arith.maxnumf %[[VAL_8]], %[[VAL_2]] : vector<2xf32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<2xi1>, vector<2xf32>
 
 // -----
 
 func.func @masked_float_min_outerprod(%arg0: vector<2xf32>, %arg1: f32, %arg2: vector<2xf32>, %m: vector<2xi1>) -> vector<2xf32> {
-  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<minf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
+  %0 = vector.mask %m { vector.outerproduct %arg0, %arg1, %arg2 {kind = #vector.kind<minnumf>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
 
 // CHECK-LABEL:   func.func @masked_float_min_outerprod(
 // CHECK-SAME:                                          %[[VAL_0:.*]]: vector<2xf32>, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: vector<2xf32>, %[[VAL_3:.*]]: vector<2xi1>) -> vector<2xf32> {
 // CHECK:           %[[VAL_8:.*]] = arith.mulf %[[VAL_0]], %{{.*}} : vector<2xf32>
-// CHECK:           %[[VAL_9:.*]] = arith.minimumf %[[VAL_8]], %[[VAL_2]] : vector<2xf32>
+// CHECK:           %[[VAL_9:.*]] = arith.minnumf %[[VAL_8]], %[[VAL_2]] : vector<2xf32>
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_3]], %[[VAL_9]], %[[VAL_2]] : vector<2xi1>, vector<2xf32>
 
 // -----
@@ -1379,7 +1379,7 @@ func.func @reduce_fminimum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 // -----
 
 func.func @reduce_fmax_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  %0 = vector.reduction <maxf>, %arg0, %arg1 : vector<16xf32> into f32
+  %0 = vector.reduction <maxnumf>, %arg0, %arg1 : vector<16xf32> into f32
   return %0 : f32
 }
 // CHECK-LABEL: @reduce_fmax_f32(
@@ -1391,7 +1391,7 @@ func.func @reduce_fmax_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 // -----
 
 func.func @reduce_fmin_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  %0 = vector.reduction <minf>, %arg0, %arg1 : vector<16xf32> into f32
+  %0 = vector.reduction <minnumf>, %arg0, %arg1 : vector<16xf32> into f32
   return %0 : f32
 }
 // CHECK-LABEL: @reduce_fmin_f32(
@@ -2023,6 +2023,20 @@ func.func @vector_load_op(%memref : memref<200x100xf32>, %i : index, %j : index)
 
 // -----
 
+func.func @vector_load_op_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+  %0 = vector.load %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @vector_load_op_nontemporal
+// CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
+// CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
+// CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}}[%[[add]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[gep]] {alignment = 4 : i64, nontemporal} : !llvm.ptr -> vector<8xf32>
+
+// -----
+
 func.func @vector_load_op_index(%memref : memref<200x100xindex>, %i : index, %j : index) -> vector<8xindex> {
   %0 = vector.load %memref[%i, %j] : memref<200x100xindex>, vector<8xindex>
   return %0 : vector<8xindex>
@@ -2049,6 +2063,21 @@ func.func @vector_store_op(%memref : memref<200x100xf32>, %i : index, %j : index
 
 // -----
 
+func.func @vector_store_op_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) {
+  %val = arith.constant dense<11.0> : vector<4xf32>
+  vector.store %val, %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: func @vector_store_op_nontemporal
+// CHECK: %[[c100:.*]] = llvm.mlir.constant(100 : index) : i64
+// CHECK: %[[mul:.*]] = llvm.mul %{{.*}}, %[[c100]]  : i64
+// CHECK: %[[add:.*]] = llvm.add %[[mul]], %{{.*}}  : i64
+// CHECK: %[[gep:.*]] = llvm.getelementptr %{{.*}}[%[[add]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.store %{{.*}}, %[[gep]] {alignment = 4 : i64, nontemporal} :  vector<4xf32>, !llvm.ptr
+
+// -----
+
 func.func @vector_store_op_index(%memref : memref<200x100xindex>, %i : index, %j : index) {
   %val = arith.constant dense<11> : vector<4xindex>
   vector.store %val, %memref[%i, %j] : memref<200x100xindex>, vector<4xindex>
@@ -2056,6 +2085,36 @@ func.func @vector_store_op_index(%memref : memref<200x100xindex>, %i : index, %j
 }
 // CHECK-LABEL: func @vector_store_op_index
 // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 8 : i64} : vector<4xi64>, !llvm.ptr
+
+// -----
+
+func.func @vector_load_op_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<f32> {
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: func @vector_load_op_0d
+// CHECK: %[[load:.*]] = memref.load %{{.*}}[%{{.*}}, %{{.*}}]
+// CHECK: %[[vec:.*]] = llvm.mlir.undef : vector<1xf32>
+// CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK: %[[inserted:.*]] = llvm.insertelement %[[load]], %[[vec]][%[[c0]] : i32] : vector<1xf32>
+// CHECK: %[[cast:.*]] = builtin.unrealized_conversion_cast %[[inserted]] : vector<1xf32> to vector<f32>
+// CHECK: return %[[cast]] : vector<f32>
+
+// -----
+
+func.func @vector_store_op_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
+  %val = arith.constant dense<11.0> : vector<f32>
+  vector.store %val, %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+  return
+}
+
+// CHECK-LABEL: func @vector_store_op_0d
+// CHECK: %[[val:.*]] = arith.constant dense<1.100000e+01> : vector<f32>
+// CHECK: %[[cast:.*]] = builtin.unrealized_conversion_cast %[[val]] : vector<f32> to vector<1xf32>
+// CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[extracted:.*]] = llvm.extractelement %[[cast]][%[[c0]] : i64] : vector<1xf32>
+// CHECK: memref.store %[[extracted]], %{{.*}}[%{{.*}}, %{{.*}}]
 
 // -----
 

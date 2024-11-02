@@ -369,6 +369,12 @@ private:
     }
     return result;
   }
+  constexpr Raw HUGE() const {
+    Raw result{static_cast<Raw>(Real::maxExponent)};
+    result <<= Real::significandBits;
+    result |= SignBit();
+    return result - 1; // decrement exponent, set all significand bits
+  }
 
   Digit digit_[maxDigits]; // in little-endian order: digit_[0] is LSD
   int digits_{0}; // # of elements in digit_[] array; zero when zero

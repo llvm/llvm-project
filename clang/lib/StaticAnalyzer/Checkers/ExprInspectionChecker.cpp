@@ -25,7 +25,7 @@ using namespace ento;
 namespace {
 class ExprInspectionChecker
     : public Checker<eval::Call, check::DeadSymbols, check::EndAnalysis> {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Checking analyzer assumptions", "debug"};
 
   // These stats are per-analysis, not per-branch, hence they shouldn't
   // stay inside the program state.
@@ -176,11 +176,7 @@ ExprInspectionChecker::reportBug(llvm::StringRef Msg, BugReporter &BR,
                                  std::optional<SVal> ExprVal) const {
   if (!N)
     return nullptr;
-
-  if (!BT)
-    BT.reset(new BugType(this, "Checking analyzer assumptions", "debug"));
-
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
   if (ExprVal) {
     R->markInteresting(*ExprVal);
   }

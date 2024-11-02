@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
+// MSVC warning C4242: '+=': conversion from 'const _Ty' to 'size_t', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'std::streamsize' to 'size_t', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244
 // UNSUPPORTED: c++03
 
 // <fstream>

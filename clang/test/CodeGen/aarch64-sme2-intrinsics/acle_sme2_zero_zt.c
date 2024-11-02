@@ -18,6 +18,6 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.zero.zt(i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svzero_zt(void) __arm_streaming_compatible __arm_shared_za {
+void test_svzero_zt(void) __arm_streaming_compatible __arm_out("za") {
   svzero_zt(0);
 }

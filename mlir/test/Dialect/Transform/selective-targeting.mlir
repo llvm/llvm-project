@@ -1,4 +1,4 @@
-// RUN:  mlir-opt %s -test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN:  mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func.func @matmul_tensors_1(
 func.func @matmul_tensors_1(
@@ -52,35 +52,40 @@ func.func @matmul_tensors_3(
   func.return %0 : tensor<128x128xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !transform.any_op):
-  // Match matmul operations inside @matmul_tensors with test.attrA set.
-  pdl.pattern @pdl_target_attrA : benefit(1) {
-    %args = operands
-    %results = types
-    %attr = attribute
-    %0 = operation "linalg.matmul"(%args : !pdl.range<value>) {"test.attrA" = %attr}-> (%results : !pdl.range<type>)
-    // TODO: we don't want this, but it is the required terminator for pdl.pattern
-    rewrite %0 with "transform.dialect"
-  }
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op) {
+    transform.with_pdl_patterns %root : !transform.any_op {
+    ^bb0(%arg0: !transform.any_op):
+      // Match matmul operations inside @matmul_tensors with test.attrA set.
+      pdl.pattern @pdl_target_attrA : benefit(1) {
+        %args = operands
+        %results = types
+        %attr = attribute
+        %0 = operation "linalg.matmul"(%args : !pdl.range<value>) {"test.attrA" = %attr}-> (%results : !pdl.range<type>)
+        // TODO: we don't want this, but it is the required terminator for pdl.pattern
+        rewrite %0 with "transform.dialect"
+      }
 
-  // Match matmul operations inside @matmul_tensors with test.attrC set.
-  pdl.pattern @pdl_target_attrC : benefit(1) {
-    %args = operands
-    %results = types
-    %attr = attribute
-    %0 = operation "linalg.matmul"(%args : !pdl.range<value>) {"test.attrC" = %attr}-> (%results : !pdl.range<type>)
-    // TODO: we don't want this, but it is the required terminator for pdl.pattern
-    rewrite %0 with "transform.dialect"
-  }
+      // Match matmul operations inside @matmul_tensors with test.attrC set.
+      pdl.pattern @pdl_target_attrC : benefit(1) {
+        %args = operands
+        %results = types
+        %attr = attribute
+        %0 = operation "linalg.matmul"(%args : !pdl.range<value>) {"test.attrC" = %attr}-> (%results : !pdl.range<type>)
+        // TODO: we don't want this, but it is the required terminator for pdl.pattern
+        rewrite %0 with "transform.dialect"
+      }
 
-  transform.sequence %arg0 : !transform.any_op failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = pdl_match @pdl_target_attrA in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.tile_using_for %0 [4, 4, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    %1 = pdl_match @pdl_target_attrC in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2 = get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
+      transform.sequence %arg0 : !transform.any_op failures(propagate) {
+      ^bb1(%arg1: !transform.any_op):
+        %0 = pdl_match @pdl_target_attrA in %arg1 : (!transform.any_op) -> !transform.any_op
+        transform.structured.tile_using_for %0 [4, 4, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+        %1 = pdl_match @pdl_target_attrC in %arg1 : (!transform.any_op) -> !transform.any_op
+        %2 = get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+        transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
+      }
+    }
+    transform.yield
   }
 }
 
@@ -110,22 +115,27 @@ func.func @vectorize_none(
   func.return %0 : tensor<128x128xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !transform.any_op):
-  pdl.pattern @pdl_target : benefit(1) {
-    %args = operands
-    %results = types
-    %attr = attribute
-    %0 = operation "linalg.matmul"(%args : !pdl.range<value>) {"test.attrA" = %attr}-> (%results : !pdl.range<type>)
-    // TODO: we don't want this, but it is the required terminator for pdl.pattern
-    rewrite %0 with "transform.dialect"
-  }
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op) {
+    transform.with_pdl_patterns %root : !transform.any_op {
+    ^bb0(%arg0: !transform.any_op):
+      pdl.pattern @pdl_target : benefit(1) {
+        %args = operands
+        %results = types
+        %attr = attribute
+        %0 = operation "linalg.matmul"(%args : !pdl.range<value>) {"test.attrA" = %attr}-> (%results : !pdl.range<type>)
+        // TODO: we don't want this, but it is the required terminator for pdl.pattern
+        rewrite %0 with "transform.dialect"
+      }
 
-  transform.sequence %arg0 : !transform.any_op failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = pdl_match @pdl_target in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+      transform.sequence %arg0 : !transform.any_op failures(propagate) {
+      ^bb1(%arg1: !transform.any_op):
+        %0 = pdl_match @pdl_target in %arg1 : (!transform.any_op) -> !transform.any_op
+        %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+        transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+      }
+    }
+    transform.yield
   }
 }
 
@@ -148,7 +158,9 @@ func.func @vectorize_all(
   return %1 : tensor<128x128xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  transform.structured.vectorize_children_and_apply_patterns %arg0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    transform.structured.vectorize_children_and_apply_patterns %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

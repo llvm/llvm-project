@@ -60,7 +60,7 @@ void test_aligned() {
   {
     globalMemCounter.last_new_size = 0;
     globalMemCounter.last_new_align = 0;
-    T* volatile ap2 = a.allocate(11, (const void*)5);
+    T* ap2 = a.allocate(11, (const void*)5);
     DoNotOptimize(ap2);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkNewCalledEq(1));

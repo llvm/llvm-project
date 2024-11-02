@@ -72,6 +72,14 @@ constexpr int getElementFromEnd(const int *Arr, int size, int index) {
 static_assert(getElementFromEnd(data, 5, 0) == 1, "");
 static_assert(getElementFromEnd(data, 5, 4) == 5, "");
 
+constexpr int getFirstElem(const int *a) {
+  return a[0]; // expected-note {{read of dereferenced null pointer}} \
+               // ref-note {{read of dereferenced null pointer}}
+}
+static_assert(getFirstElem(nullptr) == 1, ""); // expected-error {{not an integral constant expression}} \
+                                               // expected-note {{in call to}} \
+                                               // ref-error {{not an integral constant expression}} \
+                                               // ref-note {{in call to}}
 
 constexpr static int arr[2] = {1,2};
 constexpr static int arr2[2] = {3,4};
@@ -557,4 +565,36 @@ namespace GH69115 {
   }
   static_assert(foo2() == 0, "");
 #endif
+}
+
+namespace NonConstReads {
+#if __cplusplus >= 202002L
+  void *p = nullptr; // ref-note {{declared here}} \
+                     // expected-note {{declared here}}
+
+  int arr[!p]; // ref-error {{not allowed at file scope}} \
+               // expected-error {{not allowed at file scope}} \
+               // ref-warning {{variable length arrays}} \
+               // ref-note {{read of non-constexpr variable 'p'}} \
+               // expected-warning {{variable length arrays}} \
+               // expected-note {{read of non-constexpr variable 'p'}}
+  int z; // ref-note {{declared here}} \
+         // expected-note {{declared here}}
+  int a[z]; // ref-error {{not allowed at file scope}} \
+            // expected-error {{not allowed at file scope}} \
+            // ref-warning {{variable length arrays}} \
+            // ref-note {{read of non-const variable 'z'}} \
+            // expected-warning {{variable length arrays}} \
+            // expected-note {{read of non-const variable 'z'}}
+#else
+  void *p = nullptr;
+  int arr[!p]; // ref-error {{not allowed at file scope}} \
+               // expected-error {{not allowed at file scope}}
+  int z;
+  int a[z]; // ref-error {{not allowed at file scope}} \
+            // expected-error {{not allowed at file scope}}
+#endif
+
+  const int y = 0;
+  int yy[y];
 }

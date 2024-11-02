@@ -15,6 +15,7 @@
 #define MLIR_CONVERSION_LLVMCOMMON_TYPECONVERTER_H
 
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {

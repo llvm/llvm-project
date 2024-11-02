@@ -12,9 +12,9 @@ tablegen("X86GenDAGISel") {
   td_file = "X86.td"
 }
 
-tablegen("X86GenEVEX2VEXTables") {
+tablegen("X86GenCompressEVEXTables") {
   visibility = [ ":LLVMX86CodeGen" ]
-  args = [ "-gen-x86-EVEX2VEX-tables" ]
+  args = [ "-gen-x86-compress-evex-tables" ]
   td_file = "X86.td"
 }
 
@@ -48,8 +48,8 @@ tablegen("X86GenRegisterBank") {
 static_library("LLVMX86CodeGen") {
   deps = [
     ":X86GenCallingConv",
+    ":X86GenCompressEVEXTables",
     ":X86GenDAGISel",
-    ":X86GenEVEX2VEXTables",
     ":X86GenFastISel",
     ":X86GenFoldTables",
     ":X86GenGlobalISel",
@@ -83,10 +83,10 @@ static_library("LLVMX86CodeGen") {
     "X86CallFrameOptimization.cpp",
     "X86CallingConv.cpp",
     "X86CmovConversion.cpp",
+    "X86CompressEVEX.cpp",
     "X86DiscriminateMemOps.cpp",
     "X86DomainReassignment.cpp",
     "X86DynAllocaExpander.cpp",
-    "X86EvexToVex.cpp",
     "X86ExpandPseudo.cpp",
     "X86FastISel.cpp",
     "X86FastPreTileConfig.cpp",

@@ -238,6 +238,10 @@ mlir::Value Fortran::lower::genInitialDataTarget(
         /*nonDeferredParams=*/std::nullopt);
   // Pointer initial data target, and NULL(mold).
   for (const auto &sym : Fortran::evaluate::CollectSymbols(initialTarget)) {
+    // Derived type component symbols should not be instantiated as objects
+    // on their own.
+    if (sym->owner().IsDerivedType())
+      continue;
     // Length parameters processing will need care in global initializer
     // context.
     if (hasDerivedTypeWithLengthParameters(sym))

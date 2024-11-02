@@ -358,6 +358,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_DTPOFF64:
     return R_DTPREL;
   case R_X86_64_TPOFF32:
+  case R_X86_64_TPOFF64:
     return R_TPREL;
   case R_X86_64_TLSDESC_CALL:
     return R_TLSDESC_CALL;
@@ -791,6 +792,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32le(loc, val);
     break;
   case R_X86_64_64:
+  case R_X86_64_TPOFF64:
   case R_X86_64_DTPOFF64:
   case R_X86_64_PC64:
   case R_X86_64_SIZE64:

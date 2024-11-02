@@ -51,6 +51,27 @@ func.func @decompose_static_concat_dim(%arg0 : tensor<1x?x64xf32>,
 //       CHECK:    %[[CONCAT:.+]] = tensor.insert_slice %{{.*}}[0, 0, 64] [1, %[[DIM1]], 64] [1, 1, 1] : tensor<1x?x64xf32> into tensor<1x?x128xf32>
 //       CHECK:    return %[[CONCAT]] : tensor<1x?x128xf32>
 
+
+func.func @decompose_dynamic_into_static_concat_dim(%arg0 : tensor<1x?x?xf32>,
+                               %arg1: tensor<1x?x?xf32>) -> tensor<1x?x128xf32> {
+  %0 = tensor.concat dim(2) %arg0, %arg1
+             : (tensor<1x?x?xf32>, tensor<1x?x?xf32>) -> tensor<1x?x128xf32>
+  return %0 : tensor<1x?x128xf32>
+}
+// CHECK-LABEL: func @decompose_dynamic_into_static_concat_dim
+//   CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C2:.+]] = arith.constant 2 : index
+//       CHECK:     %[[T0_DIM1:.+]] = tensor.dim %{{.*}}, %[[C1]] : tensor<1x?x?xf32>
+//       CHECK:     tensor.empty(%[[T0_DIM1]]) : tensor<1x?x128xf32>
+//       CHECK:     %[[T0_DIM2:.+]] = tensor.dim %{{.*}}, %[[C2]] : tensor<1x?x?xf32>
+//       CHECK:     tensor.insert_slice %{{.*}}[0, 0, 0] [1, %[[T0_DIM1]], %[[T0_DIM2]]] [1, 1, 1]
+//  CHECK-SAME:       tensor<1x?x?xf32> into tensor<1x?x128xf32>
+//       CHECK:     %[[T1_DIM1:.+]] = tensor.dim %{{.*}}, %[[C1]] : tensor<1x?x?xf32>
+//       CHECK:     %[[T1_DIM2:.+]] = tensor.dim %{{.*}}, %[[C2]] : tensor<1x?x?xf32>
+//       CHECK:     %[[CONCAT:.+]] = tensor.insert_slice %{{.*}}[0, 0, %[[T0_DIM2]]] [1, %[[T1_DIM1]], %[[T1_DIM2]]] [1, 1, 1]
+//  CHECK-SAME:        tensor<1x?x?xf32> into tensor<1x?x128xf32>
+//       CHECK:     return %[[CONCAT]] : tensor<1x?x128xf32>
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
     transform.apply_patterns to %func_op {

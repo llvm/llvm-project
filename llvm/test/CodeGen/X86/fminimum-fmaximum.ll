@@ -699,10 +699,9 @@ define double @test_fminimum_nnan(double %x, double %y) "no-nans-fp-math"="true"
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; X86-NEXT:    vextractps $1, %xmm2, %eax
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vextractps $1, %xmm0, %eax
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    js .LBB14_1
 ; X86-NEXT:  # %bb.2:

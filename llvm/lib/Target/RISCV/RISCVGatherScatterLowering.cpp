@@ -136,8 +136,13 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   // multipled.
   auto *BO = dyn_cast<BinaryOperator>(Start);
   if (!BO || (BO->getOpcode() != Instruction::Add &&
+              BO->getOpcode() != Instruction::Or &&
               BO->getOpcode() != Instruction::Shl &&
               BO->getOpcode() != Instruction::Mul))
+    return std::make_pair(nullptr, nullptr);
+
+  if (BO->getOpcode() == Instruction::Or &&
+      !cast<PossiblyDisjointInst>(BO)->isDisjoint())
     return std::make_pair(nullptr, nullptr);
 
   // Look for an operand that is splatted.
@@ -163,6 +168,10 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case Instruction::Or:
+    // TODO: We'd be better off creating disjoint or here, but we don't yet
+    // have an IRBuilder API for that.
+    [[fallthrough]];
   case Instruction::Add:
     Start = Builder.CreateAdd(Start, Splat);
     break;
@@ -241,7 +250,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     return false;
   case Instruction::Or:
     // We need to be able to treat Or as Add.
-    if (!haveNoCommonBitsSet(BO->getOperand(0), BO->getOperand(1), *DL))
+    if (!cast<PossiblyDisjointInst>(BO)->isDisjoint())
       return false;
     break;
   case Instruction::Add:
@@ -362,7 +371,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
     VecOperand = i;
 
-    TypeSize TS = DL->getTypeAllocSize(GTI.getIndexedType());
+    TypeSize TS = GTI.getSequentialElementStride(*DL);
     if (TS.isScalable())
       return std::make_pair(nullptr, nullptr);
 

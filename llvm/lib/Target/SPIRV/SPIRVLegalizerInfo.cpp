@@ -289,8 +289,9 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpirvType,
   return ConvReg;
 }
 
-bool SPIRVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                        MachineInstr &MI) const {
+bool SPIRVLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   auto Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   if (!isTypeFoldingSupported(Opc)) {

@@ -147,8 +147,10 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_CmseNSCall:                                              \
   case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_ArmStreamingCompatible:                                  \
-  case ParsedAttr::AT_ArmSharedZA:                                             \
-  case ParsedAttr::AT_ArmPreservesZA:                                          \
+  case ParsedAttr::AT_ArmPreserves:                                            \
+  case ParsedAttr::AT_ArmIn:                                                   \
+  case ParsedAttr::AT_ArmOut:                                                  \
+  case ParsedAttr::AT_ArmInOut:                                                \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
     CALLING_CONV_ATTRS_CASELIST
@@ -7876,6 +7878,49 @@ static bool checkMutualExclusion(TypeProcessingState &state,
   return true;
 }
 
+static bool handleArmStateAttribute(Sema &S,
+                                    FunctionProtoType::ExtProtoInfo &EPI,
+                                    ParsedAttr &Attr,
+                                    FunctionType::ArmStateValue State) {
+  if (!Attr.getNumArgs()) {
+    S.Diag(Attr.getLoc(), diag::err_missing_arm_state) << Attr;
+    Attr.setInvalid();
+    return true;
+  }
+
+  for (unsigned I = 0; I < Attr.getNumArgs(); ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(Attr, I, StateName, &LiteralLoc))
+      return true;
+
+    unsigned Shift;
+    FunctionType::ArmStateValue ExistingState;
+    if (StateName == "za") {
+      Shift = FunctionType::SME_ZAShift;
+      ExistingState = FunctionType::getArmZAState(EPI.AArch64SMEAttributes);
+    } else {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    // __arm_in(S), __arm_out(S), __arm_inout(S) and __arm_preserves(S)
+    // are all mutually exclusive for the same S, so check if there are
+    // conflicting attributes.
+    if (ExistingState != FunctionType::ARM_None && ExistingState != State) {
+      S.Diag(LiteralLoc, diag::err_conflicting_attributes_arm_state)
+          << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    EPI.setArmSMEAttribute(
+        (FunctionType::AArch64SMETypeAttributes)((State << Shift)));
+  }
+  return false;
+}
+
 /// Process an individual function attribute.  Returns true to
 /// indicate that the attribute was handled, false if it wasn't.
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
@@ -8008,10 +8053,17 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
   if (attr.getKind() == ParsedAttr::AT_ArmStreaming ||
       attr.getKind() == ParsedAttr::AT_ArmStreamingCompatible ||
-      attr.getKind() == ParsedAttr::AT_ArmSharedZA ||
-      attr.getKind() == ParsedAttr::AT_ArmPreservesZA){
-    if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
+      attr.getKind() == ParsedAttr::AT_ArmPreserves ||
+      attr.getKind() == ParsedAttr::AT_ArmIn ||
+      attr.getKind() == ParsedAttr::AT_ArmOut ||
+      attr.getKind() == ParsedAttr::AT_ArmInOut) {
+    if (S.CheckAttrTarget(attr))
       return true;
+
+    if (attr.getKind() == ParsedAttr::AT_ArmStreaming ||
+        attr.getKind() == ParsedAttr::AT_ArmStreamingCompatible)
+      if (S.CheckAttrNoArgs(attr))
+        return true;
 
     if (!unwrapped.isFunctionType())
       return false;
@@ -8039,11 +8091,21 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
         return true;
       EPI.setArmSMEAttribute(FunctionType::SME_PStateSMCompatibleMask);
       break;
-    case ParsedAttr::AT_ArmSharedZA:
-      EPI.setArmSMEAttribute(FunctionType::SME_PStateZASharedMask);
+    case ParsedAttr::AT_ArmPreserves:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_Preserves))
+        return true;
       break;
-    case ParsedAttr::AT_ArmPreservesZA:
-      EPI.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask);
+    case ParsedAttr::AT_ArmIn:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_In))
+        return true;
+      break;
+    case ParsedAttr::AT_ArmOut:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_Out))
+        return true;
+      break;
+    case ParsedAttr::AT_ArmInOut:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_InOut))
+        return true;
       break;
     default:
       llvm_unreachable("Unsupported attribute");

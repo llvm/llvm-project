@@ -20,6 +20,7 @@ class EXPCommon<bit row, bit done, string asm = ""> : InstSI<
   let EXP_CNT = 1;
   let mayLoad = done;
   let mayStore = 1;
+  let maybeAtomic = 0;
   let UseNamedOperandTable = 1;
   let Uses = !if(row, [EXEC, M0], [EXEC]);
   let SchedRW = [WriteExport];

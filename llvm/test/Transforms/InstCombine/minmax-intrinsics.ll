@@ -2489,3 +2489,95 @@ define i1 @PR57986() {
   %umin = call i1 @llvm.umin.i1(i1 ptrtoint (ptr @g to i1), i1 true)
   ret i1 %umin
 }
+
+define i8 @fold_umax_with_knownbits_info(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umax_with_knownbits_info(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A1:%.*]] = or i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[A2:%.*]] = shl i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A1]], [[A2]]
+; CHECK-NEXT:    ret i8 [[SUB]]
+;
+entry:
+  %a1 = or i8 %a, 1
+  %a2 = shl i8 %b, 1
+  %sub = sub i8 %a1, %a2
+  %val = call i8 @llvm.umax.i8(i8 %sub, i8 1)
+  ret i8 %val
+}
+
+define <3 x i8> @fold_umax_with_knownbits_info_undef_in_splat(<3 x i8> %a, <3 x i8> %b) {
+; CHECK-LABEL: @fold_umax_with_knownbits_info_undef_in_splat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A1:%.*]] = or <3 x i8> [[A:%.*]], <i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[A2:%.*]] = shl <3 x i8> [[B:%.*]], <i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[SUB:%.*]] = sub <3 x i8> [[A1]], [[A2]]
+; CHECK-NEXT:    ret <3 x i8> [[SUB]]
+;
+entry:
+  %a1 = or <3 x i8> %a, <i8 1, i8 1, i8 1>
+  %a2 = shl <3 x i8> %b, <i8 1, i8 1, i8 1>
+  %sub = sub <3 x i8> %a1, %a2
+  %val = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %sub, <3 x i8> <i8 1, i8 undef, i8 1>)
+  ret <3 x i8> %val
+}
+
+define i8 @fold_umin_with_knownbits_info(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umin_with_knownbits_info(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i8 3
+;
+entry:
+  %a1 = or i8 %a, 3
+  %a2 = shl i8 %b, 2
+  %sub = sub i8 %a1, %a2
+  %val = call i8 @llvm.umin.i8(i8 %sub, i8 3)
+  ret i8 %val
+}
+
+define <3 x i8> @fold_umin_with_knownbits_info_undef_in_splat(<3 x i8> %a, <3 x i8> %b) {
+; CHECK-LABEL: @fold_umin_with_knownbits_info_undef_in_splat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <3 x i8> <i8 3, i8 3, i8 3>
+;
+entry:
+  %a1 = or <3 x i8> %a, <i8 3, i8 3, i8 3>
+  %a2 = shl <3 x i8> %b, <i8 2, i8 2, i8 2>
+  %sub = sub <3 x i8> %a1, %a2
+  %val = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %sub, <3 x i8> <i8 3, i8 undef, i8 3>)
+  ret <3 x i8> %val
+}
+
+define i8 @fold_umax_with_knownbits_info_fail(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umax_with_knownbits_info_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A1:%.*]] = or i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[A2:%.*]] = shl i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A1]], [[A2]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[SUB]], i8 1)
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+entry:
+  %a1 = or i8 %a, 2
+  %a2 = shl i8 %b, 1
+  %sub = sub i8 %a1, %a2
+  %val = call i8 @llvm.umax.i8(i8 %sub, i8 1)
+  ret i8 %val
+}
+
+define i8 @fold_umin_with_knownbits_info_fail(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umin_with_knownbits_info_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A1:%.*]] = or i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[A2:%.*]] = shl i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A1]], [[A2]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[SUB]], i8 3)
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+entry:
+  %a1 = or i8 %a, 1
+  %a2 = shl i8 %b, 2
+  %sub = sub i8 %a1, %a2
+  %val = call i8 @llvm.umin.i8(i8 %sub, i8 3)
+  ret i8 %val
+}

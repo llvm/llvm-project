@@ -258,6 +258,9 @@ void SelectTypeChecker::Enter(const parser::SelectTypeConstruct &construct) {
     if (IsProcedure(*selector)) {
       context_.Say(
           selectTypeStmt.source, "Selector may not be a procedure"_err_en_US);
+    } else if (evaluate::IsAssumedRank(*selector)) {
+      context_.Say(selectTypeStmt.source,
+          "Assumed-rank variable may only be used as actual argument"_err_en_US);
     } else if (auto exprType{selector->GetType()}) {
       const auto &typeCaseList{
           std::get<std::list<parser::SelectTypeConstruct::TypeCase>>(

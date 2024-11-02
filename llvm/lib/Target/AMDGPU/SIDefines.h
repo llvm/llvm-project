@@ -400,6 +400,10 @@ enum CPol {
   TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
   TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
   TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+
+  // Volatile (used to preserve/signal operation volatility for buffer
+  // operations not a real instruction bit)
+  VOLATILE = 1 << 31,
 };
 
 } // namespace CPol

@@ -8,6 +8,6 @@
 typedef unsigned int uint2 __attribute((ext_vector_type(2)));
 
 void vector_shufflevector_valid(void) {
-    //CHECK: {{%.*}} = shufflevector <2 x i32> {{%.*}}, <2 x i32> undef, <2 x i32> <i32 0, i32 poison>
+    //CHECK: {{%.*}} = shufflevector <2 x i32> {{%.*}}, <2 x i32> poison, <2 x i32> <i32 0, i32 poison>
     (uint2)(((uint2)(0)).s0, 0);
 }

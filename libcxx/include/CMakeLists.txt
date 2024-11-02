@@ -22,6 +22,8 @@ set(files
   __algorithm/find_first_of.h
   __algorithm/find_if.h
   __algorithm/find_if_not.h
+  __algorithm/find_segment_if.h
+  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -107,6 +109,7 @@ set(files
   __algorithm/ranges_any_of.h
   __algorithm/ranges_binary_search.h
   __algorithm/ranges_clamp.h
+  __algorithm/ranges_contains.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -911,10 +914,8 @@ set(files
   expected
   experimental/__config
   experimental/__memory
-  experimental/__simd/abi_tag.h
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
-  experimental/__simd/internal_declaration.h
   experimental/__simd/reference.h
   experimental/__simd/scalar.h
   experimental/__simd/simd.h

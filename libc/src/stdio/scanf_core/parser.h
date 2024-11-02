@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H
 
 #include "src/__support/arg_list.h"
-#include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/scanf_core/core_structs.h"

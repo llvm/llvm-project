@@ -49,7 +49,7 @@ void BufferViewFlowAnalysis::rename(Value from, Value to) {
   dependencies[to] = dependencies[from];
   dependencies.erase(from);
 
-  for (auto &[key, value] : dependencies) {
+  for (auto &[_, value] : dependencies) {
     if (value.contains(from)) {
       value.insert(to);
       value.erase(from);

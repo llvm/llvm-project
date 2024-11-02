@@ -1608,6 +1608,8 @@ Error MachOPlatform::MachOPlatformPlugin::prepareSymbolTableRegistration(
     SmallVector<jitlink::Symbol *> SymsToProcess;
     for (auto *Sym : G.defined_symbols())
       SymsToProcess.push_back(Sym);
+    for (auto *Sym : G.absolute_symbols())
+      SymsToProcess.push_back(Sym);
 
     for (auto *Sym : SymsToProcess) {
       if (!Sym->hasName())

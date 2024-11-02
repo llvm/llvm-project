@@ -23,6 +23,6 @@ char *test_bar(void) {
 @import config; // expected-warning{{definition of configuration macro 'WANT_BAR' has no effect on the import of 'config'; pass '-DWANT_BAR=...' on the command line to configure the module}}
 
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -std=c99 -fmodules -fimplicit-module-maps -x objective-c -fmodules-cache-path=%t -DWANT_FOO=1 -emit-module -fmodule-name=config %S/Inputs/module.map
+// RUN: %clang_cc1 -std=c99 -fmodules -fimplicit-module-maps -x objective-c -fmodules-cache-path=%t -DWANT_FOO=1 -emit-module -fmodule-name=config %S/Inputs/module.modulemap
 // RUN: %clang_cc1 -std=c99 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs -DWANT_FOO=1 %s -verify
 

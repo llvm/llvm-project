@@ -90,7 +90,7 @@ subroutine components(n)
   real, pointer :: p10 => o3%x
   associate (a1 => o3, a2 => o3%x)
     block
-      real, pointer :: p11 => a1
+      type(t3), pointer :: p11 => a1
       real, pointer :: p12 => a2
     end block
   end associate
@@ -106,3 +106,21 @@ subroutine notObjects
 !ERROR: 'x4' is not a pointer but is initialized like one
   real, intrinsic :: x4 => cos
 end subroutine
+
+subroutine edgeCases
+  integer :: j = 1, m = 2
+  !ERROR: Data statement object must be a variable
+  data k/3/
+  data n/4/
+  !ERROR: Named constant 'j' already has a value
+  parameter(j = 5)
+  !ERROR: Named constant 'k' already has a value
+  parameter(k = 6)
+  parameter(l = 7)
+  !ERROR: 'm' was initialized earlier as a scalar
+  dimension m(1)
+  !ERROR: 'l' was initialized earlier as a scalar
+  dimension l(1)
+  !ERROR: 'n' was initialized earlier as a scalar
+  dimension n(1)
+end

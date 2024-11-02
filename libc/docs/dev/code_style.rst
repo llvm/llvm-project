@@ -178,3 +178,11 @@ these functions do not call the constructors and destructors of the
 allocated/deallocated objects. So, use these functions carefully and only
 when it is absolutely clear that constructor and destructor invocation is
 not required.
+
+Warnings in sources
+===================
+
+We expect contributions to be free of warnings from the `minimum supported
+compiler versions`__ (and newer).
+
+.. __: https://libc.llvm.org/compiler_support.html#minimum-supported-versions

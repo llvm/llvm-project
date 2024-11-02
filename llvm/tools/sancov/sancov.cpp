@@ -36,7 +36,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
@@ -1215,8 +1214,6 @@ static void parseArgs(int Argc, char **Argv) {
 }
 
 int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
-  llvm::InitLLVM X(Argc, Argv);
-
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();

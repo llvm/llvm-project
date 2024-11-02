@@ -123,9 +123,13 @@ WebAssembly-specific options:
    is not possible for undefined data symbols.  Undefined data symbols will
    still be reported as normal (in accordance with ``--unresolved-symbols``).
 
+.. option:: --initial-heap=<value>
+
+  Initial size of the heap. Default: zero.
+
 .. option:: --initial-memory=<value>
 
-  Initial size of the linear memory. Default: static data size.
+  Initial size of the linear memory. Default: the sum of stack, static data and heap sizes.
 
 .. option:: --max-memory=<value>
 

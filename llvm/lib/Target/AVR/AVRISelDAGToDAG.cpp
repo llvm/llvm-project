@@ -335,7 +335,7 @@ template <> bool AVRDAGToDAGISel::select<ISD::STORE>(SDNode *N) {
     return false;
   }
 
-  int CST = (int)cast<ConstantSDNode>(BasePtr.getOperand(1))->getZExtValue();
+  int CST = (int)BasePtr.getConstantOperandVal(1);
   SDValue Chain = ST->getChain();
   EVT VT = ST->getValue().getValueType();
   SDLoc DL(N);

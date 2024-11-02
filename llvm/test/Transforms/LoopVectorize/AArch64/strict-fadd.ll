@@ -285,8 +285,8 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED: %[[VEC_FADD2]] = fadd <4 x float> %[[STRIDED2:.*]], %[[VEC_PHI2]]
 ; CHECK-UNORDERED-NOT: call float @llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block
-; CHECK-UNORDERED: %[[RDX1:.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> %[[VEC_FADD1]])
 ; CHECK-UNORDERED: %[[RDX2:.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> %[[VEC_FADD2]])
+; CHECK-UNORDERED: %[[RDX1:.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> %[[VEC_FADD1]])
 ; CHECK-UNORDERED: for.body
 ; CHECK-UNORDERED: %[[LOAD1:.*]] = load float, ptr
 ; CHECK-UNORDERED: %[[FADD1:.*]] = fadd float %[[LOAD1]], {{.*}}

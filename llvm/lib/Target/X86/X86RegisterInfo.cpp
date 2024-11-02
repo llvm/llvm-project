@@ -1077,12 +1077,6 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
   unsigned ID = RC.getID();
-  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
-  if ((ID == X86::VK64RegClassID || ID == X86::VK64WMRegClassID) &&
-      Subtarget.hasAVX512() && !Subtarget.hasEVEX512())
-    report_fatal_error(
-        "64-bit mask registers are not supported without EVEX512");
-
   if (ID != X86::TILERegClassID)
     return BaseImplRetVal;
 

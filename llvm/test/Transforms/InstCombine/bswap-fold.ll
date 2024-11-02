@@ -498,8 +498,8 @@ define i64 @bs_and64_multiuse1(i64 %a, i64 %b) #0 {
 define i64 @bs_and64_multiuse2(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64_multiuse2(
 ; CHECK-NEXT:    [[T1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[A:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
+; CHECK-NEXT:    [[T2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[T3:%.*]] = and i64 [[T1]], [[T2]]
 ; CHECK-NEXT:    [[T4:%.*]] = mul i64 [[T3]], [[T1]]
 ; CHECK-NEXT:    ret i64 [[T4]]
 ;
@@ -512,9 +512,9 @@ define i64 @bs_and64_multiuse2(i64 %a, i64 %b) #0 {
 
 define i64 @bs_and64_multiuse3(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64_multiuse3(
+; CHECK-NEXT:    [[T1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[A:%.*]])
 ; CHECK-NEXT:    [[T2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A:%.*]], [[B]]
-; CHECK-NEXT:    [[T3:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
+; CHECK-NEXT:    [[T3:%.*]] = and i64 [[T1]], [[T2]]
 ; CHECK-NEXT:    [[T4:%.*]] = mul i64 [[T3]], [[T2]]
 ; CHECK-NEXT:    ret i64 [[T4]]
 ;

@@ -188,15 +188,6 @@ bool MayRequireFinalization(const DerivedTypeSpec &derived);
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
 
 bool IsInBlankCommon(const Symbol &);
-inline bool IsAssumedSizeArray(const Symbol &symbol) {
-  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    return object->IsAssumedSize();
-  } else if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
-    return assoc->IsAssumedSize();
-  } else {
-    return false;
-  }
-}
 bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);

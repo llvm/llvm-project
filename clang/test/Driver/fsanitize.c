@@ -896,11 +896,6 @@
 // RUN: %clang --target=riscv64-linux-gnu -fsanitize=scudo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO
 // CHECK-SCUDO: "-fsanitize=scudo"
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-PIE
-// RUN: %clang --target=arm-linux-androideabi -fsanitize=scudo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-PIE
-// CHECK-SCUDO-PIE: "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie"
-// CHECK-SCUDO-PIE: "-pie"
-
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=scudo,undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-UBSAN
 // CHECK-SCUDO-UBSAN: "-fsanitize={{.*}}scudo"
 

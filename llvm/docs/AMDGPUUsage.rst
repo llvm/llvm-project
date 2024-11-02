@@ -703,23 +703,24 @@ supported for the ``amdgcn`` target.
   .. table:: AMDGPU Address Spaces
      :name: amdgpu-address-spaces-table
 
-     ================================= =============== =========== ================ ======= ============================
-     ..                                                                                     64-Bit Process Address Space
-     --------------------------------- --------------- ----------- ---------------- ------------------------------------
-     Address Space Name                LLVM IR Address HSA Segment Hardware         Address NULL Value
-                                       Space Number    Name        Name             Size
-     ================================= =============== =========== ================ ======= ============================
-     Generic                           0               flat        flat             64      0x0000000000000000
-     Global                            1               global      global           64      0x0000000000000000
-     Region                            2               N/A         GDS              32      *not implemented for AMDHSA*
-     Local                             3               group       LDS              32      0xFFFFFFFF
-     Constant                          4               constant    *same as global* 64      0x0000000000000000
-     Private                           5               private     scratch          32      0xFFFFFFFF
-     Constant 32-bit                   6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental) 7               *TODO*
-     Buffer Resource (experimental)    8               *TODO*
-     Streamout Registers               128             N/A         GS_REGS
-     ================================= =============== =========== ================ ======= ============================
+     ===================================== =============== =========== ================ ======= ============================
+     ..                                                                                         64-Bit Process Address Space
+     ------------------------------------- --------------- ----------- ---------------- ------------------------------------
+     Address Space Name                    LLVM IR Address HSA Segment Hardware         Address NULL Value
+                                           Space Number    Name        Name             Size
+     ===================================== =============== =========== ================ ======= ============================
+     Generic                               0               flat        flat             64      0x0000000000000000
+     Global                                1               global      global           64      0x0000000000000000
+     Region                                2               N/A         GDS              32      *not implemented for AMDHSA*
+     Local                                 3               group       LDS              32      0xFFFFFFFF
+     Constant                              4               constant    *same as global* 64      0x0000000000000000
+     Private                               5               private     scratch          32      0xFFFFFFFF
+     Constant 32-bit                       6               *TODO*                               0x00000000
+     Buffer Fat Pointer (experimental)     7               *TODO*
+     Buffer Resource (experimental)        8               *TODO*
+     Buffer Strided Pointer (experimental) 9               *TODO*
+     Streamout Registers                   128             N/A         GS_REGS
+     ===================================== =============== =========== ================ ======= ============================
 
 **Generic**
   The generic address space is supported unless the *Target Properties* column
@@ -836,7 +837,7 @@ supported for the ``amdgcn`` target.
   the backend.
 
   The buffer descriptor used to construct a buffer fat pointer must be *raw*:
-  the stride must be 0, the "add tid" flag bust be 0, the swizzle enable bits
+  the stride must be 0, the "add tid" flag must be 0, the swizzle enable bits
   must be off, and the extent must be measured in bytes. (On subtargets where
   bounds checking may be disabled, buffer fat pointers may choose to enable
   it or not).
@@ -863,6 +864,18 @@ supported for the ``amdgcn`` target.
   the 32-bit NumRecords/extent field (bits `95:64`), and the 32-bit flags field
   (bits `127:96`). The specific interpretation of these fields varies by the
   target architecture and is detailed in the ISA descriptions.
+
+**Buffer Strided Pointer**
+  The buffer index pointer is an experimental address space. It represents
+  a 128-bit buffer descriptor and a 32-bit offset, like the **Buffer Fat
+  Pointer**. Additionally, it contains an index into the buffer, which
+  allows the direct addressing of structured elements. These components appear
+  in that order, i.e., the descriptor comes first, then the 32-bit offset
+  followed by the 32-bit index.
+
+  The bits in the buffer descriptor must meet the following requirements:
+  the stride is the size of a structured element, the "add tid" flag must be 0,
+  and the swizzle enable bits must be off.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
@@ -1130,6 +1143,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0080: All DS instructions may be scheduled across sched_barrier.
                                                    - 0x0100: All DS read instructions may be scheduled accoss sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
+                                                   - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
 
   llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
@@ -4100,6 +4114,9 @@ Code object V5 metadata is the same as
                                                        buffer that conforms to the requirements of the malloc/free
                                                        device library V1 version implementation.
 
+                                                     "hidden_dynamic_lds_size"
+                                                       Size of the dynamically allocated LDS memory is passed in the kernarg.
+
                                                      "hidden_private_base"
                                                        The high 32 bits of the flat addressing private aperture base.
                                                        Only used by GFX8 to allow conversion between private segment
@@ -4392,7 +4409,15 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC3``
                                                        configuration
                                                        register. See
-                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table`.
+                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+                                                     GFX12
+                                                       Compute Shader (CS)
+                                                       program settings used by
+                                                       CP to set up
+                                                       ``COMPUTE_PGM_RSRC3``
+                                                       configuration
+                                                       register. See
+                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
      415:384 4 bytes COMPUTE_PGM_RSRC1               Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
@@ -4817,13 +4842,16 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.USER_SGPR``.
-     6       1 bit   ENABLE_TRAP_HANDLER             Must be 0.
+     6       1 bit   ENABLE_TRAP_HANDLER             GFX6-GFX11
+                                                       Must be 0.
 
-                                                     This bit represents
-                                                     ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``,
-                                                     which is set by the CP if
-                                                     the runtime has installed a
-                                                     trap handler.
+                                                       This bit represents
+                                                       ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``,
+                                                       which is set by the CP if
+                                                       the runtime has installed a
+                                                       trap handler.
+                                                     GFX12
+                                                       Reserved, must be 0.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
@@ -4943,7 +4971,7 @@ The fields used by CP for code objects before V3 also match those specified in
      30      1 bit   ENABLE_EXCEPTION_INT_DIVIDE_BY  Integer Division by Zero
                      _ZERO                           (rcp_iflag_f32 instruction
                                                      only)
-     31      1 bit                                   Reserved, must be 0.
+     31      1 bit   RESERVED                        Reserved, must be 0.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
@@ -4972,8 +5000,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX10-GFX12
-     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table
+  .. table:: compute_pgm_rsrc3 for GFX10-GFX11
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -5019,6 +5047,32 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Not used for compute kernels that are not part of a graphics pipeline and
                                                        must be 0.
+     32      **Total size 4 bytes.**
+     ======= ===================================================================================================================
+
+..
+
+  .. table:: compute_pgm_rsrc3 for GFX12
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table
+
+     ======= ======= =============================== ===========================================================================
+     Bits    Size    Field Name                      Description
+     ======= ======= =============================== ===========================================================================
+     3:0     4 bits  RESERVED                        Reserved, must be 0.
+     11:4    8 bits  INST_PREF_SIZE                  Number of instruction bytes to prefetch, starting at the kernel's entry
+                                                     point instruction, before wavefront starts execution. The value is 0..255
+                                                     with a granularity of 128 bytes.
+     12      1 bit   RESERVED                        Reserved, must be 0.
+     13      1 bit   GLG_EN                          If 1, group launch guarantee will be enabled for this dispatch
+     30:14   17 bits RESERVED                        Reserved, must be 0.
+     31      1 bit   IMAGE_OP                        If 1, the kernel execution contains image instructions. If executed as
+                                                     part of a graphics pipeline, image read instructions will stall waiting
+                                                     for any necessary ``WAIT_SYNC`` fence to be performed in order to
+                                                     indicate that earlier pipeline stages have completed writing to the
+                                                     image.
+
+                                                     Not used for compute kernels that are not part of a graphics pipeline and
+                                                     must be 0.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
@@ -15494,7 +15548,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in

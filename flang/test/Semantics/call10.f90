@@ -109,10 +109,8 @@ module m
     !ERROR: A pure subprogram may not initialize a variable
     real :: v3
     data v3/0./
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real :: v4
     common /blk/ v4
-    save /blk/
     block
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
       real, save :: v5

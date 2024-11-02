@@ -37,7 +37,7 @@ jobs:
 
     steps:
     - name: Checkout LLVM
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
     - name: Validate and parse tag
       id: validate-tag
@@ -77,15 +77,15 @@ jobs:
           - ubuntu-22.04
     steps:
     - name: Checkout LLVM
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Install Ninja
-      uses: llvm/actions/install-ninja@main
+      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
 
     - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@v1
+      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
       with:
         max-size: 250M
         key: sccache-${{ matrix.os }}-release
@@ -93,8 +93,8 @@ jobs:
 
     - name: Build Clang
       run: |
-        cmake -G Ninja  -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_ENABLE_ASSERTIONS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DLLVM_ENABLE_PROJECTS=clang -S llvm -B build
-        ninja -v -C build
+        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_POSITION_INDEPENDENT_CODE=ON -S llvm -B build
+        ninja -v -C build clang
 
 
   build-binaries:
@@ -119,13 +119,13 @@ jobs:
 
     steps:
     - name: Checkout LLVM
-      uses: actions/checkout@v4
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
         path: ${{ needs.prepare.outputs.build-dir }}/llvm-project
 
     - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@v1
+      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
       with:
         max-size: 250M
         key: sccache-${{ matrix.target.os }}-release
@@ -152,6 +152,7 @@ jobs:
         -triple ${{ matrix.target.triple }} \
         -use-ninja \
         -no-checkout \
+        -use-cmake-cache \
         -no-test-suite \
         -configure-flags "-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
 

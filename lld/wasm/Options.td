@@ -215,6 +215,9 @@ defm soname: Eq<"soname", "Set the module name in the generated name section">;
 def import_table: FF<"import-table">,
   HelpText<"Import function table from the environment">;
 
+def initial_heap: JJ<"initial-heap=">,
+  HelpText<"Initial size of the heap">;
+
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 

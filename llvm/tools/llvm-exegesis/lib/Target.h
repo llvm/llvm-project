@@ -39,6 +39,10 @@ extern cl::OptionCategory Options;
 extern cl::OptionCategory BenchmarkOptions;
 extern cl::OptionCategory AnalysisOptions;
 
+enum ValidationEvent {
+  InstructionRetired
+};
+
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure
   // cycles.
@@ -58,6 +62,9 @@ struct PfmCountersInfo {
   // An optional list of IssueCounters.
   const IssueCounter *IssueCounters;
   unsigned NumIssueCounters;
+
+  const std::pair<ValidationEvent, const char *> *ValidationEvents;
+  unsigned NumValidationEvents;
 
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;

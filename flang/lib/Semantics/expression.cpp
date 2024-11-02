@@ -3088,21 +3088,18 @@ const Assignment *ExpressionAnalyzer::Analyze(
 }
 
 static bool IsExternalCalledImplicitly(
-    parser::CharBlock callSite, const ProcedureDesignator &proc) {
-  if (const auto *symbol{proc.GetSymbol()}) {
-    return symbol->has<semantics::SubprogramDetails>() &&
-        symbol->owner().IsGlobal() &&
-        (!symbol->scope() /*ENTRY*/ ||
-            !symbol->scope()->sourceRange().Contains(callSite));
-  } else {
-    return false;
-  }
+    parser::CharBlock callSite, const Symbol *symbol) {
+  return symbol && symbol->owner().IsGlobal() &&
+      symbol->has<semantics::SubprogramDetails>() &&
+      (!symbol->scope() /*ENTRY*/ ||
+          !symbol->scope()->sourceRange().Contains(callSite));
 }
 
 std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     parser::CharBlock callSite, const ProcedureDesignator &proc,
     ActualArguments &arguments) {
-  bool treatExternalAsImplicit{IsExternalCalledImplicitly(callSite, proc)};
+  bool treatExternalAsImplicit{
+      IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
   std::optional<characteristics::Procedure> chars;
   if (procSymbol && procSymbol->has<semantics::ProcEntityDetails>() &&
@@ -3138,10 +3135,15 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   }
   bool ok{true};
   if (chars) {
-    if (treatExternalAsImplicit && !chars->CanBeCalledViaImplicitInterface()) {
-      Say(callSite,
-          "References to the procedure '%s' require an explicit interface"_err_en_US,
-          DEREF(procSymbol).name());
+    std::string whyNot;
+    if (treatExternalAsImplicit &&
+        !chars->CanBeCalledViaImplicitInterface(&whyNot)) {
+      if (auto *msg{Say(callSite,
+              "References to the procedure '%s' require an explicit interface"_err_en_US,
+              DEREF(procSymbol).name())};
+          msg && !whyNot.empty()) {
+        msg->Attach(callSite, "%s"_because_en_US, whyNot);
+      }
     }
     const SpecificIntrinsic *specificIntrinsic{proc.GetSpecificIntrinsic()};
     bool procIsDummy{procSymbol && IsDummy(*procSymbol)};

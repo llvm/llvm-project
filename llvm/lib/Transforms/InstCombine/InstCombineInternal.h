@@ -276,7 +276,15 @@ private:
   bool transformConstExprCastCall(CallBase &Call);
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
-  Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
+
+  // Return (a, b) if (LHS, RHS) is known to be (a, b) or (b, a).
+  // Otherwise, return std::nullopt
+  // Currently it matches:
+  // - LHS = (select c, a, b), RHS = (select c, b, a)
+  // - LHS = (phi [a, BB0], [b, BB1]), RHS = (phi [b, BB0], [a, BB1])
+  // - LHS = min(a, b), RHS = max(a, b)
+  std::optional<std::pair<Value *, Value *>> matchSymmetricPair(Value *LHS,
+                                                                Value *RHS);
 
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
@@ -497,6 +505,10 @@ public:
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
                                         Value *RHS);
 
+  // If `I` has operand `(ctpop (not x))`, fold `I` with `(sub nuw nsw
+  // BitWidth(x), (ctpop x))`.
+  Instruction *tryFoldInstWithCtpopWithNot(Instruction *I);
+
   // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
   //    -> (logic_shift (Binop1 (Binop2 X, inv_logic_shift(C1, C)), Y), C)
   // (Binop1 (Binop2 (logic_shift X, Amt), Mask), (logic_shift Y, Amt))
@@ -550,7 +562,7 @@ public:
   bool SimplifyDemandedInstructionBits(Instruction &Inst, KnownBits &Known);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
-                                    APInt &UndefElts, unsigned Depth = 0,
+                                    APInt &PoisonElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
 
   /// Canonicalize the position of binops relative to shufflevector.
@@ -633,9 +645,8 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
-  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
-                                      Value *Z, ICmpInst::Predicate Pred);
-  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
+  Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
+                                  Value *Z, ICmpInst::Predicate Pred);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -693,6 +704,8 @@ public:
                                                const APInt &C);
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
+  Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
+                                   Value *Op1, ICmpInst &CxtI);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);

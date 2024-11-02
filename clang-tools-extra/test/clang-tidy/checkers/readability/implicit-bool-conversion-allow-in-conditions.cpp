@@ -12,6 +12,7 @@ int* functionReturningPointer();
 struct Struct {
   int member;
   unsigned bitfield : 1;
+  bool boolfield : 1;
 };
 
 
@@ -28,6 +29,8 @@ void implicitConversionIntegerToBoolInConditionalsIsAllowed() {
   if (!s.member) {}
   if (s.bitfield) {}
   if (!s.bitfield) {}
+  if (s.boolfield == true) {}
+  if (s.boolfield != true) {}
   if (functionReturningInt()) {}
   if (!functionReturningInt()) {}
   if (functionReturningInt() && functionReturningPointer()) {}

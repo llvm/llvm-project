@@ -110,8 +110,7 @@ void DependencyGraphCallback::OutputGraphFile() {
     writeNodeReference(OS, AllFiles[I]);
     OS << " [ shape=\"box\", label=\"";
     StringRef FileName = AllFiles[I].getName();
-    if (FileName.starts_with(SysRoot))
-      FileName = FileName.substr(SysRoot.size());
+    FileName.consume_front(SysRoot);
 
     OS << DOT::EscapeString(std::string(FileName)) << "\"];\n";
   }

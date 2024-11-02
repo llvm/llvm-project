@@ -29,7 +29,7 @@ entry:
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_sdot4_no_clamp
 ; GFX906: v_dot4_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX10:  v_dot4c_i32_i8_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX10:  v_dot4c_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GF11:   v_dot4_i32_iu8 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}} neg_lo:[1,1,0]{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_sdot4_no_clamp(
     ptr addrspace(1) %r,

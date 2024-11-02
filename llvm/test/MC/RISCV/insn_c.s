@@ -23,37 +23,37 @@ target:
 
 # CHECK-ASM: .insn ci  1, 0, a0, 13
 # CHECK-ASM: encoding: [0x35,0x05]
-# CHECK-OBJ: c.addi a0, 13
+# CHECK-OBJ: c.addi a0, 0xd
 .insn ci  1, 0, a0, 13
 
 # CHECK-ASM: .insn ci  1, 0, a0, 13
 # CHECK-ASM: encoding: [0x35,0x05]
-# CHECK-OBJ: c.addi a0, 13
+# CHECK-OBJ: c.addi a0, 0xd
 .insn ci C1, 0, a0, 13
 
 # CHECK-ASM: .insn ciw  0, 0, a0, 13
 # CHECK-ASM: encoding: [0xa8,0x01]
-# CHECK-OBJ: c.addi4spn a0, sp, 200
+# CHECK-OBJ: c.addi4spn a0, sp, 0xc8
 .insn ciw  0, 0, a0, 13
 
 # CHECK-ASM: .insn ciw  0, 0, a0, 13
 # CHECK-ASM: encoding: [0xa8,0x01]
-# CHECK-OBJ: c.addi4spn a0, sp, 200
+# CHECK-OBJ: c.addi4spn a0, sp, 0xc8
 .insn ciw C0, 0, a0, 13
 
 # CHECK-ASM: .insn css  2, 6, a0, 13
 # CHECK-ASM: encoding: [0xaa,0xc6]
-# CHECK-OBJ: c.swsp a0, 76(sp)
+# CHECK-OBJ: c.swsp a0, 0x4c(sp)
 .insn css  2, 6, a0, 13
 
 # CHECK-ASM: .insn cl  0, 2, a0, 13
 # CHECK-ASM: encoding: [0xa8,0x4d]
-# CHECK-OBJ: c.lw a0, 88(a1)
+# CHECK-OBJ: c.lw a0, 0x58(a1)
 .insn cl  0, 2, a0, 13(a1)
 
 # CHECK-ASM: .insn cs  0, 6, a0, 13
 # CHECK-ASM: encoding: [0xa8,0xcd]
-# CHECK-OBJ: c.sw a0, 88(a1)
+# CHECK-OBJ: c.sw a0, 0x58(a1)
 .insn cs  0, 6, a0, 13(a1)
 
 # CHECK-ASM: .insn ca  1, 35, 0, a0, a1

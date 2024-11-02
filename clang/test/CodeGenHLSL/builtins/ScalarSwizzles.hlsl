@@ -85,7 +85,7 @@ float4 FillTwoPointFiveFloat(){
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x float>, align 4
 // CHECK: store <1 x float> <float 5.000000e-01>, ptr [[vec1Ptr]], align 4
 // CHECK: [[vec1:%.*]] = load <1 x float>, ptr [[vec1Ptr]], align 4
-// CHECK: [[vec1Ret:%.*]] = shufflevector <1 x float> [[vec1]], <1 x float> undef, <1 x i32> zeroinitializer
+// CHECK: [[vec1Ret:%.*]] = shufflevector <1 x float> [[vec1]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK: ret <1 x float> [[vec1Ret]]
 vector<float, 1> FillOneHalfFloat(){
   return .5f.r;
@@ -122,7 +122,7 @@ float2 HowManyFloats(float V) {
 // CHECK: [[XVec3:%.*]] = shufflevector <1 x double> [[XVec]], <1 x double> poison, <3 x i32> zeroinitializer
 // CHECK: [[XVal:%.*]] = extractelement <3 x double> [[XVec3]], i32 0
 // CHECK: [[XValF:%.*]] = fptrunc double [[XVal]] to float
-// CHECK: [[Vec3F1:%.*]] = insertelement <3 x float> undef, float [[XValF]], i32 0
+// CHECK: [[Vec3F1:%.*]] = insertelement <3 x float> poison, float [[XValF]], i32 0
 
 // CHECK: store <1 x double> <double 1.000000e+00>, ptr [[YTmp]], align 8
 // CHECK: [[YVec:%.*]] = load <1 x double>, ptr [[YTmp]], align 8

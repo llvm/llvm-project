@@ -289,8 +289,7 @@ define i4 @ptr_N_step_zext_n_zext(ptr %src, ptr %lower, ptr %upper, i16 %N, i16 
 ; CHECK-NEXT:    br i1 [[STEP_ULT_N]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 [[STEP_ADD_1_EXT]]
-; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult ptr [[SRC_STEP]], [[LOWER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], false
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
@@ -344,9 +343,8 @@ define i4 @ptr_N_step_zext_n_zext_out_of_bounds(ptr %src, ptr %lower, ptr %upper
 ; CHECK-NEXT:    br i1 [[STEP_ULT_N]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 [[STEP_ADD_2_EXT]]
-; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult ptr [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge ptr [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3

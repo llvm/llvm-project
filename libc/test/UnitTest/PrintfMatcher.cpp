@@ -77,7 +77,7 @@ static void display(FormatSection form) {
            << "\n";
     else if (form.conv_name != '%')
       tlog << "\tvalue: "
-           << int_to_hex<fputil::FPBits<long double>::UIntType>(
+           << int_to_hex<fputil::FPBits<long double>::StorageType>(
                   form.conv_val_raw)
            << "\n";
   }

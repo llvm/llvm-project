@@ -198,6 +198,7 @@ def SiFive7Model : SchedMachineModel {
   let LoadLatency = 3;
   let MispredictPenalty = 3;
   let CompleteModel = 0;
+  let EnableIntervals = true;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
                              HasStdExtZknh, HasStdExtZksed, HasStdExtZksh,

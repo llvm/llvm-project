@@ -982,5 +982,3 @@ define float @reduce_fadd_4xi32_non_associative2(ptr %p) {
   %fadd2 = fadd fast float %fadd1, %e3
   ret float %fadd2
 }
-
-

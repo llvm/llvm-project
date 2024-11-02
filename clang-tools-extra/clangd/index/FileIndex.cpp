@@ -223,7 +223,7 @@ FileShardedIndex::getShard(llvm::StringRef Uri) const {
 SlabTuple indexMainDecls(ParsedAST &AST) {
   return indexSymbols(
       AST.getASTContext(), AST.getPreprocessor(), AST.getLocalTopLevelDecls(),
-      &AST.getMacros(), *AST.getPragmaIncludes(),
+      &AST.getMacros(), AST.getPragmaIncludes(),
       /*IsIndexMainAST=*/true, AST.version(), /*CollectMainFileRefs=*/true);
 }
 

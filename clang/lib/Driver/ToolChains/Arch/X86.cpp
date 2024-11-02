@@ -237,9 +237,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
-    bool IsNegative = Name.starts_with("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
 #ifndef NDEBUG
     assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");

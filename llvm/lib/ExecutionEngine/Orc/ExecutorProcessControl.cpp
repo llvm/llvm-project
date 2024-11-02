@@ -95,7 +95,7 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
 
   for (auto &Elem : Request) {
     sys::DynamicLibrary Dylib(Elem.Handle.toPtr<void *>());
-    R.push_back(std::vector<ExecutorAddr>());
+    R.push_back(std::vector<ExecutorSymbolDef>());
     for (auto &KV : Elem.Symbols) {
       auto &Sym = KV.first;
       std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
@@ -107,7 +107,9 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
         MissingSymbols.push_back(Sym);
         return make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols));
       }
-      R.back().push_back(ExecutorAddr::fromPtr(Addr));
+      // FIXME: determine accurate JITSymbolFlags.
+      R.back().push_back(
+          {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
     }
   }
 

@@ -2,6 +2,7 @@
 ; XFAIL: target=sparc{{.*}}
 
 ; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not=DW_TAG
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not=DW_TAG
 
 ; IR generated from clang -O0 with:
 ; struct C {

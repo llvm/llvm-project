@@ -49,4 +49,4 @@ Section,Description,Dependencies,Assignee,Status,First released version
 "`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output"
 `[print.fun] <https://wg21.link/print.fun>`__,"Output to ``stdout``",,Mark de Wever,|Complete|, 17.0
 `[print.fun] <https://wg21.link/print.fun>`__,"Output to ``FILE*``",,Mark de Wever,|Complete|, 17.0
-`[ostream.formatted.print] <https://wg21.link/ostream.formatted.print>`__,"Output to ``ostream``",,Mark de Wever
+`[ostream.formatted.print] <https://wg21.link/ostream.formatted.print>`__,"Output to ``ostream``",,Mark de Wever,|Complete|, 18.0

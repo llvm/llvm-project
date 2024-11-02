@@ -9,7 +9,8 @@
 // RUN: %clang_cc1 -std=c++20 -O1 -triple %itanium_abi_triple %t/c.cppm \
 // RUN:     -emit-module-interface -fprebuilt-module-path=%t -o %t/c.pcm
 // RUN: %clang_cc1 -std=c++20 -O1 -triple %itanium_abi_triple %t/c.pcm -S \
-// RUN:     -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cppm
+// RUN:     -fprebuilt-module-path=%t -emit-llvm -disable-llvm-passes -o - \
+// RUN:     | FileCheck %t/c.cppm
 
 //--- a.cppm
 export module a;

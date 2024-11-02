@@ -6,6 +6,7 @@
 // FIXME: This fails to link due to missing math symbols. We should provide the
 //        needed math functions in the GPU `libm` and require the GPU C library.
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 #include <cassert>
 #include <complex>

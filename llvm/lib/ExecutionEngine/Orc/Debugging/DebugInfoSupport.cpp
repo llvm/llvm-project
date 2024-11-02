@@ -105,8 +105,7 @@ llvm::orc::createDWARFContext(LinkGraph &G) {
       auto SecData = getSectionData(Sec);
       auto Name = Sec.getName();
       // DWARFContext expects the section name to not start with a dot
-      if (Name.starts_with("."))
-        Name = Name.drop_front();
+      Name.consume_front(".");
       LLVM_DEBUG(dbgs() << "Creating DWARFContext section " << Name
                         << " with size " << SecData.size() << "\n");
       DWARFSectionData[Name] =

@@ -30,13 +30,6 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
   let summary = "Structured metadata for sparse tensor low-level storage scheme";
 
   let description = [{
-    Syntax:
-
-    ```
-    storage_specifier-type ::= `!storage_specifier` `<` encoding `>`
-    encoding ::= attribute-value
-    ```
-
     Values with storage_specifier types represent aggregated storage scheme
     metadata for the given sparse tensor encoding.  It currently holds
     a set of values for level-sizes, coordinate arrays, position arrays,

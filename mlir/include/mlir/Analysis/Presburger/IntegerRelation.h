@@ -221,6 +221,8 @@ public:
     return getInt64Vec(inequalities.getRow(idx));
   }
 
+  inline IntMatrix getInequalities() const { return inequalities; }
+
   /// Get the number of vars of the specified kind.
   unsigned getNumVarKind(VarKind kind) const {
     return space.getNumVarKind(kind);
@@ -576,6 +578,11 @@ public:
   void convertToLocal(VarKind kind, unsigned varStart, unsigned varLimit) {
     convertVarKind(kind, varStart, varLimit, VarKind::Local);
   }
+
+  /// Merge and align symbol variables of `this` and `other` with respect to
+  /// identifiers. After this operation the symbol variables of both relations
+  /// have the same identifiers in the same order.
+  void mergeAndAlignSymbols(IntegerRelation &other);
 
   /// Adds additional local vars to the sets such that they both have the union
   /// of the local vars in each set, without changing the set of points that

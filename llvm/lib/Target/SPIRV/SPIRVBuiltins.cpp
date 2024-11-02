@@ -872,8 +872,8 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     std::tie(GroupResultRegister, GroupResultType) =
         buildBoolRegister(MIRBuilder, Call->ReturnType, GR);
 
-  auto Scope = Builtin->Name.startswith("sub_group") ? SPIRV::Scope::Subgroup
-                                                     : SPIRV::Scope::Workgroup;
+  auto Scope = Builtin->Name.starts_with("sub_group") ? SPIRV::Scope::Subgroup
+                                                      : SPIRV::Scope::Workgroup;
   Register ScopeRegister = buildConstantIntReg(Scope, MIRBuilder, GR);
 
   // Build work/sub group instruction.
@@ -1617,7 +1617,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
                                SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   const DataLayout &DL = MIRBuilder.getDataLayout();
-  bool HasEvents = Call->Builtin->Name.find("events") != StringRef::npos;
+  bool HasEvents = Call->Builtin->Name.contains("events");
   const SPIRVType *Int32Ty = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
 
   // Make vararg instructions before OpEnqueueKernel.
@@ -1999,13 +1999,13 @@ struct OpenCLType {
 //===----------------------------------------------------------------------===//
 
 static Type *parseTypeString(const StringRef Name, LLVMContext &Context) {
-  if (Name.startswith("void"))
+  if (Name.starts_with("void"))
     return Type::getVoidTy(Context);
-  else if (Name.startswith("int") || Name.startswith("uint"))
+  else if (Name.starts_with("int") || Name.starts_with("uint"))
     return Type::getInt32Ty(Context);
-  else if (Name.startswith("float"))
+  else if (Name.starts_with("float"))
     return Type::getFloatTy(Context);
-  else if (Name.startswith("half"))
+  else if (Name.starts_with("half"))
     return Type::getHalfTy(Context);
   llvm_unreachable("Unable to recognize type!");
 }
@@ -2081,7 +2081,7 @@ parseBuiltinTypeNameToTargetExtType(std::string TypeName,
   // Pointers-to-opaque-structs representing OpenCL types are first translated
   // to equivalent SPIR-V types. OpenCL builtin type names should have the
   // following format: e.g. %opencl.event_t
-  if (NameWithParameters.startswith("opencl.")) {
+  if (NameWithParameters.starts_with("opencl.")) {
     const SPIRV::OpenCLType *OCLTypeRecord =
         SPIRV::lookupOpenCLType(NameWithParameters);
     if (!OCLTypeRecord)
@@ -2093,12 +2093,12 @@ parseBuiltinTypeNameToTargetExtType(std::string TypeName,
 
   // Names of the opaque structs representing a SPIR-V builtins without
   // parameters should have the following format: e.g. %spirv.Event
-  assert(NameWithParameters.startswith("spirv.") &&
+  assert(NameWithParameters.starts_with("spirv.") &&
          "Unknown builtin opaque type!");
 
   // Parameterized SPIR-V builtins names follow this format:
   // e.g. %spirv.Image._void_1_0_0_0_0_0_0, %spirv.Pipe._0
-  if (NameWithParameters.find('_') == std::string::npos)
+  if (!NameWithParameters.contains('_'))
     return TargetExtType::get(MIRBuilder.getContext(), NameWithParameters);
 
   SmallVector<StringRef> Parameters;

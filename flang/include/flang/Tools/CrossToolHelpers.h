@@ -35,6 +35,7 @@ struct MLIRToLLVMPassPipelineConfig {
     LoopVersioning = opts.LoopVersioning;
     DebugInfo = opts.getDebugInfo();
     AliasAnalysis = opts.AliasAnalysis;
+    FramePointerKind = opts.getFramePointer();
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -44,6 +45,8 @@ struct MLIRToLLVMPassPipelineConfig {
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
+  llvm::FramePointerKind FramePointerKind =
+      llvm::FramePointerKind::None; ///< Add frame pointer to functions.
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
 };
@@ -53,14 +56,16 @@ struct OffloadModuleOpts {
   OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
       bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
-      bool OpenMPIsGPU, uint32_t OpenMPVersion, std::string OMPHostIRFile = {})
+      bool OpenMPIsGPU, uint32_t OpenMPVersion, std::string OMPHostIRFile = {},
+      bool NoGPULib = false)
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
         OpenMPThreadSubscription(OpenMPThreadSubscription),
         OpenMPNoThreadState(OpenMPNoThreadState),
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
-        OpenMPVersion(OpenMPVersion), OMPHostIRFile(OMPHostIRFile) {}
+        OpenMPVersion(OpenMPVersion), OMPHostIRFile(OMPHostIRFile),
+        NoGPULib(NoGPULib) {}
 
   OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
@@ -70,7 +75,7 @@ struct OffloadModuleOpts {
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
         OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPVersion(Opts.OpenMPVersion),
-        OMPHostIRFile(Opts.OMPHostIRFile) {}
+        OMPHostIRFile(Opts.OMPHostIRFile), NoGPULib(Opts.NoGPULib) {}
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -81,6 +86,7 @@ struct OffloadModuleOpts {
   bool OpenMPIsGPU = false;
   uint32_t OpenMPVersion = 11;
   std::string OMPHostIRFile = {};
+  bool NoGPULib = false;
 };
 
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
@@ -95,7 +101,7 @@ void setOffloadModuleInterfaceAttributes(
     if (Opts.OpenMPIsTargetDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
-          Opts.OpenMPNoNestedParallelism, Opts.OpenMPVersion);
+          Opts.OpenMPNoNestedParallelism, Opts.OpenMPVersion, Opts.NoGPULib);
 
       if (!Opts.OMPHostIRFile.empty())
         offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);

@@ -55,6 +55,7 @@ define void @back_off_barrier_no_fence(ptr %in, ptr %out) #0 {
 ; GFX11-BACKOFF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-BACKOFF-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX11-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-BACKOFF-NEXT:    s_barrier
 ; GFX11-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
 ; GFX11-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
@@ -72,7 +73,6 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX9-NO-BACKOFF-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX9-NO-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NO-BACKOFF-NEXT:    s_barrier
-; GFX9-NO-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NO-BACKOFF-NEXT:    flat_store_dword v[2:3], v0
 ; GFX9-NO-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NO-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
@@ -83,7 +83,7 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX9-BACKOFF-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX9-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-BACKOFF-NEXT:    s_barrier
-; GFX9-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-BACKOFF-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-BACKOFF-NEXT:    flat_store_dword v[2:3], v0
 ; GFX9-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
@@ -94,7 +94,7 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX940-BACKOFF-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX940-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-BACKOFF-NEXT:    s_barrier
-; GFX940-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-BACKOFF-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-BACKOFF-NEXT:    flat_store_dword v[2:3], v0 sc0 sc1
 ; GFX940-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
@@ -106,8 +106,6 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX10-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-BACKOFF-NEXT:    s_barrier
-; GFX10-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-BACKOFF-NEXT:    buffer_gl0_inv
 ; GFX10-BACKOFF-NEXT:    flat_store_dword v[2:3], v0
 ; GFX10-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
@@ -120,8 +118,6 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX11-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-BACKOFF-NEXT:    s_barrier
-; GFX11-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-BACKOFF-NEXT:    buffer_gl0_inv
 ; GFX11-BACKOFF-NEXT:    flat_store_b32 v[2:3], v0
 ; GFX11-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)

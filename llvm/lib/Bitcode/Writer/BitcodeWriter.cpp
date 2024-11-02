@@ -459,9 +459,24 @@ public:
       // Record all stack id indices actually used in the summary entries being
       // written, so that we can compact them in the case of distributed ThinLTO
       // indexes.
-      for (auto &CI : FS->callsites())
+      for (auto &CI : FS->callsites()) {
+        // If the stack id list is empty, this callsite info was synthesized for
+        // a missing tail call frame. Ensure that the callee's GUID gets a value
+        // id. Normally we only generate these for defined summaries, which in
+        // the case of distributed ThinLTO is only the functions already defined
+        // in the module or that we want to import. We don't bother to include
+        // all the callee symbols as they aren't normally needed in the backend.
+        // However, for the synthesized callsite infos we do need the callee
+        // GUID in the backend so that we can correlate the identified callee
+        // with this callsite info (which for non-tail calls is done by the
+        // ordering of the callsite infos and verified via stack ids).
+        if (CI.StackIdIndices.empty()) {
+          GUIDToValueIdMap[CI.Callee.getGUID()] = ++GlobalValueId;
+          continue;
+        }
         for (auto Idx : CI.StackIdIndices)
           StackIdIndices.push_back(Idx);
+      }
       for (auto &AI : FS->allocs())
         for (auto &MIB : AI.MIBs)
           for (auto Idx : MIB.StackIdIndices)

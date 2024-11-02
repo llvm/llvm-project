@@ -8,7 +8,8 @@
 ; CHECK: %[[#]] = OpFunction %[[#]] None %[[#]]
 ; CHECK-NEXT: %[[#PTR:]] = OpFunctionParameter %[[#]]
 ; CHECK-NEXT: %[[#]] = OpLabel
-; CHECK-NEXT: OpStore %[[#PTR]] %[[#UNDEF]] Aligned 4
+; CHECK-NEXT: %[[#BC:]] = OpBitcast %[[#]] %[[#PTR]]
+; CHECK-NEXT: OpStore %[[#BC]] %[[#UNDEF]] Aligned 4
 ; CHECK-NEXT: OpReturn
 ; CHECK-NEXT: OpFunctionEnd
 

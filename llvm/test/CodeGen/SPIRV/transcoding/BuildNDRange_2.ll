@@ -22,6 +22,7 @@
 
 ; TODO(#60133): Requires updates following opaque pointer migration.
 ; XFAIL: *
+; REQUIRES: asserts
 
 ; CHECK-SPIRV-DAG:     %[[#LEN2_ID:]] = OpConstant %[[#]] 2
 ; CHECK-SPIRV-DAG:     %[[#LEN3_ID:]] = OpConstant %[[#]] 3

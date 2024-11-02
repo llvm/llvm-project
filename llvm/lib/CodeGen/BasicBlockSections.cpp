@@ -103,7 +103,7 @@ class BasicBlockSections : public MachineFunctionPass {
 public:
   static char ID;
 
-  BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
+  BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
   BasicBlockSections() : MachineFunctionPass(ID) {
     initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
@@ -128,7 +128,7 @@ INITIALIZE_PASS_BEGIN(
     "Prepares for basic block sections, by splitting functions "
     "into clusters of basic blocks.",
     false, false)
-INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
+INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
                     "Prepares for basic block sections, by splitting functions "
                     "into clusters of basic blocks.",
@@ -306,7 +306,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   if (BBSectionsType == BasicBlockSection::List) {
     auto [HasProfile, ClusterInfo] =
-        getAnalysis<BasicBlockSectionsProfileReader>()
+        getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
             .getClusterInfoForFunction(MF.getName());
     if (!HasProfile)
       return false;
@@ -362,7 +362,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<BasicBlockSectionsProfileReader>();
+  AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

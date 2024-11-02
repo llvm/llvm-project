@@ -144,7 +144,7 @@ func.func @map_nested_forall_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: te
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %forall, %tiled = transform.structured.tile_using_forall %matmul num_threads [2, 3, 1] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
+    %tiled, %forall = transform.structured.tile_using_forall %matmul num_threads [2, 3, 1] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{only bufferized scf.forall can be mapped}}

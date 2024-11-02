@@ -254,7 +254,7 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_i32(<32 x i32> %x, <32 x
 ; LMULMAX8-NEXT:    li a1, 2
 ; LMULMAX8-NEXT:    vmv8r.v v8, v16
 ; LMULMAX8-NEXT:    vmv8r.v v16, v24
-; LMULMAX8-NEXT:    call ext2@plt
+; LMULMAX8-NEXT:    call ext2
 ; LMULMAX8-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    addi sp, sp, 16
 ; LMULMAX8-NEXT:    ret
@@ -272,7 +272,7 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_i32(<32 x i32> %x, <32 x
 ; LMULMAX4-NEXT:    vmv4r.v v12, v20
 ; LMULMAX4-NEXT:    vmv4r.v v16, v28
 ; LMULMAX4-NEXT:    vmv4r.v v20, v24
-; LMULMAX4-NEXT:    call ext2@plt
+; LMULMAX4-NEXT:    call ext2
 ; LMULMAX4-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    addi sp, sp, 16
 ; LMULMAX4-NEXT:    ret
@@ -300,7 +300,7 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x
 ; LMULMAX8-NEXT:    li a2, 42
 ; LMULMAX8-NEXT:    vse32.v v8, (a3)
 ; LMULMAX8-NEXT:    vmv.v.v v8, v24
-; LMULMAX8-NEXT:    call ext3@plt
+; LMULMAX8-NEXT:    call ext3
 ; LMULMAX8-NEXT:    addi sp, s0, -256
 ; LMULMAX8-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
@@ -330,7 +330,7 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x
 ; LMULMAX4-NEXT:    vse32.v v8, (a1)
 ; LMULMAX4-NEXT:    vmv.v.v v8, v24
 ; LMULMAX4-NEXT:    vmv.v.v v12, v28
-; LMULMAX4-NEXT:    call ext3@plt
+; LMULMAX4-NEXT:    call ext3
 ; LMULMAX4-NEXT:    addi sp, s0, -256
 ; LMULMAX4-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
@@ -394,7 +394,7 @@ define fastcc <32 x i32> @pass_vector_arg_indirect_stack(<32 x i32> %x, <32 x i3
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    li a0, 0
 ; LMULMAX8-NEXT:    vmv.v.i v16, 0
-; LMULMAX8-NEXT:    call vector_arg_indirect_stack@plt
+; LMULMAX8-NEXT:    call vector_arg_indirect_stack
 ; LMULMAX8-NEXT:    addi sp, s0, -256
 ; LMULMAX8-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
@@ -431,7 +431,7 @@ define fastcc <32 x i32> @pass_vector_arg_indirect_stack(<32 x i32> %x, <32 x i3
 ; LMULMAX4-NEXT:    vmv.v.i v12, 0
 ; LMULMAX4-NEXT:    vmv.v.i v16, 0
 ; LMULMAX4-NEXT:    vmv.v.i v20, 0
-; LMULMAX4-NEXT:    call vector_arg_indirect_stack@plt
+; LMULMAX4-NEXT:    call vector_arg_indirect_stack
 ; LMULMAX4-NEXT:    addi sp, s0, -256
 ; LMULMAX4-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
@@ -501,7 +501,7 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; LMULMAX8-NEXT:    sd a0, 0(sp)
 ; LMULMAX8-NEXT:    li a0, 0
 ; LMULMAX8-NEXT:    vmv.v.i v16, 0
-; LMULMAX8-NEXT:    call vector_arg_direct_stack@plt
+; LMULMAX8-NEXT:    call vector_arg_direct_stack
 ; LMULMAX8-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
 ; LMULMAX8-NEXT:    addi sp, sp, 160
 ; LMULMAX8-NEXT:    ret
@@ -538,7 +538,7 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; LMULMAX4-NEXT:    vmv.v.i v12, 0
 ; LMULMAX4-NEXT:    vmv.v.i v16, 0
 ; LMULMAX4-NEXT:    vmv.v.i v20, 0
-; LMULMAX4-NEXT:    call vector_arg_direct_stack@plt
+; LMULMAX4-NEXT:    call vector_arg_direct_stack
 ; LMULMAX4-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
 ; LMULMAX4-NEXT:    addi sp, sp, 160
 ; LMULMAX4-NEXT:    ret

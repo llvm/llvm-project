@@ -15,7 +15,7 @@ struct s0 {
   int a[64];
 };
 
-// CHECK: define internal void @__f2_block_invoke(ptr noalias sret(%struct.s0) align 4 {{%.*}}, ptr noundef {{%.*}}, ptr noundef byval(%struct.s0) align 4 {{.*}})
+// CHECK: define internal void @__f2_block_invoke(ptr dead_on_unwind noalias writable sret(%struct.s0) align 4 {{%.*}}, ptr noundef {{%.*}}, ptr noundef byval(%struct.s0) align 4 {{.*}})
 struct s0 f2(struct s0 a0) {
   return ^(struct s0 a1){ return a1; }(a0);
 }

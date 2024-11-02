@@ -10,7 +10,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for utofp_v3i8_v3f32
 ; CHECK-GI-NOFP16-NEXT:  warning: Instruction selection used fallback path for stofp_v3i8_v3f16
 ; CHECK-GI-NOFP16-NEXT:  warning: Instruction selection used fallback path for utofp_v3i8_v3f16
-; CHECK-GI-FP16-NEXT:  warning: Instruction selection used fallback path for stofp_v2i8_v2f16
 
 define double @stofp_i64_f64(i64 %a) {
 ; CHECK-LABEL: stofp_i64_f64:
@@ -5563,13 +5562,21 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-FP16-LABEL: stofp_v2i8_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-FP16-NEXT:    fmov w9, s0
-; CHECK-GI-FP16-NEXT:    sxtb w9, w9
-; CHECK-GI-FP16-NEXT:    sxtb w8, w8
-; CHECK-GI-FP16-NEXT:    scvtf h0, w9
-; CHECK-GI-FP16-NEXT:    scvtf h1, w8
+; CHECK-GI-FP16-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], v0.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[3], v0.h[0]
+; CHECK-GI-FP16-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-GI-FP16-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], v0.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[3], v0.h[0]
+; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[2], v0.h[0]
+; CHECK-GI-FP16-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:

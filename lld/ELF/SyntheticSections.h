@@ -1257,9 +1257,9 @@ public:
   size_t getSize() const override;
 };
 
-class MemtagDescriptors final : public SyntheticSection {
+class MemtagGlobalDescriptors final : public SyntheticSection {
 public:
-  MemtagDescriptors()
+  MemtagGlobalDescriptors()
       : SyntheticSection(llvm::ELF::SHF_ALLOC,
                          llvm::ELF::SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC,
                          /*alignment=*/4, ".memtag.globals.dynamic") {}
@@ -1315,7 +1315,7 @@ struct Partition {
   std::unique_ptr<GnuHashTableSection> gnuHashTab;
   std::unique_ptr<HashTableSection> hashTab;
   std::unique_ptr<MemtagAndroidNote> memtagAndroidNote;
-  std::unique_ptr<MemtagDescriptors> memtagDescriptors;
+  std::unique_ptr<MemtagGlobalDescriptors> memtagGlobalDescriptors;
   std::unique_ptr<PackageMetadataNote> packageMetadataNote;
   std::unique_ptr<RelocationBaseSection> relaDyn;
   std::unique_ptr<RelrBaseSection> relrDyn;

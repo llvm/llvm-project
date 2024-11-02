@@ -14,6 +14,7 @@
 #ifndef LLVM_TEXTAPI_RECORD_H
 #define LLVM_TEXTAPI_RECORD_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/TextAPI/Symbol.h"
@@ -50,7 +51,7 @@ class Record {
 public:
   Record() = default;
   Record(StringRef Name, RecordLinkage Linkage, SymbolFlags Flags)
-      : Name(Name), Linkage(Linkage), Flags(Flags) {}
+      : Name(Name), Linkage(Linkage), Flags(mergeFlags(Flags, Linkage)) {}
 
   bool isWeakDefined() const {
     return (Flags & SymbolFlags::WeakDefined) == SymbolFlags::WeakDefined;
@@ -79,6 +80,10 @@ public:
   bool isRexported() const { return Linkage == RecordLinkage::Rexported; }
 
   StringRef getName() const { return Name; }
+  SymbolFlags getFlags() const { return Flags; }
+
+private:
+  SymbolFlags mergeFlags(SymbolFlags Flags, RecordLinkage Linkage);
 
 protected:
   StringRef Name;
@@ -103,6 +108,10 @@ public:
 
   bool isFunction() const { return GV == Kind::Function; }
   bool isVariable() const { return GV == Kind::Variable; }
+  void setKind(const Kind &V) {
+    if (GV == Kind::Unknown)
+      GV = V;
+  }
 
 private:
   Kind GV;
@@ -133,6 +142,7 @@ public:
 
   ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
   ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
+  std::vector<ObjCIVarRecord *> getObjCIVars() const;
 
 private:
   RecordMap<ObjCIVarRecord> IVars;
@@ -159,6 +169,7 @@ public:
 
   bool hasExceptionAttribute() const { return HasEHType; }
   bool addObjCCategory(ObjCCategoryRecord *Record);
+  std::vector<ObjCCategoryRecord *> getObjCCategories() const;
 
 private:
   bool HasEHType;

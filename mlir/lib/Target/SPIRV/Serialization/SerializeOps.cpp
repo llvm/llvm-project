@@ -177,6 +177,34 @@ LogicalResult Serializer::processUndefOp(spirv::UndefOp op) {
   return success();
 }
 
+LogicalResult Serializer::processFuncParameter(spirv::FuncOp op) {
+  for (auto [idx, arg] : llvm::enumerate(op.getArguments())) {
+    uint32_t argTypeID = 0;
+    if (failed(processType(op.getLoc(), arg.getType(), argTypeID))) {
+      return failure();
+    }
+    auto argValueID = getNextID();
+
+    // Process decoration attributes of arguments.
+    auto funcOp = cast<FunctionOpInterface>(*op);
+    for (auto argAttr : funcOp.getArgAttrs(idx)) {
+      if (argAttr.getName() != DecorationAttr::name)
+        continue;
+
+      if (auto decAttr = dyn_cast<DecorationAttr>(argAttr.getValue())) {
+        if (failed(processDecorationAttr(op->getLoc(), argValueID,
+                                         decAttr.getValue(), decAttr)))
+          return failure();
+      }
+    }
+
+    valueIDMap[arg] = argValueID;
+    encodeInstructionInto(functionHeader, spirv::Opcode::OpFunctionParameter,
+                          {argTypeID, argValueID});
+  }
+  return success();
+}
+
 LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   LLVM_DEBUG(llvm::dbgs() << "-- start function '" << op.getName() << "' --\n");
   assert(functionHeader.empty() && functionBody.empty());
@@ -229,32 +257,15 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
     // is going to return false for this function from now on)
     // Hence, we'll remove the body once we are done with the serialization.
     op.addEntryBlock();
-    for (auto arg : op.getArguments()) {
-      uint32_t argTypeID = 0;
-      if (failed(processType(op.getLoc(), arg.getType(), argTypeID))) {
-        return failure();
-      }
-      auto argValueID = getNextID();
-      valueIDMap[arg] = argValueID;
-      encodeInstructionInto(functionHeader, spirv::Opcode::OpFunctionParameter,
-                            {argTypeID, argValueID});
-    }
+    if (failed(processFuncParameter(op)))
+      return failure();
     // Don't need to process the added block, there is nothing to process,
     // the fake body was added just to get the arguments, remove the body,
     // since it's use is done.
     op.eraseBody();
   } else {
-    // Declare the parameters.
-    for (auto arg : op.getArguments()) {
-      uint32_t argTypeID = 0;
-      if (failed(processType(op.getLoc(), arg.getType(), argTypeID))) {
-        return failure();
-      }
-      auto argValueID = getNextID();
-      valueIDMap[arg] = argValueID;
-      encodeInstructionInto(functionHeader, spirv::Opcode::OpFunctionParameter,
-                            {argTypeID, argValueID});
-    }
+    if (failed(processFuncParameter(op)))
+      return failure();
 
     // Some instructions (e.g., OpVariable) in a function must be in the first
     // block in the function. These instructions will be put in
@@ -383,20 +394,31 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   operands.push_back(static_cast<uint32_t>(varOp.storageClass()));
 
   // Encode initialization.
-  if (auto initializer = varOp.getInitializer()) {
-    auto initializerID = getVariableID(*initializer);
-    if (!initializerID) {
+  StringRef initAttrName = varOp.getInitializerAttrName().getValue();
+  if (std::optional<StringRef> initSymbolName = varOp.getInitializer()) {
+    uint32_t initializerID = 0;
+    auto initRef = varOp->getAttrOfType<FlatSymbolRefAttr>(initAttrName);
+    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
+        varOp->getParentOp(), initRef.getAttr());
+
+    // Check if initializer is GlobalVariable or SpecConstant* cases.
+    if (isa<spirv::GlobalVariableOp>(initOp))
+      initializerID = getVariableID(*initSymbolName);
+    else
+      initializerID = getSpecConstID(*initSymbolName);
+
+    if (!initializerID)
       return emitError(varOp.getLoc(),
                        "invalid usage of undefined variable as initializer");
-    }
+
     operands.push_back(initializerID);
-    elidedAttrs.push_back("initializer");
+    elidedAttrs.push_back(initAttrName);
   }
 
   if (failed(emitDebugLine(typesGlobalValues, varOp.getLoc())))
     return failure();
   encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpVariable, operands);
-  elidedAttrs.push_back("initializer");
+  elidedAttrs.push_back(initAttrName);
 
   // Encode decorations.
   for (auto attr : varOp->getAttrs()) {

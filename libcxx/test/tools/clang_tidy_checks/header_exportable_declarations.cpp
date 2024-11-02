@@ -275,7 +275,7 @@ static bool is_module(header_exportable_declarations::FileType file_type) {
 
   case header_exportable_declarations::FileType::Unknown:
     llvm::errs() << "This should be unreachable.\n";
-    break;
+    return false;
   }
 }
 

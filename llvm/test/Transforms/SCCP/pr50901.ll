@@ -49,6 +49,8 @@
 ; CHECK-DAG: ![[DBG6]] = distinct !DIGlobalVariable(name: "g_66", {{.*}}
 ; CHECK: ![[G7:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG7:[0-9]+]], expr: !DIExpression(DW_OP_constu, 70, DW_OP_stack_value))
 ; CHECK-DAG: ![[DBG7]] = distinct !DIGlobalVariable(name: "g_77", {{.*}}
+; CHECK:     = !DIGlobalVariableExpression(var: ![[DBG_FLOAT_UNDEF:.+]], expr: !DIExpression())
+; CHECK-DAG: ![[DBG_FLOAT_UNDEF]]  = distinct !DIGlobalVariable(name: "g_float_undef"
 
 @g_1 = dso_local global i32 -4, align 4, !dbg !0
 @g_2 = dso_local global float 0x4011C28F60000000, align 4, !dbg !8
@@ -64,6 +66,7 @@
 @_ZL4g_55 = internal global i8 1, align 1, !dbg !33
 @_ZL4g_66 = internal global ptr null, align 8, !dbg !35
 @_ZL4g_77 = internal global ptr inttoptr (i64 70 to ptr), align 8, !dbg !37
+@g_float_undef = internal global float undef, align 4, !dbg !83
 
 define dso_local void @_Z3barv() !dbg !46 {
 entry:
@@ -83,6 +86,8 @@ entry:
   store ptr %5, ptr @g_6, align 8, !dbg !59
   %6 = load ptr, ptr @_ZL4g_77, align 8, !dbg !59
   store ptr %6, ptr @g_7, align 8, !dbg !59
+  %l = load float, ptr @g_float_undef, align 8, !dbg !59
+  store float %l, ptr @g_2, align 8, !dbg !59
   ret void, !dbg !59
 }
 
@@ -103,7 +108,7 @@ entry:
 !4 = !{!5}
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
 !6 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
-!7 = !{!0, !8, !10, !13, !16, !19, !23, !25, !27, !29, !31, !33, !35, !37}
+!7 = !{!0, !8, !10, !13, !16, !19, !23, !25, !27, !29, !31, !33, !35, !37, !83}
 !8 = !DIGlobalVariableExpression(var: !9, expr: !DIExpression())
 !9 = distinct !DIGlobalVariable(name: "g_2", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
 !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
@@ -152,3 +157,5 @@ entry:
 !80 = !DILocation(line: 29, column: 5, scope: !81)
 !81 = distinct !DILexicalBlock(scope: !77, file: !3, line: 28, column: 3)
 !82 = !DILocation(line: 31, column: 1, scope: !77)
+!83 = !DIGlobalVariableExpression(var: !84, expr: !DIExpression())
+!84 = distinct !DIGlobalVariable(name: "g_float_undef", linkageName: "g_float_undef", scope: !2, file: !3, line: 15, type: !6, isLocal: true, isDefinition: true)

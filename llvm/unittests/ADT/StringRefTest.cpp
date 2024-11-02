@@ -59,6 +59,7 @@ TEST(StringRefTest, Construction) {
 TEST(StringRefTest, Conversion) {
   EXPECT_EQ("hello", std::string(StringRef("hello")));
   EXPECT_EQ("hello", std::string_view(StringRef("hello")));
+  static_assert(std::string_view(StringRef("hello")) == "hello");
 }
 
 TEST(StringRefTest, EmptyInitializerList) {
@@ -78,9 +79,22 @@ TEST(StringRefTest, Iteration) {
 
 TEST(StringRefTest, StringOps) {
   const char *p = "hello";
+
   EXPECT_EQ(p, StringRef(p, 0).data());
+  static_assert(StringRef("hello").data()[0] == 'h');
+  static_assert(StringRef("hello").data()[1] == 'e');
+  static_assert(StringRef("hello").data()[2] == 'l');
+  static_assert(StringRef("hello").data()[3] == 'l');
+  static_assert(StringRef("hello").data()[4] == 'o');
+  static_assert(StringRef("hello").data()[5] == '\0');
+
   EXPECT_TRUE(StringRef().empty());
+  static_assert(StringRef("").empty());
+  static_assert(!StringRef("hello").empty());
+
   EXPECT_EQ((size_t) 5, StringRef("hello").size());
+  static_assert(StringRef("hello").size() == 5);
+
   EXPECT_GT( 0, StringRef("aab").compare("aad"));
   EXPECT_EQ( 0, StringRef("aab").compare("aab"));
   EXPECT_LT( 0, StringRef("aab").compare("aaa"));

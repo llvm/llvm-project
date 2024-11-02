@@ -6,11 +6,11 @@ define void @select_v32i8_imm(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvrepli.h $xr1, -256
-; CHECK-NEXT:    xvbitseli.b $xr0, $xr1, 1
-; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    xvbitseli.b $xr1, $xr0, 1
+; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a0
-  %sel = select <32 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <32 x i8> %v0, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %sel = select <32 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <32 x i8> %v0
   store <32 x i8> %sel, ptr %res
   ret void
 }

@@ -64,7 +64,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     // sure that the return is covered. Otherwise, we can check whether there
     // is a way to reach the RI from the start of the lifetime without passing
     // through an end.
-    if (EndBlocks.count(RI->getParent()) > 0 ||
+    if (EndBlocks.contains(RI->getParent()) ||
         !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
       ++NumCoveredExits;
     }

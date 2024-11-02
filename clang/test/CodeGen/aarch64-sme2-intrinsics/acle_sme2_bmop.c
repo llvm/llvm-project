@@ -33,7 +33,7 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.bmopa.za32.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svbmopa_u32(svbool_t pn, svbool_t pm, svuint32_t zn, svuint32_t zm) __arm_streaming __arm_shared_za {
+void test_svbmopa_u32(svbool_t pn, svbool_t pm, svuint32_t zn, svuint32_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svbmopa_za32,_u32,_m,)(3, pn, pm, zn, zm);
 }
 
@@ -51,7 +51,7 @@ void test_svbmopa_u32(svbool_t pn, svbool_t pm, svuint32_t zn, svuint32_t zm) __
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.bmopa.za32.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svbmopa_s32(svbool_t pn, svbool_t pm, svint32_t zn, svint32_t zm) __arm_streaming __arm_shared_za {
+void test_svbmopa_s32(svbool_t pn, svbool_t pm, svint32_t zn, svint32_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svbmopa_za32,_s32,_m,)(3, pn, pm, zn, zm);
 }
 
@@ -71,7 +71,7 @@ void test_svbmopa_s32(svbool_t pn, svbool_t pm, svint32_t zn, svint32_t zm) __ar
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.bmops.za32.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svbmops_u32(svbool_t pn, svbool_t pm, svuint32_t zn, svuint32_t zm) __arm_streaming __arm_shared_za {
+void test_svbmops_u32(svbool_t pn, svbool_t pm, svuint32_t zn, svuint32_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svbmops_za32,_u32,_m,)(3, pn, pm, zn, zm);
 }
 
@@ -89,6 +89,6 @@ void test_svbmops_u32(svbool_t pn, svbool_t pm, svuint32_t zn, svuint32_t zm) __
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.bmops.za32.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN:%.*]], <vscale x 4 x i32> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svbmops_s32(svbool_t pn, svbool_t pm, svint32_t zn, svint32_t zm) __arm_streaming __arm_shared_za {
+void test_svbmops_s32(svbool_t pn, svbool_t pm, svint32_t zn, svint32_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svbmops_za32,_s32,_m,)(3, pn, pm, zn, zm);
 }

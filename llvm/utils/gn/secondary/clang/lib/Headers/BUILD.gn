@@ -120,6 +120,7 @@ copy("Headers") {
     "__stddef_wint_t.h",
     "__wmmintrin_aes.h",
     "__wmmintrin_pclmul.h",
+    "adcintrin.h",
     "adxintrin.h",
     "altivec.h",
     "ammintrin.h",
