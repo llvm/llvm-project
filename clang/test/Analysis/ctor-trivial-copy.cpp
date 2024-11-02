@@ -51,11 +51,7 @@ void _01_empty_structs() {
   clang_analyzer_dump_val(Empty2); // expected-warning {{lazyCompoundVal}}
   clang_analyzer_dump_val(Empty3); // expected-warning {{lazyCompoundVal}}
 
-  // Notice that we don't have entries for the copies, only for the original "Empty" object.
-  // That binding was added by the opaque "conjure" call, directly constructing to the variable "Empty" by copy-elision.
-  // The copies are not present because the ExprEngine skips the evalBind of empty structs.
-  // And even if such binds would reach the Store, the Store copies small structs by copying the individual fields,
-  // and there are no fields within "Empty", thus we wouldn't have any entries anyways.
+  // We should have the same Conjured symbol for "Empty", "Empty2" and "Empty3".
   clang_analyzer_printState();
   // CHECK:       "store": { "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:    { "cluster": "GlobalInternalSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
@@ -66,6 +62,12 @@ void _01_empty_structs() {
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Empty", "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ:conj_\$[0-9]+{int, LC[0-9]+, S[0-9]+, #[0-9]+}]]" }
+  // CHECK-NEXT:    ]},
+  // CHECK-NEXT:    { "cluster": "Empty2", "pointer": "0x{{[0-9a-f]+}}", "items": [
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ]]" }
+  // CHECK-NEXT:    ]},
+  // CHECK-NEXT:    { "cluster": "Empty3", "pointer": "0x{{[0-9a-f]+}}", "items": [
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ]]" }
   // CHECK-NEXT:    ]}
   // CHECK-NEXT:  ]},
 
