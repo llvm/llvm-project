@@ -325,8 +325,7 @@ declare i32 @__gxx_personality_v0(...)
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   FPU.finish(FAM);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size());
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size());
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount());
 }
@@ -379,8 +378,7 @@ declare i32 @__gxx_personality_v0(...)
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   FPU.finish(FAM);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
@@ -434,8 +432,7 @@ declare i32 @__gxx_personality_v0(...)
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   FPU.finish(FAM);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
@@ -487,8 +484,7 @@ lpad:
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   FPU.finish(FAM);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
@@ -544,8 +540,7 @@ lpad:
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   FPU.finish(FAM);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));

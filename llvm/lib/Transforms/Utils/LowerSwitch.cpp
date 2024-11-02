@@ -160,7 +160,7 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
                          BasicBlock *Default) {
   Function *F = OrigBlock->getParent();
   BasicBlock *NewLeaf = BasicBlock::Create(Val->getContext(), "LeafBlock");
-  F->getBasicBlockList().insert(++OrigBlock->getIterator(), NewLeaf);
+  F->insertBasicBlockAt(++OrigBlock->getIterator(), NewLeaf);
 
   // Emit comparison
   ICmpInst *Comp = nullptr;
@@ -300,7 +300,7 @@ BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
       SwitchConvert(RHS.begin(), RHS.end(), NewLowerBound, UpperBound, Val,
                     NewNode, OrigBlock, Default, UnreachableRanges);
 
-  F->getBasicBlockList().insert(++OrigBlock->getIterator(), NewNode);
+  F->insertBasicBlockAt(++OrigBlock->getIterator(), NewNode);
   Comp->insertAt(NewNode, NewNode->end());
 
   BranchInst::Create(LBranch, RBranch, Comp, NewNode);
