@@ -28,7 +28,7 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
   if (InsertBefore) {
     BasicBlock *BB = InsertBefore->getParent();
     assert(BB && "Instruction to insert before is not in a basic block!");
-    BB->getInstList().insert(InsertBefore->getIterator(), this);
+    insertAt(BB, InsertBefore->getIterator());
   }
 }
 
@@ -38,7 +38,7 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
 
   // append this instruction into the basic block
   assert(InsertAtEnd && "Basic block to append to may not be NULL!");
-  InsertAtEnd->getInstList().push_back(this);
+  insertAt(InsertAtEnd, InsertAtEnd->end());
 }
 
 Instruction::~Instruction() {
@@ -85,14 +85,13 @@ iplist<Instruction>::iterator Instruction::eraseFromParent() {
 /// Insert an unlinked instruction into a basic block immediately before the
 /// specified instruction.
 void Instruction::insertBefore(Instruction *InsertPos) {
-  InsertPos->getParent()->getInstList().insert(InsertPos->getIterator(), this);
+  insertAt(InsertPos->getParent(), InsertPos->getIterator());
 }
 
 /// Insert an unlinked instruction into a basic block immediately after the
 /// specified instruction.
 void Instruction::insertAfter(Instruction *InsertPos) {
-  InsertPos->getParent()->getInstList().insertAfter(InsertPos->getIterator(),
-                                                    this);
+  insertAt(InsertPos->getParent(), std::next(InsertPos->getIterator()));
 }
 
 BasicBlock::iterator Instruction::insertAt(BasicBlock *BB,
