@@ -1510,10 +1510,10 @@ static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
   switch (ROp) {
   case Intrinsic::umax:
   case Intrinsic::umin:
-    return hasNUW && LOp == Instruction::Add;
+    return HasNUW && LOp == Instruction::Add;
   case Intrinsic::smax:
   case Intrinsic::smin:
-    return hasNSW && LOp == Instruction::Add;
+    return HasNSW && LOp == Instruction::Add;
   default:
     return false;
   }
