@@ -151,9 +151,10 @@ LLVM_LIBC_FUNCTION(double, cbrt, (double x)) {
 
   if (LIBC_UNLIKELY(x_abs < FPBits::min_normal().uintval() ||
                     x_abs >= FPBits::inf().uintval())) {
-    if (x_abs == 0 || x_abs >= FPBits::inf().uintval())
+    if (x == 0.0 || x_abs >= FPBits::inf().uintval())
       // x is 0, Inf, or NaN.
-      return x;
+      // Make sure it works for FTZ/DAZ modes.
+      return static_cast<double>(x + x);
 
     // x is non-zero denormal number.
     // Normalize x.

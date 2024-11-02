@@ -12,12 +12,15 @@
 #include "llvm/MC/MCObjectStreamer.h"
 
 namespace llvm {
+class XCOFFObjectWriter;
 
 class MCXCOFFStreamer : public MCObjectStreamer {
 public:
   MCXCOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                   std::unique_ptr<MCObjectWriter> OW,
                   std::unique_ptr<MCCodeEmitter> Emitter);
+
+  XCOFFObjectWriter &getWriter();
 
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,

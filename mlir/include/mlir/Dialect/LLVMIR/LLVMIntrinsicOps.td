@@ -450,7 +450,14 @@ def LLVM_AssumeOp
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$cond)>
+    OpBuilder<(ins "Value":$cond)>,
+    OpBuilder<(ins "Value":$cond,
+                   "ArrayRef<llvm::OperandBundleDefT<Value>>":$opBundles)>,
+    OpBuilder<(ins "Value":$cond, "llvm::StringRef":$tag, "ValueRange":$args)>,
+    OpBuilder<(ins "Value":$cond, "AssumeAlignTag":$tag, "Value":$ptr,
+                   "Value":$align)>,
+    OpBuilder<(ins "Value":$cond, "AssumeSeparateStorageTag":$tag,
+                   "Value":$ptr1, "Value":$ptr2)>
   ];
 
   let hasVerifier = 1;

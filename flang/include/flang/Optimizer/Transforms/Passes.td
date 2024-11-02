@@ -153,7 +153,7 @@ def CFGConversion : Pass<"cfg-conversion"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">,
     Option<"setNSW", "set-nsw", "bool",
-           /*default=*/"true",
+           /*default=*/"false",
            "set nsw on loop variable increment">
   ];
 }
@@ -432,7 +432,7 @@ def CUFDeviceGlobal :
     Pass<"cuf-device-global", "mlir::ModuleOp"> {
   let summary = "Flag globals used in device function with data attribute";
   let dependentDialects = [
-    "cuf::CUFDialect"
+    "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
   ];
 }
 

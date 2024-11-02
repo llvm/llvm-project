@@ -579,7 +579,6 @@ The code, slightly simplified and annotated, is reproduced here:
   // Partial bufferization passes.
   pm.addPass(createTensorConstantBufferizePass());
   pm.addNestedPass<func::FuncOp>(createTCPBufferizePass()); // Bufferizes the downstream `tcp` dialect.
-  pm.addNestedPass<func::FuncOp>(createSCFBufferizePass());
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());
   pm.addPass(createFuncBufferizePass());
@@ -596,7 +595,7 @@ must be module passes because they make changes to the top-level module.
 
 The bulk of the bufferization work is done by the function passes. Most of these
 passes are provided as part of the upstream MLIR distribution and bufferize
-their respective dialects (e.g. `scf-bufferize` bufferizes the `scf` dialect).
+their respective dialects (e.g. `abc-bufferize` bufferizes the `abc` dialect).
 The `tcp-bufferize` pass is an exception -- it is a partial bufferization pass
 used to bufferize the downstream `tcp` dialect, and fits in perfectly with all
 the other passes provided upstream.
@@ -693,20 +692,6 @@ legal. There is a helper `populateBufferizeMaterializationLegality`
 which helps with this in general.
 
 ### Other partial bufferization examples
-
--   `scf-bufferize`
-    ([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/SCF/Transforms/Bufferize.cpp#L1),
-    [test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/SCF/bufferize.mlir#L1))
-
-    -   Bufferizes ops from the `scf` dialect.
-    -   This is an example of how to bufferize ops that implement
-        `RegionBranchOpInterface` (that is, they use regions to represent
-        control flow).
-    -   The bulk of the work is done by
-        `lib/Dialect/SCF/Transforms/StructuralTypeConversions.cpp`
-        ([code](https://github.com/llvm/llvm-project/blob/daaaed6bb89044ac58a23f1bb1ccdd12342a5a58/mlir/lib/Dialect/SCF/Transforms/StructuralTypeConversions.cpp#L1)),
-        which is well-commented and covers how to correctly convert ops that
-        contain regions.
 
 -   `func-bufferize`
     ([code](https://github.com/llvm/llvm-project/blob/2f5715dc78328215d51d5664c72c632a6dac1046/mlir/lib/Dialect/Func/Transforms/FuncBufferize.cpp#L1),

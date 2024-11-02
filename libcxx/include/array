@@ -118,6 +118,7 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__algorithm/swap_ranges.h>
 #include <__assert>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__fwd/array.h>
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>

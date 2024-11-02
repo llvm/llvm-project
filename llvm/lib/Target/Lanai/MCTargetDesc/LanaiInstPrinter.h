@@ -49,7 +49,7 @@ public:
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                raw_ostream &O);
   static const char *getRegisterName(MCRegister Reg);
-  void printRegName(raw_ostream &OS, MCRegister Reg) const override;
+  void printRegName(raw_ostream &OS, MCRegister Reg) override;
 
 private:
   bool printAlias(const MCInst *MI, raw_ostream &Ostream);
