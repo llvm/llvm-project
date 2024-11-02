@@ -164,14 +164,16 @@ template<typename T>
 struct initializer_list {
   const T* ptr; size_t sz;
 };
-template <typename T>
+template<typename T> class allocator {};
+template <typename T, typename Alloc = allocator<T>>
 struct vector {
   typedef __gnu_cxx::basic_iterator<T> iterator;
   iterator begin();
   iterator end();
   const T *data() const;
   vector();
-  vector(initializer_list<T> __l);
+  vector(initializer_list<T> __l,
+         const Alloc& alloc = Alloc());
 
   template<typename InputIterator>
 	vector(InputIterator first, InputIterator __last);
@@ -380,6 +382,19 @@ struct X {
   int &pointee;
   int *pointee2;
   std::unique_ptr<int> pointer;
+};
+
+struct [[gsl::Owner]] XOwner {
+  int* get() const [[clang::lifetimebound]];
+};
+struct X2 {
+  // A common usage that moves the passing owner to the class.
+  // verify no warning on this case.
+  X2(XOwner owner) :
+    pointee(owner.get()),
+    owner(std::move(owner)) {}
+  int* pointee;
+  XOwner owner;
 };
 
 std::vector<int>::iterator getIt();

@@ -74,6 +74,11 @@ public:
   unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const {
     return 8;
   }
+  int getInliningLastCallToStaticBonus() const {
+    // This is the value of InlineConstants::LastCallToStaticBonus before it was
+    // removed along with the introduction of this function.
+    return 15000;
+  }
   unsigned adjustInliningThreshold(const CallBase *CB) const { return 0; }
   unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {
     return 0;
@@ -172,7 +177,8 @@ public:
         Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" ||
         Name == "cosh"  || Name == "coshf"  || Name == "coshl" ||
         Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" ||
-        Name == "sqrt" || Name == "sqrtf" || Name == "sqrtl")
+        Name == "sqrt"  || Name == "sqrtf"  || Name == "sqrtl" ||
+        Name == "exp10"  || Name == "exp10l"  || Name == "exp10f")
       return false;
     // clang-format on
     // These are all likely to be optimized into something smaller.
@@ -324,6 +330,11 @@ public:
   }
 
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
     return false;
   }
 
@@ -778,6 +789,7 @@ public:
     case Intrinsic::experimental_gc_relocate:
     case Intrinsic::coro_alloc:
     case Intrinsic::coro_begin:
+    case Intrinsic::coro_begin_custom_abi:
     case Intrinsic::coro_free:
     case Intrinsic::coro_end:
     case Intrinsic::coro_frame:
@@ -977,6 +989,13 @@ public:
     return false;
   }
 
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const {
+    return false;
+  }
+
+  bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
+
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     return TargetTransformInfo::VPLegalization(
@@ -987,6 +1006,10 @@ public:
   bool hasArmWideBranch(bool) const { return false; }
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
+
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
+    return 0;
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

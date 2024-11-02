@@ -65,11 +65,11 @@ static uint16_t lo(uint32_t v) { return v; }
 static uint16_t ha(uint32_t v) { return (v + 0x8000) >> 16; }
 
 static uint32_t readFromHalf16(Ctx &ctx, const uint8_t *loc) {
-  return read32(ctx.arg.isLE ? loc : loc - 2);
+  return read32(ctx, ctx.arg.isLE ? loc : loc - 2);
 }
 
 static void writeFromHalf16(Ctx &ctx, uint8_t *loc, uint32_t insn) {
-  write32(ctx.arg.isLE ? loc : loc - 2, insn);
+  write32(ctx, ctx.arg.isLE ? loc : loc - 2, insn);
 }
 
 void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
@@ -96,7 +96,7 @@ void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
 
   // Write N `b PLTresolve` first.
   for (size_t i = 0; i != numEntries; ++i)
-    write32(buf + 4 * i, 0x48000000 | 4 * (numEntries - i));
+    write32(ctx, buf + 4 * i, 0x48000000 | 4 * (numEntries - i));
   buf += 4 * numEntries;
 
   // Then write PLTresolve(), which has two forms: PIC and non-PIC. PLTresolve()
@@ -107,49 +107,53 @@ void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
   if (ctx.arg.isPic) {
     uint32_t afterBcl = 4 * ctx.in.plt->getNumEntries() + 12;
     uint32_t gotBcl = got + 4 - (glink + afterBcl);
-    write32(buf + 0, 0x3d6b0000 | ha(afterBcl));  // addis r11,r11,1f-glink@ha
-    write32(buf + 4, 0x7c0802a6);                 // mflr r0
-    write32(buf + 8, 0x429f0005);                 // bcl 20,30,.+4
-    write32(buf + 12, 0x396b0000 | lo(afterBcl)); // 1: addi r11,r11,1b-glink@l
-    write32(buf + 16, 0x7d8802a6);                // mflr r12
-    write32(buf + 20, 0x7c0803a6);                // mtlr r0
-    write32(buf + 24, 0x7d6c5850);                // sub r11,r11,r12
-    write32(buf + 28, 0x3d8c0000 | ha(gotBcl));   // addis 12,12,GOT+4-1b@ha
+    write32(ctx, buf + 0,
+            0x3d6b0000 | ha(afterBcl)); // addis r11,r11,1f-glink@ha
+    write32(ctx, buf + 4, 0x7c0802a6);  // mflr r0
+    write32(ctx, buf + 8, 0x429f0005);  // bcl 20,30,.+4
+    write32(ctx, buf + 12,
+            0x396b0000 | lo(afterBcl)); // 1: addi r11,r11,1b-glink@l
+    write32(ctx, buf + 16, 0x7d8802a6); // mflr r12
+    write32(ctx, buf + 20, 0x7c0803a6); // mtlr r0
+    write32(ctx, buf + 24, 0x7d6c5850); // sub r11,r11,r12
+    write32(ctx, buf + 28, 0x3d8c0000 | ha(gotBcl)); // addis 12,12,GOT+4-1b@ha
     if (ha(gotBcl) == ha(gotBcl + 4)) {
-      write32(buf + 32, 0x800c0000 | lo(gotBcl)); // lwz r0,r12,GOT+4-1b@l(r12)
-      write32(buf + 36,
-              0x818c0000 | lo(gotBcl + 4));       // lwz r12,r12,GOT+8-1b@l(r12)
+      write32(ctx, buf + 32,
+              0x800c0000 | lo(gotBcl)); // lwz r0,r12,GOT+4-1b@l(r12)
+      write32(ctx, buf + 36,
+              0x818c0000 | lo(gotBcl + 4)); // lwz r12,r12,GOT+8-1b@l(r12)
     } else {
-      write32(buf + 32, 0x840c0000 | lo(gotBcl)); // lwzu r0,r12,GOT+4-1b@l(r12)
-      write32(buf + 36, 0x818c0000 | 4);          // lwz r12,r12,4(r12)
+      write32(ctx, buf + 32,
+              0x840c0000 | lo(gotBcl));       // lwzu r0,r12,GOT+4-1b@l(r12)
+      write32(ctx, buf + 36, 0x818c0000 | 4); // lwz r12,r12,4(r12)
     }
-    write32(buf + 40, 0x7c0903a6);                // mtctr 0
-    write32(buf + 44, 0x7c0b5a14);                // add r0,11,11
-    write32(buf + 48, 0x7d605a14);                // add r11,0,11
-    write32(buf + 52, 0x4e800420);                // bctr
+    write32(ctx, buf + 40, 0x7c0903a6); // mtctr 0
+    write32(ctx, buf + 44, 0x7c0b5a14); // add r0,11,11
+    write32(ctx, buf + 48, 0x7d605a14); // add r11,0,11
+    write32(ctx, buf + 52, 0x4e800420); // bctr
     buf += 56;
   } else {
-    write32(buf + 0, 0x3d800000 | ha(got + 4));   // lis     r12,GOT+4@ha
-    write32(buf + 4, 0x3d6b0000 | ha(-glink));    // addis   r11,r11,-glink@ha
+    write32(ctx, buf + 0, 0x3d800000 | ha(got + 4)); // lis     r12,GOT+4@ha
+    write32(ctx, buf + 4, 0x3d6b0000 | ha(-glink)); // addis   r11,r11,-glink@ha
     if (ha(got + 4) == ha(got + 8))
-      write32(buf + 8, 0x800c0000 | lo(got + 4)); // lwz r0,GOT+4@l(r12)
+      write32(ctx, buf + 8, 0x800c0000 | lo(got + 4)); // lwz r0,GOT+4@l(r12)
     else
-      write32(buf + 8, 0x840c0000 | lo(got + 4)); // lwzu r0,GOT+4@l(r12)
-    write32(buf + 12, 0x396b0000 | lo(-glink));   // addi    r11,r11,-glink@l
-    write32(buf + 16, 0x7c0903a6);                // mtctr   r0
-    write32(buf + 20, 0x7c0b5a14);                // add     r0,r11,r11
+      write32(ctx, buf + 8, 0x840c0000 | lo(got + 4)); // lwzu r0,GOT+4@l(r12)
+    write32(ctx, buf + 12, 0x396b0000 | lo(-glink)); // addi    r11,r11,-glink@l
+    write32(ctx, buf + 16, 0x7c0903a6);              // mtctr   r0
+    write32(ctx, buf + 20, 0x7c0b5a14);              // add     r0,r11,r11
     if (ha(got + 4) == ha(got + 8))
-      write32(buf + 24, 0x818c0000 | lo(got + 8)); // lwz r12,GOT+8@l(r12)
+      write32(ctx, buf + 24, 0x818c0000 | lo(got + 8)); // lwz r12,GOT+8@l(r12)
     else
-      write32(buf + 24, 0x818c0000 | 4);          // lwz r12,4(r12)
-    write32(buf + 28, 0x7d605a14);                // add     r11,r0,r11
-    write32(buf + 32, 0x4e800420);                // bctr
+      write32(ctx, buf + 24, 0x818c0000 | 4); // lwz r12,4(r12)
+    write32(ctx, buf + 28, 0x7d605a14);       // add     r11,r0,r11
+    write32(ctx, buf + 32, 0x4e800420);       // bctr
     buf += 36;
   }
 
   // Pad with nop. They should not be executed.
   for (; buf < end; buf += 4)
-    write32(buf, 0x60000000);
+    write32(ctx, buf, 0x60000000);
 }
 
 PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
@@ -174,7 +178,7 @@ PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
   defaultMaxPageSize = 65536;
   defaultImageBase = 0x10000000;
 
-  write32(trapInstr.data(), 0x7fe00008);
+  write32(ctx, trapInstr.data(), 0x7fe00008);
 }
 
 void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
@@ -188,12 +192,12 @@ void PPC::writeGotHeader(uint8_t *buf) const {
   // _GLOBAL_OFFSET_TABLE_[0] = _DYNAMIC
   // glibc stores _dl_runtime_resolve in _GLOBAL_OFFSET_TABLE_[1],
   // link_map in _GLOBAL_OFFSET_TABLE_[2].
-  write32(buf, ctx.mainPart->dynamic->getVA());
+  write32(ctx, buf, ctx.mainPart->dynamic->getVA());
 }
 
 void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // Address of the symbol resolver stub in .glink .
-  write32(buf,
+  write32(ctx, buf,
           ctx.in.plt->getVA() + ctx.in.plt->headerSize + 4 * s.getPltIdx(ctx));
 }
 
@@ -205,7 +209,7 @@ bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     return true;
   if (s.isUndefWeak())
     return false;
-  return !PPC::inBranchRange(type, branchAddr, s.getVA(a));
+  return !PPC::inBranchRange(type, branchAddr, s.getVA(ctx, a));
 }
 
 uint32_t PPC::getThunkSectionSpacing() const { return 0x2000000; }
@@ -290,7 +294,7 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC_DTPMOD32:
   case R_PPC_DTPREL32:
   case R_PPC_TPREL32:
-    return SignExtend64<32>(read32(buf));
+    return SignExtend64<32>(read32(ctx, buf));
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
@@ -321,16 +325,16 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   std::tie(newType, val) = fromDTPREL(rel.type, val);
   switch (newType) {
   case R_PPC_ADDR16:
-    checkIntUInt(loc, val, 16, rel);
-    write16(loc, val);
+    checkIntUInt(ctx, loc, val, 16, rel);
+    write16(ctx, loc, val);
     break;
   case R_PPC_GOT16:
   case R_PPC_GOT_TLSGD16:
   case R_PPC_GOT_TLSLD16:
   case R_PPC_GOT_TPREL16:
   case R_PPC_TPREL16:
-    checkInt(loc, val, 16, rel);
-    write16(loc, val);
+    checkInt(ctx, loc, val, 16, rel);
+    write16(ctx, loc, val);
     break;
   case R_PPC_ADDR16_HA:
   case R_PPC_DTPREL16_HA:
@@ -339,7 +343,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TPREL16_HA:
   case R_PPC_REL16_HA:
   case R_PPC_TPREL16_HA:
-    write16(loc, ha(val));
+    write16(ctx, loc, ha(val));
     break;
   case R_PPC_ADDR16_HI:
   case R_PPC_DTPREL16_HI:
@@ -348,7 +352,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TPREL16_HI:
   case R_PPC_REL16_HI:
   case R_PPC_TPREL16_HI:
-    write16(loc, val >> 16);
+    write16(ctx, loc, val >> 16);
     break;
   case R_PPC_ADDR16_LO:
   case R_PPC_DTPREL16_LO:
@@ -357,17 +361,17 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TPREL16_LO:
   case R_PPC_REL16_LO:
   case R_PPC_TPREL16_LO:
-    write16(loc, val);
+    write16(ctx, loc, val);
     break;
   case R_PPC_ADDR32:
   case R_PPC_REL32:
-    write32(loc, val);
+    write32(ctx, loc, val);
     break;
   case R_PPC_REL14: {
     uint32_t mask = 0x0000FFFC;
-    checkInt(loc, val, 16, rel);
-    checkAlignment(loc, val, 4, rel);
-    write32(loc, (read32(loc) & ~mask) | (val & mask));
+    checkInt(ctx, loc, val, 16, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
+    write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
   case R_PPC_ADDR24:
@@ -375,9 +379,9 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_LOCAL24PC:
   case R_PPC_PLTREL24: {
     uint32_t mask = 0x03FFFFFC;
-    checkInt(loc, val, 26, rel);
-    checkAlignment(loc, val, 4, rel);
-    write32(loc, (read32(loc) & ~mask) | (val & mask));
+    checkInt(ctx, loc, val, 26, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
+    write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
   default:
@@ -419,7 +423,7 @@ void PPC::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   }
   case R_PPC_TLSGD:
     // bl __tls_get_addr(x@tldgd) --> add r3, r3, r2
-    write32(loc, 0x7c631214);
+    write32(ctx, loc, 0x7c631214);
     break;
   default:
     llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
@@ -435,7 +439,7 @@ void PPC::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     break;
   case R_PPC_TLSGD:
     // bl __tls_get_addr(x@tldgd) --> add r3, r3, x@tprel@l
-    write32(loc, 0x38630000 | lo(val));
+    write32(ctx, loc, 0x38630000 | lo(val));
     break;
   default:
     llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
@@ -453,7 +457,7 @@ void PPC::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     // r3+x@dtprel computes r3+x-0x8000, while we want it to compute r3+x@tprel
     // = r3+x-0x7000, so add 4096 to r3.
     // bl __tls_get_addr(x@tlsld) --> addi r3, r3, 4096
-    write32(loc, 0x38631000);
+    write32(ctx, loc, 0x38631000);
     break;
   case R_PPC_DTPREL16:
   case R_PPC_DTPREL16_HA:
@@ -476,18 +480,18 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     break;
   }
   case R_PPC_TLS: {
-    uint32_t insn = read32(loc);
+    uint32_t insn = read32(ctx, loc);
     if (insn >> 26 != 31)
       error("unrecognized instruction for IE to LE R_PPC_TLS");
     // addi rT, rT, x@tls --> addi rT, rT, x@tprel@l
-    unsigned secondaryOp = (read32(loc) & 0x000007fe) >> 1;
+    unsigned secondaryOp = (read32(ctx, loc) & 0x000007fe) >> 1;
     uint32_t dFormOp = getPPCDFormOp(secondaryOp);
     if (dFormOp == 0) { // Expecting a DS-Form instruction.
       dFormOp = getPPCDSFormOp(secondaryOp);
       if (dFormOp == 0)
         error("unrecognized instruction for IE to LE R_PPC_TLS");
     }
-    write32(loc, (dFormOp | (insn & 0x03ff0000) | lo(val)));
+    write32(ctx, loc, (dFormOp | (insn & 0x03ff0000) | lo(val)));
     break;
   }
   default:

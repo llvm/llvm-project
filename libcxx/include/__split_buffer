@@ -14,6 +14,7 @@
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -35,7 +36,6 @@
 #include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -79,9 +79,6 @@ public:
   pointer __begin_;
   pointer __end_;
   _LIBCPP_COMPRESSED_PAIR(pointer, __end_cap_, allocator_type, __alloc_);
-
-  using __alloc_ref       = __add_lvalue_reference_t<allocator_type>;
-  using __alloc_const_ref = __add_lvalue_reference_t<allocator_type>;
 
   __split_buffer(const __split_buffer&)            = delete;
   __split_buffer& operator=(const __split_buffer&) = delete;
@@ -440,9 +437,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::reserve(size
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT {
   if (capacity() > size()) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       __split_buffer<value_type, __alloc_rr&> __t(size(), 0, __alloc());
       __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
       __t.__end_ = __t.__begin_ + (__end_ - __begin_);
@@ -450,10 +447,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::shrink_to_fi
       std::swap(__begin_, __t.__begin_);
       std::swap(__end_, __t.__end_);
       std::swap(__end_cap(), __t.__end_cap());
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 }
 

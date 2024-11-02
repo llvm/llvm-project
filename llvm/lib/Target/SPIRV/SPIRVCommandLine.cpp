@@ -42,6 +42,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
         {"SPV_INTEL_optnone", SPIRV::Extension::Extension::SPV_INTEL_optnone},
         {"SPV_INTEL_usm_storage_classes",
          SPIRV::Extension::Extension::SPV_INTEL_usm_storage_classes},
+        {"SPV_INTEL_split_barrier",
+         SPIRV::Extension::Extension::SPV_INTEL_split_barrier},
         {"SPV_INTEL_subgroups",
          SPIRV::Extension::Extension::SPV_INTEL_subgroups},
         {"SPV_KHR_uniform_group_instructions",

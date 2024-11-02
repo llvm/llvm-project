@@ -94,15 +94,15 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> EnableMISchedLoadClustering(
-    "riscv-misched-load-clustering", cl::Hidden,
-    cl::desc("Enable load clustering in the machine scheduler"),
+static cl::opt<bool> EnableMISchedLoadStoreClustering(
+    "riscv-misched-load-store-clustering", cl::Hidden,
+    cl::desc("Enable load and store clustering in the machine scheduler"),
     cl::init(true));
 
-static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
-    "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
-    cl::desc("Insert vsetvls after vector register allocation"),
-    cl::init(true));
+static cl::opt<bool>
+    EnableVLOptimizer("riscv-enable-vl-optimizer",
+                      cl::desc("Enable the RISC-V VL Optimizer pass"),
+                      cl::init(false), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -123,6 +123,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVVectorPeepholePass(*PR);
+  initializeRISCVVLOptimizerPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
@@ -347,9 +348,11 @@ public:
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMILive *DAG = nullptr;
-    if (EnableMISchedLoadClustering) {
+    if (EnableMISchedLoadStoreClustering) {
       DAG = createGenericSchedLive(C);
       DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+      DAG->addMutation(createStoreClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
     return DAG;
@@ -405,8 +408,7 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
-  if (EnableVSETVLIAfterRVVRegAlloc)
-    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -416,8 +418,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRVVRegAllocPass(true));
   addPass(createVirtRegRewriter(false));
-  if (EnableVSETVLIAfterRVVRegAlloc)
-    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -558,21 +559,15 @@ void RISCVPassConfig::addMachineSSAOptimization() {
 
 void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
+    if (EnableVLOptimizer)
+      addPass(createRISCVVLOptimizerPass());
+  }
 
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupPass());
-
-  // Run RISCVInsertVSETVLI after PHI elimination. On O1 and above do it after
-  // register coalescing so needVSETVLIPHI doesn't need to look through COPYs.
-  if (!EnableVSETVLIAfterRVVRegAlloc) {
-    if (TM->getOptLevel() == CodeGenOptLevel::None)
-      insertPass(&PHIEliminationID, &RISCVInsertVSETVLIID);
-    else
-      insertPass(&RegisterCoalescerID, &RISCVInsertVSETVLIID);
-  }
 }
 
 void RISCVPassConfig::addFastRegAlloc() {

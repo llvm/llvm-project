@@ -1161,15 +1161,16 @@ parameters of a function. Parameter attributes are considered to be part
 of the function, not of the function type, so functions with different
 parameter attributes can have the same function type.
 
-Parameter attributes are simple keywords that follow the type specified.
-If multiple parameter attributes are needed, they are space separated.
-For example:
+Parameter attributes are either simple keywords or strings that follow the
+specified type. Multiple parameter attributes, when required, are separated by
+spaces. For example:
 
 .. code-block:: llvm
 
     declare i32 @printf(ptr noalias nocapture, ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
+    define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
 
 Note that any attributes for the function result (``nonnull``,
 ``signext``) come before the result type.
@@ -1309,11 +1310,13 @@ Currently, only the following parameter attributes are defined:
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
     loads and stores to the structure may be assumed by the callee not
-    to trap and to be properly aligned. This is not a valid attribute
-    for return values.
+    to trap and to be properly aligned.
 
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
+
+    A function that accepts an ``sret`` argument must return ``void``.
+    A return value may not be ``sret``.
 
 .. _attr_elementtype:
 
@@ -1841,9 +1844,9 @@ a function. Function attributes are considered to be part of the
 function, not of the function type, so functions with different function
 attributes can have the same function type.
 
-Function attributes are simple keywords that follow the type specified.
-If multiple attributes are needed, they are space separated. For
-example:
+Function attributes are simple keywords or strings that follow the specified
+type. Multiple attributes, when required, are separated by spaces.
+For example:
 
 .. code-block:: llvm
 
@@ -1851,6 +1854,7 @@ example:
     define void @f() alwaysinline { ... }
     define void @f() alwaysinline optsize { ... }
     define void @f() optsize { ... }
+    define void @f() "no-sse" { ... }
 
 ``alignstack(<n>)``
     This attribute indicates that, when emitting the prologue and
@@ -2082,6 +2086,12 @@ example:
     function call, use of ``longjmp``, or other means. It is a compiler hint that
     is used at module level to improve dataflow analysis, dropped during linking,
     and has no effect on functions defined in the current module.
+``nodivergencesource``
+    A call to this function is not a source of divergence. In uniformity
+    analysis, a *source of divergence* is an instruction that generates
+    divergence even if its inputs are uniform. A call with no further information
+    would normally be considered a source of divergence; setting this attribute
+    on a function means that a call to it is not a source of divergence.
 ``noduplicate``
     This attribute indicates that calls to the function cannot be
     duplicated. A call to a ``noduplicate`` function may be moved
@@ -2326,7 +2336,7 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
-``sanitize_realtime_unsafe``
+``sanitize_realtime_blocking``
     This attribute indicates that RealtimeSanitizer should error immediately
     if the attributed function is called during invocation of a function
     attributed with ``sanitize_realtime``.
@@ -2426,6 +2436,8 @@ example:
     If a function with an ``sspreq`` attribute is inlined into a calling
     function which has an ``ssp`` or ``sspstrong`` attribute, the calling
     function's attribute will be upgraded to ``sspreq``.
+
+.. _strictfp:
 
 ``strictfp``
     This attribute indicates that the function was called from a scope that
@@ -2666,8 +2678,8 @@ are grouped into a single :ref:`attribute group <attrgrp>`.
 Operand Bundles
 ---------------
 
-Operand bundles are tagged sets of SSA values that can be associated
-with certain LLVM instructions (currently only ``call`` s and
+Operand bundles are tagged sets of SSA values or metadata strings that can be
+associated with certain LLVM instructions (currently only ``call`` s and
 ``invoke`` s).  In a way they are like metadata, but dropping them is
 incorrect and will change program semantics.
 
@@ -2675,7 +2687,7 @@ Syntax::
 
     operand bundle set ::= '[' operand bundle (, operand bundle )* ']'
     operand bundle ::= tag '(' [ bundle operand ] (, bundle operand )* ')'
-    bundle operand ::= SSA value
+    bundle operand ::= SSA value | metadata string
     tag ::= string constant
 
 Operand bundles are **not** part of a function's signature, and a
@@ -3604,11 +3616,12 @@ status flags are not observable. Therefore, floating-point math operations do
 not have side effects and may be speculated freely. Results assume the
 round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 
-Running LLVM code in an environment where these assumptions are not met can lead
-to undefined behavior. The ``strictfp`` and ``denormal-fp-math`` attributes as
-well as :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be used
-to weaken LLVM's assumptions and ensure defined behavior in non-default
-floating-point environments; see their respective documentation for details.
+Running LLVM code in an environment where these assumptions are not met
+typically leads to undefined behavior. The ``strictfp`` and ``denormal-fp-math``
+attributes as well as :ref:`Constrained Floating-Point Intrinsics
+<constrainedfp>` can be used to weaken LLVM's assumptions and ensure defined
+behavior in non-default floating-point environments; see their respective
+documentation for details.
 
 .. _floatnan:
 
@@ -3630,10 +3643,11 @@ are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
 ``llvm.copysign``. These operations act directly on the underlying bit
 representation and never change anything except possibly for the sign bit.
 
-For floating-point math operations, unless specified otherwise, the following
-rules apply when a NaN value is returned: the result has a non-deterministic
-sign; the quiet bit and payload are non-deterministically chosen from the
-following set of options:
+Floating-point math operations that return a NaN are an exception from the
+general principle that LLVM implements IEEE-754 semantics. Unless specified
+otherwise, the following rules apply whenever the IEEE-754 semantics say that a
+NaN value is returned: the result has a non-deterministic sign; the quiet bit
+and payload are non-deterministically chosen from the following set of options:
 
 - The quiet bit is set and the payload is all-zero. ("Preferred NaN" case)
 - The quiet bit is set and the payload is copied from any input operand that is
@@ -3678,6 +3692,40 @@ specification on some architectures:
 - Older MIPS versions use the opposite polarity for the quiet/signaling bit, and
   LLVM does not correctly represent this. See `issue #60796
   <https://github.com/llvm/llvm-project/issues/60796>`_.
+
+.. _floatsem:
+
+Floating-Point Semantics
+------------------------
+
+This section defines the semantics for core floating-point operations on types
+that use a format specified by IEEE-745. These types are: ``half``, ``float``,
+``double``, and ``fp128``, which correspond to the binary16, binary32, binary64,
+and binary128 formats, respectively. The "core" operations are those defined in
+section 5 of IEEE-745, which all have corresponding LLVM operations.
+
+The value returned by those operations matches that of the corresponding
+IEEE-754 operation executed in the :ref:`default LLVM floating-point environment
+<floatenv>`, except that the behavior of NaN results is instead :ref:`as
+specified here <floatnan>`. In particular, such a floating-point instruction
+returning a non-NaN value is guaranteed to always return the same bit-identical
+result on all machines and optimization levels.
+
+This means that optimizations and backends may not change the observed bitwise
+result of these operations in any way (unless NaNs are returned), and frontends
+can rely on these operations providing correctly rounded results as described in
+the standard.
+
+(Note that this is only about the value returned by these operations; see the
+:ref:`floating-point environment section <floatenv>` regarding flags and
+exceptions.)
+
+Various flags, attributes, and metadata can alter the behavior of these
+operations and thus make them not bit-identical across machines and optimization
+levels any more: most notably, the :ref:`fast-math flags <fastmath>` as well as
+the :ref:`strictfp <strictfp>` and :ref:`denormal-fp-math <denormal_fp_math>`
+attributes and :ref:`!fpmath metadata <fpmath-metadata>`. See their
+corresponding documentation for details.
 
 .. _fastmath:
 
@@ -3975,7 +4023,7 @@ Floating-Point Types
      - Description
 
    * - ``half``
-     - 16-bit floating-point value
+     - 16-bit floating-point value (IEEE-754 binary16)
 
    * - ``bfloat``
      - 16-bit "brain" floating-point value (7-bit significand).  Provides the
@@ -3984,23 +4032,19 @@ Floating-Point Types
        extensions and Arm's ARMv8.6-A extensions, among others.
 
    * - ``float``
-     - 32-bit floating-point value
+     - 32-bit floating-point value (IEEE-754 binary32)
 
    * - ``double``
-     - 64-bit floating-point value
+     - 64-bit floating-point value (IEEE-754 binary64)
 
    * - ``fp128``
-     - 128-bit floating-point value (113-bit significand)
+     - 128-bit floating-point value (IEEE-754 binary128)
 
    * - ``x86_fp80``
      -  80-bit floating-point value (X87)
 
    * - ``ppc_fp128``
      - 128-bit floating-point value (two 64-bits)
-
-The binary format of half, float, double, and fp128 correspond to the
-IEEE-754-2008 specifications for binary16, binary32, binary64, and binary128
-respectively.
 
 X86_amx Type
 """"""""""""
@@ -6956,6 +7000,8 @@ For example,
     ; !alias.scope list):
     %2 = load float, ptr %c, align 4, !alias.scope !6
     store float %0, ptr %arrayidx.i, align 4, !noalias !7
+
+.. _fpmath-metadata:
 
 '``fpmath``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^
@@ -12287,6 +12333,7 @@ Syntax:
 ::
 
       <result> = icmp <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
+      <result> = icmp samesign <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
 
 Overview:
 """""""""
@@ -12355,6 +12402,9 @@ are compared as if they were integers.
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
 as the values being compared. Otherwise, the result is an ``i1``.
+
+If the ``samesign`` keyword is present and the operands are not of the
+same sign then the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -15464,6 +15514,8 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+.. _t_llvm_sin:
+
 '``llvm.sin.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15500,6 +15552,8 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+.. _t_llvm_cos:
 
 '``llvm.cos.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15830,6 +15884,50 @@ Semantics:
 
 Return the same value as a corresponding libm '``tanh``' function but without
 trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+
+'``llvm.sincos.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sincos`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, float }          @llvm.sincos.f32(float  %Val)
+      declare { double, double }        @llvm.sincos.f64(double %Val)
+      declare { x86_fp80, x86_fp80 }    @llvm.sincos.f80(x86_fp80  %Val)
+      declare { fp128, fp128 }          @llvm.sincos.f128(fp128 %Val)
+      declare { ppc_fp128, ppc_fp128 }  @llvm.sincos.ppcf128(ppc_fp128  %Val)
+      declare { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sincos.*``' intrinsics returns the sine and cosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+This intrinsic is equivalent to a calling both :ref:`llvm.sin <t_llvm_sin>`
+and :ref:`llvm.cos <t_llvm_cos>` on the argument.
+
+The first result is the sine of the argument and the second result is the cosine
+of the argument.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
@@ -19877,8 +19975,8 @@ More update operation types may be added in the future.
 
 ::
 
-    declare <8 x i32> @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
-    declare <vscale x 2 x i64> @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
 
 Arguments:
 """"""""""

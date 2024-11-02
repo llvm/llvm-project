@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace LLVM {
-#define GEN_PASS_DEF_DISCOPEFORLLVMFUNCOP
+#define GEN_PASS_DEF_DISCOPEFORLLVMFUNCOPPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
 } // namespace LLVM
 } // namespace mlir
@@ -84,8 +84,11 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
 
 namespace {
 /// Add a debug info scope to LLVMFuncOp that are missing it.
-struct DIScopeForLLVMFuncOp
-    : public LLVM::impl::DIScopeForLLVMFuncOpBase<DIScopeForLLVMFuncOp> {
+struct DIScopeForLLVMFuncOpPass
+    : public LLVM::impl::DIScopeForLLVMFuncOpPassBase<
+          DIScopeForLLVMFuncOpPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     ModuleOp module = getOperation();
     Location loc = module.getLoc();
@@ -131,7 +134,3 @@ struct DIScopeForLLVMFuncOp
 };
 
 } // end anonymous namespace
-
-std::unique_ptr<Pass> mlir::LLVM::createDIScopeForLLVMFuncOpPass() {
-  return std::make_unique<DIScopeForLLVMFuncOp>();
-}

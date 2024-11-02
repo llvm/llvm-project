@@ -233,7 +233,7 @@ bool CodeGenAction::beginSourceFileAction() {
     llvm::SMDiagnostic err;
     llvmModule = llvm::parseIRFile(getCurrentInput().getFile(), err, *llvmCtx);
     if (!llvmModule || llvm::verifyModule(*llvmModule, &llvm::errs())) {
-      err.print("flang-new", llvm::errs());
+      err.print("flang", llvm::errs());
       unsigned diagID = ci.getDiagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "Could not parse IR");
       ci.getDiagnostics().Report(diagID);
@@ -301,7 +301,7 @@ bool CodeGenAction::beginSourceFileAction() {
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
       ci.getInvocation().getFrontendOpts().features, targetMachine,
-      ci.getInvocation().getTargetOpts().cpuToTuneFor);
+      ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());

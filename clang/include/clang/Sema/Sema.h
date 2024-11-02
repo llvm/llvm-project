@@ -49,6 +49,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/TypeTraits.h"
@@ -546,9 +547,6 @@ public:
   /// Print out statistics about the semantic analysis.
   void PrintStats() const;
 
-  /// Warn that the stack is nearly exhausted.
-  void warnStackExhausted(SourceLocation Loc);
-
   /// Run some code with "sufficient" stack space. (Currently, at least 256K is
   /// guaranteed). Produces a warning if we're low on stack space and allocates
   /// more in that case. Use this in code that may recurse deeply (for example,
@@ -702,10 +700,10 @@ public:
   /// Retrieve the current block, if any.
   sema::BlockScopeInfo *getCurBlock();
 
-  /// Get the innermost lambda enclosing the current location, if any. This
-  /// looks through intervening non-lambda scopes such as local functions and
-  /// blocks.
-  sema::LambdaScopeInfo *getEnclosingLambda() const;
+  /// Get the innermost lambda or block enclosing the current location, if any.
+  /// This looks through intervening non-lambda, non-block scopes such as local
+  /// functions.
+  sema::CapturingScopeInfo *getEnclosingLambdaOrBlock() const;
 
   /// Retrieve the current lambda scope info, if any.
   /// \param IgnoreNonLambdaCapturingScope true if should find the top-most
@@ -871,8 +869,6 @@ public:
   /// to lookup file scope declarations in the "ordinary" C decl namespace.
   /// For example, user-defined classes, built-in "id" type, etc.
   Scope *TUScope;
-
-  bool WarnedStackExhausted = false;
 
   void incrementMSManglingNumber() const {
     return CurScope->incrementMSManglingNumber();
@@ -1184,6 +1180,8 @@ protected:
 private:
   std::optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;
   bool WarnedDarwinSDKInfoMissing = false;
+
+  StackExhaustionHandler StackHandler;
 
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
@@ -3480,10 +3478,12 @@ public:
   /// a C++0x [dcl.typedef]p2 alias-declaration: 'using T = A;'.
   NamedDecl *ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *D,
                                   LookupResult &Previous, bool &Redeclaration);
-  NamedDecl *ActOnVariableDeclarator(
-      Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
-      LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
-      bool &AddToScope, ArrayRef<BindingDecl *> Bindings = std::nullopt);
+  NamedDecl *ActOnVariableDeclarator(Scope *S, Declarator &D, DeclContext *DC,
+                                     TypeSourceInfo *TInfo,
+                                     LookupResult &Previous,
+                                     MultiTemplateParamsArg TemplateParamLists,
+                                     bool &AddToScope,
+                                     ArrayRef<BindingDecl *> Bindings = {});
 
   /// Perform semantic checking on a newly-created variable
   /// declaration.
@@ -4453,9 +4453,10 @@ public:
                                       SourceLocation *ArgLocation = nullptr);
 
   /// Determine if type T is a valid subject for a nonnull and similar
-  /// attributes. By default, we look through references (the behavior used by
-  /// nonnull), but if the second parameter is true, then we treat a reference
-  /// type as valid.
+  /// attributes. Dependent types are considered valid so they can be checked
+  /// during instantiation time. By default, we look through references (the
+  /// behavior used by nonnull), but if the second parameter is true, then we
+  /// treat a reference type as valid.
   bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 
   /// AddAssumeAlignedAttr - Adds an assume_aligned attribute to a particular
@@ -4527,9 +4528,10 @@ public:
   /// declaration.
   void AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E);
 
-  /// AddAnnotationAttr - Adds an annotation Annot with Args arguments to D.
-  void AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
-                         StringRef Annot, MutableArrayRef<Expr *> Args);
+  /// CreateAnnotationAttr - Creates an annotation Annot with Args arguments.
+  Attr *CreateAnnotationAttr(const AttributeCommonInfo &CI, StringRef Annot,
+                             MutableArrayRef<Expr *> Args);
+  Attr *CreateAnnotationAttr(const ParsedAttr &AL);
 
   bool checkMSInheritanceAttrOnDefinition(CXXRecordDecl *RD, SourceRange Range,
                                           bool BestCase,
@@ -5325,9 +5327,8 @@ public:
   bool SetDelegatingInitializer(CXXConstructorDecl *Constructor,
                                 CXXCtorInitializer *Initializer);
 
-  bool SetCtorInitializers(
-      CXXConstructorDecl *Constructor, bool AnyErrors,
-      ArrayRef<CXXCtorInitializer *> Initializers = std::nullopt);
+  bool SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
+                           ArrayRef<CXXCtorInitializer *> Initializers = {});
 
   /// MarkBaseAndMemberDestructorsReferenced - Given a record decl,
   /// mark all the non-trivial destructors of its members and bases as
@@ -6623,9 +6624,9 @@ public:
   /// \param SkipLocalVariables If true, don't mark local variables as
   /// 'referenced'.
   /// \param StopAt Subexpressions that we shouldn't recurse into.
-  void MarkDeclarationsReferencedInExpr(
-      Expr *E, bool SkipLocalVariables = false,
-      ArrayRef<const Expr *> StopAt = std::nullopt);
+  void MarkDeclarationsReferencedInExpr(Expr *E,
+                                        bool SkipLocalVariables = false,
+                                        ArrayRef<const Expr *> StopAt = {});
 
   /// Try to convert an expression \p E to type \p Ty. Returns the result of the
   /// conversion.
@@ -6696,7 +6697,7 @@ public:
   DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
-                      ArrayRef<Expr *> Args = std::nullopt,
+                      ArrayRef<Expr *> Args = {},
                       DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
@@ -6753,7 +6754,7 @@ public:
 
   ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
-  ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
+  ExprResult ActOnIntegerConstant(SourceLocation Loc, int64_t Val);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero);
 
@@ -10124,15 +10125,17 @@ public:
   /// \param PartialOverloading true if we are performing "partial" overloading
   /// based on an incomplete set of function arguments. This feature is used by
   /// code completion.
-  void AddOverloadCandidate(
-      FunctionDecl *Function, DeclAccessPair FoundDecl, ArrayRef<Expr *> Args,
-      OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
-      bool PartialOverloading = false, bool AllowExplicit = true,
-      bool AllowExplicitConversion = false,
-      ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
-      ConversionSequenceList EarlyConversions = std::nullopt,
-      OverloadCandidateParamOrder PO = {},
-      bool AggregateCandidateDeduction = false);
+  void AddOverloadCandidate(FunctionDecl *Function, DeclAccessPair FoundDecl,
+                            ArrayRef<Expr *> Args,
+                            OverloadCandidateSet &CandidateSet,
+                            bool SuppressUserConversions = false,
+                            bool PartialOverloading = false,
+                            bool AllowExplicit = true,
+                            bool AllowExplicitConversion = false,
+                            ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
+                            ConversionSequenceList EarlyConversions = {},
+                            OverloadCandidateParamOrder PO = {},
+                            bool AggregateCandidateDeduction = false);
 
   /// Add all of the function declarations in the given function set to
   /// the overload candidate set.
@@ -10159,15 +10162,15 @@ public:
   /// both @c a1 and @c a2. If @p SuppressUserConversions, then don't
   /// allow user-defined conversions via constructors or conversion
   /// operators.
-  void
-  AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
-                     CXXRecordDecl *ActingContext, QualType ObjectType,
-                     Expr::Classification ObjectClassification,
-                     ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
-                     bool SuppressUserConversions = false,
-                     bool PartialOverloading = false,
-                     ConversionSequenceList EarlyConversions = std::nullopt,
-                     OverloadCandidateParamOrder PO = {});
+  void AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
+                          CXXRecordDecl *ActingContext, QualType ObjectType,
+                          Expr::Classification ObjectClassification,
+                          ArrayRef<Expr *> Args,
+                          OverloadCandidateSet &CandidateSet,
+                          bool SuppressUserConversions = false,
+                          bool PartialOverloading = false,
+                          ConversionSequenceList EarlyConversions = {},
+                          OverloadCandidateParamOrder PO = {});
 
   /// Add a C++ member function template as a candidate to the candidate
   /// set, using template argument deduction to produce an appropriate member
@@ -12968,12 +12971,13 @@ public:
     bool CheckInstantiationDepth(SourceLocation PointOfInstantiation,
                                  SourceRange InstantiationRange);
 
-    InstantiatingTemplate(
-        Sema &SemaRef, CodeSynthesisContext::SynthesisKind Kind,
-        SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
-        Decl *Entity, NamedDecl *Template = nullptr,
-        ArrayRef<TemplateArgument> TemplateArgs = std::nullopt,
-        sema::TemplateDeductionInfo *DeductionInfo = nullptr);
+    InstantiatingTemplate(Sema &SemaRef,
+                          CodeSynthesisContext::SynthesisKind Kind,
+                          SourceLocation PointOfInstantiation,
+                          SourceRange InstantiationRange, Decl *Entity,
+                          NamedDecl *Template = nullptr,
+                          ArrayRef<TemplateArgument> TemplateArgs = {},
+                          sema::TemplateDeductionInfo *DeductionInfo = nullptr);
 
     InstantiatingTemplate(const InstantiatingTemplate &) = delete;
 
@@ -13014,12 +13018,6 @@ public:
   /// arguments on an enclosing class template.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
-      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
-
-  void getTemplateInstantiationArgs(
-      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
-      const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
 
@@ -13440,6 +13438,13 @@ public:
   bool inTemplateInstantiation() const {
     return CodeSynthesisContexts.size() > NonInstantiationEntries;
   }
+
+  using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
+
+  /// \brief create a Requirement::SubstitutionDiagnostic with only a
+  /// SubstitutedEntity and DiagLoc using ASTContext's allocator.
+  concepts::Requirement::SubstitutionDiagnostic *
+  createSubstDiagAt(SourceLocation Location, EntityPrinter Printer);
 
   ///@}
 

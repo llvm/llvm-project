@@ -250,6 +250,7 @@ struct Symbol {
   };
 
   Symbol() : File(), Flags(None), UsedInRegularObj(false) {}
+  Symbol(Symbol::Flags Flags) : File(), Flags(Flags), UsedInRegularObj(true) {}
 
   Symbol(MemoryBufferRef File, const irsymtab::Reader::SymbolRef Sym)
       : File(File), Flags(0), UsedInRegularObj(false) {
@@ -344,7 +345,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
   Conf.RemarksFormat = RemarksFormat;
 
-  Conf.MAttrs = {Args.getLastArgValue(OPT_feature, "").str()};
+  Conf.MAttrs = llvm::codegen::getMAttrs();
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
@@ -535,6 +536,8 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
 
   bool Extracted = true;
   StringMap<Symbol> SymTab;
+  for (auto &Sym : Args.getAllArgValues(OPT_u))
+    SymTab[Sym] = Symbol(Symbol::Undefined);
   SmallVector<std::unique_ptr<MemoryBuffer>> LinkerInput;
   while (Extracted) {
     Extracted = false;

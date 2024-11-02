@@ -46,7 +46,6 @@ class CodeGenSubRegIndex;
 /// record corresponds to.
 MVT::SimpleValueType getValueType(const Record *Rec);
 
-StringRef getName(MVT::SimpleValueType T);
 StringRef getEnumName(MVT::SimpleValueType T);
 
 /// getQualifiedName - Return the name of the specified record, with a

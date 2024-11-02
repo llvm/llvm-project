@@ -2710,7 +2710,7 @@ if.else:
 
 define i64 @sub_infer_nuw_from_domcond_fold2(i32 range(i32 0, 2147483648) %x, i32 range(i32 0, 2147483648) %y) {
 ; CHECK-LABEL: @sub_infer_nuw_from_domcond_fold2(
-; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp samesign ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[Y]]
@@ -2734,7 +2734,7 @@ if.else:
 define i1 @sub_infer_nuw_from_domcond_fold3(i16 %xx, i32 range(i32 0, 12) %y) {
 ; CHECK-LABEL: @sub_infer_nuw_from_domcond_fold3(
 ; CHECK-NEXT:    [[X:%.*]] = zext i16 [[XX:%.*]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false

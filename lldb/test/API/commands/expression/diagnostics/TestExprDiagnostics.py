@@ -184,53 +184,44 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         # the first argument are probably stable enough that this test can check for them.
         self.assertIn("void NSLog(NSString *format", value.GetError().GetCString())
 
-    def test_command_expr_formatting(self):
-        """Test that the source and caret positions LLDB prints are correct"""
+    def test_command_expr_sbdata(self):
+        """Test the structured diagnostics data"""
         self.build()
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "// Break here", self.main_source_spec
         )
-        frame = thread.GetFrameAtIndex(0)
-        self.expect("settings set show-inline-diagnostics true")
+        interp = self.dbg.GetCommandInterpreter()
+        cro = lldb.SBCommandReturnObject()
+        interp.HandleCommand("expression -- a+b", cro)
 
-        def check(input_ref):
-            self.expect(input_ref[0], error=True, substrs=input_ref[1:])
+        diags = cro.GetErrorData()
+        # Version.
+        version = diags.GetValueForKey("version")
+        self.assertEqual(version.GetIntegerValue(), 1)
 
-        check(
-            [
-                "expression -- a+b",
-                "              ^ ^",
-                "              │ ╰─ error: use of undeclared identifier 'b'",
-                "              ╰─ error: use of undeclared identifier 'a'",
-            ]
-        )
+        details = diags.GetValueForKey("details")
 
-        check(
-            [
-                "expr -- a",
-                "        ^",
-                "        ╰─ error: use of undeclared identifier 'a'",
-            ]
-        )
-        check(
-            [
-                "expr -i 0 -o 0 -- a",
-                "                  ^",
-                "                  ╰─ error: use of undeclared identifier 'a'",
-            ]
-        )
+        # Detail 1/2: undeclared 'a'
+        diag = details.GetItemAtIndex(0)
 
-        self.expect(
-            "expression --top-level -- template<typename T> T FOO(T x) { return x/2;}"
-        )
-        check(
-            [
-                'expression -- FOO("")',
-                "              ^",
-                "              ╰─ note: in instantiation of function template specialization 'FOO<const char *>' requested here",
-                "error: <user expression",
-                "invalid operands to binary expression",
-            ]
-        )
-        check(["expression --\na\n+\nb", "error: <user", "a", "error: <user", "b"])
+        severity = diag.GetValueForKey("severity")
+        message = diag.GetValueForKey("message")
+        rendered = diag.GetValueForKey("rendered")
+        sloc = diag.GetValueForKey("source_location")
+        filename = sloc.GetValueForKey("file")
+        hidden = sloc.GetValueForKey("hidden")
+        in_user_input = sloc.GetValueForKey("in_user_input")
+
+        self.assertEqual(str(severity), "error")
+        self.assertIn("undeclared identifier 'a'", str(message))
+        # The rendered string should contain the source file.
+        self.assertIn("user expression", str(rendered))
+        self.assertIn("user expression", str(filename))
+        self.assertFalse(hidden.GetBooleanValue())
+        self.assertTrue(in_user_input.GetBooleanValue())
+
+        # Detail 1/2: undeclared 'b'
+        diag = details.GetItemAtIndex(1)
+        message = diag.GetValueForKey("message")
+        self.assertIn("undeclared identifier 'b'", str(message))

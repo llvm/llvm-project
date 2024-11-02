@@ -8,7 +8,6 @@
 
 #include "CommandObjectDWIMPrint.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
@@ -19,6 +18,7 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -191,6 +191,17 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     ExpressionResults expr_result = target.EvaluateExpression(
         expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
 
+    // Record the position of the expression in the command.
+    std::optional<uint16_t> indent;
+    if (fixed_expression.empty()) {
+      size_t pos = m_original_command.rfind(expr);
+      if (pos != llvm::StringRef::npos)
+        indent = pos;
+    }
+    // Previously the indent was set up for diagnosing command line
+    // parsing errors. Now point it to the expression.
+    result.SetDiagnosticIndent(indent);
+
     // Only mention Fix-Its if the expression evaluator applied them.
     // Compiler errors refer to the final expression after applying Fix-It(s).
     if (!fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
@@ -220,7 +231,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
       dump_val_object(*valobj_sp);
     else
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
 
     if (suppress_result)
       if (auto result_var_sp =

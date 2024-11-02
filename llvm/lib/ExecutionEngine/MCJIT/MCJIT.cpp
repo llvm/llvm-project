@@ -588,7 +588,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
       return rv;
     }
     case Type::VoidTyID:
-      rv.IntVal = APInt(32, ((int(*)())(intptr_t)FPtr)());
+      rv.IntVal = APInt(32, ((int (*)())(intptr_t)FPtr)(), true);
       return rv;
     case Type::FloatTyID:
       rv.FloatVal = ((float(*)())(intptr_t)FPtr)();

@@ -220,10 +220,11 @@ MODULE_PASS_WITH_PARAMS(
     parseMSanPassOptions, "recover;kernel;eager-checks;track-origins=N")
 MODULE_PASS_WITH_PARAMS(
     "print<structural-hash>", "StructuralHashPrinterPass",
-    [](bool EnableDetailedStructuralHash) {
-      return StructuralHashPrinterPass(dbgs(), EnableDetailedStructuralHash);
+    [](StructuralHashOptions Options) {
+      return StructuralHashPrinterPass(dbgs(), Options);
     },
-    parseStructuralHashPrinterPassOptions, "detailed")
+    parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
+
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -339,6 +340,7 @@ FUNCTION_PASS("callbr-prepare", CallBrPreparePass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass(TM))
+FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass())
 FUNCTION_PASS("constraint-elimination", ConstraintEliminationPass())
 FUNCTION_PASS("coro-elide", CoroElidePass())

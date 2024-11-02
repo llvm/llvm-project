@@ -610,7 +610,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     if (A->getOption().matches(options::OPT_m64) ||
         A->getOption().matches(options::OPT_maix64)) {
       AT = Target.get64BitArchVariant().getArch();
-      if (Target.getEnvironment() == llvm::Triple::GNUX32)
+      if (Target.getEnvironment() == llvm::Triple::GNUX32 ||
+          Target.getEnvironment() == llvm::Triple::GNUT64)
         Target.setEnvironment(llvm::Triple::GNU);
       else if (Target.getEnvironment() == llvm::Triple::MuslX32)
         Target.setEnvironment(llvm::Triple::Musl);
@@ -673,6 +674,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       } else if (ABIName == "n32") {
         Target = Target.get64BitArchVariant();
         if (Target.getEnvironment() == llvm::Triple::GNU ||
+            Target.getEnvironment() == llvm::Triple::GNUT64 ||
             Target.getEnvironment() == llvm::Triple::GNUABI64)
           Target.setEnvironment(llvm::Triple::GNUABIN32);
         else if (Target.getEnvironment() == llvm::Triple::Musl ||
@@ -681,6 +683,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       } else if (ABIName == "64") {
         Target = Target.get64BitArchVariant();
         if (Target.getEnvironment() == llvm::Triple::GNU ||
+            Target.getEnvironment() == llvm::Triple::GNUT64 ||
             Target.getEnvironment() == llvm::Triple::GNUABIN32)
           Target.setEnvironment(llvm::Triple::GNUABI64);
         else if (Target.getEnvironment() == llvm::Triple::Musl ||
@@ -2029,7 +2032,7 @@ void Driver::PrintHelp(bool ShowHidden) const {
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   if (IsFlangMode()) {
-    OS << getClangToolFullVersion("flang-new") << '\n';
+    OS << getClangToolFullVersion("flang") << '\n';
   } else {
     // FIXME: The following handlers should use a callback mechanism, we don't
     // know what the client would like to do.
@@ -4786,6 +4789,11 @@ Action *Driver::ConstructPhaseAction(
   // encode this in the steps because the intermediate type depends on
   // arguments. Just special case here.
   if (Phase == phases::Assemble && Input->getType() != types::TY_PP_Asm)
+    return Input;
+
+  // Use of --sycl-link will only allow for the link phase to occur. This is
+  // for all input files.
+  if (Args.hasArg(options::OPT_sycl_link) && Phase != phases::Link)
     return Input;
 
   // Build the appropriate action.

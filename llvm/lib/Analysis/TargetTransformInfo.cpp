@@ -228,6 +228,10 @@ TargetTransformInfo::getInliningCostBenefitAnalysisProfitableMultiplier()
   return TTIImpl->getInliningCostBenefitAnalysisProfitableMultiplier();
 }
 
+int TargetTransformInfo::getInliningLastCallToStaticBonus() const {
+  return TTIImpl->getInliningLastCallToStaticBonus();
+}
+
 unsigned
 TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
@@ -288,6 +292,10 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
 }
 
 bool TargetTransformInfo::isSourceOfDivergence(const Value *V) const {
+  if (const auto *Call = dyn_cast<CallBase>(V)) {
+    if (Call->hasFnAttr(Attribute::NoDivergenceSource))
+      return false;
+  }
   return TTIImpl->isSourceOfDivergence(V);
 }
 
@@ -515,6 +523,13 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
 bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
                                                   Align Alignment) const {
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::isLegalInterleavedAccessType(
+    VectorType *VTy, unsigned Factor, Align Alignment,
+    unsigned AddrSpace) const {
+  return TTIImpl->isLegalInterleavedAccessType(VTy, Factor, Alignment,
+                                               AddrSpace);
 }
 
 bool TargetTransformInfo::isLegalMaskedVectorHistogram(Type *AddrType,
@@ -1357,6 +1372,21 @@ bool TargetTransformInfo::enableScalableVectorization() const {
 bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
                                                 Align Alignment) const {
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
+}
+
+bool TargetTransformInfo::isProfitableToSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
+}
+
+bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
+  return TTIImpl->isVectorShiftByScalarCheap(Ty);
+}
+
+unsigned
+TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
+                                                 Type *ArrayType) const {
+  return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

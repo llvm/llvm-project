@@ -791,6 +791,9 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
+/// Return true if the instruction doesn't potentially cross vector lanes.
+bool isNotCrossLaneOperation(const Instruction *I);
+
 /// Return true if the instruction does not have any effects besides
 /// calculating the result and does not have undefined behavior.
 ///

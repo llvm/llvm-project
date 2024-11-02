@@ -622,6 +622,9 @@ static bool containsAddRecDependentOnLoop(const SCEV *S, const Loop &L) {
 /// representation.
 /// \see Formula::BaseRegs.
 bool Formula::isCanonical(const Loop &L) const {
+  assert((Scale == 0 || ScaledReg) &&
+         "ScaledReg must be non-null if Scale is non-zero");
+
   if (!ScaledReg)
     return BaseRegs.size() <= 1;
 
@@ -3973,9 +3976,10 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
       F.UnfoldedOffset =
           Immediate::getFixed((uint64_t)F.UnfoldedOffset.getFixedValue() +
                               InnerSumSC->getValue()->getZExtValue());
-      if (IsScaledReg)
+      if (IsScaledReg) {
         F.ScaledReg = nullptr;
-      else
+        F.Scale = 0;
+      } else
         F.BaseRegs.erase(F.BaseRegs.begin() + Idx);
     } else if (IsScaledReg)
       F.ScaledReg = InnerSum;

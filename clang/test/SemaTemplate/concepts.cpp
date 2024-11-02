@@ -1151,3 +1151,17 @@ int test() {
 }
 
 }
+
+namespace GH109780 {
+
+template <typename T>
+concept Concept; // expected-error {{expected '='}}
+
+bool val = Concept<int>;
+
+template <typename T>
+concept C = invalid; // expected-error {{use of undeclared identifier 'invalid'}}
+
+bool val2 = C<int>;
+
+} // namespace GH109780

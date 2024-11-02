@@ -182,8 +182,8 @@ define i128 @add_wide_operand(i128 %a) nounwind {
 ; RV32I-NEXT:    lui a4, 128
 ; RV32I-NEXT:    add a1, a1, a4
 ; RV32I-NEXT:    sw a2, 0(a0)
-; RV32I-NEXT:    sw a3, 8(a0)
 ; RV32I-NEXT:    sw a5, 4(a0)
+; RV32I-NEXT:    sw a3, 8(a0)
 ; RV32I-NEXT:    sw a1, 12(a0)
 ; RV32I-NEXT:    jalr zero, 0(ra)
 ;
@@ -217,8 +217,8 @@ define i128 @add_wide_operand(i128 %a) nounwind {
 ; RV32C-NEXT:    c.or a1, a3
 ; RV32C-NEXT:    c.slli a6, 3
 ; RV32C-NEXT:    sw a6, 0(a0)
-; RV32C-NEXT:    c.sw a1, 8(a0)
 ; RV32C-NEXT:    c.sw a4, 4(a0)
+; RV32C-NEXT:    c.sw a1, 8(a0)
 ; RV32C-NEXT:    c.sw a2, 12(a0)
 ; RV32C-NEXT:    c.jr ra
 ;

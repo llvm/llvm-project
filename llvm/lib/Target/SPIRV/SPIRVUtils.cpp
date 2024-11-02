@@ -460,53 +460,98 @@ PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
   return Output;
 }
 
-size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Rank) {
-  if (Visited.count(BB) != 0)
-    return Rank;
+bool PartialOrderingVisitor::CanBeVisited(BasicBlock *BB) const {
+  for (BasicBlock *P : predecessors(BB)) {
+    // Ignore back-edges.
+    if (DT.dominates(BB, P))
+      continue;
 
-  Loop *L = LI.getLoopFor(BB);
-  const bool isLoopHeader = LI.isLoopHeader(BB);
+    // One of the predecessor hasn't been visited. Not ready yet.
+    if (BlockToOrder.count(P) == 0)
+      return false;
 
-  if (BlockToOrder.count(BB) == 0) {
-    OrderInfo Info = {Rank, Visited.size()};
+    // If the block is a loop exit, the loop must be finished before
+    // we can continue.
+    Loop *L = LI.getLoopFor(P);
+    if (L == nullptr || L->contains(BB))
+      continue;
+
+    // SPIR-V requires a single back-edge. And the backend first
+    // step transforms loops into the simplified format. If we have
+    // more than 1 back-edge, something is wrong.
+    assert(L->getNumBackEdges() <= 1);
+
+    // If the loop has no latch, loop's rank won't matter, so we can
+    // proceed.
+    BasicBlock *Latch = L->getLoopLatch();
+    assert(Latch);
+    if (Latch == nullptr)
+      continue;
+
+    // The latch is not ready yet, let's wait.
+    if (BlockToOrder.count(Latch) == 0)
+      return false;
+  }
+
+  return true;
+}
+
+size_t PartialOrderingVisitor::GetNodeRank(BasicBlock *BB) const {
+  size_t result = 0;
+
+  for (BasicBlock *P : predecessors(BB)) {
+    // Ignore back-edges.
+    if (DT.dominates(BB, P))
+      continue;
+
+    auto Iterator = BlockToOrder.end();
+    Loop *L = LI.getLoopFor(P);
+    BasicBlock *Latch = L ? L->getLoopLatch() : nullptr;
+
+    // If the predecessor is either outside a loop, or part of
+    // the same loop, simply take its rank + 1.
+    if (L == nullptr || L->contains(BB) || Latch == nullptr) {
+      Iterator = BlockToOrder.find(P);
+    } else {
+      // Otherwise, take the loop's rank (highest rank in the loop) as base.
+      // Since loops have a single latch, highest rank is easy to find.
+      // If the loop has no latch, then it doesn't matter.
+      Iterator = BlockToOrder.find(Latch);
+    }
+
+    assert(Iterator != BlockToOrder.end());
+    result = std::max(result, Iterator->second.Rank + 1);
+  }
+
+  return result;
+}
+
+size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
+  ToVisit.push(BB);
+  Queued.insert(BB);
+
+  while (ToVisit.size() != 0) {
+    BasicBlock *BB = ToVisit.front();
+    ToVisit.pop();
+
+    if (!CanBeVisited(BB)) {
+      ToVisit.push(BB);
+      continue;
+    }
+
+    size_t Rank = GetNodeRank(BB);
+    OrderInfo Info = {Rank, BlockToOrder.size()};
     BlockToOrder.emplace(BB, Info);
-  } else {
-    BlockToOrder[BB].Rank = std::max(BlockToOrder[BB].Rank, Rank);
-  }
 
-  for (BasicBlock *Predecessor : predecessors(BB)) {
-    if (isLoopHeader && L->contains(Predecessor)) {
-      continue;
-    }
-
-    if (BlockToOrder.count(Predecessor) == 0) {
-      return Rank;
+    for (BasicBlock *S : successors(BB)) {
+      if (Queued.count(S) != 0)
+        continue;
+      ToVisit.push(S);
+      Queued.insert(S);
     }
   }
 
-  Visited.insert(BB);
-
-  SmallVector<BasicBlock *, 2> OtherSuccessors;
-  SmallVector<BasicBlock *, 2> LoopSuccessors;
-
-  for (BasicBlock *Successor : successors(BB)) {
-    // Ignoring back-edges.
-    if (DT.dominates(Successor, BB))
-      continue;
-
-    if (isLoopHeader && L->contains(Successor)) {
-      LoopSuccessors.push_back(Successor);
-    } else
-      OtherSuccessors.push_back(Successor);
-  }
-
-  for (BasicBlock *BB : LoopSuccessors)
-    Rank = std::max(Rank, visit(BB, Rank + 1));
-
-  size_t OutputRank = Rank;
-  for (BasicBlock *Item : OtherSuccessors)
-    OutputRank = std::max(OutputRank, visit(Item, Rank + 1));
-  return OutputRank;
+  return 0;
 }
 
 PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
@@ -596,6 +641,20 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
     MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
   return MaybeDef;
+}
+
+bool getVacantFunctionName(Module &M, std::string &Name) {
+  // It's a bit of paranoia, but still we don't want to have even a chance that
+  // the loop will work for too long.
+  constexpr unsigned MaxIters = 1024;
+  for (unsigned I = 0; I < MaxIters; ++I) {
+    std::string OrdName = Name + Twine(I).str();
+    if (!M.getFunction(OrdName)) {
+      Name = OrdName;
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace llvm

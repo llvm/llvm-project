@@ -123,6 +123,25 @@ define void @foo(i8 %v0) {
     EXPECT_FALSE(Intvl1.disjoint(Intvl3));
     EXPECT_TRUE(Intvl1.disjoint(Empty));
   }
+  {
+    // Check comesBefore().
+    sandboxir::Interval<sandboxir::Instruction> Intvl1(I0, I0);
+    sandboxir::Interval<sandboxir::Instruction> Intvl2(I2, I2);
+    EXPECT_TRUE(Intvl1.comesBefore(Intvl2));
+    EXPECT_FALSE(Intvl2.comesBefore(Intvl1));
+
+    sandboxir::Interval<sandboxir::Instruction> Intvl12(I1, I2);
+    EXPECT_TRUE(Intvl1.comesBefore(Intvl12));
+    EXPECT_FALSE(Intvl12.comesBefore(Intvl1));
+    {
+#ifndef NDEBUG
+      // Check comesBefore() with non-disjoint intervals.
+      sandboxir::Interval<sandboxir::Instruction> Intvl1(I0, I2);
+      sandboxir::Interval<sandboxir::Instruction> Intvl2(I2, I2);
+      EXPECT_DEATH(Intvl1.comesBefore(Intvl2), ".*disjoint.*");
+#endif // NDEBUG
+    }
+  }
 }
 
 // Helper function for returning a vector of instruction pointers from a range

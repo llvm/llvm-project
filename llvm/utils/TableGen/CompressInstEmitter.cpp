@@ -248,7 +248,8 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                             "' in the corresponding instruction operand!");
 
       OperandMap[I].Kind = OpData::Operand;
-    } else if (IntInit *II = dyn_cast<IntInit>(Dag->getArg(I - TiedCount))) {
+    } else if (const IntInit *II =
+                   dyn_cast<IntInit>(Dag->getArg(I - TiedCount))) {
       // Validate that corresponding instruction operand expects an immediate.
       if (Inst.Operands[I].Rec->isSubClassOf("RegisterClass"))
         PrintFatalError(
@@ -428,7 +429,7 @@ void CompressInstEmitter::createInstOperandMapping(
 ///   Instruction type and generate a warning.
 void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   // Validate input Dag operands.
-  DagInit *SourceDag = Rec->getValueAsDag("Input");
+  const DagInit *SourceDag = Rec->getValueAsDag("Input");
   assert(SourceDag && "Missing 'Input' in compress pattern!");
   LLVM_DEBUG(dbgs() << "Input: " << *SourceDag << "\n");
 
@@ -438,7 +439,7 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   verifyDagOpCount(SourceInst, SourceDag, true);
 
   // Validate output Dag operands.
-  DagInit *DestDag = Rec->getValueAsDag("Output");
+  const DagInit *DestDag = Rec->getValueAsDag("Output");
   assert(DestDag && "Missing 'Output' in compress pattern!");
   LLVM_DEBUG(dbgs() << "Output: " << *DestDag << "\n");
 

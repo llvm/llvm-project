@@ -2296,7 +2296,10 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f32,   { 1, 1, 1, 1 } },
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32,  { 3, 1, 1, 1 } },
     { ISD::FP_EXTEND, MVT::v16f64,  MVT::v16f32,  { 4, 1, 1, 1 } }, // 2*vcvtps2pd+vextractf64x4
+    { ISD::FP_EXTEND, MVT::v16f32,  MVT::v16f16,  { 1, 1, 1, 1 } }, // vcvtph2ps
+    { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f16,   { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
     { ISD::FP_ROUND,  MVT::v8f32,   MVT::v8f64,   { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v16f16,  MVT::v16f32,  { 1, 1, 1, 1 } }, // vcvtps2ph
 
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
@@ -2973,6 +2976,17 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v4i32,  MVT::v2i64,  { 1, 1, 1, 1 } }, // PSHUFD
   };
 
+  static const TypeConversionCostKindTblEntry F16ConversionTbl[] = {
+    { ISD::FP_ROUND,  MVT::f16,     MVT::f32,     { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v8f16,   MVT::v8f32,   { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,  MVT::v4f16,   MVT::v4f32,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::f32,     MVT::f16,     { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::f64,     MVT::f16,     { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
+    { ISD::FP_EXTEND, MVT::v8f32,   MVT::v8f16,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::v4f32,   MVT::v4f16,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::v4f64,   MVT::v4f16,   { 2, 1, 1, 1 } }, // vcvtph2ps+vcvtps2pd
+  };
+
   // Attempt to map directly to (simple) MVT types to let us match custom entries.
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
@@ -3034,6 +3048,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
           return *KindCost;
     }
 
+    if (ST->hasF16C()) {
+      if (const auto *Entry = ConvertCostTableLookup(F16ConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+    }
+
     if (ST->hasSSE41()) {
       if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
@@ -3046,6 +3067,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                      SimpleDstTy, SimpleSrcTy))
         if (auto KindCost = Entry->Cost[CostKind])
           return *KindCost;
+    }
+
+    if ((ISD == ISD::FP_ROUND && SimpleDstTy == MVT::f16) ||
+        (ISD == ISD::FP_EXTEND && SimpleSrcTy == MVT::f16)) {
+      // fp16 conversions not covered by any table entries require a libcall.
+      // Return a large (arbitrary) number to model this.
+      return InstructionCost(64);
     }
   }
 
@@ -3106,6 +3134,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                    LTDest.second, LTSrc.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return std::max(LTSrc.first, LTDest.first) * *KindCost;
+
+  if (ST->hasF16C()) {
+    if (const auto *Entry = ConvertCostTableLookup(F16ConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
+  }
 
   if (ST->hasSSE41())
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
@@ -6899,4 +6934,91 @@ InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
 InstructionCost X86TTIImpl::getBranchMispredictPenalty() const {
   // TODO: Hook MispredictPenalty of SchedMachineModel into this.
   return 14;
+}
+
+bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
+  unsigned Bits = Ty->getScalarSizeInBits();
+
+  // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
+  // Splitting for v32i8/v16i16 on XOP+AVX2 targets is still preferred.
+  if (ST->hasXOP() && (Bits == 8 || Bits == 16 || Bits == 32 || Bits == 64))
+    return false;
+
+  // AVX2 has vpsllv[dq] instructions (and other shifts) that make variable
+  // shifts just as cheap as scalar ones.
+  if (ST->hasAVX2() && (Bits == 32 || Bits == 64))
+    return false;
+
+  // AVX512BW has shifts such as vpsllvw.
+  if (ST->hasBWI() && Bits == 16)
+    return false;
+
+  // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
+  // fully general vector.
+  return true;
+}
+
+unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
+                                       Type *ScalarValTy) const {
+  if (ST->hasF16C() && ScalarMemTy->isHalfTy()) {
+    return 4;
+  }
+  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+}
+
+bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
+                                            SmallVectorImpl<Use *> &Ops) const {
+  using namespace llvm::PatternMatch;
+
+  FixedVectorType *VTy = dyn_cast<FixedVectorType>(I->getType());
+  if (!VTy)
+    return false;
+
+  if (I->getOpcode() == Instruction::Mul &&
+      VTy->getElementType()->isIntegerTy(64)) {
+    for (auto &Op : I->operands()) {
+      // Make sure we are not already sinking this operand
+      if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
+        continue;
+
+      // Look for PMULDQ pattern where the input is a sext_inreg from vXi32 or
+      // the PMULUDQ pattern where the input is a zext_inreg from vXi32.
+      if (ST->hasSSE41() &&
+          match(Op.get(), m_AShr(m_Shl(m_Value(), m_SpecificInt(32)),
+                                 m_SpecificInt(32)))) {
+        Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
+        Ops.push_back(&Op);
+      } else if (ST->hasSSE2() &&
+                 match(Op.get(),
+                       m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
+        Ops.push_back(&Op);
+      }
+    }
+
+    return !Ops.empty();
+  }
+
+  // A uniform shift amount in a vector shift or funnel shift may be much
+  // cheaper than a generic variable vector shift, so make that pattern visible
+  // to SDAG by sinking the shuffle instruction next to the shift.
+  int ShiftAmountOpNum = -1;
+  if (I->isShift())
+    ShiftAmountOpNum = 1;
+  else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (II->getIntrinsicID() == Intrinsic::fshl ||
+        II->getIntrinsicID() == Intrinsic::fshr)
+      ShiftAmountOpNum = 2;
+  }
+
+  if (ShiftAmountOpNum == -1)
+    return false;
+
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(I->getOperand(ShiftAmountOpNum));
+  if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
+      isVectorShiftByScalarCheap(I->getType())) {
+    Ops.push_back(&I->getOperandUse(ShiftAmountOpNum));
+    return true;
+  }
+
+  return false;
 }

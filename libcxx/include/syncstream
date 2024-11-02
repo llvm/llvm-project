@@ -273,14 +273,14 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI ~basic_syncbuf() {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
     try {
-#    endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#    endif // _LIBCPP_HAS_EXCEPTIONS
       emit();
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
     }
-#    endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#    endif // _LIBCPP_HAS_EXCEPTIONS
     __dec_reference();
   }
 
@@ -337,7 +337,7 @@ protected:
       return traits_type::not_eof(__c);
 
     if (this->pptr() == this->epptr()) {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
       try {
 #    endif
         size_t __size = __str_.size();
@@ -348,7 +348,7 @@ protected:
         this->setp(__p, __p + __str_.size());
         this->pbump(__size);
 
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
       } catch (...) {
         return traits_type::eof();
       }
@@ -480,13 +480,13 @@ public:
     // TODO validate other unformatted output functions.
     typename basic_ostream<char_type, traits_type>::sentry __s(*this);
     if (__s) {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
       try {
 #    endif
 
         if (__sb_.emit() == false)
           this->setstate(ios::badbit);
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
       } catch (...) {
         this->__set_badbit_and_consider_rethrow();
       }

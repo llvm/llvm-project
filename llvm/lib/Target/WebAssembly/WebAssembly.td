@@ -78,6 +78,10 @@ def FeatureTailCall :
       SubtargetFeature<"tail-call", "HasTailCall", "true",
                        "Enable tail call instructions">;
 
+def FeatureWideArithmetic :
+      SubtargetFeature<"wide-arithmetic", "HasWideArithmetic", "true",
+                       "Enable wide-arithmetic instructions">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//
@@ -110,7 +114,8 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // consideration given to available support in relevant engines and tools, and
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
-                      [FeatureMultivalue, FeatureMutableGlobals,
+                      [FeatureBulkMemory, FeatureMultivalue,
+                       FeatureMutableGlobals, FeatureNontrappingFPToInt,
                        FeatureReferenceTypes, FeatureSignExt]>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!

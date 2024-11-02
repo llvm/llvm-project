@@ -20,8 +20,9 @@ LLVM_LIBC_FUNCTION(int, rename, (const char *oldpath, const char *newpath)) {
   rpc::Client::Port port = rpc::client.open<RPC_RENAME>();
   port.send_n(oldpath, internal::string_length(oldpath) + 1);
   port.send_n(newpath, internal::string_length(newpath) + 1);
-  port.recv(
-      [&](rpc::Buffer *buffer) { ret = static_cast<int>(buffer->data[0]); });
+  port.recv([&](rpc::Buffer *buffer, uint32_t) {
+    ret = static_cast<int>(buffer->data[0]);
+  });
   port.close();
 
   return ret;

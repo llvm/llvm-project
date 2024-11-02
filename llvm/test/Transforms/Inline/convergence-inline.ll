@@ -185,6 +185,30 @@ define void @test_two_calls() convergent {
   ret void
 }
 
+define i32 @token_not_first(i32 %x) convergent alwaysinline {
+; CHECK-LABEL: @token_not_first(
+; CHECK-NEXT:    {{%.*}} = alloca ptr, align 8
+; CHECK-NEXT:    [[TOKEN:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @g(i32 [[X:%.*]]) [ "convergencectrl"(token [[TOKEN]]) ]
+; CHECK-NEXT:    ret i32 [[Y]]
+;
+  %p = alloca ptr, align 8
+  %token = call token @llvm.experimental.convergence.entry()
+  %y = call i32 @g(i32 %x) [ "convergencectrl"(token %token) ]
+  ret i32 %y
+}
+
+define void @test_token_not_first() convergent {
+; CHECK-LABEL: @test_token_not_first(
+; CHECK-NEXT:    [[TOKEN:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    {{%.*}} = call i32 @g(i32 23) [ "convergencectrl"(token [[TOKEN]]) ]
+; CHECK-NEXT:    ret void
+;
+  %token = call token @llvm.experimental.convergence.entry()
+  %x = call i32 @token_not_first(i32 23) [ "convergencectrl"(token %token) ]
+  ret void
+}
+
 declare void @f(i32) convergent
 declare i32 @g(i32) convergent
 

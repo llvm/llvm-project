@@ -125,6 +125,7 @@ def FloatZeroConversion : DiagGroup<"float-zero-conversion">;
 def FloatConversion :
   DiagGroup<"float-conversion", [FloatOverflowConversion,
                                  FloatZeroConversion]>;
+def MathErrnoEnabledWithVecLib : DiagGroup<"math-errno-enabled-with-veclib">;
 
 def FrameAddress : DiagGroup<"frame-address">;
 def FreeNonHeapObject : DiagGroup<"free-nonheap-object">;
@@ -1583,3 +1584,7 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// A warning for options that enable a feature that is not yet complete
+def ExperimentalOption : DiagGroup<"experimental-option">;
+

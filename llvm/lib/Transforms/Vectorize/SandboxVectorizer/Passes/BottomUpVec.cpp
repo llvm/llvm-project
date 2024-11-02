@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
-
-using namespace llvm::sandboxir;
+#include "llvm/SandboxIR/Module.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
 namespace llvm::sandboxir {
+
+BottomUpVec::BottomUpVec(StringRef Pipeline)
+    : FunctionPass("bottom-up-vec"),
+      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
+
 // TODO: This is a temporary function that returns some seeds.
 //       Replace this with SeedCollector's function when it lands.
 static llvm::SmallVector<Value *, 4> collectSeeds(BasicBlock &BB) {
@@ -34,10 +40,8 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
   return Operands;
 }
 
-} // namespace llvm::sandboxir
-
 void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
-  auto LegalityRes = Legality.canVectorize(Bndl);
+  const auto &LegalityRes = Legality->canVectorize(Bndl);
   switch (LegalityRes.getSubclassID()) {
   case LegalityResultID::Widen: {
     auto *I = cast<Instruction>(Bndl[0]);
@@ -47,20 +51,30 @@ void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
     }
     break;
   }
+  case LegalityResultID::Pack: {
+    // TODO: Unimplemented
+    llvm_unreachable("Unimplemented");
+  }
   }
 }
 
 void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
 
-bool BottomUpVec::runOnFunction(Function &F) {
+bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
+  Legality = std::make_unique<LegalityAnalysis>(A.getScalarEvolution(),
+                                                F.getParent()->getDataLayout());
   Change = false;
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {
     // TODO: Replace with proper SeedCollector function.
     auto Seeds = collectSeeds(BB);
     // TODO: Slice Seeds into smaller chunks.
+    // TODO: If vectorization succeeds, run the RegionPassManager on the
+    // resulting region.
     if (Seeds.size() >= 2)
       tryVectorize(Seeds);
   }
   return Change;
 }
+
+} // namespace llvm::sandboxir

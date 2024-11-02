@@ -50,7 +50,7 @@ struct RVVIntrinsicDef {
 
 struct RVVOverloadIntrinsicDef {
   // Indexes of RISCVIntrinsicManagerImpl::IntrinsicList.
-  SmallVector<uint16_t, 8> Indexes;
+  SmallVector<uint32_t, 8> Indexes;
 };
 
 } // namespace
@@ -169,7 +169,7 @@ private:
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
   // Mapping function name to index of IntrinsicList.
-  StringMap<uint16_t> Intrinsics;
+  StringMap<uint32_t> Intrinsics;
   // Mapping function name to RVVOverloadIntrinsicDef.
   StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
 
@@ -399,7 +399,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
                                      Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
-  uint16_t Index = IntrinsicList.size();
+  uint32_t Index = IntrinsicList.size();
   assert(IntrinsicList.size() == (size_t)Index &&
          "Intrinsics indices overflow.");
   IntrinsicList.push_back({BuiltinName, Signature});
@@ -623,7 +623,12 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(
         TheCall->getType()->castAs<BuiltinType>());
 
-    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v"))
+    const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+    llvm::StringMap<bool> FunctionFeatureMap;
+    Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+
+    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v") &&
+        !FunctionFeatureMap.lookup("v"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ true << TheCall->getSourceRange() << "v";

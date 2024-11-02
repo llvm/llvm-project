@@ -95,6 +95,14 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
+  // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
+  // terminates a basic block. Instead, it would assume that control flow
+  // continued to the next instruction. The next instruction could be in the
+  // block that's lexically below it. This would lead to a phantom CFG edges
+  // being created within ptxas. This issue was fixed in CUDA 12.3. Thus, when
+  // PTX ISA versions 8.3+ we can confidently say that the bug will not be
+  // present.
+  bool hasPTXASUnreachableBug() const { return PTXVersion < 83; }
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }

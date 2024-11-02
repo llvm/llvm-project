@@ -355,7 +355,9 @@ defm GeometryPointSize : CapabilityOperand<24, 0, 0, [], [Geometry]>;
 defm ImageGatherExtended : CapabilityOperand<25, 0, 0, [], [Shader]>;
 defm StorageImageMultisample : CapabilityOperand<27, 0, 0, [], [Shader]>;
 defm UniformBufferArrayDynamicIndexing : CapabilityOperand<28, 0, 0, [], [Shader]>;
-defm SampledImageArrayDymnamicIndexing : CapabilityOperand<29, 0, 0, [], [Shader]>;
+defm SampledImageArrayDynamicIndexing : CapabilityOperand<29, 0, 0, [], [Shader]>;
+defm StorageBufferArrayDynamicIndexing : CapabilityOperand<30, 0, 0, [], [Shader]>;
+defm StorageImageArrayDynamicIndexing : CapabilityOperand<31, 0, 0, [], [Shader]>;
 defm ClipDistance : CapabilityOperand<32, 0, 0, [], [Shader]>;
 defm CullDistance : CapabilityOperand<33, 0, 0, [], [Shader]>;
 defm SampleRateShading : CapabilityOperand<35, 0, 0, [], [Shader]>;
@@ -482,6 +484,7 @@ defm GlobalVariableFPGADecorationsINTEL : CapabilityOperand<6189, 0, 0, [SPV_INT
 defm CacheControlsINTEL : CapabilityOperand<6441, 0, 0, [SPV_INTEL_cache_controls], []>;
 defm CooperativeMatrixKHR : CapabilityOperand<6022, 0, 0, [SPV_KHR_cooperative_matrix], []>;
 defm ArithmeticFenceEXT : CapabilityOperand<6144, 0, 0, [SPV_EXT_arithmetic_fence], []>;
+defm SplitBarrierINTEL : CapabilityOperand<6141, 0, 0, [SPV_INTEL_split_barrier], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time

@@ -213,7 +213,6 @@ StringRef getLanguageName(Language Lang) {
   case Language::OpenCL:
   case Language::OpenCLCXX:
   case Language::CUDA:
-  case Language::RenderScript:
   case Language::HIP:
   case Language::HLSL:
 

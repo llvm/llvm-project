@@ -3078,7 +3078,7 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // debug information so we would like to keep this around even if the value
 // is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    MemoryEffects<[MemAlloc<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 

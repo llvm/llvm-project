@@ -1023,7 +1023,6 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 static bool
 CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &BBPreds,
-                                const SmallPtrSetImpl<BasicBlock *> &SuccPreds,
                                 BasicBlock *&CommonPred) {
 
   // There must be phis in BB, otherwise BB will be merged into Succ directly
@@ -1042,7 +1041,7 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
 
   // Get the single common predecessor of both BB and Succ. Return false
   // when there are more than one common predecessors.
-  for (BasicBlock *SuccPred : SuccPreds) {
+  for (BasicBlock *SuccPred : predecessors(Succ)) {
     if (BBPreds.count(SuccPred)) {
       if (CommonPred)
         return false;
@@ -1166,7 +1165,6 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     return false;
 
   SmallPtrSet<BasicBlock *, 16> BBPreds(pred_begin(BB), pred_end(BB));
-  SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
 
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
@@ -1175,9 +1173,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
-  bool BBPhisMergeable =
-      BBKillable ||
-      CanRedirectPredsOfEmptyBBToSucc(BB, Succ, BBPreds, SuccPreds, CommonPred);
+  bool BBPhisMergeable = BBKillable || CanRedirectPredsOfEmptyBBToSucc(
+                                           BB, Succ, BBPreds, CommonPred);
 
   if ((!BBKillable && !BBPhisMergeable) || introduceTooManyPhiEntries(BB, Succ))
     return false;
@@ -1302,7 +1299,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-
+    SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -3511,6 +3508,17 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   else if (!isa<LoadInst>(I))
     ReplInst->andIRFlags(I);
 
+  // Handle attributes.
+  if (auto *CB1 = dyn_cast<CallBase>(ReplInst)) {
+    if (auto *CB2 = dyn_cast<CallBase>(I)) {
+      bool Success = CB1->tryIntersectAttributes(CB2);
+      assert(Success && "We should not be trying to sink callbases "
+                        "with non-intersectable attributes");
+      // For NDEBUG Compile.
+      (void)Success;
+    }
+  }
+
   // FIXME: If both the original and replacement value are part of the
   // same control-flow region (meaning that the execution of one
   // guarantees the execution of the other), then we can combine the
@@ -3843,11 +3851,11 @@ static const std::optional<BitPart> &
 collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
                 std::map<Value *, std::optional<BitPart>> &BPS, int Depth,
                 bool &FoundRoot) {
-  auto I = BPS.find(V);
-  if (I != BPS.end())
+  auto [I, Inserted] = BPS.try_emplace(V);
+  if (!Inserted)
     return I->second;
 
-  auto &Result = BPS[V] = std::nullopt;
+  auto &Result = I->second;
   auto BitWidth = V->getType()->getScalarSizeInBits();
 
   // Can't do integer/elements > 128 bits.
@@ -4144,7 +4152,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   else
     return false;
 
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(I->getModule(), Intrin, DemandedTy);
   Value *Provider = Res->Provider;
 
   // We may need to truncate the provider.

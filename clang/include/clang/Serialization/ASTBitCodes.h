@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 31;
+const unsigned VERSION_MAJOR = 33;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -54,7 +54,7 @@ const unsigned VERSION_MAJOR = 31;
 /// for the previous version could still support reading the new
 /// version by ignoring new kinds of subblocks), this number
 /// should be increased.
-const unsigned VERSION_MINOR = 1;
+const unsigned VERSION_MINOR = 0;
 
 /// An ID number that refers to an identifier in an AST file.
 ///
@@ -1149,7 +1149,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 505;
+const unsigned NUM_PREDEF_TYPE_IDS = 513;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

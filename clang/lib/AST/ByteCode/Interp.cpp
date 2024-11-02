@@ -22,6 +22,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include <limits>
@@ -80,11 +81,17 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (!D->getType().isConstQualified())
+  if (!D->getType().isConstQualified()) {
     diagnoseNonConstVariable(S, OpPC, D);
-  else if (const auto *VD = dyn_cast<VarDecl>(D);
-           VD && !VD->getAnyInitializer())
-    diagnoseMissingInitializer(S, OpPC, VD);
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getAnyInitializer()) {
+      diagnoseMissingInitializer(S, OpPC, VD);
+    } else {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    }
+  }
 
   return false;
 }
@@ -347,6 +354,13 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (D->isConstexpr())
     return true;
 
+  // If we're evaluating the initializer for a constexpr variable in C23, we may
+  // only read other contexpr variables. Abort here since this one isn't
+  // constexpr.
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+      VD && VD->isConstexpr() && S.getLangOpts().C23)
+    return Invalid(S, OpPC);
+
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
   if (T->isIntegralOrEnumerationType()) {
@@ -386,7 +400,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
@@ -499,8 +513,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   AccessKinds AK) {
+static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK) {
   assert(Ptr.isLive());
 
   // FIXME: This check here might be kinda expensive. Maybe it would be better
@@ -963,7 +977,7 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
+static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(B);
   const Descriptor *Desc = B->getDescriptor();
 
@@ -986,6 +1000,106 @@ bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
 
   assert(Desc->isRecord());
   return runRecordDestructor(S, OpPC, Pointer(const_cast<Block *>(B)), Desc);
+}
+
+static bool hasVirtualDestructor(QualType T) {
+  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+    if (const CXXDestructorDecl *DD = RD->getDestructor())
+      return DD->isVirtual();
+  return false;
+}
+
+bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
+          bool IsGlobalDelete) {
+  if (!CheckDynamicMemoryAllocation(S, OpPC))
+    return false;
+
+  const Expr *Source = nullptr;
+  const Block *BlockToDelete = nullptr;
+  {
+    // Extra scope for this so the block doesn't have this pointer
+    // pointing to it when we destroy it.
+    Pointer Ptr = S.Stk.pop<Pointer>();
+
+    // Deleteing nullptr is always fine.
+    if (Ptr.isZero())
+      return true;
+
+    // Remove base casts.
+    QualType InitialType = Ptr.getType();
+    while (Ptr.isBaseClass())
+      Ptr = Ptr.getBase();
+
+    // For the non-array case, the types must match if the static type
+    // does not have a virtual destructor.
+    if (!DeleteIsArrayForm && Ptr.getType() != InitialType &&
+        !hasVirtualDestructor(InitialType)) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_delete_base_nonvirt_dtor)
+          << InitialType << Ptr.getType();
+      return false;
+    }
+
+    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
+          << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
+      return false;
+    }
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+
+    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
+      return false;
+
+    // For a class type with a virtual destructor, the selected operator delete
+    // is the one looked up when building the destructor.
+    QualType AllocType = Ptr.getType();
+    if (!DeleteIsArrayForm && !IsGlobalDelete) {
+      auto getVirtualOperatorDelete = [](QualType T) -> const FunctionDecl * {
+        if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+          if (const CXXDestructorDecl *DD = RD->getDestructor())
+            return DD->isVirtual() ? DD->getOperatorDelete() : nullptr;
+        return nullptr;
+      };
+
+      if (const FunctionDecl *VirtualDelete =
+              getVirtualOperatorDelete(AllocType);
+          VirtualDelete &&
+          !VirtualDelete->isReplaceableGlobalAllocationFunction()) {
+        S.FFDiag(S.Current->getSource(OpPC),
+                 diag::note_constexpr_new_non_replaceable)
+            << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
+        return false;
+      }
+    }
+  }
+  assert(Source);
+  assert(BlockToDelete);
+
+  // Invoke destructors before deallocating the memory.
+  if (!RunDestructors(S, OpPC, BlockToDelete))
+    return false;
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+  std::optional<DynamicAllocator::Form> AllocForm =
+      Allocator.getAllocationForm(Source);
+
+  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+    // Nothing has been deallocated, this must be a double-delete.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_delete);
+    return false;
+  }
+
+  assert(AllocForm);
+  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
+                                          ? DynamicAllocator::Form::Array
+                                          : DynamicAllocator::Form::NonArray;
+  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
+                             Source);
 }
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
@@ -1355,6 +1469,11 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
         << StorageType << AllocType;
     return false;
   }
+
+  // Can't activate fields in a union, unless the direct base is the union.
+  if (Ptr.inUnion() && !Ptr.isActive() && !Ptr.getBase().getRecord()->isUnion())
+    return CheckActive(S, OpPC, Ptr, AK_Construct);
+
   return true;
 }
 
@@ -1412,6 +1531,63 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
   S.FFDiag(Loc,
            diag::err_shufflevector_minus_one_is_undefined_behavior_constexpr)
       << Index;
+  return false;
+}
+
+bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, unsigned BitWidth) {
+  if (Ptr.isDummy())
+    return false;
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
+  if (Ptr.isBlockPointer() && !Ptr.isZero()) {
+    // Only allow based lvalue casts if they are lossless.
+    if (S.getASTContext().getTargetInfo().getPointerWidth(LangAS::Default) !=
+        BitWidth)
+      return Invalid(S, OpPC);
+  }
+  return true;
+}
+
+bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
+    return false;
+
+  S.Stk.push<IntegralAP<false>>(
+      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  return true;
+}
+
+bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
+    return false;
+
+  S.Stk.push<IntegralAP<true>>(
+      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  return true;
+}
+
+bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
+                  bool TargetIsUCharOrByte) {
+  // This is always fine.
+  if (!HasIndeterminateBits)
+    return true;
+
+  // Indeterminate bits can only be bitcast to unsigned char or std::byte.
+  if (TargetIsUCharOrByte)
+    return true;
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  QualType ExprType = E->getType();
+  S.FFDiag(E, diag::note_constexpr_bit_cast_indet_dest)
+      << ExprType << S.getLangOpts().CharIsSigned << E->getSourceRange();
   return false;
 }
 

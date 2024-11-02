@@ -215,6 +215,18 @@ def FminF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T, T)";
 }
 
+def FmaximumNumF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_fmaximum_num"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+  let Prototype = "T(T, T)";
+}
+
+def FminimumNumF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_fminimum_num"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+  let Prototype = "T(T, T)";
+}
+
 def Atan2F128 : Builtin {
   let Spellings = ["__builtin_atan2f128"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
@@ -1186,13 +1198,13 @@ def AllowRuntimeCheck : Builtin {
 
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ConvertVector : Builtin {
   let Spellings = ["__builtin_convertvector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -2702,6 +2714,7 @@ def Abs : IntMathTemplate, LibBuiltin<"stdlib.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Calloc : LibBuiltin<"stdlib.h"> {
@@ -3728,6 +3741,22 @@ def Fmin : FPMathTemplate, LibBuiltin<"math.h"> {
   let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
+def FmaximumNum : FPMathTemplate, LibBuiltin<"math.h"> {
+  let Spellings = ["fmaximum_num"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "T(T, T)";
+  let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+}
+
+def FminimumNum : FPMathTemplate, LibBuiltin<"math.h"> {
+  let Spellings = ["fminimum_num"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "T(T, T)";
+  let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+}
+
 def Hypot : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["hypot"];
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
@@ -4733,6 +4762,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool()";
 }
 
+def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_read_lane_at"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const];
@@ -4741,6 +4776,12 @@ def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLCross: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_cross"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_degrees"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
@@ -4826,6 +4867,12 @@ def HLSLStep: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_radians"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

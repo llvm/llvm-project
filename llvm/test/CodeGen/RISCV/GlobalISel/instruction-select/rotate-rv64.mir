@@ -117,7 +117,7 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[RORIW:%[0-9]+]]:gpr = RORIW [[COPY]], 15
+    ; CHECK-NEXT: [[RORIW:%[0-9]+]]:gpr = RORIW [[COPY]], 17
     ; CHECK-NEXT: $x10 = COPY [[RORIW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
@@ -165,9 +165,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 15
-    ; CHECK-NEXT: [[RORW:%[0-9]+]]:gpr = RORW [[COPY]], [[ADDI]]
-    ; CHECK-NEXT: $x10 = COPY [[RORW]]
+    ; CHECK-NEXT: [[RORIW:%[0-9]+]]:gpr = RORIW [[COPY]], 15
+    ; CHECK-NEXT: $x10 = COPY [[RORIW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
     %1:gprb(s32) = G_TRUNC %0(s64)

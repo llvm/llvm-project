@@ -24,7 +24,8 @@
 #endif
 
 #ifdef __cplusplus
-#  include <ctgmath>
+#  include <cmath>
+#  include <complex>
 #else
 #  if __has_include_next(<tgmath.h>)
 #    include_next <tgmath.h>

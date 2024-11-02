@@ -808,6 +808,24 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     }
     break;
   }
+  case ISD::SRL: {
+    // If we are only demanding sign bits then we can use the shift source
+    // directly.
+    if (std::optional<uint64_t> MaxSA =
+            DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
+      SDValue Op0 = Op.getOperand(0);
+      unsigned ShAmt = *MaxSA;
+      // Must already be signbits in DemandedBits bounds, and can't demand any
+      // shifted in zeroes.
+      if (DemandedBits.countl_zero() >= ShAmt) {
+        unsigned NumSignBits =
+            DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+        if (DemandedBits.countr_zero() >= (BitWidth - NumSignBits))
+          return Op0;
+      }
+    }
+    break;
+  }
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
@@ -1486,22 +1504,15 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::OR: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    SDNodeFlags Flags = Op.getNode()->getFlags();
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1)) {
-      if (Flags.hasDisjoint()) {
-        Flags.setDisjoint(false);
-        Op->setFlags(Flags);
-      }
+      Op->dropFlags(SDNodeFlags::Disjoint);
       return true;
     }
 
     if (SimplifyDemandedBits(Op0, ~Known.One & DemandedBits, DemandedElts,
                              Known2, TLO, Depth + 1)) {
-      if (Flags.hasDisjoint()) {
-        Flags.setDisjoint(false);
-        Op->setFlags(Flags);
-      }
+      Op->dropFlags(SDNodeFlags::Disjoint);
       return true;
     }
 
@@ -1806,14 +1817,9 @@ bool TargetLowering::SimplifyDemandedBits(
       APInt InDemandedMask = DemandedBits.lshr(ShAmt);
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1)) {
-        SDNodeFlags Flags = Op.getNode()->getFlags();
-        if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
-          // Disable the nsw and nuw flags. We can no longer guarantee that we
-          // won't wrap after simplification.
-          Flags.setNoSignedWrap(false);
-          Flags.setNoUnsignedWrap(false);
-          Op->setFlags(Flags);
-        }
+        // Disable the nsw and nuw flags. We can no longer guarantee that we
+        // won't wrap after simplification.
+        Op->dropFlags(SDNodeFlags::NoWrap);
         return true;
       }
       Known.Zero <<= ShAmt;
@@ -1897,14 +1903,9 @@ bool TargetLowering::SimplifyDemandedBits(
         APInt DemandedFromOp(APInt::getLowBitsSet(BitWidth, BitWidth - CTLZ));
         if (SimplifyDemandedBits(Op0, DemandedFromOp, DemandedElts, Known, TLO,
                                  Depth + 1)) {
-          SDNodeFlags Flags = Op.getNode()->getFlags();
-          if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
-            // Disable the nsw and nuw flags. We can no longer guarantee that we
-            // won't wrap after simplification.
-            Flags.setNoSignedWrap(false);
-            Flags.setNoUnsignedWrap(false);
-            Op->setFlags(Flags);
-          }
+          // Disable the nsw and nuw flags. We can no longer guarantee that we
+          // won't wrap after simplification.
+          Op->dropFlags(SDNodeFlags::NoWrap);
           return true;
         }
         Known.resetAll();
@@ -2456,15 +2457,11 @@ bool TargetLowering::SimplifyDemandedBits(
         return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT, Src));
     }
 
-    SDNodeFlags Flags = Op->getFlags();
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     APInt InDemandedElts = DemandedElts.zext(InElts);
     if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
                              Depth + 1)) {
-      if (Flags.hasNonNeg()) {
-        Flags.setNonNeg(false);
-        Op->setFlags(Flags);
-      }
+      Op->dropFlags(SDNodeFlags::NonNeg);
       return true;
     }
     assert(Known.getBitWidth() == InBits && "Src width has changed?");
@@ -2528,7 +2525,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (!TLO.LegalOperations() || isOperationLegal(Opc, VT)) {
         SDNodeFlags Flags;
         if (!IsVecInReg)
-          Flags.setNonNeg(true);
+          Flags |= SDNodeFlags::NonNeg;
         return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT, Src, Flags));
       }
     }
@@ -2836,13 +2833,9 @@ bool TargetLowering::SimplifyDemandedBits(
                              DemandedElts, KnownOp0, TLO, Depth + 1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO)) {
-      if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
-        // Disable the nsw and nuw flags. We can no longer guarantee that we
-        // won't wrap after simplification.
-        Flags.setNoSignedWrap(false);
-        Flags.setNoUnsignedWrap(false);
-        Op->setFlags(Flags);
-      }
+      // Disable the nsw and nuw flags. We can no longer guarantee that we
+      // won't wrap after simplification.
+      Op->dropFlags(SDNodeFlags::NoWrap);
       return true;
     }
 
@@ -2858,12 +2851,10 @@ bool TargetLowering::SimplifyDemandedBits(
       SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
           Op1, LoMask, DemandedElts, TLO.DAG, Depth + 1);
       if (DemandedOp0 || DemandedOp1) {
-        Flags.setNoSignedWrap(false);
-        Flags.setNoUnsignedWrap(false);
         Op0 = DemandedOp0 ? DemandedOp0 : Op0;
         Op1 = DemandedOp1 ? DemandedOp1 : Op1;
-        SDValue NewOp =
-            TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1, Flags);
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1,
+                                        Flags & ~SDNodeFlags::NoWrap);
         return TLO.CombineTo(Op, NewOp);
       }
     }
@@ -2880,9 +2871,8 @@ bool TargetLowering::SimplifyDemandedBits(
       SDValue Neg1 = TLO.DAG.getAllOnesConstant(dl, VT);
       // Disable the nsw and nuw flags. We can no longer guarantee that we
       // won't wrap after simplification.
-      Flags.setNoSignedWrap(false);
-      Flags.setNoUnsignedWrap(false);
-      SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Neg1, Flags);
+      SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Neg1,
+                                      Flags & ~SDNodeFlags::NoWrap);
       return TLO.CombineTo(Op, NewOp);
     }
 
@@ -6157,9 +6147,7 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
 
   SDValue Res = Op0;
   if (UseSRA) {
-    SDNodeFlags Flags;
-    Flags.setExact(true);
-    Res = DAG.getNode(ISD::SRA, dl, VT, Res, Shift, Flags);
+    Res = DAG.getNode(ISD::SRA, dl, VT, Res, Shift, SDNodeFlags::Exact);
     Created.push_back(Res.getNode());
   }
 
@@ -6220,9 +6208,7 @@ static SDValue BuildExactUDIV(const TargetLowering &TLI, SDNode *N,
 
   SDValue Res = N->getOperand(0);
   if (UseSRL) {
-    SDNodeFlags Flags;
-    Flags.setExact(true);
-    Res = DAG.getNode(ISD::SRL, dl, VT, Res, Shift, Flags);
+    Res = DAG.getNode(ISD::SRL, dl, VT, Res, Shift, SDNodeFlags::Exact);
     Created.push_back(Res.getNode());
   }
 
@@ -6813,7 +6799,9 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
 
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
     KAmts.push_back(
-        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K), DL, ShSVT));
+        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K, /*isSigned=*/false,
+                              /*implicitTrunc=*/true),
+                        DL, ShSVT));
     QAmts.push_back(DAG.getConstant(Q, DL, SVT));
     return true;
   };
@@ -7084,7 +7072,9 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     PAmts.push_back(DAG.getConstant(P, DL, SVT));
     AAmts.push_back(DAG.getConstant(A, DL, SVT));
     KAmts.push_back(
-        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K), DL, ShSVT));
+        DAG.getConstant(APInt(ShSVT.getSizeInBits(), K, /*isSigned=*/false,
+                              /*implicitTrunc=*/true),
+                        DL, ShSVT));
     QAmts.push_back(DAG.getConstant(Q, DL, SVT));
     return true;
   };
@@ -8364,11 +8354,10 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
 }
 
 bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
-                                      SDValue &Chain,
-                                      SelectionDAG &DAG) const {
+                                      SDValue &Chain, SelectionDAG &DAG) const {
   // This transform is not correct for converting 0 when rounding mode is set
-  // to round toward negative infinity which will produce -0.0. So disable under
-  // strictfp.
+  // to round toward negative infinity which will produce -0.0. So disable
+  // under strictfp.
   if (Node->isStrictFPOpcode())
     return false;
 
@@ -8376,10 +8365,20 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
+  // If the input is known to be non-negative and SINT_TO_FP is legal then use
+  // it.
+  if (Node->getFlags().hasNonNeg() &&
+      isOperationLegalOrCustom(ISD::SINT_TO_FP, SrcVT)) {
+    Result =
+        DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Node->getOperand(0));
+    return true;
+  }
+
   if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
     return false;
 
-  // Only expand vector types if we have the appropriate vector bit operations.
+  // Only expand vector types if we have the appropriate vector bit
+  // operations.
   if (SrcVT.isVector() && (!isOperationLegalOrCustom(ISD::SRL, SrcVT) ||
                            !isOperationLegalOrCustom(ISD::FADD, DstVT) ||
                            !isOperationLegalOrCustom(ISD::FSUB, DstVT) ||
@@ -8393,8 +8392,9 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   // Implementation of unsigned i64 to f64 following the algorithm in
   // __floatundidf in compiler_rt.  This implementation performs rounding
   // correctly in all rounding modes with the exception of converting 0
-  // when rounding toward negative infinity. In that case the fsub will produce
-  // -0.0. This will be added to +0.0 and produce -0.0 which is incorrect.
+  // when rounding toward negative infinity. In that case the fsub will
+  // produce -0.0. This will be added to +0.0 and produce -0.0 which is
+  // incorrect.
   SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
   SDValue TwoP84PlusTwoP52 = DAG.getConstantFP(
       llvm::bit_cast<double>(UINT64_C(0x4530000000100000)), dl, DstVT);
@@ -8408,8 +8408,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
   SDValue LoFlt = DAG.getBitcast(DstVT, LoOr);
   SDValue HiFlt = DAG.getBitcast(DstVT, HiOr);
-  SDValue HiSub =
-      DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
+  SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
   Result = DAG.getNode(ISD::FADD, dl, DstVT, LoFlt, HiSub);
   return true;
 }
@@ -8424,14 +8423,17 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
 
   if (Node->getFlags().hasNoNaNs()) {
     ISD::CondCode Pred = Opcode == ISD::FMINNUM ? ISD::SETLT : ISD::SETGT;
+    EVT VT = Node->getValueType(0);
+    if ((!isCondCodeLegal(Pred, VT.getSimpleVT()) ||
+         !isOperationLegalOrCustom(ISD::VSELECT, VT)) &&
+        VT.isVector())
+      return SDValue();
     SDValue Op1 = Node->getOperand(0);
     SDValue Op2 = Node->getOperand(1);
     SDValue SelCC = DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred);
     // Copy FMF flags, but always set the no-signed-zeros flag
     // as this is implied by the FMINNUM/FMAXNUM semantics.
-    SDNodeFlags Flags = Node->getFlags();
-    Flags.setNoSignedZeros(true);
-    SelCC->setFlags(Flags);
+    SelCC->setFlags(Node->getFlags() | SDNodeFlags::NoSignedZeros);
     return SelCC;
   }
 
@@ -8797,6 +8799,31 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
             APFloat::getSmallestNormalized(Semantics), DL, OperandVT);
         return DAG.getSetCC(DL, ResultVT, Abs, SmallestNormal,
                             IsOrdered ? OrderedOp : UnorderedOp);
+      }
+    }
+
+    if (FPTestMask == fcNormal) {
+      // TODO: Handle unordered
+      ISD::CondCode IsFiniteOp = IsInvertedFP ? ISD::SETUGE : ISD::SETOLT;
+      ISD::CondCode IsNormalOp = IsInvertedFP ? ISD::SETOLT : ISD::SETUGE;
+
+      if (isCondCodeLegalOrCustom(IsFiniteOp,
+                                  OperandVT.getScalarType().getSimpleVT()) &&
+          isCondCodeLegalOrCustom(IsNormalOp,
+                                  OperandVT.getScalarType().getSimpleVT()) &&
+          isFAbsFree(OperandVT)) {
+        // isnormal(x) --> fabs(x) < infinity && !(fabs(x) < smallest_normal)
+        SDValue Inf =
+            DAG.getConstantFP(APFloat::getInf(Semantics), DL, OperandVT);
+        SDValue SmallestNormal = DAG.getConstantFP(
+            APFloat::getSmallestNormalized(Semantics), DL, OperandVT);
+
+        SDValue Abs = DAG.getNode(ISD::FABS, DL, OperandVT, Op);
+        SDValue IsFinite = DAG.getSetCC(DL, ResultVT, Abs, Inf, IsFiniteOp);
+        SDValue IsNormal =
+            DAG.getSetCC(DL, ResultVT, Abs, SmallestNormal, IsNormalOp);
+        unsigned LogicOp = IsInvertedFP ? ISD::OR : ISD::AND;
+        return DAG.getNode(LogicOp, DL, ResultVT, IsFinite, IsNormal);
       }
     }
   }
@@ -11762,10 +11789,8 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
       // Re-write the last ValI if all lanes were selected. Otherwise,
       // overwrite the last write it with the passthru value.
-      SDNodeFlags Flags{};
-      Flags.setUnpredictable(true);
       LastWriteVal = DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI,
-                                   LastWriteVal, Flags);
+                                   LastWriteVal, SDNodeFlags::Unpredictable);
       Chain = DAG.getStore(
           Chain, DL, LastWriteVal, OutPtr,
           MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));

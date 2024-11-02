@@ -1528,7 +1528,12 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
                                    KnownNonNull_t IsKnownNonNull) {
-  LValue LV = EmitLValueHelper(E, IsKnownNonNull);
+  // Running with sufficient stack space to avoid deeply nested expressions
+  // cause a stack overflow.
+  LValue LV;
+  CGM.runWithSufficientStackSpace(
+      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull); });
+
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
   return LV;
@@ -2037,7 +2042,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty)) {
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
       Load->setMetadata(llvm::LLVMContext::MD_noundef,
-                        llvm::MDNode::get(getLLVMContext(), std::nullopt));
+                        llvm::MDNode::get(getLLVMContext(), {}));
     }
 
   return EmitFromMemory(Load, Ty);
@@ -3370,9 +3375,9 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // Format the type name as if for a diagnostic, including quotes and
   // optionally an 'aka'.
   SmallString<32> Buffer;
-  CGM.getDiags().ConvertArgToString(
-      DiagnosticsEngine::ak_qualtype, (intptr_t)T.getAsOpaquePtr(), StringRef(),
-      StringRef(), std::nullopt, Buffer, std::nullopt);
+  CGM.getDiags().ConvertArgToString(DiagnosticsEngine::ak_qualtype,
+                                    (intptr_t)T.getAsOpaquePtr(), StringRef(),
+                                    StringRef(), {}, Buffer, {});
 
   if (IsBitInt) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
@@ -3879,7 +3884,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
     EmitCheck(std::make_pair(static_cast<llvm::Value *>(Builder.getFalse()),
                              SanitizerKind::Unreachable),
               SanitizerHandler::BuiltinUnreachable,
-              EmitCheckSourceLocation(Loc), std::nullopt);
+              EmitCheckSourceLocation(Loc), {});
   }
   Builder.CreateUnreachable();
 }
@@ -5455,9 +5460,8 @@ LValue CodeGenFunction::EmitOpaqueValueLValue(const OpaqueValueExpr *e) {
   return getOrCreateOpaqueLValueMapping(e);
 }
 
-void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
-                                         CallArgList &Args, QualType Ty) {
-
+std::pair<LValue, LValue>
+CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   // Emitting the casted temporary through an opaque value.
   LValue BaseLV = EmitLValue(E->getArgLValue());
   OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
@@ -5471,6 +5475,13 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
                                TempLV);
 
   OpaqueValueMappingData::bind(*this, E->getCastedTemporary(), TempLV);
+  return std::make_pair(BaseLV, TempLV);
+}
+
+LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
+                                           CallArgList &Args, QualType Ty) {
+
+  auto [BaseLV, TempLV] = EmitHLSLOutArgLValues(E, Ty);
 
   llvm::Value *Addr = TempLV.getAddress().getBasePointer();
   llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
@@ -5483,6 +5494,7 @@ void CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast(),
                     LifetimeSize);
   Args.add(RValue::get(TmpAddr, *this), Ty);
+  return TempLV;
 }
 
 LValue

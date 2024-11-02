@@ -2449,6 +2449,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::PackExpansion:
     case Type::Pipe:
     case Type::ArrayParameter:
+    case Type::HLSLAttributedResource:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -3928,7 +3929,22 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (FunctionTemplate->getFriendObjectKind())
     Owner = FunctionTemplate->getLexicalDeclContext();
   FunctionDecl *FD = FunctionTemplate->getTemplatedDecl();
-
+  // additional check for inline friend,
+  // ```
+  //   template <class F1> int foo(F1 X);
+  //   template <int A1> struct A {
+  //     template <class F1> friend int foo(F1 X) { return A1; }
+  //   };
+  //   template struct A<1>;
+  //   int a = foo(1.0);
+  // ```
+  const FunctionDecl *FDFriend;
+  if (FD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None &&
+      FD->isDefined(FDFriend, /*CheckForPendingFriendDefinition*/ true) &&
+      FDFriend->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None) {
+    FD = const_cast<FunctionDecl *>(FDFriend);
+    Owner = FD->getLexicalDeclContext();
+  }
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
       /*Final=*/false);
@@ -4042,11 +4058,10 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   // keep track of these diagnostics. They'll be emitted if this specialization
   // is actually used.
   if (Info.diag_begin() != Info.diag_end()) {
-    SuppressedDiagnosticsMap::iterator
-      Pos = SuppressedDiagnostics.find(Specialization->getCanonicalDecl());
-    if (Pos == SuppressedDiagnostics.end())
-        SuppressedDiagnostics[Specialization->getCanonicalDecl()]
-          .append(Info.diag_begin(), Info.diag_end());
+    auto [Pos, Inserted] =
+        SuppressedDiagnostics.try_emplace(Specialization->getCanonicalDecl());
+    if (Inserted)
+      Pos->second.append(Info.diag_begin(), Info.diag_end());
   }
 
   return TemplateDeductionResult::Success;
@@ -6148,7 +6163,7 @@ struct TemplateArgumentListAreEqual {
             std::enable_if_t<!std::is_same_v<T1, T2>, bool> = true>
   bool operator()(T1 *Spec, T2 *Primary) {
     ArrayRef<TemplateArgument> Args1 = Spec->getTemplateArgs().asArray(),
-                               Args2 = Primary->getInjectedTemplateArgs();
+                               Args2 = Primary->getInjectedTemplateArgs(Ctx);
 
     for (unsigned I = 0, E = Args1.size(); I < E; ++I) {
       // We use profile, instead of structural comparison of the arguments,
@@ -6327,7 +6342,7 @@ bool Sema::isMoreSpecializedThanPrimary(
   VarTemplateDecl *Primary = Spec->getSpecializedTemplate();
   TemplateName Name(Primary);
   QualType PrimaryT = Context.getTemplateSpecializationType(
-      Name, Primary->getInjectedTemplateArgs());
+      Name, Primary->getInjectedTemplateArgs(Context));
   QualType PartialT = Context.getTemplateSpecializationType(
       Name, Spec->getTemplateArgs().asArray());
 
@@ -6357,18 +6372,14 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   //    - Each function template has a single function parameter whose type is
   //      a specialization of X with template arguments corresponding to the
   //      template parameters from the respective function template
-  SmallVector<TemplateArgument, 8> AArgs;
-  Context.getInjectedTemplateArgs(A, AArgs);
+  SmallVector<TemplateArgument, 8> AArgs(A->getInjectedTemplateArgs(Context));
 
   // Check P's arguments against A's parameter list. This will fill in default
   // template arguments as needed. AArgs are already correct by construction.
   // We can't just use CheckTemplateIdType because that will expand alias
   // templates.
-  SmallVector<TemplateArgument, 4> PArgs;
+  SmallVector<TemplateArgument, 4> PArgs(P->getInjectedTemplateArgs(Context));
   {
-    SFINAETrap Trap(*this);
-
-    Context.getInjectedTemplateArgs(P, PArgs);
     TemplateArgumentListInfo PArgList(P->getLAngleLoc(),
                                       P->getRAngleLoc());
     for (unsigned I = 0, N = P->size(); I != N; ++I) {
@@ -6384,6 +6395,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     }
     PArgs.clear();
 
+    SFINAETrap Trap(*this);
     // C++1z [temp.arg.template]p3:
     //   If the rewrite produces an invalid type, then P is not at least as
     //   specialized as A.
@@ -6828,6 +6840,16 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     MarkUsedTemplateParameters(Ctx,
                                cast<DependentBitIntType>(T)->getNumBitsExpr(),
                                OnlyDeduced, Depth, Used);
+    break;
+
+  case Type::HLSLAttributedResource:
+    MarkUsedTemplateParameters(
+        Ctx, cast<HLSLAttributedResourceType>(T)->getWrappedType(), OnlyDeduced,
+        Depth, Used);
+    if (cast<HLSLAttributedResourceType>(T)->hasContainedType())
+      MarkUsedTemplateParameters(
+          Ctx, cast<HLSLAttributedResourceType>(T)->getContainedType(),
+          OnlyDeduced, Depth, Used);
     break;
 
   // None of these types have any template parameters in them.

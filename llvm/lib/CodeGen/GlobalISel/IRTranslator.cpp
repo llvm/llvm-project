@@ -340,20 +340,17 @@ bool IRTranslator::translateCompare(const User &U,
   Register Op1 = getOrCreateVReg(*U.getOperand(1));
   Register Res = getOrCreateVReg(U);
   CmpInst::Predicate Pred = CI->getPredicate();
+  uint32_t Flags = MachineInstr::copyFlagsFromInstruction(*CI);
   if (CmpInst::isIntPredicate(Pred))
-    MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
+    MIRBuilder.buildICmp(Pred, Res, Op0, Op1, Flags);
   else if (Pred == CmpInst::FCMP_FALSE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
-  else {
-    uint32_t Flags = 0;
-    if (CI)
-      Flags = MachineInstr::copyFlagsFromInstruction(*CI);
+  else
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
-  }
 
   return true;
 }
@@ -2343,6 +2340,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::sincos: {
+    ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
+    MIRBuilder.buildFSincos(VRegs[0], VRegs[1],
+                            getOrCreateVReg(*CI.getArgOperand(0)),
+                            MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
   case Intrinsic::fptosi_sat:
     MIRBuilder.buildFPTOSI_SAT(getOrCreateVReg(CI),
                                getOrCreateVReg(*CI.getArgOperand(0)));
@@ -2378,7 +2382,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::stackprotector: {
     LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
     Register GuardVal;
-    if (TLI->useLoadStackGuardNode()) {
+    if (TLI->useLoadStackGuardNode(*CI.getModule())) {
       GuardVal = MRI->createGenericVirtualRegister(PtrTy);
       getStackGuard(GuardVal, MIRBuilder);
     } else
@@ -3869,7 +3873,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
-  if (TLI->useLoadStackGuardNode()) {
+  if (TLI->useLoadStackGuardNode(*ParentBB->getBasicBlock()->getModule())) {
     Guard =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
     getStackGuard(Guard, *CurBuilder);
@@ -3913,16 +3917,11 @@ bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
     return false;
   }
 
-  // On PS4/PS5, the "return address" must still be within the calling
-  // function, even if it's at the very end, so emit an explicit TRAP here.
-  // WebAssembly needs an unreachable instruction after a non-returning call,
-  // because the function return type can be different from __stack_chk_fail's
-  // return type (void).
-  const TargetMachine &TM = MF->getTarget();
-  if (TM.getTargetTriple().isPS() || TM.getTargetTriple().isWasm()) {
-    LLVM_DEBUG(dbgs() << "Unhandled trap emission for stack protector fail\n");
-    return false;
-  }
+  // Emit a trap instruction if we are required to do so.
+  const TargetOptions &TargetOpts = TLI->getTargetMachine().Options;
+  if (TargetOpts.TrapUnreachable && !TargetOpts.NoTrapAfterNoreturn)
+    CurBuilder->buildInstr(TargetOpcode::G_TRAP);
+
   return true;
 }
 

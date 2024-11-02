@@ -416,7 +416,6 @@ public:
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
-  /// @}
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
 
@@ -435,6 +434,10 @@ public:
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+  /// @}
 };
 
 } // end namespace llvm

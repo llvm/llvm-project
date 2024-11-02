@@ -19,6 +19,7 @@
 #include "RISCV.h"
 #include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVRegisterInfo.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/APInt.h"
@@ -86,7 +87,11 @@ public:
                              const char *ExtraCode, raw_ostream &OS) override;
 
   // Returns whether Inst is compressed.
-  bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
+  bool EmitToStreamer(MCStreamer &S, const MCInst &Inst,
+                      const MCSubtargetInfo &SubtargetInfo);
+  bool EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
+    return EmitToStreamer(S, Inst, *STI);
+  }
 
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
@@ -242,12 +247,13 @@ void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   SM.recordStatepoint(*MILabel, MI);
 }
 
-bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
+bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
+                                     const MCSubtargetInfo &SubtargetInfo) {
   MCInst CInst;
-  bool Res = RISCVRVC::compress(CInst, Inst, *STI);
+  bool Res = RISCVRVC::compress(CInst, Inst, SubtargetInfo);
   if (Res)
     ++RISCVNumInstrsCompressed;
-  AsmPrinter::EmitToStreamer(S, Res ? CInst : Inst);
+  S.emitInstruction(Res ? CInst : Inst, SubtargetInfo);
   return Res;
 }
 
@@ -342,6 +348,13 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'i': // Literal 'i' if operand is not a register.
       if (!MO.isReg())
         OS << 'i';
+      return false;
+    case 'N': // Print the register encoding as an integer (0-31)
+      if (!MO.isReg())
+        return true;
+
+      const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
+      OS << TRI->getEncodingValue(MO.getReg());
       return false;
     }
   }
@@ -662,87 +675,100 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
     OutStreamer->emitLabel(Sym);
 
     // Extract shadow offset from ptr
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::SLLI).addReg(RISCV::X6).addReg(Reg).addImm(8),
         MCSTI);
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::SRLI)
-                                     .addReg(RISCV::X6)
-                                     .addReg(RISCV::X6)
-                                     .addImm(12),
-                                 MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::SRLI)
+                       .addReg(RISCV::X6)
+                       .addReg(RISCV::X6)
+                       .addImm(12),
+                   MCSTI);
     // load shadow tag in X6, X5 contains shadow base
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::ADD)
-                                     .addReg(RISCV::X6)
-                                     .addReg(RISCV::X5)
-                                     .addReg(RISCV::X6),
-                                 MCSTI);
-    OutStreamer->emitInstruction(
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::ADD)
+                       .addReg(RISCV::X6)
+                       .addReg(RISCV::X5)
+                       .addReg(RISCV::X6),
+                   MCSTI);
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::LBU).addReg(RISCV::X6).addReg(RISCV::X6).addImm(0),
         MCSTI);
     // Extract tag from pointer and compare it with loaded tag from shadow
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::SRLI).addReg(RISCV::X7).addReg(Reg).addImm(56),
         MCSTI);
     MCSymbol *HandleMismatchOrPartialSym = OutContext.createTempSymbol();
     // X7 contains tag from the pointer, while X6 contains tag from memory
-    OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::BNE)
-            .addReg(RISCV::X7)
-            .addReg(RISCV::X6)
-            .addExpr(MCSymbolRefExpr::create(HandleMismatchOrPartialSym,
-                                             OutContext)),
-        MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::BNE)
+                       .addReg(RISCV::X7)
+                       .addReg(RISCV::X6)
+                       .addExpr(MCSymbolRefExpr::create(
+                           HandleMismatchOrPartialSym, OutContext)),
+                   MCSTI);
     MCSymbol *ReturnSym = OutContext.createTempSymbol();
     OutStreamer->emitLabel(ReturnSym);
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::JALR)
-                                     .addReg(RISCV::X0)
-                                     .addReg(RISCV::X1)
-                                     .addImm(0),
-                                 MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::JALR)
+                       .addReg(RISCV::X0)
+                       .addReg(RISCV::X1)
+                       .addImm(0),
+                   MCSTI);
     OutStreamer->emitLabel(HandleMismatchOrPartialSym);
 
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::ADDI)
-                                     .addReg(RISCV::X28)
-                                     .addReg(RISCV::X0)
-                                     .addImm(16),
-                                 MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::ADDI)
+                       .addReg(RISCV::X28)
+                       .addReg(RISCV::X0)
+                       .addImm(16),
+                   MCSTI);
     MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::BGEU)
             .addReg(RISCV::X6)
             .addReg(RISCV::X28)
             .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
         MCSTI);
 
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::ANDI).addReg(RISCV::X28).addReg(Reg).addImm(0xF),
         MCSTI);
 
     if (Size != 1)
-      OutStreamer->emitInstruction(MCInstBuilder(RISCV::ADDI)
-                                       .addReg(RISCV::X28)
-                                       .addReg(RISCV::X28)
-                                       .addImm(Size - 1),
-                                   MCSTI);
-    OutStreamer->emitInstruction(
+      EmitToStreamer(*OutStreamer,
+                     MCInstBuilder(RISCV::ADDI)
+                         .addReg(RISCV::X28)
+                         .addReg(RISCV::X28)
+                         .addImm(Size - 1),
+                     MCSTI);
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::BGE)
             .addReg(RISCV::X28)
             .addReg(RISCV::X6)
             .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
         MCSTI);
 
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::ORI).addReg(RISCV::X6).addReg(Reg).addImm(0xF),
         MCSTI);
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::LBU).addReg(RISCV::X6).addReg(RISCV::X6).addImm(0),
         MCSTI);
-    OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::BEQ)
-            .addReg(RISCV::X6)
-            .addReg(RISCV::X7)
-            .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
-        MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::BEQ)
+                       .addReg(RISCV::X6)
+                       .addReg(RISCV::X7)
+                       .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
+                   MCSTI);
 
     OutStreamer->emitLabel(HandleMismatchSym);
 
@@ -781,50 +807,54 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
     // +---------------------------------+ <-- [x2 / SP]
 
     // Adjust sp
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::ADDI)
-                                     .addReg(RISCV::X2)
-                                     .addReg(RISCV::X2)
-                                     .addImm(-256),
-                                 MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::ADDI)
+                       .addReg(RISCV::X2)
+                       .addReg(RISCV::X2)
+                       .addImm(-256),
+                   MCSTI);
 
     // store x10(arg0) by new sp
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::SD)
-                                     .addReg(RISCV::X10)
-                                     .addReg(RISCV::X2)
-                                     .addImm(8 * 10),
-                                 MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::SD)
+                       .addReg(RISCV::X10)
+                       .addReg(RISCV::X2)
+                       .addImm(8 * 10),
+                   MCSTI);
     // store x11(arg1) by new sp
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::SD)
-                                     .addReg(RISCV::X11)
-                                     .addReg(RISCV::X2)
-                                     .addImm(8 * 11),
-                                 MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::SD)
+                       .addReg(RISCV::X11)
+                       .addReg(RISCV::X2)
+                       .addImm(8 * 11),
+                   MCSTI);
 
     // store x8(fp) by new sp
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::SD).addReg(RISCV::X8).addReg(RISCV::X2).addImm(8 *
                                                                             8),
         MCSTI);
     // store x1(ra) by new sp
-    OutStreamer->emitInstruction(
+    EmitToStreamer(
+        *OutStreamer,
         MCInstBuilder(RISCV::SD).addReg(RISCV::X1).addReg(RISCV::X2).addImm(1 *
                                                                             8),
         MCSTI);
     if (Reg != RISCV::X10)
-      OutStreamer->emitInstruction(MCInstBuilder(RISCV::ADDI)
-                                       .addReg(RISCV::X10)
-                                       .addReg(Reg)
-                                       .addImm(0),
-                                   MCSTI);
-    OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::ADDI)
-            .addReg(RISCV::X11)
-            .addReg(RISCV::X0)
-            .addImm(AccessInfo & HWASanAccessInfo::RuntimeMask),
-        MCSTI);
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(RISCV::ADDI).addReg(RISCV::X10).addReg(Reg).addImm(0),
+          MCSTI);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(RISCV::ADDI)
+                       .addReg(RISCV::X11)
+                       .addReg(RISCV::X0)
+                       .addImm(AccessInfo & HWASanAccessInfo::RuntimeMask),
+                   MCSTI);
 
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr),
-                                 MCSTI);
+    EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr),
+                   MCSTI);
   }
 }
 
