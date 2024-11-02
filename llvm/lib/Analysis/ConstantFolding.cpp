@@ -1697,9 +1697,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case 's':
     return Name == "scalbn" || Name == "scalbnf" || Name == "scalbnl" ||
            Name == "scalbln" || Name == "scalblnf" || Name == "scalblnl" ||
-           Name == "sin" || Name == "sinf" ||
-           Name == "sinh" || Name == "sinhf" ||
-           Name == "sqrt" || Name == "sqrtf";
+           Name == "sin" || Name == "sinf" || Name == "sinh" ||
+          Name == "sinhf" || Name == "sqrt" || Name == "sqrtf";
   case 't':
     return Name == "tan" || Name == "tanf" ||
            Name == "tanh" || Name == "tanhf" ||
