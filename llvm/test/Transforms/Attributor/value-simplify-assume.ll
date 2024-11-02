@@ -347,6 +347,7 @@ define i1 @assume_2_nr(i1 %arg, i1 %cond) norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_2_nr
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; TUNIT-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, i1* [[STACK]], align 1
@@ -363,6 +364,7 @@ define i1 @assume_2_nr(i1 %arg, i1 %cond) norecurse {
 ; CGSCC-LABEL: define {{[^@]+}}@assume_2_nr
 ; CGSCC-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; CGSCC-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; CGSCC-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    store i1 true, i1* [[STACK]], align 1
@@ -971,6 +973,7 @@ define i1 @assume_2(i1 %arg, i1 %cond) {
 ; TUNIT-LABEL: define {{[^@]+}}@assume_2
 ; TUNIT-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; TUNIT-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; TUNIT-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i1 true, i1* [[STACK]], align 1
@@ -987,6 +990,7 @@ define i1 @assume_2(i1 %arg, i1 %cond) {
 ; CGSCC-LABEL: define {{[^@]+}}@assume_2
 ; CGSCC-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; CGSCC-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; CGSCC-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    store i1 true, i1* [[STACK]], align 1
@@ -1299,6 +1303,7 @@ define i32 @assume_read_global_good() {
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i32 [[LGS1]], 42
 ; TUNIT-NEXT:    call void @llvm.assume(i1 noundef [[C]]) #[[ATTR6]]
 ; TUNIT-NEXT:    [[LGS2:%.*]] = load i32, i32* @Gstatic_int1, align 4
+; TUNIT-NEXT:    store i32 13, i32* @Gstatic_int1, align 4
 ; TUNIT-NEXT:    store i32 17, i32* @Gstatic_int1, align 4
 ; TUNIT-NEXT:    [[LGS3:%.*]] = load i32, i32* @Gstatic_int1, align 4
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i32 [[LGS2]], [[LGS3]]
@@ -1311,6 +1316,7 @@ define i32 @assume_read_global_good() {
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i32 [[LGS1]], 42
 ; CGSCC-NEXT:    call void @llvm.assume(i1 noundef [[C]]) #[[ATTR7]]
 ; CGSCC-NEXT:    [[LGS2:%.*]] = load i32, i32* @Gstatic_int1, align 4
+; CGSCC-NEXT:    store i32 13, i32* @Gstatic_int1, align 4
 ; CGSCC-NEXT:    store i32 17, i32* @Gstatic_int1, align 4
 ; CGSCC-NEXT:    [[LGS3:%.*]] = load i32, i32* @Gstatic_int1, align 4
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[LGS2]], [[LGS3]]

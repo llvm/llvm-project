@@ -694,7 +694,6 @@ def depthwise_conv_3d_ndhwc_dhwcm(I=TensorDef(T1,
            D.ow * S.SW + D.kw * S.DW, D.ic]) * TypeFn.cast_signed(
                U, K[D.kd, D.kh, D.kw, D.ic, D.cm])
 
-
 @linalg_structured_op
 def pooling_nhwc_sum(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
                                  S.OW * S.SW + S.KW * S.DW, S.C),
@@ -837,6 +836,146 @@ def pooling_nhwc_min_unsigned(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
   O[D.n, D.oh, D.ow,
     D.c] = ReduceFn.min_unsigned[D.kh, D.kw](TypeFn.cast_unsigned(
         U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
+
+@linalg_structured_op
+def pooling_nwc_sum(I=TensorDef(T1, S.N,
+                                S.OW * S.SW + S.KW * S.DW, S.C),
+                    K=TensorDef(T2, S.KW, index_dims=[D.kw]),
+                    O=TensorDef(U, S.N, S.OW, S.C, output=True),
+                    strides=IndexAttrDef(S.SW, default=[1]),
+                    dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs sum pooling.
+
+  Layout:
+    * Input: NWC.
+    * Kernel: W.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.ow, D.c, D.kw)
+  O[D.n, D.ow, D.c] += TypeFn.cast_signed(
+      U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c])
+
+
+@linalg_structured_op
+def pooling_ncw_sum(I=TensorDef(T1, S.N, S.C,
+                                S.OW * S.SW + S.KW * S.DW),
+                    K=TensorDef(T2, S.KW, index_dims=[D.kw]),
+                    O=TensorDef(U, S.N, S.C, S.OW, output=True),
+                    strides=IndexAttrDef(S.SW, default=[1]),
+                    dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs sum pooling.
+
+  Layout:
+    * Input: NCW.
+    * Kernel: W.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.c, D.ow, D.kw)
+  O[D.n, D.c, D.ow] += TypeFn.cast_signed(
+      U, I[D.n, D.c, D.ow * S.SW + D.kw * S.DW])
+
+
+@linalg_structured_op
+def pooling_nwc_max(I=TensorDef(T1, S.N,
+                                S.OW * S.SW + S.KW * S.DW, S.C),
+                    K=TensorDef(T2, S.KW, index_dims=[D.kw]),
+                    O=TensorDef(U, S.N, S.OW, S.C, output=True),
+                    strides=IndexAttrDef(S.SW, default=[1]),
+                    dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs max pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.ow, D.c, D.kw)
+  O[D.n, D.ow, D.c] = ReduceFn.max_signed[[D.kw]](TypeFn.cast_signed(
+      U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c]))
+
+
+@linalg_structured_op
+def pooling_nwc_max_unsigned(I=TensorDef(T1, S.N,
+                                         S.OW * S.SW + S.KW * S.DW, S.C),
+                             K=TensorDef(T2,
+                                         S.KW,
+                                         index_dims=[D.kw]),
+                             O=TensorDef(U, S.N, S.OW, S.C, output=True),
+                             strides=IndexAttrDef(S.SW, default=[1]),
+                             dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs unsigned max pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.ow, D.c, D.kw)
+  O[D.n, D.ow,
+    D.c] = ReduceFn.max_unsigned[[D.kw]](TypeFn.cast_unsigned(
+        U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c]))
+
+
+@linalg_structured_op
+def pooling_ncw_max(I=TensorDef(T1, S.N, S.C,
+                                S.OW * S.SW + S.KW * S.DW),
+                    K=TensorDef(T2, S.KW, index_dims=[D.kw]),
+                    O=TensorDef(U, S.N, S.C, S.OW, output=True),
+                    strides=IndexAttrDef(S.SW, default=[1]),
+                    dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs max pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.c, D.ow, D.kw)
+  O[D.n, D.c, D.ow] = ReduceFn.max_signed[[D.kw]](TypeFn.cast_signed(
+      U, I[D.n, D.c, D.ow * S.SW + D.kw * S.DW,]))
+
+
+@linalg_structured_op
+def pooling_nwc_min(I=TensorDef(T1, S.N,
+                                S.OW * S.SW + S.KW * S.DW, S.C),
+                    K=TensorDef(T2, S.KW, index_dims=[D.kw]),
+                    O=TensorDef(U, S.N, S.OW, S.C, output=True),
+                    strides=IndexAttrDef(S.SW, default=[1]),
+                    dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs min pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.ow, D.c, D.kw)
+  O[D.n, D.ow, D.c] = ReduceFn.min_signed[[D.kw]](TypeFn.cast_signed(
+      U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c]))
+
+
+@linalg_structured_op
+def pooling_nwc_min_unsigned(I=TensorDef(T1, S.N,
+                                         S.OW * S.SW + S.KW * S.DW, S.C),
+                             K=TensorDef(T2,
+                                         S.KW,
+                                         index_dims=[D.kw]),
+                             O=TensorDef(U, S.N, S.OW, S.C, output=True),
+                             strides=IndexAttrDef(S.SW, default=[1]),
+                             dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs unsigned min pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.ow, D.c, D.kw)
+  O[D.n, D.ow,
+    D.c] = ReduceFn.min_unsigned[[D.kw]](TypeFn.cast_unsigned(
+        U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c]))
+
 
 
 @linalg_structured_op

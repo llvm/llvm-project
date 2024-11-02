@@ -402,10 +402,10 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   }
 
   llvm::erase_if(Chunks, [this, &Y](const std::unique_ptr<ELFYAML::Chunk> &C) {
-    if (isa<ELFYAML::SectionHeaderTable>(*C.get()))
+    if (isa<ELFYAML::SectionHeaderTable>(*C))
       return false;
 
-    const ELFYAML::Section &S = cast<ELFYAML::Section>(*C.get());
+    const ELFYAML::Section &S = cast<ELFYAML::Section>(*C);
     return !shouldPrintSection(S, Sections[S.OriginalSecNdx], Y->DWARF);
   });
 
@@ -495,7 +495,7 @@ ELFDumper<ELFT>::dumpProgramHeaders(
     // It is not possible to have a non-Section chunk, because
     // obj2yaml does not create Fill chunks.
     for (const std::unique_ptr<ELFYAML::Chunk> &C : Chunks) {
-      ELFYAML::Section &S = cast<ELFYAML::Section>(*C.get());
+      ELFYAML::Section &S = cast<ELFYAML::Section>(*C);
       if (isInSegment<ELFT>(S, Sections[S.OriginalSecNdx], Phdr)) {
         if (!PH.FirstSec)
           PH.FirstSec = S.Name;
@@ -530,13 +530,13 @@ std::optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
       cantFail(std::move(Err));
 
       if (RawSec->Name == ".debug_aranges")
-        Err = dumpDebugARanges(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugARanges(*DWARFCtx, DWARF);
       else if (RawSec->Name == ".debug_str")
-        Err = dumpDebugStrings(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugStrings(*DWARFCtx, DWARF);
       else if (RawSec->Name == ".debug_ranges")
-        Err = dumpDebugRanges(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugRanges(*DWARFCtx, DWARF);
       else if (RawSec->Name == ".debug_addr")
-        Err = dumpDebugAddr(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugAddr(*DWARFCtx, DWARF);
       else
         continue;
 

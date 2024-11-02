@@ -426,7 +426,7 @@ if.end:
 declare i32 @foo()
 
 %str1 = type { %str2 }
-%str2 = type { [24 x i8], i8*, i32, %str1*, i32, [4 x i8], %str1*, %str1*, %str1*, %str1*, %str1*, %str1*, %str1*, %str1*, %str1*, i8*, i8, i8*, %str1*, i8* }
+%str2 = type { [24 x i8], ptr, i32, ptr, i32, [4 x i8], ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i8, ptr, ptr, ptr }
 
 ; Test case distilled from 126.gcc.
 ; The phi in sw.bb.i.i gets multiple operands for the %entry predecessor.
@@ -449,11 +449,10 @@ if.end85:
   ret void
 
 sw.bb.i.i:
-  %ref.tr.i.i = phi %str1* [ %0, %sw.bb.i.i ], [ undef, %entry ]
-  %operands.i.i = getelementptr inbounds %str1, %str1* %ref.tr.i.i, i64 0, i32 0, i32 2
-  %arrayidx.i.i = bitcast i32* %operands.i.i to %str1**
-  %0 = load %str1*, %str1** %arrayidx.i.i, align 8
-  %code1.i.i.phi.trans.insert = getelementptr inbounds %str1, %str1* %0, i64 0, i32 0, i32 0, i64 16
+  %ref.tr.i.i = phi ptr [ %0, %sw.bb.i.i ], [ undef, %entry ]
+  %operands.i.i = getelementptr inbounds %str1, ptr %ref.tr.i.i, i64 0, i32 0, i32 2
+  %0 = load ptr, ptr %operands.i.i, align 8
+  %code1.i.i.phi.trans.insert = getelementptr inbounds %str1, ptr %0, i64 0, i32 0, i32 0, i64 16
   br label %sw.bb.i.i
 }
 
@@ -690,7 +689,7 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
   %or = or i1 %c0, %c1
   %sel = select i1 %or, i64 0, i64 %r
   %ext = sext i1 %or to i32
-  store volatile i32 %ext, i32* @g
+  store volatile i32 %ext, ptr @g
   ret i64 %sel
 }
 

@@ -133,7 +133,7 @@
 ; THRESHOLD_YAML:   - String:          generated in loop
 ; THRESHOLD_YAML: ...
 
-define void @fpr128(<4 x float>* %p) nounwind ssp !prof !11 !dbg !6 {
+define void @fpr128(ptr %p) nounwind ssp !prof !11 !dbg !6 {
 entry:
   br label %loop, !dbg !8
 

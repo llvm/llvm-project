@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Support
   Symbolize
+  TargetParser
   )
 
 set(exegesis_sources

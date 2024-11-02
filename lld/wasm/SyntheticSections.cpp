@@ -236,8 +236,8 @@ void ImportSection::writeBody() {
 
   if (config->memoryImport) {
     WasmImport import;
-    import.Module = config->memoryImport.value().first;
-    import.Field = config->memoryImport.value().second;
+    import.Module = config->memoryImport->first;
+    import.Field = config->memoryImport->second;
     import.Kind = WASM_EXTERNAL_MEMORY;
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;
@@ -668,7 +668,7 @@ void LinkingSection::writeBody() {
     writeUleb128(sub.os, dataSegments.size(), "num data segments");
     for (const OutputSegment *s : dataSegments) {
       writeStr(sub.os, s->name, "segment name");
-      writeUleb128(sub.os, Log2(s->alignment), "alignment");
+      writeUleb128(sub.os, s->alignment, "alignment");
       writeUleb128(sub.os, s->linkingFlags, "flags");
     }
     sub.writeTo(os);

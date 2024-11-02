@@ -9,11 +9,11 @@ define arm_aapcs_vfpcc i8 @isel(i32 %i) {
 entry:
   %i.addr = alloca i32, align 4
   %buffer = alloca [4096 x i8], align 1
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   %rem = urem i32 %0, 4096
-  %arrayidx = getelementptr inbounds [4096 x i8], [4096 x i8]* %buffer, i32 0, i32 %rem
-  %1 = load volatile i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [4096 x i8], ptr %buffer, i32 0, i32 %rem
+  %1 = load volatile i8, ptr %arrayidx, align 1
   ret i8 %1
 }
 

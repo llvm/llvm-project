@@ -796,7 +796,7 @@ void DwarfStreamer::emitCIE(StringRef CIEBytes) {
 /// contains the FDE data without the length, CIE offset and address
 /// which will be replaced with the parameter values.
 void DwarfStreamer::emitFDE(uint32_t CIEOffset, uint32_t AddrSize,
-                            uint32_t Address, StringRef FDEBytes) {
+                            uint64_t Address, StringRef FDEBytes) {
   MS->switchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
 
   MS->emitIntValue(FDEBytes.size() + 4 + AddrSize, 4);

@@ -103,10 +103,11 @@ class PPCAsmParser : public MCTargetAsmParser {
 
   bool isPPC64() const { return IsPPC64; }
 
-  bool MatchRegisterName(unsigned &RegNo, int64_t &IntVal);
+  bool MatchRegisterName(MCRegister &RegNo, int64_t &IntVal);
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   const MCExpr *ExtractModifierFromExpr(const MCExpr *E,
@@ -1248,7 +1249,7 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
+bool PPCAsmParser::MatchRegisterName(MCRegister &RegNo, int64_t &IntVal) {
   if (getParser().getTok().is(AsmToken::Percent))
     getParser().Lex(); // Eat the '%'.
 
@@ -1307,14 +1308,14 @@ bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
   return false;
 }
 
-bool PPCAsmParser::
-ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
+bool PPCAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                                 SMLoc &EndLoc) {
   if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
     return TokError("invalid register name");
   return false;
 }
 
-OperandMatchResultTy PPCAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy PPCAsmParser::tryParseRegister(MCRegister &RegNo,
                                                     SMLoc &StartLoc,
                                                     SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
@@ -1502,7 +1503,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   // Special handling for register names.  These are interpreted
   // as immediates corresponding to the register number.
   case AsmToken::Percent: {
-    unsigned RegNo;
+    MCRegister RegNo;
     int64_t IntVal;
     if (MatchRegisterName(RegNo, IntVal))
       return Error(S, "invalid register name");
@@ -1558,7 +1559,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
     int64_t IntVal;
     switch (getLexer().getKind()) {
     case AsmToken::Percent: {
-      unsigned RegNo;
+      MCRegister RegNo;
       if (MatchRegisterName(RegNo, IntVal))
         return Error(S, "invalid register name");
       break;

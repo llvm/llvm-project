@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: for function 'interp_p1_f16'
 ; CHECK: DIVERGENT:       %p1 = call float @llvm.amdgcn.interp.p1.f16

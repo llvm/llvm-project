@@ -26,14 +26,14 @@ target triple = "nvptx64-unknown-unknown"
 ; Function Attrs: nounwind
 define internal void @.function.() {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
   ret void
 }
 
 ; Function Attrs: nounwind
 define internal void @_$_function_$_() {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @_$_str, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @_$_str)
   ret void
 }
 
@@ -45,4 +45,4 @@ entry:
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

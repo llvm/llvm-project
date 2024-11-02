@@ -8,7 +8,7 @@
 ; CHECK-NOT: = addasl(r{{[0-9]+}},[[REG0]],#1)
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i16* nocapture %a1) #0 {
+define void @f0(i32 %a0, ptr nocapture %a1) #0 {
 b0:
   br i1 undef, label %b2, label %b1
 
@@ -46,10 +46,10 @@ b11:                                              ; preds = %b11, %b10, %b8
   %v0 = phi i32 [ %v6, %b11 ], [ undef, %b8 ], [ undef, %b10 ]
   %v1 = phi i32 [ %v0, %b11 ], [ %a0, %b8 ], [ undef, %b10 ]
   %v2 = add nsw i32 %v1, -2
-  %v3 = getelementptr inbounds i16, i16* %a1, i32 %v2
-  %v4 = load i16, i16* %v3, align 2, !tbaa !0
-  %v5 = getelementptr inbounds i16, i16* %a1, i32 %v0
-  store i16 %v4, i16* %v5, align 2, !tbaa !0
+  %v3 = getelementptr inbounds i16, ptr %a1, i32 %v2
+  %v4 = load i16, ptr %v3, align 2, !tbaa !0
+  %v5 = getelementptr inbounds i16, ptr %a1, i32 %v0
+  store i16 %v4, ptr %v5, align 2, !tbaa !0
   %v6 = add nsw i32 %v0, -1
   %v7 = icmp sgt i32 %v6, 0
   br i1 %v7, label %b11, label %b12

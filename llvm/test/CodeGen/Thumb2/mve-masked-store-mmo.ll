@@ -45,32 +45,30 @@ define i32 @incorrectmmo() {
 ; CHECK-NEXT:    .zero 1
 entry:
   %x = alloca [10 x i8], align 1
-  %0 = getelementptr inbounds [10 x i8], [10 x i8]* %x, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 10, i8* nonnull %0)
-  %1 = bitcast [10 x i8]* %x to <16 x i8>*
-  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i8>* %1, i32 1, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
-  %2 = load i8, i8* %0, align 1
-  %conv1 = zext i8 %2 to i32
-  %arrayidx2 = getelementptr inbounds [10 x i8], [10 x i8]* %x, i32 0, i32 1
-  %3 = load i8, i8* %arrayidx2, align 1
-  %conv3 = zext i8 %3 to i32
+  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %x)
+  call void @llvm.masked.store.v16i8.p0(<16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, ptr %x, i32 1, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+  %0 = load i8, ptr %x, align 1
+  %conv1 = zext i8 %0 to i32
+  %arrayidx2 = getelementptr inbounds [10 x i8], ptr %x, i32 0, i32 1
+  %1 = load i8, ptr %arrayidx2, align 1
+  %conv3 = zext i8 %1 to i32
   %add = add nuw nsw i32 %conv3, %conv1
-  %arrayidx4 = getelementptr inbounds [10 x i8], [10 x i8]* %x, i32 0, i32 2
-  %4 = load i8, i8* %arrayidx4, align 1
-  %conv5 = zext i8 %4 to i32
+  %arrayidx4 = getelementptr inbounds [10 x i8], ptr %x, i32 0, i32 2
+  %2 = load i8, ptr %arrayidx4, align 1
+  %conv5 = zext i8 %2 to i32
   %add6 = add nuw nsw i32 %add, %conv5
-  %arrayidx7 = getelementptr inbounds [10 x i8], [10 x i8]* %x, i32 0, i32 8
-  %5 = load i8, i8* %arrayidx7, align 1
-  %conv8 = zext i8 %5 to i32
+  %arrayidx7 = getelementptr inbounds [10 x i8], ptr %x, i32 0, i32 8
+  %3 = load i8, ptr %arrayidx7, align 1
+  %conv8 = zext i8 %3 to i32
   %add9 = add nuw nsw i32 %add6, %conv8
-  %arrayidx10 = getelementptr inbounds [10 x i8], [10 x i8]* %x, i32 0, i32 9
-  %6 = load i8, i8* %arrayidx10, align 1
-  %conv11 = zext i8 %6 to i32
+  %arrayidx10 = getelementptr inbounds [10 x i8], ptr %x, i32 0, i32 9
+  %4 = load i8, ptr %arrayidx10, align 1
+  %conv11 = zext i8 %4 to i32
   %add12 = add nuw nsw i32 %add9, %conv11
-  call void @llvm.lifetime.end.p0i8(i64 10, i8* nonnull %0)
+  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %x)
   ret i32 %add12
 }
 
-declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.masked.store.v16i8.p0(<16 x i8>, ptr, i32, <16 x i1>)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)

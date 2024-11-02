@@ -7,22 +7,22 @@
 ; Function Attrs: nounwind
 define void @foo() #0 {
 entry:
-  store i32 305419896, i32* @i, align 4
-  %0 = load i32, i32* @b, align 4
+  store i32 305419896, ptr @i, align 4
+  %0 = load i32, ptr @b, align 4
   %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i32 10, i32* @b, align 4
+  store i32 10, ptr @b, align 4
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  store i32 20, i32* @b, align 4
+  store i32 20, ptr @b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   call void asm sideeffect ".space 100000", ""() #1, !srcloc !1
-  store i32 305419896, i32* @l, align 4
+  store i32 305419896, ptr @l, align 4
   ret void
 ; constisle: $CPI0_1:
 ; constisle	.4byte	305419896               # 0x12345678

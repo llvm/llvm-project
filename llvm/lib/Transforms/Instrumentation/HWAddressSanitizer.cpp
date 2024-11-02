@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -387,8 +388,7 @@ private:
   bool DetectUseAfterScope;
   bool UsePageAliases;
 
-  bool HasMatchAllTag = false;
-  uint8_t MatchAllTag = 0;
+  llvm::Optional<uint8_t> MatchAllTag;
 
   unsigned PointerTagShift;
   uint64_t TagMaskByte;
@@ -494,11 +494,11 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   Comdat *NoteComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
 
   Type *Int8Arr0Ty = ArrayType::get(Int8Ty, 0);
-  auto Start =
+  auto *Start =
       new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
                          nullptr, "__start_hwasan_globals");
   Start->setVisibility(GlobalValue::HiddenVisibility);
-  auto Stop =
+  auto *Stop =
       new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
                          nullptr, "__stop_hwasan_globals");
   Stop->setVisibility(GlobalValue::HiddenVisibility);
@@ -533,7 +533,7 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
 
   // Create a zero-length global in hwasan_globals so that the linker will
   // always create start and stop symbols.
-  auto Dummy = new GlobalVariable(
+  auto *Dummy = new GlobalVariable(
       M, Int8Arr0Ty, /*isConstantGlobal*/ true, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(Int8Arr0Ty), "hwasan.dummy.global");
   Dummy->setSection("hwasan_globals");
@@ -589,11 +589,9 @@ void HWAddressSanitizer::initializeModule() {
 
   if (ClMatchAllTag.getNumOccurrences()) {
     if (ClMatchAllTag != -1) {
-      HasMatchAllTag = true;
       MatchAllTag = ClMatchAllTag & 0xFF;
     }
   } else if (CompileKernel) {
-    HasMatchAllTag = true;
     MatchAllTag = 0xFF;
   }
 
@@ -702,14 +700,13 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
         IRB, ConstantExpr::getIntToPtr(
                  ConstantInt::get(IntptrTy, Mapping.Offset), Int8PtrTy));
 
-  if (Mapping.InGlobal) {
+  if (Mapping.InGlobal)
     return getDynamicShadowIfunc(IRB);
-  } else {
-    Value *GlobalDynamicAddress =
-        IRB.GetInsertBlock()->getParent()->getParent()->getOrInsertGlobal(
-            kHwasanShadowMemoryDynamicAddress, Int8PtrTy);
-    return IRB.CreateLoad(Int8PtrTy, GlobalDynamicAddress);
-  }
+
+  Value *GlobalDynamicAddress =
+      IRB.GetInsertBlock()->getParent()->getParent()->getOrInsertGlobal(
+          kHwasanShadowMemoryDynamicAddress, Int8PtrTy);
+  return IRB.CreateLoad(Int8PtrTy, GlobalDynamicAddress);
 }
 
 bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
@@ -766,7 +763,7 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(),
                              std::nullopt);
-  } else if (auto CI = dyn_cast<CallInst>(I)) {
+  } else if (auto *CI = dyn_cast<CallInst>(I)) {
     for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
       if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
           ignoreAccess(I, CI->getArgOperand(ArgNo)))
@@ -819,11 +816,11 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
 
 int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
                                           unsigned AccessSizeIndex) {
-  return (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
-         (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
-         (MatchAllTag << HWASanAccessInfo::MatchAllShift) +
-         (Recover << HWASanAccessInfo::RecoverShift) +
-         (IsWrite << HWASanAccessInfo::IsWriteShift) +
+  return (CompileKernel << HWASanAccessInfo::CompileKernelShift) |
+         (MatchAllTag.has_value() << HWASanAccessInfo::HasMatchAllShift) |
+         (MatchAllTag.value_or(0) << HWASanAccessInfo::MatchAllShift) |
+         (Recover << HWASanAccessInfo::RecoverShift) |
+         (IsWrite << HWASanAccessInfo::IsWriteShift) |
          (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
 }
 
@@ -857,9 +854,9 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *MemTag = IRB.CreateLoad(Int8Ty, Shadow);
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
-  if (HasMatchAllTag) {
+  if (MatchAllTag.has_value()) {
     Value *TagNotIgnored = IRB.CreateICmpNE(
-        PtrTag, ConstantInt::get(PtrTag->getType(), MatchAllTag));
+        PtrTag, ConstantInt::get(PtrTag->getType(), *MatchAllTag));
     TagMismatch = IRB.CreateAnd(TagMismatch, TagNotIgnored);
   }
 
@@ -1152,8 +1149,7 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
 Value *HWAddressSanitizer::getPC(IRBuilder<> &IRB) {
   if (TargetTriple.getArch() == Triple::aarch64)
     return readRegister(IRB, "pc");
-  else
-    return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
+  return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(), IntptrTy);
 }
 
 Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
@@ -1162,7 +1158,7 @@ Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
     // first).
     Function *F = IRB.GetInsertBlock()->getParent();
     Module *M = F->getParent();
-    auto GetStackPointerFn = Intrinsic::getDeclaration(
+    auto *GetStackPointerFn = Intrinsic::getDeclaration(
         M, Intrinsic::frameaddress,
         IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
     CachedSP = IRB.CreatePtrToInt(

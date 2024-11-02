@@ -319,7 +319,7 @@ bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
 
   if (Options.Atomics && I.mayReadOrWriteMemory()) {
     auto SSID = getAtomicSyncScopeID(&I);
-    if (SSID.has_value() && SSID.value() != SyncScope::SingleThread) {
+    if (SSID.has_value() && *SSID != SyncScope::SingleThread) {
       NumMetadataAtomics++;
       InstMetadata.push_back(&MetadataInfo::Atomics);
     }

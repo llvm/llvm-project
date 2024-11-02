@@ -27,7 +27,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -35,7 +34,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -1358,9 +1356,11 @@ Error ExpansionContext::expandResponseFiles(
 bool cl::expandResponseFiles(int Argc, const char *const *Argv,
                              const char *EnvVar, StringSaver &Saver,
                              SmallVectorImpl<const char *> &NewArgv) {
-  auto Tokenize = Triple(sys::getProcessTriple()).isOSWindows()
-                      ? cl::TokenizeWindowsCommandLine
-                      : cl::TokenizeGNUCommandLine;
+#ifdef _WIN32
+  auto Tokenize = cl::TokenizeWindowsCommandLine;
+#else
+  auto Tokenize = cl::TokenizeGNUCommandLine;
+#endif
   // The environment variable specifies initial options.
   if (EnvVar)
     if (std::optional<std::string> EnvValue = sys::Process::GetEnv(EnvVar))
@@ -1504,9 +1504,12 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   // Expand response files.
   SmallVector<const char *, 20> newArgv(argv, argv + argc);
   BumpPtrAllocator A;
-  ExpansionContext ECtx(A, Triple(sys::getProcessTriple()).isOSWindows()
-                               ? cl::TokenizeWindowsCommandLine
-                               : cl::TokenizeGNUCommandLine);
+#ifdef _WIN32
+  auto Tokenize = cl::TokenizeWindowsCommandLine;
+#else
+  auto Tokenize = cl::TokenizeGNUCommandLine;
+#endif
+  ExpansionContext ECtx(A, Tokenize);
   if (Error Err = ECtx.expandResponseFiles(newArgv)) {
     *Errs << toString(std::move(Err)) << '\n';
     return false;
@@ -2535,7 +2538,7 @@ public:
 namespace {
 class VersionPrinter {
 public:
-  void print() {
+  void print(std::vector<VersionPrinterTy> ExtraPrinters = {}) {
     raw_ostream &OS = outs();
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
@@ -2551,15 +2554,14 @@ public:
 #ifndef NDEBUG
     OS << " with assertions";
 #endif
-#if LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
-    std::string CPU = std::string(sys::getHostCPUName());
-    if (CPU == "generic")
-      CPU = "(unknown)";
-    OS << ".\n"
-       << "  Default target: " << sys::getDefaultTargetTriple() << '\n'
-       << "  Host CPU: " << CPU;
-#endif
-    OS << '\n';
+    OS << ".\n";
+
+    // Iterate over any registered extra printers and call them to add further
+    // information.
+    if (!ExtraPrinters.empty()) {
+      for (const auto &I : ExtraPrinters)
+        I(outs());
+    }
   }
   void operator=(bool OptionWasSpecified);
 };
@@ -2686,15 +2688,7 @@ void VersionPrinter::operator=(bool OptionWasSpecified) {
     CommonOptions->OverrideVersionPrinter(outs());
     exit(0);
   }
-  print();
-
-  // Iterate over any registered extra printers and call them to add further
-  // information.
-  if (!CommonOptions->ExtraVersionPrinters.empty()) {
-    outs() << '\n';
-    for (const auto &I : CommonOptions->ExtraVersionPrinters)
-      I(outs());
-  }
+  print(CommonOptions->ExtraVersionPrinters);
 
   exit(0);
 }
@@ -2749,7 +2743,7 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
 
 /// Utility function for printing version number.
 void cl::PrintVersionMessage() {
-  CommonOptions->VersionPrinterInstance.print();
+  CommonOptions->VersionPrinterInstance.print(CommonOptions->ExtraVersionPrinters);
 }
 
 void cl::SetVersionPrinter(VersionPrinterTy func) {

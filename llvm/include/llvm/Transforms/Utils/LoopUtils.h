@@ -47,7 +47,6 @@ typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
     RuntimePointerCheck;
 
-template <typename T> class Optional;
 template <typename T, unsigned N> class SmallSetVector;
 template <typename T, unsigned N> class SmallPriorityWorklist;
 
@@ -212,7 +211,7 @@ bool promoteLoopAccessesToScalars(
     PredIteratorCache &, LoopInfo *, DominatorTree *, AssumptionCache *AC,
     const TargetLibraryInfo *, TargetTransformInfo *, Loop *,
     MemorySSAUpdater &, ICFLoopSafetyInfo *, OptimizationRemarkEmitter *,
-    bool AllowSpeculation);
+    bool AllowSpeculation, bool HasReadsOutsideSet);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of nodes includes the starting point.

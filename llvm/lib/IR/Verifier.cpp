@@ -798,6 +798,13 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     Check(!STy->containsScalableVectorType(),
           "Globals cannot contain scalable vectors", &GV);
 
+  // Check if it's a target extension type that disallows being used as a
+  // global.
+  if (auto *TTy = dyn_cast<TargetExtType>(GV.getValueType()))
+    Check(TTy->hasProperty(TargetExtType::CanBeGlobal),
+          "Global @" + GV.getName() + " has illegal target extension type",
+          TTy);
+
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
     return;

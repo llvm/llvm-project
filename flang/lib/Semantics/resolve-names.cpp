@@ -6359,14 +6359,16 @@ void ConstructVisitor::Post(const parser::SelectTypeStmt &x) {
     // This isn't a name in the current scope, it is in each TypeGuardStmt
     MakePlaceholder(*name, MiscDetails::Kind::SelectTypeAssociateName);
     association.name = &*name;
-    auto exprType{association.selector.expr->GetType()};
     if (ExtractCoarrayRef(association.selector.expr)) { // C1103
       Say("Selector must not be a coindexed object"_err_en_US);
     }
-    if (exprType && !exprType->IsPolymorphic()) { // C1159
-      Say(association.selector.source,
-          "Selector '%s' in SELECT TYPE statement must be "
-          "polymorphic"_err_en_US);
+    if (association.selector.expr) {
+      auto exprType{association.selector.expr->GetType()};
+      if (exprType && !exprType->IsPolymorphic()) { // C1159
+        Say(association.selector.source,
+            "Selector '%s' in SELECT TYPE statement must be "
+            "polymorphic"_err_en_US);
+      }
     }
   } else {
     if (const Symbol *

@@ -40,14 +40,14 @@ define half @extractelement_v8f16(<8 x half> %op1) #0 {
   ret half %r
 }
 
-define half @extractelement_v16f16(<16 x half>* %a) #0 {
+define half @extractelement_v16f16(ptr %a) #0 {
 ; CHECK-LABEL: extractelement_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    mov z0.h, z0.h[7]
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
+  %op1 = load <16 x half>, ptr %a
   %r = extractelement <16 x half> %op1, i64 15
   ret half %r
 }
@@ -74,14 +74,14 @@ define float @extractelement_v4f32(<4 x float> %op1) #0 {
   ret float %r
 }
 
-define float @extractelement_v8f32(<8 x float>* %a) #0 {
+define float @extractelement_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: extractelement_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    mov z0.s, z0.s[3]
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
+  %op1 = load <8 x float>, ptr %a
   %r = extractelement <8 x float> %op1, i64 7
   ret float %r
 }
@@ -106,14 +106,14 @@ define double @extractelement_v2f64(<2 x double> %op1) #0 {
   ret double %r
 }
 
-define double @extractelement_v4f64(<4 x double>* %a) #0 {
+define double @extractelement_v4f64(ptr %a) #0 {
 ; CHECK-LABEL: extractelement_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
+  %op1 = load <4 x double>, ptr %a
   %r = extractelement <4 x double> %op1, i64 3
   ret double %r
 }

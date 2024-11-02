@@ -1356,7 +1356,7 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   OS.emitLabel(LineSym);
 
   // Construct the lineinfo.
-  auto SP = DL.get()->getScope()->getSubprogram();
+  auto SP = DL->getScope()->getSubprogram();
   constructLineInfo(SP, LineSym, DL.getLine(), DL.getCol());
 
   LineInfoGenerated = true;

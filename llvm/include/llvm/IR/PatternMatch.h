@@ -2295,10 +2295,12 @@ m_NSWNeg(const ValTy &V) {
 }
 
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
+/// NOTE: we first match the 'Not' (by matching '-1'),
+/// and only then match the inner matcher!
 template <typename ValTy>
-inline BinaryOp_match<ValTy, cst_pred_ty<is_all_ones>, Instruction::Xor, true>
+inline BinaryOp_match<cst_pred_ty<is_all_ones>, ValTy, Instruction::Xor, true>
 m_Not(const ValTy &V) {
-  return m_c_Xor(V, m_AllOnes());
+  return m_c_Xor(m_AllOnes(), V);
 }
 
 template <typename ValTy> struct NotForbidUndef_match {
@@ -2582,6 +2584,25 @@ template <typename LHS, typename RHS>
 inline LogicalOp_match<LHS, RHS, Instruction::Or, true>
 m_c_LogicalOr(const LHS &L, const RHS &R) {
   return LogicalOp_match<LHS, RHS, Instruction::Or, true>(L, R);
+}
+
+/// Matches either L && R or L || R,
+/// either one being in the either binary or logical form.
+/// Note that the latter form is poison-blocking.
+template <typename LHS, typename RHS, bool Commutable = false>
+inline auto m_LogicalOp(const LHS &L, const RHS &R) {
+  return m_CombineOr(
+      LogicalOp_match<LHS, RHS, Instruction::And, Commutable>(L, R),
+      LogicalOp_match<LHS, RHS, Instruction::Or, Commutable>(L, R));
+}
+
+/// Matches either L && R or L || R where L and R are arbitrary values.
+inline auto m_LogicalOp() { return m_LogicalOp(m_Value(), m_Value()); }
+
+/// Matches either L && R or L || R with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_LogicalOp(const LHS &L, const RHS &R) {
+  return m_LogicalOp<LHS, RHS, /*Commutable=*/true>(L, R);
 }
 
 } // end namespace PatternMatch

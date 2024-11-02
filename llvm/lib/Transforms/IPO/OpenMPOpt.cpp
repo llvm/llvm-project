@@ -498,11 +498,11 @@ struct OMPInformationCache : public InformationCache {
   }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-    // Remove the `noinline` attribute from `__kmpc`, `_OMP::` and `omp_`
+    // Remove the `noinline` attribute from `__kmpc`, `ompx::` and `omp_`
     // functions, except if `optnone` is present.
     if (isOpenMPDevice(M)) {
       for (Function &F : M) {
-        for (StringRef Prefix : {"__kmpc", "_ZN4_OMP", "omp_"})
+        for (StringRef Prefix : {"__kmpc", "_ZN4ompx", "omp_"})
           if (F.hasFnAttribute(Attribute::NoInline) &&
               F.getName().startswith(Prefix) &&
               !F.hasFnAttribute(Attribute::OptimizeNone))
@@ -4476,10 +4476,10 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
     if (!SimplifiedValue)
       return Str + std::string("none");
 
-    if (!SimplifiedValue.value())
+    if (!*SimplifiedValue)
       return Str + std::string("nullptr");
 
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(SimplifiedValue.value()))
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(*SimplifiedValue))
       return Str + std::to_string(CI->getSExtValue());
 
     return Str + std::string("unknown");
@@ -4504,7 +4504,7 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
         [&](const IRPosition &IRP, const AbstractAttribute *AA,
             bool &UsedAssumedInformation) -> std::optional<Value *> {
           assert((isValidState() ||
-                  (SimplifiedValue && SimplifiedValue.value() == nullptr)) &&
+                  (SimplifiedValue && *SimplifiedValue == nullptr)) &&
                  "Unexpected invalid state!");
 
           if (!isAtFixpoint()) {
@@ -4521,9 +4521,6 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
     switch (RFKind) {
     case OMPRTL___kmpc_is_spmd_exec_mode:
       Changed |= foldIsSPMDExecMode(A);
-      break;
-    case OMPRTL___kmpc_is_generic_main_thread_id:
-      Changed |= foldIsGenericMainThread(A);
       break;
     case OMPRTL___kmpc_parallel_level:
       Changed |= foldParallelLevel(A);
@@ -4634,28 +4631,6 @@ private:
       // must be none.
       assert(!SimplifiedValue && "SimplifiedValue should be none");
     }
-
-    return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
-                                                    : ChangeStatus::CHANGED;
-  }
-
-  /// Fold __kmpc_is_generic_main_thread_id into a constant if possible.
-  ChangeStatus foldIsGenericMainThread(Attributor &A) {
-    std::optional<Value *> SimplifiedValueBefore = SimplifiedValue;
-
-    CallBase &CB = cast<CallBase>(getAssociatedValue());
-    Function *F = CB.getFunction();
-    const auto &ExecutionDomainAA = A.getAAFor<AAExecutionDomain>(
-        *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-
-    if (!ExecutionDomainAA.isValidState())
-      return indicatePessimisticFixpoint();
-
-    auto &Ctx = getAnchorValue().getContext();
-    if (ExecutionDomainAA.isExecutedByInitialThreadOnly(CB))
-      SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), true);
-    else
-      return indicatePessimisticFixpoint();
 
     return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
                                                     : ChangeStatus::CHANGED;
@@ -4801,7 +4776,6 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
         OMPInfoCache.RFIs[OMPRTL___kmpc_target_init];
     InitRFI.foreachUse(SCC, CreateKernelInfoCB);
 
-    registerFoldRuntimeCall(OMPRTL___kmpc_is_generic_main_thread_id);
     registerFoldRuntimeCall(OMPRTL___kmpc_is_spmd_exec_mode);
     registerFoldRuntimeCall(OMPRTL___kmpc_parallel_level);
     registerFoldRuntimeCall(OMPRTL___kmpc_get_hardware_num_threads_in_block);

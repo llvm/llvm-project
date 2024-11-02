@@ -21,8 +21,10 @@
 #include "ompt-specific.h"
 #endif
 
+#if ENABLE_LIBOMPTARGET
 // Declaration of synchronization function from libomptarget.
 extern "C" void __tgt_target_nowait_query(void **) KMP_WEAK_ATTRIBUTE_INTERNAL;
+#endif
 
 /* forward declaration */
 static void __kmp_enable_tasking(kmp_task_team_t *task_team,
@@ -1798,12 +1800,15 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
     KMP_FSYNC_ACQUIRED(taskdata); // acquired self (new task)
 #endif
 
+#if ENABLE_LIBOMPTARGET
     if (taskdata->td_target_data.async_handle != NULL) {
       // If we have a valid target async handle, that means that we have already
       // executed the task routine once. We must query for the handle completion
       // instead of re-executing the routine.
       __tgt_target_nowait_query(&taskdata->td_target_data.async_handle);
-    } else if (task->routine != NULL) {
+    } else
+#endif
+    if (task->routine != NULL) {
 #ifdef KMP_GOMP_COMPAT
       if (taskdata->td_flags.native) {
         ((void (*)(void *))(*(task->routine)))(task->shareds);

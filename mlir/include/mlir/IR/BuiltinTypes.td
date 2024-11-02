@@ -1031,7 +1031,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [
 
     /// Clone this vector type with the given shape and element type. If the
     /// provided shape is `None`, the current shape of the type is used.
-    VectorType cloneWith(Optional<ArrayRef<int64_t>> shape,
+    VectorType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                          Type elementType) const;
   }];
   let skipDefaultBuilders = 1;

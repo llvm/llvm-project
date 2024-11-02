@@ -2,7 +2,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 | FileCheck %s --check-prefix=GCN
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 | FileCheck %s --check-prefix=GFX11
 
-define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
+define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-LABEL: vgpr_descriptor_waterfall_loop_idom_update:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -70,7 +70,7 @@ entry:
   br label %bb0
 
 bb0:
-  %desc = load <4 x i32>, <4 x i32>* %arg, align 8
+  %desc = load <4 x i32>, ptr %arg, align 8
   tail call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> %desc, i32 undef, i32 0, i32 0)
   br label %bb0
 }

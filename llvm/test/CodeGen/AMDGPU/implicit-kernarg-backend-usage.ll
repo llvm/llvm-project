@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefixes=GFX9V4 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 --amdhsa-code-object-version=5 < %s | FileCheck --check-prefixes=GFX9V5 %s
 
-define amdgpu_kernel void @addrspacecast(i32 addrspace(5)* %ptr.private, i32 addrspace(3)* %ptr.local) {
+define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) {
 ; GFX8V3-LABEL: addrspacecast:
 ; GFX8V3:       ; %bb.0:
 ; GFX8V3-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
@@ -148,14 +148,14 @@ define amdgpu_kernel void @addrspacecast(i32 addrspace(5)* %ptr.private, i32 add
 ; GFX9V5-NEXT:    flat_store_dword v[2:3], v0
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
-  %flat.private = addrspacecast i32 addrspace(5)* %ptr.private to i32*
-  %flat.local = addrspacecast i32 addrspace(3)* %ptr.local to i32*
-  store volatile i32 1, i32* %flat.private
-  store volatile i32 2, i32* %flat.local
+  %flat.private = addrspacecast ptr addrspace(5) %ptr.private to ptr
+  %flat.local = addrspacecast ptr addrspace(3) %ptr.local to ptr
+  store volatile i32 1, ptr %flat.private
+  store volatile i32 2, ptr %flat.local
   ret void
 }
 
-define amdgpu_kernel void @llvm_amdgcn_is_shared(i8* %ptr) {
+define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ; GFX8V3-LABEL: llvm_amdgcn_is_shared:
 ; GFX8V3:       ; %bb.0:
 ; GFX8V3-NEXT:    s_load_dword s0, s[4:5], 0x40
@@ -227,13 +227,13 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(i8* %ptr) {
 ; GFX9V5-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
-  %is.shared = call i1 @llvm.amdgcn.is.shared(i8* %ptr)
+  %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, i32 addrspace(1)* undef
+  store volatile i32 %zext, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @llvm_amdgcn_is_private(i8* %ptr) {
+define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ; GFX8V3-LABEL: llvm_amdgcn_is_private:
 ; GFX8V3:       ; %bb.0:
 ; GFX8V3-NEXT:    s_load_dword s0, s[4:5], 0x44
@@ -305,9 +305,9 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(i8* %ptr) {
 ; GFX9V5-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
-  %is.private = call i1 @llvm.amdgcn.is.private(i8* %ptr)
+  %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, i32 addrspace(1)* undef
+  store volatile i32 %zext, ptr addrspace(1) undef
   ret void
 }
 
@@ -372,7 +372,7 @@ define amdgpu_kernel void @llvm_debugtrap() {
   unreachable
 }
 
-define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
+define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  {
 ; GFX8V3-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX8V3:       ; %bb.0:
 ; GFX8V3-NEXT:    v_mov_b32_e32 v0, s6
@@ -496,22 +496,22 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
 ; GFX9V5-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
-  %queue.ptr = call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %dispatch.ptr = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+  %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %dispatch.ptr = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %dispatch.id = call i64 @llvm.amdgcn.dispatch.id()
-  %queue.load = load volatile i8, i8 addrspace(4)* %queue.ptr
-  %implicitarg.load = load volatile i8, i8 addrspace(4)* %implicitarg.ptr
-  %dispatch.load = load volatile i8, i8 addrspace(4)* %dispatch.ptr
-  store volatile i64 %dispatch.id, i64 addrspace(1)* %ptr
+  %queue.load = load volatile i8, ptr addrspace(4) %queue.ptr
+  %implicitarg.load = load volatile i8, ptr addrspace(4) %implicitarg.ptr
+  %dispatch.load = load volatile i8, ptr addrspace(4) %dispatch.ptr
+  store volatile i64 %dispatch.id, ptr addrspace(1) %ptr
   ret void
 }
 
-declare noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
-declare noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+declare noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 declare i64 @llvm.amdgcn.dispatch.id()
-declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
-declare i1 @llvm.amdgcn.is.shared(i8*)
-declare i1 @llvm.amdgcn.is.private(i8*)
+declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+declare i1 @llvm.amdgcn.is.shared(ptr)
+declare i1 @llvm.amdgcn.is.private(ptr)
 declare void @llvm.trap()
 declare void @llvm.debugtrap()

@@ -246,7 +246,8 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // AddUIExtendedOp
 //===----------------------------------------------------------------------===//
 
-Optional<SmallVector<int64_t, 4>> arith::AddUIExtendedOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+arith::AddUIExtendedOp::getShapeForUnroll() {
   if (auto vt = getType(0).dyn_cast<VectorType>())
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -378,7 +379,8 @@ OpFoldResult arith::MulIOp::fold(ArrayRef<Attribute> operands) {
 // MulSIExtendedOp
 //===----------------------------------------------------------------------===//
 
-Optional<SmallVector<int64_t, 4>> arith::MulSIExtendedOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+arith::MulSIExtendedOp::getShapeForUnroll() {
   if (auto vt = getType(0).dyn_cast<VectorType>())
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -424,7 +426,8 @@ void arith::MulSIExtendedOp::getCanonicalizationPatterns(
 // MulUIExtendedOp
 //===----------------------------------------------------------------------===//
 
-Optional<SmallVector<int64_t, 4>> arith::MulUIExtendedOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+arith::MulUIExtendedOp::getShapeForUnroll() {
   if (auto vt = getType(0).dyn_cast<VectorType>())
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -1639,7 +1642,7 @@ static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
   return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
-static Optional<int64_t> getIntegerWidth(Type t) {
+static std::optional<int64_t> getIntegerWidth(Type t) {
   if (auto intType = t.dyn_cast<IntegerType>()) {
     return intType.getWidth();
   }
@@ -1661,7 +1664,7 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(getRhs(), m_Zero())) {
     if (auto extOp = getLhs().getDefiningOp<ExtSIOp>()) {
       // extsi(%x : i1 -> iN) != 0  ->  %x
-      Optional<int64_t> integerWidth =
+      std::optional<int64_t> integerWidth =
           getIntegerWidth(extOp.getOperand().getType());
       if (integerWidth && integerWidth.value() == 1 &&
           getPredicate() == arith::CmpIPredicate::ne)
@@ -1669,7 +1672,7 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
     }
     if (auto extOp = getLhs().getDefiningOp<ExtUIOp>()) {
       // extui(%x : i1 -> iN) != 0  ->  %x
-      Optional<int64_t> integerWidth =
+      std::optional<int64_t> integerWidth =
           getIntegerWidth(extOp.getOperand().getType());
       if (integerWidth && integerWidth.value() == 1 &&
           getPredicate() == arith::CmpIPredicate::ne)

@@ -8,12 +8,12 @@
 
 @"$str" = private addrspace(1) constant [12 x i8] c"__CUDA_ARCH\00"
 
-declare i32 @__nvvm_reflect(i8*)
+declare i32 @__nvvm_reflect(ptr)
 
 ; COMMON-LABEL: @foo
 define i32 @foo(float %a, float %b) {
 ; COMMON-NOT: call i32 @__nvvm_reflect
-  %reflect = call i32 @__nvvm_reflect(i8* addrspacecast (i8 addrspace(1)* getelementptr inbounds ([12 x i8], [12 x i8] addrspace(1)* @"$str", i32 0, i32 0) to i8*))
+  %reflect = call i32 @__nvvm_reflect(ptr addrspacecast (ptr addrspace(1) @"$str" to ptr))
 ; SM20: ret i32 200  
 ; SM35: ret i32 350  
   ret i32 %reflect

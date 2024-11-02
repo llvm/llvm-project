@@ -405,12 +405,10 @@ checkTilingLegalityImpl(MutableArrayRef<mlir::AffineForOp> origLoops) {
         for (unsigned k = 0, e = depComps.size(); k < e; k++) {
           DependenceComponent depComp = depComps[k];
           if (depComp.lb.has_value() && depComp.ub.has_value() &&
-              depComp.lb.value() < depComp.ub.value() &&
-              depComp.ub.value() < 0) {
+              *depComp.lb < *depComp.ub && *depComp.ub < 0) {
             LLVM_DEBUG(llvm::dbgs()
-                       << "Dependence component lb = "
-                       << Twine(depComp.lb.value())
-                       << " ub = " << Twine(depComp.ub.value())
+                       << "Dependence component lb = " << Twine(*depComp.lb)
+                       << " ub = " << Twine(*depComp.ub)
                        << " is negative  at depth: " << Twine(d)
                        << " and thus violates the legality rule.\n");
             return false;
@@ -801,11 +799,11 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
     newLoops[width + i].setStep(origLoops[i].getStep());
 
     // Set the upper bound.
-    if (mayBeConstantCount && mayBeConstantCount.value() < tileSizes[i]) {
+    if (mayBeConstantCount && *mayBeConstantCount < tileSizes[i]) {
       // Trip count is less than the tile size: upper bound is lower bound +
       // trip count * stepSize.
-      AffineMap ubMap = b.getSingleDimShiftAffineMap(
-          mayBeConstantCount.value() * origLoops[i].getStep());
+      AffineMap ubMap = b.getSingleDimShiftAffineMap(*mayBeConstantCount *
+                                                     origLoops[i].getStep());
       newLoops[width + i].setUpperBound(
           /*operands=*/newLoops[i].getInductionVar(), ubMap);
     } else if (largestDiv % tileSizes[i] != 0) {
@@ -974,7 +972,7 @@ void mlir::getTileableBands(func::FuncOp f,
 LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value()) {
-    uint64_t tripCount = mayBeConstantTripCount.value();
+    uint64_t tripCount = *mayBeConstantTripCount;
     if (tripCount == 0)
       return success();
     if (tripCount == 1)
@@ -990,8 +988,8 @@ LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
                                          uint64_t unrollFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value() &&
-      mayBeConstantTripCount.value() < unrollFactor)
-    return loopUnrollByFactor(forOp, mayBeConstantTripCount.value());
+      *mayBeConstantTripCount < unrollFactor)
+    return loopUnrollByFactor(forOp, *mayBeConstantTripCount);
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
@@ -1159,8 +1157,8 @@ LogicalResult mlir::loopUnrollJamUpToFactor(AffineForOp forOp,
                                             uint64_t unrollJamFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value() &&
-      mayBeConstantTripCount.value() < unrollJamFactor)
-    return loopUnrollJamByFactor(forOp, mayBeConstantTripCount.value());
+      *mayBeConstantTripCount < unrollJamFactor)
+    return loopUnrollJamByFactor(forOp, *mayBeConstantTripCount);
   return loopUnrollJamByFactor(forOp, unrollJamFactor);
 }
 
@@ -1582,7 +1580,7 @@ AffineForOp mlir::sinkSequentialLoops(AffineForOp forOp) {
     for (unsigned j = 0; j < maxLoopDepth; ++j) {
       DependenceComponent &depComp = depComps[j];
       assert(depComp.lb.has_value() && depComp.ub.has_value());
-      if (depComp.lb.value() != 0 || depComp.ub.value() != 0)
+      if (*depComp.lb != 0 || *depComp.ub != 0)
         isParallelLoop[j] = false;
     }
   }

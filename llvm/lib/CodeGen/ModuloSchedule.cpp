@@ -1470,7 +1470,7 @@ Register KernelRewriter::phi(Register LoopReg, std::optional<Register> InitReg,
                              const TargetRegisterClass *RC) {
   // If the init register is not undef, try and find an existing phi.
   if (InitReg) {
-    auto I = Phis.find({LoopReg, InitReg.value()});
+    auto I = Phis.find({LoopReg, *InitReg});
     if (I != Phis.end())
       return I->second;
   } else {
@@ -1491,10 +1491,10 @@ Register KernelRewriter::phi(Register LoopReg, std::optional<Register> InitReg,
       return R;
     // Found a phi taking undef as input, so rewrite it to take InitReg.
     MachineInstr *MI = MRI.getVRegDef(R);
-    MI->getOperand(1).setReg(InitReg.value());
-    Phis.insert({{LoopReg, InitReg.value()}, R});
+    MI->getOperand(1).setReg(*InitReg);
+    Phis.insert({{LoopReg, *InitReg}, R});
     const TargetRegisterClass *ConstrainRegClass =
-        MRI.constrainRegClass(R, MRI.getRegClass(InitReg.value()));
+        MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
     assert(ConstrainRegClass && "Expected a valid constrained register class!");
     (void)ConstrainRegClass;
     UndefPhis.erase(I);

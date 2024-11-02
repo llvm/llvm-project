@@ -35,9 +35,9 @@ public:
   void InclusionDirective(SourceLocation Hash, const Token &IncludeTok,
                           StringRef SpelledFilename, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          llvm::Optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *, SrcMgr::CharacteristicKind) override {
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *,
+                          SrcMgr::CharacteristicKind) override {
     if (!Active)
       return;
 
@@ -180,7 +180,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
                           CharSourceRange /*FilenameRange*/,
-                          Optional<FileEntryRef> File,
+                          OptionalFileEntryRef File,
                           llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/,

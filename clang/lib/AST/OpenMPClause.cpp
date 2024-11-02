@@ -313,7 +313,7 @@ OMPClause::child_range OMPNumTasksClause::used_children() {
 OMPClause::child_range OMPFinalClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
-  return child_range(&Condition, &Condition + 1);
+  return children();
 }
 
 OMPClause::child_range OMPPriorityClause::used_children() {
@@ -325,13 +325,13 @@ OMPClause::child_range OMPPriorityClause::used_children() {
 OMPClause::child_range OMPNovariantsClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
-  return child_range(&Condition, &Condition + 1);
+  return children();
 }
 
 OMPClause::child_range OMPNocontextClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
-  return child_range(&Condition, &Condition + 1);
+  return children();
 }
 
 OMPOrderedClause *OMPOrderedClause::Create(const ASTContext &C, Expr *Num,

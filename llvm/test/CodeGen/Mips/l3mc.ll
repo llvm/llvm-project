@@ -42,60 +42,60 @@
 ; Function Attrs: nounwind
 define void @_Z3foov() #0 {
 entry:
-  %0 = load double, double* @d1, align 8
+  %0 = load double, ptr @d1, align 8
   %conv = fptosi double %0 to i64
-  store i64 %conv, i64* @ll1, align 8
-  %1 = load double, double* @d2, align 8
+  store i64 %conv, ptr @ll1, align 8
+  %1 = load double, ptr @d2, align 8
   %conv1 = fptoui double %1 to i64
-  store i64 %conv1, i64* @ull1, align 8
-  %2 = load float, float* @f1, align 4
+  store i64 %conv1, ptr @ull1, align 8
+  %2 = load float, ptr @f1, align 4
   %conv2 = fptosi float %2 to i64
-  store i64 %conv2, i64* @ll2, align 8
-  %3 = load float, float* @f2, align 4
+  store i64 %conv2, ptr @ll2, align 8
+  %3 = load float, ptr @f2, align 4
   %conv3 = fptoui float %3 to i64
-  store i64 %conv3, i64* @ull2, align 8
-  %4 = load double, double* @d3, align 8
+  store i64 %conv3, ptr @ull2, align 8
+  %4 = load double, ptr @d3, align 8
   %conv4 = fptosi double %4 to i32
-  store i32 %conv4, i32* @l1, align 4
-  %5 = load double, double* @d4, align 8
+  store i32 %conv4, ptr @l1, align 4
+  %5 = load double, ptr @d4, align 8
   %conv5 = fptoui double %5 to i32
-  store i32 %conv5, i32* @ul1, align 4
-  %6 = load float, float* @f3, align 4
+  store i32 %conv5, ptr @ul1, align 4
+  %6 = load float, ptr @f3, align 4
   %conv6 = fptosi float %6 to i32
-  store i32 %conv6, i32* @l2, align 4
-  %7 = load float, float* @f4, align 4
+  store i32 %conv6, ptr @l2, align 4
+  %7 = load float, ptr @f4, align 4
   %conv7 = fptoui float %7 to i32
-  store i32 %conv7, i32* @ul2, align 4
+  store i32 %conv7, ptr @ul2, align 4
   ret void
 }
 
 ; Function Attrs: nounwind
 define void @_Z3goov() #0 {
 entry:
-  %0 = load i64, i64* @ll1, align 8
+  %0 = load i64, ptr @ll1, align 8
   %conv = sitofp i64 %0 to double
-  store double %conv, double* @d1, align 8
-  %1 = load i64, i64* @ull1, align 8
+  store double %conv, ptr @d1, align 8
+  %1 = load i64, ptr @ull1, align 8
   %conv1 = uitofp i64 %1 to double
-  store double %conv1, double* @d2, align 8
-  %2 = load i64, i64* @ll2, align 8
+  store double %conv1, ptr @d2, align 8
+  %2 = load i64, ptr @ll2, align 8
   %conv2 = sitofp i64 %2 to float
-  store float %conv2, float* @f1, align 4
-  %3 = load i64, i64* @ull2, align 8
+  store float %conv2, ptr @f1, align 4
+  %3 = load i64, ptr @ull2, align 8
   %conv3 = uitofp i64 %3 to float
-  store float %conv3, float* @f2, align 4
-  %4 = load i32, i32* @l1, align 4
+  store float %conv3, ptr @f2, align 4
+  %4 = load i32, ptr @l1, align 4
   %conv4 = sitofp i32 %4 to double
-  store double %conv4, double* @d3, align 8
-  %5 = load i32, i32* @ul1, align 4
+  store double %conv4, ptr @d3, align 8
+  %5 = load i32, ptr @ul1, align 4
   %conv5 = uitofp i32 %5 to double
-  store double %conv5, double* @d4, align 8
-  %6 = load i32, i32* @l2, align 4
+  store double %conv5, ptr @d4, align 8
+  %6 = load i32, ptr @l2, align 4
   %conv6 = sitofp i32 %6 to float
-  store float %conv6, float* @f3, align 4
-  %7 = load i32, i32* @ul2, align 4
+  store float %conv6, ptr @f3, align 4
+  %7 = load i32, ptr @ul2, align 4
   %conv7 = uitofp i32 %7 to float
-  store float %conv7, float* @f4, align 4
+  store float %conv7, ptr @f4, align 4
   ret void
 }
 

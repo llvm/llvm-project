@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
-define amdgpu_kernel void @udiv32_invariant_denom(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
+define amdgpu_kernel void @udiv32_invariant_denom(ptr addrspace(1) nocapture %arg, i32 %arg1) {
 ; GFX9-LABEL: udiv32_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x2c
@@ -155,14 +155,14 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i32 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = udiv i32 %tmp, %arg1
   %tmp5 = zext i32 %tmp to i64
-  %tmp6 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp5
-  store i32 %tmp4, i32 addrspace(1)* %tmp6, align 4
+  %tmp6 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp5
+  store i32 %tmp4, ptr addrspace(1) %tmp6, align 4
   %tmp7 = add nuw nsw i32 %tmp, 1
   %tmp8 = icmp eq i32 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3
 }
 
-define amdgpu_kernel void @urem32_invariant_denom(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
+define amdgpu_kernel void @urem32_invariant_denom(ptr addrspace(1) nocapture %arg, i32 %arg1) {
 ; GFX9-LABEL: urem32_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x2c
@@ -309,14 +309,14 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i32 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = urem i32 %tmp, %arg1
   %tmp5 = zext i32 %tmp to i64
-  %tmp6 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp5
-  store i32 %tmp4, i32 addrspace(1)* %tmp6, align 4
+  %tmp6 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp5
+  store i32 %tmp4, ptr addrspace(1) %tmp6, align 4
   %tmp7 = add nuw nsw i32 %tmp, 1
   %tmp8 = icmp eq i32 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3
 }
 
-define amdgpu_kernel void @sdiv32_invariant_denom(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
+define amdgpu_kernel void @sdiv32_invariant_denom(ptr addrspace(1) nocapture %arg, i32 %arg1) {
 ; GFX9-LABEL: sdiv32_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s3, s[0:1], 0x2c
@@ -471,14 +471,14 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i32 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = sdiv i32 %tmp, %arg1
   %tmp5 = zext i32 %tmp to i64
-  %tmp6 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp5
-  store i32 %tmp4, i32 addrspace(1)* %tmp6, align 4
+  %tmp6 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp5
+  store i32 %tmp4, ptr addrspace(1) %tmp6, align 4
   %tmp7 = add nuw nsw i32 %tmp, 1
   %tmp8 = icmp eq i32 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3
 }
 
-define amdgpu_kernel void @srem32_invariant_denom(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
+define amdgpu_kernel void @srem32_invariant_denom(ptr addrspace(1) nocapture %arg, i32 %arg1) {
 ; GFX9-LABEL: srem32_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -620,14 +620,14 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i32 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = srem i32 %tmp, %arg1
   %tmp5 = zext i32 %tmp to i64
-  %tmp6 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp5
-  store i32 %tmp4, i32 addrspace(1)* %tmp6, align 4
+  %tmp6 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp5
+  store i32 %tmp4, ptr addrspace(1) %tmp6, align 4
   %tmp7 = add nuw nsw i32 %tmp, 1
   %tmp8 = icmp eq i32 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3
 }
 
-define amdgpu_kernel void @udiv16_invariant_denom(i16 addrspace(1)* nocapture %arg, i16 %arg1) {
+define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %arg, i16 %arg1) {
 ; GFX9-LABEL: udiv16_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -746,14 +746,14 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i16 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = udiv i16 %tmp, %arg1
   %tmp5 = zext i16 %tmp to i64
-  %tmp6 = getelementptr inbounds i16, i16 addrspace(1)* %arg, i64 %tmp5
-  store i16 %tmp4, i16 addrspace(1)* %tmp6, align 2
+  %tmp6 = getelementptr inbounds i16, ptr addrspace(1) %arg, i64 %tmp5
+  store i16 %tmp4, ptr addrspace(1) %tmp6, align 2
   %tmp7 = add nuw nsw i16 %tmp, 1
   %tmp8 = icmp eq i16 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3
 }
 
-define amdgpu_kernel void @urem16_invariant_denom(i16 addrspace(1)* nocapture %arg, i16 %arg1) {
+define amdgpu_kernel void @urem16_invariant_denom(ptr addrspace(1) nocapture %arg, i16 %arg1) {
 ; GFX9-LABEL: urem16_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -872,14 +872,14 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i16 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = urem i16 %tmp, %arg1
   %tmp5 = zext i16 %tmp to i64
-  %tmp6 = getelementptr inbounds i16, i16 addrspace(1)* %arg, i64 %tmp5
-  store i16 %tmp4, i16 addrspace(1)* %tmp6, align 2
+  %tmp6 = getelementptr inbounds i16, ptr addrspace(1) %arg, i64 %tmp5
+  store i16 %tmp4, ptr addrspace(1) %tmp6, align 2
   %tmp7 = add nuw nsw i16 %tmp, 1
   %tmp8 = icmp eq i16 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3
 }
 
-define amdgpu_kernel void @sdiv16_invariant_denom(i16 addrspace(1)* nocapture %arg, i16 %arg1) {
+define amdgpu_kernel void @sdiv16_invariant_denom(ptr addrspace(1) nocapture %arg, i16 %arg1) {
 ; GFX9-LABEL: sdiv16_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -1014,14 +1014,14 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i16 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = sdiv i16 %tmp, %arg1
   %tmp5 = zext i16 %tmp to i64
-  %tmp6 = getelementptr inbounds i16, i16 addrspace(1)* %arg, i64 %tmp5
-  store i16 %tmp4, i16 addrspace(1)* %tmp6, align 2
+  %tmp6 = getelementptr inbounds i16, ptr addrspace(1) %arg, i64 %tmp5
+  store i16 %tmp4, ptr addrspace(1) %tmp6, align 2
   %tmp7 = add nuw nsw i16 %tmp, 1
   %tmp8 = icmp eq i16 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3
 }
 
-define amdgpu_kernel void @srem16_invariant_denom(i16 addrspace(1)* nocapture %arg, i16 %arg1) {
+define amdgpu_kernel void @srem16_invariant_denom(ptr addrspace(1) nocapture %arg, i16 %arg1) {
 ; GFX9-LABEL: srem16_invariant_denom:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -1165,8 +1165,8 @@ bb3:                                              ; preds = %bb3, %bb
   %tmp = phi i16 [ 0, %bb ], [ %tmp7, %bb3 ]
   %tmp4 = srem i16 %tmp, %arg1
   %tmp5 = zext i16 %tmp to i64
-  %tmp6 = getelementptr inbounds i16, i16 addrspace(1)* %arg, i64 %tmp5
-  store i16 %tmp4, i16 addrspace(1)* %tmp6, align 2
+  %tmp6 = getelementptr inbounds i16, ptr addrspace(1) %arg, i64 %tmp5
+  store i16 %tmp4, ptr addrspace(1) %tmp6, align 2
   %tmp7 = add nuw nsw i16 %tmp, 1
   %tmp8 = icmp eq i16 %tmp7, 1024
   br i1 %tmp8, label %bb2, label %bb3

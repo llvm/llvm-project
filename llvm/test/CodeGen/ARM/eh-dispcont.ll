@@ -5,21 +5,20 @@
 ; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=static -o - %s | FileCheck %s -check-prefix=THUMB1-NOPIC -check-prefix=THUMB1
 ; RUN: llc -mtriple thumbv6-apple-ios -relocation-model=dynamic-no-pic -o - %s | FileCheck %s -check-prefix=THUMB1-NOPIC -check-prefix=THUMB1
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
-define i32 @main() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 entry:
-  %exception = tail call i8* @__cxa_allocate_exception(i32 4) #1
-  %0 = bitcast i8* %exception to i32*
-  store i32 1, i32* %0, align 4
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #2
+  %exception = tail call ptr @__cxa_allocate_exception(i32 4) #1
+  store i32 1, ptr %exception, align 4
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
           to label %unreachable unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
-          catch i8* null
-  %2 = extractvalue { i8*, i32 } %1, 0
-  %3 = tail call i8* @__cxa_begin_catch(i8* %2) #1
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1) #1
   tail call void @__cxa_end_catch()
   ret i32 0
 
@@ -27,11 +26,11 @@ unreachable:                                      ; preds = %entry
   unreachable
 }
 
-declare i8* @__cxa_allocate_exception(i32)
+declare ptr @__cxa_allocate_exception(i32)
 
-declare void @__cxa_throw(i8*, i8*, i8*)
+declare void @__cxa_throw(ptr, ptr, ptr)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

@@ -163,7 +163,7 @@ void Scope::applyNRVO() {
     return;
 
   if (*NRVO && isDeclScope(*NRVO))
-    NRVO.value()->setNRVOVariable(true);
+    (*NRVO)->setNRVOVariable(true);
 
   // It's necessary to propagate NRVO candidate to the parent scope for cases
   // when the parent scope doesn't contain a return statement.

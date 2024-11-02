@@ -237,7 +237,7 @@ SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
   const SarifArtifactLocation &Location = I->second.Location;
   json::Object ArtifactLocationObject{{"uri", Location.URI}};
   if (Location.Index.has_value())
-    ArtifactLocationObject["index"] = Location.Index.value();
+    ArtifactLocationObject["index"] = *Location.Index;
   return json::Object{{{"artifactLocation", std::move(ArtifactLocationObject)},
                        {"region", createTextRegion(SourceMgr, R)}}};
 }
@@ -296,12 +296,12 @@ void SarifDocumentWriter::endRun() {
     const SarifArtifact &A = Pair.getValue();
     json::Object Loc{{"uri", A.Location.URI}};
     if (A.Location.Index.has_value()) {
-      Loc["index"] = static_cast<int64_t>(A.Location.Index.value());
+      Loc["index"] = static_cast<int64_t>(*A.Location.Index);
     }
     json::Object Artifact;
     Artifact["location"] = std::move(Loc);
     if (A.Length.has_value())
-      Artifact["length"] = static_cast<int64_t>(A.Length.value());
+      Artifact["length"] = static_cast<int64_t>(*A.Length);
     if (!A.Roles.empty())
       Artifact["roles"] = json::Array(A.Roles);
     if (!A.MimeType.empty())

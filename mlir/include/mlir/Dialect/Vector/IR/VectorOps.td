@@ -1370,19 +1370,19 @@ def Vector_TransferReadOp :
                    "Value":$source,
                    "ValueRange":$indices,
                    "AffineMap":$permutationMap,
-                   CArg<"Optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
     /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
                    "Value":$padding,
-                   CArg<"Optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
     /// 4. Builder that sets padding to zero and permutation map to
     /// 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
-                   CArg<"Optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
   ];
 
   let extraClassDeclaration = [{
@@ -1521,13 +1521,13 @@ def Vector_TransferWriteOp :
                    "Value":$dest,
                    "ValueRange":$indices,
                    "AffineMap":$permutationMap,
-                   CArg<"Optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
     /// 4. Builder with type inference that sets an empty mask and sets permutation
     /// map to 'getMinorIdentityMap'.
     OpBuilder<(ins "Value":$vector,
                    "Value":$dest,
                    "ValueRange":$indices,
-                   CArg<"Optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
   ];
 
   let extraClassDeclaration = [{

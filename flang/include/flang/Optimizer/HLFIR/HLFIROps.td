@@ -202,7 +202,7 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
       "llvm::StringRef":$component, "mlir::Value":$component_shape,
       "llvm::ArrayRef<std::variant<mlir::Value, std::tuple<mlir::Value, mlir::Value, mlir::Value>>>":$subscripts,
       CArg<"mlir::ValueRange", "{}">:$substring,
-      CArg<"llvm::Optional<bool>", "{}">:$complex_part,
+      CArg<"std::optional<bool>", "{}">:$complex_part,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
 
@@ -234,6 +234,26 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let builders = [OpBuilder<(ins "mlir::ValueRange":$strings,"mlir::Value":$len)>];
 
   let hasVerifier = 1;
+}
+
+def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
+  let summary = "change the length of a character entity";
+  let description = [{
+    Change the length of character entity. This trims or pads the
+    character argument according to the new length.
+  }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$string,
+                   AnyIntegerType:$length);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+    $string `len` $length
+     attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
 }
 
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,

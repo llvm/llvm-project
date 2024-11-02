@@ -19,4 +19,5 @@ add_llvm_component_library(LLVMBinaryFormat
 
   LINK_COMPONENTS
   Support
+  TargetParser
   )

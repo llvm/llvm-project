@@ -238,17 +238,17 @@ entry:
   ret i16 %p5
 }
 
-define i16 @test_ptr_arg(i16* %p) {
+define i16 @test_ptr_arg(ptr %p) {
 ; CHECK-LABEL: name: test_ptr_arg
 ; CHECK: liveins: $r0
 ; CHECK: [[VREGP:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK: [[VREGV:%[0-9]+]]:_(s16) = G_LOAD [[VREGP]](p0){{.*}}load (s16)
 entry:
-  %v = load i16, i16* %p
+  %v = load i16, ptr %p
   ret i16 %v
 }
 
-define i32* @test_ptr_ret(i32** %p) {
+define ptr @test_ptr_ret(ptr %p) {
 ; Test pointer returns and pointer-to-pointer arguments
 ; CHECK-LABEL: name: test_ptr_ret
 ; CHECK: liveins: $r0
@@ -257,11 +257,11 @@ define i32* @test_ptr_ret(i32** %p) {
 ; CHECK: $r0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
-  %v = load i32*, i32** %p
-  ret i32* %v
+  %v = load ptr, ptr %p
+  ret ptr %v
 }
 
-define i32 @test_ptr_arg_on_stack(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32* %p) {
+define i32 @test_ptr_arg_on_stack(i32 %a0, i32 %a1, i32 %a2, i32 %a3, ptr %p) {
 ; CHECK-LABEL: name: test_ptr_arg_on_stack
 ; CHECK: fixedStack:
 ; CHECK: id: [[P:[0-9]+]]{{.*}}offset: 0{{.*}}size: 4
@@ -272,7 +272,7 @@ define i32 @test_ptr_arg_on_stack(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32* %p) {
 ; CHECK: $r0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 entry:
-  %v = load i32, i32* %p
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
@@ -554,7 +554,7 @@ define i32 @test_constantstruct_v2s32_s32_s32() {
   ret i32 %elt
 }
 
-define void @test_load_store_struct({i32, i32} *%addr) {
+define void @test_load_store_struct(ptr %addr) {
 ; Make sure the IRTranslator doesn't use an unnecessarily large GEP index type
 ; when breaking up loads and stores of aggregates.
 ; CHECK-LABEL: name: test_load_store_struct
@@ -566,7 +566,7 @@ define void @test_load_store_struct({i32, i32} *%addr) {
 ; CHECK-DAG: G_STORE [[VAL1]](s32), [[ADDR1]](p0) :: (store (s32) into %ir.addr)
 ; CHECK-DAG: [[ADDR3:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
 ; CHECK-DAG: G_STORE [[VAL2]](s32), [[ADDR3]](p0) :: (store (s32) into %ir.addr + 4)
-  %val = load {i32, i32}, {i32, i32} *%addr, align 4
-  store {i32, i32} %val, {i32, i32} *%addr, align 4
+  %val = load {i32, i32}, ptr %addr, align 4
+  store {i32, i32} %val, ptr %addr, align 4
   ret void
 }

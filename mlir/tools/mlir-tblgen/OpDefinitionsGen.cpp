@@ -1129,7 +1129,7 @@ void OpEmitter::genAttrSetters() {
       method = createMethod("bool");
     else if (isOptional)
       method =
-          createMethod("::llvm::Optional<" + baseAttr.getReturnType() + ">");
+          createMethod("::std::optional<" + baseAttr.getReturnType() + ">");
     else
       method = createMethod(attr.getReturnType());
     if (!method)
@@ -1148,7 +1148,7 @@ void OpEmitter::genAttrSetters() {
 
     // TODO: Handle unit attr parameters specially, given that it is treated as
     // optional but not in the same way as the others (i.e. it uses bool over
-    // llvm::Optional<>).
+    // std::optional<>).
     StringRef paramStr = isUnitAttr ? "attrValue" : "*attrValue";
     const char *optionalCodeBody = R"(
     if (attrValue)
@@ -2949,7 +2949,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   adaptor.addField("::mlir::ValueRange", "odsOperands");
   adaptor.addField("::mlir::DictionaryAttr", "odsAttrs");
   adaptor.addField("::mlir::RegionRange", "odsRegions");
-  adaptor.addField("::llvm::Optional<::mlir::OperationName>", "odsOpName");
+  adaptor.addField("::std::optional<::mlir::OperationName>", "odsOpName");
 
   const auto *attrSizedOperands =
       op.getTrait("::m::OpTrait::AttrSizedOperandSegments");

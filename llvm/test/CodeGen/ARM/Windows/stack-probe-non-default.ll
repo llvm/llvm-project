@@ -4,16 +4,15 @@
 ; RUN: llc -mtriple thumbv7-windows -mcpu cortex-a9 -code-model large -o - %s \
 ; RUN:     | FileCheck %s -check-prefix CHECK-LARGE-CODE-MODEL
 
-declare dllimport arm_aapcs_vfpcc void @initialise(i8*)
+declare dllimport arm_aapcs_vfpcc void @initialise(ptr)
 
 define dllexport arm_aapcs_vfpcc signext i8 @function(i32 %offset) #0 {
 entry:
   %buffer = alloca [4096 x i8], align 1
-  %0 = getelementptr inbounds [4096 x i8], [4096 x i8]* %buffer, i32 0, i32 0
-  call arm_aapcs_vfpcc void @initialise(i8* %0)
-  %arrayidx = getelementptr inbounds [4096 x i8], [4096 x i8]* %buffer, i32 0, i32 %offset
-  %1 = load i8, i8* %arrayidx, align 1
-  ret i8 %1
+  call arm_aapcs_vfpcc void @initialise(ptr %buffer)
+  %arrayidx = getelementptr inbounds [4096 x i8], ptr %buffer, i32 0, i32 %offset
+  %0 = load i8, ptr %arrayidx, align 1
+  ret i8 %0
 }
 
 attributes #0 = { "stack-probe-size"="8096" }

@@ -17,7 +17,7 @@ void test_math_f64(double x) {
     double l1 = sin(x);
     // CHECK: call double @__ocml_cos_f64
     double l2 = cos(x);
-    // CHECK: call double @__ocml_fabs_f64
+    // CHECK: call double @llvm.fabs.f64
     double l3 = fabs(x);
   }
 }
@@ -32,8 +32,8 @@ void test_math_f32(float x) {
     // CHECK-C: call double @__ocml_cos_f64
     // CHECK-CPP: call float @__ocml_cos_f32
     float l2 = cos(x);
-    // CHECK-C: call double @__ocml_fabs_f64
-    // CHECK-CPP: call float @__ocml_fabs_f32
+    // CHECK-C: call double @llvm.fabs.f64
+    // CHECK-CPP: call float @llvm.fabs.f32
     float l3 = fabs(x);
   }
 }
@@ -45,7 +45,7 @@ void test_math_f32_suffix(float x) {
     float l1 = sinf(x);
     // CHECK: call float @__ocml_cos_f32
     float l2 = cosf(x);
-    // CHECK: call float @__ocml_fabs_f32
+    // CHECK: call float @llvm.fabs.f32
     float l3 = fabsf(x);
   }
 }

@@ -48,6 +48,7 @@ MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
   RegAllocHints.reserve(256);
   UsedPhysRegMask.resize(NumRegs);
   PhysRegUseDefLists.reset(new MachineOperand*[NumRegs]());
+  TheDelegates.clear();
 }
 
 /// setRegClass - Set the register class of the specified virtual register.
@@ -162,8 +163,7 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   // New virtual register number.
   Register Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = RegClass;
-  if (TheDelegate)
-    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  noteNewVirtualRegister(Reg);
   return Reg;
 }
 
@@ -172,8 +172,7 @@ Register MachineRegisterInfo::cloneVirtualRegister(Register VReg,
   Register Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = VRegInfo[VReg].first;
   setType(Reg, getType(VReg));
-  if (TheDelegate)
-    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  noteCloneVirtualRegister(Reg, VReg);
   return Reg;
 }
 
@@ -189,8 +188,7 @@ MachineRegisterInfo::createGenericVirtualRegister(LLT Ty, StringRef Name) {
   // FIXME: Should we use a dummy register class?
   VRegInfo[Reg].first = static_cast<RegisterBank *>(nullptr);
   setType(Reg, Ty);
-  if (TheDelegate)
-    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  noteNewVirtualRegister(Reg);
   return Reg;
 }
 

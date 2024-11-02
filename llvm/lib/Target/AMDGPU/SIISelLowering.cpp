@@ -398,8 +398,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, {MVT::i32, MVT::i64},
                      Expand);
 
-  if (Subtarget->hasFlatAddressSpace())
-    setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
   setOperationAction(ISD::BITREVERSE, {MVT::i32, MVT::i64}, Legal);
 
@@ -1716,7 +1715,7 @@ SDValue SITargetLowering::getLDSKernelId(SelectionDAG &DAG,
   std::optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
-    return DAG.getConstant(KnownSize.value(), SL, MVT::i32);
+    return DAG.getConstant(*KnownSize, SL, MVT::i32);
   return SDValue();
 }
 
@@ -2870,7 +2869,7 @@ void SITargetLowering::passSpecialInputs(
       std::optional<uint32_t> Id =
           AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
       if (Id.has_value()) {
-        InputReg = DAG.getConstant(Id.value(), DL, ArgVT);
+        InputReg = DAG.getConstant(*Id, DL, ArgVT);
       } else {
         InputReg = DAG.getUNDEF(ArgVT);
       }
@@ -4895,7 +4894,8 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
                 : AMDGPUISD::BUFFER_LOAD_FORMAT;
   } else {
     // TODO: Support non-format TFE loads.
-    assert(!IsTFE);
+    if (IsTFE)
+      return SDValue();
     Opc = AMDGPUISD::BUFFER_LOAD;
   }
 
@@ -12342,7 +12342,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (Ret.first)
-    Ret.second = TRI->getPhysRegClass(Ret.first);
+    Ret.second = TRI->getPhysRegBaseClass(Ret.first);
 
   return Ret;
 }
@@ -12588,6 +12588,14 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
         MRI.setRegClass(Reg, TRI->getRegClass(NewClassID));
     }
   }
+
+  // Reserve the SGPR(s) to save/restore EXEC for WWM spill/copy handling.
+  unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
+  Register SReg =
+      ST.isWave32()
+          ? AMDGPU::SGPR_32RegClass.getRegister(MaxNumSGPRs - 1)
+          : AMDGPU::SGPR_64RegClass.getRegister((MaxNumSGPRs / 2) - 1);
+  Info->setSGPRForEXECCopy(SReg);
 
   TargetLoweringBase::finalizeLowering(MF);
 }

@@ -591,7 +591,7 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
 bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
   if (IsDWO)
     return false;
-  if (DWO.get())
+  if (DWO)
     return false;
   DWARFDie UnitDie = getUnitDIE();
   if (!UnitDie)

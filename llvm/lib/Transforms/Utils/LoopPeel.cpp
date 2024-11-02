@@ -854,7 +854,7 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
-                    bool PreserveLCSSA) {
+                    bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
 
@@ -945,8 +945,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   InsertTop->setName(Header->getName() + ".peel.begin");
   InsertBot->setName(Header->getName() + ".peel.next");
   NewPreHeader->setName(PreHeader->getName() + ".peel.newph");
-
-  ValueToValueMapTy LVMap;
 
   Instruction *LatchTerm =
       cast<Instruction>(cast<BasicBlock>(Latch)->getTerminator());

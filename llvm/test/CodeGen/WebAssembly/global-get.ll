@@ -13,7 +13,7 @@ define i32 @return_i32_global() {
 ; CHECK-NEXT: functype       return_i32_global () -> (i32)
 ; CHECK-NEXT: global.get i32_global
 ; CHECK-NEXT: end_function
-  %v = load i32, i32 addrspace(1)* @i32_global
+  %v = load i32, ptr addrspace(1) @i32_global
   ret i32 %v
 }
 
@@ -22,7 +22,7 @@ define i64 @return_i64_global() {
 ; CHECK-NEXT: functype       return_i64_global () -> (i64)
 ; CHECK-NEXT: global.get i64_global
 ; CHECK-NEXT: end_function
-  %v = load i64, i64 addrspace(1)* @i64_global
+  %v = load i64, ptr addrspace(1) @i64_global
   ret i64 %v
 }
 
@@ -31,7 +31,7 @@ define float @return_f32_global() {
 ; CHECK-NEXT: functype       return_f32_global () -> (f32)
 ; CHECK-NEXT: global.get f32_global
 ; CHECK-NEXT: end_function
-  %v = load float, float addrspace(1)* @f32_global
+  %v = load float, ptr addrspace(1) @f32_global
   ret float %v
 }
 
@@ -40,7 +40,7 @@ define double @return_f64_global() {
 ; CHECK-NEXT: functype       return_f64_global () -> (f64)
 ; CHECK-NEXT: global.get f64_global
 ; CHECK-NEXT: end_function
-  %v = load double, double addrspace(1)* @f64_global
+  %v = load double, ptr addrspace(1) @f64_global
   ret double %v
 }
 
@@ -49,7 +49,7 @@ define i32 @return_extern_i32_global() {
 ; CHECK-NEXT: functype       return_extern_i32_global () -> (i32)
 ; CHECK-NEXT: global.get i32_external_used
 ; CHECK-NEXT: end_function
-  %v = load i32, i32 addrspace(1)* @i32_external_used
+  %v = load i32, ptr addrspace(1) @i32_external_used
   ret i32 %v
 }
 

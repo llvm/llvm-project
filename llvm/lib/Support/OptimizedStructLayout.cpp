@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/OptimizedStructLayout.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 using namespace llvm;
 

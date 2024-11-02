@@ -16,9 +16,10 @@
 #ifndef FORTRAN_LOWER_RUNTIME_H
 #define FORTRAN_LOWER_RUNTIME_H
 
+#include <optional>
+
 namespace llvm {
-template <typename T>
-class Optional;
+template <typename T> using Optional = std::optional<T>;
 }
 
 namespace mlir {

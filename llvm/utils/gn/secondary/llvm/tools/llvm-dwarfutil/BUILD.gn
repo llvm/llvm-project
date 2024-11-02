@@ -19,6 +19,7 @@ executable("llvm-dwarfutil") {
     "//llvm/lib/Target:AllTargetsCodeGens",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "DebugInfoLinker.cpp",

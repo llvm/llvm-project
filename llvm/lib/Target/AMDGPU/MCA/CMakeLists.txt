@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMAMDGPUTargetMCA
   AMDGPUInfo
   AMDGPUUtils
   Support
+  TargetParser
   MCA
 
   ADD_TO_COMPONENT

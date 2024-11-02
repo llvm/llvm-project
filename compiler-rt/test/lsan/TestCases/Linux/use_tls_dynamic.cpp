@@ -9,7 +9,7 @@
 // RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0:use_ld_allocations=0:use_tls=0" not %run %t 2>&1 | FileCheck %s
 // RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0:use_ld_allocations=0:use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
-// UNSUPPORTED: arm,powerpc,i386-linux && !android
+// UNSUPPORTED: target={{(arm|powerpc).*}},i386-linux && !android
 
 #ifndef BUILD_DSO
 #include <assert.h>

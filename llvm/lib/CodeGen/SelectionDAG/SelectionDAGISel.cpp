@@ -2339,7 +2339,7 @@ void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
   Ops.push_back(RegMask);
   Ops.push_back(Chain);
   if (Glue.has_value())
-    Ops.push_back(Glue.value());
+    Ops.push_back(*Glue);
 
   SDVTList NodeTys = N->getVTList();
   CurDAG->SelectNodeTo(N, TargetOpcode::PATCHPOINT, NodeTys, Ops);

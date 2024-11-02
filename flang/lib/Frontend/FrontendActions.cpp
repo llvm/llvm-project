@@ -552,7 +552,7 @@ void CodeGenAction::generateLLVMIR() {
   }
 
   // Translate to LLVM IR
-  llvm::Optional<llvm::StringRef> moduleName = mlirModule->getName();
+  std::optional<llvm::StringRef> moduleName = mlirModule->getName();
   llvmModule = mlir::translateModuleToLLVMIR(
       *mlirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
 

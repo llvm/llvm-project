@@ -44,7 +44,7 @@ configuration will look like this:
      -DLLVM_ENABLE_RUNTIMES="libc;openmp"                  \
      -DCMAKE_BUILD_TYPE=<Debug|Release>  \ # Select build type
      -DLLVM_LIBC_FULL_BUILD=ON           \ # We need the full libc
-     -DLLVM_LIBC_TARGET_OS=gpu           \ # Build in GPU mode
+     -DLIBC_GPU_BUILD=ON                 \ # Build in GPU mode
      -DLLVM_LIBC_GPU_ARCHITECTURES=all   \ # Build all supported architectures
      -DCMAKE_INSTALL_PREFIX=<PATH>       \ # Where 'libcgpu.a' will live
   $> ninja install

@@ -50,7 +50,6 @@ struct DenormalMode;
 class DISubprogram;
 class LLVMContext;
 class Module;
-template <typename T> class Optional;
 class raw_ostream;
 class Type;
 class User;

@@ -43,8 +43,9 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   using InstSeq = SmallVector<Inst>;
 
   /// Parse a register as used in CFI directives.
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -535,12 +536,12 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
   return RegNo == LoongArch::NoRegister;
 }
 
-bool LoongArchAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool LoongArchAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
   return Error(getLoc(), "invalid register number");
 }
 
-OperandMatchResultTy LoongArchAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy LoongArchAsmParser::tryParseRegister(MCRegister &RegNo,
                                                           SMLoc &StartLoc,
                                                           SMLoc &EndLoc) {
   llvm_unreachable("Unimplemented function.");

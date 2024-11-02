@@ -159,6 +159,8 @@ struct TypeCloner {
         return LLVMX86MMXTypeInContext(Ctx);
       case LLVMTokenTypeKind:
         return LLVMTokenTypeInContext(Ctx);
+      case LLVMTargetExtTypeKind:
+        assert(false && "Implement me");
     }
 
     fprintf(stderr, "%d is not a supported typekind\n", Kind);

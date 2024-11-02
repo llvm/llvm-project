@@ -171,7 +171,7 @@ private:
 
   void replay() {
     for (const auto &Inc : Includes) {
-      llvm::Optional<FileEntryRef> File;
+      OptionalFileEntryRef File;
       if (Inc.Resolved != "")
         File = expectedToOptional(SM.getFileManager().getFileRef(Inc.Resolved));
 
@@ -679,7 +679,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                          make_move_iterator(UnusedHeadersDiags.begin()),
                          make_move_iterator(UnusedHeadersDiags.end()));
   }
-  return Result;
+  return std::move(Result);
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;

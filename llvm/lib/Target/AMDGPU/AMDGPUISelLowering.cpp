@@ -332,6 +332,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
+  setOperationAction(ISD::FROUNDEVEN, {MVT::f16, MVT::f32, MVT::f64}, Custom);
+
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
   if (Subtarget->has16BitInsts())
@@ -1252,6 +1254,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FTRUNC: return LowerFTRUNC(Op, DAG);
   case ISD::FRINT: return LowerFRINT(Op, DAG);
   case ISD::FNEARBYINT: return LowerFNEARBYINT(Op, DAG);
+  case ISD::FROUNDEVEN:
+    return LowerFROUNDEVEN(Op, DAG);
   case ISD::FROUND: return LowerFROUND(Op, DAG);
   case ISD::FFLOOR: return LowerFFLOOR(Op, DAG);
   case ISD::FLOG:
@@ -2242,6 +2246,13 @@ SDValue AMDGPUTargetLowering::LowerFNEARBYINT(SDValue Op, SelectionDAG &DAG) con
   // exceptions. Those aren't really meaningful for us, and OpenCL only has
   // rint, so just treat them as equivalent.
   return DAG.getNode(ISD::FRINT, SDLoc(Op), Op.getValueType(), Op.getOperand(0));
+}
+
+SDValue AMDGPUTargetLowering::LowerFROUNDEVEN(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  auto VT = Op.getValueType();
+  auto Arg = Op.getOperand(0u);
+  return DAG.getNode(ISD::FRINT, SDLoc(Op), VT, Arg);
 }
 
 // XXX - May require not supporting f32 denormals?

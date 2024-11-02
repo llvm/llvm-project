@@ -694,7 +694,7 @@ bool InstructionSelector::executeMatchTable(
           (ISel.*ISelInfo.ComplexPredicates[ComplexPredicateID])(
               State.MIs[InsnID]->getOperand(OpIdx));
       if (Renderer)
-        State.Renderers[RendererID] = Renderer.value();
+        State.Renderers[RendererID] = *Renderer;
       else
         if (handleReject() == RejectAndGiveUp)
           return false;

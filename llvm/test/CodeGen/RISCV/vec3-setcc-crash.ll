@@ -8,7 +8,7 @@
 ; call getSetCCResultType, from which we'd return an invalid MVT (<3 x i1>)
 ; upon seeing that the V extension is enabled. The invalid MVT has a null
 ; Type*, which then segfaulted when accessed (as an EVT).
-define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
+define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV32-LABEL: vec3_setcc_crash:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw a0, 0(a0)
@@ -62,9 +62,9 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV64-NEXT:    sb a2, 2(a1)
 ; RV64-NEXT:    sh a0, 0(a1)
 ; RV64-NEXT:    ret
-  %a = load <3 x i8>, <3 x i8>* %in
+  %a = load <3 x i8>, ptr %in
   %cmp = icmp sgt <3 x i8> %a, zeroinitializer
   %c = select <3 x i1> %cmp, <3 x i8> %a, <3 x i8> zeroinitializer
-  store <3 x i8> %c, <3 x i8>* %out
+  store <3 x i8> %c, ptr %out
   ret void
 }

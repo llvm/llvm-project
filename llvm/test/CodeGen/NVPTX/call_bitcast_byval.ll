@@ -20,26 +20,25 @@ target triple = "nvptx64-nvidia-cuda"
 ; CHECK-NEXT: _Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE,
 define weak_odr void @foo() {
 entry:
-  %call.i.i.i = tail call %"class.complex" bitcast (%complex_half ()* @_Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE to %"class.complex" (i32, i32, %"class.complex"*)*)(i32 0, i32 0, %"class.complex"* byval(%"class.complex") null)
+  %call.i.i.i = tail call %"class.complex" @_Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE(i32 0, i32 0, ptr byval(%"class.complex") null)
   ret void
 }
 
 ;; Function pointers can escape, so we have to use a conservative
 ;; alignment for a function that has address taken.
 ;;
-declare i8* @usefp(i8* %fp)
+declare ptr @usefp(ptr %fp)
 ; CHECK: .func callee(
 ; CHECK-NEXT: .param .align 4 .b8 callee_param_0[4]
-define internal void @callee(%"class.complex"* byval(%"class.complex") %byval_arg) {
+define internal void @callee(ptr byval(%"class.complex") %byval_arg) {
   ret void
 }
 define void @boom() {
-  %fp = call i8* @usefp(i8* bitcast (void (%"class.complex"*)* @callee to i8*))
-  %cast = bitcast i8* %fp to void (%"class.complex"*)*
+  %fp = call ptr @usefp(ptr @callee)
   ; CHECK: .param .align 4 .b8 param0[4];
   ; CHECK: st.param.v2.b16 [param0+0]
   ; CHECK: .callprototype ()_ (.param .align 2 .b8 _[4]);
-  call void %cast(%"class.complex"* byval(%"class.complex") null)
+  call void %fp(ptr byval(%"class.complex") null)
   ret void
 }
 

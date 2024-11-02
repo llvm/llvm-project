@@ -374,6 +374,8 @@ int main(int argc, char **argv) {
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
 
+  // Register the Target and CPU printer for --version.
+  cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
@@ -577,7 +579,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
-      Target->setCodeModel(CM_IR.value());
+      Target->setCodeModel(*CM_IR);
   } else {
     TheTriple = Triple(Triple::normalize(TargetTriple));
     if (TheTriple.getTriple().empty())

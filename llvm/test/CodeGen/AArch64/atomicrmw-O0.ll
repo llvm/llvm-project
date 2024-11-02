@@ -4,7 +4,7 @@
 
 ; Ensure there's no stack spill in between ldxr/stxr pairs.
 
-define i8 @test_rmw_add_8(i8* %dst)   {
+define i8 @test_rmw_add_8(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_add_8:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -49,11 +49,11 @@ define i8 @test_rmw_add_8(i8* %dst)   {
 ; LSE-NEXT:    ldaddalb w8, w0, [x0]
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw add i8* %dst, i8 1 seq_cst
+  %res = atomicrmw add ptr %dst, i8 1 seq_cst
   ret i8 %res
 }
 
-define i16 @test_rmw_add_16(i16* %dst)   {
+define i16 @test_rmw_add_16(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_add_16:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -98,11 +98,11 @@ define i16 @test_rmw_add_16(i16* %dst)   {
 ; LSE-NEXT:    ldaddalh w8, w0, [x0]
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw add i16* %dst, i16 1 seq_cst
+  %res = atomicrmw add ptr %dst, i16 1 seq_cst
   ret i16 %res
 }
 
-define i32 @test_rmw_add_32(i32* %dst)   {
+define i32 @test_rmw_add_32(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_add_32:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -147,11 +147,11 @@ define i32 @test_rmw_add_32(i32* %dst)   {
 ; LSE-NEXT:    ldaddal w8, w0, [x0]
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw add i32* %dst, i32 1 seq_cst
+  %res = atomicrmw add ptr %dst, i32 1 seq_cst
   ret i32 %res
 }
 
-define i64 @test_rmw_add_64(i64* %dst)   {
+define i64 @test_rmw_add_64(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_add_64:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -197,11 +197,11 @@ define i64 @test_rmw_add_64(i64* %dst)   {
 ; LSE-NEXT:    ldaddal x8, x0, [x0]
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw add i64* %dst, i64 1 seq_cst
+  %res = atomicrmw add ptr %dst, i64 1 seq_cst
   ret i64 %res
 }
 
-define i128 @test_rmw_add_128(i128* %dst)   {
+define i128 @test_rmw_add_128(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_add_128:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #48
@@ -294,10 +294,10 @@ define i128 @test_rmw_add_128(i128* %dst)   {
 ; LSE-NEXT:    add sp, sp, #48
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw add i128* %dst, i128 1 seq_cst
+  %res = atomicrmw add ptr %dst, i128 1 seq_cst
   ret i128 %res
 }
-define i8 @test_rmw_nand_8(i8* %dst)   {
+define i8 @test_rmw_nand_8(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_nand_8:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -365,11 +365,11 @@ define i8 @test_rmw_nand_8(i8* %dst)   {
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw nand i8* %dst, i8 1 seq_cst
+  %res = atomicrmw nand ptr %dst, i8 1 seq_cst
   ret i8 %res
 }
 
-define i16 @test_rmw_nand_16(i16* %dst)   {
+define i16 @test_rmw_nand_16(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_nand_16:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -437,11 +437,11 @@ define i16 @test_rmw_nand_16(i16* %dst)   {
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw nand i16* %dst, i16 1 seq_cst
+  %res = atomicrmw nand ptr %dst, i16 1 seq_cst
   ret i16 %res
 }
 
-define i32 @test_rmw_nand_32(i32* %dst)   {
+define i32 @test_rmw_nand_32(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_nand_32:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -509,11 +509,11 @@ define i32 @test_rmw_nand_32(i32* %dst)   {
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw nand i32* %dst, i32 1 seq_cst
+  %res = atomicrmw nand ptr %dst, i32 1 seq_cst
   ret i32 %res
 }
 
-define i64 @test_rmw_nand_64(i64* %dst)   {
+define i64 @test_rmw_nand_64(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_nand_64:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -587,11 +587,11 @@ define i64 @test_rmw_nand_64(i64* %dst)   {
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw nand i64* %dst, i64 1 seq_cst
+  %res = atomicrmw nand ptr %dst, i64 1 seq_cst
   ret i64 %res
 }
 
-define i128 @test_rmw_nand_128(i128* %dst)   {
+define i128 @test_rmw_nand_128(ptr %dst)   {
 ; NOLSE-LABEL: test_rmw_nand_128:
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #48
@@ -692,6 +692,6 @@ define i128 @test_rmw_nand_128(i128* %dst)   {
 ; LSE-NEXT:    add sp, sp, #48
 ; LSE-NEXT:    ret
 entry:
-  %res = atomicrmw nand i128* %dst, i128 1 seq_cst
+  %res = atomicrmw nand ptr %dst, i128 1 seq_cst
   ret i128 %res
 }

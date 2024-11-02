@@ -1340,14 +1340,14 @@ SampleProfileLoader::getExternalInlineAdvisorCost(CallBase &CB) {
 
 bool SampleProfileLoader::getExternalInlineAdvisorShouldInline(CallBase &CB) {
   std::optional<InlineCost> Cost = getExternalInlineAdvisorCost(CB);
-  return Cost ? !!Cost.value() : false;
+  return Cost ? !!*Cost : false;
 }
 
 InlineCost
 SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   if (std::optional<InlineCost> ReplayCost =
           getExternalInlineAdvisorCost(*Candidate.CallInstr))
-    return ReplayCost.value();
+    return *ReplayCost;
   // Adjust threshold based on call site hotness, only do this for callsite
   // prioritized inliner because otherwise cost-benefit check is done earlier.
   int SampleThreshold = SampleColdCallSiteThreshold;

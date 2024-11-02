@@ -29,7 +29,7 @@ entry:
   ret [1 x i64] %.fca.0.insert
 }
 
-define void @test_whole32(i32* %existing, i32* %new) {
+define void @test_whole32(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_whole32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -37,20 +37,20 @@ define void @test_whole32(i32* %existing, i32* %new) {
 ; CHECK-NEXT:    bfi w8, w9, #26, #5
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i32, i32* %existing
+  %oldval = load volatile i32, ptr %existing
   %oldval_keep = and i32 %oldval, 2214592511 ; =0x83ffffff
 
-  %newval = load volatile i32, i32* %new
+  %newval = load volatile i32, ptr %new
   %newval_shifted = shl i32 %newval, 26
   %newval_masked = and i32 %newval_shifted, 2080374784 ; = 0x7c000000
 
   %combined = or i32 %oldval_keep, %newval_masked
-  store volatile i32 %combined, i32* %existing
+  store volatile i32 %combined, ptr %existing
 
   ret void
 }
 
-define void @test_whole64(i64* %existing, i64* %new) {
+define void @test_whole64(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_whole64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
@@ -58,20 +58,20 @@ define void @test_whole64(i64* %existing, i64* %new) {
 ; CHECK-NEXT:    bfi x8, x9, #26, #14
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i64, i64* %existing
+  %oldval = load volatile i64, ptr %existing
   %oldval_keep = and i64 %oldval, 18446742974265032703 ; = 0xffffff0003ffffffL
 
-  %newval = load volatile i64, i64* %new
+  %newval = load volatile i64, ptr %new
   %newval_shifted = shl i64 %newval, 26
   %newval_masked = and i64 %newval_shifted, 1099444518912 ; = 0xfffc000000
 
   %combined = or i64 %oldval_keep, %newval_masked
-  store volatile i64 %combined, i64* %existing
+  store volatile i64 %combined, ptr %existing
 
   ret void
 }
 
-define void @test_whole32_from64(i64* %existing, i64* %new) {
+define void @test_whole32_from64(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_whole32_from64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
@@ -80,19 +80,19 @@ define void @test_whole32_from64(i64* %existing, i64* %new) {
 ; CHECK-NEXT:    bfxil x8, x9, #0, #16
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i64, i64* %existing
+  %oldval = load volatile i64, ptr %existing
   %oldval_keep = and i64 %oldval, 4294901760 ; = 0xffff0000
 
-  %newval = load volatile i64, i64* %new
+  %newval = load volatile i64, ptr %new
   %newval_masked = and i64 %newval, 65535 ; = 0xffff
 
   %combined = or i64 %oldval_keep, %newval_masked
-  store volatile i64 %combined, i64* %existing
+  store volatile i64 %combined, ptr %existing
 
   ret void
 }
 
-define void @test_32bit_masked(i32 *%existing, i32 *%new) {
+define void @test_32bit_masked(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_masked:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -102,20 +102,20 @@ define void @test_32bit_masked(i32 *%existing, i32 *%new) {
 ; CHECK-NEXT:    bfi w8, w9, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i32, i32* %existing
+  %oldval = load volatile i32, ptr %existing
   %oldval_keep = and i32 %oldval, 135 ; = 0x87
 
-  %newval = load volatile i32, i32* %new
+  %newval = load volatile i32, ptr %new
   %newval_shifted = shl i32 %newval, 3
   %newval_masked = and i32 %newval_shifted, 120 ; = 0x78
 
   %combined = or i32 %oldval_keep, %newval_masked
-  store volatile i32 %combined, i32* %existing
+  store volatile i32 %combined, ptr %existing
 
   ret void
 }
 
-define void @test_64bit_masked(i64 *%existing, i64 *%new) {
+define void @test_64bit_masked(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_64bit_masked:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
@@ -124,21 +124,21 @@ define void @test_64bit_masked(i64 *%existing, i64 *%new) {
 ; CHECK-NEXT:    bfi x8, x9, #40, #8
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i64, i64* %existing
+  %oldval = load volatile i64, ptr %existing
   %oldval_keep = and i64 %oldval, 1095216660480 ; = 0xff_0000_0000
 
-  %newval = load volatile i64, i64* %new
+  %newval = load volatile i64, ptr %new
   %newval_shifted = shl i64 %newval, 40
   %newval_masked = and i64 %newval_shifted, 280375465082880 ; = 0xff00_0000_0000
 
   %combined = or i64 %newval_masked, %oldval_keep
-  store volatile i64 %combined, i64* %existing
+  store volatile i64 %combined, ptr %existing
 
   ret void
 }
 
 ; Mask is too complicated for literal ANDwwi, make sure other avenues are tried.
-define void @test_32bit_complexmask(i32 *%existing, i32 *%new) {
+define void @test_32bit_complexmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_complexmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -148,21 +148,21 @@ define void @test_32bit_complexmask(i32 *%existing, i32 *%new) {
 ; CHECK-NEXT:    bfi w8, w9, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i32, i32* %existing
+  %oldval = load volatile i32, ptr %existing
   %oldval_keep = and i32 %oldval, 647 ; = 0x287
 
-  %newval = load volatile i32, i32* %new
+  %newval = load volatile i32, ptr %new
   %newval_shifted = shl i32 %newval, 3
   %newval_masked = and i32 %newval_shifted, 120 ; = 0x278
 
   %combined = or i32 %oldval_keep, %newval_masked
-  store volatile i32 %combined, i32* %existing
+  store volatile i32 %combined, ptr %existing
 
   ret void
 }
 
 ; Neither mask is a contiguous set of 1s. BFI can't be used
-define void @test_32bit_badmask(i32 *%existing, i32 *%new) {
+define void @test_32bit_badmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_badmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -174,21 +174,21 @@ define void @test_32bit_badmask(i32 *%existing, i32 *%new) {
 ; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i32, i32* %existing
+  %oldval = load volatile i32, ptr %existing
   %oldval_keep = and i32 %oldval, 135 ; = 0x87
 
-  %newval = load volatile i32, i32* %new
+  %newval = load volatile i32, ptr %new
   %newval_shifted = shl i32 %newval, 3
   %newval_masked = and i32 %newval_shifted, 632 ; = 0x278
 
   %combined = or i32 %oldval_keep, %newval_masked
-  store volatile i32 %combined, i32* %existing
+  store volatile i32 %combined, ptr %existing
 
   ret void
 }
 
 ; Ditto
-define void @test_64bit_badmask(i64 *%existing, i64 *%new) {
+define void @test_64bit_badmask(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_64bit_badmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x9, [x0]
@@ -201,22 +201,22 @@ define void @test_64bit_badmask(i64 *%existing, i64 *%new) {
 ; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i64, i64* %existing
+  %oldval = load volatile i64, ptr %existing
   %oldval_keep = and i64 %oldval, 135 ; = 0x87
 
-  %newval = load volatile i64, i64* %new
+  %newval = load volatile i64, ptr %new
   %newval_shifted = shl i64 %newval, 3
   %newval_masked = and i64 %newval_shifted, 664 ; = 0x278
 
   %combined = or i64 %oldval_keep, %newval_masked
-  store volatile i64 %combined, i64* %existing
+  store volatile i64 %combined, ptr %existing
 
   ret void
 }
 
 ; Bitfield insert where there's a left-over shr needed at the beginning
 ; (e.g. result of str.bf1 = str.bf2)
-define void @test_32bit_with_shr(i32* %existing, i32* %new) {
+define void @test_32bit_with_shr(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_with_shr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -225,21 +225,21 @@ define void @test_32bit_with_shr(i32* %existing, i32* %new) {
 ; CHECK-NEXT:    bfi w8, w9, #26, #5
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i32, i32* %existing
+  %oldval = load volatile i32, ptr %existing
   %oldval_keep = and i32 %oldval, 2214592511 ; =0x83ffffff
 
-  %newval = load i32, i32* %new
+  %newval = load i32, ptr %new
   %newval_shifted = shl i32 %newval, 12
   %newval_masked = and i32 %newval_shifted, 2080374784 ; = 0x7c000000
 
   %combined = or i32 %oldval_keep, %newval_masked
-  store volatile i32 %combined, i32* %existing
+  store volatile i32 %combined, ptr %existing
 
   ret void
 }
 
 ; Bitfield insert where the second or operand is a better match to be folded into the BFM
-define void @test_32bit_opnd1_better(i32* %existing, i32* %new) {
+define void @test_32bit_opnd1_better(ptr %existing, ptr %new) {
 ; CHECK-LABEL: test_32bit_opnd1_better:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -248,15 +248,15 @@ define void @test_32bit_opnd1_better(i32* %existing, i32* %new) {
 ; CHECK-NEXT:    bfi w8, w9, #16, #8
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
-  %oldval = load volatile i32, i32* %existing
+  %oldval = load volatile i32, ptr %existing
   %oldval_keep = and i32 %oldval, 65535 ; 0x0000ffff
 
-  %newval = load i32, i32* %new
+  %newval = load i32, ptr %new
   %newval_shifted = shl i32 %newval, 16
   %newval_masked = and i32 %newval_shifted, 16711680 ; 0x00ff0000
 
   %combined = or i32 %oldval_keep, %newval_masked
-  store volatile i32 %combined, i32* %existing
+  store volatile i32 %combined, ptr %existing
 
   ret void
 }
@@ -284,7 +284,7 @@ define i32 @test_nouseful_bits(i8 %a, i32 %b) {
   ret i32 %shl.4
 }
 
-define void @test_nouseful_strb(i32* %ptr32, i8* %ptr8, i32 %x)  {
+define void @test_nouseful_strb(ptr %ptr32, ptr %ptr8, i32 %x)  {
 ; CHECK-LABEL: test_nouseful_strb:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -292,17 +292,17 @@ define void @test_nouseful_strb(i32* %ptr32, i8* %ptr8, i32 %x)  {
 ; CHECK-NEXT:    strb w8, [x1]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* %ptr32, align 8
+  %0 = load i32, ptr %ptr32, align 8
   %and = and i32 %0, -8
   %shr = lshr i32 %x, 16
   %and1 = and i32 %shr, 7
   %or = or i32 %and, %and1
   %trunc = trunc i32 %or to i8
-  store i8 %trunc, i8* %ptr8
+  store i8 %trunc, ptr %ptr8
   ret void
 }
 
-define void @test_nouseful_strh(i32* %ptr32, i16* %ptr16, i32 %x)  {
+define void @test_nouseful_strh(ptr %ptr32, ptr %ptr16, i32 %x)  {
 ; CHECK-LABEL: test_nouseful_strh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -310,17 +310,17 @@ define void @test_nouseful_strh(i32* %ptr32, i16* %ptr16, i32 %x)  {
 ; CHECK-NEXT:    strh w8, [x1]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* %ptr32, align 8
+  %0 = load i32, ptr %ptr32, align 8
   %and = and i32 %0, -16
   %shr = lshr i32 %x, 16
   %and1 = and i32 %shr, 15
   %or = or i32 %and, %and1
   %trunc = trunc i32 %or to i16
-  store i16 %trunc, i16* %ptr16
+  store i16 %trunc, ptr %ptr16
   ret void
 }
 
-define void @test_nouseful_sturb(i32* %ptr32, i8* %ptr8, i32 %x)  {
+define void @test_nouseful_sturb(ptr %ptr32, ptr %ptr8, i32 %x)  {
 ; CHECK-LABEL: test_nouseful_sturb:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -328,18 +328,18 @@ define void @test_nouseful_sturb(i32* %ptr32, i8* %ptr8, i32 %x)  {
 ; CHECK-NEXT:    sturb w8, [x1, #-1]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* %ptr32, align 8
+  %0 = load i32, ptr %ptr32, align 8
   %and = and i32 %0, -8
   %shr = lshr i32 %x, 16
   %and1 = and i32 %shr, 7
   %or = or i32 %and, %and1
   %trunc = trunc i32 %or to i8
-  %gep = getelementptr i8, i8* %ptr8, i64 -1
-  store i8 %trunc, i8* %gep
+  %gep = getelementptr i8, ptr %ptr8, i64 -1
+  store i8 %trunc, ptr %gep
   ret void
 }
 
-define void @test_nouseful_sturh(i32* %ptr32, i16* %ptr16, i32 %x)  {
+define void @test_nouseful_sturh(ptr %ptr32, ptr %ptr16, i32 %x)  {
 ; CHECK-LABEL: test_nouseful_sturh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -347,14 +347,14 @@ define void @test_nouseful_sturh(i32* %ptr32, i16* %ptr16, i32 %x)  {
 ; CHECK-NEXT:    sturh w8, [x1, #-2]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* %ptr32, align 8
+  %0 = load i32, ptr %ptr32, align 8
   %and = and i32 %0, -16
   %shr = lshr i32 %x, 16
   %and1 = and i32 %shr, 15
   %or = or i32 %and, %and1
   %trunc = trunc i32 %or to i16
-  %gep = getelementptr i16, i16* %ptr16, i64 -1
-  store i16 %trunc, i16* %gep
+  %gep = getelementptr i16, ptr %ptr16, i64 -1
+  store i16 %trunc, ptr %gep
   ret void
 }
 
@@ -403,7 +403,7 @@ entry:
 }
 
 ; Don't convert 'and' with multiple uses.
-define i32 @test_or_and_and4(i32 %a, i32 %b, i32* %ptr) {
+define i32 @test_or_and_and4(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_or_and_and4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0xffff000f
@@ -413,14 +413,14 @@ define i32 @test_or_and_and4(i32 %a, i32 %b, i32* %ptr) {
 ; CHECK-NEXT:    ret
 entry:
   %and = and i32 %a, -65521
-  store i32 %and, i32* %ptr, align 4
+  store i32 %and, ptr %ptr, align 4
   %and2 = and i32 %b, 65520
   %or = or i32 %and2, %and
   ret i32 %or
 }
 
 ; Don't convert 'and' with multiple uses.
-define i32 @test_or_and_and5(i32 %a, i32 %b, i32* %ptr) {
+define i32 @test_or_and_and5(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_or_and_and5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w1, #0xfff0
@@ -430,7 +430,7 @@ define i32 @test_or_and_and5(i32 %a, i32 %b, i32* %ptr) {
 ; CHECK-NEXT:    ret
 entry:
   %and = and i32 %b, 65520
-  store i32 %and, i32* %ptr, align 4
+  store i32 %and, ptr %ptr, align 4
   %and1 = and i32 %a, -65521
   %or = or i32 %and, %and1
   ret i32 %or
@@ -557,21 +557,21 @@ define i32 @test9(i64 %b, i32 %e) {
   ret i32 %h
 }
 
-define <2 x i32> @test_complex_type(<2 x i32>* %addr, i64 %in, i64* %bf ) {
+define <2 x i32> @test_complex_type(ptr %addr, i64 %in, ptr %bf ) {
 ; CHECK-LABEL: test_complex_type:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0], #8
 ; CHECK-NEXT:    orr x8, x0, x1, lsl #32
 ; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    ret
-  %vec = load <2 x i32>, <2 x i32>* %addr
+  %vec = load <2 x i32>, ptr %addr
 
-  %vec.next = getelementptr <2 x i32>, <2 x i32>* %addr, i32 1
-  %lo = ptrtoint <2 x i32>* %vec.next to i64
+  %vec.next = getelementptr <2 x i32>, ptr %addr, i32 1
+  %lo = ptrtoint ptr %vec.next to i64
 
   %hi = shl i64 %in, 32
   %both = or i64 %lo, %hi
-  store i64 %both, i64* %bf
+  store i64 %both, ptr %bf
 
   ret <2 x i32> %vec
 }

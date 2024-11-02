@@ -7,9 +7,9 @@
 ; CHECK-LABEL: fred:
 ; CHECK: v[[V0:[0-9]+]].h = vpacke(v1.w,v0.w)
 ; CHECK:                  = vpacke({{.*}},v[[V0]].h)
-define void @fred(<32 x i8>* %a0, <32 x i32> %a1) #0 {
+define void @fred(ptr %a0, <32 x i32> %a1) #0 {
   %v0 = trunc <32 x i32> %a1 to <32 x i8>
-  store <32 x i8> %v0, <32 x i8>* %a0, align 32
+  store <32 x i8> %v0, ptr %a0, align 32
   ret void
 }
 

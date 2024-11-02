@@ -12,14 +12,14 @@
 @k0.lds = addrspace(3) global i8 undef
 define amdgpu_kernel void @k0() {
 ; CHECK-LABEL: @k0(
-; CHECK-NEXT:    [[LD:%.*]] = load i8, i8 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0), align 1
+; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds, align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 2
-; CHECK-NEXT:    store i8 [[MUL]], i8 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_LDS_T]], [[LLVM_AMDGCN_KERNEL_K0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0), align 1
+; CHECK-NEXT:    store i8 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds, align 1
 ; CHECK-NEXT:    ret void
 ;
-  %ld = load i8, i8 addrspace(3)* @k0.lds
+  %ld = load i8, ptr addrspace(3) @k0.lds
   %mul = mul i8 %ld, 2
-  store i8 %mul, i8  addrspace(3)* @k0.lds
+  store i8 %mul, ptr  addrspace(3) @k0.lds
   ret void
 }
 
@@ -28,44 +28,44 @@ define amdgpu_kernel void @k0() {
 @f0.lds = addrspace(3) global i16 undef
 define void @f0() {
 ; MODULE-LABEL: @f0(
-; MODULE-NEXT:    [[LD:%.*]] = load i16, i16 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope !0, !noalias !3
+; MODULE-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope !0, !noalias !3
 ; MODULE-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 3
-; MODULE-NEXT:    store i16 [[MUL]], i16 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope !0, !noalias !3
+; MODULE-NEXT:    store i16 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope !0, !noalias !3
 ; MODULE-NEXT:    ret void
 ;
 ; TABLE-LABEL: @f0(
 ; TABLE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; TABLE-NEXT:    [[F0_LDS2:%.*]] = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]] addrspace(4)* @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
-; TABLE-NEXT:    [[TMP2:%.*]] = load i32, i32 addrspace(4)* [[F0_LDS2]], align 4
-; TABLE-NEXT:    [[F0_LDS3:%.*]] = inttoptr i32 [[TMP2]] to i16 addrspace(3)*
-; TABLE-NEXT:    [[LD:%.*]] = load i16, i16 addrspace(3)* [[F0_LDS3]], align 2
+; TABLE-NEXT:    [[F0_LDS2:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
+; TABLE-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[F0_LDS2]], align 4
+; TABLE-NEXT:    [[F0_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; TABLE-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[F0_LDS3]], align 2
 ; TABLE-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 3
-; TABLE-NEXT:    [[F0_LDS:%.*]] = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]] addrspace(4)* @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
-; TABLE-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[F0_LDS]], align 4
-; TABLE-NEXT:    [[F0_LDS1:%.*]] = inttoptr i32 [[TMP3]] to i16 addrspace(3)*
-; TABLE-NEXT:    store i16 [[MUL]], i16 addrspace(3)* [[F0_LDS1]], align 2
+; TABLE-NEXT:    [[F0_LDS:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
+; TABLE-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[F0_LDS]], align 4
+; TABLE-NEXT:    [[F0_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; TABLE-NEXT:    store i16 [[MUL]], ptr addrspace(3) [[F0_LDS1]], align 2
 ; TABLE-NEXT:    ret void
 ;
 ; K_OR_HY-LABEL: @f0(
-; K_OR_HY-NEXT:    [[LD:%.*]] = load i16, i16 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K_F0_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K_F0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k_f0.lds, i32 0, i32 0), align 2
+; K_OR_HY-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) @llvm.amdgcn.kernel.k_f0.lds, align 2
 ; K_OR_HY-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 3
-; K_OR_HY-NEXT:    store i16 [[MUL]], i16 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K_F0_LDS_T]], [[LLVM_AMDGCN_KERNEL_K_F0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k_f0.lds, i32 0, i32 0), align 2
+; K_OR_HY-NEXT:    store i16 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.k_f0.lds, align 2
 ; K_OR_HY-NEXT:    ret void
 ;
-  %ld = load i16, i16 addrspace(3)* @f0.lds
+  %ld = load i16, ptr addrspace(3) @f0.lds
   %mul = mul i16 %ld, 3
-  store i16 %mul, i16  addrspace(3)* @f0.lds
+  store i16 %mul, ptr  addrspace(3) @f0.lds
   ret void
 }
 
 define amdgpu_kernel void @k_f0() {
 ; MODULE-LABEL: @k_f0(
-; MODULE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_MODULE_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.module.lds) ]
+; MODULE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; MODULE-NEXT:    call void @f0()
 ; MODULE-NEXT:    ret void
 ;
 ; TABLE-LABEL: @k_f0(
-; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_KERNEL_K_F0_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.kernel.k_f0.lds) ]
+; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k_f0.lds) ]
 ; TABLE-NEXT:    call void @f0()
 ; TABLE-NEXT:    ret void
 ;
@@ -82,63 +82,63 @@ define amdgpu_kernel void @k_f0() {
 @both.lds = addrspace(3) global i32 undef
 define void @f_both() {
 ; MODULE-LABEL: @f_both(
-; MODULE-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), align 4, !alias.scope !4, !noalias !3
+; MODULE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope !4, !noalias !3
 ; MODULE-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 4
-; MODULE-NEXT:    store i32 [[MUL]], i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), align 4, !alias.scope !4, !noalias !3
+; MODULE-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope !4, !noalias !3
 ; MODULE-NEXT:    ret void
 ;
 ; TABLE-LABEL: @f_both(
 ; TABLE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; TABLE-NEXT:    [[BOTH_LDS2:%.*]] = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]] addrspace(4)* @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP2:%.*]] = load i32, i32 addrspace(4)* [[BOTH_LDS2]], align 4
-; TABLE-NEXT:    [[BOTH_LDS3:%.*]] = inttoptr i32 [[TMP2]] to i32 addrspace(3)*
-; TABLE-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(3)* [[BOTH_LDS3]], align 4
+; TABLE-NEXT:    [[BOTH_LDS2:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[BOTH_LDS2]], align 4
+; TABLE-NEXT:    [[BOTH_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; TABLE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) [[BOTH_LDS3]], align 4
 ; TABLE-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 4
-; TABLE-NEXT:    [[BOTH_LDS:%.*]] = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]] addrspace(4)* @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[BOTH_LDS]], align 4
-; TABLE-NEXT:    [[BOTH_LDS1:%.*]] = inttoptr i32 [[TMP3]] to i32 addrspace(3)*
-; TABLE-NEXT:    store i32 [[MUL]], i32 addrspace(3)* [[BOTH_LDS1]], align 4
+; TABLE-NEXT:    [[BOTH_LDS:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[BOTH_LDS]], align 4
+; TABLE-NEXT:    [[BOTH_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; TABLE-NEXT:    store i32 [[MUL]], ptr addrspace(3) [[BOTH_LDS1]], align 4
 ; TABLE-NEXT:    ret void
 ;
 ; K_OR_HY-LABEL: @f_both(
-; K_OR_HY-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0_both.lds, i32 0, i32 0), align 4
+; K_OR_HY-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.kernel.k0_both.lds, align 4
 ; K_OR_HY-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 4
-; K_OR_HY-NEXT:    store i32 [[MUL]], i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]], [[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0_both.lds, i32 0, i32 0), align 4
+; K_OR_HY-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.k0_both.lds, align 4
 ; K_OR_HY-NEXT:    ret void
 ;
-  %ld = load i32, i32 addrspace(3)* @both.lds
+  %ld = load i32, ptr addrspace(3) @both.lds
   %mul = mul i32 %ld, 4
-  store i32 %mul, i32  addrspace(3)* @both.lds
+  store i32 %mul, ptr  addrspace(3) @both.lds
   ret void
 }
 
 define amdgpu_kernel void @k0_both() {
 ; MODULE-LABEL: @k0_both(
-; MODULE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_MODULE_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.module.lds) ]
-; MODULE-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), align 4, !alias.scope !4, !noalias !0
+; MODULE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
+; MODULE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope !4, !noalias !0
 ; MODULE-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 5
-; MODULE-NEXT:    store i32 [[MUL]], i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), align 4, !alias.scope !4, !noalias !0
+; MODULE-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope !4, !noalias !0
 ; MODULE-NEXT:    call void @f_both()
 ; MODULE-NEXT:    ret void
 ;
 ; TABLE-LABEL: @k0_both(
-; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.kernel.k0_both.lds) ]
-; TABLE-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]], [[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0_both.lds, i32 0, i32 0), align 4
+; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k0_both.lds) ]
+; TABLE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.kernel.k0_both.lds, align 4
 ; TABLE-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 5
-; TABLE-NEXT:    store i32 [[MUL]], i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]], [[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0_both.lds, i32 0, i32 0), align 4
+; TABLE-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.k0_both.lds, align 4
 ; TABLE-NEXT:    call void @f_both()
 ; TABLE-NEXT:    ret void
 ;
 ; K_OR_HY-LABEL: @k0_both(
-; K_OR_HY-NEXT:    [[LD:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0_both.lds, i32 0, i32 0), align 4
+; K_OR_HY-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.kernel.k0_both.lds, align 4
 ; K_OR_HY-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 5
-; K_OR_HY-NEXT:    store i32 [[MUL]], i32 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]], [[LLVM_AMDGCN_KERNEL_K0_BOTH_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0_both.lds, i32 0, i32 0), align 4
+; K_OR_HY-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.k0_both.lds, align 4
 ; K_OR_HY-NEXT:    call void @f_both()
 ; K_OR_HY-NEXT:    ret void
 ;
-  %ld = load i32, i32 addrspace(3)* @both.lds
+  %ld = load i32, ptr addrspace(3) @both.lds
   %mul = mul i32 %ld, 5
-  store i32 %mul, i32  addrspace(3)* @both.lds
+  store i32 %mul, ptr  addrspace(3) @both.lds
   call void @f_both()
   ret void
 }

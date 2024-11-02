@@ -32,27 +32,27 @@ Deallocate(rp)
 
 Allocate(x(3))
 
-!ERROR: component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+!ERROR: Component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
 Deallocate(x(2)%p)
 
-!ERROR: name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+!ERROR: Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
 Deallocate(pi)
 
-!ERROR: component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
-!ERROR: name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+!ERROR: Component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+!ERROR: Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
 Deallocate(x(2)%p, pi)
 
-!ERROR: name in DEALLOCATE statement must be a variable name
+!ERROR: Name in DEALLOCATE statement must be a variable name
 Deallocate(prp)
 
-!ERROR: name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
-!ERROR: name in DEALLOCATE statement must be a variable name
+!ERROR: Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+!ERROR: Name in DEALLOCATE statement must be a variable name
 Deallocate(pi, prp)
 
-!ERROR: name in DEALLOCATE statement must be a variable name
+!ERROR: Name in DEALLOCATE statement must be a variable name
 Deallocate(maxvalue)
 
-!ERROR: component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+!ERROR: Component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
 Deallocate(x%p)
 
 !ERROR: STAT may not be duplicated in a DEALLOCATE statement

@@ -16,10 +16,10 @@
 ; GCN-LABEL: @sadd64rr
 ; GCN:       s_add_u32
 ; GCN:       s_addc_u32
-define amdgpu_kernel void @sadd64rr(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @sadd64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 entry:
   %add = add i64 %a, %b
-  store i64 %add, i64 addrspace(1)* %out
+  store i64 %add, ptr addrspace(1) %out
   ret void
 }
 
@@ -31,10 +31,10 @@ entry:
 ; GCN-LABEL: @sadd64ri
 ; GCN:       s_add_u32  s{{[0-9]+}}, s{{[0-9]+}}, 0x56789876
 ; GCN:       s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x1234
-define amdgpu_kernel void @sadd64ri(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @sadd64ri(ptr addrspace(1) %out, i64 %a) {
 entry:
   %add = add i64 20015998343286, %a
-  store i64 %add, i64 addrspace(1)* %out
+  store i64 %add, ptr addrspace(1) %out
   ret void
 }
 
@@ -61,12 +61,12 @@ entry:
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
-define amdgpu_kernel void @vadd64rr(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @vadd64rr(ptr addrspace(1) %out, i64 %a) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %add = add i64 %a, %tid.ext
-  store i64 %add, i64 addrspace(1)* %out
+  store i64 %add, ptr addrspace(1) %out
   ret void
 }
 
@@ -96,12 +96,12 @@ entry:
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
 ; GFX11: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, 0, 0x1234, [[CARRY]]
-define amdgpu_kernel void @vadd64ri(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @vadd64ri(ptr addrspace(1) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %add = add i64 20015998343286, %tid.ext
-  store i64 %add, i64 addrspace(1)* %out
+  store i64 %add, ptr addrspace(1) %out
   ret void
 }
 
@@ -109,11 +109,11 @@ entry:
 ; GCN-ISEL-LABEL: body:
 ; GCN-ISEL-LABEL: bb.0
 ; GCN-ISEL: S_ADD_I32
-define amdgpu_kernel void @suaddo32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @suaddo32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) #0 {
   %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %uadd, 0
   %carry = extractvalue { i32, i1 } %uadd, 1
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -144,12 +144,12 @@ define amdgpu_kernel void @suaddo32(i32 addrspace(1)* %out, i1 addrspace(1)* %ca
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX11: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
-define amdgpu_kernel void @uaddo32_vcc_user(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @uaddo32_vcc_user(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) #0 {
   %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %uadd, 0
   %carry = extractvalue { i32, i1 } %uadd, 1
-  store i32 %val, i32 addrspace(1)* %out, align 4
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
@@ -162,12 +162,12 @@ define amdgpu_kernel void @uaddo32_vcc_user(i32 addrspace(1)* %out, i1 addrspace
 ;
 ; GCN: s_add_u32
 ; GCN: s_addc_u32
-define amdgpu_kernel void @suaddo64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 %a, i64 %b) #0 {
+define amdgpu_kernel void @suaddo64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i64 %a, i64 %b) #0 {
   %uadd = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %uadd, 0
   %carry = extractvalue { i64, i1 } %uadd, 1
-  store i64 %val, i64 addrspace(1)* %out, align 8
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i64 %val, ptr addrspace(1) %out, align 8
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
@@ -194,14 +194,14 @@ define amdgpu_kernel void @suaddo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
 ; GFX11: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
-define amdgpu_kernel void @vuaddo64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 %a) #0 {
+define amdgpu_kernel void @vuaddo64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i64 %a) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %uadd = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %tid.ext)
   %val = extractvalue { i64, i1 } %uadd, 0
   %carry = extractvalue { i64, i1 } %uadd, 1
-  store i64 %val, i64 addrspace(1)* %out, align 8
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i64 %val, ptr addrspace(1) %out, align 8
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
@@ -213,10 +213,10 @@ define amdgpu_kernel void @vuaddo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; GCN-LABEL: @ssub64rr
 ; GCN:       s_sub_u32
 ; GCN:       s_subb_u32
-define amdgpu_kernel void @ssub64rr(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @ssub64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 entry:
   %sub = sub i64 %a, %b
-  store i64 %sub, i64 addrspace(1)* %out
+  store i64 %sub, ptr addrspace(1) %out
   ret void
 }
 
@@ -228,10 +228,10 @@ entry:
 ; GCN-LABEL: @ssub64ri
 ; GCN:       s_sub_u32  s{{[0-9]+}}, 0x56789876, s{{[0-9]+}}
 ; GCN:       s_subb_u32 s{{[0-9]+}}, 0x1234, s{{[0-9]+}}
-define amdgpu_kernel void @ssub64ri(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @ssub64ri(ptr addrspace(1) %out, i64 %a) {
 entry:
   %sub = sub i64 20015998343286, %a
-  store i64 %sub, i64 addrspace(1)* %out
+  store i64 %sub, ptr addrspace(1) %out
   ret void
 }
 
@@ -258,12 +258,12 @@ entry:
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
-define amdgpu_kernel void @vsub64rr(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @vsub64rr(ptr addrspace(1) %out, i64 %a) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %sub = sub i64 %a, %tid.ext
-  store i64 %sub, i64 addrspace(1)* %out
+  store i64 %sub, ptr addrspace(1) %out
   ret void
 }
 
@@ -293,12 +293,12 @@ entry:
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
 ; GFX11: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, 0x1234, 0, [[CARRY]]
-define amdgpu_kernel void @vsub64ri(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @vsub64ri(ptr addrspace(1) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %sub = sub i64 20015998343286, %tid.ext
-  store i64 %sub, i64 addrspace(1)* %out
+  store i64 %sub, ptr addrspace(1) %out
   ret void
 }
 
@@ -306,11 +306,11 @@ entry:
 ; GCN-ISEL-LABEL: body:
 ; GCN-ISEL-LABEL: bb.0
 ; GCN-ISEL: S_SUB_I32
-define amdgpu_kernel void @susubo32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @susubo32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) #0 {
   %usub = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %usub, 0
   %carry = extractvalue { i32, i1 } %usub, 1
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -341,12 +341,12 @@ define amdgpu_kernel void @susubo32(i32 addrspace(1)* %out, i1 addrspace(1)* %ca
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX11: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
-define amdgpu_kernel void @usubo32_vcc_user(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @usubo32_vcc_user(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) #0 {
   %usub = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue { i32, i1 } %usub, 0
   %carry = extractvalue { i32, i1 } %usub, 1
-  store i32 %val, i32 addrspace(1)* %out, align 4
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
@@ -359,12 +359,12 @@ define amdgpu_kernel void @usubo32_vcc_user(i32 addrspace(1)* %out, i1 addrspace
 ;
 ; GCN: s_sub_u32
 ; GCN: s_subb_u32
-define amdgpu_kernel void @susubo64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 %a, i64 %b) #0 {
+define amdgpu_kernel void @susubo64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i64 %a, i64 %b) #0 {
   %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %usub, 0
   %carry = extractvalue { i64, i1 } %usub, 1
-  store i64 %val, i64 addrspace(1)* %out, align 8
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i64 %val, ptr addrspace(1) %out, align 8
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
@@ -391,14 +391,14 @@ define amdgpu_kernel void @susubo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
 ; GFX11: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
-define amdgpu_kernel void @vusubo64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 %a) #0 {
+define amdgpu_kernel void @vusubo64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i64 %a) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %usub = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %tid.ext)
   %val = extractvalue { i64, i1 } %usub, 0
   %carry = extractvalue { i64, i1 } %usub, 1
-  store i64 %val, i64 addrspace(1)* %out, align 8
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i64 %val, ptr addrspace(1) %out, align 8
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
@@ -409,9 +409,9 @@ define amdgpu_kernel void @vusubo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; GCN-ISEL: S_ADD_CO_PSEUDO %{{[0-9]+}}, killed %{{[0-9]+}}, killed %[[CARRY]]
 ; GCN-ISEL: %[[CARRY:[0-9]+]]:sreg_64_xexec = V_SUB_CO_U32_e64
 ; GCN-ISEL: S_SUB_CO_PSEUDO killed %{{[0-9]+}}, %{{[0-9]+}}, %[[CARRY]]
-define amdgpu_kernel void @sudiv64(i64 addrspace(1)* %out, i64 %x, i64 %y) {
+define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
   %result = udiv i64 %x, %y
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 

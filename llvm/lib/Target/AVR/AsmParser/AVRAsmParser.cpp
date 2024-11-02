@@ -55,8 +55,9 @@ class AVRAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -600,7 +601,7 @@ OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-bool AVRAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool AVRAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
   RegNo = parseRegister(/*RestoreOnFailure=*/false);
@@ -609,7 +610,7 @@ bool AVRAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   return (RegNo == AVR::NoRegister);
 }
 
-OperandMatchResultTy AVRAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy AVRAsmParser::tryParseRegister(MCRegister &RegNo,
                                                     SMLoc &StartLoc,
                                                     SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();

@@ -118,7 +118,7 @@ void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns,
 /// VectorToSCF, which reduces the rank of vector transfer ops.
 void populateVectorTransferLoweringPatterns(
     RewritePatternSet &patterns,
-    llvm::Optional<unsigned> maxTransferRank = std::nullopt,
+    std::optional<unsigned> maxTransferRank = std::nullopt,
     PatternBenefit benefit = 1);
 
 /// These patterns materialize masks for various vector ops such as transfers.
@@ -141,6 +141,11 @@ void populateVectorMaskOpLoweringPatterns(RewritePatternSet &patterns,
 /// ops.
 void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns,
                                              PatternBenefit benefit = 1);
+
+/// Collects patterns that lower scalar vector transfer ops to memref loads and
+/// stores when beneficial.
+void populateScalarVectorTransferLoweringPatterns(RewritePatternSet &patterns,
+                                                  PatternBenefit benefit = 1);
 
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);

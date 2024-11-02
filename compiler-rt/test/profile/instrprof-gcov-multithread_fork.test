@@ -1,4 +1,4 @@
-UNSUPPORTED: windows
+UNSUPPORTED: target={{.*windows.*}}
 
 RUN: mkdir -p %t.d
 RUN: cd %t.d

@@ -731,7 +731,7 @@ define i32 @fcvt_wu_h(half %a) nounwind {
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
-define i32 @fcvt_wu_h_multiple_use(half %x, i32* %y) nounwind {
+define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) nounwind {
 ; CHECKIZFH-LABEL: fcvt_wu_h_multiple_use:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
@@ -1890,7 +1890,7 @@ define half @fcvt_h_w(i32 %a) nounwind {
   ret half %1
 }
 
-define half @fcvt_h_w_load(i32* %p) nounwind {
+define half @fcvt_h_w_load(ptr %p) nounwind {
 ; CHECKIZFH-LABEL: fcvt_h_w_load:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    lw a0, 0(a0)
@@ -1944,7 +1944,7 @@ define half @fcvt_h_w_load(i32* %p) nounwind {
 ; CHECK64-IZFHMIN-NEXT:    fcvt.s.l ft0, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
 ; CHECK64-IZFHMIN-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %1 = sitofp i32 %a to half
   ret half %1
 }
@@ -2003,7 +2003,7 @@ define half @fcvt_h_wu(i32 %a) nounwind {
   ret half %1
 }
 
-define half @fcvt_h_wu_load(i32* %p) nounwind {
+define half @fcvt_h_wu_load(ptr %p) nounwind {
 ; RV32IZFH-LABEL: fcvt_h_wu_load:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    lw a0, 0(a0)
@@ -2063,7 +2063,7 @@ define half @fcvt_h_wu_load(i32* %p) nounwind {
 ; CHECK64-IZFHMIN-NEXT:    fcvt.s.lu ft0, a0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
 ; CHECK64-IZFHMIN-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %1 = uitofp i32 %a to half
   ret half %1
 }
@@ -2543,7 +2543,7 @@ define i16 @bitcast_i16_h(half %a) nounwind {
 }
 
 ; Make sure we select W version of addi on RV64.
-define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, half* %1) nounwind {
+define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32IZFH-LABEL: fcvt_h_w_demanded_bits:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    addi a0, a0, 1
@@ -2627,12 +2627,12 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, half* %1) nounwind {
 ; CHECK64-IZFHMIN-NEXT:    ret
   %3 = add i32 %0, 1
   %4 = sitofp i32 %3 to half
-  store half %4, half* %1, align 2
+  store half %4, ptr %1, align 2
   ret i32 %3
 }
 
 ; Make sure we select W version of addi on RV64.
-define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, half* %1) nounwind {
+define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32IZFH-LABEL: fcvt_h_wu_demanded_bits:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    addi a0, a0, 1
@@ -2718,7 +2718,7 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, half* %1) nounwind {
 ; CHECK64-IZFHMIN-NEXT:    ret
   %3 = add i32 %0, 1
   %4 = uitofp i32 %3 to half
-  store half %4, half* %1, align 2
+  store half %4, ptr %1, align 2
   ret i32 %3
 }
 

@@ -9,10 +9,10 @@
 
 ; Magic ARM pair hints works best with linearscan / fast.
 
-@b = external global i64*
+@b = external global ptr
 
 ; We use the following two to force values into specific registers.
-declare i64* @get_ptr()
+declare ptr @get_ptr()
 declare void @use_i64(i64 %v)
 
 define void @test_ldrd(i64 %a) nounwind readonly "frame-pointer"="all" {
@@ -24,8 +24,8 @@ define void @test_ldrd(i64 %a) nounwind readonly "frame-pointer"="all" {
 ; M3-NOT: ldrd r[[REGNUM:[0-9]+]], {{r[0-9]+}}, [r[[REGNUM]]]
 ; CONSERVATIVE-NOT: ldrd
 ; NORMAL: bl{{x?}} _use_i64
-  %ptr = call i64* @get_ptr()
-  %v = load i64, i64* %ptr, align 8
+  %ptr = call ptr @get_ptr()
+  %v = load i64, ptr %ptr, align 8
   call void @use_i64(i64 %v)
   ret void
 }
@@ -49,7 +49,7 @@ define void @test_ldrd(i64 %a) nounwind readonly "frame-pointer"="all" {
 ; GREEDY: %bb
 ; GREEDY: ldrd
 ; GREEDY: str
-define void @f(i32* nocapture %a, i32* nocapture %b, i32 %n) nounwind "frame-pointer"="all" {
+define void @f(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind "frame-pointer"="all" {
 entry:
   %0 = add nsw i32 %n, -1                         ; <i32> [#uses=2]
   %1 = icmp sgt i32 %0, 0                         ; <i1> [#uses=1]
@@ -57,14 +57,14 @@ entry:
 
 bb:                                               ; preds = %bb, %entry
   %i.03 = phi i32 [ %tmp, %bb ], [ 0, %entry ]    ; <i32> [#uses=3]
-  %scevgep = getelementptr i32, i32* %a, i32 %i.03     ; <i32*> [#uses=1]
-  %scevgep4 = getelementptr i32, i32* %b, i32 %i.03    ; <i32*> [#uses=1]
+  %scevgep = getelementptr i32, ptr %a, i32 %i.03     ; <ptr> [#uses=1]
+  %scevgep4 = getelementptr i32, ptr %b, i32 %i.03    ; <ptr> [#uses=1]
   %tmp = add i32 %i.03, 1                         ; <i32> [#uses=3]
-  %scevgep5 = getelementptr i32, i32* %a, i32 %tmp     ; <i32*> [#uses=1]
-  %2 = load i32, i32* %scevgep, align 4                ; <i32> [#uses=1]
-  %3 = load i32, i32* %scevgep5, align 4               ; <i32> [#uses=1]
+  %scevgep5 = getelementptr i32, ptr %a, i32 %tmp     ; <ptr> [#uses=1]
+  %2 = load i32, ptr %scevgep, align 4                ; <i32> [#uses=1]
+  %3 = load i32, ptr %scevgep5, align 4               ; <i32> [#uses=1]
   %4 = add nsw i32 %3, %2                         ; <i32> [#uses=1]
-  store i32 %4, i32* %scevgep4, align 4
+  store i32 %4, ptr %scevgep4, align 4
   %exitcond = icmp eq i32 %tmp, %0                ; <i1> [#uses=1]
   br i1 %exitcond, label %return, label %bb
 
@@ -89,12 +89,11 @@ entry:
 ; A8-NEXT: str [[FIELD2]], [[[BASE]]]
 ; CONSERVATIVE-NOT: ldrd
   %orig_blocks = alloca [256 x i16], align 2
-  %0 = bitcast [256 x i16]* %orig_blocks to i8*call void @llvm.lifetime.start.p0i8(i64 512, i8* %0) nounwind
-  %tmp1 = load i32, i32* getelementptr inbounds (%struct.Test, %struct.Test* @TestVar, i32 0, i32 1), align 4
-  %tmp2 = load i32, i32* getelementptr inbounds (%struct.Test, %struct.Test* @TestVar, i32 0, i32 2), align 4
+  %tmp1 = load i32, ptr getelementptr inbounds (%struct.Test, ptr @TestVar, i32 0, i32 1), align 4
+  %tmp2 = load i32, ptr getelementptr inbounds (%struct.Test, ptr @TestVar, i32 0, i32 2), align 4
   %add = add nsw i32 %tmp2, %tmp1
-  store i32 %add, i32* getelementptr inbounds (%struct.Test, %struct.Test* @TestVar, i32 0, i32 0), align 4
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %0) nounwind
+  store i32 %add, ptr @TestVar, align 4
+  call void @llvm.lifetime.end.p0(i64 512, ptr %orig_blocks) nounwind
   ret void
 }
 
@@ -105,12 +104,11 @@ declare void @extfunc(i32, i32, i32, i32)
 ; A8: ldrd
 ; CHECK: bl{{x?}} _extfunc
 ; A8: pop
-define void @Func2(i32* %p) "frame-pointer"="all" {
+define void @Func2(ptr %p) "frame-pointer"="all" {
 entry:
-  %addr0 = getelementptr i32, i32* %p, i32 0
-  %addr1 = getelementptr i32, i32* %p, i32 1
-  %v0 = load i32, i32* %addr0
-  %v1 = load i32, i32* %addr1
+  %addr1 = getelementptr i32, ptr %p, i32 1
+  %v0 = load i32, ptr %p
+  %v1 = load i32, ptr %addr1
   ; try to force %v0/%v1 into non-adjacent registers
   call void @extfunc(i32 %v0, i32 0, i32 0, i32 %v1)
   ret void
@@ -138,18 +136,18 @@ define void @strd_spill_ldrd_reload(i32 %v0, i32 %v1) "frame-pointer"="all" {
   ret void
 }
 
-declare void @extfunc2(i32*, i32, i32)
+declare void @extfunc2(ptr, i32, i32)
 
 ; CHECK-LABEL: ldrd_postupdate_dec:
 ; NORMAL: ldrd r1, r2, [r0], #-8
 ; CONSERVATIVE-NOT: ldrd
 ; CHECK: bl{{x?}} _extfunc
-define void @ldrd_postupdate_dec(i32* %p0) "frame-pointer"="all" {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  %v0 = load i32, i32* %p0
-  %v1 = load i32, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 -2
-  call void @extfunc2(i32* %p1, i32 %v0, i32 %v1)
+define void @ldrd_postupdate_dec(ptr %p0) "frame-pointer"="all" {
+  %p0.1 = getelementptr i32, ptr %p0, i32 1
+  %v0 = load i32, ptr %p0
+  %v1 = load i32, ptr %p0.1
+  %p1 = getelementptr i32, ptr %p0, i32 -2
+  call void @extfunc2(ptr %p1, i32 %v0, i32 %v1)
   ret void
 }
 
@@ -157,12 +155,12 @@ define void @ldrd_postupdate_dec(i32* %p0) "frame-pointer"="all" {
 ; NORMAL: ldrd r1, r2, [r0], #8
 ; CONSERVATIVE-NOT: ldrd
 ; CHECK: bl{{x?}} _extfunc
-define void @ldrd_postupdate_inc(i32* %p0) "frame-pointer"="all" {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  %v0 = load i32, i32* %p0
-  %v1 = load i32, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 2
-  call void @extfunc2(i32* %p1, i32 %v0, i32 %v1)
+define void @ldrd_postupdate_inc(ptr %p0) "frame-pointer"="all" {
+  %p0.1 = getelementptr i32, ptr %p0, i32 1
+  %v0 = load i32, ptr %p0
+  %v1 = load i32, ptr %p0.1
+  %p1 = getelementptr i32, ptr %p0, i32 2
+  call void @extfunc2(ptr %p1, i32 %v0, i32 %v1)
   ret void
 }
 
@@ -170,24 +168,24 @@ define void @ldrd_postupdate_inc(i32* %p0) "frame-pointer"="all" {
 ; NORMAL: strd r1, r2, [r0], #-8
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr
-define i32* @strd_postupdate_dec(i32* %p0, i32 %v0, i32 %v1) "frame-pointer"="all" {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  store i32 %v0, i32* %p0
-  store i32 %v1, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 -2
-  ret i32* %p1
+define ptr @strd_postupdate_dec(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="all" {
+  %p0.1 = getelementptr i32, ptr %p0, i32 1
+  store i32 %v0, ptr %p0
+  store i32 %v1, ptr %p0.1
+  %p1 = getelementptr i32, ptr %p0, i32 -2
+  ret ptr %p1
 }
 
 ; CHECK-LABEL: strd_postupdate_inc:
 ; NORMAL: strd r1, r2, [r0], #8
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr
-define i32* @strd_postupdate_inc(i32* %p0, i32 %v0, i32 %v1) "frame-pointer"="all" {
-  %p0.1 = getelementptr i32, i32* %p0, i32 1
-  store i32 %v0, i32* %p0
-  store i32 %v1, i32* %p0.1
-  %p1 = getelementptr i32, i32* %p0, i32 2
-  ret i32* %p1
+define ptr @strd_postupdate_inc(ptr %p0, i32 %v0, i32 %v1) "frame-pointer"="all" {
+  %p0.1 = getelementptr i32, ptr %p0, i32 1
+  store i32 %v0, ptr %p0
+  store i32 %v1, ptr %p0.1
+  %p1 = getelementptr i32, ptr %p0, i32 2
+  ret ptr %p1
 }
 
 ; CHECK-LABEL: ldrd_strd_aa:
@@ -197,68 +195,58 @@ define i32* @strd_postupdate_inc(i32* %p0, i32 %v0, i32 %v1) "frame-pointer"="al
 ; CONSERVATIVE-NOT: strd
 ; CHECK: bx lr
 
-define void @ldrd_strd_aa(i32* noalias nocapture %x, i32* noalias nocapture readonly %y) {
+define void @ldrd_strd_aa(ptr noalias nocapture %x, ptr noalias nocapture readonly %y) {
 entry:
-  %0 = load i32, i32* %y, align 4
-  store i32 %0, i32* %x, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %y, i32 1
-  %1 = load i32, i32* %arrayidx2, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %x, i32 1
-  store i32 %1, i32* %arrayidx3, align 4
+  %0 = load i32, ptr %y, align 4
+  store i32 %0, ptr %x, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %y, i32 1
+  %1 = load i32, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %x, i32 1
+  store i32 %1, ptr %arrayidx3, align 4
   ret void
 }
 
 ; CHECK-LABEL: bitcast_ptr_ldr
 ; CHECK-NOT: ldrd
-define i32 @bitcast_ptr_ldr(i16* %In) {
+define i32 @bitcast_ptr_ldr(ptr %In) {
 entry:
-  %0 = bitcast i16* %In to i32*
-  %in.addr.0 = getelementptr inbounds i32, i32* %0, i32 0
-  %in.addr.1 = getelementptr inbounds i32, i32* %0, i32 1
-  %1 = load i32, i32* %in.addr.0, align 2
-  %2 = load i32, i32* %in.addr.1, align 2
-  %mul = mul i32 %1, %2
+  %in.addr.1 = getelementptr inbounds i32, ptr %In, i32 1
+  %0 = load i32, ptr %In, align 2
+  %1 = load i32, ptr %in.addr.1, align 2
+  %mul = mul i32 %0, %1
   ret i32 %mul
 }
 
 ; CHECK-LABEL: bitcast_gep_ldr
 ; CHECK-NOT: ldrd
-define i32 @bitcast_gep_ldr(i16* %In) {
+define i32 @bitcast_gep_ldr(ptr %In) {
 entry:
-  %in.addr.0 = getelementptr inbounds i16, i16* %In, i32 0
-  %in.addr.1 = getelementptr inbounds i16, i16* %In, i32 2
-  %cast.0 = bitcast i16* %in.addr.0 to i32*
-  %cast.1 = bitcast i16* %in.addr.1 to i32*
-  %0 = load i32, i32* %cast.0, align 2
-  %1 = load i32, i32* %cast.1, align 2
+  %in.addr.1 = getelementptr inbounds i16, ptr %In, i32 2
+  %0 = load i32, ptr %In, align 2
+  %1 = load i32, ptr %in.addr.1, align 2
   %mul = mul i32 %0, %1
   ret i32 %mul
 }
 
 ; CHECK-LABEL: bitcast_ptr_str
 ; CHECK-NOT: strd
-define void @bitcast_ptr_str(i32 %arg0, i32 %arg1, i16* %out) {
+define void @bitcast_ptr_str(i32 %arg0, i32 %arg1, ptr %out) {
 entry:
-  %0 = bitcast i16* %out to i32*
-  %out.addr.0 = getelementptr inbounds i32, i32* %0, i32 0
-  %out.addr.1 = getelementptr inbounds i32, i32* %0, i32 1
-  store i32 %arg0, i32* %out.addr.0, align 2
-  store i32 %arg1, i32* %out.addr.1, align 2
+  %out.addr.1 = getelementptr inbounds i32, ptr %out, i32 1
+  store i32 %arg0, ptr %out, align 2
+  store i32 %arg1, ptr %out.addr.1, align 2
   ret void
 }
 
 ; CHECK-LABEL: bitcast_gep_str
 ; CHECK-NOT: strd
-define void @bitcast_gep_str(i32 %arg0, i32 %arg1, i16* %out) {
+define void @bitcast_gep_str(i32 %arg0, i32 %arg1, ptr %out) {
 entry:
-  %out.addr.0 = getelementptr inbounds i16, i16* %out, i32 0
-  %out.addr.1 = getelementptr inbounds i16, i16* %out, i32 2
-  %cast.0 = bitcast i16* %out.addr.0 to i32*
-  %cast.1 = bitcast i16* %out.addr.1 to i32*
-  store i32 %arg0, i32* %cast.0, align 2
-  store i32 %arg1, i32* %cast.1, align 2
+  %out.addr.1 = getelementptr inbounds i16, ptr %out, i32 2
+  store i32 %arg0, ptr %out, align 2
+  store i32 %arg1, ptr %out.addr.1, align 2
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind

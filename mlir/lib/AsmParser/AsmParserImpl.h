@@ -430,6 +430,10 @@ public:
                                              Type type) override {
     return parser.parseOptionalAttribute(result, type);
   }
+  OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result,
+                                             Type type) override {
+    return parser.parseOptionalAttribute(result, type);
+  }
 
   /// Parse a named dictionary into 'result' if it is present.
   ParseResult parseOptionalAttrDict(NamedAttrList &result) override {

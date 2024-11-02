@@ -280,6 +280,10 @@ OptionalParseResult Parser::parseOptionalAttribute(StringAttr &attribute,
                                                    Type type) {
   return parseOptionalAttributeWithToken(Token::string, attribute, type);
 }
+OptionalParseResult Parser::parseOptionalAttribute(SymbolRefAttr &result,
+                                                   Type type) {
+  return parseOptionalAttributeWithToken(Token::at_identifier, result, type);
+}
 
 /// Attribute dictionary.
 ///
@@ -687,7 +691,7 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
                                                      Type eltTy) {
   if (hexStorage.has_value()) {
-    auto stringValue = hexStorage.value().getStringValue();
+    auto stringValue = hexStorage->getStringValue();
     return DenseStringElementsAttr::get(type, {stringValue});
   }
 

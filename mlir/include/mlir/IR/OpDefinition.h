@@ -47,7 +47,7 @@ public:
   bool has_value() const { return impl.has_value(); }
 
   /// Access the internal ParseResult value.
-  ParseResult value() const { return impl.value(); }
+  ParseResult value() const { return *impl; }
   ParseResult operator*() const { return value(); }
 
 private:

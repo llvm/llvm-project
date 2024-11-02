@@ -306,7 +306,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setOperationAction(ISD::ABS, MVT::i32, Custom);
 
-  setOperationAction(ISD::SELECT, XLenVT, Custom);
+  if (!Subtarget.hasVendorXVentanaCondOps())
+    setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
@@ -439,7 +440,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                         ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
                        XLenVT, Legal);
 
-    setOperationAction(ISD::FLT_ROUNDS_, XLenVT, Custom);
+    setOperationAction(ISD::GET_ROUNDING, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   }
 
@@ -4175,7 +4176,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::MSCATTER:
   case ISD::VP_SCATTER:
     return lowerMaskedScatter(Op, DAG);
-  case ISD::FLT_ROUNDS_:
+  case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
     return lowerSET_ROUNDING(Op, DAG);
@@ -8028,9 +8029,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     if (SDValue V = lowerVPREDUCE(SDValue(N, 0), DAG))
       Results.push_back(V);
     break;
-  case ISD::FLT_ROUNDS_: {
+  case ISD::GET_ROUNDING: {
     SDVTList VTs = DAG.getVTList(Subtarget.getXLenVT(), MVT::Other);
-    SDValue Res = DAG.getNode(ISD::FLT_ROUNDS_, DL, VTs, N->getOperand(0));
+    SDValue Res = DAG.getNode(ISD::GET_ROUNDING, DL, VTs, N->getOperand(0));
     Results.push_back(Res.getValue(0));
     Results.push_back(Res.getValue(1));
     break;
@@ -10651,7 +10652,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
   TII.storeRegToStackSlot(*BB, MI, SrcReg, MI.getOperand(2).isKill(), FI, SrcRC,
-                          RI);
+                          RI, Register());
   MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
   MachineMemOperand *MMOLo =
       MF.getMachineMemOperand(MPI, MachineMemOperand::MOLoad, 4, Align(8));
@@ -10699,7 +10700,7 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
       .addFrameIndex(FI)
       .addImm(4)
       .addMemOperand(MMOHi);
-  TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, RI);
+  TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, RI, Register());
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }

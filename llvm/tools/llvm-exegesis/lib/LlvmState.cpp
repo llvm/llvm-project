@@ -100,20 +100,22 @@ std::unique_ptr<LLVMTargetMachine> LLVMState::createTargetMachine() const {
           Reloc::Model::Static)));
 }
 
-std::unique_ptr<const StringMap<unsigned>>
+std::unique_ptr<const DenseMap<StringRef, unsigned>>
 LLVMState::createOpcodeNameToOpcodeIdxMapping() const {
   const MCInstrInfo &InstrInfo = getInstrInfo();
-  auto Map = std::make_unique<StringMap<unsigned>>(InstrInfo.getNumOpcodes());
+  auto Map = std::make_unique<DenseMap<StringRef, unsigned>>(
+      InstrInfo.getNumOpcodes());
   for (unsigned I = 0, E = InstrInfo.getNumOpcodes(); I < E; ++I)
     (*Map)[InstrInfo.getName(I)] = I;
   assert(Map->size() == InstrInfo.getNumOpcodes() && "Size prediction failed");
   return std::move(Map);
 }
 
-std::unique_ptr<const StringMap<unsigned>>
+std::unique_ptr<const DenseMap<StringRef, unsigned>>
 LLVMState::createRegNameToRegNoMapping() const {
   const MCRegisterInfo &RegInfo = getRegInfo();
-  auto Map = std::make_unique<StringMap<unsigned>>(RegInfo.getNumRegs());
+  auto Map =
+      std::make_unique<DenseMap<StringRef, unsigned>>(RegInfo.getNumRegs());
   // Special-case RegNo 0, which would otherwise be spelled as ''.
   (*Map)[kNoRegister] = 0;
   for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)

@@ -422,7 +422,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "call_alloc";
 
   // Floating point environment manipulation
-  case ISD::FLT_ROUNDS_:                return "flt_rounds";
+  case ISD::GET_ROUNDING:               return "get_rounding";
   case ISD::SET_ROUNDING:               return "set_rounding";
 
   // Bit manipulation

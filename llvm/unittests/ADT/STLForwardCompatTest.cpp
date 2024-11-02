@@ -54,7 +54,7 @@ TEST(TransformTest, TransformStd) {
   A = 3;
   std::optional<int> C = llvm::transformOptional(A, [&](int N) { return N + 1; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(4, C.value());
+  EXPECT_EQ(4, *C);
 }
 
 TEST(TransformTest, MoveTransformStd) {
@@ -75,7 +75,7 @@ TEST(TransformTest, MoveTransformStd) {
   std::optional<int> C = llvm::transformOptional(
       std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(7, C.value());
+  EXPECT_EQ(7, *C);
   EXPECT_EQ(0u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(0u, MoveOnly::Destructions);
@@ -90,7 +90,7 @@ TEST(TransformTest, TransformLlvm) {
   A = 3;
   llvm::Optional<int> C = llvm::transformOptional(A, [&](int N) { return N + 1; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(4, C.value());
+  EXPECT_EQ(4, *C);
 }
 
 TEST(TransformTest, MoveTransformLlvm) {
@@ -111,7 +111,7 @@ TEST(TransformTest, MoveTransformLlvm) {
   llvm::Optional<int> C = llvm::transformOptional(
       std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(7, C.value());
+  EXPECT_EQ(7, *C);
   EXPECT_EQ(0u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(0u, MoveOnly::Destructions);

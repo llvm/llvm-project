@@ -344,7 +344,7 @@ class MemLocFragmentFill {
         return false; // B has fewer elements than A.
       if (AIt.start() != BIt.start() || AIt.stop() != BIt.stop())
         return false; // Interval is different.
-      if (AIt.value() != BIt.value())
+      if (*AIt != *BIt)
         return false; // Value at interval is different.
     }
     // AIt == AEnd. Check BIt is also now at end.
@@ -422,8 +422,8 @@ class MemLocFragmentFill {
         // [ r ]
         LLVM_DEBUG(dbgs() << "- a is contained within "
                           << toString(FirstOverlap));
-        if (AIt.value() && AIt.value() == FirstOverlap.value())
-          Result.insert(AIt.start(), AIt.stop(), AIt.value());
+        if (*AIt && *AIt == *FirstOverlap)
+          Result.insert(AIt.start(), AIt.stop(), *AIt);
       } else {
         // There's an overlap but `a` is not fully contained within
         // `b`. Shorten any end-point intersections.
@@ -435,8 +435,8 @@ class MemLocFragmentFill {
         if (IntersectStart) {
           LLVM_DEBUG(dbgs() << "- insert intersection of a and "
                             << toString(FirstOverlap));
-          if (AIt.value() && AIt.value() == FirstOverlap.value())
-            Result.insert(AIt.start(), FirstOverlap.stop(), AIt.value());
+          if (*AIt && *AIt == *FirstOverlap)
+            Result.insert(AIt.start(), FirstOverlap.stop(), *AIt);
           ++Next;
         }
         // [ - a - ]
@@ -446,8 +446,8 @@ class MemLocFragmentFill {
         if (IntersectEnd) {
           LLVM_DEBUG(dbgs() << "- insert intersection of a and "
                             << toString(LastOverlap));
-          if (AIt.value() && AIt.value() == LastOverlap.value())
-            Result.insert(LastOverlap.start(), AIt.stop(), AIt.value());
+          if (*AIt && *AIt == *LastOverlap)
+            Result.insert(LastOverlap.start(), AIt.stop(), *AIt);
         }
 
         // Insert all intervals in map `B` that are contained within interval
@@ -460,8 +460,8 @@ class MemLocFragmentFill {
                Next.stop() <= AIt.stop()) {
           LLVM_DEBUG(dbgs()
                      << "- insert intersection of a and " << toString(Next));
-          if (AIt.value() && AIt.value() == Next.value())
-            Result.insert(Next.start(), Next.stop(), Next.value());
+          if (*AIt && *AIt == *Next)
+            Result.insert(Next.start(), Next.stop(), *Next);
           ++Next;
         }
       }
@@ -653,12 +653,12 @@ class MemLocFragmentFill {
       auto EndBitOfOverlap = FirstOverlap.stop();
       FirstOverlap.setStop(StartBit);
       insertMemLoc(BB, Before, Var, FirstOverlap.start(), StartBit,
-                   FirstOverlap.value(), VarLoc.DL);
+                   *FirstOverlap, VarLoc.DL);
 
       // Insert a new interval to represent the end part.
-      FragMap.insert(EndBit, EndBitOfOverlap, FirstOverlap.value());
-      insertMemLoc(BB, Before, Var, EndBit, EndBitOfOverlap,
-                   FirstOverlap.value(), VarLoc.DL);
+      FragMap.insert(EndBit, EndBitOfOverlap, *FirstOverlap);
+      insertMemLoc(BB, Before, Var, EndBit, EndBitOfOverlap, *FirstOverlap,
+                   VarLoc.DL);
 
       // Insert the new (middle) fragment now there is space.
       FragMap.insert(StartBit, EndBit, Base);
@@ -676,7 +676,7 @@ class MemLocFragmentFill {
         // Split off at the intersection.
         FirstOverlap.setStop(StartBit);
         insertMemLoc(BB, Before, Var, FirstOverlap.start(), StartBit,
-                     FirstOverlap.value(), VarLoc.DL);
+                     *FirstOverlap, VarLoc.DL);
       }
       // [ - f - ]
       //      [ - i - ]
@@ -686,8 +686,8 @@ class MemLocFragmentFill {
         LLVM_DEBUG(dbgs() << "- Intersect interval at end\n");
         // Split off at the intersection.
         LastOverlap.setStart(EndBit);
-        insertMemLoc(BB, Before, Var, EndBit, LastOverlap.stop(),
-                     LastOverlap.value(), VarLoc.DL);
+        insertMemLoc(BB, Before, Var, EndBit, LastOverlap.stop(), *LastOverlap,
+                     VarLoc.DL);
       }
 
       LLVM_DEBUG(dbgs() << "- Erase intervals contained within\n");
@@ -1266,7 +1266,7 @@ void AssignmentTrackingLowering::emitDbgValue(
       // Copy the fragment info over from the value-expression to the new
       // DIExpression.
       if (auto OptFragInfo = Source->getExpression()->getFragmentInfo()) {
-        auto FragInfo = OptFragInfo.value();
+        auto FragInfo = *OptFragInfo;
         Expr = *DIExpression::createFragmentExpression(
             Expr, FragInfo.OffsetInBits, FragInfo.SizeInBits);
       }
@@ -1346,7 +1346,7 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
       auto R = DIExpression::createFragmentExpression(DIE, Frag->OffsetInBits,
                                                       Frag->SizeInBits);
       assert(R && "unexpected createFragmentExpression failure");
-      DIE = R.value();
+      DIE = *R;
     }
     SmallVector<uint64_t, 3> Ops;
     if (Info.OffsetInBits)

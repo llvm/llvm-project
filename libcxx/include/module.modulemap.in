@@ -1436,7 +1436,10 @@ module std [system] {
     module is_reference                        { private header "__type_traits/is_reference.h" }
     module is_reference_wrapper                { private header "__type_traits/is_reference_wrapper.h" }
     module is_referenceable                    { private header "__type_traits/is_referenceable.h" }
-    module is_same                             { private header "__type_traits/is_same.h" }
+    module is_same                             {
+      private header "__type_traits/is_same.h"
+      export type_traits.integral_constant
+    }
     module is_scalar                           { private header "__type_traits/is_scalar.h" }
     module is_scoped_enum                      { private header "__type_traits/is_scoped_enum.h" }
     module is_signed                           { private header "__type_traits/is_signed.h" }

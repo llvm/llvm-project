@@ -143,6 +143,9 @@ public:
 
   bool IsAggregateType();
 
+  // Returns if the type is a templated decl. Does not look through typedefs.
+  bool IsTemplateType();
+
   bool IsValidType() { return m_encoding_uid_type != eEncodingInvalid; }
 
   bool IsTypedef() { return m_encoding_uid_type == eEncodingIsTypedefUID; }
@@ -167,14 +170,6 @@ public:
 
   bool WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t address,
                      AddressType address_type, DataExtractor &data);
-
-  bool GetIsDeclaration() const;
-
-  void SetIsDeclaration(bool b);
-
-  bool GetIsExternal() const;
-
-  void SetIsExternal(bool b);
 
   lldb::Format GetFormat();
 

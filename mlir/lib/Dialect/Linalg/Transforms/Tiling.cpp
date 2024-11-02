@@ -191,9 +191,9 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
 static bool canOmitTileOffsetInBoundsCheck(OpFoldResult tileSize,
                                            OpFoldResult numThreads,
                                            OpFoldResult iterationSize) {
-  Optional<int64_t> tileSizeConst = getConstantIntValue(tileSize);
-  Optional<int64_t> numThreadsConst = getConstantIntValue(numThreads);
-  Optional<int64_t> iterSizeConst = getConstantIntValue(iterationSize);
+  std::optional<int64_t> tileSizeConst = getConstantIntValue(tileSize);
+  std::optional<int64_t> numThreadsConst = getConstantIntValue(numThreads);
+  std::optional<int64_t> iterSizeConst = getConstantIntValue(iterationSize);
   if (!tileSizeConst || !numThreadsConst || !iterSizeConst)
     return false;
   return *tileSizeConst * (*numThreadsConst - 1) < *iterSizeConst;
@@ -221,7 +221,7 @@ static void calculateTileOffsetsAndSizes(
     RewriterBase &b, Location loc, scf::ForeachThreadOp foreachThreadOp,
     ArrayRef<OpFoldResult> numThreads, SmallVector<Range> loopRanges,
     bool omitTileOffsetBoundsCheck,
-    Optional<ArrayRef<OpFoldResult>> nominalTileSizes,
+    std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
     SmallVector<OpFoldResult> &tiledOffsets,
     SmallVector<OpFoldResult> &tiledSizes) {
   OpBuilder::InsertionGuard g(b);
@@ -302,8 +302,8 @@ static void calculateTileOffsetsAndSizes(
 /// assume that `tileSize[i] * (numThread[i] -1) <= dimSize[i]` holds.
 static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> numThreads,
-    Optional<ArrayRef<OpFoldResult>> nominalTileSizes,
-    Optional<ArrayAttr> mapping, bool omitTileOffsetBoundsCheck) {
+    std::optional<ArrayRef<OpFoldResult>> nominalTileSizes,
+    std::optional<ArrayAttr> mapping, bool omitTileOffsetBoundsCheck) {
   Location loc = op->getLoc();
   OpBuilder::InsertionGuard g(b);
 
@@ -399,7 +399,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
 FailureOr<ForeachThreadTilingResult>
 linalg::tileToForeachThreadOp(RewriterBase &b, TilingInterface op,
                               ArrayRef<OpFoldResult> numThreads,
-                              Optional<ArrayAttr> mapping) {
+                              std::optional<ArrayAttr> mapping) {
   return tileToForeachThreadOpImpl(b, op, numThreads,
                                    /*nominalTileSizes=*/std::nullopt, mapping,
                                    /*omitTileOffsetBoundsCheck=*/false);
@@ -408,7 +408,7 @@ linalg::tileToForeachThreadOp(RewriterBase &b, TilingInterface op,
 FailureOr<ForeachThreadTilingResult>
 linalg::tileToForeachThreadOpUsingTileSizes(RewriterBase &b, TilingInterface op,
                                             ArrayRef<OpFoldResult> tileSizes,
-                                            Optional<ArrayAttr> mapping) {
+                                            std::optional<ArrayAttr> mapping) {
   SmallVector<Range> loopRanges = op.getIterationDomain(b);
   unsigned nLoops = loopRanges.size();
   SmallVector<OpFoldResult> numThreads;
@@ -586,7 +586,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
                                         PartialReductionOpInterface op,
                                         ArrayRef<OpFoldResult> numThreads,
                                         ArrayRef<OpFoldResult> tileSizes,
-                                        Optional<ArrayAttr> mapping) {
+                                        std::optional<ArrayAttr> mapping) {
   Location loc = op.getLoc();
   OpBuilder::InsertionGuard g(b);
 
@@ -650,7 +650,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
 
   // 2. Create the ForeachThreadOp with an empty region.
   scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, identityTensor.value()->getResults(),
+      loc, (*identityTensor)->getResults(),
       ValueRange(materializedNonZeroNumThreads), mapping);
 
   // 3. Calculate the tile offsets and sizes for the subsequent loop that will
@@ -768,7 +768,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
 
   // 8. Return.
   ForeachThreadReductionTilingResult results;
-  results.initialOp = identityTensor.value();
+  results.initialOp = *identityTensor;
   results.loops = foreachThreadOp;
   results.parallelTiledOp = tiledOp;
   results.mergeOp = mergeOp;

@@ -339,7 +339,7 @@ bool AtomicSequence(EmulateInstructionRISCV &emulator) {
   const auto pc = emulator.ReadPC();
   if (!pc)
     return false;
-  auto current_pc = pc.value();
+  auto current_pc = *pc;
   const auto entry_pc = current_pc;
 
   // The first instruction should be LR.W or LR.D
@@ -1214,8 +1214,7 @@ public:
     return transformOptional(inst.rs1.Read(m_emu),
                              [&](auto &&rs1) {
                                uint64_t addr = rs1 + uint64_t(inst.imm);
-                               uint64_t bits =
-                                   m_emu.ReadMem<uint64_t>(addr).value();
+                               uint64_t bits = *m_emu.ReadMem<uint64_t>(addr);
                                APFloat f(semantics(), APInt(numBits, bits));
                                return inst.rd.WriteAPFloat(m_emu, f);
                              })

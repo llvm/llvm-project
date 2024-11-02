@@ -118,7 +118,9 @@ namespace llvm {
 
 namespace llvm {
   namespace AArch64PState {
-#define GET_PSTATE_IMPL
+#define GET_PSTATEIMM0_15_IMPL
+#include "AArch64GenSystemOperands.inc"
+#define GET_PSTATEIMM0_1_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }

@@ -12,6 +12,7 @@ add_llvm_component_library(LLVMSparcDesc
   MC
   SparcInfo
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   Sparc

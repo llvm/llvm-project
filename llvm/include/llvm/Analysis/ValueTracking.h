@@ -603,20 +603,22 @@ bool isGuaranteedToTransferExecutionToSuccessor(
 bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
                                             const Loop *L);
 
-/// Return true if I yields poison or raises UB if any of its operands is
-/// poison.
-/// Formally, given I = `r = op v1 v2 .. vN`, propagatesPoison returns true
-/// if, for all i, r is evaluated to poison or op raises UB if vi = poison.
-/// If vi is a vector or an aggregate and r is a single value, any poison
-/// element in vi should make r poison or raise UB.
+/// Return true if \p PoisonOp's user yields poison or raises UB if its
+/// operand \p PoisonOp is poison.
+///
+/// If \p PoisonOp is a vector or an aggregate and the operation's result is a
+/// single value, any poison element in /p PoisonOp should make the result
+/// poison or raise UB.
+///
 /// To filter out operands that raise UB on poison, you can use
 /// getGuaranteedNonPoisonOp.
-bool propagatesPoison(const Operator *I);
+bool propagatesPoison(const Use &PoisonOp);
 
 /// Insert operands of I into Ops such that I will trigger undefined behavior
 /// if I is executed and that operand has a poison value.
 void getGuaranteedNonPoisonOps(const Instruction *I,
                                SmallPtrSetImpl<const Value *> &Ops);
+
 /// Insert operands of I into Ops such that I will trigger undefined behavior
 /// if I is executed and that operand is not a well-defined value
 /// (i.e. has undef bits or poison).

@@ -557,7 +557,7 @@ Scanner::tryLexIdentifierOrSkipLine(const char *&First, const char *const End) {
 StringRef Scanner::lexIdentifier(const char *&First, const char *const End) {
   Optional<StringRef> Id = tryLexIdentifierOrSkipLine(First, End);
   assert(Id && "expected identifier token");
-  return Id.value();
+  return *Id;
 }
 
 bool Scanner::isNextIdentifierOrSkipLine(StringRef Id, const char *&First,

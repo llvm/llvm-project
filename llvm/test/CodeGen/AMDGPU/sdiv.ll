@@ -13,7 +13,7 @@
 ; This was fixed by adding an additional pattern in R600Instructions.td to
 ; match this pattern with a CNDGE_INT.
 
-define amdgpu_kernel void @sdiv_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @sdiv_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: sdiv_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -193,15 +193,15 @@ define amdgpu_kernel void @sdiv_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %i
 ; EG-NEXT:     SUB_INT T0.X, PV.W, T0.W,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
-  %num = load i32, i32 addrspace(1) * %in
-  %den = load i32, i32 addrspace(1) * %den_ptr
+  %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
+  %num = load i32, ptr addrspace(1) %in
+  %den = load i32, ptr addrspace(1) %den_ptr
   %result = sdiv i32 %num, %den
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sdiv_i32_4(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @sdiv_i32_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: sdiv_i32_4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -286,16 +286,16 @@ define amdgpu_kernel void @sdiv_i32_4(i32 addrspace(1)* %out, i32 addrspace(1)* 
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %num = load i32, i32 addrspace(1) * %in
+  %num = load i32, ptr addrspace(1) %in
   %result = sdiv i32 %num, 4
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; Multiply by a weird constant to make sure setIntDivIsCheap is
 ; working.
 
-define amdgpu_kernel void @slow_sdiv_i32_3435(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @slow_sdiv_i32_3435(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: slow_sdiv_i32_3435:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -387,13 +387,13 @@ define amdgpu_kernel void @slow_sdiv_i32_3435(i32 addrspace(1)* %out, i32 addrsp
 ; EG-NEXT:     ADD_INT T0.X, PV.W, PS,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %num = load i32, i32 addrspace(1) * %in
+  %num = load i32, ptr addrspace(1) %in
   %result = sdiv i32 %num, 3435
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @sdiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: sdiv_v2i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -686,15 +686,15 @@ define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ; EG-NEXT:     SUB_INT T0.X, PV.W, T0.W,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %den_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
-  %num = load <2 x i32>, <2 x i32> addrspace(1) * %in
-  %den = load <2 x i32>, <2 x i32> addrspace(1) * %den_ptr
+  %den_ptr = getelementptr <2 x i32>, ptr addrspace(1) %in, i32 1
+  %num = load <2 x i32>, ptr addrspace(1) %in
+  %den = load <2 x i32>, ptr addrspace(1) %den_ptr
   %result = sdiv <2 x i32> %num, %den
-  store <2 x i32> %result, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sdiv_v2i32_4(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @sdiv_v2i32_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: sdiv_v2i32_4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -797,13 +797,13 @@ define amdgpu_kernel void @sdiv_v2i32_4(<2 x i32> addrspace(1)* %out, <2 x i32> 
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %num = load <2 x i32>, <2 x i32> addrspace(1) * %in
+  %num = load <2 x i32>, ptr addrspace(1) %in
   %result = sdiv <2 x i32> %num, <i32 4, i32 4>
-  store <2 x i32> %result, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sdiv_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: sdiv_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1329,15 +1329,15 @@ define amdgpu_kernel void @sdiv_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> ad
 ; EG-NEXT:     SUB_INT T2.X, PV.W, T0.W,
 ; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %den_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
-  %num = load <4 x i32>, <4 x i32> addrspace(1) * %in
-  %den = load <4 x i32>, <4 x i32> addrspace(1) * %den_ptr
+  %den_ptr = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 1
+  %num = load <4 x i32>, ptr addrspace(1) %in
+  %den = load <4 x i32>, ptr addrspace(1) %den_ptr
   %result = sdiv <4 x i32> %num, %den
-  store <4 x i32> %result, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sdiv_v4i32_4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @sdiv_v4i32_4(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: sdiv_v4i32_4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1475,13 +1475,13 @@ define amdgpu_kernel void @sdiv_v4i32_4(<4 x i32> addrspace(1)* %out, <4 x i32> 
 ; EG-NEXT:     ASHR T1.X, PV.W, literal.x,
 ; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %num = load <4 x i32>, <4 x i32> addrspace(1) * %in
+  %num = load <4 x i32>, ptr addrspace(1) %in
   %result = sdiv <4 x i32> %num, <i32 4, i32 4, i32 4, i32 4>
-  store <4 x i32> %result, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_sdiv_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
+define amdgpu_kernel void @v_sdiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: v_sdiv_i8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1617,16 +1617,16 @@ define amdgpu_kernel void @v_sdiv_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %i
 ; EG-NEXT:     BFE_INT T0.X, PV.W, 0.0, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    8(1.121039e-44), 2(2.802597e-45)
-  %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
-  %num = load i8, i8 addrspace(1) * %in
-  %den = load i8, i8 addrspace(1) * %den_ptr
+  %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
+  %num = load i8, ptr addrspace(1) %in
+  %den = load i8, ptr addrspace(1) %den_ptr
   %result = sdiv i8 %num, %den
   %result.ext = sext i8 %result to i32
-  store i32 %result.ext, i32 addrspace(1)* %out
+  store i32 %result.ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_sdiv_i23(i32 addrspace(1)* %out, i23 addrspace(1)* %in) {
+define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: v_sdiv_i23:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1806,16 +1806,16 @@ define amdgpu_kernel void @v_sdiv_i23(i32 addrspace(1)* %out, i23 addrspace(1)* 
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    9(1.261169e-44), 2(2.802597e-45)
-  %den_ptr = getelementptr i23, i23 addrspace(1)* %in, i23 1
-  %num = load i23, i23 addrspace(1) * %in
-  %den = load i23, i23 addrspace(1) * %den_ptr
+  %den_ptr = getelementptr i23, ptr addrspace(1) %in, i23 1
+  %num = load i23, ptr addrspace(1) %in
+  %den = load i23, ptr addrspace(1) %den_ptr
   %result = sdiv i23 %num, %den
   %result.ext = sext i23 %result to i32
-  store i32 %result.ext, i32 addrspace(1)* %out
+  store i32 %result.ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* %in) {
+define amdgpu_kernel void @v_sdiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: v_sdiv_i24:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1985,16 +1985,16 @@ define amdgpu_kernel void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* 
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    8(1.121039e-44), 2(2.802597e-45)
-  %den_ptr = getelementptr i24, i24 addrspace(1)* %in, i24 1
-  %num = load i24, i24 addrspace(1) * %in
-  %den = load i24, i24 addrspace(1) * %den_ptr
+  %den_ptr = getelementptr i24, ptr addrspace(1) %in, i24 1
+  %num = load i24, ptr addrspace(1) %in
+  %den = load i24, ptr addrspace(1) %den_ptr
   %result = sdiv i24 %num, %den
   %result.ext = sext i24 %result to i32
-  store i32 %result.ext, i32 addrspace(1)* %out
+  store i32 %result.ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_sdiv_i25(i32 addrspace(1)* %out, i25 addrspace(1)* %in) {
+define amdgpu_kernel void @v_sdiv_i25(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: v_sdiv_i25:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2196,37 +2196,37 @@ define amdgpu_kernel void @v_sdiv_i25(i32 addrspace(1)* %out, i25 addrspace(1)* 
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    7(9.809089e-45), 2(2.802597e-45)
-  %den_ptr = getelementptr i25, i25 addrspace(1)* %in, i25 1
-  %num = load i25, i25 addrspace(1) * %in
-  %den = load i25, i25 addrspace(1) * %den_ptr
+  %den_ptr = getelementptr i25, ptr addrspace(1) %in, i25 1
+  %num = load i25, ptr addrspace(1) %in
+  %den = load i25, ptr addrspace(1) %den_ptr
   %result = sdiv i25 %num, %den
   %result.ext = sext i25 %result to i32
-  store i32 %result.ext, i32 addrspace(1)* %out
+  store i32 %result.ext, ptr addrspace(1) %out
   ret void
 }
 
 ; Tests for 64-bit divide bypass.
-; define amdgpu_kernel void @test_get_quotient(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+; define amdgpu_kernel void @test_get_quotient(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
 ;   %result = sdiv i64 %a, %b
-;   store i64 %result, i64 addrspace(1)* %out, align 8
+;   store i64 %result, ptr addrspace(1) %out, align 8
 ;   ret void
 ; }
 
-; define amdgpu_kernel void @test_get_remainder(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+; define amdgpu_kernel void @test_get_remainder(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
 ;   %result = srem i64 %a, %b
-;   store i64 %result, i64 addrspace(1)* %out, align 8
+;   store i64 %result, ptr addrspace(1) %out, align 8
 ;   ret void
 ; }
 
-; define amdgpu_kernel void @test_get_quotient_and_remainder(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+; define amdgpu_kernel void @test_get_quotient_and_remainder(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
 ;   %resultdiv = sdiv i64 %a, %b
 ;   %resultrem = srem i64 %a, %b
 ;   %result = add i64 %resultdiv, %resultrem
-;   store i64 %result, i64 addrspace(1)* %out, align 8
+;   store i64 %result, ptr addrspace(1) %out, align 8
 ;   ret void
 ; }
 
-define amdgpu_kernel void @scalarize_mulhs_4xi32(<4 x i32> addrspace(1)* nocapture readonly %in, <4 x i32> addrspace(1)* nocapture %out) {
+define amdgpu_kernel void @scalarize_mulhs_4xi32(ptr addrspace(1) nocapture readonly %in, ptr addrspace(1) nocapture %out) {
 ; GCN-LABEL: scalarize_mulhs_4xi32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2362,8 +2362,8 @@ define amdgpu_kernel void @scalarize_mulhs_4xi32(<4 x i32> addrspace(1)* nocaptu
 ; EG-NEXT:     ADD_INT T0.X, PV.W, PS,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Z, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %1 = load <4 x i32>, <4 x i32> addrspace(1)* %in, align 16
+  %1 = load <4 x i32>, ptr addrspace(1) %in, align 16
   %2 = sdiv <4 x i32> %1, <i32 53668, i32 53668, i32 53668, i32 53668>
-  store <4 x i32> %2, <4 x i32> addrspace(1)* %out, align 16
+  store <4 x i32> %2, ptr addrspace(1) %out, align 16
   ret void
 }

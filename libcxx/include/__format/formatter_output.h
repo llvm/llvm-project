@@ -373,10 +373,10 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string(
 
 #  if _LIBCPP_STD_VER > 20
 
-struct __null_sentinel {};
+struct __nul_terminator {};
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI bool operator==(const _CharT* __cstr, __null_sentinel) {
+_LIBCPP_HIDE_FROM_ABI bool operator==(const _CharT* __cstr, __nul_terminator) {
   return *__cstr == _CharT('\0');
 }
 
@@ -384,7 +384,7 @@ template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI void
 __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _CharT* __prefix) {
   back_insert_iterator __out_it{__str};
-  std::ranges::copy(__prefix, __null_sentinel{}, __out_it);
+  std::ranges::copy(__prefix, __nul_terminator{}, __out_it);
 
   char __buffer[8];
   to_chars_result __r = std::to_chars(std::begin(__buffer), std::end(__buffer), __value, 16);

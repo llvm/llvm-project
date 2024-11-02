@@ -816,6 +816,10 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
   case Type::X86_AMXTyID:
     return Align(64);
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getAlignment(LayoutTy, abi_or_pref);
+  }
   default:
     llvm_unreachable("Bad type for getAlignment!!!");
   }

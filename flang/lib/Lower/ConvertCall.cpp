@@ -368,7 +368,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
 
   if (caller.mustSaveResult())
     builder.create<fir::SaveResultOp>(loc, callResult,
-                                      fir::getBase(allocatedResult.value()),
+                                      fir::getBase(*allocatedResult),
                                       arrayResultShape, resultLengths);
 
   if (allocatedResult) {
@@ -404,6 +404,82 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   }
 
   return callResult;
+}
+
+static hlfir::EntityWithAttributes genStmtFunctionRef(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+    const Fortran::evaluate::ProcedureRef &procRef) {
+  const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol();
+  assert(symbol && "expected symbol in ProcedureRef of statement functions");
+  const auto &details = symbol->get<Fortran::semantics::SubprogramDetails>();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Statement functions have their own scope, we just need to associate
+  // the dummy symbols to argument expressions. There are no
+  // optional/alternate return arguments. Statement functions cannot be
+  // recursive (directly or indirectly) so it is safe to add dummy symbols to
+  // the local map here.
+  symMap.pushScope();
+  llvm::SmallVector<hlfir::AssociateOp> exprAssociations;
+  for (auto [arg, bind] : llvm::zip(details.dummyArgs(), procRef.arguments())) {
+    assert(arg && "alternate return in statement function");
+    assert(bind && "optional argument in statement function");
+    const auto *expr = bind->UnwrapExpr();
+    // TODO: assumed type in statement function, that surprisingly seems
+    // allowed, probably because nobody thought of restricting this usage.
+    // gfortran/ifort compiles this.
+    assert(expr && "assumed type used as statement function argument");
+    // As per Fortran 2018 C1580, statement function arguments can only be
+    // scalars.
+    // The only care is to use the dummy character explicit length if any
+    // instead of the actual argument length (that can be bigger).
+    hlfir::EntityWithAttributes loweredArg = Fortran::lower::convertExprToHLFIR(
+        loc, converter, *expr, symMap, stmtCtx);
+    fir::FortranVariableOpInterface variableIface = loweredArg.getIfVariable();
+    if (!variableIface) {
+      // So far only FortranVariableOpInterface can be mapped to symbols.
+      // Create an hlfir.associate to create a variable from a potential
+      // value argument.
+      mlir::Type argType = converter.genType(*arg);
+      auto associate = hlfir::genAssociateExpr(
+          loc, builder, loweredArg, argType, toStringRef(arg->name()));
+      exprAssociations.push_back(associate);
+      variableIface = associate;
+    }
+    const Fortran::semantics::DeclTypeSpec *type = arg->GetType();
+    if (type &&
+        type->category() == Fortran::semantics::DeclTypeSpec::Character) {
+      // Instantiate character as if it was a normal dummy argument so that the
+      // statement function dummy character length is applied and dealt with
+      // correctly.
+      symMap.addSymbol(*arg, variableIface.getBase());
+      Fortran::lower::mapSymbolAttributes(converter, *arg, symMap, stmtCtx);
+    } else {
+      // No need to create an extra hlfir.declare otherwise for
+      // numerical and logical scalar dummies.
+      symMap.addVariableDefinition(*arg, variableIface);
+    }
+  }
+
+  // Explicitly map statement function host associated symbols to their
+  // parent scope lowered symbol box.
+  for (const Fortran::semantics::SymbolRef &sym :
+       Fortran::evaluate::CollectSymbols(*details.stmtFunction()))
+    if (const auto *details =
+            sym->detailsIf<Fortran::semantics::HostAssocDetails>())
+      converter.copySymbolBinding(details->symbol(), sym);
+
+  hlfir::Entity result = Fortran::lower::convertExprToHLFIR(
+      loc, converter, details.stmtFunction().value(), symMap, stmtCtx);
+  symMap.popScope();
+  // The result must not be a variable.
+  result = hlfir::loadTrivialScalar(loc, builder, result);
+  if (result.isVariable())
+    result = hlfir::Entity{builder.create<hlfir::AsExprOp>(loc, result)};
+  for (auto associate : exprAssociations)
+    builder.create<hlfir::EndAssociateOp>(loc, associate);
+  return hlfir::EntityWithAttributes{result};
 }
 
 /// Is this a call to an elemental procedure with at least one array argument?
@@ -454,7 +530,7 @@ public:
       return genIntrinsicRef(procRef, resultType, *specific);
     }
     if (isStatementFunctionCall(procRef))
-      TODO(loc, "lowering Statement function call to HLFIR");
+      return genStmtFunctionRef(loc, converter, symMap, stmtCtx, procRef);
 
     Fortran::lower::CallerInterface caller(procRef, converter);
     mlir::FunctionType callSiteType = caller.genFunctionType();

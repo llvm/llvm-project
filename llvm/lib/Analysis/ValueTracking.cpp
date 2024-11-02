@@ -3803,11 +3803,54 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
 
     if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
       switch (II->getIntrinsicID()) {
+      case Intrinsic::sin:
+      case Intrinsic::cos:
+        // Return NaN on infinite inputs.
+        return true;
       case Intrinsic::fabs:
+      case Intrinsic::sqrt:
       case Intrinsic::canonicalize:
       case Intrinsic::copysign:
       case Intrinsic::arithmetic_fence:
+      case Intrinsic::trunc:
         return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
+      case Intrinsic::floor:
+      case Intrinsic::ceil:
+      case Intrinsic::rint:
+      case Intrinsic::nearbyint:
+      case Intrinsic::round:
+      case Intrinsic::roundeven:
+        // PPC_FP128 is a special case.
+        if (V->getType()->isMultiUnitFPType())
+          return false;
+        return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
+      case Intrinsic::fptrunc_round:
+        // Requires knowing the value range.
+        return false;
+      case Intrinsic::minnum:
+      case Intrinsic::maxnum:
+      case Intrinsic::minimum:
+      case Intrinsic::maximum:
+        return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1) &&
+               isKnownNeverInfinity(Inst->getOperand(1), TLI, Depth + 1);
+      case Intrinsic::log:
+      case Intrinsic::log10:
+      case Intrinsic::log2:
+        // log(+inf) -> +inf
+        // log([+-]0.0) -> -inf
+        // log(-inf) -> nan
+        // log(-x) -> nan
+        // TODO: We lack API to check the == 0 case.
+        return false;
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::pow:
+      case Intrinsic::powi:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+        // These can return infinities on overflow cases, so it's hard to prove
+        // anything about it.
+        return false;
       default:
         break;
       }
@@ -5330,15 +5373,12 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
     return false;
 
   if (const auto *I = dyn_cast<Instruction>(V)) {
-    if (propagatesPoison(cast<Operator>(I)))
-      return any_of(I->operands(), [=](const Value *Op) {
-        return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
-      });
+    if (any_of(I->operands(), [=](const Use &Op) {
+          return propagatesPoison(Op) &&
+                 directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
+        }))
+      return true;
 
-    // 'select ValAssumedPoison, _, _' is poison.
-    if (const auto *SI = dyn_cast<SelectInst>(I))
-      return directlyImpliesPoison(ValAssumedPoison, SI->getCondition(),
-                                   Depth + 1);
     // V  = extractvalue V0, idx
     // V2 = extractvalue V0, idx2
     // V0's elements are all poison or not. (e.g., add_with_overflow)
@@ -5496,7 +5536,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
       else if (PoisonOnly && isa<Operator>(Cond)) {
         // For poison, we can analyze further
         auto *Opr = cast<Operator>(Cond);
-        if (propagatesPoison(Opr) && is_contained(Opr->operand_values(), V))
+        if (any_of(Opr->operands(),
+                   [V](const Use &U) { return V == U && propagatesPoison(U); }))
           return true;
       }
     }
@@ -5618,13 +5659,15 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
   llvm_unreachable("Instruction not contained in its own parent basic block.");
 }
 
-bool llvm::propagatesPoison(const Operator *I) {
+bool llvm::propagatesPoison(const Use &PoisonOp) {
+  const Operator *I = cast<Operator>(PoisonOp.getUser());
   switch (I->getOpcode()) {
   case Instruction::Freeze:
-  case Instruction::Select:
   case Instruction::PHI:
   case Instruction::Invoke:
     return false;
+  case Instruction::Select:
+    return PoisonOp.getOperandNo() == 0;
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
@@ -5805,14 +5848,11 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
         return false;
 
-      // If this instruction propagates poison, mark it as poison if any of
-      // its operands are poison
-      if (propagatesPoison(cast<Operator>(&I))) {
-        for (const Value *Op : I.operands()) {
-          if (YieldsPoison.count(Op)) {
-            YieldsPoison.insert(&I);
-            break;
-          }
+      // If an operand is poison and propagates it, mark I as yielding poison.
+      for (const Use &Op : I.operands()) {
+        if (YieldsPoison.count(Op) && propagatesPoison(Op)) {
+          YieldsPoison.insert(&I);
+          break;
         }
       }
     }

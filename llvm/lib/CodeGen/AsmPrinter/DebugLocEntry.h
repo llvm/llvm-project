@@ -76,6 +76,9 @@ public:
       : EntryKind(E_TargetIndexLocation), TIL(Loc) {}
 
   bool isLocation() const { return EntryKind == E_Location; }
+  bool isIndirectLocation() const {
+    return EntryKind == E_Location && Loc.isIndirect();
+  }
   bool isTargetIndexLocation() const {
     return EntryKind == E_TargetIndexLocation;
   }
@@ -150,6 +153,29 @@ public:
   bool isFragment() const { return getExpression()->isFragment(); }
   bool isEntryVal() const { return getExpression()->isEntryValue(); }
   bool isVariadic() const { return IsVariadic; }
+  bool isEquivalent(const DbgValueLoc &Other) const {
+    // Cannot be equivalent with different numbers of entries.
+    if (ValueLocEntries.size() != Other.ValueLocEntries.size())
+      return false;
+    bool ThisIsIndirect =
+        !IsVariadic && ValueLocEntries[0].isIndirectLocation();
+    bool OtherIsIndirect =
+        !Other.IsVariadic && Other.ValueLocEntries[0].isIndirectLocation();
+    // Check equivalence of DIExpressions + Directness together.
+    if (!DIExpression::isEqualExpression(Expression, ThisIsIndirect,
+                                         Other.Expression, OtherIsIndirect))
+      return false;
+    // Indirectness should have been accounted for in the above check, so just
+    // compare register values directly here.
+    if (ThisIsIndirect || OtherIsIndirect) {
+      DbgValueLocEntry ThisOp = ValueLocEntries[0];
+      DbgValueLocEntry OtherOp = Other.ValueLocEntries[0];
+      return ThisOp.isLocation() && OtherOp.isLocation() &&
+             ThisOp.getLoc().getReg() == OtherOp.getLoc().getReg();
+    }
+    // If neither are indirect, then just compare the loc entries directly.
+    return ValueLocEntries == Other.ValueLocEntries;
+  }
   const DIExpression *getExpression() const { return Expression; }
   ArrayRef<DbgValueLocEntry> getLocEntries() const { return ValueLocEntries; }
   friend bool operator==(const DbgValueLoc &, const DbgValueLoc &);
@@ -191,11 +217,15 @@ public:
   /// Entry.
   bool MergeRanges(const DebugLocEntry &Next) {
     // If this and Next are describing the same variable, merge them.
-    if ((End == Next.Begin && Values == Next.Values)) {
-      End = Next.End;
-      return true;
-    }
-    return false;
+    if (End != Next.Begin)
+      return false;
+    if (Values.size() != Next.Values.size())
+      return false;
+    for (unsigned EntryIdx = 0; EntryIdx < Values.size(); ++EntryIdx)
+      if (!Values[EntryIdx].isEquivalent(Next.Values[EntryIdx]))
+        return false;
+    End = Next.End;
+    return true;
   }
 
   const MCSymbol *getBeginSym() const { return Begin; }

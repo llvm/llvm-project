@@ -18,6 +18,7 @@
 
 #include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/Builders.h"
@@ -592,9 +593,6 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
-
-/// Unwrap integer constant from an mlir::Value.
-llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value);
 
 /// Get the integer constants of triplet and compute the extent.
 llvm::Optional<std::int64_t>

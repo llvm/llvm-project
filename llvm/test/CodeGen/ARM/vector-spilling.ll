@@ -8,24 +8,23 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: test:
 ; CHECK: vstmia
 ; CHECK: vldmia
-define void @test(<8 x i64>* %src) #0 {
+define void @test(ptr %src) #0 {
 entry:
-  %0 = getelementptr inbounds <8 x i64>, <8 x i64>* %src, i32 0
-  %1 = load <8 x i64>, <8 x i64>* %0, align 8
+  %0 = load <8 x i64>, ptr %src, align 8
 
-  %2 = getelementptr inbounds <8 x i64>, <8 x i64>* %src, i32 1
-  %3 = load <8 x i64>, <8 x i64>* %2, align 8
+  %1 = getelementptr inbounds <8 x i64>, ptr %src, i32 1
+  %2 = load <8 x i64>, ptr %1, align 8
 
-  %4 = getelementptr inbounds <8 x i64>, <8 x i64>* %src, i32 2
-  %5 = load <8 x i64>, <8 x i64>* %4, align 8
+  %3 = getelementptr inbounds <8 x i64>, ptr %src, i32 2
+  %4 = load <8 x i64>, ptr %3, align 8
 
-  %6 = getelementptr inbounds <8 x i64>, <8 x i64>* %src, i32 3
-  %7 = load <8 x i64>, <8 x i64>* %6, align 8
+  %5 = getelementptr inbounds <8 x i64>, ptr %src, i32 3
+  %6 = load <8 x i64>, ptr %5, align 8
 
-  %8 = shufflevector <8 x i64> %1, <8 x i64> %3, <8 x i32> <i32 12, i32 4, i32 15, i32 14, i32 8, i32 13, i32 2, i32 9>
-  %9 = shufflevector <8 x i64> %1, <8 x i64> %3, <8 x i32> <i32 1, i32 0, i32 3, i32 10, i32 5, i32 11, i32 7, i32 6>
+  %7 = shufflevector <8 x i64> %0, <8 x i64> %2, <8 x i32> <i32 12, i32 4, i32 15, i32 14, i32 8, i32 13, i32 2, i32 9>
+  %8 = shufflevector <8 x i64> %0, <8 x i64> %2, <8 x i32> <i32 1, i32 0, i32 3, i32 10, i32 5, i32 11, i32 7, i32 6>
 
-  tail call void(<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) @foo(<8 x i64> %1, <8 x i64> %3, <8 x i64> %5, <8 x i64> %7, <8 x i64> %8, <8 x i64> %9)
+  tail call void(<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) @foo(<8 x i64> %0, <8 x i64> %2, <8 x i64> %4, <8 x i64> %6, <8 x i64> %7, <8 x i64> %8)
   ret void
 }
 

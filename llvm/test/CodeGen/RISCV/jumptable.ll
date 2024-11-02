@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=riscv64 -code-model=medium -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I-MEDIUM
 
-define void @below_threshold(i32 %in, i32* %out) nounwind {
+define void @below_threshold(i32 %in, ptr %out) nounwind {
 ; RV32I-SMALL-LABEL: below_threshold:
 ; RV32I-SMALL:       # %bb.0: # %entry
 ; RV32I-SMALL-NEXT:    li a2, 2
@@ -146,22 +146,22 @@ entry:
     i32 4, label %bb4
   ]
 bb1:
-  store i32 4, i32* %out
+  store i32 4, ptr %out
   br label %exit
 bb2:
-  store i32 3, i32* %out
+  store i32 3, ptr %out
   br label %exit
 bb3:
-  store i32 2, i32* %out
+  store i32 2, ptr %out
   br label %exit
 bb4:
-  store i32 1, i32* %out
+  store i32 1, ptr %out
   br label %exit
 exit:
   ret void
 }
 
-define void @above_threshold(i32 %in, i32* %out) nounwind {
+define void @above_threshold(i32 %in, ptr %out) nounwind {
 ; RV32I-SMALL-LABEL: above_threshold:
 ; RV32I-SMALL:       # %bb.0: # %entry
 ; RV32I-SMALL-NEXT:    addi a0, a0, -1
@@ -311,22 +311,22 @@ entry:
     i32 6, label %bb6
   ]
 bb1:
-  store i32 4, i32* %out
+  store i32 4, ptr %out
   br label %exit
 bb2:
-  store i32 3, i32* %out
+  store i32 3, ptr %out
   br label %exit
 bb3:
-  store i32 2, i32* %out
+  store i32 2, ptr %out
   br label %exit
 bb4:
-  store i32 1, i32* %out
+  store i32 1, ptr %out
   br label %exit
 bb5:
-  store i32 100, i32* %out
+  store i32 100, ptr %out
   br label %exit
 bb6:
-  store i32 200, i32* %out
+  store i32 200, ptr %out
   br label %exit
 exit:
   ret void

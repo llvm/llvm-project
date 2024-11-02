@@ -25,12 +25,11 @@ entry:
 ; 64:  sd      $ra, 24($[[R1]])
 
   %agg.tmp = alloca %struct.S1, align 1
-  %tmp = getelementptr inbounds %struct.S1, %struct.S1* %agg.tmp, i32 0, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp, i8* align 1 getelementptr inbounds (%struct.S1, %struct.S1* @s1, i32 0, i32 0, i32 0), i32 65536, i1 false)
-  call void @f2(%struct.S1* byval(%struct.S1) %agg.tmp) nounwind
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %agg.tmp, ptr align 1 @s1, i32 65536, i1 false)
+  call void @f2(ptr byval(%struct.S1) %agg.tmp) nounwind
   ret void
 }
 
-declare void @f2(%struct.S1* byval(%struct.S1))
+declare void @f2(ptr byval(%struct.S1))
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

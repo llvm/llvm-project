@@ -10,7 +10,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LMULMAX8,LMULMAX8-RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LMULMAX8,LMULMAX8-RV64
 
-define void @ctlz_v16i8(<16 x i8>* %x, <16 x i8>* %y) nounwind {
+define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: ctlz_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -53,15 +53,15 @@ define void @ctlz_v16i8(<16 x i8>* %x, <16 x i8>* %y) nounwind {
 ; LMULMAX8-NEXT:    vmerge.vim v8, v8, 8, v0
 ; LMULMAX8-NEXT:    vse8.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
-  %a = load <16 x i8>, <16 x i8>* %x
-  %b = load <16 x i8>, <16 x i8>* %y
+  %a = load <16 x i8>, ptr %x
+  %b = load <16 x i8>, ptr %y
   %c = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
-  store <16 x i8> %c, <16 x i8>* %x
+  store <16 x i8> %c, ptr %x
   ret void
 }
 declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>, i1)
 
-define void @ctlz_v8i16(<8 x i16>* %x, <8 x i16>* %y) nounwind {
+define void @ctlz_v8i16(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32I-LABEL: ctlz_v8i16:
 ; LMULMAX2-RV32I:       # %bb.0:
 ; LMULMAX2-RV32I-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -243,15 +243,15 @@ define void @ctlz_v8i16(<8 x i16>* %x, <8 x i16>* %y) nounwind {
 ; LMULMAX8-NEXT:    vmerge.vxm v8, v9, a1, v0
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
-  %a = load <8 x i16>, <8 x i16>* %x
-  %b = load <8 x i16>, <8 x i16>* %y
+  %a = load <8 x i16>, ptr %x
+  %b = load <8 x i16>, ptr %y
   %c = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
-  store <8 x i16> %c, <8 x i16>* %x
+  store <8 x i16> %c, ptr %x
   ret void
 }
 declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16>, i1)
 
-define void @ctlz_v4i32(<4 x i32>* %x, <4 x i32>* %y) nounwind {
+define void @ctlz_v4i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32I-LABEL: ctlz_v4i32:
 ; LMULMAX2-RV32I:       # %bb.0:
 ; LMULMAX2-RV32I-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -448,15 +448,15 @@ define void @ctlz_v4i32(<4 x i32>* %x, <4 x i32>* %y) nounwind {
 ; LMULMAX8-NEXT:    vmerge.vxm v8, v9, a1, v0
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
-  %a = load <4 x i32>, <4 x i32>* %x
-  %b = load <4 x i32>, <4 x i32>* %y
+  %a = load <4 x i32>, ptr %x
+  %b = load <4 x i32>, ptr %y
   %c = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
-  store <4 x i32> %c, <4 x i32>* %x
+  store <4 x i32> %c, ptr %x
   ret void
 }
 declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1)
 
-define void @ctlz_v2i64(<2 x i64>* %x, <2 x i64>* %y) nounwind {
+define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32-LABEL: ctlz_v2i64:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -753,15 +753,15 @@ define void @ctlz_v2i64(<2 x i64>* %x, <2 x i64>* %y) nounwind {
 ; LMULMAX8-RV64-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX8-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-RV64-NEXT:    ret
-  %a = load <2 x i64>, <2 x i64>* %x
-  %b = load <2 x i64>, <2 x i64>* %y
+  %a = load <2 x i64>, ptr %x
+  %b = load <2 x i64>, ptr %y
   %c = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
-  store <2 x i64> %c, <2 x i64>* %x
+  store <2 x i64> %c, ptr %x
   ret void
 }
 declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1)
 
-define void @ctlz_v32i8(<32 x i8>* %x, <32 x i8>* %y) nounwind {
+define void @ctlz_v32i8(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-LABEL: ctlz_v32i8:
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    li a1, 32
@@ -852,15 +852,15 @@ define void @ctlz_v32i8(<32 x i8>* %x, <32 x i8>* %y) nounwind {
 ; LMULMAX8-NEXT:    vmerge.vim v8, v8, 8, v0
 ; LMULMAX8-NEXT:    vse8.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
-  %a = load <32 x i8>, <32 x i8>* %x
-  %b = load <32 x i8>, <32 x i8>* %y
+  %a = load <32 x i8>, ptr %x
+  %b = load <32 x i8>, ptr %y
   %c = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
-  store <32 x i8> %c, <32 x i8>* %x
+  store <32 x i8> %c, ptr %x
   ret void
 }
 declare <32 x i8> @llvm.ctlz.v32i8(<32 x i8>, i1)
 
-define void @ctlz_v16i16(<16 x i16>* %x, <16 x i16>* %y) nounwind {
+define void @ctlz_v16i16(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32-LABEL: ctlz_v16i16:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -1062,15 +1062,15 @@ define void @ctlz_v16i16(<16 x i16>* %x, <16 x i16>* %y) nounwind {
 ; LMULMAX8-NEXT:    vmerge.vxm v8, v10, a1, v0
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
-  %a = load <16 x i16>, <16 x i16>* %x
-  %b = load <16 x i16>, <16 x i16>* %y
+  %a = load <16 x i16>, ptr %x
+  %b = load <16 x i16>, ptr %y
   %c = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
-  store <16 x i16> %c, <16 x i16>* %x
+  store <16 x i16> %c, ptr %x
   ret void
 }
 declare <16 x i16> @llvm.ctlz.v16i16(<16 x i16>, i1)
 
-define void @ctlz_v8i32(<8 x i32>* %x, <8 x i32>* %y) nounwind {
+define void @ctlz_v8i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32-LABEL: ctlz_v8i32:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1289,15 +1289,15 @@ define void @ctlz_v8i32(<8 x i32>* %x, <8 x i32>* %y) nounwind {
 ; LMULMAX8-NEXT:    vmerge.vxm v8, v10, a1, v0
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
-  %a = load <8 x i32>, <8 x i32>* %x
-  %b = load <8 x i32>, <8 x i32>* %y
+  %a = load <8 x i32>, ptr %x
+  %b = load <8 x i32>, ptr %y
   %c = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
-  store <8 x i32> %c, <8 x i32>* %x
+  store <8 x i32> %c, ptr %x
   ret void
 }
 declare <8 x i32> @llvm.ctlz.v8i32(<8 x i32>, i1)
 
-define void @ctlz_v4i64(<4 x i64>* %x, <4 x i64>* %y) nounwind {
+define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32-LABEL: ctlz_v4i64:
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -1650,10 +1650,10 @@ define void @ctlz_v4i64(<4 x i64>* %x, <4 x i64>* %y) nounwind {
 ; LMULMAX8-RV64-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX8-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-RV64-NEXT:    ret
-  %a = load <4 x i64>, <4 x i64>* %x
-  %b = load <4 x i64>, <4 x i64>* %y
+  %a = load <4 x i64>, ptr %x
+  %b = load <4 x i64>, ptr %y
   %c = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
-  store <4 x i64> %c, <4 x i64>* %x
+  store <4 x i64> %c, ptr %x
   ret void
 }
 declare <4 x i64> @llvm.ctlz.v4i64(<4 x i64>, i1)

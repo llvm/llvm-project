@@ -373,6 +373,8 @@ __OMP_RTL(__kmpc_proxy_task_completed_ooo, false, Void, VoidPtr)
 
 __OMP_RTL(__kmpc_omp_wait_deps, false, Void, IdentPtr, Int32, Int32,
           /* kmp_depend_info_t */ VoidPtr, Int32, VoidPtr)
+__OMP_RTL(__kmpc_omp_taskwait_deps_51, false, Void, IdentPtr, Int32, Int32,
+          /* kmp_depend_info_t */ VoidPtr, Int32, VoidPtr, Int32)
 __OMP_RTL(__kmpc_cancellationpoint, false, Int32, IdentPtr, Int32, Int32)
 
 __OMP_RTL(__kmpc_fork_teams, true, Void, IdentPtr, Int32, ParallelTaskPtr)
@@ -478,8 +480,6 @@ __OMP_RTL(__kmpc_barrier_simple_generic, false, Void, IdentPtr, Int32)
 
 __OMP_RTL(__kmpc_warp_active_thread_mask, false, Int64,)
 __OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
-
-__OMP_RTL(__kmpc_is_generic_main_thread_id, false, Int8, Int32)
 
 __OMP_RTL(__last, false, Void, )
 
@@ -896,6 +896,9 @@ __OMP_RTL_ATTRS(__kmpc_proxy_task_completed_ooo, DefaultAttrs, AttributeSet(),
                 ParamAttrs())
 
 __OMP_RTL_ATTRS(__kmpc_omp_wait_deps, BarrierAttrs, AttributeSet(),
+                ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
+                           ReadOnlyPtrAttrs))
+__OMP_RTL_ATTRS(__kmpc_omp_taskwait_deps_51, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
                            ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_cancellationpoint, DefaultAttrs, AttributeSet(),

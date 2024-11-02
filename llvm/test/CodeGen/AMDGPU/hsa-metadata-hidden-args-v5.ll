@@ -98,14 +98,14 @@
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 2
 define amdgpu_kernel void @test_v5(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 

@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=SI %s
 ; RUN: opt -mtriple=amdgcn-- -S -amdgpu-unify-divergent-exit-nodes -verify -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
 
-define amdgpu_kernel void @infinite_loop(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @infinite_loop(ptr addrspace(1) %out) {
 ; SI-LABEL: infinite_loop:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -20,17 +20,17 @@ define amdgpu_kernel void @infinite_loop(i32 addrspace(1)* %out) {
 ; IR-NEXT:  entry:
 ; IR-NEXT:    br label [[LOOP:%.*]]
 ; IR:       loop:
-; IR-NEXT:    store volatile i32 999, i32 addrspace(1)* [[OUT:%.*]], align 4
+; IR-NEXT:    store volatile i32 999, ptr addrspace(1) [[OUT:%.*]], align 4
 ; IR-NEXT:    br label [[LOOP]]
 entry:
   br label %loop
 
 loop:
-  store volatile i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, ptr addrspace(1) %out, align 4
   br label %loop
 }
 
-define amdgpu_kernel void @infinite_loop_ret(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @infinite_loop_ret(ptr addrspace(1) %out) {
 ; SI-LABEL: infinite_loop_ret:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
@@ -57,7 +57,7 @@ define amdgpu_kernel void @infinite_loop_ret(i32 addrspace(1)* %out) {
 ; IR-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP]], 1
 ; IR-NEXT:    br i1 [[COND]], label [[LOOP:%.*]], label [[UNIFIEDRETURNBLOCK:%.*]]
 ; IR:       loop:
-; IR-NEXT:    store volatile i32 999, i32 addrspace(1)* [[OUT:%.*]], align 4
+; IR-NEXT:    store volatile i32 999, ptr addrspace(1) [[OUT:%.*]], align 4
 ; IR-NEXT:    br i1 true, label [[LOOP]], label [[UNIFIEDRETURNBLOCK]]
 ; IR:       UnifiedReturnBlock:
 ; IR-NEXT:    ret void
@@ -67,14 +67,14 @@ entry:
   br i1 %cond, label %loop, label %return
 
 loop:
-  store volatile i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, ptr addrspace(1) %out, align 4
   br label %loop
 
 return:
   ret void
 }
 
-define amdgpu_kernel void @infinite_loops(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @infinite_loops(ptr addrspace(1) %out) {
 ; SI-LABEL: infinite_loops:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -117,10 +117,10 @@ define amdgpu_kernel void @infinite_loops(i32 addrspace(1)* %out) {
 ; IR-NEXT:  entry:
 ; IR-NEXT:    br i1 undef, label [[LOOP1:%.*]], label [[LOOP2:%.*]]
 ; IR:       loop1:
-; IR-NEXT:    store volatile i32 999, i32 addrspace(1)* [[OUT:%.*]], align 4
+; IR-NEXT:    store volatile i32 999, ptr addrspace(1) [[OUT:%.*]], align 4
 ; IR-NEXT:    br i1 true, label [[LOOP1]], label [[DUMMYRETURNBLOCK:%.*]]
 ; IR:       loop2:
-; IR-NEXT:    store volatile i32 888, i32 addrspace(1)* [[OUT]], align 4
+; IR-NEXT:    store volatile i32 888, ptr addrspace(1) [[OUT]], align 4
 ; IR-NEXT:    br i1 true, label [[LOOP2]], label [[DUMMYRETURNBLOCK]]
 ; IR:       DummyReturnBlock:
 ; IR-NEXT:    ret void
@@ -128,15 +128,15 @@ entry:
   br i1 undef, label %loop1, label %loop2
 
 loop1:
-  store volatile i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, ptr addrspace(1) %out, align 4
   br label %loop1
 
 loop2:
-  store volatile i32 888, i32 addrspace(1)* %out, align 4
+  store volatile i32 888, ptr addrspace(1) %out, align 4
   br label %loop2
 }
 
-define amdgpu_kernel void @infinite_loop_nest_ret(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @infinite_loop_nest_ret(ptr addrspace(1) %out) {
 ; SI-LABEL: infinite_loop_nest_ret:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
@@ -177,7 +177,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret(i32 addrspace(1)* %out) {
 ; IR:       outer_loop:
 ; IR-NEXT:    br label [[INNER_LOOP:%.*]]
 ; IR:       inner_loop:
-; IR-NEXT:    store volatile i32 999, i32 addrspace(1)* [[OUT:%.*]], align 4
+; IR-NEXT:    store volatile i32 999, ptr addrspace(1) [[OUT:%.*]], align 4
 ; IR-NEXT:    [[COND3:%.*]] = icmp eq i32 [[TMP]], 3
 ; IR-NEXT:    br i1 true, label [[TRANSITIONBLOCK:%.*]], label [[UNIFIEDRETURNBLOCK]]
 ; IR:       TransitionBlock:
@@ -195,7 +195,7 @@ outer_loop:
   br label %inner_loop
 
 inner_loop:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, ptr addrspace(1) %out, align 4
   %cond3 = icmp eq i32 %tmp, 3
   br i1 %cond3, label %inner_loop, label %outer_loop
 

@@ -98,9 +98,8 @@ static void getXferIndices(OpBuilder &b, OpTy xferOp, Value iv,
   if (!isBroadcast) {
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
-    Value offset = adaptor.getIndices()[dim.value()];
-    indices[dim.value()] =
-        makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    Value offset = adaptor.getIndices()[*dim];
+    indices[*dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
   }
 }
 

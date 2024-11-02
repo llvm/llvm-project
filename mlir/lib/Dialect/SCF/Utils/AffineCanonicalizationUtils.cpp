@@ -218,8 +218,8 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
                        : constraints.appendSymbolVar(/*num=*/1);
 
   // If loop lower/upper bounds are constant: Add EQ constraint.
-  Optional<int64_t> lbInt = getConstantIntValue(lb);
-  Optional<int64_t> ubInt = getConstantIntValue(ub);
+  std::optional<int64_t> lbInt = getConstantIntValue(lb);
+  std::optional<int64_t> ubInt = getConstantIntValue(ub);
   if (lbInt)
     constraints.addBound(IntegerPolyhedron::EQ, symLb, *lbInt);
   if (ubInt)

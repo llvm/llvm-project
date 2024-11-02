@@ -1472,6 +1472,12 @@ operator<<(const StreamingDiagnostic &DB, T *DC) {
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             SourceLocation L) {
+  DB.AddSourceRange(CharSourceRange::getTokenRange(L));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              SourceRange R) {
   DB.AddSourceRange(CharSourceRange::getTokenRange(R));
   return DB;

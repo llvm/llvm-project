@@ -184,7 +184,7 @@ entry:
   ret i32 %add
 }
 
-define i32 @orgep(i32 %i, i32* %x, i32* %y) {
+define i32 @orgep(i32 %i, ptr %x, ptr %y) {
 ; CHECK-T1-LABEL: orgep:
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    lsls r0, r0, #3
@@ -206,12 +206,12 @@ define i32 @orgep(i32 %i, i32* %x, i32* %y) {
 entry:
   %mul = shl i32 %i, 1
   %add = or i32 %mul, 1
-  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %add
-  %0 = load i32, i32* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i32, ptr %x, i32 %add
+  %0 = load i32, ptr %arrayidx, align 8
   ret i32 %0
 }
 
-define i32 @orgeps(i32 %i, i32* %x, i32* %y) {
+define i32 @orgeps(i32 %i, ptr %x, ptr %y) {
 ; CHECK-T1-LABEL: orgeps:
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    lsls r0, r0, #3
@@ -237,16 +237,16 @@ define i32 @orgeps(i32 %i, i32* %x, i32* %y) {
 entry:
   %mul = shl i32 %i, 1
   %add = or i32 %mul, 1
-  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %add
-  %0 = load i32, i32* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i32, ptr %x, i32 %add
+  %0 = load i32, ptr %arrayidx, align 8
   %add2 = add i32 %mul, 2
-  %arrayidx3 = getelementptr inbounds i32, i32* %x, i32 %add2
-  %1 = load i32, i32* %arrayidx3, align 8
+  %arrayidx3 = getelementptr inbounds i32, ptr %x, i32 %add2
+  %1 = load i32, ptr %arrayidx3, align 8
   %add4 = add i32 %1, %0
   ret i32 %add4
 }
 
-define i32 @multiuse(i32 %i, i32* %x, i32* %y) {
+define i32 @multiuse(i32 %i, ptr %x, ptr %y) {
 ; CHECK-T1-LABEL: multiuse:
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    lsls r0, r0, #1
@@ -274,8 +274,8 @@ define i32 @multiuse(i32 %i, i32* %x, i32* %y) {
 entry:
   %mul = shl i32 %i, 1
   %add = or i32 %mul, 1
-  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %add
-  %0 = load i32, i32* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i32, ptr %x, i32 %add
+  %0 = load i32, ptr %arrayidx, align 8
   %r = add i32 %add, %0
   ret i32 %r
 }

@@ -68,21 +68,21 @@ public:
 
   const PfmCountersInfo &getPfmCounters() const { return *PfmCounters; }
 
-  const StringMap<unsigned> &getOpcodeNameToOpcodeIdxMapping() const {
+  const DenseMap<StringRef, unsigned> &getOpcodeNameToOpcodeIdxMapping() const {
     assert(OpcodeNameToOpcodeIdxMapping);
     return *OpcodeNameToOpcodeIdxMapping;
   };
 
-  const StringMap<unsigned> &getRegNameToRegNoMapping() const {
+  const DenseMap<StringRef, unsigned> &getRegNameToRegNoMapping() const {
     assert(RegNameToRegNoMapping);
     return *RegNameToRegNoMapping;
   }
 
 private:
-  std::unique_ptr<const StringMap<unsigned>>
+  std::unique_ptr<const DenseMap<StringRef, unsigned>>
   createOpcodeNameToOpcodeIdxMapping() const;
 
-  std::unique_ptr<const StringMap<unsigned>>
+  std::unique_ptr<const DenseMap<StringRef, unsigned>>
   createRegNameToRegNoMapping() const;
 
   LLVMState(std::unique_ptr<const TargetMachine> TM, const ExegesisTarget *ET,
@@ -93,8 +93,9 @@ private:
   std::unique_ptr<const RegisterAliasingTrackerCache> RATC;
   std::unique_ptr<const InstructionsCache> IC;
   const PfmCountersInfo *PfmCounters;
-  std::unique_ptr<const StringMap<unsigned>> OpcodeNameToOpcodeIdxMapping;
-  std::unique_ptr<const StringMap<unsigned>> RegNameToRegNoMapping;
+  std::unique_ptr<const DenseMap<StringRef, unsigned>>
+      OpcodeNameToOpcodeIdxMapping;
+  std::unique_ptr<const DenseMap<StringRef, unsigned>> RegNameToRegNoMapping;
 };
 
 } // namespace exegesis

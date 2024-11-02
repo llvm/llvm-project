@@ -279,9 +279,9 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK:        mov.b32         {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]]}, [[E]];
 ; CHECK-DAG:    st.v2.b16       [%[[B]]], {[[E0]], [[E1]]};
 ; CHECK:        ret;
-define void @test_ldst_v2f16(<2 x half>* %a, <2 x half>* %b) {
-  %t1 = load <2 x half>, <2 x half>* %a
-  store <2 x half> %t1, <2 x half>* %b, align 16
+define void @test_ldst_v2f16(ptr %a, ptr %b) {
+  %t1 = load <2 x half>, ptr %a
+  store <2 x half> %t1, ptr %b, align 16
   ret void
 }
 
@@ -296,9 +296,9 @@ define void @test_ldst_v2f16(<2 x half>* %a, <2 x half>* %b) {
 ; CHECK-DAG:    st.u32          [%[[B]]],
 ; CHECK-DAG:    st.b16          [%[[B]]+4],
 ; CHECK:        ret;
-define void @test_ldst_v3f16(<3 x half>* %a, <3 x half>* %b) {
-  %t1 = load <3 x half>, <3 x half>* %a
-  store <3 x half> %t1, <3 x half>* %b, align 16
+define void @test_ldst_v3f16(ptr %a, ptr %b) {
+  %t1 = load <3 x half>, ptr %a
+  store <3 x half> %t1, ptr %b, align 16
   ret void
 }
 
@@ -308,9 +308,9 @@ define void @test_ldst_v3f16(<3 x half>* %a, <3 x half>* %b) {
 ; CHECK-DAG:    ld.v4.b16       {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]], [[E2:%h[0-9]+]], [[E3:%h[0-9]+]]}, [%[[A]]];
 ; CHECK-DAG:    st.v4.b16       [%[[B]]], {[[E0]], [[E1]], [[E2]], [[E3]]};
 ; CHECK:        ret;
-define void @test_ldst_v4f16(<4 x half>* %a, <4 x half>* %b) {
-  %t1 = load <4 x half>, <4 x half>* %a
-  store <4 x half> %t1, <4 x half>* %b, align 16
+define void @test_ldst_v4f16(ptr %a, ptr %b) {
+  %t1 = load <4 x half>, ptr %a
+  store <4 x half> %t1, ptr %b, align 16
   ret void
 }
 
@@ -320,9 +320,9 @@ define void @test_ldst_v4f16(<4 x half>* %a, <4 x half>* %b) {
 ; CHECK-DAG:    ld.v4.b32       {[[E0:%r[0-9]+]], [[E1:%r[0-9]+]], [[E2:%r[0-9]+]], [[E3:%r[0-9]+]]}, [%[[A]]];
 ; CHECK-DAG:    st.v4.b32       [%[[B]]], {[[E0]], [[E1]], [[E2]], [[E3]]};
 ; CHECK:        ret;
-define void @test_ldst_v8f16(<8 x half>* %a, <8 x half>* %b) {
-  %t1 = load <8 x half>, <8 x half>* %a
-  store <8 x half> %t1, <8 x half>* %b, align 16
+define void @test_ldst_v8f16(ptr %a, ptr %b) {
+  %t1 = load <8 x half>, ptr %a
+  store <8 x half> %t1, ptr %b, align 16
   ret void
 }
 

@@ -1,13 +1,13 @@
 ; RUN: llc -mtriple=armv7-linux < %s | FileCheck %s
 
-declare arm_aapcscc void @addrof_i32(i32*)
-declare arm_aapcscc void @addrof_i64(i64*)
+declare arm_aapcscc void @addrof_i32(ptr)
+declare arm_aapcscc void @addrof_i64(ptr)
 
 define arm_aapcscc void @simple(i32, i32, i32, i32, i32 %x) {
 entry:
   %x.addr = alloca i32
-  store i32 %x, i32* %x.addr
-  call void @addrof_i32(i32* %x.addr)
+  store i32 %x, ptr %x.addr
+  call void @addrof_i32(ptr %x.addr)
   ret void
 }
 
@@ -24,8 +24,8 @@ entry:
 define arm_aapcscc i32 @use_arg(i32, i32, i32, i32, i32 %x) {
 entry:
   %x.addr = alloca i32
-  store i32 %x, i32* %x.addr
-  call void @addrof_i32(i32* %x.addr)
+  store i32 %x, ptr %x.addr
+  call void @addrof_i32(ptr %x.addr)
   ret i32 %x
 }
 
@@ -41,8 +41,8 @@ entry:
 define arm_aapcscc i64 @split_i64(i32, i32, i32, i32, i64 %x) {
 entry:
   %x.addr = alloca i64, align 4
-  store i64 %x, i64* %x.addr, align 4
-  call void @addrof_i64(i64* %x.addr)
+  store i64 %x, ptr %x.addr, align 4
+  call void @addrof_i64(ptr %x.addr)
   ret i64 %x
 }
 

@@ -47,11 +47,9 @@ public:
 
     for (unsigned Bucket = 0; Bucket < NumBuckets; ++Bucket) {
       HMapBucket B = getBucket(Bucket);
-      if (B.Key != HMAP_EmptyBucketKey) {
-        Optional<StringRef> Key = getString(B.Key);
-        if (Key)
-          Callback(Key.value());
-      }
+      if (B.Key != HMAP_EmptyBucketKey)
+        if (Optional<StringRef> Key = getString(B.Key))
+          Callback(*Key);
     }
   }
 

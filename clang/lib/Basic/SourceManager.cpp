@@ -712,10 +712,10 @@ void SourceManager::overrideFileContents(const FileEntry *SourceFile,
     Pair.first->second = NewFile;
 }
 
-Optional<FileEntryRef>
+OptionalFileEntryRef
 SourceManager::bypassFileContentsOverride(FileEntryRef File) {
   assert(isFileOverridden(&File.getFileEntry()));
-  llvm::Optional<FileEntryRef> BypassFile = FileMgr.getBypassFile(File);
+  OptionalFileEntryRef BypassFile = FileMgr.getBypassFile(File);
 
   // If the file can't be found in the FS, give up.
   if (!BypassFile)

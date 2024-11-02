@@ -1,5 +1,5 @@
-// RUN: %clang -c -Xfoo %s 2>&1 | FileCheck --check-prefix=CHECK_STANDALONE_FOO %s
-// RUN: %clang -c -Xfoo=bar %s 2>&1 | FileCheck --check-prefix=CHECK_JOINED_FOO %s
+// RUN: %clang -c %s -o /dev/null -Xfoo < %s 2>&1 | FileCheck --check-prefix=CHECK_STANDALONE_FOO %s
+// RUN: %clang -c %s -o /dev/null -Xfoo=bar 2>&1 | FileCheck --check-prefix=CHECK_JOINED_FOO %s
 
 // This test ensures that we only warn on -X<unknown> and -X<unknown=value>
 // in case it is used downstream. If we error, we can't ignore it and some

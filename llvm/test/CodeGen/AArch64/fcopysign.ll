@@ -46,7 +46,7 @@ define fp128 @copysign0() {
 ; CHECK-NONEON-NEXT:    ldr q0, [sp], #16
 ; CHECK-NONEON-NEXT:    ret
 entry:
-  %v = load double, double* @val_double, align 8
+  %v = load double, ptr @val_double, align 8
   %conv = fpext double %v to fp128
   %call = tail call fp128 @llvm.copysign.f128(fp128 0xL00000000000000007FFF000000000000, fp128 %conv) #2
   ret fp128 %call
@@ -85,8 +85,8 @@ define fp128@copysign1() {
 ; CHECK-NONEON-NEXT:    ldr q0, [sp], #16
 ; CHECK-NONEON-NEXT:    ret
 entry:
-  %v0 = load fp128, fp128* @val_fp128, align 16
-  %v1 = load float, float* @val_float, align 4
+  %v0 = load fp128, ptr @val_fp128, align 16
+  %v1 = load float, ptr @val_float, align 4
   %conv = fpext float %v1 to fp128
   %call = tail call fp128 @llvm.copysign.f128(fp128 %v0, fp128 %conv)
   ret fp128 %call

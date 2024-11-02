@@ -17,7 +17,7 @@
 #include "Synchronization.h"
 #include "Types.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 

@@ -138,7 +138,7 @@ public:
     addSourceMaterialization(
         [&](mlir::OpBuilder &builder, mlir::Type resultType,
             mlir::ValueRange inputs,
-            mlir::Location loc) -> llvm::Optional<mlir::Value> {
+            mlir::Location loc) -> std::optional<mlir::Value> {
           if (inputs.size() != 1)
             return std::nullopt;
           return inputs[0];
@@ -148,7 +148,7 @@ public:
     addTargetMaterialization(
         [&](mlir::OpBuilder &builder, mlir::Type resultType,
             mlir::ValueRange inputs,
-            mlir::Location loc) -> llvm::Optional<mlir::Value> {
+            mlir::Location loc) -> std::optional<mlir::Value> {
           if (inputs.size() != 1)
             return std::nullopt;
           return inputs[0];
@@ -163,7 +163,7 @@ public:
   mlir::Type indexType() { return mlir::IntegerType::get(&getContext(), 64); }
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  llvm::Optional<mlir::LogicalResult>
+  std::optional<mlir::LogicalResult>
   convertRecordType(fir::RecordType derived,
                     llvm::SmallVectorImpl<mlir::Type> &results,
                     llvm::ArrayRef<mlir::Type> callStack) {

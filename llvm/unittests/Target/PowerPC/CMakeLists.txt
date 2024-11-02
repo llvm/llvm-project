@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   Support
   Target
+  TargetParser
   PowerPCCodeGen
   PowerPCDesc
   PowerPCInfo

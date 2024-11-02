@@ -1031,8 +1031,8 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     // to the start of the .got or .got.plt section.
     InputSection *sec = in.gotPlt.get();
     if (!target->gotBaseSymInGotPlt)
-      sec = in.mipsGot.get() ? cast<InputSection>(in.mipsGot.get())
-                             : cast<InputSection>(in.got.get());
+      sec = in.mipsGot ? cast<InputSection>(in.mipsGot.get())
+                       : cast<InputSection>(in.got.get());
     ElfSym::globalOffsetTable->section = sec;
   }
 

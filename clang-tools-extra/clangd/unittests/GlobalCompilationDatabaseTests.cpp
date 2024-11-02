@@ -330,9 +330,9 @@ TEST(GlobalCompilationDatabaseTest, CompileFlagsDirectory) {
   DirectoryBasedGlobalCompilationDatabase CDB(FS);
   auto Commands = CDB.getCompileCommand(testPath("x/y.cpp"));
   ASSERT_TRUE(Commands.has_value());
-  EXPECT_THAT(Commands.value().CommandLine, Contains("-DFOO"));
+  EXPECT_THAT(Commands->CommandLine, Contains("-DFOO"));
   // Make sure we pick the right working directory.
-  EXPECT_EQ(testPath("x"), Commands.value().Directory);
+  EXPECT_EQ(testPath("x"), Commands->Directory);
 }
 
 MATCHER_P(hasArg, Flag, "") {

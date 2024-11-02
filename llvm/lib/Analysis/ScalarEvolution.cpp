@@ -7294,8 +7294,9 @@ bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
   while (!PoisonStack.empty() && !LatchControlDependentOnPoison) {
     const Instruction *Poison = PoisonStack.pop_back_val();
 
-    for (const auto *PoisonUser : Poison->users()) {
-      if (propagatesPoison(cast<Operator>(PoisonUser))) {
+    for (const Use &U : Poison->uses()) {
+      const User *PoisonUser = U.getUser();
+      if (propagatesPoison(U)) {
         if (Pushed.insert(cast<Instruction>(PoisonUser)).second)
           PoisonStack.push_back(cast<Instruction>(PoisonUser));
       } else if (auto *BI = dyn_cast<BranchInst>(PoisonUser)) {

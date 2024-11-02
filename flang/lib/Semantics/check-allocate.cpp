@@ -8,6 +8,7 @@
 
 #include "check-allocate.h"
 #include "assignment.h"
+#include "definable.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
@@ -532,6 +533,19 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     return false;
   }
   context.CheckIndexVarRedefine(name_);
+  if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {
+    if (auto whyNot{
+            WhyNotDefinable(name_.source, context.FindScope(name_.source),
+                {DefinabilityFlag::PointerDefinition,
+                    DefinabilityFlag::AcceptAllocatable},
+                *allocateObject_.typedExpr->v)}) {
+      context
+          .Say(name_.source,
+              "Name in ALLOCATE statement is not definable"_err_en_US)
+          .Attach(std::move(*whyNot));
+      return false;
+    }
+  }
   return RunCoarrayRelatedChecks(context);
 }
 

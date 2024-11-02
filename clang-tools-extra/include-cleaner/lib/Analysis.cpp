@@ -101,7 +101,7 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
 
   AnalysisResults Results;
   for (const Include &I : Inc.all())
-    if (!Used.contains(&I))
+    if (!Used.contains(&I) && PI && !PI->shouldKeep(I.Line))
       Results.Unused.push_back(&I);
   for (llvm::StringRef S : Missing.keys())
     Results.Missing.push_back(S.str());

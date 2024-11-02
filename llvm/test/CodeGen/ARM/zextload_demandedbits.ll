@@ -12,24 +12,23 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-
 ; CHECK: asr
 ; CHECK: bl
 ; CHECK: pop
-define void @quux(%struct.eggs* %arg) {
+define void @quux(ptr %arg) {
 bb:
-  %tmp1 = getelementptr inbounds %struct.eggs, %struct.eggs* %arg, i32 0, i32 1
-  %0 = load i16, i16* %tmp1, align 2
+  %tmp1 = getelementptr inbounds %struct.eggs, ptr %arg, i32 0, i32 1
+  %0 = load i16, ptr %tmp1, align 2
   %tobool = icmp eq i16 %0, 0
   br i1 %tobool, label %bb16, label %bb3
 
 bb3:                                              ; preds = %bb
-  %tmp4 = bitcast i16* %tmp1 to i8*
-  %tmp5 = ptrtoint i16* %tmp1 to i32
+  %tmp5 = ptrtoint ptr %tmp1 to i32
   %tmp6 = shl i32 %tmp5, 20
   %tmp7 = ashr exact i32 %tmp6, 20
-  %tmp14 = getelementptr inbounds %struct.barney, %struct.barney* undef, i32 %tmp7
-  %tmp15 = tail call i32 @widget(%struct.barney* %tmp14, i8* %tmp4, i32 %tmp7)
+  %tmp14 = getelementptr inbounds %struct.barney, ptr undef, i32 %tmp7
+  %tmp15 = tail call i32 @widget(ptr %tmp14, ptr %tmp1, i32 %tmp7)
   br label %bb16
 
 bb16:                                             ; preds = %bb3, %bb
   ret void
 }
 
-declare i32 @widget(%struct.barney*, i8*, i32)
+declare i32 @widget(ptr, ptr, i32)

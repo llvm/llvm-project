@@ -631,7 +631,7 @@ entry:
   ret i64 %z
 }
 
-define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_zext_load(<16 x i8> *%xp, <16 x i8> *%yp) {
+define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_zext_load(ptr %xp, ptr %yp) {
 ; CHECK-LABEL: add_v16i8_v16i64_zext_load:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
@@ -644,8 +644,8 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_zext_load(<16 x i8> *%xp, <16 x i8>
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
-  %x = load <16 x i8>, <16 x i8>* %xp
-  %y = load <16 x i8>, <16 x i8>* %yp
+  %x = load <16 x i8>, ptr %xp
+  %y = load <16 x i8>, ptr %yp
   %xx = zext <16 x i8> %x to <16 x i64>
   %yy = zext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy
@@ -653,7 +653,7 @@ entry:
   ret i64 %z
 }
 
-define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_sext_load(<16 x i8> *%xp, <16 x i8> *%yp) {
+define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_sext_load(ptr %xp, ptr %yp) {
 ; CHECK-LABEL: add_v16i8_v16i64_sext_load:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s16 q0, [r1]
@@ -666,8 +666,8 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_sext_load(<16 x i8> *%xp, <16 x i8>
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
-  %x = load <16 x i8>, <16 x i8>* %xp
-  %y = load <16 x i8>, <16 x i8>* %yp
+  %x = load <16 x i8>, ptr %xp
+  %y = load <16 x i8>, ptr %yp
   %xx = sext <16 x i8> %x to <16 x i64>
   %yy = sext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy
@@ -1391,7 +1391,7 @@ entry:
   ret i64 %r
 }
 
-define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_zext_load(<16 x i8> *%xp, <16 x i8> *%yp, i64 %a) {
+define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_zext_load(ptr %xp, ptr %yp, i64 %a) {
 ; CHECK-LABEL: add_v16i8_v16i64_acc_zext_load:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
@@ -1404,8 +1404,8 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_zext_load(<16 x i8> *%xp, <16 x
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
-  %x = load <16 x i8>, <16 x i8>* %xp
-  %y = load <16 x i8>, <16 x i8>* %yp
+  %x = load <16 x i8>, ptr %xp
+  %y = load <16 x i8>, ptr %yp
   %xx = zext <16 x i8> %x to <16 x i64>
   %yy = zext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy
@@ -1414,7 +1414,7 @@ entry:
   ret i64 %r
 }
 
-define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_sext_load(<16 x i8> *%xp, <16 x i8> *%yp, i64 %a) {
+define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_sext_load(ptr %xp, ptr %yp, i64 %a) {
 ; CHECK-LABEL: add_v16i8_v16i64_acc_sext_load:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s16 q0, [r1]
@@ -1427,8 +1427,8 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_sext_load(<16 x i8> *%xp, <16 x
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
-  %x = load <16 x i8>, <16 x i8>* %xp
-  %y = load <16 x i8>, <16 x i8>* %yp
+  %x = load <16 x i8>, ptr %xp
+  %y = load <16 x i8>, ptr %yp
   %xx = sext <16 x i8> %x to <16 x i64>
   %yy = sext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy

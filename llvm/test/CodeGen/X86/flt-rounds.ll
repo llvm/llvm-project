@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=-sse2 -verify-machineinstrs < %s | FileCheck %s --check-prefix=X86
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=X64
 
-declare i32 @llvm.flt.rounds()
+declare i32 @llvm.get.rounding()
 
 define i32 @test_flt_rounds() nounwind {
 ; X86-LABEL: test_flt_rounds:
@@ -31,7 +31,7 @@ define i32 @test_flt_rounds() nounwind {
 ; X64-NEXT:    shrl %cl, %eax
 ; X64-NEXT:    andl $3, %eax
 ; X64-NEXT:    retq
-  %1 = call i32 @llvm.flt.rounds()
+  %1 = call i32 @llvm.get.rounding()
   ret i32 %1
 }
 
@@ -172,21 +172,21 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    retq
 entry:
   %call = tail call i32 @fesetround(i32 1024)
-  %0 = tail call i32 @llvm.flt.rounds()
+  %0 = tail call i32 @llvm.get.rounding()
   %cmp = icmp ne i32 %0, 3
   %spec.select = zext i1 %cmp to i32
   %call1 = tail call i32 @fesetround(i32 0)
-  %1 = tail call i32 @llvm.flt.rounds()
+  %1 = tail call i32 @llvm.get.rounding()
   %cmp2 = icmp eq i32 %1, 1
   %inc4 = select i1 %cmp, i32 2, i32 1
   %errs.1 = select i1 %cmp2, i32 %spec.select, i32 %inc4
   %call6 = tail call i32 @fesetround(i32 3072)
-  %2 = tail call i32 @llvm.flt.rounds()
+  %2 = tail call i32 @llvm.get.rounding()
   %cmp7 = icmp ne i32 %2, 0
   %inc9 = zext i1 %cmp7 to i32
   %spec.select22 = add nuw nsw i32 %errs.1, %inc9
   %call11 = tail call i32 @fesetround(i32 2048)
-  %3 = tail call i32 @llvm.flt.rounds()
+  %3 = tail call i32 @llvm.get.rounding()
   %cmp12 = icmp ne i32 %3, 2
   %inc14.neg = sext i1 %cmp12 to i32
   %cmp16 = icmp ne i32 %spec.select22, %inc14.neg

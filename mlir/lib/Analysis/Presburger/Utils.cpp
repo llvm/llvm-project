@@ -401,7 +401,7 @@ DivisionRepr::divValuesAt(ArrayRef<MPInt> point) const {
         // Division value required, but not found yet.
         if (!divValues[j])
           break;
-        divVal += dividend[getDivOffset() + j] * divValues[j].value();
+        divVal += dividend[getDivOffset() + j] * *divValues[j];
       }
 
       // We have some division values that are still not found, but are required

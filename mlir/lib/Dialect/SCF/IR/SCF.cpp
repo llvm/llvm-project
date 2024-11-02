@@ -248,7 +248,7 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
 void ExecuteRegionOp::getSuccessorRegions(
-    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    std::optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is the ExecuteRegionOp, branch into the body.
   if (!index) {
@@ -265,7 +265,7 @@ void ExecuteRegionOp::getSuccessorRegions(
 //===----------------------------------------------------------------------===//
 
 MutableOperandRange
-ConditionOp::getMutableSuccessorOperands(Optional<unsigned> index) {
+ConditionOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
   // Pass all operands except the condition to the successor region.
   return getArgsMutable();
 }
@@ -352,17 +352,19 @@ LogicalResult ForOp::verifyRegions() {
   return success();
 }
 
-Optional<Value> ForOp::getSingleInductionVar() { return getInductionVar(); }
+std::optional<Value> ForOp::getSingleInductionVar() {
+  return getInductionVar();
+}
 
-Optional<OpFoldResult> ForOp::getSingleLowerBound() {
+std::optional<OpFoldResult> ForOp::getSingleLowerBound() {
   return OpFoldResult(getLowerBound());
 }
 
-Optional<OpFoldResult> ForOp::getSingleStep() {
+std::optional<OpFoldResult> ForOp::getSingleStep() {
   return OpFoldResult(getStep());
 }
 
-Optional<OpFoldResult> ForOp::getSingleUpperBound() {
+std::optional<OpFoldResult> ForOp::getSingleUpperBound() {
   return OpFoldResult(getUpperBound());
 }
 
@@ -476,7 +478,7 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
 /// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable. LoopOp only has one region, so 0 is the only valid value
 /// for `index`.
-OperandRange ForOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+OperandRange ForOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
   assert(index && *index == 0 && "invalid region index");
 
   // The initial operands map to the loop arguments after the induction
@@ -489,7 +491,7 @@ OperandRange ForOp::getSuccessorEntryOperands(Optional<unsigned> index) {
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void ForOp::getSuccessorRegions(Optional<unsigned> index,
+void ForOp::getSuccessorRegions(std::optional<unsigned> index,
                                 ArrayRef<Attribute> operands,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is the ForOp, branch into the body using the iterator
@@ -721,7 +723,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 /// Util function that tries to compute a constant diff between u and l.
 /// Returns std::nullopt when the difference between two AffineValueMap is
 /// dynamic.
-static Optional<int64_t> computeConstDiff(Value l, Value u) {
+static std::optional<int64_t> computeConstDiff(Value l, Value u) {
   IntegerAttr clb, cub;
   if (matchPattern(l, m_Constant(&clb)) && matchPattern(u, m_Constant(&cub))) {
     llvm::APInt lbValue = clb.getValue();
@@ -754,7 +756,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    Optional<int64_t> diff =
+    std::optional<int64_t> diff =
         computeConstDiff(op.getLowerBound(), op.getUpperBound());
     if (!diff)
       return failure();
@@ -765,7 +767,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    llvm::Optional<llvm::APInt> maybeStepValue = op.getConstantStep();
+    std::optional<llvm::APInt> maybeStepValue = op.getConstantStep();
     if (!maybeStepValue)
       return failure();
 
@@ -1068,7 +1070,7 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
               LastTensorLoadCanonicalization, ForOpTensorCastFolder>(context);
 }
 
-Optional<APInt> ForOp::getConstantStep() {
+std::optional<APInt> ForOp::getConstantStep() {
   IntegerAttr step;
   if (matchPattern(getStep(), m_Constant(&step)))
     return step.getValue();
@@ -1212,7 +1214,7 @@ ParseResult ForeachThreadOp::parse(OpAsmParser &parser,
 void ForeachThreadOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &result, ValueRange outputs,
                             ValueRange numThreads,
-                            Optional<ArrayAttr> mapping) {
+                            std::optional<ArrayAttr> mapping) {
   result.addOperands(numThreads);
   result.addOperands(outputs);
   if (mapping.has_value()) {
@@ -1565,7 +1567,7 @@ void IfOp::print(OpAsmPrinter &p) {
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
-void IfOp::getSuccessorRegions(Optional<unsigned> index,
+void IfOp::getSuccessorRegions(std::optional<unsigned> index,
                                ArrayRef<Attribute> operands,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
@@ -2723,7 +2725,7 @@ void WhileOp::build(::mlir::OpBuilder &odsBuilder,
   afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
 }
 
-OperandRange WhileOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+OperandRange WhileOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
   assert(index && *index == 0 &&
          "WhileOp is expected to branch only to the first region");
 
@@ -2746,7 +2748,7 @@ Block::BlockArgListType WhileOp::getAfterArguments() {
   return getAfter().front().getArguments();
 }
 
-void WhileOp::getSuccessorRegions(Optional<unsigned> index,
+void WhileOp::getSuccessorRegions(std::optional<unsigned> index,
                                   ArrayRef<Attribute> operands,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
   // The parent op always branches to the condition region.
@@ -3524,7 +3526,7 @@ Block &scf::IndexSwitchOp::getCaseBlock(unsigned idx) {
 }
 
 void IndexSwitchOp::getSuccessorRegions(
-    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    std::optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &successors) {
   // All regions branch back to the parent op.
   if (index) {

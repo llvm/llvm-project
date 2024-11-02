@@ -475,7 +475,7 @@ public:
   /// Return the outermost loop in this FORALL nest.
   fir::DoLoopOp getOuterLoop() {
     assert(outerLoop.has_value());
-    return outerLoop.value();
+    return *outerLoop;
   }
 
   /// Return the statement context for the entire, outermost FORALL construct.

@@ -36,4 +36,4 @@ declare void @llvm.assume(i1) #0
 attributes #0 = { nounwind }
 
 !nvvm.annotations = !{!0}
-!0 = !{void (i32, i32, i32)* @no_vectorization, !"kernel", i32 1}
+!0 = !{ptr @no_vectorization, !"kernel", i32 1}

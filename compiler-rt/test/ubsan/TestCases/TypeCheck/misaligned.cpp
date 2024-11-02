@@ -12,7 +12,7 @@
 // RUN: not %run %t s1 2>&1 | FileCheck %s --check-prefix=CHECK-STORE
 // RUN: not %run %t w1 2>&1 | FileCheck %s --check-prefix=CHECK-WILD
 // Compilation error make the test fails.
-// XFAIL: openbsd
+// XFAIL: target={{.*openbsd.*}}
 
 #include <new>
 

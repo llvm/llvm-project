@@ -171,8 +171,8 @@ define signext i32 @test7(i32 signext %x, i32 signext %z) {
 define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; NOSFB-LABEL: select_xor_1:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a1, a1, 1
-; NOSFB-NEXT:    negw a1, a1
+; NOSFB-NEXT:    slli a1, a1, 63
+; NOSFB-NEXT:    srai a1, a1, 63
 ; NOSFB-NEXT:    andi a1, a1, 43
 ; NOSFB-NEXT:    xor a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -199,8 +199,8 @@ entry:
 define i16 @select_xor_1b(i16 %A, i8 %cond) {
 ; NOSFB-LABEL: select_xor_1b:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a1, a1, 1
-; NOSFB-NEXT:    negw a1, a1
+; NOSFB-NEXT:    slli a1, a1, 63
+; NOSFB-NEXT:    srai a1, a1, 63
 ; NOSFB-NEXT:    andi a1, a1, 43
 ; NOSFB-NEXT:    xor a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -225,8 +225,8 @@ entry:
 define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; NOSFB-LABEL: select_xor_2:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a2, a2, 1
-; NOSFB-NEXT:    neg a2, a2
+; NOSFB-NEXT:    slli a2, a2, 63
+; NOSFB-NEXT:    srai a2, a2, 63
 ; NOSFB-NEXT:    and a1, a1, a2
 ; NOSFB-NEXT:    xor a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -234,10 +234,9 @@ define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; SFB-LABEL: select_xor_2:
 ; SFB:       # %bb.0: # %entry
 ; SFB-NEXT:    andi a2, a2, 1
-; SFB-NEXT:    xor a1, a1, a0
 ; SFB-NEXT:    beqz a2, .LBB9_2
 ; SFB-NEXT:  # %bb.1: # %entry
-; SFB-NEXT:    mv a0, a1
+; SFB-NEXT:    xor a0, a0, a1
 ; SFB-NEXT:  .LBB9_2: # %entry
 ; SFB-NEXT:    ret
 entry:
@@ -253,8 +252,8 @@ entry:
 define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; NOSFB-LABEL: select_xor_2b:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a2, a2, 1
-; NOSFB-NEXT:    neg a2, a2
+; NOSFB-NEXT:    slli a2, a2, 63
+; NOSFB-NEXT:    srai a2, a2, 63
 ; NOSFB-NEXT:    and a1, a1, a2
 ; NOSFB-NEXT:    xor a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -262,10 +261,9 @@ define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; SFB-LABEL: select_xor_2b:
 ; SFB:       # %bb.0: # %entry
 ; SFB-NEXT:    andi a2, a2, 1
-; SFB-NEXT:    xor a1, a1, a0
 ; SFB-NEXT:    beqz a2, .LBB10_2
 ; SFB-NEXT:  # %bb.1: # %entry
-; SFB-NEXT:    mv a0, a1
+; SFB-NEXT:    xor a0, a0, a1
 ; SFB-NEXT:  .LBB10_2: # %entry
 ; SFB-NEXT:    ret
 entry:
@@ -279,8 +277,8 @@ entry:
 define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; NOSFB-LABEL: select_or:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a2, a2, 1
-; NOSFB-NEXT:    neg a2, a2
+; NOSFB-NEXT:    slli a2, a2, 63
+; NOSFB-NEXT:    srai a2, a2, 63
 ; NOSFB-NEXT:    and a1, a1, a2
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -288,10 +286,9 @@ define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; SFB-LABEL: select_or:
 ; SFB:       # %bb.0: # %entry
 ; SFB-NEXT:    andi a2, a2, 1
-; SFB-NEXT:    or a1, a1, a0
 ; SFB-NEXT:    beqz a2, .LBB11_2
 ; SFB-NEXT:  # %bb.1: # %entry
-; SFB-NEXT:    mv a0, a1
+; SFB-NEXT:    or a0, a0, a1
 ; SFB-NEXT:  .LBB11_2: # %entry
 ; SFB-NEXT:    ret
 entry:
@@ -307,8 +304,8 @@ entry:
 define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; NOSFB-LABEL: select_or_b:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a2, a2, 1
-; NOSFB-NEXT:    neg a2, a2
+; NOSFB-NEXT:    slli a2, a2, 63
+; NOSFB-NEXT:    srai a2, a2, 63
 ; NOSFB-NEXT:    and a1, a1, a2
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -316,10 +313,9 @@ define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; SFB-LABEL: select_or_b:
 ; SFB:       # %bb.0: # %entry
 ; SFB-NEXT:    andi a2, a2, 1
-; SFB-NEXT:    or a1, a1, a0
 ; SFB-NEXT:    beqz a2, .LBB12_2
 ; SFB-NEXT:  # %bb.1: # %entry
-; SFB-NEXT:    mv a0, a1
+; SFB-NEXT:    or a0, a0, a1
 ; SFB-NEXT:  .LBB12_2: # %entry
 ; SFB-NEXT:    ret
 entry:
@@ -333,8 +329,8 @@ entry:
 define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; NOSFB-LABEL: select_or_1:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a2, a2, 1
-; NOSFB-NEXT:    neg a2, a2
+; NOSFB-NEXT:    slli a2, a2, 63
+; NOSFB-NEXT:    srai a2, a2, 63
 ; NOSFB-NEXT:    and a1, a1, a2
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -342,10 +338,9 @@ define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; SFB-LABEL: select_or_1:
 ; SFB:       # %bb.0: # %entry
 ; SFB-NEXT:    andi a2, a2, 1
-; SFB-NEXT:    or a1, a1, a0
 ; SFB-NEXT:    beqz a2, .LBB13_2
 ; SFB-NEXT:  # %bb.1: # %entry
-; SFB-NEXT:    mv a0, a1
+; SFB-NEXT:    or a0, a0, a1
 ; SFB-NEXT:  .LBB13_2: # %entry
 ; SFB-NEXT:    ret
 entry:
@@ -361,8 +356,8 @@ entry:
 define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; NOSFB-LABEL: select_or_1b:
 ; NOSFB:       # %bb.0: # %entry
-; NOSFB-NEXT:    andi a2, a2, 1
-; NOSFB-NEXT:    neg a2, a2
+; NOSFB-NEXT:    slli a2, a2, 63
+; NOSFB-NEXT:    srai a2, a2, 63
 ; NOSFB-NEXT:    and a1, a1, a2
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
@@ -370,10 +365,9 @@ define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; SFB-LABEL: select_or_1b:
 ; SFB:       # %bb.0: # %entry
 ; SFB-NEXT:    andi a2, a2, 1
-; SFB-NEXT:    or a1, a1, a0
 ; SFB-NEXT:    beqz a2, .LBB14_2
 ; SFB-NEXT:  # %bb.1: # %entry
-; SFB-NEXT:    mv a0, a1
+; SFB-NEXT:    or a0, a0, a1
 ; SFB-NEXT:  .LBB14_2: # %entry
 ; SFB-NEXT:    ret
 entry:

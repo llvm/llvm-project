@@ -34,7 +34,7 @@ start:
 ; We avoid lowering the intrinsic as a libcall because this function has the same name as
 ; the libcall we wanted to generate (that would create an infinite loop).
 
-define i128 @__muloti4(i128 %0, i128 %1, i32* nocapture nonnull writeonly align 4 %2) #2 {
+define i128 @__muloti4(i128 %0, i128 %1, ptr nocapture nonnull writeonly align 4 %2) #2 {
 ; AARCH-LABEL: __muloti4:
 ; AARCH:       // %bb.0: // %Entry
 ; AARCH-NEXT:    asr x9, x1, #63
@@ -86,7 +86,7 @@ define i128 @__muloti4(i128 %0, i128 %1, i32* nocapture nonnull writeonly align 
 ; AARCH-NEXT:  .LBB1_4: // %Block9
 ; AARCH-NEXT:    ret
 Entry:
-  store i32 0, i32* %2, align 4
+  store i32 0, ptr %2, align 4
   %.fr = freeze i128 %1
   %mul = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %0, i128 %.fr)
   %3 = icmp slt i128 %0, 0
@@ -99,7 +99,7 @@ Else2:                                            ; preds = %Entry
   br i1 %mul.ov, label %Then7, label %Block9
 
 Then7:                                            ; preds = %Else2, %Entry
-  store i32 1, i32* %2, align 4
+  store i32 1, ptr %2, align 4
   br label %Block9
 
 Block9:                                           ; preds = %Else2, %Then7

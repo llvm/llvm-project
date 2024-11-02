@@ -251,6 +251,20 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (isDone) {
     return; // following checks do not apply
   }
+  if (symbol.attrs().test(Attr::PROTECTED)) {
+    if (symbol.owner().kind() != Scope::Kind::Module) { // C854
+      messages_.Say(
+          "A PROTECTED entity must be in the specification part of a module"_err_en_US);
+    }
+    if (!evaluate::IsVariable(symbol) && !IsProcedurePointer(symbol)) { // C855
+      messages_.Say(
+          "A PROTECTED entity must be a variable or pointer"_err_en_US);
+    }
+    if (InCommonBlock(symbol)) { // C856
+      messages_.Say(
+          "A PROTECTED entity may not be in a common block"_err_en_US);
+    }
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }

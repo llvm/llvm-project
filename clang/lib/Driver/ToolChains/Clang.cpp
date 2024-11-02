@@ -2260,8 +2260,8 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(Args.MakeArgString("-hexagon-small-data-threshold=" +
-                                         Twine(G.value())));
+    CmdArgs.push_back(
+        Args.MakeArgString("-hexagon-small-data-threshold=" + Twine(*G)));
   }
 
   if (!Args.hasArg(options::OPT_fno_short_enums))
@@ -7226,6 +7226,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
              getToolChain().IsAArch64OutlineAtomicsDefault(Args)) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+outline-atomics");
+  }
+
+  if (Triple.isAArch64() &&
+      (Args.hasArg(options::OPT_mno_fmv) ||
+       getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_CompilerRT)) {
+    // Disable Function Multiversioning on AArch64 target.
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("-fmv");
   }
 
   if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,

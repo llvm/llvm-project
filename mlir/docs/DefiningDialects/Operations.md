@@ -1341,9 +1341,9 @@ enum class MyIntEnum : uint32_t {
   Case20 = 20,
 };
 
-llvm::Optional<MyIntEnum> symbolizeMyIntEnum(uint32_t);
+std::optional<MyIntEnum> symbolizeMyIntEnum(uint32_t);
 llvm::StringRef ConvertToString(MyIntEnum);
-llvm::Optional<MyIntEnum> ConvertToEnum(llvm::StringRef);
+std::optional<MyIntEnum> ConvertToEnum(llvm::StringRef);
 inline constexpr unsigned getMaxEnumValForMyIntEnum() {
   return 20;
 }
@@ -1387,13 +1387,13 @@ llvm::StringRef ConvertToString(MyIntEnum val) {
   return "";
 }
 
-llvm::Optional<MyIntEnum> ConvertToEnum(llvm::StringRef str) {
-  return llvm::StringSwitch<llvm::Optional<MyIntEnum>>(str)
+std::optional<MyIntEnum> ConvertToEnum(llvm::StringRef str) {
+  return llvm::StringSwitch<std::optional<MyIntEnum>>(str)
       .Case("Case15", MyIntEnum::Case15)
       .Case("Case20", MyIntEnum::Case20)
       .Default(std::nullopt);
 }
-llvm::Optional<MyIntEnum> symbolizeMyIntEnum(uint32_t value) {
+std::optional<MyIntEnum> symbolizeMyIntEnum(uint32_t value) {
   switch (value) {
   case 15: return MyIntEnum::Case15;
   case 20: return MyIntEnum::Case20;
@@ -1430,9 +1430,9 @@ enum class MyBitEnum : uint32_t {
   Bit3 = 8,
 };
 
-llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t);
+std::optional<MyBitEnum> symbolizeMyBitEnum(uint32_t);
 std::string stringifyMyBitEnum(MyBitEnum);
-llvm::Optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef);
+std::optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef);
 
 inline constexpr MyBitEnum operator|(MyBitEnum a, MyBitEnum b) {
   return static_cast<MyBitEnum>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
@@ -1462,10 +1462,10 @@ inline std::string stringifyEnum(MyBitEnum enumValue) {
 }
 
 template <typename EnumType>
-::llvm::Optional<EnumType> symbolizeEnum(::llvm::StringRef);
+::std::optional<EnumType> symbolizeEnum(::llvm::StringRef);
 
 template <>
-inline ::llvm::Optional<MyBitEnum> symbolizeEnum<MyBitEnum>(::llvm::StringRef str) {
+inline ::std::optional<MyBitEnum> symbolizeEnum<MyBitEnum>(::llvm::StringRef str) {
   return symbolizeMyBitEnum(str);
 }
 
@@ -1506,7 +1506,7 @@ std::string stringifyMyBitEnum(MyBitEnum symbol) {
   return llvm::join(strs, "|");
 }
 
-llvm::Optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef str) {
+std::optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef str) {
   // Special case for all bits unset.
   if (str == "None") return MyBitEnum::None;
 
@@ -1515,7 +1515,7 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef str) {
 
   uint32_t val = 0;
   for (auto symbol : symbols) {
-    auto bit = llvm::StringSwitch<llvm::Optional<uint32_t>>(symbol)
+    auto bit = llvm::StringSwitch<std::optional<uint32_t>>(symbol)
       .Case("tagged", 1)
       .Case("Bit1", 2)
       .Case("Bit2", 4)
@@ -1526,7 +1526,7 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef str) {
   return static_cast<MyBitEnum>(val);
 }
 
-llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
+std::optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
   // Special case for all bits unset.
   if (value == 0) return MyBitEnum::None;
 

@@ -540,7 +540,7 @@ define void @foo_with_call() #2 {
 ; CHECK-RV64-FD-NEXT:    fld fs11, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    addi sp, sp, 384
 ; CHECK-RV64-FD-NEXT:    mret
-  %call = call i32 bitcast (i32 (...)* @otherfoo to i32 ()*)()
+  %call = call i32 @otherfoo()
   ret void
 }
 
@@ -1056,7 +1056,7 @@ define void @foo_fp_with_call() #3 {
 ; CHECK-RV64-FD-NEXT:    fld fs11, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    addi sp, sp, 400
 ; CHECK-RV64-FD-NEXT:    mret
-  %call = call i32 bitcast (i32 (...)* @otherfoo to i32 ()*)()
+  %call = call i32 @otherfoo()
   ret void
 }
 

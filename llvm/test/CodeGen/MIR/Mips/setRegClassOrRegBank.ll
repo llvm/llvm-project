@@ -9,7 +9,7 @@
 ; Check that setRegClassOrRegBank.mir has same output.
 
 declare <4 x i32> @llvm.mips.addvi.w(<4 x i32>, i32 immarg)
-define void @add_v4i32_builtin_imm(<4 x i32>* %a, <4 x i32>* %c) {
+define void @add_v4i32_builtin_imm(ptr %a, ptr %c) {
   ; P5600-LABEL: name: add_v4i32_builtin_imm
   ; P5600: bb.1.entry:
   ; P5600:   liveins: $a0, $a1
@@ -20,8 +20,8 @@ define void @add_v4i32_builtin_imm(<4 x i32>* %a, <4 x i32>* %c) {
   ; P5600:   G_STORE [[ADDVI_W]](<4 x s32>), [[COPY1]](p0) :: (store (<4 x s32>) into %ir.c)
   ; P5600:   RetRA
 entry:
-  %0 = load <4 x i32>, <4 x i32>* %a, align 16
+  %0 = load <4 x i32>, ptr %a, align 16
   %1 = tail call <4 x i32> @llvm.mips.addvi.w(<4 x i32> %0, i32 25)
-  store <4 x i32> %1, <4 x i32>* %c, align 16
+  store <4 x i32> %1, ptr %c, align 16
   ret void
 }

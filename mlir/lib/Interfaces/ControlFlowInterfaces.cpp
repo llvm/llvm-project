@@ -36,7 +36,7 @@ SuccessorOperands::SuccessorOperands(unsigned int producedOperandCount,
 /// Returns the `BlockArgument` corresponding to operand `operandIndex` in some
 /// successor if 'operandIndex' is within the range of 'operands', or
 /// std::nullopt if `operandIndex` isn't a successor operand index.
-Optional<BlockArgument>
+std::optional<BlockArgument>
 detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
                                    unsigned operandIndex, Block *successor) {
   OperandRange forwardedOperands = operands.getForwardedOperands();
@@ -90,17 +90,17 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 /// inputs that flow from `sourceIndex' to the given region, or std::nullopt if
 /// the exact type match verification is not necessary (e.g., if the Op verifies
 /// the match itself).
-static LogicalResult
-verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
-                         function_ref<Optional<TypeRange>(Optional<unsigned>)>
-                             getInputsTypesForRegion) {
+static LogicalResult verifyTypesAlongAllEdges(
+    Operation *op, std::optional<unsigned> sourceNo,
+    function_ref<std::optional<TypeRange>(std::optional<unsigned>)>
+        getInputsTypesForRegion) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   SmallVector<RegionSuccessor, 2> successors;
   regionInterface.getSuccessorRegions(sourceNo, successors);
 
   for (RegionSuccessor &succ : successors) {
-    Optional<unsigned> succRegionNo;
+    std::optional<unsigned> succRegionNo;
     if (!succ.isParent())
       succRegionNo = succ.getSuccessor()->getRegionNumber();
 
@@ -119,7 +119,8 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
       return diag;
     };
 
-    Optional<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
+    std::optional<TypeRange> sourceTypes =
+        getInputsTypesForRegion(succRegionNo);
     if (!sourceTypes.has_value())
       continue;
 
@@ -151,7 +152,8 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
 LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
-  auto inputTypesFromParent = [&](Optional<unsigned> regionNo) -> TypeRange {
+  auto inputTypesFromParent =
+      [&](std::optional<unsigned> regionNo) -> TypeRange {
     return regionInterface.getSuccessorEntryOperands(regionNo).getTypes();
   };
 
@@ -179,7 +181,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
     // implementing the `RegionBranchTerminatorOpInterface`, all should have the
     // same operand types when passing them to the same region.
 
-    Optional<OperandRange> regionReturnOperands;
+    std::optional<OperandRange> regionReturnOperands;
     for (Block &block : region) {
       Operation *terminator = block.getTerminator();
       auto terminatorOperands =
@@ -202,7 +204,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
     }
 
     auto inputTypesFromRegion =
-        [&](Optional<unsigned> regionNo) -> Optional<TypeRange> {
+        [&](std::optional<unsigned> regionNo) -> std::optional<TypeRange> {
       // If there is no return-like terminator, the op itself should verify
       // type consistency.
       if (!regionReturnOperands)
@@ -307,7 +309,7 @@ bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
 }
 
 void RegionBranchOpInterface::getSuccessorRegions(
-    Optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
   unsigned numInputs = 0;
   if (index) {
     // If the predecessor is a region, get the number of operands from an
@@ -367,9 +369,9 @@ bool mlir::isRegionReturnLike(Operation *operation) {
 /// `OperandRange` represents all operands that are passed to the specified
 /// successor region. If `regionIndex` is `std::nullopt`, all operands that are
 /// passed to the parent operation will be returned.
-Optional<MutableOperandRange>
-mlir::getMutableRegionBranchSuccessorOperands(Operation *operation,
-                                              Optional<unsigned> regionIndex) {
+std::optional<MutableOperandRange>
+mlir::getMutableRegionBranchSuccessorOperands(
+    Operation *operation, std::optional<unsigned> regionIndex) {
   // Try to query a RegionBranchTerminatorOpInterface to determine
   // all successor operands that will be passed to the successor
   // input arguments.
@@ -388,9 +390,9 @@ mlir::getMutableRegionBranchSuccessorOperands(Operation *operation,
 /// Returns the read only operands that are passed to the region with the given
 /// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
 /// information.
-Optional<OperandRange>
+std::optional<OperandRange>
 mlir::getRegionBranchSuccessorOperands(Operation *operation,
-                                       Optional<unsigned> regionIndex) {
+                                       std::optional<unsigned> regionIndex) {
   auto range = getMutableRegionBranchSuccessorOperands(operation, regionIndex);
-  return range ? Optional<OperandRange>(*range) : std::nullopt;
+  return range ? std::optional<OperandRange>(*range) : std::nullopt;
 }

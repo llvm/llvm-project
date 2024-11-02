@@ -218,6 +218,13 @@ public:
     StructuredBindingPolicy.PrintCanonicalTypes = true;
   }
 
+  bool VisitTypeLoc(TypeLoc TL) {
+    if (const auto *DT = llvm::dyn_cast<DecltypeType>(TL.getType()))
+      if (QualType UT = DT->getUnderlyingType(); !UT->isDependentType())
+        addTypeHint(TL.getSourceRange(), UT, ": ");
+    return true;
+  }
+
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     // Weed out constructor calls that don't look like a function call with
     // an argument list, by checking the validity of getParenOrBraceRange().

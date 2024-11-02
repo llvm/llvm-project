@@ -257,6 +257,7 @@ SyncDependenceAnalysis::SyncDependenceAnalysis(const DominatorTree &DT,
 
 SyncDependenceAnalysis::~SyncDependenceAnalysis() = default;
 
+namespace {
 // divergence propagator for reducible CFGs
 struct DivergencePropagator {
   const ModifiedPO &LoopPOT;
@@ -433,6 +434,7 @@ struct DivergencePropagator {
     return std::move(DivDesc);
   }
 };
+} // end anonymous namespace
 
 #ifndef NDEBUG
 static void printBlockSet(ConstBlockSet &Blocks, raw_ostream &Out) {

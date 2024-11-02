@@ -139,7 +139,7 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   return firBase;
 }
 
-hlfir::EntityWithAttributes
+fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
                   fir::FortranVariableFlagsAttr flags) {
@@ -305,7 +305,7 @@ hlfir::Entity hlfir::getElementAt(mlir::Location loc,
 static mlir::Value genUBound(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lb, mlir::Value extent,
                              mlir::Value one) {
-  if (auto constantLb = fir::factory::getIntIfConstant(lb))
+  if (auto constantLb = fir::getIntIfConstant(lb))
     if (*constantLb == 1)
       return extent;
   extent = builder.createConvert(loc, one.getType(), extent);
@@ -431,6 +431,9 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
     if (auto concat = expr.getDefiningOp<hlfir::ConcatOp>()) {
       result.push_back(concat.getLength());
       return;
+    } else if (auto concat = expr.getDefiningOp<hlfir::SetLengthOp>()) {
+      result.push_back(concat.getLength());
+      return;
     } else if (auto asExpr = expr.getDefiningOp<hlfir::AsExprOp>()) {
       hlfir::genLengthParameters(loc, builder, hlfir::Entity{asExpr.getVar()},
                                  result);
@@ -452,6 +455,14 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
     return;
   }
   TODO(loc, "inquire PDTs length parameters in HLFIR");
+}
+
+mlir::Value hlfir::genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
+                                 hlfir::Entity entity) {
+  llvm::SmallVector<mlir::Value, 1> lenParams;
+  genLengthParameters(loc, builder, entity, lenParams);
+  assert(lenParams.size() == 1 && "characters must have one length parameters");
+  return lenParams[0];
 }
 
 std::pair<mlir::Value, mlir::Value> hlfir::genVariableFirBaseShapeAndParams(
@@ -500,7 +511,7 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
   hlfir::ExprType::Shape typeShape(rank, hlfir::ExprType::getUnknownExtent());
   if (auto shapeOp = shape.getDefiningOp<fir::ShapeOp>())
     for (auto extent : llvm::enumerate(shapeOp.getExtents()))
-      if (auto cstExtent = fir::factory::getIntIfConstant(extent.value()))
+      if (auto cstExtent = fir::getIntIfConstant(extent.value()))
         typeShape[extent.index()] = *cstExtent;
   return hlfir::ExprType::get(elementType.getContext(), typeShape, elementType,
                               isPolymorphic);

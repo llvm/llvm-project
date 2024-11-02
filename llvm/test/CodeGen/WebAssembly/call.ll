@@ -96,7 +96,7 @@ define i32 @call_i32_binary(i32 %a, i32 %b) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: {{^}} call_indirect $pop[[L0]]{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @call_indirect_void(void ()* %callee) {
+define void @call_indirect_void(ptr %callee) {
   call void %callee()
   ret void
 }
@@ -106,7 +106,7 @@ define void @call_indirect_void(void ()* %callee) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @call_indirect_i32(i32 ()* %callee) {
+define i32 @call_indirect_i32(ptr %callee) {
   %t = call i32 %callee()
   ret i32 %t
 }
@@ -116,7 +116,7 @@ define i32 @call_indirect_i32(i32 ()* %callee) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i64 @call_indirect_i64(i64 ()* %callee) {
+define i64 @call_indirect_i64(ptr %callee) {
   %t = call i64 %callee()
   ret i64 %t
 }
@@ -126,7 +126,7 @@ define i64 @call_indirect_i64(i64 ()* %callee) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define float @call_indirect_float(float ()* %callee) {
+define float @call_indirect_float(ptr %callee) {
   %t = call float %callee()
   ret float %t
 }
@@ -136,7 +136,7 @@ define float @call_indirect_float(float ()* %callee) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define double @call_indirect_double(double ()* %callee) {
+define double @call_indirect_double(ptr %callee) {
   %t = call double %callee()
   ret double %t
 }
@@ -146,7 +146,7 @@ define double @call_indirect_double(double ()* %callee) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define <16 x i8> @call_indirect_v128(<16 x i8> ()* %callee) {
+define <16 x i8> @call_indirect_v128(ptr %callee) {
   %t = call <16 x i8> %callee()
   ret <16 x i8> %t
 }
@@ -157,7 +157,7 @@ define <16 x i8> @call_indirect_v128(<16 x i8> ()* %callee) {
 ; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: {{^}} call_indirect $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @call_indirect_arg(void (i32)* %callee, i32 %arg) {
+define void @call_indirect_arg(ptr %callee, i32 %arg) {
   call void %callee(i32 %arg)
   ret void
 }
@@ -170,7 +170,7 @@ define void @call_indirect_arg(void (i32)* %callee, i32 %arg) {
 ; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
 ; CHECK-NEXT: drop $pop[[NUM]]{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @call_indirect_arg_2(i32 (i32, i32)* %callee, i32 %arg, i32 %arg2) {
+define void @call_indirect_arg_2(ptr %callee, i32 %arg, i32 %arg2) {
   call i32 %callee(i32 %arg, i32 %arg2)
   ret void
 }
@@ -223,13 +223,13 @@ declare void @vararg_func(...)
 declare void @other_void_nullary()
 define void @call_constexpr() {
 bb0:
-  call void bitcast (void (...)* @vararg_func to void (i32, i32)*)(i32 2, i32 3)
+  call void @vararg_func(i32 2, i32 3)
   br label %bb1
 bb1:
-  call void select (i1 0, void ()* @void_nullary, void ()* @other_void_nullary)()
+  call void select (i1 0, ptr @void_nullary, ptr @other_void_nullary)()
   br label %bb2
 bb2:
-  call void inttoptr (i32 ptrtoint (void ()* @void_nullary to i32) to void ()*)()
+  call void inttoptr (i32 ptrtoint (ptr @void_nullary to i32) to ptr)()
   ret void
 }
 

@@ -265,7 +265,7 @@ getDefaultABIAttrs(MLIRContext *context, gpu::GPUFuncOp funcOp,
       return failure();
     // Vulkan's interface variable requirements needs scalars to be wrapped in a
     // struct. The struct held in storage buffer.
-    Optional<spirv::StorageClass> sc;
+    std::optional<spirv::StorageClass> sc;
     if (funcOp.getArgument(argIndex).getType().isIntOrIndexOrFloat())
       sc = spirv::StorageClass::StorageBuffer;
     argABI.push_back(spirv::getInterfaceVarABIAttr(0, argIndex, sc, context));

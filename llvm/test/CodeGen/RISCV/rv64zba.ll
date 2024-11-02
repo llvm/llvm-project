@@ -22,7 +22,7 @@ define i64 @slliuw(i64 %a) nounwind {
   ret i64 %shl
 }
 
-define i128 @slliuw_2(i32 signext %0, i128* %1) {
+define i128 @slliuw_2(i32 signext %0, ptr %1) {
 ; RV64I-LABEL: slliuw_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
@@ -40,8 +40,8 @@ define i128 @slliuw_2(i32 signext %0, i128* %1) {
 ; RV64ZBA-NEXT:    ld a1, 8(a1)
 ; RV64ZBA-NEXT:    ret
   %3 = zext i32 %0 to i64
-  %4 = getelementptr inbounds i128, i128* %1, i64 %3
-  %5 = load i128, i128* %4
+  %4 = getelementptr inbounds i128, ptr %1, i64 %3
+  %5 = load i128, ptr %4
   ret i128 %5
 }
 
@@ -62,7 +62,7 @@ define i64 @adduw(i64 %a, i64 %b) nounwind {
   ret i64 %add
 }
 
-define signext i8 @adduw_2(i32 signext %0, i8* %1) {
+define signext i8 @adduw_2(i32 signext %0, ptr %1) {
 ; RV64I-LABEL: adduw_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
@@ -77,8 +77,8 @@ define signext i8 @adduw_2(i32 signext %0, i8* %1) {
 ; RV64ZBA-NEXT:    lb a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = zext i32 %0 to i64
-  %4 = getelementptr inbounds i8, i8* %1, i64 %3
-  %5 = load i8, i8* %4
+  %4 = getelementptr inbounds i8, ptr %1, i64 %3
+  %5 = load i8, ptr %4
   ret i8 %5
 }
 
@@ -117,7 +117,7 @@ define i64 @zextw_demandedbits_i64(i64 %0) {
   ret i64 %3
 }
 
-define signext i16 @sh1add(i64 %0, i16* %1) {
+define signext i16 @sh1add(i64 %0, ptr %1) {
 ; RV64I-LABEL: sh1add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 1
@@ -130,12 +130,12 @@ define signext i16 @sh1add(i64 %0, i16* %1) {
 ; RV64ZBA-NEXT:    sh1add a0, a0, a1
 ; RV64ZBA-NEXT:    lh a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
-  %3 = getelementptr inbounds i16, i16* %1, i64 %0
-  %4 = load i16, i16* %3
+  %3 = getelementptr inbounds i16, ptr %1, i64 %0
+  %4 = load i16, ptr %3
   ret i16 %4
 }
 
-define signext i32 @sh2add(i64 %0, i32* %1) {
+define signext i32 @sh2add(i64 %0, ptr %1) {
 ; RV64I-LABEL: sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 2
@@ -148,12 +148,12 @@ define signext i32 @sh2add(i64 %0, i32* %1) {
 ; RV64ZBA-NEXT:    sh2add a0, a0, a1
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
-  %3 = getelementptr inbounds i32, i32* %1, i64 %0
-  %4 = load i32, i32* %3
+  %3 = getelementptr inbounds i32, ptr %1, i64 %0
+  %4 = load i32, ptr %3
   ret i32 %4
 }
 
-define i64 @sh3add(i64 %0, i64* %1) {
+define i64 @sh3add(i64 %0, ptr %1) {
 ; RV64I-LABEL: sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 3
@@ -166,12 +166,12 @@ define i64 @sh3add(i64 %0, i64* %1) {
 ; RV64ZBA-NEXT:    sh3add a0, a0, a1
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
-  %3 = getelementptr inbounds i64, i64* %1, i64 %0
-  %4 = load i64, i64* %3
+  %3 = getelementptr inbounds i64, ptr %1, i64 %0
+  %4 = load i64, ptr %3
   ret i64 %4
 }
 
-define signext i16 @sh1adduw(i32 signext %0, i16* %1) {
+define signext i16 @sh1adduw(i32 signext %0, ptr %1) {
 ; RV64I-LABEL: sh1adduw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
@@ -186,8 +186,8 @@ define signext i16 @sh1adduw(i32 signext %0, i16* %1) {
 ; RV64ZBA-NEXT:    lh a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = zext i32 %0 to i64
-  %4 = getelementptr inbounds i16, i16* %1, i64 %3
-  %5 = load i16, i16* %4
+  %4 = getelementptr inbounds i16, ptr %1, i64 %3
+  %5 = load i16, ptr %4
   ret i16 %5
 }
 
@@ -209,7 +209,7 @@ define i64 @sh1adduw_2(i64 %0, i64 %1) {
   ret i64 %5
 }
 
-define signext i32 @sh2adduw(i32 signext %0, i32* %1) {
+define signext i32 @sh2adduw(i32 signext %0, ptr %1) {
 ; RV64I-LABEL: sh2adduw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
@@ -224,8 +224,8 @@ define signext i32 @sh2adduw(i32 signext %0, i32* %1) {
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = zext i32 %0 to i64
-  %4 = getelementptr inbounds i32, i32* %1, i64 %3
-  %5 = load i32, i32* %4
+  %4 = getelementptr inbounds i32, ptr %1, i64 %3
+  %5 = load i32, ptr %4
   ret i32 %5
 }
 
@@ -247,7 +247,7 @@ define i64 @sh2adduw_2(i64 %0, i64 %1) {
   ret i64 %5
 }
 
-define i64 @sh3adduw(i32 signext %0, i64* %1) {
+define i64 @sh3adduw(i32 signext %0, ptr %1) {
 ; RV64I-LABEL: sh3adduw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
@@ -262,8 +262,8 @@ define i64 @sh3adduw(i32 signext %0, i64* %1) {
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = zext i32 %0 to i64
-  %4 = getelementptr inbounds i64, i64* %1, i64 %3
-  %5 = load i64, i64* %4
+  %4 = getelementptr inbounds i64, ptr %1, i64 %3
+  %5 = load i64, ptr %4
   ret i64 %5
 }
 
@@ -1314,7 +1314,7 @@ define zeroext i32 @sext_ashr_zext_i16(i16 %a) nounwind {
 
 ; This the IR you get from InstCombine if take the difference of 2 pointers and
 ; cast is to unsigned before using as an index.
-define signext i16 @sh1adduw_ptrdiff(i64 %diff, i16* %baseptr) {
+define signext i16 @sh1adduw_ptrdiff(i64 %diff, ptr %baseptr) {
 ; RV64I-LABEL: sh1adduw_ptrdiff:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, 1
@@ -1333,12 +1333,12 @@ define signext i16 @sh1adduw_ptrdiff(i64 %diff, i16* %baseptr) {
 ; RV64ZBA-NEXT:    ret
   %ptrdiff = lshr exact i64 %diff, 1
   %cast = and i64 %ptrdiff, 4294967295
-  %ptr = getelementptr inbounds i16, i16* %baseptr, i64 %cast
-  %res = load i16, i16* %ptr
+  %ptr = getelementptr inbounds i16, ptr %baseptr, i64 %cast
+  %res = load i16, ptr %ptr
   ret i16 %res
 }
 
-define signext i32 @sh2adduw_ptrdiff(i64 %diff, i32* %baseptr) {
+define signext i32 @sh2adduw_ptrdiff(i64 %diff, ptr %baseptr) {
 ; RV64I-LABEL: sh2adduw_ptrdiff:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, 1
@@ -1357,12 +1357,12 @@ define signext i32 @sh2adduw_ptrdiff(i64 %diff, i32* %baseptr) {
 ; RV64ZBA-NEXT:    ret
   %ptrdiff = lshr exact i64 %diff, 2
   %cast = and i64 %ptrdiff, 4294967295
-  %ptr = getelementptr inbounds i32, i32* %baseptr, i64 %cast
-  %res = load i32, i32* %ptr
+  %ptr = getelementptr inbounds i32, ptr %baseptr, i64 %cast
+  %res = load i32, ptr %ptr
   ret i32 %res
 }
 
-define i64 @sh3adduw_ptrdiff(i64 %diff, i64* %baseptr) {
+define i64 @sh3adduw_ptrdiff(i64 %diff, ptr %baseptr) {
 ; RV64I-LABEL: sh3adduw_ptrdiff:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, 1
@@ -1381,12 +1381,12 @@ define i64 @sh3adduw_ptrdiff(i64 %diff, i64* %baseptr) {
 ; RV64ZBA-NEXT:    ret
   %ptrdiff = lshr exact i64 %diff, 3
   %cast = and i64 %ptrdiff, 4294967295
-  %ptr = getelementptr inbounds i64, i64* %baseptr, i64 %cast
-  %res = load i64, i64* %ptr
+  %ptr = getelementptr inbounds i64, ptr %baseptr, i64 %cast
+  %res = load i64, ptr %ptr
   ret i64 %res
 }
 
-define signext i16 @srliw_1_sh1add(i16* %0, i32 signext %1) {
+define signext i16 @srliw_1_sh1add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_1_sh1add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 1
@@ -1403,12 +1403,12 @@ define signext i16 @srliw_1_sh1add(i16* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 1
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i16, i16* %0, i64 %4
-  %6 = load i16, i16* %5, align 2
+  %5 = getelementptr inbounds i16, ptr %0, i64 %4
+  %6 = load i16, ptr %5, align 2
   ret i16 %6
 }
 
-define i128 @slliuw_ptrdiff(i64 %diff, i128* %baseptr) {
+define i128 @slliuw_ptrdiff(i64 %diff, ptr %baseptr) {
 ; RV64I-LABEL: slliuw_ptrdiff:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, 1
@@ -1430,12 +1430,12 @@ define i128 @slliuw_ptrdiff(i64 %diff, i128* %baseptr) {
 ; RV64ZBA-NEXT:    ret
   %ptrdiff = lshr exact i64 %diff, 4
   %cast = and i64 %ptrdiff, 4294967295
-  %ptr = getelementptr inbounds i128, i128* %baseptr, i64 %cast
-  %res = load i128, i128* %ptr
+  %ptr = getelementptr inbounds i128, ptr %baseptr, i64 %cast
+  %res = load i128, ptr %ptr
   ret i128 %res
 }
 
-define signext i32 @srliw_2_sh2add(i32* %0, i32 signext %1) {
+define signext i32 @srliw_2_sh2add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_2_sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 2
@@ -1452,12 +1452,12 @@ define signext i32 @srliw_2_sh2add(i32* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 2
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i32, i32* %0, i64 %4
-  %6 = load i32, i32* %5, align 4
+  %5 = getelementptr inbounds i32, ptr %0, i64 %4
+  %6 = load i32, ptr %5, align 4
   ret i32 %6
 }
 
-define i64 @srliw_3_sh3add(i64* %0, i32 signext %1) {
+define i64 @srliw_3_sh3add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_3_sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 3
@@ -1474,12 +1474,12 @@ define i64 @srliw_3_sh3add(i64* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 3
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i64, i64* %0, i64 %4
-  %6 = load i64, i64* %5, align 8
+  %5 = getelementptr inbounds i64, ptr %0, i64 %4
+  %6 = load i64, ptr %5, align 8
   ret i64 %6
 }
 
-define signext i32 @srliw_1_sh2add(i32* %0, i32 signext %1) {
+define signext i32 @srliw_1_sh2add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_1_sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 1
@@ -1496,12 +1496,12 @@ define signext i32 @srliw_1_sh2add(i32* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 1
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i32, i32* %0, i64 %4
-  %6 = load i32, i32* %5, align 4
+  %5 = getelementptr inbounds i32, ptr %0, i64 %4
+  %6 = load i32, ptr %5, align 4
   ret i32 %6
 }
 
-define i64 @srliw_1_sh3add(i64* %0, i32 signext %1) {
+define i64 @srliw_1_sh3add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_1_sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 1
@@ -1518,12 +1518,12 @@ define i64 @srliw_1_sh3add(i64* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 1
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i64, i64* %0, i64 %4
-  %6 = load i64, i64* %5, align 8
+  %5 = getelementptr inbounds i64, ptr %0, i64 %4
+  %6 = load i64, ptr %5, align 8
   ret i64 %6
 }
 
-define i64 @srliw_2_sh3add(i64* %0, i32 signext %1) {
+define i64 @srliw_2_sh3add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_2_sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 2
@@ -1540,12 +1540,12 @@ define i64 @srliw_2_sh3add(i64* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 2
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i64, i64* %0, i64 %4
-  %6 = load i64, i64* %5, align 8
+  %5 = getelementptr inbounds i64, ptr %0, i64 %4
+  %6 = load i64, ptr %5, align 8
   ret i64 %6
 }
 
-define signext i16 @srliw_2_sh1add(i16* %0, i32 signext %1) {
+define signext i16 @srliw_2_sh1add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_2_sh1add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 2
@@ -1562,13 +1562,13 @@ define signext i16 @srliw_2_sh1add(i16* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 2
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i16, i16* %0, i64 %4
-  %6 = load i16, i16* %5, align 2
+  %5 = getelementptr inbounds i16, ptr %0, i64 %4
+  %6 = load i16, ptr %5, align 2
   ret i16 %6
 }
 
 
-define signext i32 @srliw_3_sh2add(i32* %0, i32 signext %1) {
+define signext i32 @srliw_3_sh2add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_3_sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 3
@@ -1585,12 +1585,12 @@ define signext i32 @srliw_3_sh2add(i32* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 3
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i32, i32* %0, i64 %4
-  %6 = load i32, i32* %5, align 4
+  %5 = getelementptr inbounds i32, ptr %0, i64 %4
+  %6 = load i32, ptr %5, align 4
   ret i32 %6
 }
 
-define i64 @srliw_4_sh3add(i64* %0, i32 signext %1) {
+define i64 @srliw_4_sh3add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_4_sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 4
@@ -1607,12 +1607,12 @@ define i64 @srliw_4_sh3add(i64* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i32 %1, 4
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i64, i64* %0, i64 %4
-  %6 = load i64, i64* %5, align 8
+  %5 = getelementptr inbounds i64, ptr %0, i64 %4
+  %6 = load i64, ptr %5, align 8
   ret i64 %6
 }
 
-define signext i32 @srli_1_sh2add(i32* %0, i64 %1) {
+define signext i32 @srli_1_sh2add(ptr %0, i64 %1) {
 ; RV64I-LABEL: srli_1_sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 1
@@ -1628,12 +1628,12 @@ define signext i32 @srli_1_sh2add(i32* %0, i64 %1) {
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i64 %1, 1
-  %4 = getelementptr inbounds i32, i32* %0, i64 %3
-  %5 = load i32, i32* %4, align 4
+  %4 = getelementptr inbounds i32, ptr %0, i64 %3
+  %5 = load i32, ptr %4, align 4
   ret i32 %5
 }
 
-define i64 @srli_2_sh3add(i64* %0, i64 %1) {
+define i64 @srli_2_sh3add(ptr %0, i64 %1) {
 ; RV64I-LABEL: srli_2_sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 1
@@ -1649,12 +1649,12 @@ define i64 @srli_2_sh3add(i64* %0, i64 %1) {
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i64 %1, 2
-  %4 = getelementptr inbounds i64, i64* %0, i64 %3
-  %5 = load i64, i64* %4, align 8
+  %4 = getelementptr inbounds i64, ptr %0, i64 %3
+  %5 = load i64, ptr %4, align 8
   ret i64 %5
 }
 
-define signext i16 @srli_2_sh1add(i16* %0, i64 %1) {
+define signext i16 @srli_2_sh1add(ptr %0, i64 %1) {
 ; RV64I-LABEL: srli_2_sh1add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a1, a1, 1
@@ -1670,12 +1670,12 @@ define signext i16 @srli_2_sh1add(i16* %0, i64 %1) {
 ; RV64ZBA-NEXT:    lh a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i64 %1, 2
-  %4 = getelementptr inbounds i16, i16* %0, i64 %3
-  %5 = load i16, i16* %4, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %3
+  %5 = load i16, ptr %4, align 2
   ret i16 %5
 }
 
-define signext i32 @srli_3_sh2add(i32* %0, i64 %1) {
+define signext i32 @srli_3_sh2add(ptr %0, i64 %1) {
 ; RV64I-LABEL: srli_3_sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a1, a1, 1
@@ -1691,12 +1691,12 @@ define signext i32 @srli_3_sh2add(i32* %0, i64 %1) {
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i64 %1, 3
-  %4 = getelementptr inbounds i32, i32* %0, i64 %3
-  %5 = load i32, i32* %4, align 4
+  %4 = getelementptr inbounds i32, ptr %0, i64 %3
+  %5 = load i32, ptr %4, align 4
   ret i32 %5
 }
 
-define i64 @srli_4_sh3add(i64* %0, i64 %1) {
+define i64 @srli_4_sh3add(ptr %0, i64 %1) {
 ; RV64I-LABEL: srli_4_sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a1, a1, 1
@@ -1712,12 +1712,12 @@ define i64 @srli_4_sh3add(i64* %0, i64 %1) {
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %3 = lshr i64 %1, 4
-  %4 = getelementptr inbounds i64, i64* %0, i64 %3
-  %5 = load i64, i64* %4, align 8
+  %4 = getelementptr inbounds i64, ptr %0, i64 %3
+  %5 = load i64, ptr %4, align 8
   ret i64 %5
 }
 
-define signext i16 @shl_2_sh1add(i16* %0, i32 signext %1) {
+define signext i16 @shl_2_sh1add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: shl_2_sh1add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 34
@@ -1734,12 +1734,12 @@ define signext i16 @shl_2_sh1add(i16* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = shl i32 %1, 2
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i16, i16* %0, i64 %4
-  %6 = load i16, i16* %5, align 2
+  %5 = getelementptr inbounds i16, ptr %0, i64 %4
+  %6 = load i16, ptr %5, align 2
   ret i16 %6
 }
 
-define signext i32 @shl_16_sh2add(i32* %0, i32 signext %1) {
+define signext i32 @shl_16_sh2add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: shl_16_sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 48
@@ -1756,12 +1756,12 @@ define signext i32 @shl_16_sh2add(i32* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = shl i32 %1, 16
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i32, i32* %0, i64 %4
-  %6 = load i32, i32* %5, align 4
+  %5 = getelementptr inbounds i32, ptr %0, i64 %4
+  %6 = load i32, ptr %5, align 4
   ret i32 %6
 }
 
-define i64 @shl_31_sh3add(i64* %0, i32 signext %1) {
+define i64 @shl_31_sh3add(ptr %0, i32 signext %1) {
 ; RV64I-LABEL: shl_31_sh3add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 63
@@ -1778,7 +1778,7 @@ define i64 @shl_31_sh3add(i64* %0, i32 signext %1) {
 ; RV64ZBA-NEXT:    ret
   %3 = shl i32 %1, 31
   %4 = zext i32 %3 to i64
-  %5 = getelementptr inbounds i64, i64* %0, i64 %4
-  %6 = load i64, i64* %5, align 8
+  %5 = getelementptr inbounds i64, ptr %0, i64 %4
+  %6 = load i64, ptr %5, align 8
   ret i64 %6
 }

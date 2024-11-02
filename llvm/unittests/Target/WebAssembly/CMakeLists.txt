@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   MC
   MIRParser
+  TargetParser
   WebAssemblyCodeGen
   WebAssemblyDesc
   WebAssemblyInfo

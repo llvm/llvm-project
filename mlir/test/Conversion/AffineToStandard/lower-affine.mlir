@@ -493,13 +493,13 @@ func.func @args_ret_affine_apply(index, index) -> (index, index) {
 // applying constant folding transformation after affine lowering.
 //===---------------------------------------------------------------------===//
 
-#mapmod = affine_map<(i) -> (i mod 42)>
-
 // --------------------------------------------------------------------------//
 // IMPORTANT NOTE: if you change this test, also change the @lowered_affine_mod
-// test in the "constant-fold.mlir" test to reflect the expected output of
+// test in the "canonicalize.mlir" test to reflect the expected output of
 // affine.apply lowering.
 // --------------------------------------------------------------------------//
+
+#map_mod = affine_map<(i) -> (i mod 42)>
 // CHECK-LABEL: func @affine_apply_mod
 func.func @affine_apply_mod(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[c42:.*]] = arith.constant 42 : index
@@ -508,17 +508,27 @@ func.func @affine_apply_mod(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[v1:.*]] = arith.cmpi slt, %[[v0]], %[[c0]] : index
 // CHECK-NEXT: %[[v2:.*]] = arith.addi %[[v0]], %[[c42]] : index
 // CHECK-NEXT: %[[v3:.*]] = arith.select %[[v1]], %[[v2]], %[[v0]] : index
-  %0 = affine.apply #mapmod (%arg0)
+  %0 = affine.apply #map_mod (%arg0)
+  return %0 : index
+}
+#map_mod_dynamic_divisor = affine_map<(i)[s] -> (i mod s)>
+// CHECK-LABEL: func @affine_apply_mod_dynamic_divisor
+func.func @affine_apply_mod_dynamic_divisor(%arg0 : index, %arg1 : index) -> (index) {
+// CHECK-NEXT: %[[v0:.*]] = arith.remsi %{{.*}}, %arg1 : index
+// CHECK-NEXT: %[[c0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[v1:.*]] = arith.cmpi slt, %[[v0]], %[[c0]] : index
+// CHECK-NEXT: %[[v2:.*]] = arith.addi %[[v0]], %arg1 : index
+// CHECK-NEXT: %[[v3:.*]] = arith.select %[[v1]], %[[v2]], %[[v0]] : index
+  %0 = affine.apply #map_mod_dynamic_divisor (%arg0)[%arg1]
   return %0 : index
 }
 
-#mapfloordiv = affine_map<(i) -> (i floordiv 42)>
-
 // --------------------------------------------------------------------------//
-// IMPORTANT NOTE: if you change this test, also change the @lowered_affine_mod
-// test in the "constant-fold.mlir" test to reflect the expected output of
+// IMPORTANT NOTE: if you change this test, also change the @lowered_affine_floordiv
+// test in the "canonicalize.mlir" test to reflect the expected output of
 // affine.apply lowering.
 // --------------------------------------------------------------------------//
+#map_floordiv = affine_map<(i) -> (i floordiv 42)>
 // CHECK-LABEL: func @affine_apply_floordiv
 func.func @affine_apply_floordiv(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[c42:.*]] = arith.constant 42 : index
@@ -530,17 +540,30 @@ func.func @affine_apply_floordiv(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[v3:.*]] = arith.divsi %[[v2]], %[[c42]] : index
 // CHECK-NEXT: %[[v4:.*]] = arith.subi %[[cm1]], %[[v3]] : index
 // CHECK-NEXT: %[[v5:.*]] = arith.select %[[v0]], %[[v4]], %[[v3]] : index
-  %0 = affine.apply #mapfloordiv (%arg0)
+  %0 = affine.apply #map_floordiv (%arg0)
+  return %0 : index
+}
+#map_floordiv_dynamic_divisor = affine_map<(i)[s] -> (i floordiv s)>
+// CHECK-LABEL: func @affine_apply_floordiv_dynamic_divisor
+func.func @affine_apply_floordiv_dynamic_divisor(%arg0 : index, %arg1 : index) -> (index) {
+// CHECK-NEXT: %[[c0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[cm1:.*]] = arith.constant -1 : index
+// CHECK-NEXT: %[[v0:.*]] = arith.cmpi slt, %{{.*}}, %[[c0]] : index
+// CHECK-NEXT: %[[v1:.*]] = arith.subi %[[cm1]], %{{.*}} : index
+// CHECK-NEXT: %[[v2:.*]] = arith.select %[[v0]], %[[v1]], %{{.*}} : index
+// CHECK-NEXT: %[[v3:.*]] = arith.divsi %[[v2]], %arg1 : index
+// CHECK-NEXT: %[[v4:.*]] = arith.subi %[[cm1]], %[[v3]] : index
+// CHECK-NEXT: %[[v5:.*]] = arith.select %[[v0]], %[[v4]], %[[v3]] : index
+  %0 = affine.apply #map_floordiv_dynamic_divisor (%arg0)[%arg1]
   return %0 : index
 }
 
-#mapceildiv = affine_map<(i) -> (i ceildiv 42)>
-
 // --------------------------------------------------------------------------//
-// IMPORTANT NOTE: if you change this test, also change the @lowered_affine_mod
-// test in the "constant-fold.mlir" test to reflect the expected output of
+// IMPORTANT NOTE: if you change this test, also change the @lowered_affine_ceildiv
+// test in the "canonicalize.mlir" test to reflect the expected output of
 // affine.apply lowering.
 // --------------------------------------------------------------------------//
+#map_ceildiv = affine_map<(i) -> (i ceildiv 42)>
 // CHECK-LABEL: func @affine_apply_ceildiv
 func.func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 // CHECK-NEXT:  %[[c42:.*]] = arith.constant 42 : index
@@ -554,7 +577,23 @@ func.func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 // CHECK-NEXT:  %[[v5:.*]] = arith.subi %[[c0]], %[[v4]] : index
 // CHECK-NEXT:  %[[v6:.*]] = arith.addi %[[v4]], %[[c1]] : index
 // CHECK-NEXT:  %[[v7:.*]] = arith.select %[[v0]], %[[v5]], %[[v6]] : index
-  %0 = affine.apply #mapceildiv (%arg0)
+  %0 = affine.apply #map_ceildiv (%arg0)
+  return %0 : index
+}
+#map_ceildiv_dynamic_divisor = affine_map<(i)[s] -> (i ceildiv s)>
+// CHECK-LABEL: func @affine_apply_ceildiv_dynamic_divisor
+func.func @affine_apply_ceildiv_dynamic_divisor(%arg0 : index, %arg1 : index) -> (index) {
+// CHECK-NEXT:  %[[c0:.*]] = arith.constant 0 : index
+// CHECK-NEXT:  %[[c1:.*]] = arith.constant 1 : index
+// CHECK-NEXT:  %[[v0:.*]] = arith.cmpi sle, %{{.*}}, %[[c0]] : index
+// CHECK-NEXT:  %[[v1:.*]] = arith.subi %[[c0]], %{{.*}} : index
+// CHECK-NEXT:  %[[v2:.*]] = arith.subi %{{.*}}, %[[c1]] : index
+// CHECK-NEXT:  %[[v3:.*]] = arith.select %[[v0]], %[[v1]], %[[v2]] : index
+// CHECK-NEXT:  %[[v4:.*]] = arith.divsi %[[v3]], %arg1 : index
+// CHECK-NEXT:  %[[v5:.*]] = arith.subi %[[c0]], %[[v4]] : index
+// CHECK-NEXT:  %[[v6:.*]] = arith.addi %[[v4]], %[[c1]] : index
+// CHECK-NEXT:  %[[v7:.*]] = arith.select %[[v0]], %[[v5]], %[[v6]] : index
+  %0 = affine.apply #map_ceildiv_dynamic_divisor (%arg0)[%arg1]
   return %0 : index
 }
 

@@ -19,12 +19,12 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:         .functype foo (i32) -> ()
 ; Implementation omitted...
 ; CHECK:         return
-define void @foo(<4 x i8>* %p) {
-  %1 = load <4 x i8>, <4 x i8>* %p
+define void @foo(ptr %p) {
+  %1 = load <4 x i8>, ptr %p
   %2 = sitofp <4 x i8> %1 to <4 x double>
   %3 = fmul <4 x double> zeroinitializer, %2
   %4 = fadd <4 x double> %3, zeroinitializer
   %5 = fptrunc <4 x double> %4 to <4 x float>
-  store <4 x float> %5, <4 x float>* undef
+  store <4 x float> %5, ptr undef
   ret void
 }

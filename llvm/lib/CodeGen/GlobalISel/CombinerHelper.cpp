@@ -3262,8 +3262,6 @@ bool CombinerHelper::applyFoldBinOpIntoSelect(MachineInstr &MI,
   }
 
   Builder.buildSelect(Dst, SelectCond, FoldTrue, FoldFalse, MI.getFlags());
-  Observer.erasingInstr(*Select);
-  Select->eraseFromParent();
   MI.eraseFromParent();
 
   return true;

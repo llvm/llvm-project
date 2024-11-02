@@ -47,7 +47,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
     }
 
     void getSuccessorRegions(
-        Optional<unsigned> index, ArrayRef<Attribute> operands,
+        std::optional<unsigned> index, ArrayRef<Attribute> operands,
         SmallVectorImpl<RegionSuccessor> &regions) {
       // Op has a region, but conceptually the control flow does not enter the
       // region.

@@ -9,7 +9,7 @@
 ; The parent kernel has a higher VGPR usage than the possible callees.
 
 ; CHECK-LABEL: {{^}}kernel1:
-; CHECK: .amdhsa_next_free_vgpr 42
+; CHECK: .amdhsa_next_free_vgpr 41
 ; CHECK-NEXT: .amdhsa_next_free_sgpr 33
 define amdgpu_kernel void @kernel1() #0 {
 bb:

@@ -2802,7 +2802,7 @@ void CodeViewDebug::emitLocalVariableList(const FunctionInfo &FI,
         // If ConstantValue is set we will emit it as a S_CONSTANT instead of a
         // S_LOCAL in order to be able to represent it at all.
         const DIType *Ty = L.DIVar->getType();
-        APSInt Val(L.ConstantValue.value());
+        APSInt Val(*L.ConstantValue);
         emitConstantSymbolRecord(Ty, Val, std::string(L.DIVar->getName()));
       } else {
         emitLocalVariable(FI, L);

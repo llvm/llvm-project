@@ -290,17 +290,17 @@ template <> std::string getName(const StringRef &name) {
   return std::string(name);
 }
 
-template <> std::string getName(const llvm::Any &WrappedIR) {
-  if (any_isa<const Module *>(WrappedIR))
-    return any_cast<const Module *>(WrappedIR)->getName().str();
-  if (any_isa<const Function *>(WrappedIR))
-    return any_cast<const Function *>(WrappedIR)->getName().str();
-  if (any_isa<const Loop *>(WrappedIR))
-    return any_cast<const Loop *>(WrappedIR)->getName().str();
-  if (any_isa<const LoopNest *>(WrappedIR))
-    return any_cast<const LoopNest *>(WrappedIR)->getName().str();
-  if (any_isa<const LazyCallGraph::SCC *>(WrappedIR))
-    return any_cast<const LazyCallGraph::SCC *>(WrappedIR)->getName();
+template <> std::string getName(const Any &WrappedIR) {
+  if (const auto *const *M = any_cast<const Module *>(&WrappedIR))
+    return (*M)->getName().str();
+  if (const auto *const *F = any_cast<const Function *>(&WrappedIR))
+    return (*F)->getName().str();
+  if (const auto *const *L = any_cast<const Loop *>(&WrappedIR))
+    return (*L)->getName().str();
+  if (const auto *const *L = any_cast<const LoopNest *>(&WrappedIR))
+    return (*L)->getName().str();
+  if (const auto *const *C = any_cast<const LazyCallGraph::SCC *>(&WrappedIR))
+    return (*C)->getName();
   return "<UNKNOWN>";
 }
 /// Define a custom matcher for objects which support a 'getName' method.

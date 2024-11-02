@@ -9,8 +9,8 @@
 #ifndef LLVM_SUPPORT_NATIVEFORMATTING_H
 #define LLVM_SUPPORT_NATIVEFORMATTING_H
 
-#include "llvm/ADT/Optional.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 class raw_ostream;

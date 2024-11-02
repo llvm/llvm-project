@@ -358,7 +358,7 @@ private:
     // 'return' takes an optional expression, handle that case here.
     mlir::Value expr = nullptr;
     if (ret.getExpr().has_value()) {
-      if (!(expr = mlirGen(*ret.getExpr().value())))
+      if (!(expr = mlirGen(**ret.getExpr())))
         return mlir::failure();
     }
 

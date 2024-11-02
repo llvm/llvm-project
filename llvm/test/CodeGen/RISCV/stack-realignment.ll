@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
-declare void @callee(i8*)
+declare void @callee(ptr)
 
 define void @caller32() {
 ; RV32I-LABEL: caller32:
@@ -45,7 +45,7 @@ define void @caller32() {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 32
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -74,7 +74,7 @@ define void @caller_no_realign32() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 32
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -117,7 +117,7 @@ define void @caller64() {
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 64
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -146,7 +146,7 @@ define void @caller_no_realign64() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 64
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -189,7 +189,7 @@ define void @caller128() {
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 128
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -218,7 +218,7 @@ define void @caller_no_realign128() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 128
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -261,7 +261,7 @@ define void @caller256() {
 ; RV64I-NEXT:    addi sp, sp, 256
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 256
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -290,7 +290,7 @@ define void @caller_no_realign256() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 256
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -333,7 +333,7 @@ define void @caller512() {
 ; RV64I-NEXT:    addi sp, sp, 1024
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 512
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -362,7 +362,7 @@ define void @caller_no_realign512() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 512
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -409,7 +409,7 @@ define void @caller1024() {
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 1024
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -438,7 +438,7 @@ define void @caller_no_realign1024() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 1024
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -493,7 +493,7 @@ define void @caller2048() {
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 2048
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -522,7 +522,7 @@ define void @caller_no_realign2048() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 2048
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -581,7 +581,7 @@ define void @caller4096() {
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 4096
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -610,6 +610,6 @@ define void @caller_no_realign4096() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 4096
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }

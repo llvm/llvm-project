@@ -99,7 +99,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         given operation 'from'.
         Note: See mlir::SymbolTable::getSymbolUses for more details.
       }],
-      "::llvm::Optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
+      "::std::optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
       (ins "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::getSymbolUses(this->getOperation(), from);

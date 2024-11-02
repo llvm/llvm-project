@@ -252,6 +252,10 @@ end
   the target of a procedure pointer assignment statement.
 * An explicit `INTERFACE` can declare the interface of a
   procedure pointer even if it is not a dummy argument.
+* A `NOPASS` type-bound procedure binding is required by C1529
+  to apply only to a scalar data-ref, but most compilers don't
+  enforce it and the constraint is not necessary for a correct
+  implementation.
 
 ### Extensions supported when enabled by options
 

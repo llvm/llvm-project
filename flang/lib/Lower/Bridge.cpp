@@ -449,7 +449,13 @@ public:
 
   void copySymbolBinding(Fortran::lower::SymbolRef src,
                          Fortran::lower::SymbolRef target) override final {
-    localSymbols.addSymbol(target, lookupSymbol(src).toExtendedValue());
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      auto srcDef = localSymbols.lookupVariableDefinition(src);
+      assert(srcDef && "source binding does not exists");
+      localSymbols.addVariableDefinition(target, *srcDef);
+    } else {
+      localSymbols.addSymbol(target, lookupSymbol(src).toExtendedValue());
+    }
   }
 
   /// Add the symbol binding to the inner-most level of the symbol map and
@@ -2764,10 +2770,10 @@ private:
                 llvm_unreachable("unknown category");
               }
               if (lhsIsWholeAllocatable)
-                fir::factory::finalizeRealloc(
-                    *builder, loc, lhsMutableBox.value(),
-                    /*lbounds=*/std::nullopt, /*takeLboundsIfRealloc=*/false,
-                    lhsRealloc.value());
+                fir::factory::finalizeRealloc(*builder, loc, *lhsMutableBox,
+                                              /*lbounds=*/std::nullopt,
+                                              /*takeLboundsIfRealloc=*/false,
+                                              *lhsRealloc);
             },
 
             // [2] User defined assignment. If the context is a scalar
@@ -3206,9 +3212,7 @@ private:
           }
           addSymbol(arg.entity->get(), arg.firArgument);
         } else {
-          assert(funit.parentHasHostAssoc());
-          funit.parentHostAssoc().internalProcedureBindings(*this,
-                                                            localSymbols);
+          assert(funit.parentHasTupleHostAssoc() && "expect tuple argument");
         }
       }
     };
@@ -3254,6 +3258,10 @@ private:
 
     mapDummiesAndResults(funit, callee);
 
+    // Map host associated symbols from parent procedure if any.
+    if (funit.parentHasHostAssoc())
+      funit.parentHostAssoc().internalProcedureBindings(*this, localSymbols);
+
     // Non-primary results of a function with multiple entry points.
     // These result values share storage with the primary result.
     llvm::SmallVector<Fortran::lower::pft::Variable> deferredFuncResultList;
@@ -3296,9 +3304,7 @@ private:
         // to the host variable, which must be in the map.
         const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
         if (funit.parentHostAssoc().isAssociated(ultimate)) {
-          Fortran::lower::SymbolBox hostBox = lookupSymbol(ultimate);
-          assert(hostBox && "host association is not in map");
-          localSymbols.addSymbol(sym, hostBox.toExtendedValue());
+          copySymbolBinding(ultimate, sym);
           continue;
         }
       }

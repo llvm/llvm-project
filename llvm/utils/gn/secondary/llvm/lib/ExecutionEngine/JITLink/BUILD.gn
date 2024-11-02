@@ -14,6 +14,7 @@ static_library("JITLink") {
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "COFF.cpp",

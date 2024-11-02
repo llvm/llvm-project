@@ -461,7 +461,8 @@ bool LoongArchFrameLowering::spillCalleeSavedRegisters(
     bool IsKill =
         !(Reg == LoongArch::R1 && MF->getFrameInfo().isReturnAddressTaken());
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC, TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC, TRI,
+                            Register());
   }
 
   return true;

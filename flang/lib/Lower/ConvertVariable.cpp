@@ -1890,6 +1890,14 @@ void Fortran::lower::mapCallInterfaceSymbols(
   }
 }
 
+void Fortran::lower::mapSymbolAttributes(
+    AbstractConverter &converter, const Fortran::semantics::SymbolRef &symbol,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+    mlir::Value preAlloc) {
+  mapSymbolAttributes(converter, pft::Variable{symbol}, symMap, stmtCtx,
+                      preAlloc);
+}
+
 void Fortran::lower::createRuntimeTypeInfoGlobal(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::semantics::Symbol &typeInfoSym) {

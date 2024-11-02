@@ -11,10 +11,10 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: v128.load8_splat $push[[V:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: v128.store 0($1), $pop[[V]]{{$}}
 ; CHECK-NEXT: return $[[E]]{{$}}
-define i8 @load_splat(i8* %p, <16 x i8>* %out) {
-  %e = load i8, i8* %p
+define i8 @load_splat(ptr %p, ptr %out) {
+  %e = load i8, ptr %p
   %v1 = insertelement <16 x i8> undef, i8 %e, i32 0
   %v2 = shufflevector <16 x i8> %v1, <16 x i8> undef, <16 x i32> zeroinitializer
-  store <16 x i8> %v2, <16 x i8>* %out
+  store <16 x i8> %v2, ptr %out
   ret i8 %e
 }

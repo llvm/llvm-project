@@ -310,7 +310,7 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp &op, llvm::IRBuilderBase &builder,
         getOverloadedDeclaration(op, id, module, moduleTranslation);
     if (failed(fnOrFailure))
       return failure();
-    fn = fnOrFailure.value();
+    fn = *fnOrFailure;
   } else {
     fn = llvm::Intrinsic::getDeclaration(module, id, {});
   }

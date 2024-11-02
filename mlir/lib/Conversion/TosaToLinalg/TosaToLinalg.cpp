@@ -1453,7 +1453,7 @@ public:
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
     auto emptyTensor = b.create<tensor::EmptyOp>(resultTy.getShape(), resultETy,
-                                                 dynamicDimsOr.value());
+                                                 *dynamicDimsOr);
     auto genericOp = b.create<linalg::GenericOp>(
         resultTy, ValueRange({}), ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()));
@@ -2051,7 +2051,7 @@ public:
     if (!dynamicDimsOr.has_value())
       return rewriter.notifyMatchFailure(
           op, "tosa.gather currently only supports dynamic batch dimensions");
-    SmallVector<Value> dynamicDims = dynamicDimsOr.value();
+    SmallVector<Value> dynamicDims = *dynamicDimsOr;
 
     auto resultElementTy = resultTy.getElementType();
 

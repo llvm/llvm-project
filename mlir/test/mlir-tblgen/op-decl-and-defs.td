@@ -61,7 +61,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::mlir::IntegerAttr getAttr1Attr();
 // CHECK:   uint32_t getAttr1();
 // CHECK:   ::mlir::FloatAttr getSomeAttr2Attr();
-// CHECK:   ::llvm::Optional< ::llvm::APFloat > getSomeAttr2();
+// CHECK:   ::std::optional< ::llvm::APFloat > getSomeAttr2();
 // CHECK:   ::mlir::Region &getSomeRegion();
 // CHECK:   ::mlir::RegionRange getSomeRegions();
 // CHECK: private:
@@ -88,7 +88,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::mlir::IntegerAttr getAttr1Attr()
 // CHECK:   uint32_t getAttr1();
 // CHECK:   ::mlir::FloatAttr getSomeAttr2Attr()
-// CHECK:   ::llvm::Optional< ::llvm::APFloat > getSomeAttr2();
+// CHECK:   ::std::optional< ::llvm::APFloat > getSomeAttr2();
 // CHECK:   ::mlir::Attribute removeSomeAttr2Attr();
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Value val);
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, int integer = 0);

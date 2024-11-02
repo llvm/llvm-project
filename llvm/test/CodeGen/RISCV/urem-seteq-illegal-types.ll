@@ -320,7 +320,7 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
   ret i1 %cmp
 }
 
-define void @test_urem_vec(<3 x i11>* %X) nounwind {
+define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-LABEL: test_urem_vec:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
@@ -649,10 +649,10 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64MV-NEXT:    sb a1, 4(a0)
 ; RV64MV-NEXT:    addi sp, sp, 16
 ; RV64MV-NEXT:    ret
-  %ld = load <3 x i11>, <3 x i11>* %X
+  %ld = load <3 x i11>, ptr %X
   %urem = urem <3 x i11> %ld, <i11 6, i11 7, i11 -5>
   %cmp = icmp ne <3 x i11> %urem, <i11 0, i11 1, i11 2>
   %ext = sext <3 x i1> %cmp to <3 x i11>
-  store <3 x i11> %ext, <3 x i11>* %X
+  store <3 x i11> %ext, ptr %X
   ret void
 }

@@ -26,10 +26,10 @@
 
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 

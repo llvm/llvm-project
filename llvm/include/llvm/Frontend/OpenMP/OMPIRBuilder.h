@@ -112,30 +112,30 @@ public:
   // Getters functions that assert if the required values are not present.
   bool isEmbedded() const {
     assert(IsEmbedded.has_value() && "IsEmbedded is not set");
-    return IsEmbedded.value();
+    return *IsEmbedded;
   }
 
   bool isTargetCodegen() const {
     assert(IsTargetCodegen.has_value() && "IsTargetCodegen is not set");
-    return IsTargetCodegen.value();
+    return *IsTargetCodegen;
   }
 
   bool hasRequiresUnifiedSharedMemory() const {
     assert(HasRequiresUnifiedSharedMemory.has_value() &&
            "HasUnifiedSharedMemory is not set");
-    return HasRequiresUnifiedSharedMemory.value();
+    return *HasRequiresUnifiedSharedMemory;
   }
 
   bool openMPOffloadMandatory() const {
     assert(OpenMPOffloadMandatory.has_value() &&
            "OpenMPOffloadMandatory is not set");
-    return OpenMPOffloadMandatory.value();
+    return *OpenMPOffloadMandatory;
   }
   // Returns the FirstSeparator if set, otherwise use the default
   // separator depending on isTargetCodegen
   StringRef firstSeparator() const {
     if (FirstSeparator.has_value())
-      return FirstSeparator.value();
+      return *FirstSeparator;
     if (isTargetCodegen())
       return "_";
     return ".";
@@ -145,7 +145,7 @@ public:
   // separator depending on isTargetCodegen
   StringRef separator() const {
     if (Separator.has_value())
-      return Separator.value();
+      return *Separator;
     if (isTargetCodegen())
       return "$";
     return ".";

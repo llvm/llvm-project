@@ -112,7 +112,7 @@ struct FragmentCompiler {
       diag(Error, "Invalid regex " + Anchored + ": " + RegexError, Text.Range);
       return std::nullopt;
     }
-    return Result;
+    return std::move(Result);
   }
 
   std::optional<std::string> makeAbsolute(Located<std::string> Path,

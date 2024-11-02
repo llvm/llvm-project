@@ -10,7 +10,7 @@
 
 define i32 @test(i32 %x) {
 entry:
-  %0 = tail call signext i16 undef(i32* undef)
+  %0 = tail call signext i16 undef(ptr undef)
   switch i32 %x, label %bb3 [
     i32 0, label %bb4
     i32 1, label %bb1

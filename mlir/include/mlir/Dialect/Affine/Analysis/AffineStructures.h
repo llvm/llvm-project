@@ -413,7 +413,7 @@ public:
   inline Value getValue(unsigned pos) const {
     assert(pos < getNumDimAndSymbolVars() && "Invalid position");
     assert(hasValue(pos) && "variable's Value not set");
-    return values[pos].value();
+    return *values[pos];
   }
 
   /// Returns true if the pos^th variable has an associated Value.

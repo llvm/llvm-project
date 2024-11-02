@@ -1,7 +1,7 @@
 // RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -g %s -O3 -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-CORRUPTED-VTABLE --strict-whitespace
 
-// UNSUPPORTED: windows-msvc
+// UNSUPPORTED: target={{.*windows-msvc.*}}
 // REQUIRES: stable-runtime, cxxabi
 
 #include <typeinfo>

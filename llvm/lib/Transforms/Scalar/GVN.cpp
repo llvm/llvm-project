@@ -764,14 +764,14 @@ void GVNPass::printPipeline(
 
   OS << "<";
   if (Options.AllowPRE != std::nullopt)
-    OS << (Options.AllowPRE.value() ? "" : "no-") << "pre;";
+    OS << (*Options.AllowPRE ? "" : "no-") << "pre;";
   if (Options.AllowLoadPRE != std::nullopt)
-    OS << (Options.AllowLoadPRE.value() ? "" : "no-") << "load-pre;";
+    OS << (*Options.AllowLoadPRE ? "" : "no-") << "load-pre;";
   if (Options.AllowLoadPRESplitBackedge != std::nullopt)
-    OS << (Options.AllowLoadPRESplitBackedge.value() ? "" : "no-")
+    OS << (*Options.AllowLoadPRESplitBackedge ? "" : "no-")
        << "split-backedge-load-pre;";
   if (Options.AllowMemDep != std::nullopt)
-    OS << (Options.AllowMemDep.value() ? "" : "no-") << "memdep";
+    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep";
   OS << ">";
 }
 

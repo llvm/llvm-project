@@ -1524,39 +1524,49 @@ static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
   Value *ScalarOp = InsElt.getOperand(1);
   Value *IndexOp  = InsElt.getOperand(2);
 
+  // Pattern depends on endian because we expect lower index is inserted first.
+  // Big endian:
+  // inselt (inselt BaseVec, (trunc (lshr X, BW/2), Index0), (trunc X), Index1
+  // Little endian:
   // inselt (inselt BaseVec, (trunc X), Index0), (trunc (lshr X, BW/2)), Index1
   // Note: It is not safe to do this transform with an arbitrary base vector
   //       because the bitcast of that vector to fewer/larger elements could
   //       allow poison to spill into an element that was not poison before.
-  // TODO: The insertion order could be reversed.
   // TODO: Detect smaller fractions of the scalar.
   // TODO: One-use checks are conservative.
   auto *VTy = dyn_cast<FixedVectorType>(InsElt.getType());
-  Value *X, *BaseVec;
-  uint64_t ShAmt, Index0, Index1;
+  Value *Scalar0, *BaseVec;
+  uint64_t Index0, Index1;
   if (!VTy || (VTy->getNumElements() & 1) ||
-      !match(VecOp, m_OneUse(m_InsertElt(m_Value(BaseVec), m_Trunc(m_Value(X)),
-                                         m_ConstantInt(Index0)))) ||
-      !match(ScalarOp, m_OneUse(m_Trunc(m_LShr(m_Specific(X),
-                                               m_ConstantInt(ShAmt))))) ||
       !match(IndexOp, m_ConstantInt(Index1)) ||
+      !match(VecOp, m_InsertElt(m_Value(BaseVec), m_Value(Scalar0),
+                                m_ConstantInt(Index0))) ||
       !match(BaseVec, m_Undef()))
     return nullptr;
+
+  // The first insert must be to the index one less than this one, and
+  // the first insert must be to an even index.
+  if (Index0 + 1 != Index1 || Index0 & 1)
+    return nullptr;
+
+  // For big endian, the high half of the value should be inserted first.
+  // For little endian, the low half of the value should be inserted first.
+  Value *X;
+  uint64_t ShAmt;
+  if (IsBigEndian) {
+    if (!match(ScalarOp, m_Trunc(m_Value(X))) ||
+        !match(Scalar0, m_Trunc(m_LShr(m_Specific(X), m_ConstantInt(ShAmt)))))
+      return nullptr;
+  } else {
+    if (!match(Scalar0, m_Trunc(m_Value(X))) ||
+        !match(ScalarOp, m_Trunc(m_LShr(m_Specific(X), m_ConstantInt(ShAmt)))))
+      return nullptr;
+  }
 
   Type *SrcTy = X->getType();
   unsigned ScalarWidth = SrcTy->getScalarSizeInBits();
   unsigned VecEltWidth = VTy->getScalarSizeInBits();
   if (ScalarWidth != VecEltWidth * 2 || ShAmt != VecEltWidth)
-    return nullptr;
-
-  // The low half must be inserted at element +1 for big-endian.
-  // The high half must be inserted at element +1 for little-endian
-  if (IsBigEndian ? Index0 != Index1 + 1 : Index0 + 1 != Index1)
-    return nullptr;
-
-  // The high half must be inserted at an even element for big-endian.
-  // The low half must be inserted at an even element for little-endian.
-  if (IsBigEndian ? Index1 & 1 : Index0 & 1)
     return nullptr;
 
   // Bitcast the base vector to a vector type with the source element type.
@@ -1580,9 +1590,21 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
     return replaceInstUsesWith(IE, V);
 
   // Canonicalize type of constant indices to i64 to simplify CSE
-  if (auto *IndexC = dyn_cast<ConstantInt>(IdxOp))
+  if (auto *IndexC = dyn_cast<ConstantInt>(IdxOp)) {
     if (auto *NewIdx = getPreferredVectorIndex(IndexC))
       return replaceOperand(IE, 2, NewIdx);
+
+    Value *BaseVec, *OtherScalar;
+    uint64_t OtherIndexVal;
+    if (match(VecOp, m_OneUse(m_InsertElt(m_Value(BaseVec),
+                                          m_Value(OtherScalar),
+                                          m_ConstantInt(OtherIndexVal)))) &&
+        !isa<Constant>(OtherScalar) && OtherIndexVal > IndexC->getZExtValue()) {
+      Value *NewIns = Builder.CreateInsertElement(BaseVec, ScalarOp, IdxOp);
+      return InsertElementInst::Create(NewIns, OtherScalar,
+                                       Builder.getInt64(OtherIndexVal));
+    }
+  }
 
   // If the scalar is bitcast and inserted into undef, do the insert in the
   // source type followed by bitcast.

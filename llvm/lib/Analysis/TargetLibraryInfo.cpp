@@ -169,7 +169,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fgets_unlocked);
 
   bool ShouldExtI32Param = false, ShouldExtI32Return = false,
-       ShouldSignExtI32Param = false;
+       ShouldSignExtI32Param = false, ShouldSignExtI32Return = false;
   // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
   // returns corresponding to C-level ints and unsigned ints.
   if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
@@ -182,9 +182,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   if (T.isMIPS() || T.isRISCV64()) {
     ShouldSignExtI32Param = true;
   }
+  // riscv64 needs signext on i32 returns corresponding to both signed and
+  // unsigned ints.
+  if (T.isRISCV64()) {
+    ShouldSignExtI32Return = true;
+  }
   TLI.setShouldExtI32Param(ShouldExtI32Param);
   TLI.setShouldExtI32Return(ShouldExtI32Return);
   TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
+  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
 
   // Let's assume by default that the size of int is 32 bits, unless the target
   // is a 16-bit architecture because then it most likely is 16 bits. If that
@@ -882,6 +888,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
     : CustomNames(TLI.CustomNames), ShouldExtI32Param(TLI.ShouldExtI32Param),
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
+      ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
       SizeOfInt(TLI.SizeOfInt) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
@@ -893,6 +900,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Param(TLI.ShouldExtI32Param),
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
+      ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
       SizeOfInt(TLI.SizeOfInt) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
@@ -905,6 +913,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
+  ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
@@ -915,6 +924,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
+  ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);

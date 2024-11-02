@@ -3494,7 +3494,10 @@ cc_library(
     ]),
     hdrs = glob(["include/mlir/Support/*.h"]),
     includes = ["include"],
-    deps = ["//llvm:Support"],
+    deps = [
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
 )
 
 cc_library(
@@ -3512,6 +3515,7 @@ cc_library(
     deps = [
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -3587,6 +3591,7 @@ cc_library(
         ":IR",
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -6620,10 +6625,12 @@ cc_library(
     srcs = [
         "lib/Target/LLVMIR/ConvertFromLLVMIR.cpp",
         "lib/Target/LLVMIR/DebugImporter.cpp",
+        "lib/Target/LLVMIR/ModuleImport.cpp",
         "lib/Target/LLVMIR/TypeFromLLVM.cpp",
     ],
     hdrs = [
         "include/mlir/Target/LLVMIR/Import.h",
+        "include/mlir/Target/LLVMIR/ModuleImport.h",
         "include/mlir/Target/LLVMIR/TypeFromLLVM.h",
         "lib/Target/LLVMIR/DebugImporter.h",
     ],
@@ -7261,6 +7268,7 @@ cc_library(
         ":Support",
         "//llvm:Support",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -7273,6 +7281,7 @@ cc_library(
         ":TableGen",
         "//llvm:Support",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -7289,6 +7298,7 @@ cc_binary(
         ":TableGen",
         "//llvm:Support",
         "//llvm:TableGen",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -8219,6 +8229,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TilingInterface",
         ":TransformDialect",
+        ":TransformDialectUtils",
         ":TransformUtils",
         "//llvm:Support",
     ],
@@ -9096,6 +9107,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "TransformDialectUtils",
+    srcs = ["lib/Dialect/Transform/Utils/Utils.cpp"],
+    hdrs = ["include/mlir/Dialect/Transform/Utils/Utils.h"],
+    includes = ["include"],
+    deps = [
+        ":DialectUtils",
+        ":IR",
+        ":Support",
+        ":TransformDialect",
+        ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "ComplexOpsTdFiles",
     srcs = [
@@ -9720,6 +9746,7 @@ cc_library(
         ":ShapedOpInterfaces",
         ":ViewLikeInterface",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10091,6 +10118,7 @@ cc_library(
         ":PDLDialect",
         ":Parser",
         ":SideEffectInterfaces",
+        ":TensorDialect",
         ":TransformDialect",
         "//llvm:Support",
     ],
@@ -10352,6 +10380,7 @@ cc_library(
     deps = [
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10368,6 +10397,7 @@ cc_library(
     deps = [
         ":Support",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10408,6 +10438,7 @@ cc_library(
         ":Support",
         ":TableGen",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TableGen",
     ],
 )

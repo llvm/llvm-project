@@ -69,7 +69,7 @@ declare signext i32 @bar(i32 signext)
 ; to a signext load allowing us to remove a sext.w before isel. Thus we get
 ; the same result with or without the sext.w removal pass.
 ; Test has been left for coverage purposes.
-define signext i32 @test2(i32* %p, i32 signext %b) nounwind {
+define signext i32 @test2(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
@@ -94,14 +94,14 @@ define signext i32 @test2(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    rolw a1, a2, a1
 ; NOREMOVAL-NEXT:    and a0, a1, a0
 ; NOREMOVAL-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %shl = shl i32 1, %b
   %neg = xor i32 %shl, -1
   %and1 = and i32 %neg, %a
   ret i32 %and1
 }
 
-define signext i32 @test3(i32* %p, i32 signext %b) nounwind {
+define signext i32 @test3(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test3:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
@@ -126,14 +126,14 @@ define signext i32 @test3(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    rolw a1, a2, a1
 ; NOREMOVAL-NEXT:    or a0, a1, a0
 ; NOREMOVAL-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %shl = shl i32 1, %b
   %neg = xor i32 %shl, -1
   %and1 = or i32 %neg, %a
   ret i32 %and1
 }
 
-define signext i32 @test4(i32* %p, i32 signext %b) nounwind {
+define signext i32 @test4(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test4:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a0, 0(a0)
@@ -158,7 +158,7 @@ define signext i32 @test4(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    sllw a1, a2, a1
 ; NOREMOVAL-NEXT:    xnor a0, a1, a0
 ; NOREMOVAL-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %shl = shl i32 1, %b
   %neg = xor i32 %shl, -1
   %and1 = xor i32 %neg, %a
@@ -972,7 +972,7 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
   ret i32 %13
 }
 
-define signext i32 @test15(i64 %arg1, i64 %arg2, i64 %arg3, i32* %arg4)  {
+define signext i32 @test15(i64 %arg1, i64 %arg2, i64 %arg3, ptr %arg4)  {
 ; CHECK-LABEL: test15:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi a2, a2, -1
@@ -1011,7 +1011,7 @@ bb2:                                              ; preds = %bb2, %entry
   %i4 = and i64 %i1, 1234
   %i5 = add i64 %i4, %arg2
   %i8 = trunc i64 %i5 to i32
-  store i32 %i8, i32* %arg4
+  store i32 %i8, ptr %arg4
   %i6 = icmp ugt i64 %i2, 255
   br i1 %i6, label %bb7, label %bb2
 
@@ -1329,7 +1329,7 @@ declare i64 @llvm.riscv.sha256sig0.i64(i64)
 
 ; The type promotion of %7 forms a sext_inreg, but %7 and %6 are combined to
 ; form a sh2add. This leaves behind a sext.w that isn't needed.
-define signext i32 @sextw_sh2add(i1 zeroext %0, i32* %1, i32 signext %2, i32 signext %3, i32 signext %4) {
+define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 signext %3, i32 signext %4) {
 ; RV64I-LABEL: sextw_sh2add:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slliw a2, a2, 2
@@ -1366,7 +1366,7 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, i32* %1, i32 signext %2, i32 sig
   br i1 %0, label %8, label %9
 
 8:                                                ; preds = %5
-  store i32 %7, i32* %1, align 4
+  store i32 %7, ptr %1, align 4
   br label %9
 
 9:                                                ; preds = %5, %8

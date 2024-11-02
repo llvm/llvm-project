@@ -4,7 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefix=GCN-NOHSA-VI %s
 ; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck --check-prefix=EG %s
 
-define amdgpu_kernel void @constant_load_i16(i16 addrspace(1)* %out, i16 addrspace(4)* %in) {
+define amdgpu_kernel void @constant_load_i16(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_load_i16:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -78,12 +78,12 @@ define amdgpu_kernel void @constant_load_i16(i16 addrspace(1)* %out, i16 addrspa
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load i16, i16 addrspace(4)* %in
-  store i16 %ld, i16 addrspace(1)* %out
+  %ld = load i16, ptr addrspace(4) %in
+  store i16 %ld, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %in) {
+define amdgpu_kernel void @constant_load_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_load_v2i16:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -136,12 +136,12 @@ define amdgpu_kernel void @constant_load_v2i16(<2 x i16> addrspace(1)* %out, <2 
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load <2 x i16>, <2 x i16> addrspace(4)* %in
-  store <2 x i16> %ld, <2 x i16> addrspace(1)* %out
+  %ld = load <2 x i16>, ptr addrspace(4) %in
+  store <2 x i16> %ld, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> addrspace(4)* %in) {
+define amdgpu_kernel void @constant_load_v3i16(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_load_v3i16:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -225,12 +225,12 @@ define amdgpu_kernel void @constant_load_v3i16(<3 x i16> addrspace(1)* %out, <3 
 ; EG-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load <3 x i16>, <3 x i16> addrspace(4)* %in
-  store <3 x i16> %ld, <3 x i16> addrspace(1)* %out
+  %ld = load <3 x i16>, ptr addrspace(4) %in
+  store <3 x i16> %ld, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(4)* %in) {
+define amdgpu_kernel void @constant_load_v4i16(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_load_v4i16:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -286,12 +286,12 @@ define amdgpu_kernel void @constant_load_v4i16(<4 x i16> addrspace(1)* %out, <4 
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load <4 x i16>, <4 x i16> addrspace(4)* %in
-  store <4 x i16> %ld, <4 x i16> addrspace(1)* %out
+  %ld = load <4 x i16>, ptr addrspace(4) %in
+  store <4 x i16> %ld, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v8i16(<8 x i16> addrspace(1)* %out, <8 x i16> addrspace(4)* %in) {
+define amdgpu_kernel void @constant_load_v8i16(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_load_v8i16:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -353,12 +353,12 @@ define amdgpu_kernel void @constant_load_v8i16(<8 x i16> addrspace(1)* %out, <8 
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load <8 x i16>, <8 x i16> addrspace(4)* %in
-  store <8 x i16> %ld, <8 x i16> addrspace(1)* %out
+  %ld = load <8 x i16>, ptr addrspace(4) %in
+  store <8 x i16> %ld, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v16i16(<16 x i16> addrspace(1)* %out, <16 x i16> addrspace(4)* %in) {
+define amdgpu_kernel void @constant_load_v16i16(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_load_v16i16:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -449,12 +449,12 @@ define amdgpu_kernel void @constant_load_v16i16(<16 x i16> addrspace(1)* %out, <
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load <16 x i16>, <16 x i16> addrspace(4)* %in
-  store <16 x i16> %ld, <16 x i16> addrspace(1)* %out
+  %ld = load <16 x i16>, ptr addrspace(4) %in
+  store <16 x i16> %ld, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_load_v16i16_align2(<16 x i16> addrspace(4)* %ptr0) #0 {
+define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_load_v16i16_align2:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -591,12 +591,12 @@ define amdgpu_kernel void @constant_load_v16i16_align2(<16 x i16> addrspace(4)* 
 ; EG-NEXT:     MOV * T2.X, literal.x,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
 entry:
-  %ld =  load <16 x i16>, <16 x i16> addrspace(4)* %ptr0, align 2
-  store <16 x i16> %ld, <16 x i16> addrspace(1)* undef, align 32
+  %ld =  load <16 x i16>, ptr addrspace(4) %ptr0, align 2
+  store <16 x i16> %ld, ptr addrspace(1) undef, align 32
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_i16_to_i32(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_i16_to_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_i16_to_i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -659,13 +659,13 @@ define amdgpu_kernel void @constant_zextload_i16_to_i32(i32 addrspace(1)* %out, 
 ; EG-NEXT:    ALU clause starting at 9:
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %a = load i16, i16 addrspace(4)* %in
+  %a = load i16, ptr addrspace(4) %in
   %ext = zext i16 %a to i32
-  store i32 %ext, i32 addrspace(1)* %out
+  store i32 %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_i16_to_i32(i32 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_i16_to_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_i16_to_i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -729,13 +729,13 @@ define amdgpu_kernel void @constant_sextload_i16_to_i32(i32 addrspace(1)* %out, 
 ; EG-NEXT:     BFE_INT T0.X, T0.X, 0.0, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
-  %a = load i16, i16 addrspace(4)* %in
+  %a = load i16, ptr addrspace(4) %in
   %ext = sext i16 %a to i32
-  store i32 %ext, i32 addrspace(1)* %out
+  store i32 %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v1i16_to_v1i32(<1 x i32> addrspace(1)* %out, <1 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v1i16_to_v1i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v1i16_to_v1i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -798,13 +798,13 @@ define amdgpu_kernel void @constant_zextload_v1i16_to_v1i32(<1 x i32> addrspace(
 ; EG-NEXT:    ALU clause starting at 9:
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <1 x i16>, <1 x i16> addrspace(4)* %in
+  %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = zext <1 x i16> %load to <1 x i32>
-  store <1 x i32> %ext, <1 x i32> addrspace(1)* %out
+  store <1 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v1i16_to_v1i32(<1 x i32> addrspace(1)* %out, <1 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v1i16_to_v1i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v1i16_to_v1i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -868,13 +868,13 @@ define amdgpu_kernel void @constant_sextload_v1i16_to_v1i32(<1 x i32> addrspace(
 ; EG-NEXT:     BFE_INT T0.X, T0.X, 0.0, literal.x,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
-  %load = load <1 x i16>, <1 x i16> addrspace(4)* %in
+  %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = sext <1 x i16> %load to <1 x i32>
-  store <1 x i32> %ext, <1 x i32> addrspace(1)* %out
+  store <1 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v2i16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v2i16_to_v2i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -938,14 +938,14 @@ define amdgpu_kernel void @constant_zextload_v2i16_to_v2i32(<2 x i32> addrspace(
 ; EG-NEXT:     AND_INT T4.X, T4.X, literal.x,
 ; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 2(2.802597e-45)
-  %load = load <2 x i16>, <2 x i16> addrspace(4)* %in
+  %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = zext <2 x i16> %load to <2 x i32>
-  store <2 x i32> %ext, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; TODO: We should use ASHR instead of LSHR + BFE
-define amdgpu_kernel void @constant_sextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v2i16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v2i16_to_v2i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1010,13 +1010,13 @@ define amdgpu_kernel void @constant_sextload_v2i16_to_v2i32(<2 x i32> addrspace(
 ; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 ; EG-NEXT:     BFE_INT * T5.Y, PV.W, 0.0, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-  %load = load <2 x i16>, <2 x i16> addrspace(4)* %in
+  %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = sext <2 x i16> %load to <2 x i32>
-  store <2 x i32> %ext, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(4)* %in) {
+define amdgpu_kernel void @constant_zextload_v3i16_to_v3i32(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v3i16_to_v3i32:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1093,13 +1093,13 @@ define amdgpu_kernel void @constant_zextload_v3i16_to_v3i32(<3 x i32> addrspace(
 ; EG-NEXT:     MOV * T3.Y, T1.X,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load <3 x i16>, <3 x i16> addrspace(4)* %in
+  %ld = load <3 x i16>, ptr addrspace(4) %in
   %ext = zext <3 x i16> %ld to <3 x i32>
-  store <3 x i32> %ext, <3 x i32> addrspace(1)* %out
+  store <3 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(4)* %in) {
+define amdgpu_kernel void @constant_sextload_v3i16_to_v3i32(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v3i16_to_v3i32:
 ; GCN-NOHSA-SI:       ; %bb.0: ; %entry
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1179,15 +1179,15 @@ define amdgpu_kernel void @constant_sextload_v3i16_to_v3i32(<3 x i32> addrspace(
 ; EG-NEXT:     LSHR * T3.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
-  %ld = load <3 x i16>, <3 x i16> addrspace(4)* %in
+  %ld = load <3 x i16>, ptr addrspace(4) %in
   %ext = sext <3 x i16> %ld to <3 x i32>
-  store <3 x i32> %ext, <3 x i32> addrspace(1)* %out
+  store <3 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; v4i16 is naturally 8 byte aligned
 ; TODO: This should use LD, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v4i16_to_v4i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1271,16 +1271,16 @@ define amdgpu_kernel void @constant_zextload_v4i16_to_v4i32(<4 x i32> addrspace(
 ; EG-NEXT:     AND_INT T5.X, T0.Y, literal.x,
 ; EG-NEXT:     LSHR * T6.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 2(2.802597e-45)
-  %load = load <4 x i16>, <4 x i16> addrspace(4)* %in
+  %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = zext <4 x i16> %load to <4 x i32>
-  store <4 x i32> %ext, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; v4i16 is naturally 8 byte aligned
 ; TODO: This should use LD, but for some there are redundant MOVs
 ; TODO: We should use ASHR instead of LSHR + BFE
-define amdgpu_kernel void @constant_sextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v4i16_to_v4i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1366,16 +1366,16 @@ define amdgpu_kernel void @constant_sextload_v4i16_to_v4i32(<4 x i32> addrspace(
 ; EG-NEXT:     LSHR T6.X, KC0[2].Y, literal.x,
 ; EG-NEXT:     BFE_INT * T5.Y, PS, 0.0, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-  %load = load <4 x i16>, <4 x i16> addrspace(4)* %in
+  %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = sext <4 x i16> %load to <4 x i32>
-  store <4 x i32> %ext, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; v8i16 is naturally 16 byte aligned
 ; TODO: These should use LSHR instead of BFE_UINT
 ; TODO: This should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_zextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v8i16_to_v8i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v8i16_to_v8i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1497,16 +1497,16 @@ define amdgpu_kernel void @constant_zextload_v8i16_to_v8i32(<8 x i32> addrspace(
 ; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
 ; EG-NEXT:     LSHR * T10.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <8 x i16>, <8 x i16> addrspace(4)* %in
+  %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = zext <8 x i16> %load to <8 x i32>
-  store <8 x i32> %ext, <8 x i32> addrspace(1)* %out
+  store <8 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; v8i16 is naturally 16 byte aligned
 ; TODO: 4 of these should use ASHR instead of LSHR + BFE_INT
 ; TODO: This should use DST, but for some there are redundant MOVs
-define amdgpu_kernel void @constant_sextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v8i16_to_v8i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v8i16_to_v8i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1630,13 +1630,13 @@ define amdgpu_kernel void @constant_sextload_v8i16_to_v8i32(<8 x i32> addrspace(
 ; EG-NEXT:     LSHR T10.X, PS, literal.x,
 ; EG-NEXT:     BFE_INT * T9.Y, PV.Z, 0.0, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-  %load = load <8 x i16>, <8 x i16> addrspace(4)* %in
+  %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = sext <8 x i16> %load to <8 x i32>
-  store <8 x i32> %ext, <8 x i32> addrspace(1)* %out
+  store <8 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v16i16_to_v16i32(<16 x i32> addrspace(1)* %out, <16 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v16i16_to_v16i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v16i16_to_v16i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1844,13 +1844,13 @@ define amdgpu_kernel void @constant_zextload_v16i16_to_v16i32(<16 x i32> addrspa
 ; EG-NEXT:    48(6.726233e-44), 0(0.000000e+00)
 ; EG-NEXT:     LSHR * T18.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <16 x i16>, <16 x i16> addrspace(4)* %in
+  %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = zext <16 x i16> %load to <16 x i32>
-  store <16 x i32> %ext, <16 x i32> addrspace(1)* %out
+  store <16 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v16i16_to_v16i32(<16 x i32> addrspace(1)* %out, <16 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v16i16_to_v16i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v16i16_to_v16i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2062,13 +2062,13 @@ define amdgpu_kernel void @constant_sextload_v16i16_to_v16i32(<16 x i32> addrspa
 ; EG-NEXT:     LSHR T12.X, PS, literal.x,
 ; EG-NEXT:     BFE_INT * T18.Y, PV.Z, 0.0, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-  %load = load <16 x i16>, <16 x i16> addrspace(4)* %in
+  %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = sext <16 x i16> %load to <16 x i32>
-  store <16 x i32> %ext, <16 x i32> addrspace(1)* %out
+  store <16 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v32i16_to_v32i32(<32 x i32> addrspace(1)* %out, <32 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v32i16_to_v32i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v32i16_to_v32i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
@@ -2448,13 +2448,13 @@ define amdgpu_kernel void @constant_zextload_v32i16_to_v32i32(<32 x i32> addrspa
 ; EG-NEXT:    112(1.569454e-43), 0(0.000000e+00)
 ; EG-NEXT:     LSHR * T34.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <32 x i16>, <32 x i16> addrspace(4)* %in
+  %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = zext <32 x i16> %load to <32 x i32>
-  store <32 x i32> %ext, <32 x i32> addrspace(1)* %out
+  store <32 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v32i16_to_v32i32(<32 x i32> addrspace(1)* %out, <32 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v32i16_to_v32i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v32i16_to_v32i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
@@ -2844,13 +2844,13 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i32(<32 x i32> addrspa
 ; EG-NEXT:     LSHR T24.X, PS, literal.x,
 ; EG-NEXT:     BFE_INT * T34.Y, PV.Z, 0.0, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-  %load = load <32 x i16>, <32 x i16> addrspace(4)* %in
+  %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = sext <32 x i16> %load to <32 x i32>
-  store <32 x i32> %ext, <32 x i32> addrspace(1)* %out
+  store <32 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(<64 x i32> addrspace(1)* %out, <64 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v64i16_to_v64i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[36:39], s[0:1], 0x9
@@ -3037,17 +3037,17 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(<64 x i32> addrspa
 ; GCN-HSA-NEXT:    s_lshr_b32 s35, s8, 16
 ; GCN-HSA-NEXT:    s_lshr_b32 s37, s11, 16
 ; GCN-HSA-NEXT:    s_lshr_b32 s38, s10, 16
-; GCN-HSA-NEXT:    s_lshr_b32 s39, s13, 16
-; GCN-HSA-NEXT:    s_lshr_b32 s40, s12, 16
-; GCN-HSA-NEXT:    s_lshr_b32 s41, s15, 16
-; GCN-HSA-NEXT:    s_lshr_b32 s42, s14, 16
+; GCN-HSA-NEXT:    s_lshr_b32 s40, s13, 16
+; GCN-HSA-NEXT:    s_lshr_b32 s41, s12, 16
+; GCN-HSA-NEXT:    s_lshr_b32 s42, s15, 16
+; GCN-HSA-NEXT:    s_lshr_b32 s43, s14, 16
 ; GCN-HSA-NEXT:    s_and_b32 s25, s1, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s27, s0, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s29, s3, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s31, s2, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s34, s5, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s36, s4, 0xffff
-; GCN-HSA-NEXT:    s_and_b32 s43, s7, 0xffff
+; GCN-HSA-NEXT:    s_and_b32 s39, s7, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s44, s6, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s45, s9, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s46, s8, 0xffff
@@ -3172,13 +3172,13 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(<64 x i32> addrspa
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v8, s52
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v7, s18
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[9:10], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s42
+; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s43
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s50
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s51
-; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s41
-; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s40
+; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s42
+; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s41
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s49
-; GCN-HSA-NEXT:    v_mov_b32_e32 v3, s39
+; GCN-HSA-NEXT:    v_mov_b32_e32 v3, s40
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[12:13], v[20:23]
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[14:15], v[4:7]
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[16:17], v[8:11]
@@ -3206,7 +3206,7 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(<64 x i32> addrspa
 ; GCN-HSA-NEXT:    s_add_u32 s0, s16, 32
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s44
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s30
-; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s43
+; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s39
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v3, s28
 ; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
@@ -3578,13 +3578,13 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(<64 x i32> addrspa
 ; EG-NEXT:    240(3.363116e-43), 0(0.000000e+00)
 ; EG-NEXT:     LSHR * T66.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <64 x i16>, <64 x i16> addrspace(4)* %in
+  %load = load <64 x i16>, ptr addrspace(4) %in
   %ext = zext <64 x i16> %load to <64 x i32>
-  store <64 x i32> %ext, <64 x i32> addrspace(1)* %out
+  store <64 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v64i16_to_v64i32(<64 x i32> addrspace(1)* %out, <64 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v64i16_to_v64i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v64i16_to_v64i32:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[36:39], s[0:1], 0x9
@@ -4330,13 +4330,13 @@ define amdgpu_kernel void @constant_sextload_v64i16_to_v64i32(<64 x i32> addrspa
 ; EG-NEXT:     LSHR T48.X, PS, literal.x,
 ; EG-NEXT:     BFE_INT * T66.Y, PV.Z, 0.0, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-  %load = load <64 x i16>, <64 x i16> addrspace(4)* %in
+  %load = load <64 x i16>, ptr addrspace(4) %in
   %ext = sext <64 x i16> %load to <64 x i32>
-  store <64 x i32> %ext, <64 x i32> addrspace(1)* %out
+  store <64 x i32> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_i16_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_i16_to_i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4404,9 +4404,9 @@ define amdgpu_kernel void @constant_zextload_i16_to_i64(i64 addrspace(1)* %out, 
 ; EG-NEXT:     MOV * T0.Y, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %a = load i16, i16 addrspace(4)* %in
+  %a = load i16, ptr addrspace(4) %in
   %ext = zext i16 %a to i64
-  store i64 %ext, i64 addrspace(1)* %out
+  store i64 %ext, ptr addrspace(1) %out
   ret void
 }
 
@@ -4415,7 +4415,7 @@ define amdgpu_kernel void @constant_zextload_i16_to_i64(i64 addrspace(1)* %out, 
 ;          t31: i64 = any_extend t28
 ;        t33: i64 = sign_extend_inreg t31, ValueType:ch:i16
 ; TODO: These could be expanded earlier using ASHR 15
-define amdgpu_kernel void @constant_sextload_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_i16_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_i16_to_i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4485,13 +4485,13 @@ define amdgpu_kernel void @constant_sextload_i16_to_i64(i64 addrspace(1)* %out, 
 ; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 ; EG-NEXT:     ASHR * T0.Y, PV.X, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-  %a = load i16, i16 addrspace(4)* %in
+  %a = load i16, ptr addrspace(4) %in
   %ext = sext i16 %a to i64
-  store i64 %ext, i64 addrspace(1)* %out
+  store i64 %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v1i16_to_v1i64(<1 x i64> addrspace(1)* %out, <1 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v1i16_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v1i16_to_v1i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4559,13 +4559,13 @@ define amdgpu_kernel void @constant_zextload_v1i16_to_v1i64(<1 x i64> addrspace(
 ; EG-NEXT:     MOV * T0.Y, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <1 x i16>, <1 x i16> addrspace(4)* %in
+  %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = zext <1 x i16> %load to <1 x i64>
-  store <1 x i64> %ext, <1 x i64> addrspace(1)* %out
+  store <1 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v1i16_to_v1i64(<1 x i64> addrspace(1)* %out, <1 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v1i16_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v1i16_to_v1i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4635,13 +4635,13 @@ define amdgpu_kernel void @constant_sextload_v1i16_to_v1i64(<1 x i64> addrspace(
 ; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 ; EG-NEXT:     ASHR * T0.Y, PV.X, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-  %load = load <1 x i16>, <1 x i16> addrspace(4)* %in
+  %load = load <1 x i16>, ptr addrspace(4) %in
   %ext = sext <1 x i16> %load to <1 x i64>
-  store <1 x i64> %ext, <1 x i64> addrspace(1)* %out
+  store <1 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v2i16_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v2i16_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v2i16_to_v2i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4715,13 +4715,13 @@ define amdgpu_kernel void @constant_zextload_v2i16_to_v2i64(<2 x i64> addrspace(
 ; EG-NEXT:     MOV T4.W, 0.0,
 ; EG-NEXT:     LSHR * T5.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 2(2.802597e-45)
-  %load = load <2 x i16>, <2 x i16> addrspace(4)* %in
+  %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = zext <2 x i16> %load to <2 x i64>
-  store <2 x i64> %ext, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v2i16_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v2i16_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v2i16_to_v2i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4798,13 +4798,13 @@ define amdgpu_kernel void @constant_sextload_v2i16_to_v2i64(<2 x i64> addrspace(
 ; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 ; EG-NEXT:     ASHR * T4.Y, PV.X, literal.x,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-  %load = load <2 x i16>, <2 x i16> addrspace(4)* %in
+  %load = load <2 x i16>, ptr addrspace(4) %in
   %ext = sext <2 x i16> %load to <2 x i64>
-  store <2 x i64> %ext, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v4i16_to_v4i64(<4 x i64> addrspace(1)* %out, <4 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v4i16_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v4i16_to_v4i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -4911,13 +4911,13 @@ define amdgpu_kernel void @constant_zextload_v4i16_to_v4i64(<4 x i64> addrspace(
 ; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
 ; EG-NEXT:     LSHR * T8.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <4 x i16>, <4 x i16> addrspace(4)* %in
+  %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = zext <4 x i16> %load to <4 x i64>
-  store <4 x i64> %ext, <4 x i64> addrspace(1)* %out
+  store <4 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v4i16_to_v4i64(<4 x i64> addrspace(1)* %out, <4 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v4i16_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v4i16_to_v4i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5037,13 +5037,13 @@ define amdgpu_kernel void @constant_sextload_v4i16_to_v4i64(<4 x i64> addrspace(
 ; EG-NEXT:     LSHR T8.X, PV.W, literal.x,
 ; EG-NEXT:     ASHR * T7.Y, PV.X, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-  %load = load <4 x i16>, <4 x i16> addrspace(4)* %in
+  %load = load <4 x i16>, ptr addrspace(4) %in
   %ext = sext <4 x i16> %load to <4 x i64>
-  store <4 x i64> %ext, <4 x i64> addrspace(1)* %out
+  store <4 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v8i16_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v8i16_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v8i16_to_v8i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5203,13 +5203,13 @@ define amdgpu_kernel void @constant_zextload_v8i16_to_v8i64(<8 x i64> addrspace(
 ; EG-NEXT:    2(2.802597e-45), 48(6.726233e-44)
 ; EG-NEXT:     LSHR * T14.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <8 x i16>, <8 x i16> addrspace(4)* %in
+  %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = zext <8 x i16> %load to <8 x i64>
-  store <8 x i64> %ext, <8 x i64> addrspace(1)* %out
+  store <8 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v8i16_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v8i16_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v8i16_to_v8i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5403,13 +5403,13 @@ define amdgpu_kernel void @constant_sextload_v8i16_to_v8i64(<8 x i64> addrspace(
 ; EG-NEXT:     LSHR T7.X, PV.W, literal.x,
 ; EG-NEXT:     ASHR * T14.Y, PV.X, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-  %load = load <8 x i16>, <8 x i16> addrspace(4)* %in
+  %load = load <8 x i16>, ptr addrspace(4) %in
   %ext = sext <8 x i16> %load to <8 x i64>
-  store <8 x i64> %ext, <8 x i64> addrspace(1)* %out
+  store <8 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v16i16_to_v16i64(<16 x i64> addrspace(1)* %out, <16 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v16i16_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v16i16_to_v16i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -5686,13 +5686,13 @@ define amdgpu_kernel void @constant_zextload_v16i16_to_v16i64(<16 x i64> addrspa
 ; EG-NEXT:    2(2.802597e-45), 112(1.569454e-43)
 ; EG-NEXT:     LSHR * T26.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <16 x i16>, <16 x i16> addrspace(4)* %in
+  %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = zext <16 x i16> %load to <16 x i64>
-  store <16 x i64> %ext, <16 x i64> addrspace(1)* %out
+  store <16 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v16i16_to_v16i64(<16 x i64> addrspace(1)* %out, <16 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v16i16_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v16i16_to_v16i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -6041,13 +6041,13 @@ define amdgpu_kernel void @constant_sextload_v16i16_to_v16i64(<16 x i64> addrspa
 ; EG-NEXT:     LSHR T12.X, PV.W, literal.x,
 ; EG-NEXT:     ASHR * T26.Y, PV.X, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-  %load = load <16 x i16>, <16 x i16> addrspace(4)* %in
+  %load = load <16 x i16>, ptr addrspace(4) %in
   %ext = sext <16 x i16> %load to <16 x i64>
-  store <16 x i64> %ext, <16 x i64> addrspace(1)* %out
+  store <16 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_zextload_v32i16_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v32i16_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_zextload_v32i16_to_v32i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
@@ -6181,129 +6181,129 @@ define amdgpu_kernel void @constant_zextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; GCN-HSA-NEXT:    s_lshr_b32 s33, s4, 16
 ; GCN-HSA-NEXT:    s_lshr_b32 s34, s2, 16
 ; GCN-HSA-NEXT:    s_lshr_b32 s18, s0, 16
-; GCN-HSA-NEXT:    s_and_b32 s35, s0, 0xffff
-; GCN-HSA-NEXT:    s_and_b32 s2, s2, 0xffff
+; GCN-HSA-NEXT:    s_and_b32 s0, s0, 0xffff
+; GCN-HSA-NEXT:    s_and_b32 s35, s2, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s4, s4, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s6, s6, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s8, s8, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s10, s10, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s12, s12, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s14, s14, 0xffff
-; GCN-HSA-NEXT:    s_and_b32 s36, s1, 0xffff
-; GCN-HSA-NEXT:    s_and_b32 s3, s3, 0xffff
+; GCN-HSA-NEXT:    s_and_b32 s1, s1, 0xffff
+; GCN-HSA-NEXT:    s_and_b32 s36, s3, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s7, s7, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s9, s9, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s11, s11, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s13, s13, 0xffff
 ; GCN-HSA-NEXT:    s_and_b32 s15, s15, 0xffff
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0xf0
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0xd0
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v7, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v6, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0xb0
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v8, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0x90
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s0
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0xf0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0xd0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v7, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v6, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0xb0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v8, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0x90
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s2
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s15
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s26
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0x70
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0x70
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s13
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s25
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[6:7], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s11
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s24
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s9
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s23
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0x50
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0x50
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[10:11], v[0:3]
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s7
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s22
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 48
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 48
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s5
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s21
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 16
-; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s3
-; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s20
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
-; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0xe0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 16
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s36
-; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s19
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s20
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0xc0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0xe0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s1
+; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s19
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
+; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0xc0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s14
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s27
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0xa0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0xa0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s12
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s28
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0x80
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0x80
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s10
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s29
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 0x60
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 0x60
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s30
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 64
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 64
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s31
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
-; GCN-HSA-NEXT:    s_add_u32 s0, s16, 32
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-HSA-NEXT:    s_add_u32 s2, s16, 32
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s33
-; GCN-HSA-NEXT:    s_addc_u32 s1, s17, 0
+; GCN-HSA-NEXT:    s_addc_u32 s3, s17, 0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s35
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s34
-; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s16
-; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s35
+; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s18
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s17
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
@@ -6564,13 +6564,13 @@ define amdgpu_kernel void @constant_zextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; EG-NEXT:    2(2.802597e-45), 240(3.363116e-43)
 ; EG-NEXT:     LSHR * T50.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %load = load <32 x i16>, <32 x i16> addrspace(4)* %in
+  %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = zext <32 x i16> %load to <32 x i64>
-  store <32 x i64> %ext, <32 x i64> addrspace(1)* %out
+  store <32 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i16> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GCN-NOHSA-SI-LABEL: constant_sextload_v32i16_to_v32i64:
 ; GCN-NOHSA-SI:       ; %bb.0:
 ; GCN-NOHSA-SI-NEXT:    s_load_dwordx4 s[16:19], s[0:1], 0x9
@@ -6589,17 +6589,17 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s26, s12, 16
 ; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s28, s10, 16
 ; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s30, s8, 16
-; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[48:49], s[20:21], 0x100000
-; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[50:51], s[18:19], 0x100000
-; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s52, s6, 16
-; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s54, s4, 16
-; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s56, s2, 16
-; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s58, s0, 16
+; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[50:51], s[20:21], 0x100000
+; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[52:53], s[18:19], 0x100000
+; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s54, s6, 16
+; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s56, s4, 16
+; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s58, s2, 16
+; GCN-NOHSA-SI-NEXT:    s_lshr_b32 s60, s0, 16
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[18:19], s[0:1], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[20:21], s[2:3], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[24:25], s[4:5], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[34:35], s[6:7], 0x100000
-; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[60:61], s[8:9], 0x100000
+; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[48:49], s[8:9], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[62:63], s[10:11], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[64:65], s[12:13], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[66:67], s[14:15], 0x100000
@@ -6613,12 +6613,12 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; GCN-NOHSA-SI-NEXT:    s_ashr_i64 s[4:5], s[4:5], 48
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s0, s16
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s1, s17
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v0, s50
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v1, s51
+; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v0, s52
+; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v1, s53
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v2, s12
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v3, s13
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v4, s48
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v5, s49
+; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v4, s50
+; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v5, s51
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v6, s2
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v7, s3
 ; GCN-NOHSA-SI-NEXT:    s_mov_b32 s3, 0xf000
@@ -6647,10 +6647,10 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v22, s4
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v23, s5
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:208
-; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[4:5], s[58:59], 0x100000
-; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[6:7], s[56:57], 0x100000
-; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[8:9], s[54:55], 0x100000
-; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[10:11], s[52:53], 0x100000
+; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[4:5], s[60:61], 0x100000
+; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[6:7], s[58:59], 0x100000
+; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[8:9], s[56:57], 0x100000
+; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[10:11], s[54:55], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[12:13], s[30:31], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[14:15], s[28:29], 0x100000
 ; GCN-NOHSA-SI-NEXT:    s_bfe_i64 s[16:17], s[26:27], 0x100000
@@ -6678,8 +6678,8 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v5, s65
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v8, s62
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v9, s63
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v12, s60
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v13, s61
+; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v12, s48
+; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v13, s49
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v16, s34
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v17, s35
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v20, s24
@@ -6923,123 +6923,123 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    s_load_dwordx16 s[0:15], s[18:19], 0x0
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s36, s15
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s38, s13
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s38, s15
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s40, s13
 ; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[82:83], s[14:15], 48
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[36:37], s[36:37], 0x100000
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s40, s11
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s48, s3
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s50, s1
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s64, s2, 16
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s66, s0, 16
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[38:39], s[38:39], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s42, s11
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s50, s3
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s52, s1
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s66, s2, 16
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s68, s0, 16
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[18:19], s[0:1], 0x100000
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[20:21], s[2:3], 0x100000
-; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[68:69], s[0:1], 48
+; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[36:37], s[0:1], 48
 ; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[70:71], s[2:3], 48
 ; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[80:81], s[12:13], 48
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s2, -1
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s0, s16
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s1, s17
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[38:39], s[38:39], 0x100000
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s36
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s37
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s82
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s83
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s42, s9
-; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[78:79], s[10:11], 48
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[40:41], s[40:41], 0x100000
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:240
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s44, s7
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s38
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s39
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s82
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s83
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s44, s9
+; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[78:79], s[10:11], 48
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x100000
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:240
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s46, s7
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s40
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s41
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s80
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s81
 ; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[76:77], s[8:9], 48
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[44:45], s[44:45], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:208
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s46, s5
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s40
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s41
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s48, s5
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s42
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s43
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s78
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s79
 ; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[74:75], s[6:7], 48
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[44:45], s[44:45], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[46:47], s[46:47], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:176
 ; GCN-NOHSA-VI-NEXT:    s_ashr_i64 s[72:73], s[4:5], 48
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s42
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s43
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s76
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s77
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[46:47], s[46:47], 0x100000
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:144
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[48:49], s[48:49], 0x100000
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s44
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s45
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s76
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s77
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[48:49], s[48:49], 0x100000
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:144
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x100000
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s46
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s47
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s74
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s75
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:112
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s52, s14, 16
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s46
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s47
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s72
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s73
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[50:51], s[50:51], 0x100000
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:80
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s54, s12, 16
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s54, s14, 16
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s48
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s49
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s72
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s73
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[52:53], s[52:53], 0x100000
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:80
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s56, s12, 16
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s50
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s51
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s70
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s71
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[34:35], s[14:15], 0x100000
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[52:53], s[52:53], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[54:55], s[54:55], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s56, s10, 16
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s50
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s51
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s68
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s69
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s58, s10, 16
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s52
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s53
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s36
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s37
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[30:31], s[12:13], 0x100000
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[16:17], s[54:55], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[16:17], s[56:57], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s58, s8, 16
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s60, s8, 16
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s34
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s35
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s52
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s53
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s54
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s55
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[28:29], s[10:11], 0x100000
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[14:15], s[56:57], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[14:15], s[58:59], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:224
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s60, s6, 16
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s62, s6, 16
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s30
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s31
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s16
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s17
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[26:27], s[8:9], 0x100000
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[12:13], s[58:59], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[12:13], s[60:61], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:192
-; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s62, s4, 16
+; GCN-NOHSA-VI-NEXT:    s_lshr_b32 s64, s4, 16
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s28
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s29
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s14
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s15
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[24:25], s[6:7], 0x100000
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[10:11], s[60:61], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[10:11], s[62:63], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:160
 ; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[22:23], s[4:5], 0x100000
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s26
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s27
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s12
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s13
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[8:9], s[62:63], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[8:9], s[64:65], 0x100000
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:128
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[6:7], s[64:65], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[6:7], s[66:67], 0x100000
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s24
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s25
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s10
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s11
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:96
-; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[4:5], s[66:67], 0x100000
+; GCN-NOHSA-VI-NEXT:    s_bfe_i64 s[4:5], s[68:69], 0x100000
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s22
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s23
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s8
@@ -7224,25 +7224,25 @@ define amdgpu_kernel void @constant_sextload_v32i16_to_v32i64(<32 x i64> addrspa
 ; EG-NEXT:     LSHR T38.X, PV.W, literal.x,
 ; EG-NEXT:     ASHR * T50.Y, PV.X, literal.y,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-  %load = load <32 x i16>, <32 x i16> addrspace(4)* %in
+  %load = load <32 x i16>, ptr addrspace(4) %in
   %ext = sext <32 x i16> %load to <32 x i64>
-  store <32 x i64> %ext, <32 x i64> addrspace(1)* %out
+  store <32 x i64> %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; These trigger undefined register machine verifier errors
 
-; define amdgpu_kernel void @constant_zextload_v64i16_to_v64i64(<64 x i64> addrspace(1)* %out, <64 x i16> addrspace(4)* %in) #0 {
-;   %load = load <64 x i16>, <64 x i16> addrspace(4)* %in
+; define amdgpu_kernel void @constant_zextload_v64i16_to_v64i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+;   %load = load <64 x i16>, ptr addrspace(4) %in
 ;   %ext = zext <64 x i16> %load to <64 x i64>
-;   store <64 x i64> %ext, <64 x i64> addrspace(1)* %out
+;   store <64 x i64> %ext, ptr addrspace(1) %out
 ;   ret void
 ; }
 
-; define amdgpu_kernel void @constant_sextload_v64i16_to_v64i64(<64 x i64> addrspace(1)* %out, <64 x i16> addrspace(4)* %in) #0 {
-;   %load = load <64 x i16>, <64 x i16> addrspace(4)* %in
+; define amdgpu_kernel void @constant_sextload_v64i16_to_v64i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+;   %load = load <64 x i16>, ptr addrspace(4) %in
 ;   %ext = sext <64 x i16> %load to <64 x i64>
-;   store <64 x i64> %ext, <64 x i64> addrspace(1)* %out
+;   store <64 x i64> %ext, ptr addrspace(1) %out
 ;   ret void
 ; }
 

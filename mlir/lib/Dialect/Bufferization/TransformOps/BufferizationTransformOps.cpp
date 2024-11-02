@@ -14,6 +14,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 
 using namespace mlir;
@@ -67,6 +68,23 @@ void transform::OneShotBufferizeOp::getEffects(
     effects.emplace_back(MemoryEffects::Free::get(), getTarget(),
                          TransformMappingResource::get());
 }
+
+//===----------------------------------------------------------------------===//
+// EmptyTensorToAllocTensorOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+EmptyTensorToAllocTensorOp::applyToOne(tensor::EmptyOp target,
+                                       SmallVector<Operation *> &results,
+                                       transform::TransformState &state) {
+  IRRewriter rewriter(target->getContext());
+  rewriter.setInsertionPoint(target);
+  auto alloc = rewriter.replaceOpWithNewOp<bufferization::AllocTensorOp>(
+      target, target.getType(), target.getDynamicSizes());
+  results.push_back(alloc);
+  return DiagnosedSilenceableFailure::success();
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

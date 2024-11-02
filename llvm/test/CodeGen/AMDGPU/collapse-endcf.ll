@@ -19,14 +19,14 @@
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR:v[0-9]+]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF_OUTER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF_INNER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
@@ -42,26 +42,26 @@
 ; GCN-O0:      ds_write_b32
 ; GCN-O0:      s_endpgm
 ;
-define amdgpu_kernel void @simple_nested_if(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @simple_nested_if(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = icmp ugt i32 %tmp, 1
   br i1 %tmp1, label %bb.outer.then, label %bb.outer.end
 
 bb.outer.then:                                    ; preds = %bb
-  %tmp4 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp4, align 4
+  %tmp4 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp4, align 4
   %tmp5 = icmp eq i32 %tmp, 2
   br i1 %tmp5, label %bb.outer.end, label %bb.inner.then
 
 bb.inner.then:                                    ; preds = %bb.outer.then
   %tmp7 = add i32 %tmp, 1
-  %tmp9 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp7
-  store i32 1, i32 addrspace(1)* %tmp9, align 4
+  %tmp9 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp7
+  store i32 1, ptr addrspace(1) %tmp9, align 4
   br label %bb.outer.end
 
 bb.outer.end:                                     ; preds = %bb.outer.then, %bb.inner.then, %bb
-  store i32 3, i32 addrspace(3)* null
+  store i32 3, ptr addrspace(3) null
   ret void
 }
 
@@ -84,14 +84,14 @@ bb.outer.end:                                     ; preds = %bb.outer.then, %bb.
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR:v[0-9]+]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF_OUTER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF_INNER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
@@ -111,32 +111,32 @@ bb.outer.end:                                     ; preds = %bb.outer.then, %bb.
 ; GCN-O0:      ds_write_b32
 ; GCN-O0:      s_endpgm
 ;
-define amdgpu_kernel void @uncollapsable_nested_if(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @uncollapsable_nested_if(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = icmp ugt i32 %tmp, 1
   br i1 %tmp1, label %bb.outer.then, label %bb.outer.end
 
 bb.outer.then:                                    ; preds = %bb
-  %tmp4 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp4, align 4
+  %tmp4 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp4, align 4
   %tmp5 = icmp eq i32 %tmp, 2
   br i1 %tmp5, label %bb.inner.end, label %bb.inner.then
 
 bb.inner.then:                                    ; preds = %bb.outer.then
   %tmp7 = add i32 %tmp, 1
-  %tmp8 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp7
-  store i32 1, i32 addrspace(1)* %tmp8, align 4
+  %tmp8 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp7
+  store i32 1, ptr addrspace(1) %tmp8, align 4
   br label %bb.inner.end
 
 bb.inner.end:                                     ; preds = %bb.inner.then, %bb.outer.then
   %tmp9 = add i32 %tmp, 2
-  %tmp10 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp9
-  store i32 2, i32 addrspace(1)* %tmp10, align 4
+  %tmp10 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp9
+  store i32 2, ptr addrspace(1) %tmp10, align 4
   br label %bb.outer.end
 
 bb.outer.end:                                     ; preds = %bb.inner.then, %bb
-  store i32 3, i32 addrspace(3)* null
+  store i32 3, ptr addrspace(3) null
   ret void
 }
 
@@ -161,7 +161,7 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR:v[0-9]+]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF_OUTER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
@@ -170,6 +170,9 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 ; GCN-O0-NEXT: s_xor_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[THEN_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[THEN_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; GCN-O0-NEXT: buffer_store_dword
+; GCN-O0-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[THEN_INNER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: s_branch [[TEMP_BB:.LBB[0-9_]+]]
@@ -180,7 +183,7 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 ; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], exec, s[{{[0-9:]+}}]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_xor_b64 exec, exec, s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_xor_b64 exec, exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF_INNER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN-O0:      store_dword
@@ -198,11 +201,11 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 ; GCN-O0:      ds_write_b32
 ; GCN-O0:      s_endpgm
 ;
-define amdgpu_kernel void @nested_if_if_else(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1, align 4
+  %tmp1 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1, align 4
   %tmp2 = icmp ugt i32 %tmp, 1
   br i1 %tmp2, label %bb.outer.then, label %bb.outer.end
 
@@ -212,18 +215,18 @@ bb.outer.then:                                       ; preds = %bb
 
 bb.then:                                             ; preds = %bb.outer.then
   %tmp3 = add i32 %tmp, 1
-  %tmp4 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp3
-  store i32 1, i32 addrspace(1)* %tmp4, align 4
+  %tmp4 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp3
+  store i32 1, ptr addrspace(1) %tmp4, align 4
   br label %bb.outer.end
 
 bb.else:                                             ; preds = %bb.outer.then
   %tmp7 = add i32 %tmp, 2
-  %tmp9 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp7
-  store i32 2, i32 addrspace(1)* %tmp9, align 4
+  %tmp9 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp7
+  store i32 2, ptr addrspace(1) %tmp9, align 4
   br label %bb.outer.end
 
 bb.outer.end:                                        ; preds = %bb, %bb.then, %bb.else
-  store i32 3, i32 addrspace(3)* null
+  store i32 3, ptr addrspace(3) null
   ret void
 }
 
@@ -260,6 +263,9 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-O0-NEXT: s_xor_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR:v[0-9]+]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; GCN-O0-NEXT: buffer_store_dword [[VGPR]]
+; GCN-O0-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[THEN_OUTER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: s_branch [[INNER_IF_OUTER_ELSE:.LBB[0-9_]+]]
@@ -270,14 +276,14 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], exec, s[{{[0-9:]+}}]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_2_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_2_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_xor_b64 exec, exec, s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_xor_b64 exec, exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF_OUTER:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN-O0:      store_dword
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[ELSE_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[ELSE_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[FLOW1:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
@@ -287,7 +293,7 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_IF_OUTER_ELSE_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_IF_OUTER_ELSE_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[THEN_OUTER_FLOW:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
@@ -308,38 +314,38 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-O0:      ds_write_b32
 ; GCN-O0:      s_endpgm
 ;
-define amdgpu_kernel void @nested_if_else_if(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1, align 4
+  %tmp1 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1, align 4
   %cc1 = icmp ugt i32 %tmp, 1
   br i1 %cc1, label %bb.outer.then, label %bb.outer.else
 
 bb.outer.then:
-  %tmp2 = getelementptr inbounds i32, i32 addrspace(1)* %tmp1, i32 1
-  store i32 1, i32 addrspace(1)* %tmp2, align 4
+  %tmp2 = getelementptr inbounds i32, ptr addrspace(1) %tmp1, i32 1
+  store i32 1, ptr addrspace(1) %tmp2, align 4
   %cc2 = icmp eq i32 %tmp, 2
   br i1 %cc2, label %bb.inner.then, label %bb.outer.end
 
 bb.inner.then:
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %tmp1, i32 2
-  store i32 2, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %tmp1, i32 2
+  store i32 2, ptr addrspace(1) %tmp3, align 4
   br label %bb.outer.end
 
 bb.outer.else:
-  %tmp4 = getelementptr inbounds i32, i32 addrspace(1)* %tmp1, i32 3
-  store i32 3, i32 addrspace(1)* %tmp4, align 4
+  %tmp4 = getelementptr inbounds i32, ptr addrspace(1) %tmp1, i32 3
+  store i32 3, ptr addrspace(1) %tmp4, align 4
   %cc3 = icmp eq i32 %tmp, 2
   br i1 %cc3, label %bb.inner.then2, label %bb.outer.end
 
 bb.inner.then2:
-  %tmp5 = getelementptr inbounds i32, i32 addrspace(1)* %tmp1, i32 4
-  store i32 4, i32 addrspace(1)* %tmp5, align 4
+  %tmp5 = getelementptr inbounds i32, ptr addrspace(1) %tmp1, i32 4
+  store i32 4, ptr addrspace(1) %tmp5, align 4
   br label %bb.outer.end
 
 bb.outer.end:
-  store i32 3, i32 addrspace(3)* null
+  store i32 3, ptr addrspace(3) null
   ret void
 }
 
@@ -357,7 +363,7 @@ bb.outer.end:
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR:v[0-9]+]], s{{[0-9]+}}, [[SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[SPILL_LANE_1:[0-9]+]]
-; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}]
+; GCN-O0-DAG: s_and_b64 s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[ENDIF:.LBB[0-9_]+]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
@@ -369,15 +375,15 @@ bb.outer.end:
 ; GCN-O0:      s_barrier
 ; GCN-O0:      s_endpgm
 ;
-define amdgpu_kernel void @s_endpgm_unsafe_barrier(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @s_endpgm_unsafe_barrier(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = icmp ugt i32 %tmp, 1
   br i1 %tmp1, label %bb.then, label %bb.end
 
 bb.then:                                          ; preds = %bb
-  %tmp4 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp4, align 4
+  %tmp4 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp4, align 4
   br label %bb.end
 
 bb.end:                                           ; preds = %bb.then, %bb
@@ -419,61 +425,81 @@ bb.end:                                           ; preds = %bb.then, %bb
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_1:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0:[0-9]+]]
 ; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; GCN-O0-NEXT: buffer_store_dword [[VGPR]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Spill
+; GCN-O0-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; GCN-O0: [[INNER_LOOP:.LBB[0-9]+_[0-9]+]]:
-; GCN-O0: buffer_load_dword
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_IN_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_IN_EXEC_SPILL_LANE_1]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_LOOP_EXEC_SPILL_LANE_0:[0-9]+]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[OUTER_LOOP_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0:      buffer_load_dword [[RESTORED_VGPR:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Reload
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_VGPR]], [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_VGPR]], [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_VGPR]], [[INNER_LOOP_IN_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_VGPR]], [[INNER_LOOP_IN_EXEC_SPILL_LANE_1]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[OUTER_LOOP_EXEC_SPILL_LANE_0:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[OUTER_LOOP_EXEC_SPILL_LANE_1:[0-9]+]]
 ; GCN-O0:      s_or_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_OUT_EXEC_SPILL_LANE_0:[0-9]+]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_OUT_EXEC_SPILL_LANE_1:[0-9]+]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_1]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_OUT_EXEC_SPILL_LANE_0:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_OUT_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_1]]
 ; GCN-O0-NEXT: s_mov_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1]]
+; GCN-O0-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; GCN-O0-NEXT: buffer_store_dword [[RESTORED_VGPR]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Spill
+; GCN-O0-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; GCN-O0-NEXT: s_andn2_b64 exec, exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execnz [[INNER_LOOP]]
 ; GCN-O0-NEXT: ; %bb.{{[0-9]+}}:
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_OUT_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[INNER_LOOP_OUT_EXEC_SPILL_LANE_1]]
+; GCN-O0:      buffer_load_dword [[RESTORED_1_VGPR:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32  ; 4-byte Folded Reload
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_1_VGPR]], [[INNER_LOOP_OUT_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_1_VGPR]], [[INNER_LOOP_OUT_EXEC_SPILL_LANE_1]]
 ; GCN-O0-NEXT: s_or_b64 exec, exec, s[{{[0-9:]+}}]
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[FLOW2_IN_EXEC_SPILL_LANE_0:[0-9]+]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[FLOW2_IN_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_1_VGPR]], s{{[0-9]+}}, [[FLOW2_IN_EXEC_SPILL_LANE_0:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_1_VGPR]], s{{[0-9]+}}, [[FLOW2_IN_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; GCN-O0-NEXT: buffer_store_dword [[RESTORED_1_VGPR]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Spill
+; GCN-O0-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[FLOW2:.LBB[0-9_]+]]
 ; GCN-O0: {{^}}[[FLOW2]]:
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[FLOW2_IN_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[FLOW2_IN_EXEC_SPILL_LANE_1]]
+; GCN-O0:      buffer_load_dword [[RESTORED_2_VGPR:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Reload
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_2_VGPR]], [[FLOW2_IN_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_2_VGPR]], [[FLOW2_IN_EXEC_SPILL_LANE_1]]
 ; GCN-O0:      s_branch [[FLOW:.LBB[0-9_]+]]
 ; GCN-O0: {{^}}[[FLOW]]:
+; GCN-O0:      buffer_load_dword [[RESTORED_3_VGPR:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Reload
 ; GCN-O0:      s_mov_b64 s[{{[0-9:]+}}], exec
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[FLOW3_IN_EXEC_SPILL_LANE_0:[0-9]+]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[FLOW3_IN_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_3_VGPR]], s{{[0-9]+}}, [[FLOW3_IN_EXEC_SPILL_LANE_0:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_3_VGPR]], s{{[0-9]+}}, [[FLOW3_IN_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; GCN-O0-NEXT: buffer_store_dword [[RESTORED_3_VGPR]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Spill
+; GCN-O0-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; GCN-O0-NEXT: s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_mov_b64 exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execz [[FLOW3:.LBB[0-9_]+]]
 ; GCN-O0:      ; %bb.{{[0-9]+}}:
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[FLOW1_OUT_EXEC_SPILL_LANE_0:[0-9]+]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[FLOW1_OUT_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0:      buffer_load_dword [[RESTORED_4_VGPR:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Reload
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_4_VGPR]], s{{[0-9]+}}, [[FLOW1_OUT_EXEC_SPILL_LANE_0:[0-9]+]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_4_VGPR]], s{{[0-9]+}}, [[FLOW1_OUT_EXEC_SPILL_LANE_1:[0-9]+]]
+; GCN-O0-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; GCN-O0-NEXT: buffer_store_dword [[RESTORED_4_VGPR]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Spill
+; GCN-O0-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; GCN-O0: {{^}}[[FLOW3]]:
 ; GCN-O0-COUNT-4: buffer_load_dword
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[OUTER_LOOP_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[OUTER_LOOP_EXEC_SPILL_LANE_1]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[FLOW1_OUT_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[VGPR]], [[FLOW1_OUT_EXEC_SPILL_LANE_1]]
+; GCN-O0:      buffer_load_dword [[RESTORED_5_VGPR:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Reload
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_5_VGPR]], [[OUTER_LOOP_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_5_VGPR]], [[OUTER_LOOP_EXEC_SPILL_LANE_1]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_5_VGPR]], [[FLOW1_OUT_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_readlane_b32 s{{[0-9]+}}, [[RESTORED_5_VGPR]], [[FLOW1_OUT_EXEC_SPILL_LANE_1]]
 ; GCN-O0:      s_and_b64 s[{{[0-9:]+}}], exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_or_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-O0-COUNT-2: s_mov_b64
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_1]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0]]
-; GCN-O0-DAG:  v_writelane_b32 [[VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_5_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_5_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_IN_EXEC_SPILL_LANE_1]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_5_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_0]]
+; GCN-O0-DAG:  v_writelane_b32 [[RESTORED_5_VGPR]], s{{[0-9]+}}, [[INNER_LOOP_BACK_EDGE_EXEC_SPILL_LANE_1]]
 ; GCN-O0-COUNT-4: buffer_store_dword
 ; GCN-O0:      s_andn2_b64 exec, exec, s[{{[0-9:]+}}]
 ; GCN-O0-NEXT: s_cbranch_execnz [[INNER_LOOP]]
@@ -494,7 +520,7 @@ bb2:                                              ; preds = %bb1
   br i1 %tmp3, label %bb4, label %bb10
 
 bb4:                                              ; preds = %bb2
-  %tmp6 = load float, float addrspace(5)* undef
+  %tmp6 = load float, ptr addrspace(5) undef
   %tmp7 = fcmp olt float %tmp6, 0.0
   br i1 %tmp7, label %bb8, label %Flow
 
@@ -514,7 +540,7 @@ Flow1:                                            ; preds = %bb10
   br label %bb1
 
 bb12:                                             ; preds = %bb10
-  store volatile <4 x float> %tmp11, <4 x float> addrspace(5)* undef, align 16
+  store volatile <4 x float> %tmp11, ptr addrspace(5) undef, align 16
   ret void
 }
 

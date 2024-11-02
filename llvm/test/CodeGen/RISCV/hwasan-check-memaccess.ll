@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck --check-prefixes=CHECK,NOPIC %s
 ; RUN: llc -mtriple=riscv64 --relocation-model=pic < %s | FileCheck --check-prefixes=CHECK,PIC %s
 
-define i8* @f2(i8* %x0, i8* %x1) {
+define ptr @f2(ptr %x0, ptr %x1) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -14,11 +14,11 @@ define i8* @f2(i8* %x0, i8* %x1) {
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  call void @llvm.hwasan.check.memaccess.shortgranules(i8* %x1, i8* %x0, i32 2)
-  ret i8* %x0
+  call void @llvm.hwasan.check.memaccess.shortgranules(ptr %x1, ptr %x0, i32 2)
+  ret ptr %x0
 }
 
-declare void @llvm.hwasan.check.memaccess.shortgranules(i8*, i8*, i32)
+declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 
 ; CHECK: .section        .text.hot,"axG",@progbits,__hwasan_check_x10_2_short,comdat
 ; CHECK-NEXT: .type   __hwasan_check_x10_2_short,@function

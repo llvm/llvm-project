@@ -3,38 +3,36 @@
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
-declare void @extern(i8*)
+declare void @extern(ptr)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #0
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) #0
 
 ; Function Attrs: nounwind
-define void @func(float* noalias %arg, i32* noalias %arg1, i8* noalias %arg2, i8* noalias %arg3) #1 {
+define void @func(ptr noalias %arg, ptr noalias %arg1, ptr noalias %arg2, ptr noalias %arg3) #1 {
 bb:
-  %tmp = getelementptr inbounds i8, i8* %arg2, i64 88
-  tail call void @llvm.memset.p0i8.i64(i8* align 8 noalias %arg2, i8 0, i64 40, i1 false)
-  store i8 0, i8* %arg3
-  store i8 2, i8* %arg2
-  store float 0.000000e+00, float* %arg
-  %tmp4 = bitcast i8* %tmp to <4 x float>*
-  store volatile <4 x float> zeroinitializer, <4 x float>* %tmp4
-  store i32 5, i32* %arg1
-  tail call void @extern(i8* %tmp)
+  %tmp = getelementptr inbounds i8, ptr %arg2, i64 88
+  tail call void @llvm.memset.p0.i64(ptr align 8 noalias %arg2, i8 0, i64 40, i1 false)
+  store i8 0, ptr %arg3
+  store i8 2, ptr %arg2
+  store float 0.000000e+00, ptr %arg
+  store volatile <4 x float> zeroinitializer, ptr %tmp
+  store i32 5, ptr %arg1
+  tail call void @extern(ptr %tmp)
   ret void
 }
 
 ; Function Attrs: nounwind
-define void @func2(float* noalias %arg, i32* noalias %arg1, i8* noalias %arg2, i8* noalias %arg3) #1 {
+define void @func2(ptr noalias %arg, ptr noalias %arg1, ptr noalias %arg2, ptr noalias %arg3) #1 {
 bb:
-  %tmp = getelementptr inbounds i8, i8* %arg2, i64 88
-  tail call void @llvm.memset.p0i8.i64(i8* align 8 noalias %arg2, i8 0, i64 40, i1 false)
-  store i8 0, i8* %arg3
-  store i8 2, i8* %arg2
-  store float 0.000000e+00, float* %arg
-  %tmp4 = bitcast i8* %tmp to <4 x float>*
-  store <4 x float> zeroinitializer, <4 x float>* %tmp4
-  store i32 5, i32* %arg1
-  tail call void @extern(i8* %tmp)
+  %tmp = getelementptr inbounds i8, ptr %arg2, i64 88
+  tail call void @llvm.memset.p0.i64(ptr align 8 noalias %arg2, i8 0, i64 40, i1 false)
+  store i8 0, ptr %arg3
+  store i8 2, ptr %arg2
+  store float 0.000000e+00, ptr %arg
+  store <4 x float> zeroinitializer, ptr %tmp
+  store i32 5, ptr %arg1
+  tail call void @extern(ptr %tmp)
   ret void
 }
 

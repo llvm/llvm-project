@@ -4,14 +4,14 @@
 @v256i64 = common dso_local local_unnamed_addr global <256 x i64> zeroinitializer, align 16
 
 ; Function Attrs: norecurse nounwind readonly
-define fastcc void @storev256i64(<256 x i64>* nocapture, <256 x i64>) {
+define fastcc void @storev256i64(ptr nocapture, <256 x i64>) {
 ; CHECK-LABEL: storev256i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vst %v0, 8, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store <256 x i64> %1, <256 x i64>* %0, align 16
+  store <256 x i64> %1, ptr %0, align 16
   ret void
 }
 
@@ -38,7 +38,7 @@ define fastcc void @storev256i64stk(<256 x i64>) {
 ; CHECK-NEXT:    lea %s11, 2048(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca <256 x i64>, align 16
-  store <256 x i64> %0, <256 x i64>* %addr, align 16
+  store <256 x i64> %0, ptr %addr, align 16
   ret void
 }
 
@@ -53,6 +53,6 @@ define fastcc void @storev256i64com(<256 x i64>) {
 ; CHECK-NEXT:    lvl %s1
 ; CHECK-NEXT:    vst %v0, 8, %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store <256 x i64> %0, <256 x i64>* @v256i64, align 16
+  store <256 x i64> %0, ptr @v256i64, align 16
   ret void
 }

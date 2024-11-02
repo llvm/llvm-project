@@ -12,7 +12,10 @@
 #include <__concepts/common_reference_with.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <type_traits>
+#include <__type_traits/add_lvalue_reference.h>
+#include <__type_traits/common_reference.h>
+#include <__type_traits/common_type.h>
+#include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

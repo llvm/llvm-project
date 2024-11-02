@@ -1201,6 +1201,7 @@ class binop_oneuse<SDPatternOperator operator>
   return N->hasOneUse();
 }]>;
 
+def and_oneuse : binop_oneuse<and>;
 def add_oneuse : binop_oneuse<add>;
 def mul_oneuse : binop_oneuse<mul>;
 
@@ -1237,6 +1238,12 @@ def : PatGprSimm12<xor, XORI>;
 def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
+
+// negate of low bit can be done via two (compressible) shifts.  The negate
+// is never compressible since rs1 and rd can't be the same register.
+def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),
+          (SRAI (SLLI $rs, (ImmSubFromXLen (XLenVT 1))),
+                (ImmSubFromXLen (XLenVT 1)))>;
 
 // AND with leading/trailing ones mask exceeding simm32/simm12.
 def : Pat<(i64 (and GPR:$rs, LeadingOnesMask:$mask)),
@@ -1336,7 +1343,7 @@ def riscv_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
                                                   node:$falsev), [{}],
                                   IntCCtoRISCVCC>;
 
-let Predicates = [HasShortForwardBranchOpt],
+let Predicates = [HasShortForwardBranchOpt], isSelect = 1,
     Constraints = "$dst = $falsev", isCommutable = 1, Size = 8 in {
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
@@ -1348,6 +1355,44 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
                                                        cond, GPR:$truev,
                                                        GPR:$falsev))]>,
                      Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+}
+
+// Conditional binops, that updates update $dst to (op rs1, rs2) when condition
+// is true. Returns $falsev otherwise. Selected by optimizeSelect.
+// TODO: Can we use DefaultOperands on the regular binop to accomplish this more
+// like how ARM does predication?
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    Constraints = "$dst = $falsev" in {
+def PseudoCCADD : Pseudo<(outs GPR:$dst),
+                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+def PseudoCCSUB : Pseudo<(outs GPR:$dst),
+                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+def PseudoCCAND : Pseudo<(outs GPR:$dst),
+                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+def PseudoCCOR  : Pseudo<(outs GPR:$dst),
+                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+def PseudoCCXOR : Pseudo<(outs GPR:$dst),
+                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+
+// RV64I instructions
+def PseudoCCADDW : Pseudo<(outs GPR:$dst),
+                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                   Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+def PseudoCCSUBW : Pseudo<(outs GPR:$dst),
+                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                   Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
 }
 
 multiclass SelectCC_GPR_rrirr<RegisterClass valty> {

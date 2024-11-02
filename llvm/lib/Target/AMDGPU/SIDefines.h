@@ -130,6 +130,13 @@ enum : uint64_t {
 
   // Is a WMMA instruction.
   IsWMMA = UINT64_C(1) << 59,
+
+  // Is source of divergence.
+  //
+  // Note: There is no corresponding SIInstrInfo::IsSourceOfDivergence method
+  // by design, since this flag only covers opcodes that are _always_ divergent.
+  // Use SIInstrInfo::getInstructionUniformity for a more complete analysis.
+  IsSourceOfDivergence = UINT64_C(1) << 60
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -902,6 +909,13 @@ enum Offset_COV5 : unsigned {
 };
 
 } // namespace ImplicitArg
+
+namespace VirtRegFlag {
+// Virtual Register Flags.
+enum Register_Flag : uint8_t { WWM_REG = 0 };
+
+} // namespace VirtRegFlag
+
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

@@ -43,9 +43,6 @@
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
 
-#define PGMATH_DECLARE
-#include "flang/Evaluate/pgmath.h.inc"
-
 /// This file implements lowering of Fortran intrinsic procedures and Fortran
 /// intrinsic module procedures.  A call may be inlined with a mix of FIR and
 /// MLIR operations, or as a call to a runtime function or LLVM intrinsic.
@@ -465,7 +462,10 @@ struct IntrinsicLibrary {
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
-
+  fir::ExtendedValue genBesselJn(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genBesselYn(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   /// Lower a bitwise comparison intrinsic using the given comparator.
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genBitwiseCompare(mlir::Type resultType,
@@ -734,6 +734,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"associated",
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
+     /*isElemental=*/false},
+    {"bessel_jn",
+     &I::genBesselJn,
+     {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
+     /*isElemental=*/false},
+    {"bessel_yn",
+     &I::genBesselYn,
+     {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
      /*isElemental=*/false},
     {"bge", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::uge>},
     {"bgt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ugt>},
@@ -1126,24 +1134,6 @@ struct RuntimeFunction {
   // Name of a runtime function that implements the operation.
   llvm::StringRef symbol;
   fir::runtime::FuncTypeBuilderFunc typeGenerator;
-};
-
-#define RUNTIME_STATIC_DESCRIPTION(name, func)                                 \
-  {#name, #func, fir::runtime::RuntimeTableKey<decltype(func)>::getTypeModel()},
-static constexpr RuntimeFunction pgmathFast[] = {
-#define PGMATH_FAST
-#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "flang/Evaluate/pgmath.h.inc"
-};
-static constexpr RuntimeFunction pgmathRelaxed[] = {
-#define PGMATH_RELAXED
-#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "flang/Evaluate/pgmath.h.inc"
-};
-static constexpr RuntimeFunction pgmathPrecise[] = {
-#define PGMATH_PRECISE
-#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "flang/Evaluate/pgmath.h.inc"
 };
 
 static mlir::FunctionType genF32F32FuncType(mlir::MLIRContext *context) {
@@ -1707,44 +1697,6 @@ private:
   bool infinite = false; // When forbidden conversion or wrong argument number
 };
 
-/// Build mlir::func::FuncOp from runtime symbol description and add
-/// fir.runtime attribute.
-static mlir::func::FuncOp getFuncOp(mlir::Location loc,
-                                    fir::FirOpBuilder &builder,
-                                    const RuntimeFunction &runtime) {
-  mlir::func::FuncOp function = builder.addNamedFunction(
-      loc, runtime.symbol, runtime.typeGenerator(builder.getContext()));
-  function->setAttr("fir.runtime", builder.getUnitAttr());
-  return function;
-}
-
-/// Select runtime function that has the smallest distance to the intrinsic
-/// function type and that will not imply narrowing arguments or extending the
-/// result.
-/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
-static mlir::func::FuncOp searchFunctionInLibrary(
-    mlir::Location loc, fir::FirOpBuilder &builder,
-    const Fortran::common::StaticMultimapView<RuntimeFunction> &lib,
-    llvm::StringRef name, mlir::FunctionType funcType,
-    const RuntimeFunction **bestNearMatch,
-    FunctionDistance &bestMatchDistance) {
-  std::pair<const RuntimeFunction *, const RuntimeFunction *> range =
-      lib.equal_range(name);
-  for (auto iter = range.first; iter != range.second && iter; ++iter) {
-    const RuntimeFunction &impl = *iter;
-    mlir::FunctionType implType = impl.typeGenerator(builder.getContext());
-    if (funcType == implType)
-      return getFuncOp(loc, builder, impl); // exact match
-
-    FunctionDistance distance(funcType, implType);
-    if (distance.isSmallerThan(bestMatchDistance)) {
-      *bestNearMatch = &impl;
-      bestMatchDistance = std::move(distance);
-    }
-  }
-  return {};
-}
-
 using RtMap = Fortran::common::StaticMultimapView<MathOperation>;
 static constexpr RtMap mathOps(mathOperations);
 static_assert(mathOps.Verify() && "map must be sorted");
@@ -1814,40 +1766,6 @@ static void checkPrecisionLoss(llvm::StringRef name,
   }
   sstream << "'";
   mlir::emitError(loc, message);
-}
-
-/// Search runtime for the best runtime function given an intrinsic name
-/// and interface. The interface may not be a perfect match in which case
-/// the caller is responsible to insert argument and return value conversions.
-/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
-static mlir::func::FuncOp getRuntimeFunction(mlir::Location loc,
-                                             fir::FirOpBuilder &builder,
-                                             llvm::StringRef name,
-                                             mlir::FunctionType funcType) {
-  const RuntimeFunction *bestNearMatch = nullptr;
-  FunctionDistance bestMatchDistance;
-  mlir::func::FuncOp match;
-  using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
-  static constexpr RtMap pgmathF(pgmathFast);
-  static_assert(pgmathF.Verify() && "map must be sorted");
-  static constexpr RtMap pgmathR(pgmathRelaxed);
-  static_assert(pgmathR.Verify() && "map must be sorted");
-  static constexpr RtMap pgmathP(pgmathPrecise);
-  static_assert(pgmathP.Verify() && "map must be sorted");
-
-  if (mathRuntimeVersion == fastVersion)
-    match = searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
-                                    &bestNearMatch, bestMatchDistance);
-  else if (mathRuntimeVersion == relaxedVersion)
-    match = searchFunctionInLibrary(loc, builder, pgmathR, name, funcType,
-                                    &bestNearMatch, bestMatchDistance);
-  else if (mathRuntimeVersion == preciseVersion)
-    match = searchFunctionInLibrary(loc, builder, pgmathP, name, funcType,
-                                    &bestNearMatch, bestMatchDistance);
-  else
-    llvm_unreachable("unsupported mathRuntimeVersion");
-
-  return match;
 }
 
 /// Helpers to get function type from arguments and result type.
@@ -2234,14 +2152,12 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
 IntrinsicLibrary::RuntimeCallGenerator
 IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
                                           mlir::FunctionType soughtFuncType) {
-  mlir::func::FuncOp funcOp;
   mlir::FunctionType actualFuncType;
   const MathOperation *mathOp = nullptr;
 
   // Look for a dedicated math operation generator, which
   // normally produces a single MLIR operation implementing
   // the math operation.
-  // If not found fall back to a runtime function lookup.
   const MathOperation *bestNearMatch = nullptr;
   FunctionDistance bestMatchDistance;
   mathOp = searchMathOperation(builder, name, soughtFuncType, &bestNearMatch,
@@ -2249,54 +2165,31 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
-    bool useBestNearMatch = true;
-    // TODO: temporary workaround to avoid using math::PowFOp
-    //       for pow(fp, i64) case and fall back to pgmath runtime.
-    //       When proper Math dialect operations are available
-    //       and added into mathOperations table, this can be removed.
-    //       This is WIP in D129812.
-    if (name == "pow" && soughtFuncType.getInput(0).isa<mlir::FloatType>())
-      if (auto exponentTy =
-              soughtFuncType.getInput(1).dyn_cast<mlir::IntegerType>())
-        useBestNearMatch = exponentTy.getWidth() != 64;
-
-    if (useBestNearMatch) {
-      checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
-      mathOp = bestNearMatch;
-    }
+    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
+    mathOp = bestNearMatch;
   }
-  if (mathOp)
-    actualFuncType = mathOp->typeGenerator(builder.getContext());
 
-  if (!mathOp)
-    if ((funcOp = getRuntimeFunction(loc, builder, name, soughtFuncType)))
-      actualFuncType = funcOp.getFunctionType();
-
-  if (!mathOp && !funcOp) {
+  if (!mathOp) {
     std::string nameAndType;
     llvm::raw_string_ostream sstream(nameAndType);
     sstream << name << "\nrequested type: " << soughtFuncType;
     crashOnMissingIntrinsic(loc, nameAndType);
   }
 
+  actualFuncType = mathOp->typeGenerator(builder.getContext());
+
   assert(actualFuncType.getNumResults() == soughtFuncType.getNumResults() &&
          actualFuncType.getNumInputs() == soughtFuncType.getNumInputs() &&
          actualFuncType.getNumResults() == 1 && "Bad intrinsic match");
 
-  return [funcOp, actualFuncType, mathOp,
+  return [actualFuncType, mathOp,
           soughtFuncType](fir::FirOpBuilder &builder, mlir::Location loc,
                           llvm::ArrayRef<mlir::Value> args) {
     llvm::SmallVector<mlir::Value> convertedArguments;
     for (auto [fst, snd] : llvm::zip(actualFuncType.getInputs(), args))
       convertedArguments.push_back(builder.createConvert(loc, fst, snd));
-    mlir::Value result;
-    // Use math operation generator, if available.
-    if (mathOp)
-      result = mathOp->funcGenerator(builder, loc, mathOp->runtimeFunc,
-                                     actualFuncType, convertedArguments);
-    else
-      result = builder.create<fir::CallOp>(loc, funcOp, convertedArguments)
-                   .getResult(0);
+    mlir::Value result = mathOp->funcGenerator(
+        builder, loc, mathOp->runtimeFunc, actualFuncType, convertedArguments);
     mlir::Type soughtType = soughtFuncType.getResult(0);
     return builder.createConvert(loc, soughtType, result);
   };
@@ -2643,6 +2536,196 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = builder.create<fir::LoadOp>(loc, pointerBoxRef);
   return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+// BESSEL_JN
+fir::ExtendedValue
+IntrinsicLibrary::genBesselJn(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2 || args.size() == 3);
+
+  mlir::Value x = fir::getBase(args.back());
+
+  if (args.size() == 2) {
+    mlir::Value n = fir::getBase(args[0]);
+
+    return genRuntimeCall("bessel_jn", resultType, {n, x});
+  } else {
+    mlir::Value n1 = fir::getBase(args[0]);
+    mlir::Value n2 = fir::getBase(args[1]);
+
+    mlir::Type intTy = n1.getType();
+    mlir::Type floatTy = x.getType();
+    mlir::Value zero = builder.createRealZeroConstant(loc, floatTy);
+    mlir::Value one = builder.createIntegerConstant(loc, intTy, 1);
+
+    mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, 1);
+    fir::MutableBoxValue resultMutableBox =
+        fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+    mlir::Value resultBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    mlir::Value cmpXEq0 = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::UEQ, x, zero);
+    mlir::Value cmpN1LtN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::slt, n1, n2);
+    mlir::Value cmpN1EqN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, n1, n2);
+
+    auto genXEq0 = [&]() {
+      fir::runtime::genBesselJnX0(builder, loc, floatTy, resultBox, n1, n2);
+    };
+
+    auto genN1LtN2 = [&]() {
+      // The runtime generates the values in the range using a backward
+      // recursion from n2 to n1. (see https://dlmf.nist.gov/10.74.iv and
+      // https://dlmf.nist.gov/10.6.E1). When n1 < n2, this requires
+      // the values of BESSEL_JN(n2) and BESSEL_JN(n2 - 1) since they
+      // are the anchors of the recursion.
+      mlir::Value n2_1 = builder.create<mlir::arith::SubIOp>(loc, n2, one);
+      mlir::Value bn2 = genRuntimeCall("bessel_jn", resultType, {n2, x});
+      mlir::Value bn2_1 = genRuntimeCall("bessel_jn", resultType, {n2_1, x});
+      fir::runtime::genBesselJn(builder, loc, resultBox, n1, n2, x, bn2, bn2_1);
+    };
+
+    auto genN1EqN2 = [&]() {
+      // When n1 == n2, only BESSEL_JN(n2) is needed.
+      mlir::Value bn2 = genRuntimeCall("bessel_jn", resultType, {n2, x});
+      fir::runtime::genBesselJn(builder, loc, resultBox, n1, n2, x, bn2, zero);
+    };
+
+    auto genN1GtN2 = [&]() {
+      // The standard requires n1 <= n2. However, we still need to allocate
+      // a zero-length array and return it when n1 > n2, so we do need to call
+      // the runtime function.
+      fir::runtime::genBesselJn(builder, loc, resultBox, n1, n2, x, zero, zero);
+    };
+
+    auto genN1GeN2 = [&] {
+      builder.genIfThenElse(loc, cmpN1EqN2)
+          .genThen(genN1EqN2)
+          .genElse(genN1GtN2)
+          .end();
+    };
+
+    auto genXNeq0 = [&]() {
+      builder.genIfThenElse(loc, cmpN1LtN2)
+          .genThen(genN1LtN2)
+          .genElse(genN1GeN2)
+          .end();
+    };
+
+    builder.genIfThenElse(loc, cmpXEq0)
+        .genThen(genXEq0)
+        .genElse(genXNeq0)
+        .end();
+
+    fir::ExtendedValue res =
+        fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+    return res.match(
+        [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+          addCleanUpForTemp(loc, box.getAddr());
+          return box;
+        },
+        [&](const auto &) -> fir::ExtendedValue {
+          fir::emitFatalError(loc, "unexpected result for BESSEL_JN");
+        });
+  }
+}
+
+// BESSEL_YN
+fir::ExtendedValue
+IntrinsicLibrary::genBesselYn(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2 || args.size() == 3);
+
+  mlir::Value x = fir::getBase(args.back());
+
+  if (args.size() == 2) {
+    mlir::Value n = fir::getBase(args[0]);
+
+    return genRuntimeCall("bessel_yn", resultType, {n, x});
+  } else {
+    mlir::Value n1 = fir::getBase(args[0]);
+    mlir::Value n2 = fir::getBase(args[1]);
+
+    mlir::Type floatTy = x.getType();
+    mlir::Type intTy = n1.getType();
+    mlir::Value zero = builder.createRealZeroConstant(loc, floatTy);
+    mlir::Value one = builder.createIntegerConstant(loc, intTy, 1);
+
+    mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, 1);
+    fir::MutableBoxValue resultMutableBox =
+        fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+    mlir::Value resultBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    mlir::Value cmpXEq0 = builder.create<mlir::arith::CmpFOp>(
+        loc, mlir::arith::CmpFPredicate::UEQ, x, zero);
+    mlir::Value cmpN1LtN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::slt, n1, n2);
+    mlir::Value cmpN1EqN2 = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, n1, n2);
+
+    auto genXEq0 = [&]() {
+      fir::runtime::genBesselYnX0(builder, loc, floatTy, resultBox, n1, n2);
+    };
+
+    auto genN1LtN2 = [&]() {
+      // The runtime generates the values in the range using a forward
+      // recursion from n1 to n2. (see https://dlmf.nist.gov/10.74.iv and
+      // https://dlmf.nist.gov/10.6.E1). When n1 < n2, this requires
+      // the values of BESSEL_YN(n1) and BESSEL_YN(n1 + 1) since they
+      // are the anchors of the recursion.
+      mlir::Value n1_1 = builder.create<mlir::arith::AddIOp>(loc, n1, one);
+      mlir::Value bn1 = genRuntimeCall("bessel_yn", resultType, {n1, x});
+      mlir::Value bn1_1 = genRuntimeCall("bessel_yn", resultType, {n1_1, x});
+      fir::runtime::genBesselYn(builder, loc, resultBox, n1, n2, x, bn1, bn1_1);
+    };
+
+    auto genN1EqN2 = [&]() {
+      // When n1 == n2, only BESSEL_YN(n1) is needed.
+      mlir::Value bn1 = genRuntimeCall("bessel_yn", resultType, {n1, x});
+      fir::runtime::genBesselYn(builder, loc, resultBox, n1, n2, x, bn1, zero);
+    };
+
+    auto genN1GtN2 = [&]() {
+      // The standard requires n1 <= n2. However, we still need to allocate
+      // a zero-length array and return it when n1 > n2, so we do need to call
+      // the runtime function.
+      fir::runtime::genBesselYn(builder, loc, resultBox, n1, n2, x, zero, zero);
+    };
+
+    auto genN1GeN2 = [&] {
+      builder.genIfThenElse(loc, cmpN1EqN2)
+          .genThen(genN1EqN2)
+          .genElse(genN1GtN2)
+          .end();
+    };
+
+    auto genXNeq0 = [&]() {
+      builder.genIfThenElse(loc, cmpN1LtN2)
+          .genThen(genN1LtN2)
+          .genElse(genN1GeN2)
+          .end();
+    };
+
+    builder.genIfThenElse(loc, cmpXEq0)
+        .genThen(genXEq0)
+        .genElse(genXNeq0)
+        .end();
+
+    fir::ExtendedValue res =
+        fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+    return res.match(
+        [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+          addCleanUpForTemp(loc, box.getAddr());
+          return box;
+        },
+        [&](const auto &) -> fir::ExtendedValue {
+          fir::emitFatalError(loc, "unexpected result for BESSEL_YN");
+        });
+  }
 }
 
 // BGE, BGT, BLE, BLT
@@ -4794,8 +4877,7 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   mlir::Value dim = fir::getBase(args[1]);
 
   // If it is a compile time constant, skip the runtime call.
-  if (llvm::Optional<std::int64_t> cstDim =
-          fir::factory::getIntIfConstant(dim)) {
+  if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
     mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
     mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
     mlir::Value lb = computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);

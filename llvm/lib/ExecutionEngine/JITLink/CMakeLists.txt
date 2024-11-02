@@ -50,6 +50,7 @@ add_llvm_component_library(LLVMJITLink
   Option
   OrcTargetProcess
   Support
+  TargetParser
   )
 
 target_link_libraries(LLVMJITLink
@@ -58,4 +59,5 @@ target_link_libraries(LLVMJITLink
   LLVMOrcShared
   LLVMOrcTargetProcess
   LLVMSupport
+  LLVMTargetParser
 )

@@ -1329,7 +1329,7 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
       // can't reroll.
       if (RootInst->mayReadFromMemory()) {
         for (auto &K : AST) {
-          if (K.aliasesUnknownInst(RootInst, BatchAA)) {
+          if (isModOrRefSet(K.aliasesUnknownInst(RootInst, BatchAA))) {
             LLVM_DEBUG(dbgs() << "LRR: iteration root match failed at "
                               << *BaseInst << " vs. " << *RootInst
                               << " (depends on future store)\n");

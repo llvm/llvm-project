@@ -8029,9 +8029,9 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // the element will provide a range of bytes. For example, if we have a
     // vector of i16s, each element provides two bytes (V[1] provides byte 2 and
     // 3).
-    if (VectorIndex.value() * NarrowByteWidth > StartingIndex)
+    if (*VectorIndex * NarrowByteWidth > StartingIndex)
       return std::nullopt;
-    if ((VectorIndex.value() + 1) * NarrowByteWidth <= StartingIndex)
+    if ((*VectorIndex + 1) * NarrowByteWidth <= StartingIndex)
       return std::nullopt;
 
     return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,

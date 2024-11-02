@@ -383,6 +383,14 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
       return false;
   }
 
+  // Check that there is no hardware loop related intrinsics in the loop.
+  for (auto *BB : L->getBlocks())
+    for (auto &I : *BB)
+      if (auto *Call = dyn_cast<IntrinsicInst>(&I))
+        if (Call->getIntrinsicID() == Intrinsic::set_loop_iterations ||
+            Call->getIntrinsicID() == Intrinsic::loop_decrement)
+          return false;
+
   SmallVector<BasicBlock*, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 

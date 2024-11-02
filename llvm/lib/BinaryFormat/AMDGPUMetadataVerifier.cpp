@@ -56,7 +56,7 @@ bool MetadataVerifier::verifyInteger(msgpack::DocNode &Node) {
 
 bool MetadataVerifier::verifyArray(
     msgpack::DocNode &Node, function_ref<bool(msgpack::DocNode &)> verifyNode,
-    Optional<size_t> Size) {
+    std::optional<size_t> Size) {
   if (!Node.isArray())
     return false;
   auto &Array = Node.getArray();

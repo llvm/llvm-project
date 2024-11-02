@@ -74,7 +74,7 @@ define i32 @ret_global_int() {
 ; MIPS32_PIC-NEXT:    jr $ra
 ; MIPS32_PIC-NEXT:    nop
 entry:
-  %0 = load i32, i32* @val
+  %0 = load i32, ptr @val
   ret i32 %0
 }
 
@@ -90,6 +90,6 @@ define i32 @ret_global_int_with_local_linkage() {
 ; MIPS32_PIC-NEXT:    jr $ra
 ; MIPS32_PIC-NEXT:    nop
 entry:
-  %0 = load i32, i32* @val_with_local_linkage
+  %0 = load i32, ptr @val_with_local_linkage
   ret i32 %0
 }

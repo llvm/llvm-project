@@ -422,7 +422,7 @@ public:
 
       LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
       TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
-                              RC, &TRI);
+                              RC, &TRI, Register());
     }
   }
 
@@ -431,7 +431,7 @@ public:
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     int FI = RegToSlotIdx[Reg];
     if (It != MBB->end()) {
-      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
+      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
       return;
     }
 
@@ -439,7 +439,7 @@ public:
     // and then swap them.
     assert(!MBB->empty() && "Empty block");
     --It;
-    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
+    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
     MachineInstr *Reload = It->getPrevNode();
     int Dummy = 0;
     (void)Dummy;

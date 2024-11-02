@@ -570,27 +570,19 @@ static bool
 isPotentiallyReachable(Attributor &A, const Instruction &FromI,
                        const Instruction *ToI, const Function &ToFn,
                        const AbstractAttribute &QueryingAA,
-                       const AA::InstExclusionSetTy *ExclusionSet,
                        std::function<bool(const Function &F)> GoBackwardsCB) {
-  LLVM_DEBUG({
-    dbgs() << "[AA] isPotentiallyReachable @" << ToFn.getName() << " from "
-           << FromI << " [GBCB: " << bool(GoBackwardsCB) << "][#ExS: "
-           << (ExclusionSet ? std::to_string(ExclusionSet->size()) : "none")
-           << "]\n";
-    if (ExclusionSet)
-      for (auto *ES : *ExclusionSet)
-        dbgs() << *ES << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "[AA] isPotentiallyReachable @" << ToFn.getName()
+                    << " from " << FromI << " [GBCB: " << bool(GoBackwardsCB)
+                    << "]\n");
 
-  // If we can go arbitrarily backwards we will eventually reach an entry point
-  // that can reach ToI. Only if a set of blocks through which we cannot go is
-  // provided, or once we track internal functions not accessible from the
-  // outside, it makes sense to perform backwards analysis in the absence of a
-  // GoBackwardsCB.
-  if (!GoBackwardsCB && !ExclusionSet) {
+  // TODO: If we can go arbitrarily backwards we will eventually reach an
+  // entry point that can reach ToI. Only once this takes a set of blocks
+  // through which we cannot go, or once we track internal functions not
+  // accessible from the outside, it makes sense to perform backwards analysis
+  // in the absence of a GoBackwardsCB.
+  if (!GoBackwardsCB) {
     LLVM_DEBUG(dbgs() << "[AA] check @" << ToFn.getName() << " from " << FromI
-                      << " is not checked backwards and does not have an "
-                         "exclusion set, abort\n");
+                      << " is not checked backwards, abort\n");
     return true;
   }
 
@@ -609,10 +601,9 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
         return true;
       LLVM_DEBUG(dbgs() << "[AA] check " << *ToI << " from " << *CurFromI
                         << " intraprocedurally\n");
-      const auto &ReachabilityAA = A.getAAFor<AAIntraFnReachability>(
+      const auto &ReachabilityAA = A.getAAFor<AAReachability>(
           QueryingAA, IRPosition::function(ToFn), DepClassTy::OPTIONAL);
-      bool Result =
-          ReachabilityAA.isAssumedReachable(A, *CurFromI, *ToI, ExclusionSet);
+      bool Result = ReachabilityAA.isAssumedReachable(A, *CurFromI, *ToI);
       LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " "
                         << (Result ? "can potentially " : "cannot ") << "reach "
                         << *ToI << " [Intra]\n");
@@ -620,57 +611,15 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
         return true;
     }
 
-    bool Result = true;
-    if (!ToFn.isDeclaration() && ToI) {
-      const auto &ToReachabilityAA = A.getAAFor<AAIntraFnReachability>(
-          QueryingAA, IRPosition::function(ToFn), DepClassTy::OPTIONAL);
-      const Instruction &EntryI = ToFn.getEntryBlock().front();
-      Result =
-          ToReachabilityAA.isAssumedReachable(A, EntryI, *ToI, ExclusionSet);
-      LLVM_DEBUG(dbgs() << "[AA] Entry " << EntryI << " of @" << ToFn.getName()
-                        << " " << (Result ? "can potentially " : "cannot ")
-                        << "reach @" << *ToI << " [ToFn]\n");
-    }
-
-    if (Result) {
-      // The entry of the ToFn can reach the instruction ToI. If the current
-      // instruction is already known to reach the ToFn.
-      const auto &FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
-          QueryingAA, IRPosition::function(*FromFn), DepClassTy::OPTIONAL);
-      Result = FnReachabilityAA.instructionCanReach(A, *CurFromI, ToFn,
-                                                    ExclusionSet);
-      LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " in @" << FromFn->getName()
-                        << " " << (Result ? "can potentially " : "cannot ")
-                        << "reach @" << ToFn.getName() << " [FromFn]\n");
-      if (Result)
-        return true;
-    }
-
-    // TODO: Check assumed nounwind.
-    const auto &ReachabilityAA = A.getAAFor<AAIntraFnReachability>(
+    // Check if the current instruction is already known to reach the ToFn.
+    const auto &FnReachabilityAA = A.getAAFor<AAFunctionReachability>(
         QueryingAA, IRPosition::function(*FromFn), DepClassTy::OPTIONAL);
-    auto ReturnInstCB = [&](Instruction &Ret) {
-      bool Result =
-          ReachabilityAA.isAssumedReachable(A, *CurFromI, Ret, ExclusionSet);
-      LLVM_DEBUG(dbgs() << "[AA][Ret] " << *CurFromI << " "
-                        << (Result ? "can potentially " : "cannot ") << "reach "
-                        << Ret << " [Intra]\n");
-      return !Result;
-    };
-
-    // Check if we can reach returns.
-    bool UsedAssumedInformation = false;
-    if (A.checkForAllInstructions(ReturnInstCB, FromFn, QueryingAA,
-                                  {Instruction::Ret}, UsedAssumedInformation)) {
-      LLVM_DEBUG(dbgs() << "[AA] No return is reachable, done\n");
-      return false;
-    }
-
-    if (!GoBackwardsCB) {
-      LLVM_DEBUG(dbgs() << "[AA] check @" << ToFn.getName() << " from " << FromI
-                        << " is not checked backwards, abort\n");
+    bool Result = FnReachabilityAA.instructionCanReach(A, *CurFromI, ToFn);
+    LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " in @" << FromFn->getName()
+                      << " " << (Result ? "can potentially " : "cannot ")
+                      << "reach @" << ToFn.getName() << " [FromFn]\n");
+    if (Result)
       return true;
-    }
 
     // If we do not go backwards from the FromFn we are done here and so far we
     // could not find a way to reach ToFn/ToI.
@@ -693,6 +642,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
       return true;
     };
 
+    bool UsedAssumedInformation = false;
     Result = !A.checkForAllCallSites(CheckCallSite, *FromFn,
                                      /* RequireAllCallSites */ true,
                                      &QueryingAA, UsedAssumedInformation);
@@ -713,20 +663,20 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
 bool AA::isPotentiallyReachable(
     Attributor &A, const Instruction &FromI, const Instruction &ToI,
     const AbstractAttribute &QueryingAA,
-    const AA::InstExclusionSetTy *ExclusionSet,
     std::function<bool(const Function &F)> GoBackwardsCB) {
+  LLVM_DEBUG(dbgs() << "[AA] isPotentiallyReachable " << ToI << " from "
+                    << FromI << " [GBCB: " << bool(GoBackwardsCB) << "]\n");
   const Function *ToFn = ToI.getFunction();
   return ::isPotentiallyReachable(A, FromI, &ToI, *ToFn, QueryingAA,
-                                  ExclusionSet, GoBackwardsCB);
+                                  GoBackwardsCB);
 }
 
 bool AA::isPotentiallyReachable(
     Attributor &A, const Instruction &FromI, const Function &ToFn,
     const AbstractAttribute &QueryingAA,
-    const AA::InstExclusionSetTy *ExclusionSet,
     std::function<bool(const Function &F)> GoBackwardsCB) {
   return ::isPotentiallyReachable(A, FromI, /* ToI */ nullptr, ToFn, QueryingAA,
-                                  ExclusionSet, GoBackwardsCB);
+                                  GoBackwardsCB);
 }
 
 /// Return true if \p New is equal or worse than \p Old.
@@ -818,8 +768,8 @@ Argument *IRPosition::getAssociatedArgument() const {
   }
 
   // If we found a unique callback candidate argument, return it.
-  if (CBCandidateArg && CBCandidateArg.value())
-    return CBCandidateArg.value();
+  if (CBCandidateArg && *CBCandidateArg)
+    return *CBCandidateArg;
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
@@ -1186,7 +1136,7 @@ bool Attributor::getAssumedSimplifiedValues(
     std::optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);
     if (!CBResult.has_value())
       continue;
-    Value *V = CBResult.value();
+    Value *V = *CBResult;
     if (!V)
       return false;
     if ((S & AA::ValueScope::Interprocedural) ||
@@ -1226,8 +1176,8 @@ std::optional<Value *> Attributor::translateArgumentToCallSiteContent(
 Attributor::~Attributor() {
   // The abstract attributes are allocated via the BumpPtrAllocator Allocator,
   // thus we cannot delete them. We can, and want to, destruct them though.
-  for (auto &DepAA : DG.SyntheticRoot.Deps) {
-    AbstractAttribute *AA = cast<AbstractAttribute>(DepAA.getPointer());
+  for (auto &It : AAMap) {
+    AbstractAttribute *AA = It.getSecond();
     AA->~AbstractAttribute();
   }
 }
@@ -2843,8 +2793,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       std::optional<short> &NumUses = AssumeUsesMap[I];
       if (!NumUses)
         NumUses = I->getNumUses();
-      NumUses = NumUses.value() - /* this assume */ 1;
-      if (NumUses.value() != 0)
+      NumUses = *NumUses - /* this assume */ 1;
+      if (*NumUses != 0)
         continue;
       AssumeOnlyValues.insert(I);
       for (const Value *Op : I->operands())

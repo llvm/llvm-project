@@ -12,7 +12,7 @@
 // in called_from_lib suppression are ignored.
 
 // REQUIRES: stable-runtime
-// UNSUPPORTED: powerpc64le
+// UNSUPPORTED: target=powerpc64le{{.*}}
 // FIXME: This test regularly fails on powerpc64 LE possibly starting with
 // r279664.  Re-enable the test once the problem(s) have been fixed.
 

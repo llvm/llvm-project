@@ -1743,9 +1743,8 @@ void LiveIntervals::splitSeparateComponents(LiveInterval &LI,
     return;
   LLVM_DEBUG(dbgs() << "  Split " << NumComp << " components: " << LI << '\n');
   Register Reg = LI.reg();
-  const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
   for (unsigned I = 1; I < NumComp; ++I) {
-    Register NewVReg = MRI->createVirtualRegister(RegClass);
+    Register NewVReg = MRI->cloneVirtualRegister(Reg);
     LiveInterval &NewLI = createEmptyInterval(NewVReg);
     SplitLIs.push_back(&NewLI);
   }

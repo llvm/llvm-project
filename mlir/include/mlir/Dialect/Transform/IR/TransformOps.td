@@ -210,7 +210,7 @@ def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
 }
 
 def MergeHandlesOp : TransformDialectOp<"merge_handles",
-    [DeclareOpInterfaceMethods<TransformOpInterface>,
+    [DeclareOpInterfaceMethods<TransformOpInterface, ["allowsRepeatedHandleOperands"]>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      SameOperandsAndResultType]> {
   let summary = "Merges handles into one pointing to the union of payload ops";

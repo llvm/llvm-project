@@ -3817,10 +3817,12 @@ static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
       .addMemOperand(MMO);
 }
 
-void AArch64InstrInfo::storeRegToStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-    bool isKill, int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           Register SrcReg, bool isKill, int FI,
+                                           const TargetRegisterClass *RC,
+                                           const TargetRegisterInfo *TRI,
+                                           Register VReg) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -3971,10 +3973,12 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
       .addMemOperand(MMO);
 }
 
-void AArch64InstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
-    int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            Register DestReg, int FI,
+                                            const TargetRegisterClass *RC,
+                                            const TargetRegisterInfo *TRI,
+                                            Register VReg) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -4539,10 +4543,10 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
              "Mismatched register size in non subreg COPY");
       if (IsSpill)
         storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
-                            getRegClass(SrcReg), &TRI);
+                            getRegClass(SrcReg), &TRI, Register());
       else
         loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex,
-                             getRegClass(DstReg), &TRI);
+                             getRegClass(DstReg), &TRI, Register());
       return &*--InsertPt;
     }
 
@@ -4588,7 +4592,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
         if (unsigned WidenedSrcReg =
                 TRI.getMatchingSuperReg(SrcReg, SpillSubreg, SpillRC)) {
           storeRegToStackSlot(MBB, InsertPt, WidenedSrcReg, SrcMO.isKill(),
-                              FrameIndex, SpillRC, &TRI);
+                              FrameIndex, SpillRC, &TRI, Register());
           return &*--InsertPt;
         }
     }
@@ -4623,7 +4627,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
         assert(TRI.getRegSizeInBits(*getRegClass(SrcReg)) ==
                    TRI.getRegSizeInBits(*FillRC) &&
                "Mismatched regclass size on folded subreg COPY");
-        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, FillRC, &TRI);
+        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, FillRC, &TRI,
+                             Register());
         MachineInstr &LoadMI = *--InsertPt;
         MachineOperand &LoadDst = LoadMI.getOperand(0);
         assert(LoadDst.getSubReg() == 0 && "unexpected subreg on fill load");
@@ -4946,19 +4951,28 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   switch (Inst.getOpcode()) {
   // == Floating-point types ==
   // -- Floating-point instructions --
+  case AArch64::FADDHrr:
   case AArch64::FADDSrr:
   case AArch64::FADDDrr:
+  case AArch64::FMULHrr:
   case AArch64::FMULSrr:
   case AArch64::FMULDrr:
+  case AArch64::FMULX16:
   case AArch64::FMULX32:
   case AArch64::FMULX64:
   // -- Advanced SIMD instructions --
+  case AArch64::FADDv4f16:
+  case AArch64::FADDv8f16:
   case AArch64::FADDv2f32:
   case AArch64::FADDv4f32:
   case AArch64::FADDv2f64:
+  case AArch64::FMULv4f16:
+  case AArch64::FMULv8f16:
   case AArch64::FMULv2f32:
   case AArch64::FMULv4f32:
   case AArch64::FMULv2f64:
+  case AArch64::FMULXv4f16:
+  case AArch64::FMULXv8f16:
   case AArch64::FMULXv2f32:
   case AArch64::FMULXv4f32:
   case AArch64::FMULXv2f64:
@@ -4983,6 +4997,29 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case AArch64::EORXrr:
   case AArch64::EONWrr:
   case AArch64::EONXrr:
+  // -- Advanced SIMD instructions --
+  // Opcodes MULv1i64 and MULv2i64 don't exist because there is no 64-bit MUL
+  // in the Advanced SIMD instruction set.
+  case AArch64::ADDv8i8:
+  case AArch64::ADDv16i8:
+  case AArch64::ADDv4i16:
+  case AArch64::ADDv8i16:
+  case AArch64::ADDv2i32:
+  case AArch64::ADDv4i32:
+  case AArch64::ADDv1i64:
+  case AArch64::ADDv2i64:
+  case AArch64::MULv8i8:
+  case AArch64::MULv16i8:
+  case AArch64::MULv4i16:
+  case AArch64::MULv8i16:
+  case AArch64::MULv2i32:
+  case AArch64::MULv4i32:
+  case AArch64::ANDv8i8:
+  case AArch64::ANDv16i8:
+  case AArch64::ORRv8i8:
+  case AArch64::ORRv16i8:
+  case AArch64::EORv8i8:
+  case AArch64::EORv16i8:
     return true;
 
   default:

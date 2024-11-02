@@ -7131,6 +7131,17 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
   return UINT32_MAX;
 }
 
+bool TypeSystemClang::IsTemplateType(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  CompilerType ct(weak_from_this(), type);
+  const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
+  if (auto *cxx_record_decl = dyn_cast<clang::TagType>(clang_type))
+    return isa<clang::ClassTemplateSpecializationDecl>(
+        cxx_record_decl->getDecl());
+  return false;
+}
+
 size_t
 TypeSystemClang::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                          bool expand_pack) {

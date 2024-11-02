@@ -13,7 +13,7 @@ lor.lhs.false:
   br i1 undef, label %return, label %if.end
 
 if.end:
-  %tmp.i = load i64, i64* undef, align 8
+  %tmp.i = load i64, ptr undef, align 8
   %and.i.i.i = and i64 %tmp.i, -16
   br i1 %IsArrow, label %if.else_crit_edge, label %if.end32
 
@@ -26,7 +26,7 @@ if.end32:
   %.pn.v = select i1 %0, i320 128, i320 64
   %.pn = shl i320 %1, %.pn.v
   %ins346392 = or i320 %.pn, 0
-  store i320 %ins346392, i320* undef, align 8
+  store i320 %ins346392, ptr undef, align 8
   br i1 undef, label %sw.bb.i.i, label %exit
 
 sw.bb.i.i:

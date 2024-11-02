@@ -24,12 +24,12 @@ target triple = "thumbv7m-arm-none-eabi"
 
 define hidden i32 @x() local_unnamed_addr #0 {
 entry:
-  %0 = load volatile i32, i32* @a, align 4
-  %1 = load volatile i32, i32* @b, align 4
-  %2 = load volatile i32, i32* @c, align 4
-  %3 = load volatile i32, i32* @d, align 4
-  %4 = load volatile i32, i32* @e, align 4
-  %5 = load volatile i32, i32* @f, align 4
+  %0 = load volatile i32, ptr @a, align 4
+  %1 = load volatile i32, ptr @b, align 4
+  %2 = load volatile i32, ptr @c, align 4
+  %3 = load volatile i32, ptr @d, align 4
+  %4 = load volatile i32, ptr @e, align 4
+  %5 = load volatile i32, ptr @f, align 4
   %add = add i32 %0, 1
   %add1 = add i32 %add, %1
   %add2 = add i32 %add1, %2
@@ -50,12 +50,12 @@ entry:
 
 define hidden i32 @y() local_unnamed_addr #0 {
 entry:
-  %0 = load volatile i32, i32* @a, align 4
-  %1 = load volatile i32, i32* @b, align 4
-  %2 = load volatile i32, i32* @c, align 4
-  %3 = load volatile i32, i32* @d, align 4
-  %4 = load volatile i32, i32* @e, align 4
-  %5 = load volatile i32, i32* @f, align 4
+  %0 = load volatile i32, ptr @a, align 4
+  %1 = load volatile i32, ptr @b, align 4
+  %2 = load volatile i32, ptr @c, align 4
+  %3 = load volatile i32, ptr @d, align 4
+  %4 = load volatile i32, ptr @e, align 4
+  %5 = load volatile i32, ptr @f, align 4
   %add = add i32 %0, 2
   %add1 = add i32 %add, %1
   %add2 = add i32 %add1, %2

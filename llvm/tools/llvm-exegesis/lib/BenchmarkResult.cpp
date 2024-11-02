@@ -152,8 +152,8 @@ private:
   const exegesis::LLVMState *State;
   std::string LastError;
   raw_string_ostream ErrorStream;
-  const StringMap<unsigned> &OpcodeNameToOpcodeIdx;
-  const StringMap<unsigned> &RegNameToRegNo;
+  const DenseMap<StringRef, unsigned> &OpcodeNameToOpcodeIdx;
+  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
 };
 } // namespace
 
@@ -349,7 +349,7 @@ InstructionBenchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
     yaml::yamlize(Yin, Benchmark, /*unused*/ true, Context);
   if (!Context.getLastError().empty())
     return make_error<Failure>(Context.getLastError());
-  return Benchmark;
+  return std::move(Benchmark);
 }
 
 Expected<std::vector<InstructionBenchmark>>
@@ -367,7 +367,7 @@ InstructionBenchmark::readYamls(const LLVMState &State,
       return make_error<Failure>(Context.getLastError());
     Yin.nextDocument();
   }
-  return Benchmarks;
+  return std::move(Benchmarks);
 }
 
 Error InstructionBenchmark::writeYamlTo(const LLVMState &State,
@@ -391,25 +391,6 @@ Error InstructionBenchmark::readYamlFrom(const LLVMState &State,
     yaml::yamlize(Yin, *this, /*unused*/ true, Context);
   if (!Context.getLastError().empty())
     return make_error<Failure>(Context.getLastError());
-  return Error::success();
-}
-
-Error InstructionBenchmark::writeYaml(const LLVMState &State,
-                                      const StringRef Filename) {
-  if (Filename == "-") {
-    if (auto Err = writeYamlTo(State, outs()))
-      return Err;
-  } else {
-    int ResultFD = 0;
-    if (auto E = errorCodeToError(openFileForWrite(Filename, ResultFD,
-                                                   sys::fs::CD_CreateAlways,
-                                                   sys::fs::OF_TextWithCRLF))) {
-      return E;
-    }
-    raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);
-    if (auto Err = writeYamlTo(State, Ostr))
-      return Err;
-  }
   return Error::success();
 }
 

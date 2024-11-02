@@ -5,24 +5,24 @@ target triple = "thumbv7-arm-none-eabi"
 ; CHECK-LABEL: f:
 ; CHECK: vld1.64 {{.*}}, [r1:128]
 ; CHECK: .p2align 4
-define void @f(<4 x i32>* %p) {
-  store <4 x i32> <i32 -1, i32 0, i32 0, i32 -1>, <4 x i32>* %p, align 4
+define void @f(ptr %p) {
+  store <4 x i32> <i32 -1, i32 0, i32 0, i32 -1>, ptr %p, align 4
   ret void 
 }
 
 ; CHECK-LABEL: f_optsize:
 ; CHECK: vld1.64 {{.*}}, [r1]
 ; CHECK: .p2align 3
-define void @f_optsize(<4 x i32>* %p) optsize {
-  store <4 x i32> <i32 -1, i32 0, i32 0, i32 -1>, <4 x i32>* %p, align 4
+define void @f_optsize(ptr %p) optsize {
+  store <4 x i32> <i32 -1, i32 0, i32 0, i32 -1>, ptr %p, align 4
   ret void 
 }
 
 ; CHECK-LABEL: f_pgso:
 ; CHECK: vld1.64 {{.*}}, [r1]
 ; CHECK: .p2align 3
-define void @f_pgso(<4 x i32>* %p) !prof !14 {
-  store <4 x i32> <i32 -1, i32 0, i32 0, i32 -1>, <4 x i32>* %p, align 4
+define void @f_pgso(ptr %p) !prof !14 {
+  store <4 x i32> <i32 -1, i32 0, i32 0, i32 -1>, ptr %p, align 4
   ret void 
 }
 

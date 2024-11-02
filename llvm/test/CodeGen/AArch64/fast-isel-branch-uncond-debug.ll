@@ -12,7 +12,7 @@ entry:
 for.cond:
   br label %for.cond, !dbg !15, !llvm.loop !18
 }
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 

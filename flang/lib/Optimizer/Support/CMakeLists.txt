@@ -17,4 +17,7 @@ add_flang_library(FIRSupport
   MLIROpenMPToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
+
+  LINK_COMPONENTS
+  TargetParser
 )

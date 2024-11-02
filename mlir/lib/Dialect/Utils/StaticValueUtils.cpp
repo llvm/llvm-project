@@ -91,7 +91,7 @@ SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr) {
 }
 
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
-Optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
+std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   // Case 1: Check for Constant integer.
   if (auto val = ofr.dyn_cast<Value>()) {
     APSInt intVal;

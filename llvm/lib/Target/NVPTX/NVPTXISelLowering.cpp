@@ -1318,8 +1318,8 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, MaybeAlign retAlignment,
-    Optional<std::pair<unsigned, const APInt &>> VAInfo, const CallBase &CB,
-    unsigned UniqueCallSite) const {
+    std::optional<std::pair<unsigned, const APInt &>> VAInfo,
+    const CallBase &CB, unsigned UniqueCallSite) const {
   auto PtrVT = getPointerTy(DL);
 
   bool isABI = (STI.getSmVersion() >= 20);
@@ -1812,11 +1812,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDVTList ProtoVTs = DAG.getVTList(MVT::Other, MVT::Glue);
     std::string Proto = getPrototype(
         DL, RetTy, Args, Outs, retAlignment,
-        HasVAArgs ? Optional<std::pair<unsigned, const APInt &>>(std::make_pair(
-                        CLI.NumFixedArgs,
-                        cast<ConstantSDNode>(VADeclareParam->getOperand(1))
-                            ->getAPIntValue()))
-                  : std::nullopt,
+        HasVAArgs
+            ? std::optional<std::pair<unsigned, const APInt &>>(std::make_pair(
+                  CLI.NumFixedArgs,
+                  cast<ConstantSDNode>(VADeclareParam->getOperand(1))
+                      ->getAPIntValue()))
+            : std::nullopt,
         *CB, UniqueCallSite);
     const char *ProtoStr =
       nvTM->getManagedStrPool()->getManagedString(Proto.c_str())->c_str();
@@ -1997,7 +1998,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Ret.getValue(2);
 
     if (ProxyRegTruncates[i]) {
-      Ret = DAG.getNode(ISD::TRUNCATE, dl, ProxyRegTruncates[i].value(), Ret);
+      Ret = DAG.getNode(ISD::TRUNCATE, dl, *ProxyRegTruncates[i], Ret);
     }
 
     InVals.push_back(Ret);

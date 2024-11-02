@@ -11,6 +11,7 @@ unittest("ClangCodeGenTests") {
     "//clang/lib/Parse",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "BufferSourceTest.cpp",

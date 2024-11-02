@@ -179,7 +179,7 @@ SerializeToHsacoPass::loadLibraries(SmallVectorImpl<char> &path,
     ret.push_back(std::move(library));
   }
 
-  return ret;
+  return std::move(ret);
 }
 
 std::unique_ptr<llvm::Module>

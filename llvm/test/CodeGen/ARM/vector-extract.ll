@@ -5,7 +5,7 @@
 
 %struct.__neon_int32x4x4_t = type { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> }
 
-define i32 @vld4Qi32(i32* %A) nounwind {
+define i32 @vld4Qi32(ptr %A) nounwind {
 ; CHECK-LABEL: vld4Qi32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld4.32 {d16, d18, d20, d22}, [r0]!
@@ -14,8 +14,7 @@ define i32 @vld4Qi32(i32* %A) nounwind {
 ; CHECK-NEXT:    vmov.32 r1, d16[0]
 ; CHECK-NEXT:    add r0, r1, r0
 ; CHECK-NEXT:    bx lr
-        %tmp0 = bitcast i32* %A to i8*
-        %tmp1 = call %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4.v4i32.p0i8(i8* %tmp0, i32 1)
+        %tmp1 = call %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4.v4i32.p0(ptr %A, i32 1)
         %tmp2 = extractvalue %struct.__neon_int32x4x4_t %tmp1, 0
         %tmp3 = extractelement <4 x i32> %tmp2, i32 0
         %tmp4 = extractvalue %struct.__neon_int32x4x4_t %tmp1, 1
@@ -24,4 +23,4 @@ define i32 @vld4Qi32(i32* %A) nounwind {
         ret i32 %tmp6
 }
 
-declare %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4.v4i32.p0i8(i8*, i32) nounwind readonly
+declare %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4.v4i32.p0(ptr, i32) nounwind readonly

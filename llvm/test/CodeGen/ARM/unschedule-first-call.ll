@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv6kz--linux-gnueabihf"
 
 ; Function Attrs: nounwind
-define void @dradbg(i32, i32, float*, float*, float*, float*, float*) #0 {
+define void @dradbg(i32, i32, ptr, ptr, ptr, ptr, ptr) #0 {
   br i1 undef, label %.critedge, label %8
 
 .critedge:                                        ; preds = %7
@@ -13,10 +13,10 @@ define void @dradbg(i32, i32, float*, float*, float*, float*, float*) #0 {
   br label %8
 
 ; <label>:8:                                      ; preds = %.critedge, %7
-  %9 = getelementptr float, float* %3, i64 undef
-  %10 = ptrtoint float* %9 to i32
+  %9 = getelementptr float, ptr %3, i64 undef
+  %10 = ptrtoint ptr %9 to i32
   %11 = icmp ule i32 %10, undef
-  %12 = getelementptr float, float* %5, i64 undef
+  %12 = getelementptr float, ptr %5, i64 undef
   %13 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 undef, i64 undef)
   %14 = extractvalue { i64, i1 } %13, 0
   %15 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %14, i64 1)
@@ -32,9 +32,9 @@ define void @dradbg(i32, i32, float*, float*, float*, float*, float*) #0 {
   %25 = extractvalue { i64, i1 } %24, 0
   %26 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %25, i64 0)
   %27 = extractvalue { i64, i1 } %26, 0
-  %28 = getelementptr float, float* %3, i64 %27
-  %29 = ptrtoint float* %12 to i32
-  %30 = ptrtoint float* %28 to i32
+  %28 = getelementptr float, ptr %3, i64 %27
+  %29 = ptrtoint ptr %12 to i32
+  %30 = ptrtoint ptr %28 to i32
   %31 = icmp ule i32 %29, %30
   %32 = or i1 %11, %31
   %33 = and i1 false, %32
@@ -54,16 +54,16 @@ define void @dradbg(i32, i32, float*, float*, float*, float*, float*) #0 {
   %47 = extractvalue { i64, i1 } %46, 0
   %48 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %47, i64 0)
   %49 = extractvalue { i64, i1 } %48, 0
-  %50 = getelementptr float, float* %5, i64 %49
-  %51 = ptrtoint float* %50 to i32
+  %50 = getelementptr float, ptr %5, i64 %49
+  %51 = ptrtoint ptr %50 to i32
   %52 = icmp ule i32 undef, %51
-  %53 = getelementptr float, float* %4, i64 undef
-  %54 = ptrtoint float* %53 to i32
+  %53 = getelementptr float, ptr %4, i64 undef
+  %54 = ptrtoint ptr %53 to i32
   %55 = icmp ule i32 undef, %54
   %56 = or i1 %52, %55
   %57 = and i1 %33, %56
-  %58 = getelementptr float, float* %2, i64 undef
-  %59 = ptrtoint float* %58 to i32
+  %58 = getelementptr float, ptr %2, i64 undef
+  %59 = ptrtoint ptr %58 to i32
   %60 = icmp ule i32 %59, undef
   %61 = select i1 undef, i64 undef, i64 0
   %62 = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %61, i64 undef)
@@ -77,16 +77,16 @@ define void @dradbg(i32, i32, float*, float*, float*, float*, float*) #0 {
   %70 = extractvalue { i64, i1 } %69, 0
   %71 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %70, i64 0)
   %72 = extractvalue { i64, i1 } %71, 0
-  %73 = getelementptr float, float* %5, i64 %72
-  %74 = ptrtoint float* %73 to i32
+  %73 = getelementptr float, ptr %5, i64 %72
+  %74 = ptrtoint ptr %73 to i32
   %75 = icmp ule i32 %74, undef
   %76 = or i1 %60, %75
   %77 = and i1 %57, %76
-  %78 = getelementptr float, float* %6, i64 undef
-  %79 = ptrtoint float* %78 to i32
+  %78 = getelementptr float, ptr %6, i64 undef
+  %79 = ptrtoint ptr %78 to i32
   %80 = icmp ule i32 %79, undef
-  %81 = getelementptr float, float* %5, i64 undef
-  %82 = ptrtoint float* %81 to i32
+  %81 = getelementptr float, ptr %5, i64 undef
+  %82 = ptrtoint ptr %81 to i32
   %83 = icmp ule i32 %82, undef
   %84 = or i1 %80, %83
   %85 = and i1 %77, %84

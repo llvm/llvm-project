@@ -1,4 +1,4 @@
-// UNSUPPORTED: windows
+// UNSUPPORTED: target={{.*windows.*}}
 // The sanitizer-windows bot is saying:
 // instrprof-write-buffer-internal.c.tmp.buf.profraw: Invalid instrumentation profile data (file header is corrupt)
 

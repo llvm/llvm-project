@@ -777,8 +777,9 @@ struct TestTypeConverter : public TypeConverter {
 
   /// Hook for materializing a conversion. This is necessary because we generate
   /// 1->N type mappings.
-  static Optional<Value> materializeCast(OpBuilder &builder, Type resultType,
-                                         ValueRange inputs, Location loc) {
+  static std::optional<Value> materializeCast(OpBuilder &builder,
+                                              Type resultType,
+                                              ValueRange inputs, Location loc) {
     return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
   }
 };
@@ -1267,7 +1268,7 @@ struct TestTypeConversionDriver
         // Convert a recursive self-referring type into a non-self-referring
         // type named "outer_converted_type" that contains a SimpleAType.
         [&](test::TestRecursiveType type, SmallVectorImpl<Type> &results,
-            ArrayRef<Type> callStack) -> Optional<LogicalResult> {
+            ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
           // If the type is already converted, return it to indicate that it is
           // legal.
           if (type.getName() == "outer_converted_type") {

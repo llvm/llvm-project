@@ -23,9 +23,9 @@ define void @baz() nounwind {
 ; CHECK-NEXT:    sw a0, 4(a1)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @foo, i64 0, i64 1), align 4
-  store i32 %0, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 0), align 4
-  %1 = load i32, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @foo, i64 0, i64 0), align 4
-  store i32 %1, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1), align 4
+  %0 = load i32, ptr getelementptr inbounds ([2 x i32], ptr @foo, i64 0, i64 1), align 4
+  store i32 %0, ptr @bar, align 4
+  %1 = load i32, ptr @foo, align 4
+  store i32 %1, ptr getelementptr inbounds ([2 x i32], ptr @bar, i64 0, i64 1), align 4
   ret void
 }

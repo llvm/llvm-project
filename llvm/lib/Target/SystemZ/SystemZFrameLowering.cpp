@@ -370,12 +370,12 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI);
+                               &SystemZ::FP64BitRegClass, TRI, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI);
+                               &SystemZ::VR128BitRegClass, TRI, Register());
     }
   }
 
@@ -399,10 +399,10 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
     Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI);
+                                &SystemZ::FP64BitRegClass, TRI, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI);
+                                &SystemZ::VR128BitRegClass, TRI, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at
@@ -1113,12 +1113,12 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI);
+                               &SystemZ::FP64BitRegClass, TRI, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI);
+                               &SystemZ::VR128BitRegClass, TRI, Register());
     }
   }
 
@@ -1145,10 +1145,10 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
     Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI);
+                                &SystemZ::FP64BitRegClass, TRI, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI);
+                                &SystemZ::VR128BitRegClass, TRI, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at

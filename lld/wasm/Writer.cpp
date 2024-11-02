@@ -288,12 +288,11 @@ void Writer::layoutMemory() {
 
   out.dylinkSec->memAlign = 0;
   for (OutputSegment *seg : segments) {
-    out.dylinkSec->memAlign =
-        std::max(out.dylinkSec->memAlign, Log2(seg->alignment));
-    memoryPtr = alignTo(memoryPtr, seg->alignment);
+    out.dylinkSec->memAlign = std::max(out.dylinkSec->memAlign, seg->alignment);
+    memoryPtr = alignTo(memoryPtr, 1ULL << seg->alignment);
     seg->startVA = memoryPtr;
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", seg->name,
-                memoryPtr, seg->size, Log2(seg->alignment)));
+                memoryPtr, seg->size, seg->alignment));
 
     if (!config->relocatable && seg->isTLS()) {
       if (WasmSym::tlsSize) {
@@ -302,7 +301,7 @@ void Writer::layoutMemory() {
       }
       if (WasmSym::tlsAlign) {
         auto *tlsAlign = cast<DefinedGlobal>(WasmSym::tlsAlign);
-        setGlobalPtr(tlsAlign, seg->alignment.value());
+        setGlobalPtr(tlsAlign, int64_t{1} << seg->alignment);
       }
       if (!config->sharedMemory && WasmSym::tlsBase) {
         auto *tlsBase = cast<DefinedGlobal>(WasmSym::tlsBase);
@@ -475,7 +474,7 @@ void Writer::populateTargetFeatures() {
   }
 
   if (config->extraFeatures.has_value()) {
-    auto &extraFeatures = config->extraFeatures.value();
+    auto &extraFeatures = *config->extraFeatures;
     allowed.insert(extraFeatures.begin(), extraFeatures.end());
   }
 
@@ -483,7 +482,7 @@ void Writer::populateTargetFeatures() {
   bool inferFeatures = !config->features.has_value();
 
   if (!inferFeatures) {
-    auto &explicitFeatures = config->features.value();
+    auto &explicitFeatures = *config->features;
     allowed.insert(explicitFeatures.begin(), explicitFeatures.end());
     if (!config->checkFeatures)
       goto done;

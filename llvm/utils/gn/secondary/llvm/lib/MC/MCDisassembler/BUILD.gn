@@ -3,6 +3,7 @@ static_library("MCDisassembler") {
   deps = [
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Disassembler.cpp",

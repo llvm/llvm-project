@@ -12,7 +12,7 @@ b0:
   br label %b1
 
 b1:                                               ; preds = %b3, %b0
-  %v0 = load i16, i16* undef, align 4
+  %v0 = load i16, ptr undef, align 4
   %v1 = sext i16 %v0 to i32
   %v2 = and i32 %v1, 7
   %v3 = sub nsw i32 8, %v2
@@ -20,9 +20,9 @@ b1:                                               ; preds = %b3, %b0
   br label %b2
 
 b2:                                               ; preds = %b2, %b1
-  %v5 = phi i8* [ undef, %b1 ], [ %v16, %b2 ]
+  %v5 = phi ptr [ undef, %b1 ], [ %v16, %b2 ]
   %v6 = phi i32 [ 4, %b1 ], [ %v17, %b2 ]
-  %v7 = load i8, i8* undef, align 1
+  %v7 = load i8, ptr undef, align 1
   %v8 = zext i8 %v7 to i32
   %v9 = mul nuw nsw i32 %v8, %v3
   %v10 = add nuw nsw i32 0, %v9
@@ -30,9 +30,9 @@ b2:                                               ; preds = %b2, %b1
   %v12 = add nuw nsw i32 0, %v11
   %v13 = lshr i32 %v12, 6
   %v14 = trunc i32 %v13 to i8
-  store i8 %v14, i8* %v5, align 1
-  %v15 = getelementptr inbounds i8, i8* %v5, i32 1
-  %v16 = select i1 undef, i8* undef, i8* %v15
+  store i8 %v14, ptr %v5, align 1
+  %v15 = getelementptr inbounds i8, ptr %v5, i32 1
+  %v16 = select i1 undef, ptr undef, ptr %v15
   %v17 = add nsw i32 %v6, -1
   %v18 = icmp eq i32 %v17, 0
   br i1 %v18, label %b3, label %b2

@@ -289,9 +289,10 @@ static bool rewrite(Function &F) {
           }
 
       SmallVector<Value*, 4> Checks;
-      if (propagatesPoison(cast<Operator>(&I)))
-        for (Value *V : I.operands())
-          Checks.push_back(getPoisonFor(ValToPoison, V));
+      for (const Use &U : I.operands()) {
+        if (ValToPoison.count(U) && propagatesPoison(U))
+          Checks.push_back(getPoisonFor(ValToPoison, U));
+      }
 
       if (canCreatePoison(cast<Operator>(&I)))
         generateCreationChecks(I, Checks);

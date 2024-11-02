@@ -908,6 +908,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   }
+  case 'f':
+    if (Name.startswith("flt.rounds")) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::get_rounding);
+      return true;
+    }
+    break;
   case 'i':
   case 'l': {
     bool IsLifetimeStart = Name.startswith("lifetime.start");

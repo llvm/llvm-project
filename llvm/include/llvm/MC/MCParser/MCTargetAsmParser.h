@@ -24,6 +24,7 @@ namespace llvm {
 class MCContext;
 class MCInst;
 class MCInstrInfo;
+class MCRegister;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
@@ -377,7 +378,7 @@ public:
     return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
   }
 
-  virtual bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  virtual bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                              SMLoc &EndLoc) = 0;
 
   /// tryParseRegister - parse one register if possible
@@ -386,7 +387,7 @@ public:
   /// location, without failing the entire parse if it can't. Must not consume
   /// tokens if the parse fails.
   virtual OperandMatchResultTy
-  tryParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) = 0;
+  tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) = 0;
 
   /// ParseInstruction - Parse one assembly instruction.
   ///

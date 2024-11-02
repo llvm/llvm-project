@@ -73,16 +73,11 @@ public:
   ///             negative = a < 0 in
   ///         select negative, remainder + b, remainder.
   Value visitModExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(
-          loc,
-          "semi-affine expressions (modulo by non-const) are not supported");
-      return nullptr;
-    }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "modulo by non-positive value is not supported");
-      return nullptr;
+    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+      if (rhsConst.getValue() <= 0) {
+        emitError(loc, "modulo by non-positive value is not supported");
+        return nullptr;
+      }
     }
 
     auto lhs = visit(expr.getLHS());
@@ -110,19 +105,20 @@ public:
   ///            let absolute = negative ? -a - 1 : a in
   ///            let quotient = absolute / b in
   ///                negative ? -quotient - 1 : quotient
+  ///
+  /// Note: this lowering does not use arith.floordivsi because the lowering of
+  /// that to arith.divsi (see populateCeilFloorDivExpandOpsPatterns) generates
+  /// not one but two arith.divsi. That could be changed to one divsi, but one
+  /// way or another, going through arith.floordivsi will result in more complex
+  /// IR because arith.floordivsi is more general than affine floordiv in that
+  /// it supports negative RHS.
   Value visitFloorDivExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(
-          loc,
-          "semi-affine expressions (division by non-const) are not supported");
-      return nullptr;
+    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+      if (rhsConst.getValue() <= 0) {
+        emitError(loc, "division by non-positive value is not supported");
+        return nullptr;
+      }
     }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "division by non-positive value is not supported");
-      return nullptr;
-    }
-
     auto lhs = visit(expr.getLHS());
     auto rhs = visit(expr.getRHS());
     assert(lhs && rhs && "unexpected affine expr lowering failure");
@@ -152,16 +148,15 @@ public:
   ///         let absolute = negative ? -a : a - 1 in
   ///         let quotient = absolute / b in
   ///             negative ? -quotient : quotient + 1
+  ///
+  /// Note: not using arith.ceildivsi for the same reason as explained in the
+  /// visitFloorDivExpr comment.
   Value visitCeilDivExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(loc) << "semi-affine expressions (division by non-const) are "
-                        "not supported";
-      return nullptr;
-    }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "division by non-positive value is not supported");
-      return nullptr;
+    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+      if (rhsConst.getValue() <= 0) {
+        emitError(loc, "division by non-positive value is not supported");
+        return nullptr;
+      }
     }
     auto lhs = visit(expr.getLHS());
     auto rhs = visit(expr.getRHS());
@@ -1801,13 +1796,13 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
       // always bounded. However, when we have symbols, we may not be able to
       // obtain a constant upper bound. Also, mapping to a negative space is
       // invalid for normalization.
-      if (!ubConst.has_value() || ubConst.value() < 0) {
+      if (!ubConst.has_value() || *ubConst < 0) {
         LLVM_DEBUG(llvm::dbgs()
                    << "can't normalize map due to unknown/invalid upper bound");
         return memrefType;
       }
       // If dimension of new memrefType is dynamic, the value is -1.
-      newShape[d] = ubConst.value() + 1;
+      newShape[d] = *ubConst + 1;
     }
   }
 

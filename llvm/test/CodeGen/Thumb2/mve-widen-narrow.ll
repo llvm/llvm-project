@@ -2,47 +2,47 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 ; RUN: llc -mtriple=thumbebv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
-define void @foo_int8_int32(<4 x i8>* %dest, <4 x i32>* readonly %src, i32 %n) {
+define void @foo_int8_int32(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int8_int32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vstrb.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i32>, <4 x i32>* %src, align 4
+  %wide.load = load <4 x i32>, ptr %src, align 4
   %0 = trunc <4 x i32> %wide.load to <4 x i8>
-  store <4 x i8> %0, <4 x i8>* %dest, align 1
+  store <4 x i8> %0, ptr %dest, align 1
   ret void
 }
 
-define void @foo_int16_int32(<4 x i16>* %dest, <4 x i32>* readonly %src, i32 %n) {
+define void @foo_int16_int32(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int16_int32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vstrh.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i32>, <4 x i32>* %src, align 4
+  %wide.load = load <4 x i32>, ptr %src, align 4
   %0 = trunc <4 x i32> %wide.load to <4 x i16>
-  store <4 x i16> %0, <4 x i16>* %dest, align 2
+  store <4 x i16> %0, ptr %dest, align 2
   ret void
 }
 
-define void @foo_int8_int16(<8 x i8>* %dest, <8 x i16>* readonly %src, i32 %n) {
+define void @foo_int8_int16(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int8_int16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
 ; CHECK-NEXT:    vstrb.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i16>, <8 x i16>* %src, align 2
+  %wide.load = load <8 x i16>, ptr %src, align 2
   %0 = trunc <8 x i16> %wide.load to <8 x i8>
-  store <8 x i8> %0, <8 x i8>* %dest, align 1
+  store <8 x i8> %0, ptr %dest, align 1
   ret void
 }
 
 
-define void @foo_int8_int32_double(<8 x i8>* %dest, <8 x i32>* readonly %src, i32 %n) {
+define void @foo_int8_int32_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LE-LABEL: foo_int8_int32_double:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrh.u16 q1, [r1]
@@ -83,13 +83,13 @@ define void @foo_int8_int32_double(<8 x i8>* %dest, <8 x i32>* readonly %src, i3
 ; CHECK-BE-NEXT:    vstrb.16 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i32>, <8 x i32>* %src, align 2
+  %wide.load = load <8 x i32>, ptr %src, align 2
   %0 = trunc <8 x i32> %wide.load to <8 x i8>
-  store <8 x i8> %0, <8 x i8>* %dest, align 1
+  store <8 x i8> %0, ptr %dest, align 1
   ret void
 }
 
-define void @foo_int16_int32_double(<8 x i16>* %dest, <8 x i32>* readonly %src, i32 %n) {
+define void @foo_int16_int32_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int16_int32_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -98,13 +98,13 @@ define void @foo_int16_int32_double(<8 x i16>* %dest, <8 x i32>* readonly %src, 
 ; CHECK-NEXT:    vstrh.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i32>, <8 x i32>* %src, align 4
+  %wide.load = load <8 x i32>, ptr %src, align 4
   %0 = trunc <8 x i32> %wide.load to <8 x i16>
-  store <8 x i16> %0, <8 x i16>* %dest, align 2
+  store <8 x i16> %0, ptr %dest, align 2
   ret void
 }
 
-define void @foo_int8_int16_double(<16 x i8>* %dest, <16 x i16>* readonly %src, i32 %n) {
+define void @foo_int8_int16_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int8_int16_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r1]
@@ -113,13 +113,13 @@ define void @foo_int8_int16_double(<16 x i8>* %dest, <16 x i16>* readonly %src, 
 ; CHECK-NEXT:    vstrb.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <16 x i16>, <16 x i16>* %src, align 2
+  %wide.load = load <16 x i16>, ptr %src, align 2
   %0 = trunc <16 x i16> %wide.load to <16 x i8>
-  store <16 x i8> %0, <16 x i8>* %dest, align 1
+  store <16 x i8> %0, ptr %dest, align 1
   ret void
 }
 
-define void @foo_int8_int32_quad(<16 x i8>* %dest, <16 x i32>* readonly %src, i32 %n) {
+define void @foo_int8_int32_quad(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int8_int32_quad:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -132,53 +132,53 @@ define void @foo_int8_int32_quad(<16 x i8>* %dest, <16 x i32>* readonly %src, i3
 ; CHECK-NEXT:    vstrb.32 q2, [r0, #8]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <16 x i32>, <16 x i32>* %src, align 4
+  %wide.load = load <16 x i32>, ptr %src, align 4
   %0 = trunc <16 x i32> %wide.load to <16 x i8>
-  store <16 x i8> %0, <16 x i8>* %dest, align 1
+  store <16 x i8> %0, ptr %dest, align 1
   ret void
 }
 
 
-define void @foo_int32_int8(<4 x i32>* %dest, <4 x i8>* readonly %src, i32 %n) {
+define void @foo_int32_int8(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int32_int8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s32 q0, [r1]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i8>, <4 x i8>* %src, align 1
+  %wide.load = load <4 x i8>, ptr %src, align 1
   %0 = sext <4 x i8> %wide.load to <4 x i32>
-  store <4 x i32> %0, <4 x i32>* %dest, align 4
+  store <4 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_int16_int8(<8 x i16>* %dest, <8 x i8>* readonly %src, i32 %n) {
+define void @foo_int16_int8(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int16_int8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s16 q0, [r1]
 ; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i8>, <8 x i8>* %src, align 1
+  %wide.load = load <8 x i8>, ptr %src, align 1
   %0 = sext <8 x i8> %wide.load to <8 x i16>
-  store <8 x i16> %0, <8 x i16>* %dest, align 2
+  store <8 x i16> %0, ptr %dest, align 2
   ret void
 }
 
-define void @foo_int32_int16(<4 x i32>* %dest, <4 x i16>* readonly %src, i32 %n) {
+define void @foo_int32_int16(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int32_int16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i16>, <4 x i16>* %src, align 2
+  %wide.load = load <4 x i16>, ptr %src, align 2
   %0 = sext <4 x i16> %wide.load to <4 x i32>
-  store <4 x i32> %0, <4 x i32>* %dest, align 4
+  store <4 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_int32_int8_double(<8 x i32>* %dest, <8 x i8>* readonly %src, i32 %n) {
+define void @foo_int32_int8_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int32_int8_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s32 q0, [r1]
@@ -187,13 +187,13 @@ define void @foo_int32_int8_double(<8 x i32>* %dest, <8 x i8>* readonly %src, i3
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i8>, <8 x i8>* %src, align 1
+  %wide.load = load <8 x i8>, ptr %src, align 1
   %0 = sext <8 x i8> %wide.load to <8 x i32>
-  store <8 x i32> %0, <8 x i32>* %dest, align 4
+  store <8 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_int16_int8_double(<16 x i16>* %dest, <16 x i8>* readonly %src, i32 %n) {
+define void @foo_int16_int8_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int16_int8_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s16 q0, [r1]
@@ -202,13 +202,13 @@ define void @foo_int16_int8_double(<16 x i16>* %dest, <16 x i8>* readonly %src, 
 ; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
+  %wide.load = load <16 x i8>, ptr %src, align 1
   %0 = sext <16 x i8> %wide.load to <16 x i16>
-  store <16 x i16> %0, <16 x i16>* %dest, align 2
+  store <16 x i16> %0, ptr %dest, align 2
   ret void
 }
 
-define void @foo_int32_int16_double(<8 x i32>* %dest, <8 x i16>* readonly %src, i32 %n) {
+define void @foo_int32_int16_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int32_int16_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
@@ -217,13 +217,13 @@ define void @foo_int32_int16_double(<8 x i32>* %dest, <8 x i16>* readonly %src, 
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i16>, <8 x i16>* %src, align 2
+  %wide.load = load <8 x i16>, ptr %src, align 2
   %0 = sext <8 x i16> %wide.load to <8 x i32>
-  store <8 x i32> %0, <8 x i32>* %dest, align 4
+  store <8 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_int32_int8_quad(<16 x i32>* %dest, <16 x i8>* readonly %src, i32 %n) {
+define void @foo_int32_int8_quad(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int32_int8_quad:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.s32 q0, [r1]
@@ -236,54 +236,54 @@ define void @foo_int32_int8_quad(<16 x i32>* %dest, <16 x i8>* readonly %src, i3
 ; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
+  %wide.load = load <16 x i8>, ptr %src, align 1
   %0 = sext <16 x i8> %wide.load to <16 x i32>
-  store <16 x i32> %0, <16 x i32>* %dest, align 4
+  store <16 x i32> %0, ptr %dest, align 4
   ret void
 }
 
 
-define void @foo_uint32_uint8(<4 x i32>* %dest, <4 x i8>* readonly %src, i32 %n) {
+define void @foo_uint32_uint8(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r1]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i8>, <4 x i8>* %src, align 1
+  %wide.load = load <4 x i8>, ptr %src, align 1
   %0 = zext <4 x i8> %wide.load to <4 x i32>
-  store <4 x i32> %0, <4 x i32>* %dest, align 4
+  store <4 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_uint16_uint8(<8 x i16>* %dest, <8 x i8>* readonly %src, i32 %n) {
+define void @foo_uint16_uint8(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint16_uint8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i8>, <8 x i8>* %src, align 1
+  %wide.load = load <8 x i8>, ptr %src, align 1
   %0 = zext <8 x i8> %wide.load to <8 x i16>
-  store <8 x i16> %0, <8 x i16>* %dest, align 2
+  store <8 x i16> %0, ptr %dest, align 2
   ret void
 }
 
-define void @foo_uint32_uint16(<4 x i32>* %dest, <4 x i16>* readonly %src, i32 %n) {
+define void @foo_uint32_uint16(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i16>, <4 x i16>* %src, align 2
+  %wide.load = load <4 x i16>, ptr %src, align 2
   %0 = zext <4 x i16> %wide.load to <4 x i32>
-  store <4 x i32> %0, <4 x i32>* %dest, align 4
+  store <4 x i32> %0, ptr %dest, align 4
   ret void
 }
 
 
-define void @foo_uint32_uint8_double(<8 x i32>* %dest, <8 x i8>* readonly %src, i32 %n) {
+define void @foo_uint32_uint8_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint8_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r1]
@@ -292,13 +292,13 @@ define void @foo_uint32_uint8_double(<8 x i32>* %dest, <8 x i8>* readonly %src, 
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i8>, <8 x i8>* %src, align 1
+  %wide.load = load <8 x i8>, ptr %src, align 1
   %0 = zext <8 x i8> %wide.load to <8 x i32>
-  store <8 x i32> %0, <8 x i32>* %dest, align 4
+  store <8 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_uint16_uint8_double(<16 x i16>* %dest, <16 x i8>* readonly %src, i32 %n) {
+define void @foo_uint16_uint8_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint16_uint8_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
@@ -307,13 +307,13 @@ define void @foo_uint16_uint8_double(<16 x i16>* %dest, <16 x i8>* readonly %src
 ; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
+  %wide.load = load <16 x i8>, ptr %src, align 1
   %0 = zext <16 x i8> %wide.load to <16 x i16>
-  store <16 x i16> %0, <16 x i16>* %dest, align 2
+  store <16 x i16> %0, ptr %dest, align 2
   ret void
 }
 
-define void @foo_uint32_uint16_double(<8 x i32>* %dest, <8 x i16>* readonly %src, i32 %n) {
+define void @foo_uint32_uint16_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint16_double:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
@@ -322,13 +322,13 @@ define void @foo_uint32_uint16_double(<8 x i32>* %dest, <8 x i16>* readonly %src
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <8 x i16>, <8 x i16>* %src, align 2
+  %wide.load = load <8 x i16>, ptr %src, align 2
   %0 = zext <8 x i16> %wide.load to <8 x i32>
-  store <8 x i32> %0, <8 x i32>* %dest, align 4
+  store <8 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_uint32_uint8_quad(<16 x i32>* %dest, <16 x i8>* readonly %src, i32 %n) {
+define void @foo_uint32_uint8_quad(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint8_quad:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r1]
@@ -341,14 +341,14 @@ define void @foo_uint32_uint8_quad(<16 x i32>* %dest, <16 x i8>* readonly %src, 
 ; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
+  %wide.load = load <16 x i8>, ptr %src, align 1
   %0 = zext <16 x i8> %wide.load to <16 x i32>
-  store <16 x i32> %0, <16 x i32>* %dest, align 4
+  store <16 x i32> %0, ptr %dest, align 4
   ret void
 }
 
 
-define void @foo_int32_int8_both(<16 x i32>* %dest, <16 x i8>* readonly %src, i32 %n) {
+define void @foo_int32_int8_both(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LE-LABEL: foo_int32_int8_both:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #32
@@ -391,14 +391,14 @@ define void @foo_int32_int8_both(<16 x i32>* %dest, <16 x i8>* readonly %src, i3
 ; CHECK-BE-NEXT:    add sp, #32
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
+  %wide.load = load <16 x i8>, ptr %src, align 1
   %0 = sext <16 x i8> %wide.load to <16 x i16>
   %1 = zext <16 x i16> %0 to <16 x i32>
-  store <16 x i32> %1, <16 x i32>* %dest, align 4
+  store <16 x i32> %1, ptr %dest, align 4
   ret void
 }
 
-define <8 x i16>* @foo_uint32_uint16_double_offset(<8 x i32>* %dest, <8 x i16>* readonly %src, i32 %n) {
+define ptr @foo_uint32_uint16_double_offset(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint16_double_offset:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #16]!
@@ -408,14 +408,14 @@ define <8 x i16>* @foo_uint32_uint16_double_offset(<8 x i32>* %dest, <8 x i16>* 
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds <8 x i16>, <8 x i16>* %src, i32 1
-  %wide.load = load <8 x i16>, <8 x i16>* %z, align 2
+  %z = getelementptr inbounds <8 x i16>, ptr %src, i32 1
+  %wide.load = load <8 x i16>, ptr %z, align 2
   %0 = sext <8 x i16> %wide.load to <8 x i32>
-  store <8 x i32> %0, <8 x i32>* %dest, align 4
-  ret <8 x i16>* %z
+  store <8 x i32> %0, ptr %dest, align 4
+  ret ptr %z
 }
 
-define <16 x i16>* @foo_uint32_uint16_quad_offset(<16 x i32>* %dest, <16 x i16>* readonly %src, i32 %n) {
+define ptr @foo_uint32_uint16_quad_offset(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint16_quad_offset:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #32]!
@@ -429,15 +429,15 @@ define <16 x i16>* @foo_uint32_uint16_quad_offset(<16 x i32>* %dest, <16 x i16>*
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds <16 x i16>, <16 x i16>* %src, i32 1
-  %wide.load = load <16 x i16>, <16 x i16>* %z, align 2
+  %z = getelementptr inbounds <16 x i16>, ptr %src, i32 1
+  %wide.load = load <16 x i16>, ptr %z, align 2
   %0 = sext <16 x i16> %wide.load to <16 x i32>
-  store <16 x i32> %0, <16 x i32>* %dest, align 4
-  ret <16 x i16>* %z
+  store <16 x i32> %0, ptr %dest, align 4
+  ret ptr %z
 }
 
 
-define void @foo_int16_int32_align1(<4 x i16>* %dest, <4 x i32>* readonly %src, i32 %n) {
+define void @foo_int16_int32_align1(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int16_int32_align1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #8
@@ -451,13 +451,13 @@ define void @foo_int16_int32_align1(<4 x i16>* %dest, <4 x i32>* readonly %src, 
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i32>, <4 x i32>* %src, align 4
+  %wide.load = load <4 x i32>, ptr %src, align 4
   %0 = trunc <4 x i32> %wide.load to <4 x i16>
-  store <4 x i16> %0, <4 x i16>* %dest, align 1
+  store <4 x i16> %0, ptr %dest, align 1
   ret void
 }
 
-define void @foo_int32_int16_align1(<4 x i32>* %dest, <4 x i16>* readonly %src, i32 %n) {
+define void @foo_int32_int16_align1(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int32_int16_align1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #8
@@ -471,13 +471,13 @@ define void @foo_int32_int16_align1(<4 x i32>* %dest, <4 x i16>* readonly %src, 
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i16>, <4 x i16>* %src, align 1
+  %wide.load = load <4 x i16>, ptr %src, align 1
   %0 = sext <4 x i16> %wide.load to <4 x i32>
-  store <4 x i32> %0, <4 x i32>* %dest, align 4
+  store <4 x i32> %0, ptr %dest, align 4
   ret void
 }
 
-define void @foo_uint32_uint16_align1(<4 x i32>* %dest, <4 x i16>* readonly %src, i32 %n) {
+define void @foo_uint32_uint16_align1(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint16_align1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #8
@@ -491,8 +491,8 @@ define void @foo_uint32_uint16_align1(<4 x i32>* %dest, <4 x i16>* readonly %src
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
 entry:
-  %wide.load = load <4 x i16>, <4 x i16>* %src, align 1
+  %wide.load = load <4 x i16>, ptr %src, align 1
   %0 = zext <4 x i16> %wide.load to <4 x i32>
-  store <4 x i32> %0, <4 x i32>* %dest, align 4
+  store <4 x i32> %0, ptr %dest, align 4
   ret void
 }

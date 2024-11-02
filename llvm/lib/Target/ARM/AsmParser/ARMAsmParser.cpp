@@ -700,8 +700,9 @@ public:
   }
 
   // Implementation of the MCTargetAsmParser interface:
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -4060,8 +4061,8 @@ static unsigned MatchRegisterName(StringRef Name);
 
 /// }
 
-bool ARMAsmParser::ParseRegister(unsigned &RegNo,
-                                 SMLoc &StartLoc, SMLoc &EndLoc) {
+bool ARMAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                                 SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
@@ -4070,10 +4071,10 @@ bool ARMAsmParser::ParseRegister(unsigned &RegNo,
   return (RegNo == (unsigned)-1);
 }
 
-OperandMatchResultTy ARMAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy ARMAsmParser::tryParseRegister(MCRegister &RegNo,
                                                     SMLoc &StartLoc,
                                                     SMLoc &EndLoc) {
-  if (ParseRegister(RegNo, StartLoc, EndLoc))
+  if (parseRegister(RegNo, StartLoc, EndLoc))
     return MatchOperand_NoMatch;
   return MatchOperand_Success;
 }
@@ -11317,9 +11318,9 @@ bool ARMAsmParser::parseDirectiveCode(SMLoc L) {
 bool ARMAsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   MCAsmParser &Parser = getParser();
   Parser.Lex(); // Eat the '.req' token.
-  unsigned Reg;
+  MCRegister Reg;
   SMLoc SRegLoc, ERegLoc;
-  if (check(ParseRegister(Reg, SRegLoc, ERegLoc), SRegLoc,
+  if (check(parseRegister(Reg, SRegLoc, ERegLoc), SRegLoc,
             "register name expected") ||
       parseEOL())
     return true;

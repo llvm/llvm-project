@@ -89,7 +89,7 @@ int foo(int n) {
 // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 2
 // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 3
 // CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[DEP_START]] to i8*
-// CHECK:       call void @__kmpc_omp_wait_deps(%struct.ident_t* @1, i32 [[GTID]], i32 4, i8* [[DEP]], i32 0, i8* null)
+// CHECK:       call void @__kmpc_omp_taskwait_deps_51(%struct.ident_t* @1, i32 [[GTID]], i32 4, i8* [[DEP]], i32 0, i8* null, i32 0)
 // CHECK:       call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])
 // CHECK:       call i32 [[TASK_ENTRY0]](i32 [[GTID]], [[TASK_TY0]]* [[BC_TASK]])
 // CHECK:       call void @__kmpc_omp_task_complete_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])
@@ -209,7 +209,7 @@ int foo(int n) {
 // CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @1, i32 [[GTID]], i32 1, i[[SZ]] {{48|24}}, i[[SZ]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY2:@.+]] to i32 (i32, i8*)*))
 // CHECK:       [[BC_TASK:%.+]] = bitcast i8* [[TASK]] to [[TASK_TY2:%.+]]*
 // CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* %{{.+}} to i8*
-// CHECK:       call void @__kmpc_omp_wait_deps(%struct.ident_t* @1, i32 [[GTID]], i32 1, i8* [[DEP]], i32 0, i8* null)
+// CHECK:       call void @__kmpc_omp_taskwait_deps_51(%struct.ident_t* @1, i32 [[GTID]], i32 1, i8* [[DEP]], i32 0, i8* null, i32 0)
 // CHECK:       call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])
 // CHECK:       call i32 [[TASK_ENTRY2]](i32 [[GTID]], [[TASK_TY2]]* [[BC_TASK]])
 // CHECK:       call void @__kmpc_omp_task_complete_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])

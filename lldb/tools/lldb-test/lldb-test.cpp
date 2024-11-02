@@ -883,7 +883,7 @@ static Mangled::NamePreference opts::symtab::getNamePreference() {
 
 int opts::symtab::handleSymtabCommand(Debugger &Dbg) {
   if (auto error = validate()) {
-    logAllUnhandledErrors(std::move(error.value()), WithColor::error(), "");
+    logAllUnhandledErrors(std::move(*error), WithColor::error(), "");
     return 1;
   }
 

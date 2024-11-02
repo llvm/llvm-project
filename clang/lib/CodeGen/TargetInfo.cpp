@@ -5998,6 +5998,16 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
                                        CodeGenFunction &CGF) const {
   ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
                                        CGF.CurFnInfo->getCallingConvention());
+  // Empty records are ignored for parameter passing purposes.
+  if (AI.isIgnore()) {
+    uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
+    CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
+    VAListAddr = CGF.Builder.CreateElementBitCast(VAListAddr, CGF.Int8PtrTy);
+    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
+    Address Addr = Address(Load, CGF.Int8Ty, SlotSize);
+    return CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
+  }
+
   bool IsIndirect = AI.isIndirect();
 
   llvm::Type *BaseTy = CGF.ConvertType(Ty);

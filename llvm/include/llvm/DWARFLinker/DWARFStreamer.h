@@ -137,7 +137,7 @@ public:
   void emitCIE(StringRef CIEBytes) override;
 
   /// Emit an FDE with data \p Bytes.
-  void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
+  void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint64_t Address,
                StringRef Bytes) override;
 
   /// Emit DWARF debug names.

@@ -36,7 +36,7 @@ buildStmtToBasicBlockMap(const CFG &Cfg) {
       if (!Stmt)
         continue;
 
-      StmtToBlock[Stmt.value().getStmt()] = Block;
+      StmtToBlock[Stmt->getStmt()] = Block;
     }
     if (const Stmt *TerminatorStmt = Block->getTerminatorStmt())
       StmtToBlock[TerminatorStmt] = Block;

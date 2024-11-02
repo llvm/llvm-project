@@ -5,7 +5,7 @@
 
 define i32 @main() nounwind {
 entry:
-  store i32 10, i32* getelementptr inbounds (%struct.ua, %struct.ua* @foo, i32 0, i32 1), align 1
+  store i32 10, ptr getelementptr inbounds (%struct.ua, ptr @foo, i32 0, i32 1), align 1
 ; 16:   sb  ${{[0-9]+}}, {{[0-9]+}}(${{[0-9]+}})
 ; 16:   sb  ${{[0-9]+}}, {{[0-9]+}}(${{[0-9]+}})
 ; 16:   sb  ${{[0-9]+}}, {{[0-9]+}}(${{[0-9]+}})

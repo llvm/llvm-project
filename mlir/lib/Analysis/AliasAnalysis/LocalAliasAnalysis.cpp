@@ -45,7 +45,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   // this region predecessor that correspond to the input values of `region`. If
   // an index could not be found, std::nullopt is returned instead.
   auto getOperandIndexIfPred =
-      [&](Optional<unsigned> predIndex) -> Optional<unsigned> {
+      [&](std::optional<unsigned> predIndex) -> std::optional<unsigned> {
     SmallVector<RegionSuccessor, 2> successors;
     branch.getSuccessorRegions(predIndex, successors);
     for (RegionSuccessor &successor : successors) {
@@ -75,12 +75,12 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   };
 
   // Check branches from the parent operation.
-  Optional<unsigned> regionIndex;
+  std::optional<unsigned> regionIndex;
   if (region) {
     // Determine the actual region number from the passed region.
     regionIndex = region->getRegionNumber();
   }
-  if (Optional<unsigned> operandIndex =
+  if (std::optional<unsigned> operandIndex =
           getOperandIndexIfPred(/*predIndex=*/std::nullopt)) {
     collectUnderlyingAddressValues(
         branch.getSuccessorEntryOperands(regionIndex)[*operandIndex], maxDepth,
@@ -89,7 +89,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   // Check branches from each child region.
   Operation *op = branch.getOperation();
   for (int i = 0, e = op->getNumRegions(); i != e; ++i) {
-    if (Optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
+    if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
       for (Block &block : op->getRegion(i)) {
         Operation *term = block.getTerminator();
         // Try to determine possible region-branch successor operands for the
@@ -211,7 +211,8 @@ static void collectUnderlyingAddressValues(Value value,
 /// non-null it specifies the parent operation that the allocation does not
 /// escape. If no scope is found, `allocScopeOp` is set to nullptr.
 static LogicalResult
-getAllocEffectFor(Value value, Optional<MemoryEffects::EffectInstance> &effect,
+getAllocEffectFor(Value value,
+                  std::optional<MemoryEffects::EffectInstance> &effect,
                   Operation *&allocScopeOp) {
   // Try to get a memory effect interface for the parent operation.
   Operation *op;
@@ -249,7 +250,7 @@ static AliasResult aliasImpl(Value lhs, Value rhs) {
   if (lhs == rhs)
     return AliasResult::MustAlias;
   Operation *lhsAllocScope = nullptr, *rhsAllocScope = nullptr;
-  Optional<MemoryEffects::EffectInstance> lhsAlloc, rhsAlloc;
+  std::optional<MemoryEffects::EffectInstance> lhsAlloc, rhsAlloc;
 
   // Handle the case where lhs is a constant.
   Attribute lhsAttr, rhsAttr;

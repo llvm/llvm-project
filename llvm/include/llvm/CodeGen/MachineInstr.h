@@ -1203,6 +1203,13 @@ public:
   bool isIdenticalTo(const MachineInstr &Other,
                      MICheckType Check = CheckDefs) const;
 
+  /// Returns true if this instruction is a debug instruction that represents an
+  /// identical debug value to \p Other.
+  /// This function considers these debug instructions equivalent if they have
+  /// identical variables, debug locations, and debug operands, and if the
+  /// DIExpressions combined with the directness flags are equivalent.
+  bool isEquivalentDbgInstr(const MachineInstr &Other) const;
+
   /// Unlink 'this' from the containing basic block, and return it without
   /// deleting it.
   ///

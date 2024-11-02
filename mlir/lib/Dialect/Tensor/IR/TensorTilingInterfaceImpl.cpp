@@ -265,14 +265,14 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
   info.isAlignedToInnerTileSize = false;
   FailureOr<int64_t> cstSize = linalg::getConstantUpperBoundForIndex(
       getValueOrCreateConstantIndexOp(b, loc, tileSize));
-  Optional<int64_t> cstInnerSize = getConstantIntValue(innerTileSize);
+  std::optional<int64_t> cstInnerSize = getConstantIntValue(innerTileSize);
   if (!failed(cstSize) && cstInnerSize) {
-    if (cstSize.value() % cstInnerSize.value() == 0)
+    if (*cstSize % *cstInnerSize == 0)
       info.isAlignedToInnerTileSize = true;
 
     // If the tiling size equals to the inner tiling size, the outer dims are
     // always 1.
-    if (cstInnerSize.value() == cstSize.value()) {
+    if (*cstInnerSize == *cstSize) {
       auto lhs = AV(dim0).bind(tileOffset);
       auto rhs = AV(dim1).bind(innerTileSize);
       info.sourceOffset = ab.floor(lhs, rhs);

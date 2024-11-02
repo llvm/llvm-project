@@ -586,7 +586,7 @@ def MemRef_DimOp : MemRef_Op<"dim", [
 
   let extraClassDeclaration = [{
     /// Helper function to get the index as a simple integer if it is constant.
-    Optional<int64_t> getConstantIndex();
+    std::optional<int64_t> getConstantIndex();
 
     /// Interface method of ShapedDimOpInterface: Return the source memref.
     Value getShapedValue() { return getSource(); }

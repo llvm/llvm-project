@@ -333,7 +333,7 @@ IntegerType StorageSpecifierType::getSizesType() const {
 }
 
 Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
-                                        Optional<unsigned> dim) const {
+                                        std::optional<unsigned> dim) const {
   if (kind != StorageSpecifierKind::ValMemSize)
     assert(dim);
 
@@ -344,8 +344,8 @@ Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
 }
 
 Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
-                                        Optional<APInt> dim) const {
-  Optional<unsigned> intDim = std::nullopt;
+                                        std::optional<APInt> dim) const {
+  std::optional<unsigned> intDim = std::nullopt;
   if (dim)
     intDim = dim.value().getZExtValue();
   return getFieldType(kind, intDim);
@@ -369,10 +369,9 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
   return failure();
 }
 
-static LogicalResult
-verifySparsifierGetterSetter(StorageSpecifierKind mdKind, Optional<APInt> dim,
-                             TypedValue<StorageSpecifierType> md,
-                             Operation *op) {
+static LogicalResult verifySparsifierGetterSetter(
+    StorageSpecifierKind mdKind, std::optional<APInt> dim,
+    TypedValue<StorageSpecifierType> md, Operation *op) {
   if (mdKind == StorageSpecifierKind::ValMemSize && dim) {
     return op->emitError(
         "redundant dimension argument for querying value memory size");
@@ -482,7 +481,7 @@ static SetStorageSpecifierOp getSpecifierSetDef(SpecifierOp op) {
 
 OpFoldResult GetStorageSpecifierOp::fold(ArrayRef<Attribute> operands) {
   StorageSpecifierKind kind = getSpecifierKind();
-  Optional<APInt> dim = getDim();
+  std::optional<APInt> dim = getDim();
   for (auto op = getSpecifierSetDef(*this); op; op = getSpecifierSetDef(op))
     if (kind == op.getSpecifierKind() && dim == op.getDim())
       return op.getValue();

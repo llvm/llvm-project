@@ -80,20 +80,20 @@ exit:
   ret i32 1
 }
 
-define amdgpu_kernel void @kernel(i32 addrspace(1)* %m) #1 {
+define amdgpu_kernel void @kernel(ptr addrspace(1) %m) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel
-; CHECK-SAME: (i32 addrspace(1)* [[M:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr addrspace(1) [[M:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @fib(i32 5)
 ; CHECK-NEXT:    [[R2:%.*]] = call i32 @fib_internal(i32 5)
-; CHECK-NEXT:    store i32 [[R]], i32 addrspace(1)* [[M]], align 4
-; CHECK-NEXT:    store i32 [[R2]], i32 addrspace(1)* [[M]], align 4
+; CHECK-NEXT:    store i32 [[R]], ptr addrspace(1) [[M]], align 4
+; CHECK-NEXT:    store i32 [[R2]], ptr addrspace(1) [[M]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %r = call i32 @fib(i32 5)
   %r2 = call i32 @fib_internal(i32 5)
 
-  store i32 %r, i32 addrspace(1)* %m
-  store i32 %r2, i32 addrspace(1)* %m
+  store i32 %r, ptr addrspace(1) %m
+  store i32 %r2, ptr addrspace(1) %m
   ret void
 }
 

@@ -41,15 +41,15 @@ define dso_local i32 @c() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LCPI0_2:
 ; CHECK-NEXT:    .long b
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %sub = sub nsw i32 2000, %0
-  %call = tail call i32 bitcast (i32 (...)* @d to i32 (i32)*)(i32 %sub) #2
-  %1 = load i32, i32* @b, align 4
+  %call = tail call i32 @d(i32 %sub) #2
+  %1 = load i32, ptr @b, align 4
   %cmp = icmp sgt i32 %1, 1999
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %call1 = tail call i32 bitcast (i32 (...)* @e to i32 ()*)() #2
+  %call1 = tail call i32 @e() #2
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

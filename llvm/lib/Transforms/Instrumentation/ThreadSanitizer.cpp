@@ -485,7 +485,7 @@ static bool isTsanAtomic(const Instruction *I) {
   if (!SSID)
     return false;
   if (isa<LoadInst>(I) || isa<StoreInst>(I))
-    return SSID.value() != SyncScope::SingleThread;
+    return *SSID != SyncScope::SingleThread;
   return true;
 }
 

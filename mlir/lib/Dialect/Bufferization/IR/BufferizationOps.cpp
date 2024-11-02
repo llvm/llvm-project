@@ -348,7 +348,7 @@ struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
 
   LogicalResult matchAndRewrite(tensor::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    Optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
+    std::optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
     auto allocTensorOp = dimOp.getSource().getDefiningOp<AllocTensorOp>();
     if (!allocTensorOp || !maybeConstantIndex)
       return failure();
@@ -690,12 +690,13 @@ LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
   return success();
 }
 
-Optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder, Value alloc) {
+std::optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder,
+                                                 Value alloc) {
   return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
       .getOperation();
 }
 
-Optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
+std::optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
   return builder.create<CloneOp>(alloc.getLoc(), alloc).getResult();
 }
 

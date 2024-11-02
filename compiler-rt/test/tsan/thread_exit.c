@@ -1,7 +1,7 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 // Crashes on powerpc64be
-// UNSUPPORTED: powerpc64
+// UNSUPPORTED: target=powerpc64{{.*}}
 
 #include "test.h"
 

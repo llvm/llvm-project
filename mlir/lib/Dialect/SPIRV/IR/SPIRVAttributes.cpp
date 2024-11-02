@@ -121,7 +121,7 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
 
 spirv::InterfaceVarABIAttr
 spirv::InterfaceVarABIAttr::get(uint32_t descriptorSet, uint32_t binding,
-                                Optional<spirv::StorageClass> storageClass,
+                                std::optional<spirv::StorageClass> storageClass,
                                 MLIRContext *context) {
   Builder b(context);
   auto descriptorSetAttr = b.getI32IntegerAttr(descriptorSet);
@@ -152,7 +152,8 @@ uint32_t spirv::InterfaceVarABIAttr::getDescriptorSet() {
   return getImpl()->descriptorSet.cast<IntegerAttr>().getInt();
 }
 
-Optional<spirv::StorageClass> spirv::InterfaceVarABIAttr::getStorageClass() {
+std::optional<spirv::StorageClass>
+spirv::InterfaceVarABIAttr::getStorageClass() {
   if (getImpl()->storageClass)
     return static_cast<spirv::StorageClass>(
         getImpl()->storageClass.cast<IntegerAttr>().getValue().getZExtValue());

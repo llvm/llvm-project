@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=armv6m %s -o - | FileCheck %s --check-prefix=THUMB1
 ; RUN: llc -mtriple=thumbv8m.main %s -o - | FileCheck %s --check-prefix=THUMB2
 
-define arm_aapcscc zeroext i1 @cmp_xor8_short_short(i16* nocapture readonly %a, i16* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_xor8_short_short(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_xor8_short_short:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -41,15 +41,15 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_short(i16* nocapture readonly %a, 
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
-  %1 = load i16, i16* %b, align 2
+  %0 = load i16, ptr %a, align 2
+  %1 = load i16, ptr %b, align 2
   %xor2 = xor i16 %1, %0
   %2 = and i16 %xor2, 255
   %cmp = icmp eq i16 %2, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_xor8_short_int(i16* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_xor8_short_int(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_xor8_short_int:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -86,16 +86,16 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_int(i16* nocapture readonly %a, i3
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
+  %0 = load i16, ptr %a, align 2
   %conv = zext i16 %0 to i32
-  %1 = load i32, i32* %b, align 4
+  %1 = load i32, ptr %b, align 4
   %xor = xor i32 %1, %conv
   %and = and i32 %xor, 255
   %cmp = icmp eq i32 %and, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_xor8_int_int(i32* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_xor8_int_int(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_xor8_int_int:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -132,15 +132,15 @@ define arm_aapcscc zeroext i1 @cmp_xor8_int_int(i32* nocapture readonly %a, i32*
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %xor = xor i32 %1, %0
   %and = and i32 %xor, 255
   %cmp = icmp eq i32 %and, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_xor16(i32* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_xor16(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_xor16:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r0, [r0]
@@ -177,15 +177,15 @@ define arm_aapcscc zeroext i1 @cmp_xor16(i32* nocapture readonly %a, i32* nocapt
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %xor = xor i32 %1, %0
   %and = and i32 %xor, 65535
   %cmp = icmp eq i32 %and, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_or8_short_short(i16* nocapture readonly %a, i16* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_or8_short_short(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_or8_short_short:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -222,15 +222,15 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_short(i16* nocapture readonly %a, i
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
-  %1 = load i16, i16* %b, align 2
+  %0 = load i16, ptr %a, align 2
+  %1 = load i16, ptr %b, align 2
   %or2 = or i16 %1, %0
   %2 = and i16 %or2, 255
   %cmp = icmp eq i16 %2, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_or8_short_int(i16* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_or8_short_int(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_or8_short_int:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -267,16 +267,16 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_int(i16* nocapture readonly %a, i32
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
+  %0 = load i16, ptr %a, align 2
   %conv = zext i16 %0 to i32
-  %1 = load i32, i32* %b, align 4
+  %1 = load i32, ptr %b, align 4
   %or = or i32 %1, %conv
   %and = and i32 %or, 255
   %cmp = icmp eq i32 %and, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_or8_int_int(i32* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_or8_int_int(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_or8_int_int:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -313,15 +313,15 @@ define arm_aapcscc zeroext i1 @cmp_or8_int_int(i32* nocapture readonly %a, i32* 
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %or = or i32 %1, %0
   %and = and i32 %or, 255
   %cmp = icmp eq i32 %and, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_or16(i32* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_or16(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_or16:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r0, [r0]
@@ -358,15 +358,15 @@ define arm_aapcscc zeroext i1 @cmp_or16(i32* nocapture readonly %a, i32* nocaptu
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %or = or i32 %1, %0
   %and = and i32 %or, 65535
   %cmp = icmp eq i32 %and, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_and8_short_short(i16* nocapture readonly %a, i16* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_and8_short_short(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_and8_short_short:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r1]
@@ -403,15 +403,15 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_short(i16* nocapture readonly %a, 
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
-  %1 = load i16, i16* %b, align 2
+  %0 = load i16, ptr %a, align 2
+  %1 = load i16, ptr %b, align 2
   %and3 = and i16 %0, 255
   %2 = and i16 %and3, %1
   %cmp = icmp eq i16 %2, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_and8_short_int(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_and8_short_int:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -448,8 +448,8 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a, i3
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
-  %1 = load i32, i32* %b, align 4
+  %0 = load i16, ptr %a, align 2
+  %1 = load i32, ptr %b, align 4
   %2 = and i16 %0, 255
   %and = zext i16 %2 to i32
   %and1 = and i32 %1, %and
@@ -457,7 +457,7 @@ entry:
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_and8_int_int(i32* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_and8_int_int(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_and8_int_int:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r1]
@@ -494,15 +494,15 @@ define arm_aapcscc zeroext i1 @cmp_and8_int_int(i32* nocapture readonly %a, i32*
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %and = and i32 %0, 255
   %and1 = and i32 %and, %1
   %cmp = icmp eq i32 %and1, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc zeroext i1 @cmp_and16(i32* nocapture readonly %a, i32* nocapture readonly %b) {
+define arm_aapcscc zeroext i1 @cmp_and16(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; ARM-LABEL: cmp_and16:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r1, [r1]
@@ -539,15 +539,15 @@ define arm_aapcscc zeroext i1 @cmp_and16(i32* nocapture readonly %a, i32* nocapt
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %and = and i32 %0, 65535
   %and1 = and i32 %and, %1
   %cmp = icmp eq i32 %and1, 0
   ret i1 %cmp
 }
 
-define arm_aapcscc i32 @add_and16(i32* nocapture readonly %a, i32 %y, i32 %z) {
+define arm_aapcscc i32 @add_and16(ptr nocapture readonly %a, i32 %y, i32 %z) {
 ; ARM-LABEL: add_and16:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    add r1, r1, r2
@@ -580,14 +580,14 @@ define arm_aapcscc i32 @add_and16(i32* nocapture readonly %a, i32 %y, i32 %z) {
 ; THUMB2-NEXT:    orrs r0, r1
 ; THUMB2-NEXT:    bx lr
 entry:
-  %x = load i32, i32* %a, align 4
+  %x = load i32, ptr %a, align 4
   %add = add i32 %y, %z
   %or = or i32 %x, %add
   %and = and i32 %or, 65535
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test1(i32* %a, i32* %b, i32 %x, i32 %y) {
+define arm_aapcscc i32 @test1(ptr %a, ptr %b, i32 %x, i32 %y) {
 ; ARM-LABEL: test1:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    mul r2, r2, r3
@@ -629,8 +629,8 @@ define arm_aapcscc i32 @test1(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; THUMB2-NEXT:    orrs r0, r1
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %mul = mul i32 %x, %y
   %xor = xor i32 %0, %1
   %or = or i32 %xor, %mul
@@ -638,7 +638,7 @@ entry:
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test2(i32* %a, i32* %b, i32 %x, i32 %y) {
+define arm_aapcscc i32 @test2(ptr %a, ptr %b, i32 %x, i32 %y) {
 ; ARM-LABEL: test2:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r1, [r1]
@@ -679,8 +679,8 @@ define arm_aapcscc i32 @test2(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; THUMB2-NEXT:    uxth r0, r0
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %mul = mul i32 %x, %1
   %xor = xor i32 %0, %y
   %or = or i32 %xor, %mul
@@ -688,7 +688,7 @@ entry:
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test3(i32* %a, i32* %b, i32 %x, i16* %y) {
+define arm_aapcscc i32 @test3(ptr %a, ptr %b, i32 %x, ptr %y) {
 ; ARM-LABEL: test3:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r0, [r0]
@@ -729,8 +729,8 @@ define arm_aapcscc i32 @test3(i32* %a, i32* %b, i32 %x, i16* %y) {
 ; THUMB2-NEXT:    uxth r0, r0
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i16, i16* %y, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i16, ptr %y, align 4
   %2 = zext i16 %1 to i32
   %mul = mul i32 %x, %0
   %xor = xor i32 %0, %2
@@ -739,7 +739,7 @@ entry:
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test4(i32* %a, i32* %b, i32 %x, i32 %y) {
+define arm_aapcscc i32 @test4(ptr %a, ptr %b, i32 %x, i32 %y) {
 ; ARM-LABEL: test4:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    mul r2, r2, r3
@@ -781,8 +781,8 @@ define arm_aapcscc i32 @test4(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; THUMB2-NEXT:    orrs r0, r1
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %mul = mul i32 %x, %y
   %xor = xor i32 %0, %1
   %or = or i32 %xor, %mul
@@ -790,7 +790,7 @@ entry:
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test5(i32* %a, i32* %b, i32 %x, i16 zeroext %y) {
+define arm_aapcscc i32 @test5(ptr %a, ptr %b, i32 %x, i16 zeroext %y) {
 ; ARM-LABEL: test5:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r1, [r1]
@@ -832,8 +832,8 @@ define arm_aapcscc i32 @test5(i32* %a, i32* %b, i32 %x, i16 zeroext %y) {
 ; THUMB2-NEXT:    orrs r0, r1
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %mul = mul i32 %x, %1
   %ext = zext i16 %y to i32
   %xor = xor i32 %0, %ext
@@ -842,7 +842,7 @@ entry:
   ret i32 %and
 }
 
-define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
+define arm_aapcscc i1 @test6(ptr %x, i8 %y, i8 %z) {
 ; ARM-LABEL: test6:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -883,13 +883,13 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i8, i8* %x, align 4
+  %0 = load i8, ptr %x, align 4
   %1 = and i8 %0, %y
   %2 = icmp eq i8 %1, %z
   ret i1 %2
 }
 
-define arm_aapcscc i1 @test7(i16* %x, i16 %y, i8 %z) {
+define arm_aapcscc i1 @test7(ptr %x, i16 %y, i8 %z) {
 ; ARM-LABEL: test7:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -930,14 +930,14 @@ define arm_aapcscc i1 @test7(i16* %x, i16 %y, i8 %z) {
 ; THUMB2-NEXT:    lsrs r0, r0, #5
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %x, align 4
+  %0 = load i16, ptr %x, align 4
   %1 = and i16 %0, %y
   %2 = trunc i16 %1 to i8
   %3 = icmp eq i8 %2, %z
   ret i1 %3
 }
 
-define arm_aapcscc void @test8(i32* nocapture %p) {
+define arm_aapcscc void @test8(ptr nocapture %p) {
 ; ARM-LABEL: test8:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r0]
@@ -967,14 +967,14 @@ define arm_aapcscc void @test8(i32* nocapture %p) {
 ; THUMB2-NEXT:    str r1, [r0]
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %neg = and i32 %0, 255
   %and = xor i32 %neg, 255
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test9(i32* nocapture %p) {
+define arm_aapcscc void @test9(ptr nocapture %p) {
 ; ARM-LABEL: test9:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r0]
@@ -1004,14 +1004,14 @@ define arm_aapcscc void @test9(i32* nocapture %p) {
 ; THUMB2-NEXT:    str r1, [r0]
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %neg = xor i32 %0, -1
   %and = and i32 %neg, 255
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test10(i32* nocapture %p) {
+define arm_aapcscc void @test10(ptr nocapture %p) {
 ; ARM-LABEL: test10:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r0]
@@ -1041,14 +1041,14 @@ define arm_aapcscc void @test10(i32* nocapture %p) {
 ; THUMB2-NEXT:    str r1, [r0]
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %neg = and i32 %0, 255
   %and = xor i32 %neg, 255
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc i32 @test11(i32* nocapture %p) {
+define arm_aapcscc i32 @test11(ptr nocapture %p) {
 ; ARM-LABEL: test11:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #1]
@@ -1072,12 +1072,12 @@ define arm_aapcscc i32 @test11(i32* nocapture %p) {
 ; THUMB2-NEXT:    ldrb r0, [r0, #1]
 ; THUMB2-NEXT:    lsls r0, r0, #8
 ; THUMB2-NEXT:    bx lr
-  %1 = load i32, i32* %p, align 4
+  %1 = load i32, ptr %p, align 4
   %and = and i32 %1, 65280
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test12(i32* nocapture %p) {
+define arm_aapcscc i32 @test12(ptr nocapture %p) {
 ; ARM-LABEL: test12:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #2]
@@ -1101,12 +1101,12 @@ define arm_aapcscc i32 @test12(i32* nocapture %p) {
 ; THUMB2-NEXT:    ldrb r0, [r0, #2]
 ; THUMB2-NEXT:    lsls r0, r0, #16
 ; THUMB2-NEXT:    bx lr
-  %1 = load i32, i32* %p, align 4
+  %1 = load i32, ptr %p, align 4
   %and = and i32 %1, 16711680
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test13(i32* nocapture %p) {
+define arm_aapcscc i32 @test13(ptr nocapture %p) {
 ; ARM-LABEL: test13:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #3]
@@ -1130,12 +1130,12 @@ define arm_aapcscc i32 @test13(i32* nocapture %p) {
 ; THUMB2-NEXT:    ldrb r0, [r0, #3]
 ; THUMB2-NEXT:    lsls r0, r0, #24
 ; THUMB2-NEXT:    bx lr
-  %1 = load i32, i32* %p, align 4
+  %1 = load i32, ptr %p, align 4
   %and = and i32 %1, 4278190080
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test14(i32* nocapture %p) {
+define arm_aapcscc i32 @test14(ptr nocapture %p) {
 ; ARM-LABEL: test14:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrh r0, [r0, #1]
@@ -1164,12 +1164,12 @@ define arm_aapcscc i32 @test14(i32* nocapture %p) {
 ; THUMB2-NEXT:    ldrh.w r0, [r0, #1]
 ; THUMB2-NEXT:    lsls r0, r0, #8
 ; THUMB2-NEXT:    bx lr
-  %1 = load i32, i32* %p, align 4
+  %1 = load i32, ptr %p, align 4
   %and = and i32 %1, 16776960
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test15(i32* nocapture %p) {
+define arm_aapcscc i32 @test15(ptr nocapture %p) {
 ; ARM-LABEL: test15:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrh r0, [r0, #2]
@@ -1193,12 +1193,12 @@ define arm_aapcscc i32 @test15(i32* nocapture %p) {
 ; THUMB2-NEXT:    ldrh r0, [r0, #2]
 ; THUMB2-NEXT:    lsls r0, r0, #16
 ; THUMB2-NEXT:    bx lr
-  %1 = load i32, i32* %p, align 4
+  %1 = load i32, ptr %p, align 4
   %and = and i32 %1, 4294901760
   ret i32 %and
 }
 
-define arm_aapcscc i32 @test16(i64* nocapture %p) {
+define arm_aapcscc i32 @test16(ptr nocapture %p) {
 ; ARM-LABEL: test16:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #1]
@@ -1222,13 +1222,13 @@ define arm_aapcscc i32 @test16(i64* nocapture %p) {
 ; THUMB2-NEXT:    ldrb r0, [r0, #1]
 ; THUMB2-NEXT:    lsls r0, r0, #8
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 65280
   %trunc = trunc i64 %and to i32
   ret i32 %trunc
 }
 
-define arm_aapcscc i32 @test17(i64* nocapture %p) {
+define arm_aapcscc i32 @test17(ptr nocapture %p) {
 ; ARM-LABEL: test17:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #2]
@@ -1252,13 +1252,13 @@ define arm_aapcscc i32 @test17(i64* nocapture %p) {
 ; THUMB2-NEXT:    ldrb r0, [r0, #2]
 ; THUMB2-NEXT:    lsls r0, r0, #16
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 16711680
   %trunc = trunc i64 %and to i32
   ret i32 %trunc
 }
 
-define arm_aapcscc i32 @test18(i64* nocapture %p) {
+define arm_aapcscc i32 @test18(ptr nocapture %p) {
 ; ARM-LABEL: test18:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #3]
@@ -1282,13 +1282,13 @@ define arm_aapcscc i32 @test18(i64* nocapture %p) {
 ; THUMB2-NEXT:    ldrb r0, [r0, #3]
 ; THUMB2-NEXT:    lsls r0, r0, #24
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 4278190080
   %trunc = trunc i64 %and to i32
   ret i32 %trunc
 }
 
-define arm_aapcscc i64 @test19(i64* nocapture %p) {
+define arm_aapcscc i64 @test19(ptr nocapture %p) {
 ; ARM-LABEL: test19:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r1, [r0, #4]
@@ -1312,12 +1312,12 @@ define arm_aapcscc i64 @test19(i64* nocapture %p) {
 ; THUMB2-NEXT:    ldrb r1, [r0, #4]
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 1095216660480
   ret i64 %and
 }
 
-define arm_aapcscc i64 @test20(i64* nocapture %p) {
+define arm_aapcscc i64 @test20(ptr nocapture %p) {
 ; ARM-LABEL: test20:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #5]
@@ -1345,12 +1345,12 @@ define arm_aapcscc i64 @test20(i64* nocapture %p) {
 ; THUMB2-NEXT:    lsls r1, r0, #8
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 280375465082880
   ret i64 %and
 }
 
-define arm_aapcscc i64 @test21(i64* nocapture %p) {
+define arm_aapcscc i64 @test21(ptr nocapture %p) {
 ; ARM-LABEL: test21:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #6]
@@ -1378,12 +1378,12 @@ define arm_aapcscc i64 @test21(i64* nocapture %p) {
 ; THUMB2-NEXT:    lsls r1, r0, #16
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 71776119061217280
   ret i64 %and
 }
 
-define arm_aapcscc i64 @test22(i64* nocapture %p) {
+define arm_aapcscc i64 @test22(ptr nocapture %p) {
 ; ARM-LABEL: test22:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0, #7]
@@ -1411,12 +1411,12 @@ define arm_aapcscc i64 @test22(i64* nocapture %p) {
 ; THUMB2-NEXT:    lsls r1, r0, #24
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, -72057594037927936
   ret i64 %and
 }
 
-define arm_aapcscc i64 @test23(i64* nocapture %p) {
+define arm_aapcscc i64 @test23(ptr nocapture %p) {
 ; ARM-LABEL: test23:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrh r1, [r0, #3]
@@ -1444,12 +1444,12 @@ define arm_aapcscc i64 @test23(i64* nocapture %p) {
 ; THUMB2-NEXT:    lsls r0, r1, #24
 ; THUMB2-NEXT:    lsrs r1, r1, #8
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 1099494850560
   ret i64 %and
 }
 
-define arm_aapcscc i64 @test24(i64* nocapture %p) {
+define arm_aapcscc i64 @test24(ptr nocapture %p) {
 ; ARM-LABEL: test24:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrh r1, [r0, #4]
@@ -1473,12 +1473,12 @@ define arm_aapcscc i64 @test24(i64* nocapture %p) {
 ; THUMB2-NEXT:    ldrh r1, [r0, #4]
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 281470681743360
   ret i64 %and
 }
 
-define arm_aapcscc i64 @test25(i64* nocapture %p) {
+define arm_aapcscc i64 @test25(ptr nocapture %p) {
 ; ARM-LABEL: test25:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrh r0, [r0, #5]
@@ -1511,12 +1511,12 @@ define arm_aapcscc i64 @test25(i64* nocapture %p) {
 ; THUMB2-NEXT:    lsls r1, r0, #8
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, 72056494526300160
   ret i64 %and
 }
 
-define arm_aapcscc i64 @test26(i64* nocapture %p) {
+define arm_aapcscc i64 @test26(ptr nocapture %p) {
 ; ARM-LABEL: test26:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrh r0, [r0, #6]
@@ -1544,12 +1544,12 @@ define arm_aapcscc i64 @test26(i64* nocapture %p) {
 ; THUMB2-NEXT:    lsls r1, r0, #16
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    bx lr
-  %1 = load i64, i64* %p, align 8
+  %1 = load i64, ptr %p, align 8
   %and = and i64 %1, -281474976710656
   ret i64 %and
 }
 
-define void @test27(i32* nocapture %ptr) {
+define void @test27(ptr nocapture %ptr) {
 ; ARM-LABEL: test27:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r0, #1]
@@ -1578,9 +1578,9 @@ define void @test27(i32* nocapture %ptr) {
 ; THUMB2-NEXT:    str r1, [r0]
 ; THUMB2-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %and = and i32 %0, 65280
   %shl = shl i32 %and, 8
-  store i32 %shl, i32* %ptr, align 4
+  store i32 %shl, ptr %ptr, align 4
   ret void
 }

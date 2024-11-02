@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -87,7 +88,7 @@ void hlfir::DesignateOp::build(
     mlir::OpBuilder &builder, mlir::OperationState &result,
     mlir::Type result_type, mlir::Value memref, llvm::StringRef component,
     mlir::Value component_shape, llvm::ArrayRef<Subscript> subscripts,
-    mlir::ValueRange substring, llvm::Optional<bool> complex_part,
+    mlir::ValueRange substring, std::optional<bool> complex_part,
     mlir::Value shape, mlir::ValueRange typeparams,
     fir::FortranVariableFlagsAttr fortran_attrs) {
   auto componentAttr =
@@ -398,6 +399,24 @@ void hlfir::ConcatOp::build(mlir::OpBuilder &builder,
       fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
       false);
   build(builder, result, resultType, strings, len);
+}
+
+//===----------------------------------------------------------------------===//
+// SetLengthOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &result, mlir::Value string,
+                               mlir::Value len) {
+  fir::CharacterType::LenType resultTypeLen = fir::CharacterType::unknownLen();
+  if (auto cstLen = fir::getIntIfConstant(len))
+    resultTypeLen = *cstLen;
+  unsigned kind = getCharacterKind(string.getType());
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
+      false);
+  build(builder, result, resultType, string, len);
 }
 
 //===----------------------------------------------------------------------===//

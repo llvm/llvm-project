@@ -386,11 +386,11 @@ static bool inlineHistoryIncludes(
     MutableArrayRef<std::pair<CallGraphNode *, std::optional<size_t>>>
         inlineHistory) {
   while (inlineHistoryID.has_value()) {
-    assert(inlineHistoryID.value() < inlineHistory.size() &&
+    assert(*inlineHistoryID < inlineHistory.size() &&
            "Invalid inline history ID");
-    if (inlineHistory[inlineHistoryID.value()].first == node)
+    if (inlineHistory[*inlineHistoryID].first == node)
       return true;
-    inlineHistoryID = inlineHistory[inlineHistoryID.value()].second;
+    inlineHistoryID = inlineHistory[*inlineHistoryID].second;
   }
   return false;
 }
@@ -543,7 +543,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
     inlineHistory.push_back(std::make_pair(it.targetNode, inlineHistoryID));
 
     auto historyToString = [](InlineHistoryT h) {
-      return h.has_value() ? std::to_string(h.value()) : "root";
+      return h.has_value() ? std::to_string(*h) : "root";
     };
     (void)historyToString;
     LLVM_DEBUG(llvm::dbgs()

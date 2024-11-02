@@ -144,9 +144,9 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoRecurse] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-recurse
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAInterFnReachability] for CtxI ' %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state #queries(1)
+; GRAPH-NEXT: [AAFunctionReachability] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state FunctionReachability [1,1]
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAIntraFnReachability] for CtxI ' %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state #queries(1)
+; GRAPH-NEXT: [AACallEdges] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state CallEdges[0,1]
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AACallEdges] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state CallEdges[0,1]
 ; GRAPH-EMPTY:
@@ -300,8 +300,8 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; DOT-DAG: Node[[Node26:0x[a-z0-9]+]] [shape=record,label="{[AAPotentialValues]
 ; DOT-DAG: Node[[Node27:0x[a-z0-9]+]] [shape=record,label="{[AAInstanceInfo]
 ; DOT-DAG: Node[[Node28:0x[a-z0-9]+]] [shape=record,label="{[AANoRecurse]
-; DOT-DAG: Node[[Node29:0x[a-z0-9]+]] [shape=record,label="{[AAInterFnReachability]
-; DOT-DAG: Node[[Node30:0x[a-z0-9]+]] [shape=record,label="{[AAIntraFnReachability]
+; DOT-DAG: Node[[Node29:0x[a-z0-9]+]] [shape=record,label="{[AAFunctionReachability]
+; DOT-DAG: Node[[Node30:0x[a-z0-9]+]] [shape=record,label="{[AACallEdges]
 ; DOT-DAG: Node[[Node31:0x[a-z0-9]+]] [shape=record,label="{[AACallEdges]
 ; DOT-DAG: Node[[Node32:0x[a-z0-9]+]] [shape=record,label="{[AAIsDead]
 ; DOT-DAG: Node[[Node33:0x[a-z0-9]+]] [shape=record,label="{[AAWillReturn]

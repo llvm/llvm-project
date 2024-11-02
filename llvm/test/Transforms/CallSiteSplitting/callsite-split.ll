@@ -73,8 +73,7 @@ declare void @dummy1(%struct.bitmap*, %struct.bitmap*, %struct.bitmap*, %struct.
 ;CHECK-LABEL: NextCond.split:
 ;CHECK: call void @dummy3()
 ;CheCK-LABEL: CallSiteBB:
-;CHECK: [[NEG:%.*]] = xor i1 %tobool1, true
-;CHECK: call void @foo(i1 [[NEG]])
+;CHECK: call void @foo(i1 %tobool1)
 define void @caller2(i1 %c, %struct.bitmap* %a_elt, %struct.bitmap* %b_elt, %struct.bitmap* %c_elt) {
 entry:
   br label %Top

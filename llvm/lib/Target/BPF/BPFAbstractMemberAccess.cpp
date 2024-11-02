@@ -126,7 +126,7 @@ public:
     uint32_t AccessIndex;
     MaybeAlign RecordAlignment;
     MDNode *Metadata;
-    Value *Base;
+    WeakTrackingVH Base;
   };
   typedef std::stack<std::pair<CallInst *, CallInfo>> CallInfoStack;
 

@@ -1980,9 +1980,6 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
-    if (!ST.hasFlatAddressSpace())
-      return false;
-
     Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
     if (!ApertureReg.isValid())
       return false;
@@ -2024,13 +2021,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       DstTy.getSizeInBits() == 64) {
     const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
     uint32_t AddrHiVal = Info->get32BitAddressHighBits();
-
-    // FIXME: This is a bit ugly due to creating a merge of 2 pointers to
-    // another. Merge operands are required to be the same type, but creating an
-    // extra ptrtoint would be kind of pointless.
-    auto HighAddr = B.buildConstant(
-        LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32), AddrHiVal);
-    B.buildMerge(Dst, {Src, HighAddr});
+    auto PtrLo = B.buildPtrToInt(S32, Src);
+    auto HighAddr = B.buildConstant(S32, AddrHiVal);
+    B.buildMerge(Dst, {PtrLo, HighAddr});
     MI.eraseFromParent();
     return true;
   }
@@ -4189,7 +4182,7 @@ bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
   std::optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
-    B.buildConstant(DstReg, KnownSize.value());
+    B.buildConstant(DstReg, *KnownSize);
   return false;
 }
 
@@ -4555,19 +4548,22 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   // TODO: Support TFE for typed and narrow loads.
   if (IsTyped) {
-    assert(!IsTFE);
+    if (IsTFE)
+      return false;
     Opc = IsD16 ? AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 :
                   AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT;
   } else if (IsFormat) {
     if (IsD16) {
-      assert(!IsTFE);
+      if (IsTFE)
+        return false;
       Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16;
     } else {
       Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE
                   : AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
     }
   } else {
-    assert(!IsTFE);
+    if (IsTFE)
+      return false;
     switch (MemTy.getSizeInBits()) {
     case 8:
       Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;

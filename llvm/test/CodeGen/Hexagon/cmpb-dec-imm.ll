@@ -19,7 +19,7 @@ b2:
 
 b6:                                               ; preds = %b2
   %v7 = trunc i32 %a0 to i8
-  store i8 %v7, i8* @glob, align 1
+  store i8 %v7, ptr @glob, align 1
   br label %b8
 
 b8:                                               ; preds = %b6, %b2

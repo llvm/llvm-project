@@ -25,7 +25,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
@@ -72,7 +72,7 @@ void SuspiciousIncludeCheck::registerPPCallbacks(
 
 void SuspiciousIncludePPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
@@ -93,7 +93,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
     llvm::sys::path::replace_extension(GuessedFileName,
                                        (HFE.size() ? "." : "") + HFE);
 
-    Optional<FileEntryRef> File =
+    OptionalFileEntryRef File =
         PP->LookupFile(DiagLoc, GuessedFileName, IsAngled, nullptr, nullptr,
                        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     if (File) {

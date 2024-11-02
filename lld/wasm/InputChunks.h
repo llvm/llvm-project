@@ -85,7 +85,7 @@ public:
   OutputSection *outputSec = nullptr;
   uint32_t comdat = UINT32_MAX;
   uint32_t inputSectionOffset = 0;
-  llvm::Align alignment;
+  uint32_t alignment;
   uint32_t flags;
 
   // Only applies to data segments.
@@ -109,8 +109,8 @@ public:
 protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
              uint32_t flags = 0)
-      : name(name), file(f), alignment(1ULL << alignment), flags(flags),
-        sectionKind(k), live(!config->gcSections), discarded(false) {}
+      : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
+        live(!config->gcSections), discarded(false) {}
   ArrayRef<uint8_t> data() const { return rawData; }
   uint64_t getTombstone() const;
 
@@ -275,10 +275,10 @@ public:
   void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return function->CodeOffset; }
-  uint32_t getFunctionIndex() const { return functionIndex.value(); }
+  uint32_t getFunctionIndex() const { return *functionIndex; }
   bool hasFunctionIndex() const { return functionIndex.has_value(); }
   void setFunctionIndex(uint32_t index);
-  uint32_t getTableIndex() const { return tableIndex.value(); }
+  uint32_t getTableIndex() const { return *tableIndex; }
   bool hasTableIndex() const { return tableIndex.has_value(); }
   void setTableIndex(uint32_t index);
   void writeCompressed(uint8_t *buf) const;

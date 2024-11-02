@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: darwin, solaris
+// UNSUPPORTED: darwin, target={{.*solaris.*}}
 
 #include <assert.h>
 #include <regex.h>

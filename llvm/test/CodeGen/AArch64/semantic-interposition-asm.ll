@@ -18,7 +18,7 @@ define i64 @test_var() nounwind {
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call i64 asm "adrp $0, $1\0Aldr ${0:w}, [$0, :lo12:$1]\0Aadrp x8, $2\0Aldr w8, [x8, :lo12:$2]\0Aadd $0,x8,$0", "=r,S,S,~{x8}"(i32* nonnull @gv0, i32* nonnull @gv1)
+  %0 = tail call i64 asm "adrp $0, $1\0Aldr ${0:w}, [$0, :lo12:$1]\0Aadrp x8, $2\0Aldr w8, [x8, :lo12:$2]\0Aadd $0,x8,$0", "=r,S,S,~{x8}"(ptr nonnull @gv0, ptr nonnull @gv1)
   ret i64 %0
 }
 
@@ -51,6 +51,6 @@ define i64 @test_fun() nounwind {
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call i64 asm "adrp $0, :got:$1\0Aldr $0, [$0, :got_lo12:$1]\0Aadrp x8, :got:$2\0Aldr x8, [x8, :got_lo12:$2]", "=r,S,S,~{x8}"(void ()* nonnull @fun0, void ()* nonnull @fun1)
+  %0 = tail call i64 asm "adrp $0, :got:$1\0Aldr $0, [$0, :got_lo12:$1]\0Aadrp x8, :got:$2\0Aldr x8, [x8, :got_lo12:$2]", "=r,S,S,~{x8}"(ptr nonnull @fun0, ptr nonnull @fun1)
   ret i64 %0
 }

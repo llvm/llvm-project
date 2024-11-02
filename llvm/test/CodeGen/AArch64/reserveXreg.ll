@@ -4,7 +4,7 @@
 
 ; LR, FP, X30 and X29 should be correctly recognized and not used.
 
-define void @foo(i64 %v1, i64 %v2, i64* %ptr) {
+define void @foo(i64 %v1, i64 %v2, ptr %ptr) {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
@@ -23,21 +23,21 @@ define void @foo(i64 %v1, i64 %v2, i64* %ptr) {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %v3 = add i64 %v1, %v2
-  %p1 = getelementptr i64, i64* %ptr, i64 1
-  store volatile i64 %v3, i64* %p1, align 8
+  %p1 = getelementptr i64, ptr %ptr, i64 1
+  store volatile i64 %v3, ptr %p1, align 8
 
-  %p2 = getelementptr i64, i64* %ptr, i64 2
-  %v4 = load volatile i64, i64* %p2, align 8
+  %p2 = getelementptr i64, ptr %ptr, i64 2
+  %v4 = load volatile i64, ptr %p2, align 8
   %v5 = add i64 %v1, %v4
   %v6 = sub i64 %v5, %v2
-  store volatile i64 %v6, i64* %p2, align 8
+  store volatile i64 %v6, ptr %p2, align 8
 
-  %p3 = getelementptr i64, i64* %ptr, i64 3
-  store volatile i64 %v3, i64* %p3, align 8
+  %p3 = getelementptr i64, ptr %ptr, i64 3
+  store volatile i64 %v3, ptr %p3, align 8
 
-  %p4 = getelementptr i64, i64* %ptr, i64 4
-  store volatile i64 %v1, i64* %p4, align 8
-  %p5 = getelementptr i64, i64* %ptr, i64 5
-  store volatile i64 %v2, i64* %p5, align 8
+  %p4 = getelementptr i64, ptr %ptr, i64 4
+  store volatile i64 %v1, ptr %p4, align 8
+  %p5 = getelementptr i64, ptr %ptr, i64 5
+  store volatile i64 %v2, ptr %p5, align 8
   ret void
 }

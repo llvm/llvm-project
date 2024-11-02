@@ -334,9 +334,9 @@ void OmpStructureChecker::CheckHintClause(
           hintClause{
               std::get_if<Fortran::parser::OmpClause::Hint>(&ompClause->u)}) {
         std::optional<std::int64_t> hintValue = GetIntValue(hintClause->v);
-        if (hintValue && hintValue.value() >= 0) {
-          if((hintValue.value() & 0xC) == 0xC /*`omp_sync_hint_nonspeculative` and `omp_lock_hint_speculative`*/ 
-                  || (hintValue.value() & 0x3) == 0x3 /*`omp_sync_hint_uncontended` and omp_sync_hint_contended*/ )
+        if (hintValue && *hintValue >= 0) {
+          if((*hintValue & 0xC) == 0xC /*`omp_sync_hint_nonspeculative` and `omp_lock_hint_speculative`*/ 
+                  || (*hintValue & 0x3) == 0x3 /*`omp_sync_hint_uncontended` and omp_sync_hint_contended*/ )
             context_.Say(clause.source,
                 "Hint clause value "
                 "is not a valid OpenMP synchronization value"_err_en_US);

@@ -81,8 +81,14 @@ struct TestLinalgTransforms
       llvm::cl::init(false)};
   Option<bool> testGeneralizeTensorPackOp{
       *this, "test-generalize-tensor-pack",
-      llvm::cl::desc("Test transform that generalize pack ops into a sequence "
+      llvm::cl::desc("Test transform that generalizes pack ops into a sequence "
                      "of tensor and Linalg ops"),
+      llvm::cl::init(false)};
+  Option<bool> testGeneralizeTensorUnPackOp{
+      *this, "test-generalize-tensor-unpack",
+      llvm::cl::desc(
+          "Test transform that generalizes unpack ops into a sequence "
+          "of tensor and Linalg ops"),
       llvm::cl::init(false)};
   Option<bool> testSwapSubTensorPadTensor{
       *this, "test-swap-subtensor-padtensor",
@@ -176,6 +182,12 @@ static void applyGeneralizeTensorPackPatterns(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
+static void applyGeneralizeTensorUnPackPatterns(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  patterns.add<GeneralizeOuterUnitDimsUnPackOpPattern>(funcOp.getContext());
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<ExtractSliceOfPadTensorSwapPattern>(funcOp.getContext());
@@ -220,6 +232,8 @@ void TestLinalgTransforms::runOnOperation() {
     return applyGeneralizePadTensorPatterns(getOperation());
   if (testGeneralizeTensorPackOp)
     return applyGeneralizeTensorPackPatterns(getOperation());
+  if (testGeneralizeTensorUnPackOp)
+    return applyGeneralizeTensorUnPackPatterns(getOperation());
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getOperation());
   if (testBubbleUpExtractSliceOpPattern)

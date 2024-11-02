@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   MIRParser
   Support
   Target
+  TargetParser
   X86CodeGen
   X86Desc
   X86Info

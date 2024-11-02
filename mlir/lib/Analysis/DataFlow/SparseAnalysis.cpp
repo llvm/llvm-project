@@ -208,7 +208,7 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
 
 void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
     ProgramPoint point, RegionBranchOpInterface branch,
-    Optional<unsigned> successorIndex,
+    std::optional<unsigned> successorIndex,
     ArrayRef<AbstractSparseLattice *> lattices) {
   const auto *predecessors = getOrCreateFor<PredecessorState>(point, point);
   assert(predecessors->allPredecessorsKnown() &&
@@ -216,7 +216,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
   for (Operation *op : predecessors->getKnownPredecessors()) {
     // Get the incoming successor operands.
-    Optional<OperandRange> operands;
+    std::optional<OperandRange> operands;
 
     // Check if the predecessor is the parent op.
     if (op == branch) {
@@ -385,12 +385,12 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
     for (auto [index, block] : llvm::enumerate(op->getSuccessors())) {
       SuccessorOperands successorOperands = branch.getSuccessorOperands(index);
       OperandRange forwarded = successorOperands.getForwardedOperands();
-      if (forwarded.size()) {
+      if (!forwarded.empty()) {
         MutableArrayRef<OpOperand> operands = op->getOpOperands().slice(
             forwarded.getBeginOperandIndex(), forwarded.size());
         for (OpOperand &operand : operands) {
           unaccounted.reset(operand.getOperandNumber());
-          if (Optional<BlockArgument> blockArg =
+          if (std::optional<BlockArgument> blockArg =
                   detail::getBranchSuccessorArgument(
                       successorOperands, operand.getOperandNumber(), block)) {
             meet(getLatticeElement(operand.get()),

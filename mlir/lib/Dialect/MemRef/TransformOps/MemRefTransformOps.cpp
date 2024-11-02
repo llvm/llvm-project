@@ -32,7 +32,7 @@ transform::MemRefMultiBufferOp::applyToOne(memref::AllocOp target,
     return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
   }
 
-  results.push_back(newBuffer.value());
+  results.push_back(*newBuffer);
   return DiagnosedSilenceableFailure::success();
 }
 

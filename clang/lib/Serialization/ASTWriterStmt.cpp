@@ -493,12 +493,12 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
     } else {
       auto *NestedReq = cast<concepts::NestedRequirement>(R);
       Record.push_back(concepts::Requirement::RK_Nested);
-      Record.push_back(NestedReq->isSubstitutionFailure());
-      if (NestedReq->isSubstitutionFailure()){
-        addSubstitutionDiagnostic(Record,
-                                  NestedReq->getSubstitutionDiagnostic());
+      Record.push_back(NestedReq->hasInvalidConstraint());
+      if (NestedReq->hasInvalidConstraint()) {
+        Record.AddString(NestedReq->getInvalidConstraintEntity());
+        addConstraintSatisfaction(Record, *NestedReq->Satisfaction);
       } else {
-        Record.AddStmt(NestedReq->Value.get<Expr *>());
+        Record.AddStmt(NestedReq->getConstraintExpr());
         if (!NestedReq->isDependent())
           addConstraintSatisfaction(Record, *NestedReq->Satisfaction);
       }

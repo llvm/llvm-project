@@ -27,9 +27,9 @@
 ; CHECK-DAG: jumpr r31
 define void @f0() {
 b0:
-  %v0 = load i32, i32* @g0, align 4
-  %v1 = atomicrmw nand i32* @g1, i32 %v0 ORDER
-  store i32 %v1, i32* @g2, align 4
+  %v0 = load i32, ptr @g0, align 4
+  %v1 = atomicrmw nand ptr @g1, i32 %v0 ORDER
+  store i32 %v1, ptr @g2, align 4
   ret void
 }
 
@@ -49,8 +49,8 @@ b0:
 ; CHECK-DAG: jumpr r31
 define void @f1() {
 b0:
-  %v0 = load i64, i64* @g3, align 8
-  %v1 = atomicrmw nand i64* @g4, i64 %v0 ORDER
-  store i64 %v1, i64* @g5, align 8
+  %v0 = load i64, ptr @g3, align 8
+  %v1 = atomicrmw nand ptr @g4, i64 %v0 ORDER
+  store i64 %v1, ptr @g5, align 8
   ret void
 }

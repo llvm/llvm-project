@@ -12,12 +12,12 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 
 define internal i8* @__kmpc_alloc_shared() {
 lor.lhs.false.i.i:
-  br i1 false, label %_ZN4_OMP5state8lookup32ENS0_9ValueKindEb.exit.i, label %if.then.i44.i.i
+  br i1 false, label %_ZN4ompx5state8lookup32ENS0_9ValueKindEb.exit.i, label %if.then.i44.i.i
 
 if.then.i44.i.i:                                  ; preds = %lor.lhs.false.i.i
-  br label %_ZN4_OMP5state8lookup32ENS0_9ValueKindEb.exit.i
+  br label %_ZN4ompx5state8lookup32ENS0_9ValueKindEb.exit.i
 
-_ZN4_OMP5state8lookup32ENS0_9ValueKindEb.exit.i:  ; preds = %if.then.i44.i.i, %lor.lhs.false.i.i
+_ZN4ompx5state8lookup32ENS0_9ValueKindEb.exit.i:  ; preds = %if.then.i44.i.i, %lor.lhs.false.i.i
   %.pn.i45.i.i = phi i8* [ null, %if.then.i44.i.i ], [ addrspacecast (i8 addrspace(3)* bitcast (%"struct.(anonymous namespace)::TeamStateTy" addrspace(3)* @_ZN12_GLOBAL__N_19TeamStateE to i8 addrspace(3)*) to i8*), %lor.lhs.false.i.i ]
   %retval.0.in.i.i.i = getelementptr inbounds i8, i8* %.pn.i45.i.i, i64 4
   %retval.0.i46.i.i = bitcast i8* %retval.0.in.i.i.i to i32*

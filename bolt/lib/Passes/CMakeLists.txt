@@ -56,6 +56,7 @@ add_llvm_library(LLVMBOLTPasses
   AsmPrinter
   MC
   Support
+  TargetParser
   TransformUtils
   )
 

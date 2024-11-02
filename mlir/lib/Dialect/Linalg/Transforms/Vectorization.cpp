@@ -179,6 +179,9 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
   LLVM_DEBUG(llvm::interleaveComma(canonicalVecShape, llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
+  if (ShapedType::isDynamicShape(canonicalVecShape))
+    return failure();
+
   // Initialize iteration space static sizes.
   initIterSpaceStaticSizes(linalgOp);
 
@@ -187,8 +190,6 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
   if (failed(precomputeIterSpaceDynamicSizes(rewriter, linalgOp)))
     return failure();
 
-  if (ShapedType::isDynamicShape(canonicalVecShape))
-    return failure();
   return success();
 }
 
@@ -373,14 +374,13 @@ struct VectorizationResult {
   Operation *newOp;
 };
 
-llvm::Optional<vector::CombiningKind>
+std::optional<vector::CombiningKind>
 mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
   using ::mlir::vector::CombiningKind;
 
   if (!combinerOp)
     return std::nullopt;
-  return llvm::TypeSwitch<Operation *, llvm::Optional<CombiningKind>>(
-             combinerOp)
+  return llvm::TypeSwitch<Operation *, std::optional<CombiningKind>>(combinerOp)
       .Case<arith::AddIOp, arith::AddFOp>(
           [&](auto op) { return CombiningKind::ADD; })
       .Case<arith::AndIOp>([&](auto op) { return CombiningKind::AND; })
@@ -1847,7 +1847,7 @@ struct Conv1DGenerator
     Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));
     if (!reduceOp)
       return;
-    llvm::Optional<vector::CombiningKind> maybeKind;
+    std::optional<vector::CombiningKind> maybeKind;
     maybeKind = getCombinerOpKind(reduceOp);
     if (!maybeKind || *maybeKind != vector::CombiningKind::ADD)
       return;

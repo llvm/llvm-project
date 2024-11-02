@@ -826,6 +826,8 @@ public:
                                 const char *name, bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
 
+  bool IsTemplateType(lldb::opaque_compiler_type_t type) override;
+
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                  bool expand_pack) override;
 

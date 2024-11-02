@@ -426,7 +426,7 @@ Fortran::lower::CalleeInterface::addEntryBlockAndMapArguments() {
 }
 
 bool Fortran::lower::CalleeInterface::hasHostAssociated() const {
-  return funit.parentHasHostAssoc();
+  return funit.parentHasTupleHostAssoc();
 }
 
 mlir::Type Fortran::lower::CalleeInterface::getHostAssociatedTy() const {
@@ -437,6 +437,13 @@ mlir::Type Fortran::lower::CalleeInterface::getHostAssociatedTy() const {
 mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
   assert(hasHostAssociated() || !funit.getHostAssoc().empty());
   return converter.hostAssocTupleValue();
+}
+
+void Fortran::lower::CalleeInterface::setFuncAttrs(
+    mlir::func::FuncOp func) const {
+  if (funit.parentHasHostAssoc())
+    func->setAttr(fir::getInternalProcedureAttrName(),
+                  mlir::UnitAttr::get(func->getContext()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -484,6 +491,7 @@ void Fortran::lower::CallInterface<T>::declare() {
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
+      side().setFuncAttrs(func);
     }
   }
 }

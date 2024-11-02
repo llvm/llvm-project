@@ -91,6 +91,7 @@ add_gen_header(
   GEN_HDR string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.null_macro
     .llvm-libc-types.size_t
 )
 
@@ -128,11 +129,9 @@ add_gen_header(
 add_gen_header(
   errno
   DEF_FILE errno.h.def
-  PARAMS
-    platform_errno=../config/${LIBC_TARGET_OS}/errno.h.in
   GEN_HDR errno.h
-  DATA_FILES
-    ../config/${LIBC_TARGET_OS}/errno.h.in
+  DEPENDS
+    .llvm-libc-macros.generic_error_number_macros
 )
 
 add_gen_header(

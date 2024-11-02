@@ -356,7 +356,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
 
       const SIRegisterInfo *TRI
         = static_cast<const GCNSubtarget *>(Subtarget)->getRegisterInfo();
-      return TRI->getPhysRegClass(Reg);
+      return TRI->getPhysRegBaseClass(Reg);
     }
 
     return nullptr;
@@ -1429,8 +1429,10 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
 static bool IsCopyFromSGPR(const SIRegisterInfo &TRI, SDValue Val) {
   if (Val.getOpcode() != ISD::CopyFromReg)
     return false;
-  auto RC =
-      TRI.getPhysRegClass(cast<RegisterSDNode>(Val.getOperand(1))->getReg());
+  auto Reg = cast<RegisterSDNode>(Val.getOperand(1))->getReg();
+  if (!Reg.isPhysical())
+    return false;
+  auto RC = TRI.getPhysRegBaseClass(Reg);
   return RC && TRI.isSGPRClass(RC);
 }
 

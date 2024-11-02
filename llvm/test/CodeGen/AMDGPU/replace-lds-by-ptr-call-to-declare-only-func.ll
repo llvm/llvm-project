@@ -20,10 +20,10 @@ declare i32 @foo()
 ; No change
 define internal void @goo() {
 ; CHECK-LABEL: entry:
-; CHECK:   store i32 undef, i32 addrspace(3)* @lds, align 4
+; CHECK:   store i32 undef, ptr addrspace(3) @lds, align 4
 ; CHECK:   ret void
 entry:
-  store i32 undef, i32 addrspace(3)* @lds, align 4
+  store i32 undef, ptr addrspace(3) @lds, align 4
   ret void
 }
 
