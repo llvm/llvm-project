@@ -46,20 +46,15 @@ public:
   BlockExtractor(bool EraseFunctions, bool KeepOldBlocks = false)
       : EraseFunctions(EraseFunctions), KeepOldBlocks(KeepOldBlocks) {}
   bool runOnModule(Module &M);
-  void init(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
-                &GroupsOfBlocksToExtract) {
-    for (const SmallVectorImpl<BasicBlock *> &GroupOfBlocks :
-         GroupsOfBlocksToExtract) {
-      SmallVector<BasicBlock *, 16> NewGroup;
-      NewGroup.append(GroupOfBlocks.begin(), GroupOfBlocks.end());
-      GroupsOfBlocks.emplace_back(NewGroup);
-    }
+  void
+  init(const std::vector<std::vector<BasicBlock *>> &GroupsOfBlocksToExtract) {
+    GroupsOfBlocks = GroupsOfBlocksToExtract;
     if (!BlockExtractorFile.empty())
       loadFile();
   }
 
 private:
-  SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupsOfBlocks;
+  std::vector<std::vector<BasicBlock *>> GroupsOfBlocks;
   bool EraseFunctions;
   bool KeepOldBlocks;
   /// Map a function name to groups of blocks.
@@ -70,59 +65,7 @@ private:
   void splitLandingPadPreds(Function &F);
 };
 
-class BlockExtractorLegacyPass : public ModulePass {
-  BlockExtractor BE;
-  bool runOnModule(Module &M) override;
-
-public:
-  static char ID;
-  BlockExtractorLegacyPass(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
-                           bool EraseFunctions, bool KeepOldBlocks)
-      : ModulePass(ID), BE(EraseFunctions, KeepOldBlocks) {
-    // We want one group per element of the input list.
-    SmallVector<SmallVector<BasicBlock *, 16>, 4> MassagedGroupsOfBlocks;
-    for (BasicBlock *BB : BlocksToExtract) {
-      SmallVector<BasicBlock *, 16> NewGroup;
-      NewGroup.push_back(BB);
-      MassagedGroupsOfBlocks.push_back(NewGroup);
-    }
-    BE.init(MassagedGroupsOfBlocks);
-  }
-
-  BlockExtractorLegacyPass(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
-                               &GroupsOfBlocksToExtract,
-                           bool EraseFunctions, bool KeepOldBlocks)
-      : ModulePass(ID), BE(EraseFunctions, KeepOldBlocks) {
-    BE.init(GroupsOfBlocksToExtract);
-  }
-
-  BlockExtractorLegacyPass()
-      : BlockExtractorLegacyPass(SmallVector<BasicBlock *, 0>(), false, false) {
-  }
-};
-
 } // end anonymous namespace
-
-char BlockExtractorLegacyPass::ID = 0;
-INITIALIZE_PASS(BlockExtractorLegacyPass, "extract-blocks",
-                "Extract basic blocks from module", false, false)
-
-ModulePass *llvm::createBlockExtractorPass() {
-  return new BlockExtractorLegacyPass();
-}
-ModulePass *llvm::createBlockExtractorPass(
-    const SmallVectorImpl<BasicBlock *> &BlocksToExtract, bool EraseFunctions,
-    bool KeepOldBlocks) {
-  return new BlockExtractorLegacyPass(BlocksToExtract, EraseFunctions,
-                                      KeepOldBlocks);
-}
-ModulePass *llvm::createBlockExtractorPass(
-    const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
-        &GroupsOfBlocksToExtract,
-    bool EraseFunctions, bool KeepOldBlocks) {
-  return new BlockExtractorLegacyPass(GroupsOfBlocksToExtract, EraseFunctions,
-                                      KeepOldBlocks);
-}
 
 /// Gets all of the blocks specified in the input file.
 void BlockExtractor::loadFile() {
@@ -185,7 +128,6 @@ void BlockExtractor::splitLandingPadPreds(Function &F) {
 }
 
 bool BlockExtractor::runOnModule(Module &M) {
-
   bool Changed = false;
 
   // Get all the functions.
@@ -267,14 +209,15 @@ bool BlockExtractor::runOnModule(Module &M) {
   return Changed;
 }
 
-bool BlockExtractorLegacyPass::runOnModule(Module &M) {
-  return BE.runOnModule(M);
-}
+BlockExtractorPass::BlockExtractorPass(
+    std::vector<std::vector<BasicBlock *>> &&GroupsOfBlocks,
+    bool EraseFunctions)
+    : GroupsOfBlocks(GroupsOfBlocks), EraseFunctions(EraseFunctions) {}
 
 PreservedAnalyses BlockExtractorPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  BlockExtractor BE(false);
-  BE.init(SmallVector<SmallVector<BasicBlock *, 16>, 0>());
+  BlockExtractor BE(EraseFunctions);
+  BE.init(GroupsOfBlocks);
   return BE.runOnModule(M) ? PreservedAnalyses::none()
                            : PreservedAnalyses::all();
 }

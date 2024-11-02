@@ -4,6 +4,7 @@ executable("llvm-extract") {
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Support",
+    "//llvm/lib/Passes",
     "//llvm/lib/Transforms/IPO",
   ]
   sources = [ "llvm-extract.cpp" ]
