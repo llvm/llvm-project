@@ -3341,26 +3341,20 @@ bool NVPTXTargetLowering::splitValueIntoRegisterParts(
 }
 
 bool llvm::NVPTXTargetLowering::isTruncateFree(EVT FromVT, EVT ToVT) const {
-
-  if (!FromVT.isSimple() || !ToVT.isSimple()) {
+  if (FromVT.isVector() || ToVT.isVector() || !FromVT.isInteger() ||
+      !ToVT.isInteger()) {
     return false;
   }
 
-  return (FromVT.getSimpleVT() == MVT::i64 && ToVT.getSimpleVT() == MVT::i32);
+  return FromVT.getSizeInBits() == 64 && ToVT.getSizeInBits() == 32;
 }
 
 bool llvm::NVPTXTargetLowering::isZExtFree(EVT FromVT, EVT ToVT) const {
-  if (!FromVT.isSimple() || !ToVT.isSimple()) {
-    return false;
-  }
-  return (FromVT.getSimpleVT() == MVT::i32 && ToVT.getSimpleVT() == MVT::i64);
+  return false;
 }
 
 bool llvm::NVPTXTargetLowering::isZExtFree(Type *SrcTy, Type *DstTy) const {
-  if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
-    return false;
-  return SrcTy->getPrimitiveSizeInBits() == 32 &&
-         DstTy->getPrimitiveSizeInBits() == 64;
+  return false;
 }
 
 // This creates target external symbol for a function parameter.
