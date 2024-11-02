@@ -2078,8 +2078,8 @@ void CodeExtractor::insertReplacerCall(
       Value *load = Reloads[i];
       std::vector<User *> Users(outputs[i]->user_begin(),
                                 outputs[i]->user_end());
-      for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-        Instruction *inst = cast<Instruction>(Users[u]);
+      for (User *U : Users) {
+        Instruction *inst = cast<Instruction>(U);
         if (inst->getParent()->getParent() == oldFunction)
           inst->replaceUsesOfWith(outputs[i], load);
       }
