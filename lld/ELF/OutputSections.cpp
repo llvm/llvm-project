@@ -326,17 +326,30 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
 }
 #endif
 
-// Compress section contents if this section contains debug info.
+// Compress certain non-SHF_ALLOC sections:
+//
+// * (if --compress-debug-sections is specified) non-empty .debug_* sections
+// * (if --compress-sections is specified) matched sections
 template <class ELFT> void OutputSection::maybeCompress() {
   using Elf_Chdr = typename ELFT::Chdr;
   (void)sizeof(Elf_Chdr);
 
-  // Compress only DWARF debug sections.
-  if (config->compressDebugSections == DebugCompressionType::None ||
-      (flags & SHF_ALLOC) || !name.starts_with(".debug_") || size == 0)
+  DebugCompressionType ctype = DebugCompressionType::None;
+  for (auto &[glob, t] : config->compressSections)
+    if (glob.match(name))
+      ctype = t;
+  if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
+      name.starts_with(".debug_") && size)
+    ctype = *config->compressDebugSections;
+  if (ctype == DebugCompressionType::None)
     return;
+  if (flags & SHF_ALLOC) {
+    errorOrWarn("--compress-sections: section '" + name +
+                "' with the SHF_ALLOC flag cannot be compressed");
+    return;
+  }
 
-  llvm::TimeTraceScope timeScope("Compress debug sections");
+  llvm::TimeTraceScope timeScope("Compress sections");
   compressed.uncompressedSize = size;
   auto buf = std::make_unique<uint8_t[]>(size);
   // Write uncompressed data to a temporary zero-initialized buffer.
@@ -344,14 +357,21 @@ template <class ELFT> void OutputSection::maybeCompress() {
     parallel::TaskGroup tg;
     writeTo<ELFT>(buf.get(), tg);
   }
+  // The generic ABI specifies "The sh_size and sh_addralign fields of the
+  // section header for a compressed section reflect the requirements of the
+  // compressed section." However, 1-byte alignment has been wildly accepted
+  // and utilized for a long time. Removing alignment padding is particularly
+  // useful when there are many compressed output sections.
+  addralign = 1;
 
 #if LLVM_ENABLE_ZSTD
   // Use ZSTD's streaming compression API which permits parallel workers working
   // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
   // "Streaming compression - HowTo".
-  if (config->compressDebugSections == DebugCompressionType::Zstd) {
+  if (ctype == DebugCompressionType::Zstd) {
     // Allocate a buffer of half of the input size, and grow it by 1.5x if
     // insufficient.
+    compressed.type = ELFCOMPRESS_ZSTD;
     compressed.shards = std::make_unique<SmallVector<uint8_t, 0>[]>(1);
     SmallVector<uint8_t, 0> &out = compressed.shards[0];
     out.resize_for_overwrite(std::max<size_t>(size / 2, 32));
@@ -424,6 +444,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
   }
   size += 4; // checksum
 
+  compressed.type = ELFCOMPRESS_ZLIB;
   compressed.shards = std::move(shardsOut);
   compressed.numShards = numShards;
   compressed.checksum = checksum;
@@ -450,20 +471,18 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   if (type == SHT_NOBITS)
     return;
 
-  // If --compress-debug-section is specified and if this is a debug section,
-  // we've already compressed section contents. If that's the case,
-  // just write it down.
+  // If the section is compressed due to
+  // --compress-debug-section/--compress-sections, the content is already known.
   if (compressed.shards) {
     auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
+    chdr->ch_type = compressed.type;
     chdr->ch_size = compressed.uncompressedSize;
     chdr->ch_addralign = addralign;
     buf += sizeof(*chdr);
-    if (config->compressDebugSections == DebugCompressionType::Zstd) {
-      chdr->ch_type = ELFCOMPRESS_ZSTD;
+    if (compressed.type == ELFCOMPRESS_ZSTD) {
       memcpy(buf, compressed.shards[0].data(), compressed.shards[0].size());
       return;
     }
-    chdr->ch_type = ELFCOMPRESS_ZLIB;
 
     // Compute shard offsets.
     auto offsets = std::make_unique<size_t[]>(compressed.numShards);

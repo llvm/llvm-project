@@ -65,6 +65,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let SubtargetPredicate = ps.SubtargetPredicate;
   let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
+  let TSFlags            = ps.TSFlags;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
   let mayStore           = ps.mayStore;
@@ -1734,14 +1735,12 @@ def DS_WRITE_B128_vi      : DS_Real_vi<0xdf, DS_WRITE_B128>;
 def DS_READ_B96_vi        : DS_Real_vi<0xfe, DS_READ_B96>;
 def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;
 
-let SubtargetPredicate = isGFX90APlus in {
-  def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
-  def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
-} // End SubtargetPredicate = isGFX90APlus
+// GFX90A+.
+def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
+def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
 
-let SubtargetPredicate = isGFX940Plus in {
-  def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
-  def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
-  def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
-  def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;
-} // End SubtargetPredicate = isGFX940Plus
+// GFX940+.
+def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
+def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
+def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
+def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;

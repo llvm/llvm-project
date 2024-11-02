@@ -23,7 +23,9 @@ extern char **environ;
 
 namespace Fortran::runtime {
 
-ExecutionEnvironment executionEnvironment;
+RT_OFFLOAD_VAR_GROUP_BEGIN
+RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
+RT_OFFLOAD_VAR_GROUP_END
 
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
@@ -47,7 +49,8 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   }
 }
 
-std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
+Fortran::common::optional<Convert> GetConvertFromString(
+    const char *x, std::size_t n) {
   static const char *keywords[]{
       "UNKNOWN", "NATIVE", "LITTLE_ENDIAN", "BIG_ENDIAN", "SWAP", nullptr};
   switch (IdentifyValue(x, n, keywords)) {
@@ -62,7 +65,7 @@ std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
   case 4:
     return Convert::Swap;
   default:
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 }
 
@@ -120,6 +123,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(
           stderr, "Fortran runtime: DEFAULT_UTF8=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_CHECK_POINTER_DEALLOCATION")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      checkPointerDeallocation = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_CHECK_POINTER_DEALLOCATION=%s is invalid; "
+          "ignored\n",
+          x);
     }
   }
 

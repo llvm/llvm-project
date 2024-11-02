@@ -118,6 +118,10 @@ def SigHandlerT : NamedType<"__sighandler_t">;
 
 def TimeTType : NamedType<"time_t">;
 
+def StructTimeSpec : NamedType<"struct timespec">;
+def StructTimeSpecPtr : PtrType<StructTimeSpec>;
+def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
+
 def BSearchCompareT : NamedType<"__bsearchcompare_t">;
 def QSortCompareT : NamedType<"__qsortcompare_t">;
 
@@ -148,6 +152,8 @@ def ActionType : NamedType<"ACTION">;
 def EntryType : NamedType<"ENTRY">;
 def EntryTypePtr : PtrType<EntryType>;
 def EntryTypePtrPtr : PtrType<EntryTypePtr>;
+
+def MBStateTType : NamedType<"mbstate_t">;
 
 class Macro<string name> {
   string Name = name;

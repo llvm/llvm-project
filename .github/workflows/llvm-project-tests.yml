@@ -118,6 +118,11 @@ jobs:
           else
             builddir="$(pwd)"/build
           fi
+          if [ "${{ runner.os }}" == "macOS" ]; then
+            # Workaround test failure on some lld tests on MacOS
+            # https://github.com/llvm/llvm-project/issues/81967
+            extra_cmake_args="-DLLVM_DISABLE_ASSEMBLY_FILES=ON"
+          fi
           echo "llvm-builddir=$builddir" >> "$GITHUB_OUTPUT"
           cmake -G Ninja \
                 -B "$builddir" \

@@ -12,6 +12,7 @@
 #ifndef FORTRAN_LOWER_CLAUASEPROCESSOR_H
 #define FORTRAN_LOWER_CLAUASEPROCESSOR_H
 
+#include "Clauses.h"
 #include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
@@ -51,7 +52,8 @@ public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
                   Fortran::semantics::SemanticsContext &semaCtx,
                   const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
+      : converter(converter), semaCtx(semaCtx), clauses2(clauses),
+        clauses(makeList(clauses, semaCtx)) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool
@@ -103,9 +105,8 @@ public:
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
-  bool
-  processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
-            mlir::Value &result) const;
+  bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
+                 mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
@@ -155,11 +156,15 @@ public:
                    llvm::omp::Directive directive) const;
 
 private:
-  using ClauseIterator = std::list<ClauseTy>::const_iterator;
+  using ClauseIterator = List<Clause>::const_iterator;
+  using ClauseIterator2 = std::list<ClauseTy>::const_iterator;
 
   /// Utility to find a clause within a range in the clause list.
   template <typename T>
   static ClauseIterator findClause(ClauseIterator begin, ClauseIterator end);
+  template <typename T>
+  static ClauseIterator2 findClause2(ClauseIterator2 begin,
+                                     ClauseIterator2 end);
 
   /// Return the first instance of the given clause found in the clause list or
   /// `nullptr` if not present. If more than one instance is expected, use
@@ -172,6 +177,10 @@ private:
   /// if at least one instance was found.
   template <typename T>
   bool findRepeatableClause(
+      std::function<void(const T &, const Fortran::parser::CharBlock &source)>
+          callbackFn) const;
+  template <typename T>
+  bool findRepeatableClause2(
       std::function<void(const T *, const Fortran::parser::CharBlock &source)>
           callbackFn) const;
 
@@ -181,14 +190,15 @@ private:
 
   Fortran::lower::AbstractConverter &converter;
   Fortran::semantics::SemanticsContext &semaCtx;
-  const Fortran::parser::OmpClauseList &clauses;
+  const Fortran::parser::OmpClauseList &clauses2;
+  List<Clause> clauses;
 };
 
 template <typename T>
 bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
-  return findRepeatableClause<T>(
+  return findRepeatableClause2<T>(
       [&](const T *motionClause, const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -248,7 +258,7 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
              " construct");
   };
 
-  for (ClauseIterator it = clauses.v.begin(); it != clauses.v.end(); ++it)
+  for (ClauseIterator2 it = clauses2.v.begin(); it != clauses2.v.end(); ++it)
     (checkUnhandledClause(std::get_if<Ts>(&it->u)), ...);
 }
 
@@ -264,10 +274,21 @@ ClauseProcessor::findClause(ClauseIterator begin, ClauseIterator end) {
 }
 
 template <typename T>
+ClauseProcessor::ClauseIterator2
+ClauseProcessor::findClause2(ClauseIterator2 begin, ClauseIterator2 end) {
+  for (ClauseIterator2 it = begin; it != end; ++it) {
+    if (std::get_if<T>(&it->u))
+      return it;
+  }
+
+  return end;
+}
+
+template <typename T>
 const T *ClauseProcessor::findUniqueClause(
     const Fortran::parser::CharBlock **source) const {
-  ClauseIterator it = findClause<T>(clauses.v.begin(), clauses.v.end());
-  if (it != clauses.v.end()) {
+  ClauseIterator it = findClause<T>(clauses.begin(), clauses.end());
+  if (it != clauses.end()) {
     if (source)
       *source = &it->source;
     return &std::get<T>(it->u);
@@ -277,12 +298,30 @@ const T *ClauseProcessor::findUniqueClause(
 
 template <typename T>
 bool ClauseProcessor::findRepeatableClause(
+    std::function<void(const T &, const Fortran::parser::CharBlock &source)>
+        callbackFn) const {
+  bool found = false;
+  ClauseIterator nextIt, endIt = clauses.end();
+  for (ClauseIterator it = clauses.begin(); it != endIt; it = nextIt) {
+    nextIt = findClause<T>(it, endIt);
+
+    if (nextIt != endIt) {
+      callbackFn(std::get<T>(nextIt->u), nextIt->source);
+      found = true;
+      ++nextIt;
+    }
+  }
+  return found;
+}
+
+template <typename T>
+bool ClauseProcessor::findRepeatableClause2(
     std::function<void(const T *, const Fortran::parser::CharBlock &source)>
         callbackFn) const {
   bool found = false;
-  ClauseIterator nextIt, endIt = clauses.v.end();
-  for (ClauseIterator it = clauses.v.begin(); it != endIt; it = nextIt) {
-    nextIt = findClause<T>(it, endIt);
+  ClauseIterator2 nextIt, endIt = clauses2.v.end();
+  for (ClauseIterator2 it = clauses2.v.begin(); it != endIt; it = nextIt) {
+    nextIt = findClause2<T>(it, endIt);
 
     if (nextIt != endIt) {
       callbackFn(&std::get<T>(nextIt->u), nextIt->source);

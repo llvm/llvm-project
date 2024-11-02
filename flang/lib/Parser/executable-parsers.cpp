@@ -542,19 +542,19 @@ TYPE_CONTEXT_PARSER("UNLOCK statement"_en_US,
 // CUF-kernel-do-directive ->
 //     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
 //     >>> do-construct
-// grid -> * | scalar-int-expr | ( scalar-int-expr-list )
-// block -> * | scalar-int-expr | ( scalar-int-expr-list )
+// star-or-expr -> * | scalar-int-expr
+// grid -> * | scalar-int-expr | ( star-or-expr-list )
+// block -> * | scalar-int-expr | ( star-or-expr-list )
 // stream -> ( 0, | STREAM = ) scalar-int-expr
+constexpr auto starOrExpr{construct<CUFKernelDoConstruct::StarOrExpr>(
+    "*" >> pure<std::optional<ScalarIntExpr>>() ||
+    applyFunction(presentOptional<ScalarIntExpr>, scalarIntExpr))};
+constexpr auto gridOrBlock{parenthesized(nonemptyList(starOrExpr)) ||
+    applyFunction(singletonList<CUFKernelDoConstruct::StarOrExpr>, starOrExpr)};
 TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
     construct<CUFKernelDoConstruct::Directive>(
-        maybe(parenthesized(scalarIntConstantExpr)),
-        "<<<" >>
-            ("*" >> pure<std::list<ScalarIntExpr>>() ||
-                parenthesized(nonemptyList(scalarIntExpr)) ||
-                applyFunction(singletonList<ScalarIntExpr>, scalarIntExpr)),
-        "," >> ("*" >> pure<std::list<ScalarIntExpr>>() ||
-                   parenthesized(nonemptyList(scalarIntExpr)) ||
-                   applyFunction(singletonList<ScalarIntExpr>, scalarIntExpr)),
+        maybe(parenthesized(scalarIntConstantExpr)), "<<<" >> gridOrBlock,
+        "," >> gridOrBlock,
         maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>" /
             endDirective)))
 TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,

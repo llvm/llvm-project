@@ -91,34 +91,42 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
 }
 
 /// Expands tanh op into
-///   1) 1-exp^{-2x} / 1+exp^{-2x}, if x => 0
-///   2) exp^{2x}-1 / exp^{2x}+1  , if x < 0
+/// 1-exp^{-2x} / 1+exp^{-2x}
+/// To avoid overflow we exploit the reflection symmetry `tanh(-x) = -tanh(x)`.
+/// We compute a "signs" value which is -1 if input is negative and +1 if input
+/// is positive.  Then multiply the input by this value, guaranteeing that the
+/// result is positive, which also guarantees `exp^{-2x * sign(x)}` is in (0,
+/// 1]. Expand the computation on the input `x * sign(x)`, then multiply the
+/// result by `sign(x)` to retain sign of the real result.
 static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   auto floatType = op.getOperand().getType();
   Location loc = op.getLoc();
+  Value zero = createFloatConst(loc, floatType, 0.0, rewriter);
   Value one = createFloatConst(loc, floatType, 1.0, rewriter);
-  Value two = createFloatConst(loc, floatType, 2.0, rewriter);
-  Value doubledX = rewriter.create<arith::MulFOp>(loc, op.getOperand(), two);
+  Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter);
 
-  // Case 1: tanh(x) = 1-exp^{-2x} / 1+exp^{-2x}
-  Value negDoubledX = rewriter.create<arith::NegFOp>(loc, doubledX);
+  // Compute sign(x) = cast<float_type>(x < 0) * (-2) + 1
+  Value isNegative = rewriter.create<arith::CmpFOp>(
+      loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
+  Value isNegativeFloat =
+      rewriter.create<arith::UIToFPOp>(loc, floatType, isNegative);
+  Value isNegativeTimesNegTwo =
+      rewriter.create<arith::MulFOp>(loc, isNegativeFloat, negTwo);
+  Value sign = rewriter.create<arith::AddFOp>(loc, isNegativeTimesNegTwo, one);
+
+  // Normalize input to positive value: y = sign(x) * x
+  Value positiveX = rewriter.create<arith::MulFOp>(loc, sign, op.getOperand());
+
+  // Decompose on normalized input
+  Value negDoubledX = rewriter.create<arith::MulFOp>(loc, negTwo, positiveX);
   Value exp2x = rewriter.create<math::ExpOp>(loc, negDoubledX);
   Value dividend = rewriter.create<arith::SubFOp>(loc, one, exp2x);
   Value divisor = rewriter.create<arith::AddFOp>(loc, one, exp2x);
   Value positiveRes = rewriter.create<arith::DivFOp>(loc, dividend, divisor);
 
-  // Case 2: tanh(x) = exp^{2x}-1 / exp^{2x}+1
-  exp2x = rewriter.create<math::ExpOp>(loc, doubledX);
-  dividend = rewriter.create<arith::SubFOp>(loc, exp2x, one);
-  divisor = rewriter.create<arith::AddFOp>(loc, exp2x, one);
-  Value negativeRes = rewriter.create<arith::DivFOp>(loc, dividend, divisor);
+  // Multiply result by sign(x) to retain signs from negative inputs
+  rewriter.replaceOpWithNewOp<arith::MulFOp>(op, sign, positiveRes);
 
-  // tanh(x) = x >= 0 ? positiveRes : negativeRes
-  Value zero = createFloatConst(loc, floatType, 0.0, rewriter);
-  Value cmpRes = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
-                                                op.getOperand(), zero);
-  rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmpRes, positiveRes,
-                                               negativeRes);
   return success();
 }
 

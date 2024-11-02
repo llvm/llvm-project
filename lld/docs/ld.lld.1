@@ -164,6 +164,10 @@ to set the compression level to 6.
 The compression level is 5.
 .El
 .Pp
+.It Fl -compress-sections Ns = Ns Ar section-glob=[none|zlib|zstd]
+Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+This is like a generalized
+.Cm --compress-debug-sections.
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
@@ -374,6 +378,8 @@ Do not put read-only non-executable sections in their own segment.
 Do not report version scripts that refer to undefined symbols.
 .It Fl -no-undefined
 Report unresolved symbols even if the linker is creating a shared library.
+.It Fl -no-warn-mismatch
+Do not reject unknown section types.
 .It Fl -no-warn-symbol-ordering
 Do not warn about problems with the symbol ordering file or call graph profile.
 .It Fl -no-warnings , Fl w

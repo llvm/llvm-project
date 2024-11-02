@@ -152,18 +152,18 @@ MlirAttribute mlirLLVMDIBasicTypeAttrGet(MlirContext ctx, unsigned int tag,
 }
 
 MlirAttribute mlirLLVMDICompositeTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute name, MlirAttribute file,
-    uint32_t line, MlirAttribute scope, MlirAttribute baseType, int64_t flags,
-    uint64_t sizeInBits, uint64_t alignInBits, intptr_t nElements,
-    MlirAttribute const *elements) {
+    MlirContext ctx, unsigned int tag, MlirAttribute recId, MlirAttribute name,
+    MlirAttribute file, uint32_t line, MlirAttribute scope,
+    MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
+    uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements) {
   SmallVector<Attribute> elementsStorage;
   elementsStorage.reserve(nElements);
 
   return wrap(DICompositeTypeAttr::get(
-      unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
-      cast<DIFileAttr>(unwrap(file)), line, cast<DIScopeAttr>(unwrap(scope)),
-      cast<DITypeAttr>(unwrap(baseType)), DIFlags(flags), sizeInBits,
-      alignInBits,
+      unwrap(ctx), tag, cast<DistinctAttr>(unwrap(recId)),
+      cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(file)), line,
+      cast<DIScopeAttr>(unwrap(scope)), cast<DITypeAttr>(unwrap(baseType)),
+      DIFlags(flags), sizeInBits, alignInBits,
       llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
                           [](Attribute a) { return a.cast<DINodeAttr>(); })));
 }

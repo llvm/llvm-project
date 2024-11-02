@@ -114,7 +114,7 @@ func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x
 // CHECK:               %[[VAL_18:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xindex>
 // CHECK:               %[[VAL_19:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_16]]] : memref<?xf32>
 // CHECK:               %[[VAL_20:.*]] = arith.mulf %[[VAL_19]], %[[VAL_4]] : f32
-// CHECK:               %[[VAL_21:.*]] = sparse_tensor.insert %[[VAL_20]] into %[[VAL_17]]{{\[}}%[[VAL_10]], %[[VAL_18]]] : tensor<10x20xf32, #sparse{{[0-9]*}}>
+// CHECK:               %[[VAL_21:.*]] = tensor.insert %[[VAL_20]] into %[[VAL_17]]{{\[}}%[[VAL_10]], %[[VAL_18]]] : tensor<10x20xf32, #sparse{{[0-9]*}}>
 // CHECK:               scf.yield %[[VAL_21]] : tensor<10x20xf32, #sparse{{[0-9]*}}>
 // CHECK:             }
 // CHECK:             scf.yield %[[VAL_22:.*]] : tensor<10x20xf32, #sparse{{[0-9]*}}>
@@ -248,7 +248,7 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK:                     scf.yield %[[VAL_100]], %[[VAL_103]], %[[VAL_104:.*]]#0, %[[VAL_104]]#1, %[[VAL_104]]#2 : index, index, i32, i1, tensor<?x?xi32, #sparse{{[0-9]*}}>
 // CHECK:                   }
 // CHECK:                   %[[VAL_202:.*]] = scf.if %[[VAL_74]]#3 -> (tensor<?x?xi32, #sparse{{[0-9]*}}>) {
-// CHECK:                     %[[VAL_105:.*]] = sparse_tensor.insert %[[VAL_74]]#2 into %[[VAL_74]]#4{{\[}}%[[VAL_39]], %[[VAL_63]]] : tensor<?x?xi32, #sparse{{[0-9]*}}>
+// CHECK:                     %[[VAL_105:.*]] = tensor.insert %[[VAL_74]]#2 into %[[VAL_74]]#4{{\[}}%[[VAL_39]], %[[VAL_63]]] : tensor<?x?xi32, #sparse{{[0-9]*}}>
 // CHECK:                     scf.yield %[[VAL_105]] : tensor<?x?xi32, #sparse{{[0-9]*}}>
 // CHECK:                   } else {
 // CHECK:                     scf.yield %[[VAL_74]]#4 : tensor<?x?xi32, #sparse{{[0-9]*}}>

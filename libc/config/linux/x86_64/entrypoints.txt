@@ -208,6 +208,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sscanf
     libc.src.stdio.scanf
     libc.src.stdio.fscanf
+    libc.src.stdio.fileno
 
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_wait
@@ -229,6 +230,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
     libc.src.sys.mman.msync
+    libc.src.sys.mman.shm_open
+    libc.src.sys.mman.shm_unlink
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -429,6 +432,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nexttoward
     libc.src.math.nexttowardf
     libc.src.math.nexttowardl
+    libc.src.math.nextdown
+    libc.src.math.nextdownf
+    libc.src.math.nextdownl
+    libc.src.math.nextup
+    libc.src.math.nextupf
+    libc.src.math.nextupl
     libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
@@ -481,6 +490,10 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.lrintf128
     libc.src.math.lroundf128
     libc.src.math.modff128
+    libc.src.math.nanf128
+    libc.src.math.nextafterf128
+    libc.src.math.nextdownf128
+    libc.src.math.nextupf128
     libc.src.math.rintf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
