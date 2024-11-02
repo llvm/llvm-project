@@ -53,12 +53,12 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @f2()
-declare i8* @f3()
+declare ptr @f3()
 
 define void @f1() {
   call void @f2()
   ; Make sure that the backend can handle undefined references.
   ; Do an indirect call so that the undefined ref shows up in the combined index.
-  call void bitcast (i8*()* @f3 to void()*)()
+  call void @f3()
   ret void
 }

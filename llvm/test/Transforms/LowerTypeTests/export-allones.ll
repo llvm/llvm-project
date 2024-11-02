@@ -141,17 +141,17 @@
 
 ; CHECK: [[G:@[0-9]+]] = private constant { [2048 x i8] } zeroinitializer
 
-; CHECK: @__typeid_typeid1_global_addr = hidden alias i8, getelementptr inbounds ({ [2048 x i8] }, { [2048 x i8] }* [[G]], i32 0, i32 0, i32 0)
-; X86: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 1 to i8*)
-; X86: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 1 to i8*)
+; CHECK: @__typeid_typeid1_global_addr = hidden alias i8, ptr [[G]]
+; X86: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 1 to ptr)
+; X86: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 1 to ptr)
 
-; CHECK: @__typeid_typeid2_global_addr = hidden alias i8, getelementptr inbounds ({ [2048 x i8] }, { [2048 x i8] }* [[G]], i32 0, i32 0, i64 4)
-; X86: @__typeid_typeid2_align = hidden alias i8, inttoptr (i8 2 to i8*)
-; X86: @__typeid_typeid2_size_m1 = hidden alias i8, inttoptr (i64 128 to i8*)
+; CHECK: @__typeid_typeid2_global_addr = hidden alias i8, getelementptr (i8, ptr [[G]], i64 4)
+; X86: @__typeid_typeid2_align = hidden alias i8, inttoptr (i8 2 to ptr)
+; X86: @__typeid_typeid2_size_m1 = hidden alias i8, inttoptr (i64 128 to ptr)
 
 ; ARM-NOT: alias {{.*}} inttoptr
 
-; CHECK: @foo = alias [2048 x i8], getelementptr inbounds ({ [2048 x i8] }, { [2048 x i8] }* [[G]], i32 0, i32 0)
+; CHECK: @foo = alias [2048 x i8], ptr [[G]]
 
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:

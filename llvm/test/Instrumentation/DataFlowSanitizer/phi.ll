@@ -6,11 +6,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define {i32, i32} @test({i32, i32} %a, i1 %c) {
-  ; CHECK: %[[#AL:]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
+  ; CHECK: %[[#AL:]] = load { i[[#SBITS]], i[[#SBITS]] }, ptr @__dfsan_arg_tls, align [[ALIGN:2]]
   ; CHECK: %[[#AL0:]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } %[[#AL]], i[[#SBITS]] 0, 0
   ; CHECK: %[[#AL1:]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } %[[#AL]], i[[#SBITS]] 0, 1
   ; CHECK: %[[#PL:]] = phi { i[[#SBITS]], i[[#SBITS]] } [ %[[#AL0]], %T ], [ %[[#AL1]], %F ]
-  ; CHECK: store { i[[#SBITS]], i[[#SBITS]] } %[[#PL]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
+  ; CHECK: store { i[[#SBITS]], i[[#SBITS]] } %[[#PL]], ptr @__dfsan_retval_tls, align [[ALIGN]]
 
 entry:
   br i1 %c, label %T, label %F

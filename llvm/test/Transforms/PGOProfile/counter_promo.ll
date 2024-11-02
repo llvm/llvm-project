@@ -46,16 +46,16 @@ bb9:                                              ; preds = %bb8, %bb7, %bb4
 
 bb12:                                             ; preds = %bb9
   ret void
-; NONATOMIC_PROMO: %[[PROMO1:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 0)
+; NONATOMIC_PROMO: %[[PROMO1:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}}
 ; NONATOMIC_PROMO-NEXT: add {{.*}} %[[PROMO1]], %[[LIVEOUT1]] 
-; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}0)
+; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}
 ; NONATOMIC_PROMO-NEXT: %[[PROMO2:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 1)
 ; NONATOMIC_PROMO-NEXT: add {{.*}} %[[PROMO2]], %[[LIVEOUT2]]
 ; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}1)
 ; NONATOMIC_PROMO-NEXT: %[[PROMO3:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 2)
 ; NONATOMIC_PROMO-NEXT: add {{.*}} %[[PROMO3]], %[[LIVEOUT3]]
 ; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}2)
-; ATOMIC_PROMO: atomicrmw add {{.*}} @__profc_foo{{.*}}0), i64 %[[LIVEOUT1]] seq_cst
+; ATOMIC_PROMO: atomicrmw add {{.*}} @__profc_foo{{.*}}, i64 %[[LIVEOUT1]] seq_cst
 ; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}}1), i64 %[[LIVEOUT2]] seq_cst
 ; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}}2), i64 %[[LIVEOUT3]] seq_cst
 ; PROMO-NOT: @__profc_foo{{.*}})

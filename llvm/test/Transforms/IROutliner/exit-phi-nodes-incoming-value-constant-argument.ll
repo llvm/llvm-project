@@ -57,7 +57,7 @@ bb5:
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], i32 [[A]], i32* null, i32 -1)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], i32 [[A]], ptr null, i32 -1)
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[E:%.*]] = sub i32 [[TMP0]], [[TMP1]]
@@ -72,11 +72,10 @@ bb5:
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i32* [[F_CE_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], i32 1, i32* [[F_CE_LOC]], i32 0)
-; CHECK-NEXT:    [[F_CE_RELOAD:%.*]] = load i32, i32* [[F_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[F_CE_LOC]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], i32 1, ptr [[F_CE_LOC]], i32 0)
+; CHECK-NEXT:    [[F_CE_RELOAD:%.*]] = load i32, ptr [[F_CE_LOC]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[F_CE_LOC]])
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[TMP0]], [[TMP1]]
@@ -101,7 +100,7 @@ bb5:
 ; CHECK-NEXT:    i32 0, label [[OUTPUT_BLOCK_1_0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       output_block_1_0:
-; CHECK-NEXT:    store i32 [[TMP5:%.*]], i32* [[TMP3:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TMP5:%.*]], ptr [[TMP3:%.*]], align 4
 ; CHECK-NEXT:    br label [[FINAL_BLOCK_0]]
 ; CHECK:       phi_block:
 ; CHECK-NEXT:    [[TMP5]] = phi i32 [ [[TMP2]], [[BB2_TO_OUTLINE]] ], [ [[TMP2]], [[BB3]] ]

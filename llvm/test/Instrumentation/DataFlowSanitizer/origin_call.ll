@@ -30,8 +30,8 @@ i1 %a190, i1 %a191, i1 %a192, i1 %a193, i1 %a194, i1 %a195, i1 %a196, i1 %a197, 
 i1 %a200
 ) {
   ; CHECK: @arg_overflow.dfsan
-  ; CHECK: [[A199:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 199), align 4
-  ; CHECK: store i32 [[A199]], i32* @__dfsan_retval_origin_tls, align 4
+  ; CHECK: [[A199:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 199), align 4
+  ; CHECK: store i32 [[A199]], ptr @__dfsan_retval_origin_tls, align 4
 
   %r = add i1 %a199, %a200
   ret i1 %r
@@ -39,12 +39,12 @@ i1 %a200
 
 define i1 @param_overflow(i1 %a) {
   ; CHECK: @param_overflow.dfsan
-  ; CHECK: store i32 %1, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 199), align 4
-  ; CHECK-NEXT: store i[[#SBITS]] %2, i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 398) to i[[#SBITS]]*), align 2
-  ; CHECK-NEXT: store i[[#SBITS]] %2, i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 400) to i[[#SBITS]]*), align 2
+  ; CHECK: store i32 %1, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 199), align 4
+  ; CHECK-NEXT: store i[[#SBITS]] %2, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 398) to ptr), align 2
+  ; CHECK-NEXT: store i[[#SBITS]] %2, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 400) to ptr), align 2
   ; CHECK-NEXT: %r = call i1 @arg_overflow.dfsan
-  ; CHECK: %_dfsret_o = load i32, i32* @__dfsan_retval_origin_tls, align 4
-  ; CHECK: store i32 %_dfsret_o, i32* @__dfsan_retval_origin_tls, align 4
+  ; CHECK: %_dfsret_o = load i32, ptr @__dfsan_retval_origin_tls, align 4
+  ; CHECK: store i32 %_dfsret_o, ptr @__dfsan_retval_origin_tls, align 4
 
   %r = call i1 @arg_overflow(
 i1 %a, i1 %a, i1 %a, i1 %a, i1 %a, i1 %a, i1 %a, i1 %a, i1 %a, i1 %a,
@@ -76,7 +76,7 @@ declare void @foo(i1 %a)
 
 define void @param_with_zero_shadow() {
   ; CHECK: @param_with_zero_shadow.dfsan
-  ; CHECK-NEXT: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
+  ; CHECK-NEXT: store i[[#SBITS]] 0, ptr @__dfsan_arg_tls, align 2
   ; CHECK-NEXT: call void @foo.dfsan(i1 true)
 
   call void @foo(i1 1)

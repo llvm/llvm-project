@@ -15,8 +15,8 @@ entry:
 
 ; CHECK: define internal void @__llvm_gcov_reset()
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* bitcast ([1 x i64]* @__llvm_gcov_ctr to i8*), i8 0, i64 8, i1 false)
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* bitcast ([1 x i64]* @__llvm_gcov_ctr.1 to i8*), i8 0, i64 8, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0.i64(ptr @__llvm_gcov_ctr, i8 0, i64 8, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0.i64(ptr @__llvm_gcov_ctr.1, i8 0, i64 8, i1 false)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

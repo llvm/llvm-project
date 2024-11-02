@@ -21,7 +21,7 @@ registers:
   - { id: 1, class: gprb }
 # ELF-NOMOVT: constants:
 # ELF-NOMOVT: id: 0
-# ELF-NOMOVT: value: 'i32* @internal_global'
+# ELF-NOMOVT: value: 'ptr @internal_global'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @internal_global
@@ -51,7 +51,7 @@ registers:
   - { id: 1, class: gprb }
 # ELF-NOMOVT: constants:
 # ELF-NOMOVT: id: 0
-# ELF-NOMOVT: value: 'i32* @external_global'
+# ELF-NOMOVT: value: 'ptr @external_global'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @external_global

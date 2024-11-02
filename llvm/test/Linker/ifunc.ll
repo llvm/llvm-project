@@ -3,23 +3,23 @@
 
 ;; Check that ifuncs are linked in properly.
 
-; CHECK-DAG: @foo = ifunc void (), void ()* ()* @foo_resolve
-; CHECK-DAG: define internal void ()* @foo_resolve() {
+; CHECK-DAG: @foo = ifunc void (), ptr @foo_resolve
+; CHECK-DAG: define internal ptr @foo_resolve() {
 
-; CHECK-DAG: @bar = ifunc void (), void ()* ()* @bar_resolve
-; CHECK-DAG: define internal void ()* @bar_resolve() {
+; CHECK-DAG: @bar = ifunc void (), ptr @bar_resolve
+; CHECK-DAG: define internal ptr @bar_resolve() {
 
 ;--- a.ll
 declare void @bar()
 
 ;--- b.ll
-@foo = ifunc void (), void ()* ()* @foo_resolve
-@bar = ifunc void (), void ()* ()* @bar_resolve
+@foo = ifunc void (), ptr @foo_resolve
+@bar = ifunc void (), ptr @bar_resolve
 
-define internal void ()* @foo_resolve() {
-  ret void ()* null
+define internal ptr @foo_resolve() {
+  ret ptr null
 }
 
-define internal void ()* @bar_resolve() {
-  ret void ()* null
+define internal ptr @bar_resolve() {
+  ret ptr null
 }

@@ -12,9 +12,9 @@ define dso_local i32 @no_instr(i32 %a) noprofile !dbg !9 {
 
 define dso_local i32 @instr(i32 %a) !dbg !28 {
 ; CHECK-LABEL: @instr(
-; CHECK-NEXT:    [[GCOV_CTR:%.*]] = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0), align 4, !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    [[GCOV_CTR:%.*]] = load i64, ptr @__llvm_gcov_ctr, align 4, !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[GCOV_CTR]], 1, !dbg [[DBG8]]
-; CHECK-NEXT:    store i64 [[TMP1]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0), align 4, !dbg [[DBG8]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__llvm_gcov_ctr, align 4, !dbg [[DBG8]]
 ; CHECK-NEXT:    ret i32 42, !dbg [[DBG8]]
 ;
   ret i32 42, !dbg !44

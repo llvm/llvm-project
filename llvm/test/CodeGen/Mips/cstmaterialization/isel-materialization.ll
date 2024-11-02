@@ -21,7 +21,7 @@ entry:
 ; MIPS-DAG: t{{[0-9]+}}: i32 = ADDiu Register:i32 $zero, TargetConstant:i32<1>
 ; MIPS-DAG: t{{[0-9]+}}: i32 = ADDiu Register:i32 $zero, TargetConstant:i32<2048>
 ; MIPS-DAG: t{{[0-9]+}}: i32 = LUi TargetConstant:i32<128>
-; MIPS:     t{{[0-9]+}}: ch,glue = JAL TargetGlobalAddress:i32<void (i32, i32, i32)* @f>
+; MIPS:     t{{[0-9]+}}: ch,glue = JAL TargetGlobalAddress:i32<ptr @f>
 
 ; MIPS:     t[[A:[0-9]+]]: i32 = LUi TargetConstant:i32<2304>
 ; MIPS:     t{{[0-9]+}}: i32 = ORi t[[A]], TargetConstant:i32<2>
@@ -30,7 +30,7 @@ entry:
 ; MM-DAG: t{{[0-9]+}}: i32 = LI16_MM TargetConstant:i32<1>
 ; MM-DAG: t{{[0-9]+}}: i32 = ADDiu_MM Register:i32 $zero, TargetConstant:i32<2048>
 ; MM-DAG: t{{[0-9]+}}: i32 = LUi_MM TargetConstant:i32<128>
-; MM:     t{{[0-9]+}}: ch,glue = JAL_MM TargetGlobalAddress:i32<void (i32, i32, i32)* @f>
+; MM:     t{{[0-9]+}}: ch,glue = JAL_MM TargetGlobalAddress:i32<ptr @f>
 
 ; MM:     t[[A:[0-9]+]]: i32 = LUi_MM TargetConstant:i32<2304>
 ; MM:     t{{[0-9]+}}: i32 = ORi_MM t[[A]], TargetConstant:i32<2>

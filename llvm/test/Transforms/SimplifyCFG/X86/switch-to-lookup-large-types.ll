@@ -15,8 +15,8 @@ define i8 @switch_to_lookup_i64(i128 %x){
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i8 [ [[SWITCH_LOAD:%.*]], [[SWITCH_LOOKUP]] ], [ 10, [[START:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i8], [3 x i8]* @switch.table.switch_to_lookup_i64, i32 0, i128 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD]] = load i8, i8* [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i8], ptr @switch.table.switch_to_lookup_i64, i32 0, i128 [[X]]
+; CHECK-NEXT:    [[SWITCH_LOAD]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 start:
@@ -49,8 +49,8 @@ define i8 @switch_to_lookup_i128(i128 %x){
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i8 [ [[SWITCH_LOAD:%.*]], [[SWITCH_LOOKUP]] ], [ 10, [[START:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i8], [3 x i8]* @switch.table.switch_to_lookup_i128, i32 0, i128 [[X]]
-; CHECK-NEXT:    [[SWITCH_LOAD]] = load i8, i8* [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i8], ptr @switch.table.switch_to_lookup_i128, i32 0, i128 [[X]]
+; CHECK-NEXT:    [[SWITCH_LOAD]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 start:

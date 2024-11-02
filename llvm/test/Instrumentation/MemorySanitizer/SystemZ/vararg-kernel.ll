@@ -52,73 +52,73 @@ attributes #1 = { sanitize_memory }
 
 ; CHECK-LABEL: @bar
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 24
 ; CHECK: [[V:%.*]] = zext {{.*}}
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[V]], {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 36
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i32*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 40
 ; CHECK: [[V:%.*]] = sext {{.*}}
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[V]], {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 48
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 160
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 168
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 176
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 184
 ; CHECK: [[V:%.*]] = zext {{.*}}
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[V]], {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 192
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 204
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i32*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 208
 ; CHECK: [[V:%.*]] = sext {{.*}}
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[V]], {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 216
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
-; CHECK: [[B:%.*]] = ptrtoint [100 x i64]* %va_arg_shadow to i64
+; CHECK: [[B:%.*]] = ptrtoint ptr %va_arg_shadow to i64
 ; CHECK: [[S:%.*]] = add i64 [[B]], 224
-; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to i64*
+; CHECK: [[M:%_msarg_va_s.*]] = inttoptr i64 [[S]] to ptr
 ; CHECK: store {{.*}} [[M]]
 
 ; CHECK: store {{.*}} 72, {{.*}} %va_arg_overflow_size

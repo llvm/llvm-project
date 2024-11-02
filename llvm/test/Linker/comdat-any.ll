@@ -33,22 +33,22 @@ define void @bar() comdat($foo) {
 $c1 = comdat any
 
 @v1 = weak_odr global i32 42, comdat($c1)
-define weak_odr i32 @f1(i8*) comdat($c1) {
+define weak_odr i32 @f1(ptr) comdat($c1) {
 bb10:
   br label %bb11
 bb11:
   ret i32 42
 }
 
-@r11 = global i32* @v1
-@r12 = global i32 (i8*)* @f1
+@r11 = global ptr @v1
+@r12 = global ptr @f1
 
-@a11 = alias i32, i32* @v1
-@a12 = alias i16, bitcast (i32* @v1 to i16*)
+@a11 = alias i32, ptr @v1
+@a12 = alias i16, ptr @v1
 
-@a13 = alias i32 (i8*), i32 (i8*)* @f1
-@a14 = alias i16, bitcast (i32 (i8*)* @f1 to i16*)
-@a15 = alias i16, i16* @a14
+@a13 = alias i32 (ptr), ptr @f1
+@a14 = alias i16, ptr @f1
+@a15 = alias i16, ptr @a14
 
 ; CHECK2: $c1 = comdat any
 ; CHECK2: $c2 = comdat any
@@ -57,36 +57,36 @@ bb11:
 
 ; CHECK2-DAG: @v1 = weak_odr global i32 42, comdat($c1)
 
-; CHECK2-DAG: @r11 = global i32* @v1{{$}}
-; CHECK2-DAG: @r12 = global i32 (i8*)* @f1{{$}}
+; CHECK2-DAG: @r11 = global ptr @v1{{$}}
+; CHECK2-DAG: @r12 = global ptr @f1{{$}}
 
-; CHECK2-DAG: @r21 = global i32* @v1{{$}}
-; CHECK2-DAG: @r22 = global i32 (i8*)* @f1{{$}}
+; CHECK2-DAG: @r21 = global ptr @v1{{$}}
+; CHECK2-DAG: @r22 = global ptr @f1{{$}}
 
 ; CHECK2-DAG: @v1.1 = internal global i32 41, comdat($c2)
 
-; CHECK2-DAG: @a11 = alias i32, i32* @v1{{$}}
-; CHECK2-DAG: @a12 = alias i16, bitcast (i32* @v1 to i16*)
+; CHECK2-DAG: @a11 = alias i32, ptr @v1{{$}}
+; CHECK2-DAG: @a12 = alias i16, ptr @v1
 
-; CHECK2-DAG: @a13 = alias i32 (i8*), i32 (i8*)* @f1{{$}}
-; CHECK2-DAG: @a14 = alias i16, bitcast (i32 (i8*)* @f1 to i16*)
+; CHECK2-DAG: @a13 = alias i32 (ptr), ptr @f1{{$}}
+; CHECK2-DAG: @a14 = alias i16, ptr @f1
 
-; CHECK2-DAG: @a21 = alias i32, i32* @v1.1{{$}}
-; CHECK2-DAG: @a22 = alias i16, bitcast (i32* @v1.1 to i16*)
+; CHECK2-DAG: @a21 = alias i32, ptr @v1.1{{$}}
+; CHECK2-DAG: @a22 = alias i16, ptr @v1.1
 
-; CHECK2-DAG: @a23 = alias i32 (i8*), i32 (i8*)* @f1.2{{$}}
-; CHECK2-DAG: @a24 = alias i16, bitcast (i32 (i8*)* @f1.2 to i16*)
+; CHECK2-DAG: @a23 = alias i32 (ptr), ptr @f1.2{{$}}
+; CHECK2-DAG: @a24 = alias i16, ptr @f1.2
 
-; CHECK2:      define weak_odr protected i32 @f1(i8* %0) comdat($c1) {
+; CHECK2:      define weak_odr protected i32 @f1(ptr %0) comdat($c1) {
 ; CHECK2-NEXT: bb10:
 ; CHECK2-NEXT:   br label %bb11{{$}}
 ; CHECK2:      bb11:
 ; CHECK2-NEXT:   ret i32 42
 ; CHECK2-NEXT: }
 
-; CHECK2:      define internal i32 @f1.2(i8* %this) comdat($c2) {
+; CHECK2:      define internal i32 @f1.2(ptr %this) comdat($c2) {
 ; CHECK2-NEXT: bb20:
-; CHECK2-NEXT:   store i8* %this, i8** null
+; CHECK2-NEXT:   store ptr %this, ptr null
 ; CHECK2-NEXT:   br label %bb21
 ; CHECK2:      bb21:
 ; CHECK2-NEXT:   ret i32 41
@@ -99,38 +99,38 @@ $c1 = comdat any
 ; This is only present in this file. The linker will keep $c1 from the first
 ; file and this will be undefined.
 @will_be_undefined = global i32 1, comdat($c1)
-@use = global i32* @will_be_undefined
+@use = global ptr @will_be_undefined
 
 @v1 = weak_odr global i32 41, comdat($c2)
-define weak_odr protected i32 @f1(i8* %this) comdat($c2) {
+define weak_odr protected i32 @f1(ptr %this) comdat($c2) {
 bb20:
-  store i8* %this, i8** null
+  store ptr %this, ptr null
   br label %bb21
 bb21:
   ret i32 41
 }
 
-@r21 = global i32* @v1
-@r22 = global i32(i8*)* @f1
+@r21 = global ptr @v1
+@r22 = global ptr @f1
 
-@a21 = alias i32, i32* @v1
-@a22 = alias i16, bitcast (i32* @v1 to i16*)
+@a21 = alias i32, ptr @v1
+@a22 = alias i16, ptr @v1
 
-@a23 = alias i32(i8*), i32(i8*)* @f1
-@a24 = alias i16, bitcast (i32(i8*)* @f1 to i16*)
-@a25 = alias i16, i16* @a24
+@a23 = alias i32(ptr), ptr @f1
+@a24 = alias i16, ptr @f1
+@a25 = alias i16, ptr @a24
 
 ;--- 3.ll
 ; CHECK3: @bar = global i32 0, comdat($a1)
 ; CHECK3: @baz = private global i32 42, comdat($a1)
-; CHECK3: @a1 = internal alias i32, i32* @baz
+; CHECK3: @a1 = internal alias i32, ptr @baz
 $a1 = comdat any
 @bar = global i32 0, comdat($a1)
 
 ;--- 3-aux.ll
 $a1 = comdat any
 @baz = private global i32 42, comdat($a1)
-@a1 = internal alias i32, i32* @baz
-define i32* @abc() {
-  ret i32* @a1
+@a1 = internal alias i32, ptr @baz
+define ptr @abc() {
+  ret ptr @a1
 }

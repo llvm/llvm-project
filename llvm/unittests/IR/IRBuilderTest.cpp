@@ -436,7 +436,7 @@ TEST_F(IRBuilderTest, Lifetime) {
   EXPECT_EQ(Start3->getArgOperand(0), Builder.getInt64(100));
 
   EXPECT_EQ(Start1->getArgOperand(1), Var1);
-  EXPECT_NE(Start2->getArgOperand(1), Var2);
+  EXPECT_EQ(Start2->getArgOperand(1)->stripPointerCasts(), Var2);
   EXPECT_EQ(Start3->getArgOperand(1), Var3);
 
   Value *End1 = Builder.CreateLifetimeEnd(Var1);

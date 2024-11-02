@@ -21,48 +21,44 @@ llvm.func @testenterdataop(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>, %arg2: 
   llvm.return
 }
 
-// CHECK: %struct.ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 // CHECK: [[LOCSTR:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testenterdataop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[LOCSTR]], i32 0, i32 0) }, align 8
+// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr [[LOCSTR]] }, align 8
 // CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPNAME2:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPTYPES:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 0, i64 1]
-// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x i8*] [i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME1]], i32 0, i32 0), i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME2]], i32 0, i32 0)]
+// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x ptr] [ptr [[MAPNAME1]], ptr [[MAPNAME2]]]
 
-// CHECK: define void @testenterdataop(float* %{{.*}}, float* %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, float* [[SIMPLEPTR:%.*]])
-// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
-// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
+// CHECK: define void @testenterdataop(ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, ptr [[SIMPLEPTR:%.*]])
+// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
+// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
 // CHECK: [[SIZE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i64], align 8
 
 // CHECK: [[ARGBASE:%.*]] = extractvalue %openacc_data %{{.*}}, 0
 // CHECK: [[ARG:%.*]] = extractvalue %openacc_data %{{.*}}, 1
 // CHECK: [[ARGSIZE:%.*]] = extractvalue %openacc_data %{{.*}}, 2
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to { float*, float*, i64, [1 x i64], [1 x i64] }*
-// CHECK: store { float*, float*, i64, [1 x i64], [1 x i64] } [[ARGBASE]], { float*, float*, i64, [1 x i64], [1 x i64] }* [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[ARG]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
-// CHECK: store i64 [[ARGSIZE]], i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: store { ptr, ptr, i64, [1 x i64], [1 x i64] } [[ARGBASE]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: store ptr [[ARG]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: store i64 [[ARGSIZE]], ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 1
+// CHECK: store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
 
-// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* [[LOCGLOBAL]], i64 -1, i32 2, i8** [[ARGBASE_ALLOCA_GEP]], i8** [[ARG_ALLOCA_GEP]], i64* [[SIZE_ALLOCA_GEP]], i64* getelementptr inbounds ([{{[0-9]*}} x i64], [{{[0-9]*}} x i64]* [[MAPTYPES]], i32 0, i32 0), i8** getelementptr inbounds ([{{[0-9]*}} x i8*], [{{[0-9]*}} x i8*]* [[MAPNAMES]], i32 0, i32 0), i8** null)
+// CHECK: call void @__tgt_target_data_begin_mapper(ptr [[LOCGLOBAL]], i64 -1, i32 2, ptr [[ARGBASE_ALLOCA_GEP]], ptr [[ARG_ALLOCA_GEP]], ptr [[SIZE_ALLOCA_GEP]], ptr [[MAPTYPES]], ptr [[MAPNAMES]], ptr null)
 
-// CHECK: declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**) #0
+// CHECK: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr) #0
 
 // -----
 
@@ -81,48 +77,44 @@ llvm.func @testexitdataop(%arg0: !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 
   llvm.return
 }
 
-// CHECK: %struct.ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 // CHECK: [[LOCSTR:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testexitdataop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[LOCSTR]], i32 0, i32 0) }, align 8
+// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr [[LOCSTR]] }, align 8
 // CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPNAME2:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPTYPES:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 8, i64 2]
-// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x i8*] [i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME1]], i32 0, i32 0), i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME2]], i32 0, i32 0)]
+// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x ptr] [ptr [[MAPNAME1]], ptr [[MAPNAME2]]]
 
-// CHECK: define void @testexitdataop({ float*, float*, i64, [1 x i64], [1 x i64] } %{{.*}}, float* [[SIMPLEPTR:%.*]])
-// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
-// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
+// CHECK: define void @testexitdataop({ ptr, ptr, i64, [1 x i64], [1 x i64] } %{{.*}}, ptr [[SIMPLEPTR:%.*]])
+// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
+// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
 // CHECK: [[SIZE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i64], align 8
 
 // CHECK: [[ARGBASE:%.*]] = extractvalue %openacc_data %{{.*}}, 0
 // CHECK: [[ARG:%.*]] = extractvalue %openacc_data %{{.*}}, 1
 // CHECK: [[ARGSIZE:%.*]] = extractvalue %openacc_data %{{.*}}, 2
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to { float*, float*, i64, [1 x i64], [1 x i64] }*
-// CHECK: store { float*, float*, i64, [1 x i64], [1 x i64] } [[ARGBASE]], { float*, float*, i64, [1 x i64], [1 x i64] }* [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[ARG]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
-// CHECK: store i64 [[ARGSIZE]], i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: store { ptr, ptr, i64, [1 x i64], [1 x i64] } [[ARGBASE]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: store ptr [[ARG]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: store i64 [[ARGSIZE]], ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 1
+// CHECK: store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
 
-// CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* [[LOCGLOBAL]], i64 -1, i32 2, i8** [[ARGBASE_ALLOCA_GEP]], i8** [[ARG_ALLOCA_GEP]], i64* [[SIZE_ALLOCA_GEP]], i64* getelementptr inbounds ([{{[0-9]*}} x i64], [{{[0-9]*}} x i64]* [[MAPTYPES]], i32 0, i32 0), i8** getelementptr inbounds ([{{[0-9]*}} x i8*], [{{[0-9]*}} x i8*]* [[MAPNAMES]], i32 0, i32 0), i8** null)
+// CHECK: call void @__tgt_target_data_end_mapper(ptr [[LOCGLOBAL]], i64 -1, i32 2, ptr [[ARGBASE_ALLOCA_GEP]], ptr [[ARG_ALLOCA_GEP]], ptr [[SIZE_ALLOCA_GEP]], ptr [[MAPTYPES]], ptr [[MAPNAMES]], ptr null)
 
-// CHECK: declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**) #0
+// CHECK: declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr) #0
 
 // -----
 
@@ -140,48 +132,44 @@ llvm.func @testupdateop(%arg0: !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x 
   llvm.return
 }
 
-// CHECK: %struct.ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 // CHECK: [[LOCSTR:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testupdateop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[LOCSTR]], i32 0, i32 0) }, align 8
+// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr [[LOCSTR]] }, align 8
 // CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPNAME2:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPTYPES:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 2, i64 1]
-// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x i8*] [i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME1]], i32 0, i32 0), i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME2]], i32 0, i32 0)]
+// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x ptr] [ptr [[MAPNAME1]], ptr [[MAPNAME2]]]
 
-// CHECK: define void @testupdateop({ float*, float*, i64, [1 x i64], [1 x i64] } %{{.*}}, float* [[SIMPLEPTR:%.*]])
-// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
-// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
+// CHECK: define void @testupdateop({ ptr, ptr, i64, [1 x i64], [1 x i64] } %{{.*}}, ptr [[SIMPLEPTR:%.*]])
+// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
+// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
 // CHECK: [[SIZE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i64], align 8
 
 // CHECK: [[ARGBASE:%.*]] = extractvalue %openacc_data %{{.*}}, 0
 // CHECK: [[ARG:%.*]] = extractvalue %openacc_data %{{.*}}, 1
 // CHECK: [[ARGSIZE:%.*]] = extractvalue %openacc_data %{{.*}}, 2
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to { float*, float*, i64, [1 x i64], [1 x i64] }*
-// CHECK: store { float*, float*, i64, [1 x i64], [1 x i64] } [[ARGBASE]], { float*, float*, i64, [1 x i64], [1 x i64] }* [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[ARG]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
-// CHECK: store i64 [[ARGSIZE]], i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: store { ptr, ptr, i64, [1 x i64], [1 x i64] } [[ARGBASE]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: store ptr [[ARG]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: store i64 [[ARGSIZE]], ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 1
+// CHECK: store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
 
-// CHECK: call void @__tgt_target_data_update_mapper(%struct.ident_t* [[LOCGLOBAL]], i64 -1, i32 2, i8** [[ARGBASE_ALLOCA_GEP]], i8** [[ARG_ALLOCA_GEP]], i64* [[SIZE_ALLOCA_GEP]], i64* getelementptr inbounds ([{{[0-9]*}} x i64], [{{[0-9]*}} x i64]* [[MAPTYPES]], i32 0, i32 0), i8** getelementptr inbounds ([{{[0-9]*}} x i8*], [{{[0-9]*}} x i8*]* [[MAPNAMES]], i32 0, i32 0), i8** null)
+// CHECK: call void @__tgt_target_data_update_mapper(ptr [[LOCGLOBAL]], i64 -1, i32 2, ptr [[ARGBASE_ALLOCA_GEP]], ptr [[ARG_ALLOCA_GEP]], ptr [[SIZE_ALLOCA_GEP]], ptr [[MAPTYPES]], ptr [[MAPNAMES]], ptr null)
 
-// CHECK: declare void @__tgt_target_data_update_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**) #0
+// CHECK: declare void @__tgt_target_data_update_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr) #0
 
 // -----
 
@@ -203,55 +191,51 @@ llvm.func @testdataop(%arg0: !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i6
   llvm.return
 }
 
-// CHECK: %struct.ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 // CHECK: [[LOCSTR:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testdataop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[LOCSTR]], i32 0, i32 0) }, align 8
+// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr [[LOCSTR]] }, align 8
 // CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPNAME2:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPTYPES:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 8195, i64 8194]
-// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x i8*] [i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME1]], i32 0, i32 0), i8* getelementptr inbounds ([{{[0-9]*}} x i8], [{{[0-9]*}} x i8]* [[MAPNAME2]], i32 0, i32 0)]
+// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x ptr] [ptr [[MAPNAME1]], ptr [[MAPNAME2]]]
 
-// CHECK: define void @testdataop({ float*, float*, i64, [1 x i64], [1 x i64] } %{{.*}}, float* [[SIMPLEPTR:%.*]], i32* %{{.*}})
-// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
-// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i8*], align 8
+// CHECK: define void @testdataop({ ptr, ptr, i64, [1 x i64], [1 x i64] } %{{.*}}, ptr [[SIMPLEPTR:%.*]], ptr %{{.*}})
+// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
+// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
 // CHECK: [[SIZE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i64], align 8
 
 // CHECK: [[ARGBASE:%.*]] = extractvalue %openacc_data %{{.*}}, 0
 // CHECK: [[ARG:%.*]] = extractvalue %openacc_data %{{.*}}, 1
 // CHECK: [[ARGSIZE:%.*]] = extractvalue %openacc_data %{{.*}}, 2
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to { float*, float*, i64, [1 x i64], [1 x i64] }*
-// CHECK: store { float*, float*, i64, [1 x i64], [1 x i64] } [[ARGBASE]], { float*, float*, i64, [1 x i64], [1 x i64] }* [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[ARG]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
-// CHECK: store i64 [[ARGSIZE]], i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: store { ptr, ptr, i64, [1 x i64], [1 x i64] } [[ARGBASE]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: store ptr [[ARG]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: store i64 [[ARGSIZE]], ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGBASEGEPCAST:%.*]] = bitcast i8** [[ARGBASEGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGBASEGEPCAST]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 1
-// CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
-// CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGBASEGEP]], align 8
+// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 1
+// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGGEP]], align 8
+// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 1
+// CHECK: store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr [[SIZEGEP]], align 4
 
-// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
-// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* [[LOCGLOBAL]], i64 -1, i32 2, i8** [[ARGBASE_ALLOCA_GEP]], i8** [[ARG_ALLOCA_GEP]], i64* [[SIZE_ALLOCA_GEP]], i64* getelementptr inbounds ([{{[0-9]*}} x i64], [{{[0-9]*}} x i64]* [[MAPTYPES]], i32 0, i32 0), i8** getelementptr inbounds ([{{[0-9]*}} x i8*], [{{[0-9]*}} x i8*]* [[MAPNAMES]], i32 0, i32 0), i8** null)
+// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK: call void @__tgt_target_data_begin_mapper(ptr [[LOCGLOBAL]], i64 -1, i32 2, ptr [[ARGBASE_ALLOCA_GEP]], ptr [[ARG_ALLOCA_GEP]], ptr [[SIZE_ALLOCA_GEP]], ptr [[MAPTYPES]], ptr [[MAPNAMES]], ptr null)
 // CHECK: br label %acc.data
 
 // CHECK:      acc.data:
-// CHECK-NEXT:   store i32 2, i32* %{{.*}}
+// CHECK-NEXT:   store i32 2, ptr %{{.*}}
 // CHECK-NEXT:   br label %acc.end_data
 
 // CHECK: acc.end_data:
-// CHECK:   [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK:   [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK:   [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 0
-// CHECK:   call void @__tgt_target_data_end_mapper(%struct.ident_t* [[LOCGLOBAL]], i64 -1, i32 2, i8** [[ARGBASE_ALLOCA_GEP]], i8** [[ARG_ALLOCA_GEP]], i64* [[SIZE_ALLOCA_GEP]], i64* getelementptr inbounds ([{{[0-9]*}} x i64], [{{[0-9]*}} x i64]* [[MAPTYPES]], i32 0, i32 0), i8** getelementptr inbounds ([{{[0-9]*}} x i8*], [{{[0-9]*}} x i8*]* [[MAPNAMES]], i32 0, i32 0), i8** null)
+// CHECK:   [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
+// CHECK:   [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
+// CHECK:   [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
+// CHECK:   call void @__tgt_target_data_end_mapper(ptr [[LOCGLOBAL]], i64 -1, i32 2, ptr [[ARGBASE_ALLOCA_GEP]], ptr [[ARG_ALLOCA_GEP]], ptr [[SIZE_ALLOCA_GEP]], ptr [[MAPTYPES]], ptr [[MAPNAMES]], ptr null)
 
-// CHECK: declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
-// CHECK: declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
+// CHECK: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+// CHECK: declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)

@@ -4,36 +4,36 @@
 ; CHECK: @"__A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".just.my.code", align 1, !dbg !5
 
 ; CHECK: define void @l1() !dbg !12 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__7DF23CF5_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__7DF23CF5_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @l2() !dbg !16 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__7DF23CF5_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__7DF23CF5_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w1() !dbg !18 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w2() !dbg !19 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w3() !dbg !21 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: define void @w4() !dbg !23 {
-; CHECK:   call void @__CheckForDebuggerJustMyCode(i8* noundef @"__A8764FDD_x@c")
+; CHECK:   call void @__CheckForDebuggerJustMyCode(ptr noundef @"__A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: define weak void @__CheckForDebuggerJustMyCode(i8* noundef %0) unnamed_addr {
+; CHECK: define weak void @__CheckForDebuggerJustMyCode(ptr noundef %0) unnamed_addr {
 ; CHECK:   ret void
 ; CHECK: }
 

@@ -577,13 +577,13 @@ define double @fcmp_nnan(double %a, double %y, double %z) {
 ; FP library calls can have fast-math-flags.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
-; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<double (double)* @log2>
+; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<ptr @log2>
 ; FMFDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
 ; FMFDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
-; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<double (double)* @log2>
+; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<ptr @log2>
 ; GLOBALDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
 ; GLOBALDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'

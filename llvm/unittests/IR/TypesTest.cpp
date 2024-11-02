@@ -48,6 +48,7 @@ TEST(TypesTest, CopyPointerType) {
   EXPECT_TRUE(P1C0->isOpaque());
 
   LLVMContext CTypedPointers;
+  CTypedPointers.setOpaquePointers(false);
   Type *Int8 = Type::getInt8Ty(CTypedPointers);
   PointerType *P2 = PointerType::get(Int8, 1);
   EXPECT_FALSE(P2->isOpaque());

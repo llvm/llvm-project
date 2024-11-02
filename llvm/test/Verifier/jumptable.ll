@@ -5,4 +5,4 @@ define i32 @f() jumptable {
 }
 
 ; CHECK: Attribute 'jumptable' requires 'unnamed_addr'
-; CHECK: i32 ()* @f
+; CHECK: ptr @f

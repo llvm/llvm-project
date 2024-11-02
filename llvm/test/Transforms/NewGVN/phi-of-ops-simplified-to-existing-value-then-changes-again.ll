@@ -83,7 +83,7 @@ define void @pr42422(i1 %c.1, i1 %c.2) {
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br label [[BB16]]
 ; CHECK:       bb15:
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[BB16]]
 ; CHECK:       bb16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i32 [ poison, [[BB15]] ], [ 1, [[BB14]] ], [ 9, [[BB7]] ]

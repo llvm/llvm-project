@@ -29,7 +29,7 @@ registers:
   - { id: 1, class: gprb }
 # RW-DEFAULT-NOMOVT: constants:
 # RW-DEFAULT-NOMOVT: id: 0
-# RW-DEFAULT-NOMOVT: value: 'i32* @internal_global'
+# RW-DEFAULT-NOMOVT: value: 'ptr @internal_global'
 # RWPI-NOMOVT: constants:
 # RWPI-NOMOVT: id: 0
 # RWPI-NOMOVT: value: 'internal_global(SBREL)'
@@ -63,7 +63,7 @@ registers:
   - { id: 1, class: gprb }
 # RW-DEFAULT-NOMOVT: constants:
 # RW-DEFAULT-NOMOVT: id: 0
-# RW-DEFAULT-NOMOVT: value: 'i32* @external_global'
+# RW-DEFAULT-NOMOVT: value: 'ptr @external_global'
 # RWPI-NOMOVT: constants:
 # RWPI-NOMOVT: id: 0
 # RWPI-NOMOVT: value: 'external_global(SBREL)'
@@ -97,7 +97,7 @@ registers:
   - { id: 1, class: gprb }
 # RO-DEFAULT-NOMOVT: constants:
 # RO-DEFAULT-NOMOVT: id: 0
-# RO-DEFAULT-NOMOVT: value: 'i32* @internal_constant'
+# RO-DEFAULT-NOMOVT: value: 'ptr @internal_constant'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @internal_constant
@@ -127,7 +127,7 @@ registers:
   - { id: 1, class: gprb }
 # RO-DEFAULT-NOMOVT: constants:
 # RO-DEFAULT-NOMOVT: id: 0
-# RO-DEFAULT-NOMOVT: value: 'i32* @external_constant'
+# RO-DEFAULT-NOMOVT: value: 'ptr @external_constant'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @external_constant

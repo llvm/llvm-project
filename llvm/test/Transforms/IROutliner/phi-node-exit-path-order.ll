@@ -58,11 +58,10 @@ bb5:
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i32* [[F_CE_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], i32* [[F_CE_LOC]], i32 0)
-; CHECK-NEXT:    [[F_CE_RELOAD:%.*]] = load i32, i32* [[F_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[F_CE_LOC]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], ptr [[F_CE_LOC]], i32 0)
+; CHECK-NEXT:    [[F_CE_RELOAD:%.*]] = load i32, ptr [[F_CE_LOC]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[F_CE_LOC]])
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[E:%.*]] = sub i32 [[TMP0]], [[TMP1]]
@@ -78,11 +77,10 @@ bb5:
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i32* [[F_CE_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], i32* [[F_CE_LOC]], i32 1)
-; CHECK-NEXT:    [[F_CE_RELOAD:%.*]] = load i32, i32* [[F_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[F_CE_LOC]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], ptr [[F_CE_LOC]], i32 1)
+; CHECK-NEXT:    [[F_CE_RELOAD:%.*]] = load i32, ptr [[F_CE_LOC]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[F_CE_LOC]])
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[TMP0]], [[TMP1]]
@@ -112,10 +110,10 @@ bb5:
 ; CHECK-NEXT:    i32 1, label [[OUTPUT_BLOCK_1_0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       output_block_0_0:
-; CHECK-NEXT:    store i32 [[F_CE]], i32* [[TMP2:%.*]], align 4
+; CHECK-NEXT:    store i32 [[F_CE]], ptr [[TMP2:%.*]], align 4
 ; CHECK-NEXT:    br label [[FINAL_BLOCK_0]]
 ; CHECK:       output_block_1_0:
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[TMP2]], align 4
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    br label [[FINAL_BLOCK_0]]
 ; CHECK:       final_block_0:
 ; CHECK-NEXT:    ret void

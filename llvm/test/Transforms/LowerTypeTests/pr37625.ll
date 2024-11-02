@@ -11,4 +11,4 @@ declare !type !2 extern_weak void @external_addrtaken(i8)
 !1 = !{!"external_addrtaken", i8 0, !2}
 !2 = !{i64 0, !"typeid1"}
 
-; CHECK-DAG: @external_addrtaken = alias void (i8), bitcast
+; CHECK-DAG: @external_addrtaken = alias void (i8), ptr @.cfi.jumptable
