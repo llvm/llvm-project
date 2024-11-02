@@ -879,6 +879,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
   }
 
+  // DirectX resources
+  if (Name.starts_with("dx."))
+    return TargetTypeInfo(PointerType::get(C, 0));
+
   return TargetTypeInfo(Type::getVoidTy(C));
 }
 

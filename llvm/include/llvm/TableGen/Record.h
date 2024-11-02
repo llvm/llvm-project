@@ -603,6 +603,7 @@ public:
 
   Init *convertInitializerTo(RecTy *Ty) const override;
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
+  std::optional<int64_t> convertInitializerToInt() const;
 
   bool isComplete() const override {
     for (unsigned i = 0; i != getNumBits(); ++i)
@@ -1669,7 +1670,7 @@ private:
   RecordKeeper &TrackedRecords;
 
   // The DefInit corresponding to this record.
-  DefInit *CorrespondingDefInit = nullptr;
+  mutable DefInit *CorrespondingDefInit = nullptr;
 
   // Unique record ID.
   unsigned ID;
@@ -1736,7 +1737,7 @@ public:
   RecordRecTy *getType() const;
 
   /// get the corresponding DefInit.
-  DefInit *getDefInit();
+  DefInit *getDefInit() const;
 
   bool isClass() const { return Kind == RK_Class; }
 
@@ -1912,6 +1913,9 @@ public:
   /// vector of records, throwing an exception if the field does not exist or
   /// if the value is not the right type.
   std::vector<Record*> getValueAsListOfDefs(StringRef FieldName) const;
+  // Temporary function to help staged migration to const Record pointers.
+  std::vector<const Record *>
+  getValueAsListOfConstDefs(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// vector of integers, throwing an exception if the field does not exist or
@@ -2032,7 +2036,7 @@ public:
   }
 
   /// Start timing a phase. Automatically stops any previous phase timer.
-  void startTimer(StringRef Name);
+  void startTimer(StringRef Name) const;
 
   /// Stop timing a phase.
   void stopTimer();
@@ -2106,12 +2110,13 @@ private:
   mutable std::map<std::string, std::vector<Record *>> ClassRecordsMap;
   GlobalMap ExtraGlobals;
 
+  // TODO: Move timing related code out of RecordKeeper.
   // These members are for the phase timing feature. We need a timer group,
   // the last timer started, and a flag to say whether the last timer
   // is the special "backend overall timer."
-  TimerGroup *TimingGroup = nullptr;
-  Timer *LastTimer = nullptr;
-  bool BackendTimer = false;
+  mutable TimerGroup *TimingGroup = nullptr;
+  mutable Timer *LastTimer = nullptr;
+  mutable bool BackendTimer = false;
 
   /// The internal uniquer implementation of the RecordKeeper.
   std::unique_ptr<detail::RecordKeeperImpl> Impl;

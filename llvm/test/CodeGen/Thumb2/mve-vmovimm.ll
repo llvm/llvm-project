@@ -1331,7 +1331,6 @@ entry:
   ret <2 x i64> %s
 }
 
-; FIXME: This is incorrect for BE
 define arm_aapcs_vfpcc <8 x i16> @and_v8i16_m1(<8 x i16> %a) {
 ; CHECKLE-LABEL: and_v8i16_m1:
 ; CHECKLE:       @ %bb.0:
@@ -1340,15 +1339,14 @@ define arm_aapcs_vfpcc <8 x i16> @and_v8i16_m1(<8 x i16> %a) {
 ;
 ; CHECKBE-LABEL: and_v8i16_m1:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vrev64.16 q1, q0
 ; CHECKBE-NEXT:    vbic.i32 q1, #0x10000
-; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %b = and <8 x i16> %a, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
   ret <8 x i16> %b
 }
 
-; FIXME: This is incorrect for BE
 define arm_aapcs_vfpcc <8 x i16> @or_v8i16_1(<8 x i16> %a) {
 ; CHECKLE-LABEL: or_v8i16_1:
 ; CHECKLE:       @ %bb.0:
@@ -1357,9 +1355,9 @@ define arm_aapcs_vfpcc <8 x i16> @or_v8i16_1(<8 x i16> %a) {
 ;
 ; CHECKBE-LABEL: or_v8i16_1:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vrev64.16 q1, q0
 ; CHECKBE-NEXT:    vorr.i32 q1, #0x10000
-; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %b = or <8 x i16> %a, <i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1>
   ret <8 x i16> %b

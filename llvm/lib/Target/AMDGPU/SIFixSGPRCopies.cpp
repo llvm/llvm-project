@@ -1116,8 +1116,8 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       if (SrcReg == AMDGPU::SCC) {
-        Register SCCCopy = MRI->createVirtualRegister(
-            TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID));
+        Register SCCCopy =
+            MRI->createVirtualRegister(TRI->getWaveMaskRegClass());
         I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
                     MI.getDebugLoc(),
                     TII->get(IsWave32 ? AMDGPU::S_CSELECT_B32

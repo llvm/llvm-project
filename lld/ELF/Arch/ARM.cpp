@@ -204,7 +204,7 @@ RelType ARM::getDynRel(RelType type) const {
 }
 
 void ARM::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write32(buf, in.plt->getVA());
+  write32(buf, ctx.in.plt->getVA());
 }
 
 void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -223,8 +223,8 @@ static void writePltHeaderLong(uint8_t *buf) {
   write32(buf + 20, 0xd4d4d4d4);  //     Pad to 32-byte boundary
   write32(buf + 24, 0xd4d4d4d4);  //     Pad to 32-byte boundary
   write32(buf + 28, 0xd4d4d4d4);
-  uint64_t gotPlt = in.gotPlt->getVA();
-  uint64_t l1 = in.plt->getVA() + 8;
+  uint64_t gotPlt = ctx.in.gotPlt->getVA();
+  uint64_t l1 = ctx.in.plt->getVA() + 8;
   write32(buf + 16, gotPlt - l1 - 8);
 }
 
@@ -249,7 +249,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
     // At 0x8, we want to jump to .got.plt, the -16 accounts for 8 bytes from
     // `pc` in the add instruction and 8 bytes for the `lr` adjustment.
     //
-    uint64_t offset = in.gotPlt->getVA() - in.plt->getVA() - 16;
+    uint64_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA() - 16;
     assert(llvm::isUInt<32>(offset) && "This should always fit into a 32-bit offset");
     write16(buf + 0, 0xb500);
     // Split into two halves to support endianness correctly.
@@ -277,7 +277,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
         0xe5bef000, //     ldr pc, [lr, #0x00000NNN] &(.got.plt -L1 - 4)
     };
 
-    uint64_t offset = in.gotPlt->getVA() - in.plt->getVA() - 4;
+    uint64_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA() - 4;
     if (!llvm::isUInt<27>(offset)) {
       // We cannot encode the Offset, use the long form.
       writePltHeaderLong(buf);

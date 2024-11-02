@@ -638,9 +638,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         // dynamic loaders require the presence of an attribute section for
         // dlopen to work. In a full implementation we would merge all attribute
         // sections.
-        if (in.attributes == nullptr) {
-          in.attributes = std::make_unique<InputSection>(*this, sec, name);
-          this->sections[i] = in.attributes.get();
+        if (ctx.in.attributes == nullptr) {
+          ctx.in.attributes = std::make_unique<InputSection>(*this, sec, name);
+          this->sections[i] = ctx.in.attributes.get();
         }
       }
     }
@@ -1744,10 +1744,15 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
-  // Symbols can be duplicated in bitcode files because of '#include' and
-  // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
-  if (!sym)
-    sym = symtab.insert(unique_saver().save(objSym.getName()));
+  if (!sym) {
+    // Symbols can be duplicated in bitcode files because of '#include' and
+    // linkonce_odr. Use uniqueSaver to save symbol names for de-duplication.
+    // Update objSym.Name to reference (via StringRef) the string saver's copy;
+    // this way LTO can reference the same string saver's copy rather than
+    // keeping copies of its own.
+    objSym.Name = uniqueSaver().save(objSym.getName());
+    sym = symtab.insert(objSym.getName());
+  }
 
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
@@ -1797,14 +1802,19 @@ void BitcodeFile::parse() {
 void BitcodeFile::parseLazy() {
   numSymbols = obj->symbols().size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
-  for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
+    // Symbols can be duplicated in bitcode files because of '#include' and
+    // linkonce_odr. Use uniqueSaver to save symbol names for de-duplication.
+    // Update objSym.Name to reference (via StringRef) the string saver's copy;
+    // this way LTO can reference the same string saver's copy rather than
+    // keeping copies of its own.
+    irSym.Name = uniqueSaver().save(irSym.getName());
     if (!irSym.isUndefined()) {
-      // Symbols can be duplicated in bitcode files because of '#include' and
-      // linkonce_odr. Use unique_saver to save symbol names for de-duplication.
-      auto *sym = symtab.insert(unique_saver().save(irSym.getName()));
+      auto *sym = symtab.insert(irSym.getName());
       sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }
+  }
 }
 
 void BitcodeFile::postParse() {

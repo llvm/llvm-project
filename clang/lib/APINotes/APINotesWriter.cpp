@@ -129,13 +129,9 @@ class APINotesWriter::Implementation {
     if (Identifier.empty())
       return 0;
 
-    auto Known = IdentifierIDs.find(Identifier);
-    if (Known != IdentifierIDs.end())
-      return Known->second;
-
-    // Add to the identifier table.
-    Known = IdentifierIDs.insert({Identifier, IdentifierIDs.size() + 1}).first;
-    return Known->second;
+    // Add to the identifier table if missing.
+    return IdentifierIDs.try_emplace(Identifier, IdentifierIDs.size() + 1)
+        .first->second;
   }
 
   /// Retrieve the ID for the given selector.

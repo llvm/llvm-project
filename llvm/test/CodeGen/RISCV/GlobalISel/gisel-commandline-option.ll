@@ -23,6 +23,7 @@
 ; ENABLED-NEXT:  Legalizer
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
 ; ENABLED-O1-NEXT:  RISCVPostLegalizerCombiner
+; ENABLED-NEXT:  RISCVPostLegalizerLowering
 ; ENABLED-NEXT:  RegBankSelect
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  Lazy Branch Probability Analysis

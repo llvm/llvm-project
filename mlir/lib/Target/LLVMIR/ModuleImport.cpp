@@ -55,7 +55,7 @@ static std::string diag(const llvm::Value &value) {
   std::string str;
   llvm::raw_string_ostream os(str);
   os << value;
-  return os.str();
+  return str;
 }
 
 // Utility to print an LLVM metadata node as a string for passing
@@ -66,7 +66,7 @@ static std::string diagMD(const llvm::Metadata *node,
   std::string str;
   llvm::raw_string_ostream os(str);
   node->print(os, module, /*IsForDebug=*/true);
-  return os.str();
+  return str;
 }
 
 /// Returns the name of the global_ctors global variables.

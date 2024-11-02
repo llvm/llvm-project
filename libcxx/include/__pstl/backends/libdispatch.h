@@ -44,6 +44,8 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+#if _LIBCPP_STD_VER >= 17
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
@@ -140,15 +142,15 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 
     unique_ptr<__merge_range_t[], decltype(__destroy)> __ranges(
         [&]() -> __merge_range_t* {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
           try {
-#endif
+#  endif
             return std::allocator<__merge_range_t>().allocate(__n_ranges);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
           } catch (const std::bad_alloc&) {
             return nullptr;
           }
-#endif
+#  endif
         }(),
         __destroy);
 
@@ -391,6 +393,8 @@ struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

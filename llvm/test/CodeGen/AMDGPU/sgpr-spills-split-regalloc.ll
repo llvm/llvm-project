@@ -1316,7 +1316,6 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    flat_load_dwordx4 v[6:9], v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill

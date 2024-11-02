@@ -12,6 +12,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/macros/properties/os.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -53,6 +54,7 @@ public:
   }
 
   void test_range_errors(AddFunc func) {
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
     using namespace LIBC_NAMESPACE::fputil::testing;
 
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
@@ -121,6 +123,7 @@ public:
           FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
     }
+#endif
   }
 
   void test_inexact_results(AddFunc func) {

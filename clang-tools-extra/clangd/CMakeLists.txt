@@ -183,7 +183,6 @@ target_link_libraries(clangDaemon
   ${LLVM_PTHREAD_LIB}
 
   clangIncludeCleaner
-  clangPseudo
   clangTidy
   clangTidyUtils
 

@@ -94,5 +94,11 @@
       "value": false,
       "doc": "Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit."
     }
+  },
+  "general": {
+    "LIBC_ADD_NULL_CHECKS": {
+      "value": true,
+      "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
+    }
   }
 }

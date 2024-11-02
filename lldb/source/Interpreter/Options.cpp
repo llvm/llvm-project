@@ -923,7 +923,7 @@ static std::string BuildShortOptions(const Option *long_options) {
       }
     }
   }
-  return std::move(sstr.str());
+  return storage;
 }
 
 llvm::Expected<Args> Options::ParseAlias(const Args &args,

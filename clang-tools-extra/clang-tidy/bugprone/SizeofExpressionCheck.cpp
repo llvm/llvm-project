@@ -48,6 +48,8 @@ AST_MATCHER_P2(Expr, hasSizeOfDescendant, int, Depth,
   return false;
 }
 
+AST_MATCHER(Expr, offsetOfExpr) { return isa<OffsetOfExpr>(Node); }
+
 CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
   if (!Ty || Ty->isIncompleteType() || Ty->isDependentType() ||
       isa<DependentSizedArrayType>(Ty) || !Ty->isConstantSizeType())
@@ -221,17 +223,15 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto ElemType =
       arrayType(hasElementType(recordType().bind("elem-type")));
   const auto ElemPtrType = pointerType(pointee(type().bind("elem-ptr-type")));
+  const auto SizeofDivideExpr = binaryOperator(
+      hasOperatorName("/"),
+      hasLHS(
+          ignoringParenImpCasts(sizeOfExpr(hasArgumentOfType(hasCanonicalType(
+              type(anyOf(ElemType, ElemPtrType, type())).bind("num-type")))))),
+      hasRHS(ignoringParenImpCasts(sizeOfExpr(
+          hasArgumentOfType(hasCanonicalType(type().bind("denom-type")))))));
 
-  Finder->addMatcher(
-      binaryOperator(
-          hasOperatorName("/"),
-          hasLHS(ignoringParenImpCasts(sizeOfExpr(hasArgumentOfType(
-              hasCanonicalType(type(anyOf(ElemType, ElemPtrType, type()))
-                                   .bind("num-type")))))),
-          hasRHS(ignoringParenImpCasts(sizeOfExpr(
-              hasArgumentOfType(hasCanonicalType(type().bind("denom-type")))))))
-          .bind("sizeof-divide-expr"),
-      this);
+  Finder->addMatcher(SizeofDivideExpr.bind("sizeof-divide-expr"), this);
 
   // Detect expression like: sizeof(...) * sizeof(...)); most likely an error.
   Finder->addMatcher(binaryOperator(hasOperatorName("*"),
@@ -257,8 +257,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("sizeof-sizeof-expr"),
                      this);
 
-  // Detect sizeof in pointer arithmetic like: N * sizeof(S) == P1 - P2 or
-  // (P1 - P2) / sizeof(S) where P1 and P2 are pointers to type S.
+  // Detect sizeof usage in comparisons involving pointer arithmetics, such as
+  // N * sizeof(T) == P1 - P2 or (P1 - P2) / sizeof(T), where P1 and P2 are
+  // pointers to a type T.
   const auto PtrDiffExpr = binaryOperator(
       hasOperatorName("-"),
       hasLHS(hasType(hasUnqualifiedDesugaredType(pointerType(pointee(
@@ -284,6 +285,47 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
           hasOperatorName("/"), hasLHS(ignoringParenImpCasts(PtrDiffExpr)),
           hasRHS(ignoringParenImpCasts(SizeOfExpr.bind("sizeof-ptr-div-expr"))))
           .bind("sizeof-in-ptr-arithmetic-div"),
+      this);
+
+  // SEI CERT ARR39-C. Do not add or subtract a scaled integer to a pointer.
+  // Detect sizeof, alignof and offsetof usage in pointer arithmetics where
+  // they are used to scale the numeric distance, which is scaled again by
+  // the pointer arithmetic operator. This can result in forming invalid
+  // offsets.
+  //
+  // Examples, where P is a pointer, N is some integer (both compile-time and
+  // run-time): P + sizeof(T), P + sizeof(*P), P + N * sizeof(*P).
+  //
+  // This check does not warn on cases where the pointee type is "1 byte",
+  // as those cases can often come from generics and also do not constitute a
+  // problem because the size does not affect the scale used.
+  const auto InterestingPtrTyForPtrArithmetic =
+      pointerType(pointee(qualType().bind("pointee-type")));
+  const auto SizeofLikeScaleExpr =
+      expr(anyOf(unaryExprOrTypeTraitExpr(ofKind(UETT_SizeOf)),
+                 unaryExprOrTypeTraitExpr(ofKind(UETT_AlignOf)),
+                 offsetOfExpr()))
+          .bind("sizeof-in-ptr-arithmetic-scale-expr");
+  const auto PtrArithmeticIntegerScaleExpr = binaryOperator(
+      hasAnyOperatorName("*", "/"),
+      // sizeof(...) * sizeof(...) and sizeof(...) / sizeof(...) is handled
+      // by this check on another path.
+      hasOperands(expr(hasType(isInteger()), unless(SizeofLikeScaleExpr)),
+                  SizeofLikeScaleExpr));
+  const auto PtrArithmeticScaledIntegerExpr =
+      expr(anyOf(SizeofLikeScaleExpr, PtrArithmeticIntegerScaleExpr),
+           unless(SizeofDivideExpr));
+
+  Finder->addMatcher(
+      expr(anyOf(
+          binaryOperator(hasAnyOperatorName("+", "-"),
+                         hasOperands(hasType(InterestingPtrTyForPtrArithmetic),
+                                     PtrArithmeticScaledIntegerExpr))
+              .bind("sizeof-in-ptr-arithmetic-plusminus"),
+          binaryOperator(hasAnyOperatorName("+=", "-="),
+                         hasLHS(hasType(InterestingPtrTyForPtrArithmetic)),
+                         hasRHS(PtrArithmeticScaledIntegerExpr))
+              .bind("sizeof-in-ptr-arithmetic-plusminus"))),
       this);
 }
 
@@ -408,6 +450,43 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
                                       "pointer arithmetic")
           << SizeOfExpr->getSourceRange() << E->getOperatorLoc()
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
+    }
+  } else if (const auto *E = Result.Nodes.getNodeAs<BinaryOperator>(
+                 "sizeof-in-ptr-arithmetic-plusminus")) {
+    const auto *PointeeTy = Result.Nodes.getNodeAs<QualType>("pointee-type");
+    const auto *ScaleExpr =
+        Result.Nodes.getNodeAs<Expr>("sizeof-in-ptr-arithmetic-scale-expr");
+    const CharUnits PointeeSize = getSizeOfType(Ctx, PointeeTy->getTypePtr());
+    const int ScaleKind = [ScaleExpr]() {
+      if (const auto *UTTE = dyn_cast<UnaryExprOrTypeTraitExpr>(ScaleExpr))
+        switch (UTTE->getKind()) {
+        case UETT_SizeOf:
+          return 0;
+        case UETT_AlignOf:
+          return 1;
+        default:
+          return -1;
+        }
+
+      if (isa<OffsetOfExpr>(ScaleExpr))
+        return 2;
+
+      return -1;
+    }();
+
+    if (ScaleKind != -1 && PointeeSize > CharUnits::One()) {
+      diag(E->getExprLoc(),
+           "suspicious usage of '%select{sizeof|alignof|offsetof}0(...)' in "
+           "pointer arithmetic; this scaled value will be scaled again by the "
+           "'%1' operator")
+          << ScaleKind << E->getOpcodeStr() << ScaleExpr->getSourceRange();
+      diag(E->getExprLoc(),
+           "'%0' in pointer arithmetic internally scales with 'sizeof(%1)' == "
+           "%2",
+           DiagnosticIDs::Note)
+          << E->getOpcodeStr()
+          << PointeeTy->getAsString(Ctx.getPrintingPolicy())
+          << PointeeSize.getQuantity();
     }
   }
 }

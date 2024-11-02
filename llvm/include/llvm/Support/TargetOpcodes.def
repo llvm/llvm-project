@@ -684,6 +684,12 @@ HANDLE_TARGET_OPCODE(G_SITOFP)
 /// Generic unsigned-int to float conversion
 HANDLE_TARGET_OPCODE(G_UITOFP)
 
+/// Generic saturating float to signed-int conversion
+HANDLE_TARGET_OPCODE(G_FPTOSI_SAT)
+
+/// Generic saturating float to unsigned-int conversion
+HANDLE_TARGET_OPCODE(G_FPTOUI_SAT)
+
 /// Generic FP absolute value.
 HANDLE_TARGET_OPCODE(G_FABS)
 

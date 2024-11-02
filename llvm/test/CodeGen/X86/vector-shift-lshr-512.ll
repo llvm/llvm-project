@@ -306,6 +306,29 @@ define <32 x i16> @constant_shift_v32i16(<32 x i16> %a) nounwind {
   ret <32 x i16> %shift
 }
 
+define <64 x i8> @constant_shift_v64i8_pairs(<64 x i8> %a) nounwind {
+; AVX512DQ-LABEL: constant_shift_v64i8_pairs:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512DQ-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [512,16384,4096,1024,32768,16384,8192,4096,512,16384,4096,1024,32768,16384,8192,4096]
+; AVX512DQ-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512DQ-NEXT:    vpmulhuw %ymm2, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpmulhuw %ymm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [257,16191,3855,771,32639,16191,7967,3855,257,16191,3855,771,32639,16191,7967,3855,257,16191,3855,771,32639,16191,7967,3855,257,16191,3855,771,32639,16191,7967,3855]
+; AVX512DQ-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512DQ-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: constant_shift_v64i8_pairs:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+  %shift = lshr <64 x i8> %a, <i8 7, i8 7, i8 2, i8 2, i8 4, i8 4, i8 6, i8 6, i8 1, i8 1, i8 2, i8 2, i8 3, i8 3, i8 4, i8 4, i8 7, i8 7, i8 2, i8 2, i8 4, i8 4, i8 6, i8 6, i8 1, i8 1, i8 2, i8 2, i8 3, i8 3, i8 4, i8 4, i8 7, i8 7, i8 2, i8 2, i8 4, i8 4, i8 6, i8 6, i8 1, i8 1, i8 2, i8 2, i8 3, i8 3, i8 4, i8 4, i8 7, i8 7, i8 2, i8 2, i8 4, i8 4, i8 6, i8 6, i8 1, i8 1, i8 2, i8 2, i8 3, i8 3, i8 4, i8 4>
+  ret <64 x i8> %shift
+}
+
 define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512DQ-LABEL: constant_shift_v64i8:
 ; AVX512DQ:       # %bb.0:

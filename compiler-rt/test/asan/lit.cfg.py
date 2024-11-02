@@ -130,6 +130,11 @@ if config.asan_dynamic:
             config.compiler_rt_libdir,
             "libclang_rt.asan_{}_dynamic.dylib".format(config.apple_platform),
         )
+    elif config.host_os == "Windows":
+        shared_libasan_path = os.path.join(
+            config.compiler_rt_libdir,
+            "clang_rt.asan_dynamic-{}.lib".format(config.target_suffix),
+        )
     else:
         lit_config.warning(
             "%shared_libasan substitution not set but dynamic ASan is available."
@@ -178,8 +183,22 @@ if platform.system() == "Windows":
         base_lib = os.path.join(
             config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix
         )
-        config.substitutions.append(("%asan_lib", base_lib % ""))
+        config.substitutions.append(("%asan_lib", base_lib % "_dynamic"))
+        if config.asan_dynamic:
+            config.substitutions.append(
+                ("%asan_thunk", base_lib % "_dynamic_runtime_thunk")
+            )
+        else:
+            config.substitutions.append(
+                ("%asan_thunk", base_lib % "_static_runtime_thunk")
+            )
         config.substitutions.append(("%asan_cxx_lib", base_lib % "_cxx"))
+        config.substitutions.append(
+            ("%asan_dynamic_runtime_thunk", base_lib % "_dynamic_runtime_thunk")
+        )
+        config.substitutions.append(
+            ("%asan_static_runtime_thunk", base_lib % "_static_runtime_thunk")
+        )
         config.substitutions.append(("%asan_dll_thunk", base_lib % "_dll_thunk"))
     else:
         # To make some of these tests work on MinGW target without changing their
@@ -262,7 +281,7 @@ if (
 
 # Add the RT libdir to PATH directly so that we can successfully run the gtest
 # binary to list its tests.
-if config.host_os == "Windows" and config.asan_dynamic:
+if config.host_os == "Windows":
     os.environ["PATH"] = os.path.pathsep.join(
         [config.compiler_rt_libdir, os.environ.get("PATH", "")]
     )

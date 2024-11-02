@@ -517,25 +517,31 @@ static bool isUnpackedVectorVT(EVT VecVT) {
 static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
   Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
   Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
+  unsigned TotalHistCnts = 1;
 
-  // Only allow (32b and 64b) integers or pointers for now...
-  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
-      (EltTy->getScalarSizeInBits() != 32 &&
-       EltTy->getScalarSizeInBits() != 64))
+  unsigned EltSize = EltTy->getScalarSizeInBits();
+  // Only allow (up to 64b) integers or pointers
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) || EltSize > 64)
     return InstructionCost::getInvalid();
 
-  // FIXME: Hacky check for legal vector types. We can promote smaller types
-  //        but we cannot legalize vectors via splitting for histcnt.
   // FIXME: We should be able to generate histcnt for fixed-length vectors
   //        using ptrue with a specific VL.
-  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy))
-    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
-         VTy->getElementCount().getKnownMinValue() != 4) ||
-        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
-        !VTy->isScalableTy())
+  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
+    unsigned EC = VTy->getElementCount().getKnownMinValue();
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
       return InstructionCost::getInvalid();
 
-  return InstructionCost(BaseHistCntCost);
+    // HistCnt only supports 32b and 64b element types
+    unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
+
+    if (EC == 2 || (LegalEltSize == 32 && EC == 4))
+      return InstructionCost(BaseHistCntCost);
+
+    unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
+    TotalHistCnts = EC / NaturalVectorWidth;
+  }
+
+  return InstructionCost(BaseHistCntCost * TotalHistCnts);
 }
 
 InstructionCost
@@ -1110,10 +1116,10 @@ instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
   return std::nullopt;
 }
 
-// Simplify unary operation where predicate has all inactive lanes by replacing
+// Simplify operation where predicate has all inactive lanes by replacing
 // instruction with zeroed object
 static std::optional<Instruction *>
-instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
+instCombineSVENoActiveZero(InstCombiner &IC, IntrinsicInst &II) {
   if (match(II.getOperand(0), m_ZeroInt())) {
     Constant *Node;
     Type *RetTy = II.getType();
@@ -1126,10 +1132,9 @@ instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
                                                   : ConstantInt::get(VecT, 0));
       }
       Node = ConstantStruct::get(StructT, ZerVec);
-    } else if (RetTy->isFPOrFPVectorTy())
-      Node = ConstantFP::get(RetTy, 0.0);
-    else
-      Node = ConstantInt::get(II.getType(), 0);
+    } else
+      Node = RetTy->isFPOrFPVectorTy() ? ConstantFP::get(RetTy, 0.0)
+                                       : ConstantInt::get(II.getType(), 0);
 
     IC.replaceInstUsesWith(II, Node);
     return IC.eraseInstFromFunction(II);
@@ -1188,7 +1193,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
   LLVMContext &Ctx = II.getContext();
 
   // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
     return II_NA;
 
   // Check that the predicate is all active
@@ -1556,7 +1561,7 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Type *VecTy = II.getType();
 
   // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
     return II_NA;
 
   if (isAllActivePredicate(Pred)) {
@@ -1907,7 +1912,7 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   Value *PassThru = ConstantAggregateZero::get(Ty);
 
   // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
     return II_NA;
 
   // Contiguous gather => masked load.
@@ -2197,6 +2202,31 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_st4:
   case Intrinsic::aarch64_sve_st4q:
     return instCombineSVENoActiveUnaryErase(IC, II, 4);
+  case Intrinsic::aarch64_sve_addqv:
+  case Intrinsic::aarch64_sve_and_z:
+  case Intrinsic::aarch64_sve_bic_z:
+  case Intrinsic::aarch64_sve_brka_z:
+  case Intrinsic::aarch64_sve_brkb_z:
+  case Intrinsic::aarch64_sve_brkn_z:
+  case Intrinsic::aarch64_sve_brkpa_z:
+  case Intrinsic::aarch64_sve_brkpb_z:
+  case Intrinsic::aarch64_sve_cntp:
+  case Intrinsic::aarch64_sve_compact:
+  case Intrinsic::aarch64_sve_eor_z:
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_eorqv:
+  case Intrinsic::aarch64_sve_nand_z:
+  case Intrinsic::aarch64_sve_nor_z:
+  case Intrinsic::aarch64_sve_orn_z:
+  case Intrinsic::aarch64_sve_orr_z:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_orqv:
+  case Intrinsic::aarch64_sve_pnext:
+  case Intrinsic::aarch64_sve_rdffr_z:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_umaxqv:
   case Intrinsic::aarch64_sve_cmpeq:
   case Intrinsic::aarch64_sve_cmpeq_wide:
   case Intrinsic::aarch64_sve_cmpge:
@@ -2251,7 +2281,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ldnt1_gather_index:
   case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
-    return instCombineSVENoActiveUnaryZero(IC, II);
+    return instCombineSVENoActiveZero(IC, II);
   case Intrinsic::aarch64_sve_prf:
   case Intrinsic::aarch64_sve_prfb_gather_index:
   case Intrinsic::aarch64_sve_prfb_gather_scalar_offset:

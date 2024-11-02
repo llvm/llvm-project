@@ -50,7 +50,13 @@ static Error printNode(StringRef Id, const MatchFinder::MatchResult &Match,
   auto NodeOrErr = getNode(Match.Nodes, Id);
   if (auto Err = NodeOrErr.takeError())
     return Err;
-  NodeOrErr->print(Os, PrintingPolicy(Match.Context->getLangOpts()));
+  const PrintingPolicy PP(Match.Context->getLangOpts());
+  if (const auto *ND = NodeOrErr->get<NamedDecl>()) {
+    // For NamedDecls, we can do a better job than printing the whole thing.
+    ND->getNameForDiagnostic(Os, PP, false);
+  } else {
+    NodeOrErr->print(Os, PP);
+  }
   *Result += Output;
   return Error::success();
 }

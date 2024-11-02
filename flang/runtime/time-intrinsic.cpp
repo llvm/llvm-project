@@ -490,16 +490,20 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
     auto typeCode{values->type().GetCategoryAndKind()};
     // ETIME values argument must have decimal range == 2.
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() == 2 &&
-            typeCode && typeCode->first == Fortran::common::TypeCategory::Real);
+        values->rank() == 1 && typeCode &&
+            typeCode->first == Fortran::common::TypeCategory::Real);
     // Only accept KIND=4 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind == 4);
-
-    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
-        kind, terminator, *values, /* atIndex = */ 0, usrTime);
-    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
-        kind, terminator, *values, /* atIndex = */ 1, sysTime);
+    auto extent{values->GetDimension(0).Extent()};
+    if (extent >= 1) {
+      ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+          kind, terminator, *values, /* atIndex = */ 0, usrTime);
+    }
+    if (extent >= 2) {
+      ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+          kind, terminator, *values, /* atIndex = */ 1, sysTime);
+    }
   }
 
   if (time) {

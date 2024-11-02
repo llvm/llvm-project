@@ -758,10 +758,11 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         // CWG1815 (https://wg21.link/CWG1815).
         EnterExpressionEvaluationContext RebuildDefaultInit(
             SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-        // Just copy previous record, make sure we haven't forget anything.
-        SemaRef.currentEvaluationContext() = SemaRef.parentEvaluationContext();
         SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
             true;
+        SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
+            SemaRef.parentEvaluationContext()
+                .DelayedDefaultInitializationContext;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {
@@ -9547,7 +9548,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                       unsigned ConstRefDiagID, unsigned WarnDiagID) {
     unsigned DiagID;
     auto &L = S.getLangOpts();
-    if (L.CPlusPlus11 &&
+    if (L.CPlusPlus11 && !L.HLSL &&
         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015)))
       DiagID = IsConstRef ? ConstRefDiagID : DefaultDiagID;
     else

@@ -87,7 +87,7 @@ struct BuiltinTableEntries {
 //
 class BuiltinNameEmitter {
 public:
-  BuiltinNameEmitter(RecordKeeper &Records, raw_ostream &OS)
+  BuiltinNameEmitter(const RecordKeeper &Records, raw_ostream &OS)
       : Records(Records), OS(OS) {}
 
   // Entrypoint to generate the functions and structures for checking
@@ -100,7 +100,7 @@ private:
 
   // Contains OpenCL builtin functions and related information, stored as
   // Record instances. They are coming from the associated TableGen file.
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
   // The output file.
   raw_ostream &OS;
@@ -113,7 +113,7 @@ private:
   // \param Output (out) String containing the enums to emit in the output file.
   // \param List (out) List containing the extracted Types, except the Types in
   //        TypesSeen.
-  void ExtractEnumTypes(std::vector<Record *> &Types,
+  void ExtractEnumTypes(ArrayRef<const Record *> Types,
                         StringMap<bool> &TypesSeen, std::string &Output,
                         std::vector<const Record *> &List);
 
@@ -237,7 +237,7 @@ private:
 /// Base class for emitting a file (e.g. header or test) from OpenCLBuiltins.td
 class OpenCLBuiltinFileEmitterBase {
 public:
-  OpenCLBuiltinFileEmitterBase(RecordKeeper &Records, raw_ostream &OS)
+  OpenCLBuiltinFileEmitterBase(const RecordKeeper &Records, raw_ostream &OS)
       : Records(Records), OS(OS) {}
   virtual ~OpenCLBuiltinFileEmitterBase() = default;
 
@@ -305,7 +305,7 @@ protected:
 
   // Contains OpenCL builtin functions and related information, stored as
   // Record instances. They are coming from the associated TableGen file.
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
   // The output file.
   raw_ostream &OS;
@@ -316,7 +316,7 @@ protected:
 // builtin function described in the .td input.
 class OpenCLBuiltinTestEmitter : public OpenCLBuiltinFileEmitterBase {
 public:
-  OpenCLBuiltinTestEmitter(RecordKeeper &Records, raw_ostream &OS)
+  OpenCLBuiltinTestEmitter(const RecordKeeper &Records, raw_ostream &OS)
       : OpenCLBuiltinFileEmitterBase(Records, OS) {}
 
   // Entrypoint to generate the functions for testing all OpenCL builtin
@@ -329,7 +329,7 @@ public:
 // prototype for each builtin function described in the .td input.
 class OpenCLBuiltinHeaderEmitter : public OpenCLBuiltinFileEmitterBase {
 public:
-  OpenCLBuiltinHeaderEmitter(RecordKeeper &Records, raw_ostream &OS)
+  OpenCLBuiltinHeaderEmitter(const RecordKeeper &Records, raw_ostream &OS)
       : OpenCLBuiltinFileEmitterBase(Records, OS) {}
 
   // Entrypoint to generate the header.
@@ -362,7 +362,7 @@ void BuiltinNameEmitter::Emit() {
   EmitQualTypeFinder();
 }
 
-void BuiltinNameEmitter::ExtractEnumTypes(std::vector<Record *> &Types,
+void BuiltinNameEmitter::ExtractEnumTypes(ArrayRef<const Record *> Types,
                                           StringMap<bool> &TypesSeen,
                                           std::string &Output,
                                           std::vector<const Record *> &List) {
@@ -378,7 +378,6 @@ void BuiltinNameEmitter::ExtractEnumTypes(std::vector<Record *> &Types,
       TypesSeen.insert(std::make_pair(T->getValueAsString("Name"), true));
     }
   }
-  SS.flush();
 }
 
 void BuiltinNameEmitter::EmitDeclarations() {
@@ -392,11 +391,11 @@ void BuiltinNameEmitter::EmitDeclarations() {
   // Extract generic types and non-generic types separately, to keep
   // gentypes at the end of the enum which simplifies the special handling
   // for gentypes in SemaLookup.
-  std::vector<Record *> GenTypes =
+  ArrayRef<const Record *> GenTypes =
       Records.getAllDerivedDefinitions("GenericType");
   ExtractEnumTypes(GenTypes, TypesSeen, GenTypeEnums, GenTypeList);
 
-  std::vector<Record *> Types = Records.getAllDerivedDefinitions("Type");
+  ArrayRef<const Record *> Types = Records.getAllDerivedDefinitions("Type");
   ExtractEnumTypes(Types, TypesSeen, TypeEnums, TypeList);
 
   OS << TypeEnums;
@@ -499,7 +498,7 @@ static void VerifySignature(const std::vector<Record *> &Signature,
 
 void BuiltinNameEmitter::GetOverloads() {
   // Populate the TypeMap.
-  std::vector<Record *> Types = Records.getAllDerivedDefinitions("Type");
+  ArrayRef<const Record *> Types = Records.getAllDerivedDefinitions("Type");
   unsigned I = 0;
   for (const auto &T : Types) {
     TypeMap.insert(std::make_pair(T, I++));
@@ -507,18 +506,15 @@ void BuiltinNameEmitter::GetOverloads() {
 
   // Populate the SignaturesList and the FctOverloadMap.
   unsigned CumulativeSignIndex = 0;
-  std::vector<Record *> Builtins = Records.getAllDerivedDefinitions("Builtin");
+  ArrayRef<const Record *> Builtins =
+      Records.getAllDerivedDefinitions("Builtin");
   for (const auto *B : Builtins) {
     StringRef BName = B->getValueAsString("Name");
-    if (!FctOverloadMap.contains(BName)) {
-      FctOverloadMap.insert(std::make_pair(
-          BName, std::vector<std::pair<const Record *, unsigned>>{}));
-    }
+    FctOverloadMap.try_emplace(BName);
 
     auto Signature = B->getValueAsListOfDefs("Signature");
     // Reuse signatures to avoid unnecessary duplicates.
-    auto it =
-        llvm::find_if(SignaturesList,
+    auto it = find_if(SignaturesList,
                       [&](const std::pair<std::vector<Record *>, unsigned> &a) {
                         return a.first == Signature;
                       });
@@ -538,7 +534,7 @@ void BuiltinNameEmitter::GetOverloads() {
 void BuiltinNameEmitter::EmitExtensionTable() {
   OS << "static const char *FunctionExtensionTable[] = {\n";
   unsigned Index = 0;
-  std::vector<Record *> FuncExtensions =
+  ArrayRef<const Record *> FuncExtensions =
       Records.getAllDerivedDefinitions("FunctionExtension");
 
   for (const auto &FE : FuncExtensions) {
@@ -690,7 +686,7 @@ void BuiltinNameEmitter::GroupBySignature() {
       CurSignatureList->push_back(Signature.second);
     }
     // Sort the list to facilitate future comparisons.
-    llvm::sort(*CurSignatureList);
+    sort(*CurSignatureList);
 
     // Check if we have already seen another function with the same list of
     // signatures.  If so, just add the name of the function.
@@ -733,7 +729,6 @@ void BuiltinNameEmitter::EmitStringMatcher() {
       raw_string_ostream SS(RetStmt);
       SS << "return std::make_pair(" << CumulativeIndex << ", " << Ovl.size()
          << ");";
-      SS.flush();
       ValidBuiltins.push_back(
           StringMatcher::StringPair(std::string(FctName), RetStmt));
     }
@@ -807,22 +802,13 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
   OS << "\n  switch (Ty.ID) {\n";
 
   // Switch cases for image types (Image2d, Image3d, ...)
-  std::vector<Record *> ImageTypes =
+  ArrayRef<const Record *> ImageTypes =
       Records.getAllDerivedDefinitions("ImageType");
 
   // Map an image type name to its 3 access-qualified types (RO, WO, RW).
-  StringMap<SmallVector<Record *, 3>> ImageTypesMap;
-  for (auto *IT : ImageTypes) {
-    auto Entry = ImageTypesMap.find(IT->getValueAsString("Name"));
-    if (Entry == ImageTypesMap.end()) {
-      SmallVector<Record *, 3> ImageList;
-      ImageList.push_back(IT);
-      ImageTypesMap.insert(
-          std::make_pair(IT->getValueAsString("Name"), ImageList));
-    } else {
-      Entry->second.push_back(IT);
-    }
-  }
+  StringMap<SmallVector<const Record *, 3>> ImageTypesMap;
+  for (auto *IT : ImageTypes)
+    ImageTypesMap[IT->getValueAsString("Name")].push_back(IT);
 
   // Emit the cases for the image types.  For an image type name, there are 3
   // corresponding QualTypes ("RO", "WO", "RW").  The "AccessQualifier" field
@@ -902,7 +888,7 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
   // Switch cases for non generic, non image types (int, int4, float, ...).
   // Only insert the plain scalar type; vector information and type qualifiers
   // are added in step 2.
-  std::vector<Record *> Types = Records.getAllDerivedDefinitions("Type");
+  ArrayRef<const Record *> Types = Records.getAllDerivedDefinitions("Type");
   StringMap<bool> TypesSeen;
 
   for (const auto *T : Types) {
@@ -1223,7 +1209,8 @@ void OpenCLBuiltinTestEmitter::emit() {
   unsigned TestID = 0;
 
   // Iterate over all builtins.
-  std::vector<Record *> Builtins = Records.getAllDerivedDefinitions("Builtin");
+  ArrayRef<const Record *> Builtins =
+      Records.getAllDerivedDefinitions("Builtin");
   for (const auto *B : Builtins) {
     StringRef Name = B->getValueAsString("Name");
 
@@ -1286,8 +1273,9 @@ void OpenCLBuiltinHeaderEmitter::emit() {
 )";
 
   // Iterate over all builtins; sort to follow order of definition in .td file.
-  std::vector<Record *> Builtins = Records.getAllDerivedDefinitions("Builtin");
-  llvm::sort(Builtins, LessRecord());
+  std::vector<const Record *> Builtins =
+      Records.getAllDerivedDefinitions("Builtin");
+  sort(Builtins, LessRecord());
 
   for (const auto *B : Builtins) {
     StringRef Name = B->getValueAsString("Name");
@@ -1331,18 +1319,19 @@ void OpenCLBuiltinHeaderEmitter::emit() {
         "#pragma OPENCL EXTENSION all : disable\n";
 }
 
-void clang::EmitClangOpenCLBuiltins(RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangOpenCLBuiltins(const RecordKeeper &Records,
+                                    raw_ostream &OS) {
   BuiltinNameEmitter NameChecker(Records, OS);
   NameChecker.Emit();
 }
 
-void clang::EmitClangOpenCLBuiltinHeader(RecordKeeper &Records,
+void clang::EmitClangOpenCLBuiltinHeader(const RecordKeeper &Records,
                                          raw_ostream &OS) {
   OpenCLBuiltinHeaderEmitter HeaderFileGenerator(Records, OS);
   HeaderFileGenerator.emit();
 }
 
-void clang::EmitClangOpenCLBuiltinTests(RecordKeeper &Records,
+void clang::EmitClangOpenCLBuiltinTests(const RecordKeeper &Records,
                                         raw_ostream &OS) {
   OpenCLBuiltinTestEmitter TestFileGenerator(Records, OS);
   TestFileGenerator.emit();

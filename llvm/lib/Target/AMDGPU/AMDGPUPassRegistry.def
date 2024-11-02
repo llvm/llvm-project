@@ -100,5 +100,6 @@ MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
 MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
 MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
+MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 #undef MACHINE_FUNCTION_PASS

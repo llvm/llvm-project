@@ -41,14 +41,17 @@ class WebAssemblyAsmTypeCheck final {
   bool typeError(SMLoc ErrorLoc, const Twine &Msg);
   bool popType(SMLoc ErrorLoc, std::optional<wasm::ValType> EVT);
   bool popRefType(SMLoc ErrorLoc);
-  bool getLocal(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
+  bool getLocal(SMLoc ErrorLoc, const MCOperand &LocalOp, wasm::ValType &Type);
   bool checkEnd(SMLoc ErrorLoc, bool PopVals = false);
   bool checkBr(SMLoc ErrorLoc, size_t Level);
   bool checkSig(SMLoc ErrorLoc, const wasm::WasmSignature &Sig);
-  bool getSymRef(SMLoc ErrorLoc, const MCInst &Inst,
+  bool getSymRef(SMLoc ErrorLoc, const MCOperand &SymOp,
                  const MCSymbolRefExpr *&SymRef);
-  bool getGlobal(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
-  bool getTable(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
+  bool getGlobal(SMLoc ErrorLoc, const MCOperand &GlobalOp,
+                 wasm::ValType &Type);
+  bool getTable(SMLoc ErrorLoc, const MCOperand &TableOp, wasm::ValType &Type);
+  bool getSignature(SMLoc ErrorLoc, const MCOperand &SigOp,
+                    wasm::WasmSymbolType Type, const wasm::WasmSignature *&Sig);
 
 public:
   WebAssemblyAsmTypeCheck(MCAsmParser &Parser, const MCInstrInfo &MII,

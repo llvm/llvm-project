@@ -553,3 +553,37 @@ void test() {
   std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
 }
 } // namespace GH100549
+
+namespace GH108272 {
+template <typename T>
+struct [[gsl::Owner]] StatusOr {
+  const T &value() [[clang::lifetimebound]];
+};
+
+template <typename V>
+class Wrapper1 {
+ public:
+  operator V() const;
+  V value;
+};
+std::string_view test1() {
+  StatusOr<Wrapper1<std::string_view>> k;
+  // Be conservative in this case, as there is not enough information available
+  // to infer the lifetime relationship for the Wrapper1 type.
+  std::string_view good = StatusOr<Wrapper1<std::string_view>>().value();
+  return k.value();
+}
+
+template <typename V>
+class Wrapper2 {
+ public:
+  operator V() const [[clang::lifetimebound]];
+  V value;
+};
+std::string_view test2() {
+  StatusOr<Wrapper2<std::string_view>> k;
+  // We expect dangling issues as the conversion operator is lifetimebound。
+  std::string_view bad = StatusOr<Wrapper2<std::string_view>>().value(); // expected-warning {{temporary whose address is used as value of}}
+  return k.value(); // expected-warning {{address of stack memory associated}}
+}
+} // namespace GH108272

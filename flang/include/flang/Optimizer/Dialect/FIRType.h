@@ -139,6 +139,13 @@ inline bool isa_builtin_cptr_type(mlir::Type t) {
   return false;
 }
 
+/// Is `t` type(c_devptr)?
+inline bool isa_builtin_cdevptr_type(mlir::Type t) {
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_devptr");
+  return false;
+}
+
 /// Is `t` a FIR dialect aggregate type?
 inline bool isa_aggregate(mlir::Type t) {
   return mlir::isa<SequenceType, mlir::TupleType>(t) || fir::isa_derived(t);

@@ -2121,3 +2121,8 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
                               [ImmCheck<3, ImmCheck0_3>]>;
   }
 }
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {
+  def FAMIN : WInst<"vamin", "...", "fhQdQfQh">;
+  def FAMAX : WInst<"vamax", "...", "fhQdQfQh">;
+}

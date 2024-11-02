@@ -35,7 +35,7 @@ public:
 };
 _LIBCPP_DIAGNOSTIC_POP
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_format_error(const char* __s) {
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_format_error(const char* __s) {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw format_error(__s);
 #  else

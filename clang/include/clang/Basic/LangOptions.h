@@ -160,7 +160,8 @@ public:
     HLSL_2017 = 2017,
     HLSL_2018 = 2018,
     HLSL_2021 = 2021,
-    HLSL_202x = 2029,
+    HLSL_202x = 2028,
+    HLSL_202y = 2029,
   };
 
   /// Clang versions with different platform ABI conformance.
