@@ -3,9 +3,9 @@
 ; RUN: diff %t1.ll %t2.ll
 ; RUN: FileCheck %s < %t1.ll
 
-@X = global i32 undef           ; <i32*> [#uses=0]
+@X = global i32 undef           ; <ptr> [#uses=0]
 
-declare i32 @atoi(i8*)
+declare i32 @atoi(ptr)
 
 define i32 @test() {
         ret i32 undef
@@ -21,7 +21,7 @@ define i32 @test2() {
 
 ; CHECK: @X = global
 ; CHECK-EMPTY:
-; CHECK: declare i32 @atoi(i8*)
+; CHECK: declare i32 @atoi(ptr)
 ; CHECK-EMPTY:
 ; CHECK: define i32 @test() {
 ; CHECK: {{^[}]}}

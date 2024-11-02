@@ -2064,6 +2064,7 @@ td_library(
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorBase.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.td",
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td",
     ],
     includes = ["include"],
     deps = [
@@ -2084,6 +2085,14 @@ gentbl_cc_library(
         (
             ["--gen-attrdef-defs"],
             "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc",
+        ),
+        (
+            ["--gen-enum-decls"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.h.inc",
+        ),
+        (
+            ["--gen-enum-defs"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -2124,6 +2133,24 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.td",
+    deps = [":SparseTensorTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SparseTensorTypesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["--gen-typedef-decls"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.h.inc",
+        ),
+        (
+            ["--gen-typedef-defs"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td",
     deps = [":SparseTensorTdFiles"],
 )
 
@@ -2179,6 +2206,7 @@ cc_library(
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorEnums",
         ":SparseTensorOpsIncGen",
+        ":SparseTensorTypesIncGen",
         "//llvm:Support",
     ],
 )
@@ -3673,7 +3701,7 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/ROCDL*.h",
             "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
         ],
-    ),
+    ) + ["include/mlir/Transforms/InliningUtils.h"],
     includes = ["include"],
     deps = [
         ":CallOpInterfaces",
@@ -6870,6 +6898,7 @@ cc_binary(
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestArith",
         "//mlir/test:TestBufferization",
+        "//mlir/test:TestControlFlow",
         "//mlir/test:TestDLTI",
         "//mlir/test:TestDialect",
         "//mlir/test:TestFunc",

@@ -367,9 +367,9 @@ AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   case CallingConv::AMDGPU_ES:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
-    return std::make_pair(1, getWavefrontSize());
+    return std::pair(1, getWavefrontSize());
   default:
-    return std::make_pair(1u, getMaxFlatWorkGroupSize());
+    return std::pair(1u, getMaxFlatWorkGroupSize());
   }
 }
 
@@ -524,7 +524,8 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
 
   // Assume all implicit inputs are used by default
   unsigned NBytes = (AMDGPU::getAmdhsaCodeObjectVersion() >= 5) ? 256 : 56;
-  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", NBytes);
+  return F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes",
+                                         NBytes);
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
@@ -683,8 +684,8 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
   if (F.hasFnAttribute("amdgpu-num-sgpr")) {
-    unsigned Requested = AMDGPU::getIntegerAttribute(
-      F, "amdgpu-num-sgpr", MaxNumSGPRs);
+    unsigned Requested =
+        F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
 
     // Make sure requested value does not violate subtarget's specifications.
     if (Requested && (Requested <= ReservedNumSGPRs))
@@ -763,8 +764,8 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
   if (F.hasFnAttribute("amdgpu-num-vgpr")) {
-    unsigned Requested = AMDGPU::getIntegerAttribute(
-      F, "amdgpu-num-vgpr", MaxNumVGPRs);
+    unsigned Requested =
+        F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
 
     if (hasGFX90AInsts())
       Requested *= 2;
@@ -953,7 +954,8 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   if (NSAThreshold.getNumOccurrences() > 0)
     return std::max(NSAThreshold.getValue(), 2u);
 
-  int Value = AMDGPU::getIntegerAttribute(MF.getFunction(), "amdgpu-nsa-threshold", -1);
+  int Value = MF.getFunction().getFnAttributeAsParsedInteger(
+      "amdgpu-nsa-threshold", -1);
   if (Value > 0)
     return std::max(Value, 2);
 

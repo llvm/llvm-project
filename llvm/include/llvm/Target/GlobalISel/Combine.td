@@ -437,7 +437,7 @@ def simplify_add_to_sub: GICombineRule <
 >;
 
 // Fold fp_op(cst) to the constant result of the floating point operation.
-def constant_fp_op_matchinfo: GIDefMatchData<"Optional<APFloat>">;
+def constant_fp_op_matchinfo: GIDefMatchData<"std::optional<APFloat>">;
 def constant_fp_op: GICombineRule <
   (defs root:$root, constant_fp_op_matchinfo:$info),
   (match (wip_match_opcode G_FNEG, G_FABS, G_FPTRUNC, G_FSQRT, G_FLOG2):$root,

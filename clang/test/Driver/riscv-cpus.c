@@ -7,6 +7,16 @@
 // MCPU-ROCKET64: "-nostdsysteminc" "-target-cpu" "rocket-rv64"
 // MCPU-ROCKET64: "-target-feature" "+64bit"
 
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr1-base | FileCheck -check-prefix=MCPU-SYNTACORE-SCR1-BASE %s
+// MCPU-SYNTACORE-SCR1-BASE: "-target-cpu" "syntacore-scr1-base"
+// MCPU-SYNTACORE-SCR1-BASE: "-target-feature" "+c" "-target-feature" "-64bit"
+// MCPU-SYNTACORE-SCR1-BASE: "-target-abi" "ilp32"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr1-max | FileCheck -check-prefix=MCPU-SYNTACORE-SCR1-MAX %s
+// MCPU-SYNTACORE-SCR1-MAX: "-target-cpu" "syntacore-scr1-max"
+// MCPU-SYNTACORE-SCR1-MAX: "-target-feature" "+m" "-target-feature" "+c" "-target-feature" "-64bit"
+// MCPU-SYNTACORE-SCR1-MAX: "-target-abi" "ilp32"
+
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=native | FileCheck -check-prefix=MCPU-NATIVE %s
 // MCPU-NATIVE-NOT: "-target-cpu" "native"
@@ -16,6 +26,12 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=rocket-rv64 | FileCheck -check-prefix=MTUNE-ROCKET64 %s
 // MTUNE-ROCKET64: "-tune-cpu" "rocket-rv64"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-base | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-BASE %s
+// MTUNE-SYNTACORE-SCR1-BASE: "-tune-cpu" "syntacore-scr1-base"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-max | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-MAX %s
+// MTUNE-SYNTACORE-SCR1-MAX: "-tune-cpu" "syntacore-scr1-max"
 
 // Check mtune alias CPU has resolved to the right CPU according XLEN.
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=generic | FileCheck -check-prefix=MTUNE-GENERIC-32 %s

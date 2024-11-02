@@ -20,6 +20,7 @@
 // RUN:   -verify=bugpath
 
 void clang_analyzer_eval(int);
+void clang_analyzer_warnIfReached();
 
 int glob;
 
@@ -215,6 +216,20 @@ void test_notnull_symbolic2(FILE *fp, int *buf) {
     // bugpath-note{{}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
 }
+void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
+  if (fp) // \
+  // bugpath-note{{Assuming 'fp' is null}} \
+  // bugpath-note{{Taking false branch}}
+    return;
+  size_t ret = fread(buf, size, n, fp); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+  clang_analyzer_warnIfReached(); // not reachable
+}
+
 typedef __WCHAR_TYPE__ wchar_t;
 // This is one test case for the ARR38-C SEI-CERT rule.
 void ARR38_C_F(FILE *file) {

@@ -71,88 +71,6 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
 void PPCSubtarget::initializeEnvironment() {
   StackAlignment = Align(16);
   CPUDirective = PPC::DIR_NONE;
-  HasMFOCRF = false;
-  Has64BitSupport = false;
-  Use64BitRegs = false;
-  UseCRBits = false;
-  HasHardFloat = false;
-  HasAltivec = false;
-  HasSPE = false;
-  HasEFPU2 = false;
-  HasFPU = false;
-  HasVSX = false;
-  NeedsTwoConstNR = false;
-  HasP8Vector = false;
-  HasP8Altivec = false;
-  HasP8Crypto = false;
-  HasP9Vector = false;
-  HasP9Altivec = false;
-  HasMMA = false;
-  HasROPProtect = false;
-  HasPrivileged = false;
-  HasP10Vector = false;
-  HasPrefixInstrs = false;
-  HasPCRelativeMemops = false;
-  HasFCPSGN = false;
-  HasFSQRT = false;
-  HasFRE = false;
-  HasFRES = false;
-  HasFRSQRTE = false;
-  HasFRSQRTES = false;
-  HasRecipPrec = false;
-  HasSTFIWX = false;
-  HasLFIWAX = false;
-  HasFPRND = false;
-  HasFPCVT = false;
-  HasISEL = false;
-  HasBPERMD = false;
-  HasExtDiv = false;
-  HasCMPB = false;
-  HasLDBRX = false;
-  IsBookE = false;
-  HasOnlyMSYNC = false;
-  IsPPC4xx = false;
-  IsPPC6xx = false;
-  IsE500 = false;
-  FeatureMFTB = false;
-  AllowsUnalignedFPAccess = false;
-  DeprecatedDST = false;
-  HasICBT = false;
-  HasInvariantFunctionDescriptors = false;
-  HasPartwordAtomics = false;
-  HasQuadwordAtomics = false;
-  HasDirectMove = false;
-  HasHTM = false;
-  HasFloat128 = false;
-  HasFusion = false;
-  HasStoreFusion = false;
-  HasAddiLoadFusion = false;
-  HasAddisLoadFusion = false;
-  HasArithAddFusion = false;
-  HasAddLogicalFusion = false;
-  HasLogicalAddFusion = false;
-  HasLogicalFusion = false;
-  HasSha3Fusion = false;
-  HasCompareFusion = false;
-  HasWideImmFusion = false;
-  HasZeroMoveFusion = false;
-  HasBack2BackFusion = false;
-  IsISA2_06 = false;
-  IsISA2_07 = false;
-  IsISA3_0 = false;
-  IsISA3_1 = false;
-  IsISAFuture = false;
-  UseLongCalls = false;
-  SecurePlt = false;
-  VectorsUseTwoUnits = false;
-  UsePPCPreRASchedStrategy = false;
-  UsePPCPostRASchedStrategy = false;
-  PairedVectorMemops = false;
-  PredictableSelectIsExpensive = false;
-  HasFastMFLR = false;
-  HasModernAIXAs = false;
-  IsAIX = false;
-
   HasPOPCNTD = POPCNTD_Unavailable;
 }
 
@@ -183,7 +101,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if ((TargetTriple.isOSFreeBSD() && TargetTriple.getOSMajorVersion() >= 13) ||
       TargetTriple.isOSNetBSD() || TargetTriple.isOSOpenBSD() ||
       TargetTriple.isMusl())
-    SecurePlt = true;
+    IsSecurePlt = true;
 
   if (HasSPE && IsPPC64)
     report_fatal_error( "SPE is only supported for 32-bit targets.\n", false);

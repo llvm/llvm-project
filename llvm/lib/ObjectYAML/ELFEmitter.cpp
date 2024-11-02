@@ -1396,7 +1396,7 @@ void ELFState<ELFT>::writeSectionContent(
   for (const ELFYAML::BBAddrMapEntry &E : *Section.Entries) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 2)
+      if (E.Version > 1)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
@@ -1414,13 +1414,10 @@ void ELFState<ELFT>::writeSectionContent(
     // Write all BBEntries.
     if (!E.BBEntries)
       continue;
-    for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
-      if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
-        SHeader.sh_size += CBA.writeULEB128(BBE.ID);
+    for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries)
       SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
                          CBA.writeULEB128(BBE.Size) +
                          CBA.writeULEB128(BBE.Metadata);
-    }
   }
 }
 

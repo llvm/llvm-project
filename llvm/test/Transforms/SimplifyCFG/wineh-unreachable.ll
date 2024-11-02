@@ -4,7 +4,7 @@
 declare void @Personality()
 declare void @f()
 
-define void @test1() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test1() personality ptr @Personality {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @f()
@@ -20,7 +20,7 @@ unreachable.unwind:
   unreachable
 }
 
-define void @test2() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test2() personality ptr @Personality {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -54,7 +54,7 @@ unreachable:
   unreachable
 }
 
-define void @test3() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test3() personality ptr @Personality {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -84,7 +84,7 @@ unreachable.unwind:
   unreachable
 }
 
-define void @test5() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test5() personality ptr @Personality {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -112,7 +112,7 @@ exit:
   unreachable
 }
 
-define void @test6() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test6() personality ptr @Personality {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -120,7 +120,7 @@ define void @test6() personality i8* bitcast (void ()* @Personality to i8*) {
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
-; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [i8* null, i32 0, i8* null]
+; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [ptr null, i32 0, ptr null]
 ; CHECK-NEXT:    catchret from [[CATCH]] to label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -133,14 +133,14 @@ catch.pad:
   %cs1 = catchswitch within none [label %catch.body, label %catch.body] unwind to caller
 
 catch.body:
-  %catch = catchpad within %cs1 [i8* null, i32 0, i8* null]
+  %catch = catchpad within %cs1 [ptr null, i32 0, ptr null]
   catchret from %catch to label %exit
 
 exit:
   ret void
 }
 
-define void @test7() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test7() personality ptr @Personality {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -148,7 +148,7 @@ define void @test7() personality i8* bitcast (void ()* @Personality to i8*) {
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
-; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [i8* null, i32 0, i8* null]
+; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [ptr null, i32 0, ptr null]
 ; CHECK-NEXT:    catchret from [[CATCH]] to label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -161,18 +161,18 @@ catch.pad:
   %cs1 = catchswitch within none [label %catch.body, label %catch.body2] unwind to caller
 
 catch.body:
-  %catch = catchpad within %cs1 [i8* null, i32 0, i8* null]
+  %catch = catchpad within %cs1 [ptr null, i32 0, ptr null]
   catchret from %catch to label %exit
 
 catch.body2:
-  %catch2 = catchpad within %cs1 [i8* null, i32 0, i8* null]
+  %catch2 = catchpad within %cs1 [ptr null, i32 0, ptr null]
   catchret from %catch2 to label %exit
 
 exit:
   ret void
 }
 
-define void @test8() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test8() personality ptr @Personality {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -180,7 +180,7 @@ define void @test8() personality i8* bitcast (void ()* @Personality to i8*) {
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch.body] unwind to caller
 ; CHECK:       catch.body:
-; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [i8* null, i32 0, i8* null]
+; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [ptr null, i32 0, ptr null]
 ; CHECK-NEXT:    catchret from [[CATCH]] to label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -193,18 +193,18 @@ catch.pad:
   %cs1 = catchswitch within none [label %catch.body, label %catch.body2] unwind to caller
 
 catch.body2:
-  %catch2 = catchpad within %cs1 [i8* null, i32 0, i8* null]
+  %catch2 = catchpad within %cs1 [ptr null, i32 0, ptr null]
   catchret from %catch2 to label %exit
 
 catch.body:
-  %catch = catchpad within %cs1 [i8* null, i32 0, i8* null]
+  %catch = catchpad within %cs1 [ptr null, i32 0, ptr null]
   catchret from %catch to label %exit
 
 exit:
   ret void
 }
 
-define void @test9() personality i8* bitcast (void ()* @Personality to i8*) {
+define void @test9() personality ptr @Personality {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -212,10 +212,10 @@ define void @test9() personality i8* bitcast (void ()* @Personality to i8*) {
 ; CHECK:       catch.pad:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label [[CATCH_BODY:%.*]], label %catch.body2] unwind to caller
 ; CHECK:       catch.body:
-; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [i8* null, i32 0, i8* null]
+; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS1]] [ptr null, i32 0, ptr null]
 ; CHECK-NEXT:    catchret from [[CATCH]] to label [[EXIT]]
 ; CHECK:       catch.body2:
-; CHECK-NEXT:    [[CATCH2:%.*]] = catchpad within [[CS1]] [i8* null, i32 64, i8* null]
+; CHECK-NEXT:    [[CATCH2:%.*]] = catchpad within [[CS1]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    catchret from [[CATCH2]] to label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -228,11 +228,11 @@ catch.pad:
   %cs1 = catchswitch within none [label %catch.body, label %catch.body2] unwind to caller
 
 catch.body:
-  %catch = catchpad within %cs1 [i8* null, i32 0, i8* null]
+  %catch = catchpad within %cs1 [ptr null, i32 0, ptr null]
   catchret from %catch to label %exit
 
 catch.body2:
-  %catch2 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %catch2 = catchpad within %cs1 [ptr null, i32 64, ptr null]
   catchret from %catch2 to label %exit
 
 exit:

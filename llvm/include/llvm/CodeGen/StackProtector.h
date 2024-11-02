@@ -36,6 +36,8 @@ class Type;
 
 class StackProtector : public FunctionPass {
 private:
+  static constexpr unsigned DefaultSSPBufferSize = 8;
+
   /// A mapping of AllocaInsts to their required SSP layout.
   using SSPLayoutMap = DenseMap<const AllocaInst *,
                                 MachineFrameInfo::SSPLayoutKind>;
@@ -59,7 +61,7 @@ private:
 
   /// The minimum size of buffers that will receive stack smashing
   /// protection when -fstack-protection is used.
-  unsigned SSPBufferSize = 0;
+  unsigned SSPBufferSize = DefaultSSPBufferSize;
 
   /// VisitedPHIs - The set of PHI nodes visited when determining
   /// if a variable's reference has been taken.  This set

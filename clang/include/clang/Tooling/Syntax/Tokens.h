@@ -34,7 +34,6 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -229,7 +228,7 @@ public:
   ///
   /// EXPECTS: \p Expanded is a subrange of expandedTokens().
   /// Complexity is logarithmic.
-  llvm::Optional<llvm::ArrayRef<syntax::Token>>
+  std::optional<llvm::ArrayRef<syntax::Token>>
   spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const;
 
   /// Find the subranges of expanded tokens, corresponding to \p Spelled.
@@ -278,7 +277,7 @@ public:
   /// If \p Spelled starts a mapping (e.g. if it's a macro name or '#' starting
   /// a preprocessor directive) return the subrange of expanded tokens that the
   /// macro expands to.
-  llvm::Optional<Expansion>
+  std::optional<Expansion>
   expansionStartingAt(const syntax::Token *Spelled) const;
   /// Returns all expansions (partially) expanded from the specified tokens.
   /// This is the expansions whose Spelled range intersects \p Spelled.

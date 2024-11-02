@@ -357,6 +357,7 @@ private:
     SValue X, Y;
     // If present, add 1 << RoundAt before shift:
     std::optional<unsigned> RoundAt;
+    VectorType *ResTy;
   };
 
   auto getNumSignificantBits(Value *V, Instruction *In) const
@@ -1245,7 +1246,7 @@ auto HvxIdioms::canonSgn(SValue X, SValue Y) const
 
 // Match
 //   (X * Y) [>> N], or
-//   ((X * Y) + (1 << N-1)) >> N
+//   ((X * Y) + (1 << M)) >> N
 auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
   using namespace PatternMatch;
   auto *Ty = In.getType();
@@ -1278,11 +1279,11 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
   // Check if there is rounding added.
   const APInt *C = nullptr;
   if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    unsigned CV = C->getZExtValue();
-    if (CV != 0 && !isPowerOf2_32(CV))
+    uint64_t CV = C->getZExtValue();
+    if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)
-      Op.RoundAt = Log2_32(CV);
+      Op.RoundAt = Log2_64(CV);
     Exp = T;
   }
 
@@ -1292,6 +1293,7 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     // FIXME: The information below is recomputed.
     Op.X.Sgn = getNumSignificantBits(Op.X.Val, &In).second;
     Op.Y.Sgn = getNumSignificantBits(Op.Y.Val, &In).second;
+    Op.ResTy = cast<VectorType>(Ty);
     return Op;
   }
 
@@ -1370,6 +1372,7 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
 
   SmallVector<Value *> Results;
   FxpOp ChopOp = Op;
+  ChopOp.ResTy = VectorType::get(Op.ResTy->getElementType(), ChopLen, false);
 
   for (unsigned V = 0; V != VecLen / ChopLen; ++V) {
     ChopOp.X.Val = HVC.subvector(Builder, X, V * ChopLen, ChopLen);
@@ -1481,7 +1484,7 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
   if (SkipWords != 0)
     WordP.resize(WordP.size() - SkipWords);
 
-  return HVC.joinVectorElements(Builder, WordP, InpTy);
+  return HVC.joinVectorElements(Builder, WordP, Op.ResTy);
 }
 
 auto HvxIdioms::createMulQ15(IRBuilderBase &Builder, SValue X, SValue Y,
@@ -2259,6 +2262,8 @@ auto HexagonVectorCombine::joinVectorElements(IRBuilderBase &Builder,
 
   unsigned NeedInputs = ToWidth / Width;
   if (Inputs.size() != NeedInputs) {
+    // Having too many inputs is ok: drop the high bits (usual wrap-around).
+    // If there are too few, fill them with the sign bit.
     Value *Last = Inputs.back();
     Value *Sign =
         Builder.CreateAShr(Last, getConstSplat(Last->getType(), Width - 1));

@@ -13,6 +13,6 @@ target triple = "x86_64-pc-windows-msvc19.11.0"
 @foo = linkonce constant i32 1, comdat
 $foo = comdat any
 
-define i32* @bar() {
-  ret i32* @foo
+define ptr @bar() {
+  ret ptr @foo
 }

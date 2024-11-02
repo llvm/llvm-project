@@ -14,7 +14,6 @@
 #include "StatepointLowering.h"
 #include "SelectionDAGBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -159,9 +158,9 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
 /// Utility function for reservePreviousStackSlotForValue. Tries to find
 /// stack slot index to which we have spilled value for previous statepoints.
 /// LookUpDepth specifies maximum DFS depth this function is allowed to look.
-static Optional<int> findPreviousSpillSlot(const Value *Val,
-                                           SelectionDAGBuilder &Builder,
-                                           int LookUpDepth) {
+static std::optional<int> findPreviousSpillSlot(const Value *Val,
+                                                SelectionDAGBuilder &Builder,
+                                                int LookUpDepth) {
   // Can not look any further - give up now
   if (LookUpDepth <= 0)
     return std::nullopt;
@@ -196,10 +195,10 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   // All incoming values should have same known stack slot, otherwise result
   // is unknown.
   if (const PHINode *Phi = dyn_cast<PHINode>(Val)) {
-    Optional<int> MergedResult;
+    std::optional<int> MergedResult;
 
     for (const auto &IncomingValue : Phi->incoming_values()) {
-      Optional<int> SpillSlot =
+      std::optional<int> SpillSlot =
           findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth - 1);
       if (!SpillSlot)
         return std::nullopt;
@@ -283,7 +282,7 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
     return;
 
   const int LookUpDepth = 6;
-  Optional<int> Index =
+  std::optional<int> Index =
       findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth);
   if (!Index)
     return;

@@ -4,10 +4,10 @@
 declare i1 @cond()
 declare void @exit(i32 %code)
 
-define void @test_01(i32* %p, i32 %shift) {
+define void @test_01(ptr %p, i32 %shift) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X]], [[SHIFT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -30,7 +30,7 @@ define void @test_01(i32* %p, i32 %shift) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %x = load i32, i32* %p, !range !0
+  %x = load i32, ptr %p, !range !0
   %x.shifted = lshr i32 %x, %shift
   br label %loop
 
@@ -60,10 +60,10 @@ never_happens:
   unreachable
 }
 
-define void @test_02(i32* %p, i32 %shift) {
+define void @test_02(ptr %p, i32 %shift) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X]], [[SHIFT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -86,7 +86,7 @@ define void @test_02(i32* %p, i32 %shift) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %x = load i32, i32* %p, !range !0
+  %x = load i32, ptr %p, !range !0
   %x.shifted = lshr i32 %x, %shift
   br label %loop
 
@@ -116,10 +116,10 @@ never_happens:
   unreachable
 }
 
-define void @test_03(i32* %p, i32 %shift) {
+define void @test_03(ptr %p, i32 %shift) {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X]], [[SHIFT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -142,7 +142,7 @@ define void @test_03(i32* %p, i32 %shift) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %x = load i32, i32* %p, !range !0
+  %x = load i32, ptr %p, !range !0
   %x.shifted = lshr i32 %x, %shift
   br label %loop
 
@@ -172,10 +172,10 @@ never_happens:
   unreachable
 }
 
-define void @test_04(i32* %p, i32 %shift) {
+define void @test_04(ptr %p, i32 %shift) {
 ; CHECK-LABEL: @test_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[X_SHIFTED:%.*]] = lshr i32 [[X]], [[SHIFT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -198,7 +198,7 @@ define void @test_04(i32* %p, i32 %shift) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %x = load i32, i32* %p, !range !0
+  %x = load i32, ptr %p, !range !0
   %x.shifted = lshr i32 %x, %shift
   br label %loop
 

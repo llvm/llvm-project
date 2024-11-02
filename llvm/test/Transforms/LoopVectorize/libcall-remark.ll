@@ -18,10 +18,10 @@ for.cond.cleanup:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [32768 x float], [32768 x float]* @data, i64 0, i64 %indvars.iv
-  %t0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [32768 x float], ptr @data, i64 0, i64 %indvars.iv
+  %t0 = load float, ptr %arrayidx, align 4
   %sqrtf = tail call float @sqrtf(float %t0)
-  store float %sqrtf, float* %arrayidx, align 4
+  store float %sqrtf, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 32768
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -38,10 +38,10 @@ for.cond.cleanup:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [32768 x float], [32768 x float]* @data, i64 0, i64 %indvars.iv
-  %t0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [32768 x float], ptr @data, i64 0, i64 %indvars.iv
+  %t0 = load float, ptr %arrayidx, align 4
   %sqrtf = tail call float @arbitrary(float %t0)
-  store float %sqrtf, float* %arrayidx, align 4
+  store float %sqrtf, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 32768
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

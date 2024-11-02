@@ -49,6 +49,7 @@ Implemented Papers
 - P2438R2 - ``std::string::substr() &&``
 - P0600R1 - ``nodiscard`` in the library
 - P0339R6 - ``polymorphic_allocator<>`` as a vocabulary type
+- P1169R4 - ``static operator()``
 
 Improvements and New Features
 -----------------------------

@@ -15,15 +15,14 @@
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
-#include "llvm/ExecutionEngine/Orc/Speculation.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Speculation.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
@@ -39,13 +38,13 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
 #include <list>
 #include <memory>
+#include <optional>
 #include <set>
 #include <utility>
 #include <vector>
@@ -65,15 +64,17 @@ public:
 
   /// Partitioning function.
   using PartitionFunction =
-      std::function<Optional<GlobalValueSet>(GlobalValueSet Requested)>;
+      std::function<std::optional<GlobalValueSet>(GlobalValueSet Requested)>;
 
   /// Off-the-shelf partitioning which compiles all requested symbols (usually
   /// a single function at a time).
-  static Optional<GlobalValueSet> compileRequested(GlobalValueSet Requested);
+  static std::optional<GlobalValueSet>
+  compileRequested(GlobalValueSet Requested);
 
   /// Off-the-shelf partitioning which compiles whole modules whenever any
   /// symbol in them is requested.
-  static Optional<GlobalValueSet> compileWholeModule(GlobalValueSet Requested);
+  static std::optional<GlobalValueSet>
+  compileWholeModule(GlobalValueSet Requested);
 
   /// Construct a CompileOnDemandLayer.
   CompileOnDemandLayer(ExecutionSession &ES, IRLayer &BaseLayer,

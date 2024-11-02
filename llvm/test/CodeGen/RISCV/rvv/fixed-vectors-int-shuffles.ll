@@ -183,9 +183,8 @@ define <8 x i64> @vrgather_permute_shuffle_uv_v8i64(<8 x i64> %x) {
 define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 5
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v16, a0
+; RV32-NEXT:    vmv.v.i v16, 5
 ; RV32-NEXT:    vmv.v.i v20, 2
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v20, v16, 7
@@ -203,8 +202,9 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV64-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 5
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v16, a0
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vmv.v.i v20, 2
 ; RV64-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
 ; RV64-NEXT:    vslideup.vi v20, v16, 7
@@ -372,9 +372,8 @@ define <8 x i8> @splat_ve4_ins_i0ve2(<8 x i8> %v) {
 define <8 x i8> @splat_ve4_ins_i1ve3(<8 x i8> %v) {
 ; CHECK-LABEL: splat_ve4_ins_i1ve3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv.v.i v9, 3
 ; CHECK-NEXT:    vmv.v.i v10, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v10, v9, 1
@@ -473,9 +472,8 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @splat_ve2_we0_ins_i2we4(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0_ins_i2we4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmv.v.i v10, 4
 ; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v11, v10, 2
@@ -493,9 +491,8 @@ define <8 x i8> @splat_ve2_we0_ins_i2we4(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @splat_ve2_we0_ins_i2ve4_i5we6(<8 x i8> %v, <8 x i8> %w) {
 ; RV32-LABEL: splat_ve2_we0_ins_i2ve4_i5we6:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 6
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v10, a0
+; RV32-NEXT:    vmv.v.i v10, 6
 ; RV32-NEXT:    vmv.v.i v11, 0
 ; RV32-NEXT:    vsetivli zero, 6, e8, mf2, tu, ma
 ; RV32-NEXT:    vslideup.vi v11, v10, 5
@@ -513,9 +510,8 @@ define <8 x i8> @splat_ve2_we0_ins_i2ve4_i5we6(<8 x i8> %v, <8 x i8> %w) {
 ;
 ; RV64-LABEL: splat_ve2_we0_ins_i2ve4_i5we6:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 6
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vmv.s.x v10, a0
+; RV64-NEXT:    vmv.v.i v10, 6
 ; RV64-NEXT:    vmv.v.i v11, 0
 ; RV64-NEXT:    vsetivli zero, 6, e8, mf2, tu, ma
 ; RV64-NEXT:    vslideup.vi v11, v10, 5

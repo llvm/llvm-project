@@ -1880,9 +1880,13 @@ Expected<uint32_t> MachOObjectFile::getSymbolFlags(DataRefImpl DRI) const {
         Result |= SymbolRef::SF_Undefined;
     }
 
-    if (!(MachOType & MachO::N_PEXT))
+    if (MachOType & MachO::N_PEXT)
+      Result |= SymbolRef::SF_Hidden;
+    else
       Result |= SymbolRef::SF_Exported;
-  }
+
+  } else if (MachOType & MachO::N_PEXT)
+    Result |= SymbolRef::SF_Hidden;
 
   if (MachOFlags & (MachO::N_WEAK_REF | MachO::N_WEAK_DEF))
     Result |= SymbolRef::SF_Weak;

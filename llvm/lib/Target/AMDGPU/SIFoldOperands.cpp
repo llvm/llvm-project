@@ -1457,7 +1457,7 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
         ((Op == AMDGPU::V_MUL_F64_e64 || Op == AMDGPU::V_MUL_F16_e64 ||
           Op == AMDGPU::V_MUL_F16_t16_e64) &&
          MFI->getMode().FP64FP16OutputDenormals))
-      return std::make_pair(nullptr, SIOutMods::NONE);
+      return std::pair(nullptr, SIOutMods::NONE);
 
     const MachineOperand *RegOp = nullptr;
     const MachineOperand *ImmOp = nullptr;
@@ -1470,7 +1470,7 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
       ImmOp = Src1;
       RegOp = Src0;
     } else
-      return std::make_pair(nullptr, SIOutMods::NONE);
+      return std::pair(nullptr, SIOutMods::NONE);
 
     int OMod = getOModValue(Op, ImmOp->getImm());
     if (OMod == SIOutMods::NONE ||
@@ -1478,9 +1478,9 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
         TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
-      return std::make_pair(nullptr, SIOutMods::NONE);
+      return std::pair(nullptr, SIOutMods::NONE);
 
-    return std::make_pair(RegOp, OMod);
+    return std::pair(RegOp, OMod);
   }
   case AMDGPU::V_ADD_F64_e64:
   case AMDGPU::V_ADD_F32_e64:
@@ -1491,7 +1491,7 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
         ((Op == AMDGPU::V_ADD_F64_e64 || Op == AMDGPU::V_ADD_F16_e64 ||
           Op == AMDGPU::V_ADD_F16_t16_e64) &&
          MFI->getMode().FP64FP16OutputDenormals))
-      return std::make_pair(nullptr, SIOutMods::NONE);
+      return std::pair(nullptr, SIOutMods::NONE);
 
     // Look through the DAGCombiner canonicalization fmul x, 2 -> fadd x, x
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -1503,12 +1503,12 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
         !TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) &&
         !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
         !TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
-      return std::make_pair(Src0, SIOutMods::MUL2);
+      return std::pair(Src0, SIOutMods::MUL2);
 
-    return std::make_pair(nullptr, SIOutMods::NONE);
+    return std::pair(nullptr, SIOutMods::NONE);
   }
   default:
-    return std::make_pair(nullptr, SIOutMods::NONE);
+    return std::pair(nullptr, SIOutMods::NONE);
   }
 }
 

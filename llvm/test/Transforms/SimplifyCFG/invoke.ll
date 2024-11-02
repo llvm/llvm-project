@@ -3,7 +3,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 declare i32 @__gxx_personality_v0(...)
-declare void @__cxa_call_unexpected(i8*)
+declare void @__cxa_call_unexpected(ptr)
 declare void @purefn() nounwind readnone willreturn
 declare i32 @readonly() nounwind readonly
 declare i32 @readonly_willreturn() nounwind readonly willreturn
@@ -11,76 +11,76 @@ declare i32 @nounwind_fn() nounwind
 declare i32 @fn()
 
 
-define i8* @f1() nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define ptr @f1() nounwind uwtable ssp personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %call = invoke noalias i8* undef()
+  %call = invoke noalias ptr undef()
   to label %invoke.cont unwind label %lpad
 
 invoke.cont:
-  ret i8* %call
+  ret ptr %call
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
-  %1 = extractvalue { i8*, i32 } %0, 0
-  tail call void @__cxa_call_unexpected(i8* %1) noreturn nounwind
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  %1 = extractvalue { ptr, i32 } %0, 0
+  tail call void @__cxa_call_unexpected(ptr %1) noreturn nounwind
   unreachable
 }
 
-define i8* @f2() nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define ptr @f2() nounwind uwtable ssp personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %call = invoke noalias i8* null()
+  %call = invoke noalias ptr null()
   to label %invoke.cont unwind label %lpad
 
 invoke.cont:
-  ret i8* %call
+  ret ptr %call
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
-  %1 = extractvalue { i8*, i32 } %0, 0
-  tail call void @__cxa_call_unexpected(i8* %1) noreturn nounwind
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  %1 = extractvalue { ptr, i32 } %0, 0
+  tail call void @__cxa_call_unexpected(ptr %1) noreturn nounwind
   unreachable
 }
 
-define i8* @f2_no_null_opt() nounwind uwtable ssp #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define ptr @f2_no_null_opt() nounwind uwtable ssp #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f2_no_null_opt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = invoke noalias i8* null()
+; CHECK-NEXT:    [[CALL:%.*]] = invoke noalias ptr null()
 ; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    ret ptr [[CALL]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i8*, i32 } [[TMP0]], 0
-; CHECK-NEXT:    tail call void @__cxa_call_unexpected(i8* [[TMP1]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 0
+; CHECK-NEXT:    tail call void @__cxa_call_unexpected(ptr [[TMP1]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %call = invoke noalias i8* null()
+  %call = invoke noalias ptr null()
   to label %invoke.cont unwind label %lpad
 
 invoke.cont:
-  ret i8* %call
+  ret ptr %call
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
-  %1 = extractvalue { i8*, i32 } %0, 0
-  tail call void @__cxa_call_unexpected(i8* %1) noreturn nounwind
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  %1 = extractvalue { ptr, i32 } %0, 0
+  tail call void @__cxa_call_unexpected(ptr %1) noreturn nounwind
   unreachable
 }
 
-define i32 @invoke_readonly_may_not_return() nounwind personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @invoke_readonly_may_not_return() nounwind personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_readonly_may_not_return(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @readonly()
@@ -94,14 +94,14 @@ invoke.cont:
   ret i32 3
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
-  %1 = extractvalue { i8*, i32 } %0, 0
-  tail call void @__cxa_call_unexpected(i8* %1) noreturn nounwind
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  %1 = extractvalue { ptr, i32 } %0, 0
+  tail call void @__cxa_call_unexpected(ptr %1) noreturn nounwind
   unreachable
 }
 
-define i32 @invoke_readonly_willreturn() nounwind personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @invoke_readonly_willreturn() nounwind personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_readonly_willreturn(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 3
@@ -114,14 +114,14 @@ invoke.cont:
   ret i32 3
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
-  %1 = extractvalue { i8*, i32 } %0, 0
-  tail call void @__cxa_call_unexpected(i8* %1) noreturn nounwind
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  %1 = extractvalue { ptr, i32 } %0, 0
+  tail call void @__cxa_call_unexpected(ptr %1) noreturn nounwind
   unreachable
 }
 
-define i32 @invoke_readonly_willreturn_with_used_retval() nounwind personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @invoke_readonly_willreturn_with_used_retval() nounwind personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_readonly_willreturn_with_used_retval(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @readonly_willreturn()
@@ -135,14 +135,14 @@ invoke.cont:
   ret i32 %call
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
-  %1 = extractvalue { i8*, i32 } %0, 0
-  tail call void @__cxa_call_unexpected(i8* %1) noreturn nounwind
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  %1 = extractvalue { ptr, i32 } %0, 0
+  tail call void @__cxa_call_unexpected(ptr %1) noreturn nounwind
   unreachable
 }
 
-define i32 @f5(i1 %cond, i8* %a, i8* %b) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @f5(i1 %cond, ptr %a, ptr %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[X:%.*]], label [[Y:%.*]]
@@ -156,9 +156,9 @@ define i32 @f5(i1 %cond, i8* %a, i8* %b) personality i8* bitcast (i32 (...)* @__
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[CALL]], [[X]] ], [ [[CALL2]], [[Y]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
-; CHECK-NEXT:    tail call void @__cxa_call_unexpected(i8* [[A:%.*]]) #[[ATTR7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:    tail call void @__cxa_call_unexpected(ptr [[A:%.*]]) #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -177,14 +177,14 @@ cont:
   ret i32 %phi
 
 lpad:
-  %phi2 = phi i8* [%a, %x], [%b, %y]
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
-  tail call void @__cxa_call_unexpected(i8* %phi2) noreturn nounwind
+  %phi2 = phi ptr [%a, %x], [%b, %y]
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  tail call void @__cxa_call_unexpected(ptr %phi2) noreturn nounwind
   unreachable
 }
 
-define void @f6() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @f6() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @f6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FOO:%.*]] = invoke i32 @fn()
@@ -192,7 +192,7 @@ define void @f6() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -208,13 +208,13 @@ invoke.cont2:
   ret void
 
 lpad:
-  %tmp = phi i8* [ null, %invoke.cont1 ], [ null, %entry ]
-  landingpad { i8*, i32 }
+  %tmp = phi ptr [ null, %invoke.cont1 ], [ null, %entry ]
+  landingpad { ptr, i32 }
   cleanup
   ret void
 }
 
-define void @invoke_of_noreturn() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @invoke_of_noreturn() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_of_noreturn(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @simple_throw()
@@ -222,10 +222,10 @@ define void @invoke_of_noreturn() personality i8* bitcast (i32 (...)* @__gxx_per
 ; CHECK:       invoke.cont.unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @sideeffect(i32 1)
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ;
 entry:
   invoke void @simple_throw() to label %invoke.cont unwind label %lpad
@@ -235,12 +235,12 @@ invoke.cont:
   ret void
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @sideeffect(i32 1)
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 }
 
-define void @invoke_of_noreturn_with_shared_normal_destination(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @invoke_of_noreturn_with_shared_normal_destination(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_of_noreturn_with_shared_normal_destination(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[INVOKE:%.*]], label [[INVOKE_CONT:%.*]]
@@ -253,10 +253,10 @@ define void @invoke_of_noreturn_with_shared_normal_destination(i1 %c) personalit
 ; CHECK-NEXT:    call void @sideeffect(i32 -1)
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @sideeffect(i32 1)
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ;
 entry:
   br i1 %c, label %invoke, label %invoke.cont
@@ -270,12 +270,12 @@ invoke.cont:
   ret void
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @sideeffect(i32 1)
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 }
 
-define void @invoke_of_nounwind() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @invoke_of_nounwind() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invoke_of_nounwind(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @simple_return()
@@ -290,9 +290,9 @@ invoke.cont:
   ret void
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @sideeffect(i32 1)
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 }
 
 declare void @simple_throw() noreturn

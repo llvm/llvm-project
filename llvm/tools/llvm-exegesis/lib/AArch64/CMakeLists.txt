@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   Exegesis
   Core
   Support
+  MC
   )
 
 add_llvm_library(LLVMExegesisAArch64

@@ -17,17 +17,17 @@ entry:
   %diff = alloca i32, align 4
   %cb = alloca [16 x i8], align 16
   %cc = alloca [16 x i8], align 16
-  store i32 0, i32* %diff, align 4, !tbaa !11
+  store i32 0, ptr %diff, align 4, !tbaa !11
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %add8 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds [16 x i8], [16 x i8]* %cb, i64 0, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1, !tbaa !21
+  %arrayidx = getelementptr inbounds [16 x i8], ptr %cb, i64 0, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1, !tbaa !21
   %conv = sext i8 %0 to i32
-  %arrayidx2 = getelementptr inbounds [16 x i8], [16 x i8]* %cc, i64 0, i64 %indvars.iv
-  %1 = load i8, i8* %arrayidx2, align 1, !tbaa !21
+  %arrayidx2 = getelementptr inbounds [16 x i8], ptr %cc, i64 0, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1, !tbaa !21
   %conv3 = sext i8 %1 to i32
   %sub = sub i32 %conv, %conv3
   %add = add nsw i32 %sub, %add8
@@ -36,12 +36,12 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !25
 
 for.end:                                          ; preds = %for.body
-  store i32 %add, i32* %diff, align 4, !tbaa !11
-  call void @ibar(i32* %diff) #2
+  store i32 %add, ptr %diff, align 4, !tbaa !11
+  call void @ibar(ptr %diff) #2
   ret i32 0
 }
 
-declare void @ibar(i32*) #1
+declare void @ibar(ptr) #1
 
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}

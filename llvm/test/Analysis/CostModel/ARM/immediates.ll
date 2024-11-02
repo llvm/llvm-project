@@ -22,8 +22,8 @@ define i32 @const_costs() {
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and_1 = and i32 undef, 1
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_1 = xor i32 undef, 1
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_7 = xor i32 undef, 7
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, i32* undef, i32 1
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, i32* undef, i32 16
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, ptr undef, i32 1
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, ptr undef, i32 16
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
@@ -44,8 +44,8 @@ define i32 @const_costs() {
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and_1 = and i32 undef, 1
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_1 = xor i32 undef, 1
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_7 = xor i32 undef, 7
-; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, i32* undef, i32 1
-; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, i32* undef, i32 16
+; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, ptr undef, i32 1
+; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, ptr undef, i32 16
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
@@ -66,8 +66,8 @@ define i32 @const_costs() {
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and_1 = and i32 undef, 1
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_1 = xor i32 undef, 1
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_7 = xor i32 undef, 7
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, i32* undef, i32 1
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, i32* undef, i32 16
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, ptr undef, i32 1
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, ptr undef, i32 16
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
@@ -88,8 +88,8 @@ define i32 @const_costs() {
 ; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and_1 = and i32 undef, 1
 ; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_1 = xor i32 undef, 1
 ; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_7 = xor i32 undef, 7
-; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, i32* undef, i32 1
-; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, i32* undef, i32 16
+; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, ptr undef, i32 1
+; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, ptr undef, i32 16
 ; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T2-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
@@ -110,8 +110,8 @@ define i32 @const_costs() {
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and_1 = and i32 undef, 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_1 = xor i32 undef, 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_7 = xor i32 undef, 7
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, i32* undef, i32 1
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, i32* undef, i32 16
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, ptr undef, i32 1
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, ptr undef, i32 16
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
@@ -132,8 +132,8 @@ define i32 @const_costs() {
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and_1 = and i32 undef, 1
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_1 = xor i32 undef, 1
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor_7 = xor i32 undef, 7
-; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, i32* undef, i32 1
-; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, i32* undef, i32 16
+; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_1 = getelementptr i32, ptr undef, i32 1
+; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep_16 = getelementptr i32, ptr undef, i32 16
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_244 = icmp ne i32 undef, 244
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_256 = icmp uge i32 undef, 256
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
@@ -153,8 +153,8 @@ define i32 @const_costs() {
   %and_1 = and i32 undef, 1
   %xor_1 = xor i32 undef, 1
   %xor_7 = xor i32 undef, 7
-  %gep_1 = getelementptr i32, i32* undef, i32 1
-  %gep_16 = getelementptr i32, i32* undef, i32 16
+  %gep_1 = getelementptr i32, ptr undef, i32 1
+  %gep_16 = getelementptr i32, ptr undef, i32 16
   %cmp_244 = icmp ne i32 undef, 244
   %cmp_256 = icmp uge i32 undef, 256
   %cmp_1024 = icmp ult i32 undef, 1024

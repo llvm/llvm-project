@@ -189,9 +189,8 @@ declare <2 x i64> @llvm.experimental.stepvector.v2i64()
 define <2 x i64> @stepvector_v2i64() {
 ; RV32LMULMAX1-LABEL: stepvector_v2i64:
 ; RV32LMULMAX1:       # %bb.0:
-; RV32LMULMAX1-NEXT:    li a0, 1
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32LMULMAX1-NEXT:    vmv.s.x v9, a0
+; RV32LMULMAX1-NEXT:    vmv.v.i v9, 1
 ; RV32LMULMAX1-NEXT:    vmv.v.i v8, 0
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV32LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
@@ -205,9 +204,8 @@ define <2 x i64> @stepvector_v2i64() {
 ;
 ; RV32LMULMAX2-LABEL: stepvector_v2i64:
 ; RV32LMULMAX2:       # %bb.0:
-; RV32LMULMAX2-NEXT:    li a0, 1
 ; RV32LMULMAX2-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32LMULMAX2-NEXT:    vmv.s.x v9, a0
+; RV32LMULMAX2-NEXT:    vmv.v.i v9, 1
 ; RV32LMULMAX2-NEXT:    vmv.v.i v8, 0
 ; RV32LMULMAX2-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV32LMULMAX2-NEXT:    vslideup.vi v8, v9, 2
@@ -227,9 +225,8 @@ declare <4 x i64> @llvm.experimental.stepvector.v4i64()
 define <4 x i64> @stepvector_v4i64() {
 ; RV32LMULMAX1-LABEL: stepvector_v4i64:
 ; RV32LMULMAX1:       # %bb.0:
-; RV32LMULMAX1-NEXT:    li a0, 1
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32LMULMAX1-NEXT:    vmv.s.x v9, a0
+; RV32LMULMAX1-NEXT:    vmv.v.i v9, 1
 ; RV32LMULMAX1-NEXT:    vmv.v.i v8, 0
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV32LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
@@ -268,9 +265,8 @@ declare <8 x i64> @llvm.experimental.stepvector.v8i64()
 define <8 x i64> @stepvector_v8i64() {
 ; RV32LMULMAX1-LABEL: stepvector_v8i64:
 ; RV32LMULMAX1:       # %bb.0:
-; RV32LMULMAX1-NEXT:    li a0, 1
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32LMULMAX1-NEXT:    vmv.s.x v9, a0
+; RV32LMULMAX1-NEXT:    vmv.v.i v9, 1
 ; RV32LMULMAX1-NEXT:    vmv.v.i v8, 0
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV32LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
@@ -321,9 +317,8 @@ declare <16 x i64> @llvm.experimental.stepvector.v16i64()
 define <16 x i64> @stepvector_v16i64() {
 ; RV32LMULMAX1-LABEL: stepvector_v16i64:
 ; RV32LMULMAX1:       # %bb.0:
-; RV32LMULMAX1-NEXT:    li a0, 1
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32LMULMAX1-NEXT:    vmv.s.x v9, a0
+; RV32LMULMAX1-NEXT:    vmv.v.i v9, 1
 ; RV32LMULMAX1-NEXT:    vmv.v.i v8, 0
 ; RV32LMULMAX1-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV32LMULMAX1-NEXT:    vslideup.vi v8, v9, 2

@@ -18,12 +18,14 @@
 #include "lldb/Utility/Status.h"
 
 namespace lldb_private {
+using namespace llvm;
+using namespace lldb;
 
 class EmulateInstructionRISCV : public EmulateInstruction {
 public:
-  static llvm::StringRef GetPluginNameStatic() { return "riscv"; }
+  static StringRef GetPluginNameStatic() { return "riscv"; }
 
-  static llvm::StringRef GetPluginDescriptionStatic() {
+  static StringRef GetPluginDescriptionStatic() {
     return "Emulate instructions for the RISC-V architecture.";
   }
 
@@ -51,7 +53,7 @@ public:
 public:
   EmulateInstructionRISCV(const ArchSpec &arch) : EmulateInstruction(arch) {}
 
-  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+  StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   bool SupportsEmulatingInstructionsOfType(InstructionType inst_type) override {
     return SupportsThisInstructionType(inst_type);
@@ -62,19 +64,18 @@ public:
   bool EvaluateInstruction(uint32_t options) override;
   bool TestEmulation(Stream *out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
-  llvm::Optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
-                                               uint32_t reg_num) override;
+  Optional<RegisterInfo> GetRegisterInfo(RegisterKind reg_kind,
+                                         uint32_t reg_num) override;
 
-  llvm::Optional<lldb::addr_t> ReadPC();
-  bool WritePC(lldb::addr_t pc);
+  Optional<addr_t> ReadPC();
+  bool WritePC(addr_t pc);
 
-  llvm::Optional<DecodeResult> ReadInstructionAt(lldb::addr_t addr);
-  llvm::Optional<DecodeResult> Decode(uint32_t inst);
+  Optional<DecodeResult> ReadInstructionAt(addr_t addr);
+  Optional<DecodeResult> Decode(uint32_t inst);
   bool Execute(DecodeResult inst, bool ignore_cond);
 
   template <typename T>
-  std::enable_if_t<std::is_integral_v<T>, llvm::Optional<T>>
-  ReadMem(uint64_t addr) {
+  std::enable_if_t<std::is_integral_v<T>, Optional<T>> ReadMem(uint64_t addr) {
     EmulateInstructionRISCV::Context ctx;
     ctx.type = EmulateInstruction::eContextRegisterLoad;
     ctx.SetNoArgs();
@@ -92,8 +93,8 @@ public:
     return WriteMemoryUnsigned(ctx, addr, value, sizeof(T));
   }
 
-  llvm::RoundingMode GetRoundingMode();
-  bool SetAccruedExceptions(llvm::APFloatBase::opStatus);
+  RoundingMode GetRoundingMode();
+  bool SetAccruedExceptions(APFloatBase::opStatus);
 
 private:
   /// Last decoded instruction from m_opcode

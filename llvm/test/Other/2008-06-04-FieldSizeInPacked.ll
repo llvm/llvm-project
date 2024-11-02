@@ -7,8 +7,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i1 @q() nounwind  {
 entry:
-	%char_p = getelementptr %packed, %packed* null, i32 0, i32 1		; <i8*> [#uses=1]
-	%char_u = getelementptr %unpacked, %unpacked* null, i32 0, i32 1		; <i8*> [#uses=1]
-	%res = icmp eq i8* %char_p, %char_u		; <i1> [#uses=1]
+	%char_p = getelementptr %packed, ptr null, i32 0, i32 1		; <ptr> [#uses=1]
+	%char_u = getelementptr %unpacked, ptr null, i32 0, i32 1		; <ptr> [#uses=1]
+	%res = icmp eq ptr %char_p, %char_u		; <i1> [#uses=1]
 	ret i1 %res
 }

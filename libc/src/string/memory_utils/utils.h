@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/compiler_features.h"
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t
@@ -80,16 +81,12 @@ template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
   return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
 }
 
-#if defined __has_builtin
-#if __has_builtin(__builtin_memcpy_inline)
+#if LLVM_LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
-#endif
 
-#if defined __has_builtin
-#if __has_builtin(__builtin_memset_inline)
+#if LLVM_LIBC_HAS_BUILTIN(__builtin_memset_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
-#endif
 #endif
 
 // Performs a constant count copy.

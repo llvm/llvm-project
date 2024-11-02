@@ -27,7 +27,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace {
@@ -938,7 +937,8 @@ mlir::LogicalResult fir::ConvertOp::verify() {
       (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
       (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
       (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
-      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)))
+      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
+      (fir::isPolymorphicType(inType) && outType.isa<BoxType>()))
     return mlir::success();
   return emitOpError("invalid type conversion");
 }
@@ -3085,6 +3085,12 @@ mlir::LogicalResult fir::ShapeOp::verify() {
   if (shapeTy.getRank() != size)
     return emitOpError("shape type rank mismatch");
   return mlir::success();
+}
+
+void fir::ShapeOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::ValueRange extents) {
+  auto type = fir::ShapeType::get(builder.getContext(), extents.size());
+  build(builder, result, type, extents);
 }
 
 //===----------------------------------------------------------------------===//

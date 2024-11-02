@@ -369,6 +369,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_destructor.h>
 #include <__memory/uses_allocator.h>
+#include <__type_traits/strip_signature.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -2049,6 +2050,16 @@ public:
 
     void reset();
 };
+
+#if _LIBCPP_STD_VER >= 17
+
+template <class _Rp, class... _Args>
+packaged_task(_Rp(*)(_Args...)) -> packaged_task<_Rp(_Args...)>;
+
+template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
+packaged_task(_Fp) -> packaged_task<_Stripped>;
+
+#endif
 
 template<class ..._ArgTypes>
 void

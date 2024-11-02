@@ -20,7 +20,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"

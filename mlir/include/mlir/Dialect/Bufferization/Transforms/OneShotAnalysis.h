@@ -17,6 +17,7 @@ namespace bufferization {
 
 struct OneShotBufferizationOptions;
 class BufferizationAliasInfo;
+struct BufferizationStatistics;
 class OneShotAnalysisState;
 
 /// Options for analysis-enabled bufferization.
@@ -92,6 +93,9 @@ public:
   /// Return `true` if a value was marked as in-place bufferized.
   bool isInPlace(OpOperand &opOperand) const;
 
+  int64_t getStatNumTensorOutOfPlace() const { return statNumTensorOutOfPlace; }
+  int64_t getStatNumTensorInPlace() const { return statNumTensorInPlace; }
+
 private:
   /// llvm::EquivalenceClasses wants comparable elements. This comparator uses
   /// uses pointer comparison on the defining op. This is a poor man's
@@ -124,6 +128,10 @@ private:
   /// statically if two values are equivalent. In that case, the values are
   /// considered to be not equivalent.
   llvm::EquivalenceClasses<Value, ValueComparator> equivalentInfo;
+
+  // Bufferization statistics.
+  int64_t statNumTensorOutOfPlace = 0;
+  int64_t statNumTensorInPlace = 0;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias
@@ -284,11 +292,13 @@ private:
 
 /// Analyze `op` and its nested ops. Bufferization decisions are stored in
 /// `state`.
-LogicalResult analyzeOp(Operation *op, OneShotAnalysisState &state);
+LogicalResult analyzeOp(Operation *op, OneShotAnalysisState &state,
+                        BufferizationStatistics *statistics = nullptr);
 
 /// Run One-Shot Bufferize on the given op: Analysis + Bufferization
-LogicalResult runOneShotBufferize(Operation *op,
-                                  const OneShotBufferizationOptions &options);
+LogicalResult
+runOneShotBufferize(Operation *op, const OneShotBufferizationOptions &options,
+                    BufferizationStatistics *statistics = nullptr);
 
 } // namespace bufferization
 } // namespace mlir

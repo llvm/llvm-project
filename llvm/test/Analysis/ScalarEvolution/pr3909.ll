@@ -2,8 +2,8 @@
 ; PR 3909
 
 
-	%0 = type { i32, %1* }		; type %0
-	%1 = type { i32, i8* }		; type %1
+	%0 = type { i32, ptr }		; type %0
+	%1 = type { i32, ptr }		; type %1
 
 define x86_stdcallcc i32 @_Dmain(%0 %unnamed) {
 entry:

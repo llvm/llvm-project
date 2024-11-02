@@ -33,9 +33,8 @@
 ; CHECK-LABEL: entry
 ; CHECK:  %foo = alloca i32, align 4
 ; CHECK:  %face = alloca i8, align 1
-; CHECK:  %foo.0..sroa_cast = bitcast i32* %foo to i8*
-; CHECK:  store volatile i32 0, i32* %foo, align 4
-; CHECK:  %foo.0. = load volatile i32, i32* %foo, align 4, !dbg !16
+; CHECK:  store volatile i32 0, ptr %foo, align 4
+; CHECK:  %foo.0. = load volatile i32, ptr %foo, align 4, !dbg !16
 ; CHECK:  %cmp = icmp eq i32 %foo.0., 4, !dbg !16
 ; CHECK:  %frombool = zext i1 %cmp to i8, !dbg !16
 ; CHECK:  call void @llvm.dbg.value(metadata i8 %frombool, metadata !13, metadata !DIExpression()), !dbg !16
@@ -53,9 +52,8 @@ define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
 entry:
   %foo = alloca i32, align 4
   %face = alloca i8, align 1
-  %foo.0..sroa_cast = bitcast i32* %foo to i8*
-  store volatile i32 0, i32* %foo, align 4
-  %foo.0. = load volatile i32, i32* %foo, align 4, !dbg !26
+  store volatile i32 0, ptr %foo, align 4
+  %foo.0. = load volatile i32, ptr %foo, align 4, !dbg !26
   %cmp = icmp eq i32 %foo.0., 4, !dbg !26
   %frombool = zext i1 %cmp to i8, !dbg !26
   call void @llvm.dbg.value(metadata i8 %frombool, metadata !15, metadata !DIExpression()), !dbg !26
@@ -72,8 +70,8 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %beards.0 = phi i32 [ 8, %if.then ], [ 4, %if.else ]
-  store volatile i8 %frombool, i8* %face, align 1
-  %face.0. = load volatile i8, i8* %face, align 1
+  store volatile i8 %frombool, ptr %face, align 1
+  %face.0. = load volatile i8, ptr %face, align 1
   %0 = and i8 %face.0., 1
   %tobool3 = icmp eq i8 %0, 0
   %cond4 = select i1 %tobool3, i32 0, i32 %beards.0

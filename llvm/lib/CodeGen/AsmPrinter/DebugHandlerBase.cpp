@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/DebugHandlerBase.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -30,7 +29,7 @@ using namespace llvm;
 /// variable's lexical scope instruction ranges.
 static cl::opt<bool> TrimVarLocs("trim-var-locs", cl::Hidden, cl::init(true));
 
-Optional<DbgVariableLocation>
+std::optional<DbgVariableLocation>
 DbgVariableLocation::extractFromMachineInstruction(
     const MachineInstr &Instruction) {
   DbgVariableLocation Location;

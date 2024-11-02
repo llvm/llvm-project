@@ -363,7 +363,8 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 
 LogicalResult
 mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
-                                     OneShotAnalysisState &state) {
+                                     OneShotAnalysisState &state,
+                                     BufferizationStatistics *statistics) {
   assert(state.getOptions().bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
@@ -387,7 +388,7 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     equivalenceAnalysis(funcOp, aliasInfo, state, funcState);
 
     // Analyze funcOp.
-    if (failed(analyzeOp(funcOp, state)))
+    if (failed(analyzeOp(funcOp, state, statistics)))
       return failure();
 
     // Run some extra function analyses.
@@ -411,7 +412,8 @@ void mlir::bufferization::removeBufferizationAttributesInModule(
 }
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
-    ModuleOp moduleOp, const OneShotBufferizationOptions &options) {
+    ModuleOp moduleOp, const OneShotBufferizationOptions &options,
+    BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
@@ -429,7 +431,8 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   for (func::FuncOp funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
-    if (failed(bufferizeOp(funcOp, options, options.copyBeforeWrite)))
+    if (failed(bufferizeOp(funcOp, options, options.copyBeforeWrite,
+                           /*opFilter=*/nullptr, statistics)))
       return failure();
     // Change buffer return types to more precise layout maps.
     if (options.functionBoundaryTypeConversion ==
@@ -444,19 +447,19 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 }
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
-    ModuleOp moduleOp, const OneShotBufferizationOptions &options) {
+    ModuleOp moduleOp, const OneShotBufferizationOptions &options,
+    BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
-    OneShotAnalysisState analysisState(moduleOp, options);
-    if (failed(insertTensorCopies(moduleOp, options)))
+    if (failed(insertTensorCopies(moduleOp, options, statistics)))
       return failure();
   }
   if (options.testAnalysisOnly)
     return success();
-  if (failed(bufferizeModuleOp(moduleOp, options)))
+  if (failed(bufferizeModuleOp(moduleOp, options, statistics)))
     return failure();
   return success();
 }

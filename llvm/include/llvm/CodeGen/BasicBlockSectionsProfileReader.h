@@ -31,8 +31,8 @@ namespace llvm {
 
 // The cluster information for a machine basic block.
 struct BBClusterInfo {
-  // Unique ID for this basic block.
-  unsigned BBID;
+  // MachineBasicBlock ID.
+  unsigned MBBNumber;
   // Cluster ID this basic block belongs to.
   unsigned ClusterID;
   // Position of basic block within the cluster.

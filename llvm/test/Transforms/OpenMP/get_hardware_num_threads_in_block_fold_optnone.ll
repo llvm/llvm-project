@@ -16,18 +16,18 @@ target triple = "nvptx64"
 define weak void @kernel0() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false)
 ; CHECK-NEXT:    call void @helper0()
 ; CHECK-NEXT:    call void @helper1()
 ; CHECK-NEXT:    call void @helper2()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true, i1 false)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false)
   call void @helper0()
   call void @helper1()
   call void @helper2()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true, i1 false)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true)
   ret void
 }
 
@@ -36,14 +36,14 @@ define weak void @kernel0() #0 {
 define weak void @kernel1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false)
 ; CHECK-NEXT:    call void @helper1()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false)
   call void @helper1()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false)
   ret void
 }
 
@@ -52,18 +52,18 @@ define weak void @kernel1() #0 {
 define weak void @kernel2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel2
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false)
 ; CHECK-NEXT:    call void @helper0()
 ; CHECK-NEXT:    call void @helper1()
 ; CHECK-NEXT:    call void @helper2()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false)
   call void @helper0()
   call void @helper1()
   call void @helper2()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false)
   ret void
 }
 
@@ -112,8 +112,8 @@ define internal void @helper2() {
 }
 
 declare i32 @__kmpc_get_hardware_num_threads_in_block()
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1 zeroext, i1 zeroext, i1 zeroext) #1
-declare void @__kmpc_target_deinit(%struct.ident_t* nocapture readnone, i1 zeroext, i1 zeroext) #1
+declare i32 @__kmpc_target_init(%struct.ident_t*, i1 zeroext, i1 zeroext) #1
+declare void @__kmpc_target_deinit(%struct.ident_t* nocapture readnone, i1 zeroext) #1
 
 
 !llvm.module.flags = !{!0, !1}

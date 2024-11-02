@@ -10,18 +10,18 @@
 ; CHECK-DAG: %abb = type { %abc }
 ; CHECK-DAG: %abc = type { [4 x i8] }
 
-; CHECK-LABEL: define void @foo1(%fum.1** %a, %fum.1.2** %b) {
-; CHECK-NEXT:   %b.copy = call %fum.1.2** @llvm.ssa.copy.p0p0s_fum.1.2s(%fum.1.2** %b)
-; CHECK-NEXT:   %a.copy = call %fum.1** @llvm.ssa.copy.p0p0s_fum.1s(%fum.1** %a)
+; CHECK-LABEL: define void @foo1(%fum.1 %a, %fum.1.2 %b) {
+; CHECK-NEXT:   %b.copy = call %fum.1.2 @llvm.ssa.copy.s_fum.1.2s(%fum.1.2 %b)
+; CHECK-NEXT:   %a.copy = call %fum.1 @llvm.ssa.copy.s_fum.1s(%fum.1 %a)
 ; CHECK-NEXT:  ret void
 
-; CHECK: declare %fum.1.2** @llvm.ssa.copy.p0p0s_fum.1.2s(%fum.1.2** returned)
+; CHECK: declare %fum.1.2 @llvm.ssa.copy.s_fum.1.2s(%fum.1.2 returned)
 
-; CHECK: declare %fum.1** @llvm.ssa.copy.p0p0s_fum.1s(%fum.1** returned)
+; CHECK: declare %fum.1 @llvm.ssa.copy.s_fum.1s(%fum.1 returned)
 
-; CHECK-LABEL: define void @foo2(%fum.1.2** %b, %fum.1** %a) {
-; CHECK-NEXT:   %a.copy = call %fum.1** @llvm.ssa.copy.p0p0s_fum.1s(%fum.1** %a)
-; CHECK-NEXT:  %b.copy = call %fum.1.2** @llvm.ssa.copy.p0p0s_fum.1.2s(%fum.1.2** %b)
+; CHECK-LABEL: define void @foo2(%fum.1.2 %b, %fum.1 %a) {
+; CHECK-NEXT:   %a.copy = call %fum.1 @llvm.ssa.copy.s_fum.1s(%fum.1 %a)
+; CHECK-NEXT:  %b.copy = call %fum.1.2 @llvm.ssa.copy.s_fum.1.2s(%fum.1.2 %b)
 ; CHECK-NEXT:  ret void
 
 

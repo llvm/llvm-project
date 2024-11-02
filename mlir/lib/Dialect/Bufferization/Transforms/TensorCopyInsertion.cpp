@@ -97,7 +97,8 @@ resolveUsesInRepetitiveRegions(Operation *op,
 }
 
 LogicalResult mlir::bufferization::insertTensorCopies(
-    Operation *op, const OneShotBufferizationOptions &options) {
+    Operation *op, const OneShotBufferizationOptions &options,
+    BufferizationStatistics *statistics) {
   // Preprocessing: Resolve currently unsupported bufferization cases.
   resolveUsesInRepetitiveRegions(op, options);
 
@@ -106,10 +107,10 @@ LogicalResult mlir::bufferization::insertTensorCopies(
   // analysis depending on whether function boundary bufferization is enabled or
   // not.
   if (options.bufferizeFunctionBoundaries) {
-    if (failed(analyzeModuleOp(cast<ModuleOp>(op), state)))
+    if (failed(analyzeModuleOp(cast<ModuleOp>(op), state, statistics)))
       return failure();
   } else {
-    if (failed(analyzeOp(op, state)))
+    if (failed(analyzeOp(op, state, statistics)))
       return failure();
   }
 

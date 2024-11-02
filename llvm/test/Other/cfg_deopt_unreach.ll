@@ -11,8 +11,8 @@
 
 declare i8 @llvm.experimental.deoptimize.i8(...)
 
-define i8 @callee(i1* %c) alwaysinline {
-  %c0 = load volatile i1, i1* %c
+define i8 @callee(ptr %c) alwaysinline {
+  %c0 = load volatile i1, ptr %c
   br i1 %c0, label %lleft, label %lright
 ; NO-FLAGS: label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
 ; DEOPT-NOT: label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"

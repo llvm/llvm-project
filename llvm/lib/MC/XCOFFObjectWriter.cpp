@@ -633,6 +633,21 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
       report_fatal_error("TOCEntryOffset overflows in small code model mode");
 
     FixedValue = TOCEntryOffset;
+  } else if (Type == XCOFF::RelocationType::R_RBR) {
+    MCSectionXCOFF *ParentSec = cast<MCSectionXCOFF>(Fragment->getParent());
+    assert((SymASec->getMappingClass() == XCOFF::XMC_PR &&
+            ParentSec->getMappingClass() == XCOFF::XMC_PR) &&
+           "Only XMC_PR csect may have the R_RBR relocation.");
+
+    // The address of the branch instruction should be the sum of section
+    // address, fragment offset and Fixup offset.
+    uint64_t BRInstrAddress = SectionMap[ParentSec]->Address +
+                              Layout.getFragmentOffset(Fragment) +
+                              Fixup.getOffset();
+    // The FixedValue should be the difference between SymA csect address and BR
+    // instr address plus any constant value.
+    FixedValue =
+        SectionMap[SymASec]->Address - BRInstrAddress + Target.getConstant();
   }
 
   assert((Fixup.getOffset() <=

@@ -31,6 +31,7 @@ typedef enum cudaError_enum {
   CUDA_ERROR_INVALID_VALUE = 1,
   CUDA_ERROR_NO_DEVICE = 100,
   CUDA_ERROR_INVALID_HANDLE = 400,
+  CUDA_ERROR_NOT_READY = 600,
   CUDA_ERROR_TOO_MANY_PEERS = 711,
 } CUresult;
 
@@ -244,6 +245,7 @@ CUresult cuModuleUnload(CUmodule);
 CUresult cuStreamCreate(CUstream *, unsigned);
 CUresult cuStreamDestroy(CUstream);
 CUresult cuStreamSynchronize(CUstream);
+CUresult cuStreamQuery(CUstream);
 CUresult cuCtxSetCurrent(CUcontext);
 CUresult cuDevicePrimaryCtxRelease(CUdevice);
 CUresult cuDevicePrimaryCtxGetState(CUdevice, unsigned *, int *);

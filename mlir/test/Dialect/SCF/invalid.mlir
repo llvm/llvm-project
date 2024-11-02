@@ -641,3 +641,14 @@ func.func @switch_wrong_types(%arg0: index, %arg1: i32) {
   }
   return
 }
+
+// -----
+
+func.func @switch_missing_terminator(%arg0: index, %arg1: i32) {
+  // expected-error @below {{'scf.index_switch' op expected region to end with scf.yield, but got func.return}}
+  "scf.index_switch"(%arg0) ({
+    "scf.yield"() : () -> ()
+  }, {
+    return
+  }) {cases = array<i64: 1>} : (index) -> ()
+}

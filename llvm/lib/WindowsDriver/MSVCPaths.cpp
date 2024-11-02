@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/WindowsDriver/MSVCPaths.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -651,7 +650,7 @@ bool findVCToolChainViaSetupConfig(vfs::FileSystem &VFS, std::string &Path,
     return false;
 
   ISetupInstancePtr NewestInstance;
-  Optional<uint64_t> NewestVersionNum;
+  std::optional<uint64_t> NewestVersionNum;
   do {
     bstr_t VersionString;
     uint64_t VersionNum;

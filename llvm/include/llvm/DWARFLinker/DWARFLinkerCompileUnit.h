@@ -136,7 +136,7 @@ public:
   uint64_t getHighPc() const { return HighPc; }
   bool hasLabelAt(uint64_t Addr) const { return Labels.count(Addr); }
 
-  Optional<PatchLocation> getUnitRangesAttribute() const {
+  std::optional<PatchLocation> getUnitRangesAttribute() const {
     return UnitRangeAttribute;
   }
 
@@ -275,7 +275,7 @@ private:
   /// all the unit's function addresses.
   /// @{
   std::vector<PatchLocation> RangeAttributes;
-  Optional<PatchLocation> UnitRangeAttribute;
+  std::optional<PatchLocation> UnitRangeAttribute;
   /// @}
 
   /// Location attributes that need to be transferred from the

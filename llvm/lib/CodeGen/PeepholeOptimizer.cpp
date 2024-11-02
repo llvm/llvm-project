@@ -66,7 +66,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -273,11 +272,11 @@ namespace {
       : MI(MI), CommutePair(std::make_pair(Idx1, Idx2)) {}
 
     MachineInstr *getMI() const { return MI; }
-    Optional<IndexPair> getCommutePair() const { return CommutePair; }
+    std::optional<IndexPair> getCommutePair() const { return CommutePair; }
 
   private:
     MachineInstr *MI;
-    Optional<IndexPair> CommutePair;
+    std::optional<IndexPair> CommutePair;
   };
 
   /// Helper class to hold a reply for ValueTracker queries.

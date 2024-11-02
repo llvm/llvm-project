@@ -224,10 +224,10 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
   case Instruction::Mul:
   case Instruction::Sub:
   case Instruction::Shl:
-    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(true); });
-    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(false); });
-    Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(true); });
-    Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(false); });
+    Modifications.push_back(
+        [&Inst]() { Inst.setHasNoSignedWrap(!Inst.hasNoSignedWrap()); });
+    Modifications.push_back(
+        [&Inst]() { Inst.setHasNoUnsignedWrap(!Inst.hasNoUnsignedWrap()); });
     break;
   case Instruction::ICmp:
     CI = cast<ICmpInst>(&Inst);
@@ -240,8 +240,8 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
   // Add inbound flag.
   case Instruction::GetElementPtr:
     GEP = cast<GetElementPtrInst>(&Inst);
-    Modifications.push_back([GEP]() { GEP->setIsInBounds(true); });
-    Modifications.push_back([GEP]() { GEP->setIsInBounds(false); });
+    Modifications.push_back(
+        [GEP]() { GEP->setIsInBounds(!GEP->isInBounds()); });
     break;
   // Add exact flag.
   case Instruction::UDiv:

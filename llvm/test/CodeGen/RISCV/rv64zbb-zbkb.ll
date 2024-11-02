@@ -279,7 +279,7 @@ define void @rori_i32_fshl_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshl_nosext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a2, a0, 1
-; RV64I-NEXT:    slli a0, a0, 31
+; RV64I-NEXT:    slliw a0, a0, 31
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)
 ; RV64I-NEXT:    ret
@@ -314,7 +314,7 @@ define signext i32 @rori_i32_fshr(i32 signext %a) nounwind {
 define void @rori_i32_fshr_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshr_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slliw a2, a0, 1
 ; RV64I-NEXT:    srliw a0, a0, 31
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)
@@ -352,7 +352,7 @@ define signext i32 @not_rori_i32(i32 signext %x, i32 signext %y) nounwind {
 define i64 @roriw_bug(i64 %x) nounwind {
 ; CHECK-LABEL: roriw_bug:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a0, 31
+; CHECK-NEXT:    slliw a1, a0, 31
 ; CHECK-NEXT:    andi a2, a0, -2
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    or a0, a1, a0

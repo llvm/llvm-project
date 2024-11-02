@@ -16,9 +16,9 @@
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
-createJITLoaderGDBRegistrar(ExecutionSession &ES,
-                            Optional<ExecutorAddr> RegistrationFunctionDylib) {
+Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
+    ExecutionSession &ES,
+    std::optional<ExecutorAddr> RegistrationFunctionDylib) {
   auto &EPC = ES.getExecutorProcessControl();
 
   if (!RegistrationFunctionDylib) {

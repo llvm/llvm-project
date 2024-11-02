@@ -22,17 +22,17 @@ entry:
 
   ;; Each following dbg.assign has an argument of the incorrect type.
   ; CHECK: invalid llvm.dbg.assign intrinsic address/value
-  call void @llvm.dbg.assign(metadata !3, metadata !10, metadata !DIExpression(), metadata !14, metadata i32* undef, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.assign(metadata !3, metadata !10, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic variable
-  call void @llvm.dbg.assign(metadata i32 0, metadata !2, metadata !DIExpression(), metadata !14, metadata i32* undef, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.assign(metadata i32 0, metadata !2, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic expression
-  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !2, metadata !14, metadata i32* undef, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !2, metadata !14, metadata ptr undef, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic DIAssignID
-  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !2, metadata i32* undef, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !2, metadata ptr undef, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic address
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata !3, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic address expression
-  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata i32* undef, metadata !2), !dbg !13
+  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !2), !dbg !13
   ret void
 }
 

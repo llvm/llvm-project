@@ -30,11 +30,12 @@ namespace dataflow {
 // analysis are always enabled and additional constructs are enabled through the
 // `Options`.
 struct UncheckedOptionalAccessModelOptions {
-  /// Ignore optionals reachable through overloaded `operator*` or `operator->`
-  /// (other than those of the optional type itself). The analysis does not
-  /// equate the results of such calls, so it can't identify when their results
-  /// are used safely (across calls), resulting in false positives in all such
-  /// cases. Note: this option does not cover access through `operator[]`.
+  /// In generating diagnostics, ignore optionals reachable through overloaded
+  /// `operator*` or `operator->` (other than those of the optional type
+  /// itself). The analysis does not equate the results of such calls, so it
+  /// can't identify when their results are used safely (across calls),
+  /// resulting in false positives in all such cases. Note: this option does not
+  /// cover access through `operator[]`.
   bool IgnoreSmartPointerDereference = false;
 };
 
@@ -44,8 +45,7 @@ struct UncheckedOptionalAccessModelOptions {
 class UncheckedOptionalAccessModel
     : public DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice> {
 public:
-  UncheckedOptionalAccessModel(
-      ASTContext &Ctx, UncheckedOptionalAccessModelOptions Options = {});
+  UncheckedOptionalAccessModel(ASTContext &Ctx);
 
   /// Returns a matcher for the optional classes covered by this model.
   static ast_matchers::DeclarationMatcher optionalClassDecl();

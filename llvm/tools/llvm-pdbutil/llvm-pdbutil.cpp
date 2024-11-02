@@ -377,8 +377,8 @@ cl::OptionCategory PdbBytes("PDB Stream Options");
 cl::OptionCategory Types("Type Options");
 cl::OptionCategory ModuleCategory("Module Options");
 
-llvm::Optional<NumberRange> DumpBlockRange;
-llvm::Optional<NumberRange> DumpByteRange;
+std::optional<NumberRange> DumpBlockRange;
+std::optional<NumberRange> DumpByteRange;
 
 cl::opt<std::string> DumpBlockRangeOpt(
     "block-range", cl::value_desc("start[-end]"),
@@ -1422,7 +1422,7 @@ static void exportStream() {
 }
 
 static bool parseRange(StringRef Str,
-                       Optional<opts::bytes::NumberRange> &Parsed) {
+                       std::optional<opts::bytes::NumberRange> &Parsed) {
   if (Str.empty())
     return true;
 

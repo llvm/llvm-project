@@ -379,7 +379,7 @@ define <2 x i1> @shl1_trunc_ne0(<2 x i8> %a) {
 
 define i1 @shl1_trunc_eq0_use1(i8 %a) {
 ; CHECK-LABEL: @shl1_trunc_eq0_use1(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 1, [[A:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 1, [[A:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[SHL]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[A]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -393,7 +393,7 @@ define i1 @shl1_trunc_eq0_use1(i8 %a) {
 
 define i1 @shl1_trunc_ne0_use2(i37 %a) {
 ; CHECK-LABEL: @shl1_trunc_ne0_use2(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i37 1, [[A:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i37 1, [[A:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i37 [[SHL]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[T]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i37 [[A]], 8
@@ -465,7 +465,7 @@ define <2 x i1> @shl4_trunc_ne0(<2 x i8> %a) {
 
 define i1 @shl1_trunc_sgt0(i9 %a) {
 ; CHECK-LABEL: @shl1_trunc_sgt0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i9 1, [[A:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i9 1, [[A:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i6 [[T]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -478,7 +478,7 @@ define i1 @shl1_trunc_sgt0(i9 %a) {
 
 define i1 @shl1_trunc_eq1(i64 %a) {
 ; CHECK-LABEL: @shl1_trunc_eq1(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 1, [[A:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 1, [[A:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[SHL]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[T]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[A]], 0
@@ -493,7 +493,7 @@ define i1 @shl1_trunc_eq1(i64 %a) {
 
 define i1 @shl1_trunc_ne32(i8 %a) {
 ; CHECK-LABEL: @shl1_trunc_ne32(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 1, [[A:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 1, [[A:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[SHL]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[A]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -545,7 +545,7 @@ define i1 @shl2_trunc_ne8_i32(i32 %a) {
 
 define i1 @shl1_trunc_sgt4(i32 %a) {
 ; CHECK-LABEL: @shl1_trunc_sgt4(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[A:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[A:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i16 [[T]], 4
 ; CHECK-NEXT:    ret i1 [[R]]

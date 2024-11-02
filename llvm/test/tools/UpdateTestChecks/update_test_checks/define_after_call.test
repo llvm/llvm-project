@@ -1,4 +1,0 @@
-# Verify that calls and defines of the same function can be mixed
-# RUN: cp -f %S/Inputs/define_after_call.ll %t.ll && %update_test_checks %t.ll
-# RUN: diff -u %t.ll %S/Inputs/define_after_call.ll.expected
-# RUN: opt < %t.ll -S | FileCheck %t.ll

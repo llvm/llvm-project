@@ -56,9 +56,9 @@ int32x4_t test_vqrdmlahq_laneq_s32(int32x4_t a, int32x4_t b, int32x4_t v) {
 
 // CHECK-LABEL: @test_vqrdmlahh_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 [[A:%.*]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[B:%.*]], i64 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 [[C:%.*]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B:%.*]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[C:%.*]], i64 0
 // CHECK-NEXT:    [[VQRDMLAHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmlah.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[VQRDMLAHH_S16_I]], i64 0
 // CHECK-NEXT:    ret i16 [[TMP3]]
@@ -79,9 +79,9 @@ int32_t test_vqrdmlahs_s32(int32_t a, int32_t b, int32_t c) {
 // CHECK-LABEL: @test_vqrdmlahh_lane_s16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[C:%.*]], i32 3
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 [[A:%.*]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[B:%.*]], i64 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 [[VGET_LANE]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B:%.*]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[VGET_LANE]], i64 0
 // CHECK-NEXT:    [[VQRDMLAHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmlah.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[VQRDMLAHH_S16_I]], i64 0
 // CHECK-NEXT:    ret i16 [[TMP3]]
@@ -103,9 +103,9 @@ int32_t test_vqrdmlahs_lane_s32(int32_t a, int32_t b, int32x2_t c) {
 // CHECK-LABEL: @test_vqrdmlahh_laneq_s16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[C:%.*]], i32 7
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 [[A:%.*]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[B:%.*]], i64 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 [[VGETQ_LANE]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B:%.*]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[VGETQ_LANE]], i64 0
 // CHECK-NEXT:    [[VQRDMLAHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmlah.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[VQRDMLAHH_S16_I]], i64 0
 // CHECK-NEXT:    ret i16 [[TMP3]]
@@ -174,9 +174,9 @@ int32x4_t test_vqrdmlshq_laneq_s32(int32x4_t a, int32x4_t b, int32x4_t v) {
 
 // CHECK-LABEL: @test_vqrdmlshh_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 [[A:%.*]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[B:%.*]], i64 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 [[C:%.*]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B:%.*]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[C:%.*]], i64 0
 // CHECK-NEXT:    [[VQRDMLSHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmlsh.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[VQRDMLSHH_S16_I]], i64 0
 // CHECK-NEXT:    ret i16 [[TMP3]]
@@ -197,9 +197,9 @@ int32_t test_vqrdmlshs_s32(int32_t a, int32_t b, int32_t c) {
 // CHECK-LABEL: @test_vqrdmlshh_lane_s16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[C:%.*]], i32 3
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 [[A:%.*]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[B:%.*]], i64 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 [[VGET_LANE]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B:%.*]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[VGET_LANE]], i64 0
 // CHECK-NEXT:    [[VQRDMLSHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmlsh.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[VQRDMLSHH_S16_I]], i64 0
 // CHECK-NEXT:    ret i16 [[TMP3]]
@@ -221,9 +221,9 @@ int32_t test_vqrdmlshs_lane_s32(int32_t a, int32_t b, int32x2_t c) {
 // CHECK-LABEL: @test_vqrdmlshh_laneq_s16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[C:%.*]], i32 7
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 [[A:%.*]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[B:%.*]], i64 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 [[VGETQ_LANE]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B:%.*]], i64 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[VGETQ_LANE]], i64 0
 // CHECK-NEXT:    [[VQRDMLSHH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmlsh.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[VQRDMLSHH_S16_I]], i64 0
 // CHECK-NEXT:    ret i16 [[TMP3]]

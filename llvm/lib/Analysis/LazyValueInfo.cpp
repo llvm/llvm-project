@@ -13,7 +13,6 @@
 
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -1358,7 +1357,8 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
               Value *Op = Usr->getOperand(i);
               ValueLatticeElement OpLatticeVal =
                   getValueFromCondition(Op, Condition, isTrueDest);
-              if (Optional<APInt> OpConst = OpLatticeVal.asConstantInteger()) {
+              if (std::optional<APInt> OpConst =
+                      OpLatticeVal.asConstantInteger()) {
                 Result = constantFoldUser(Usr, Op, *OpConst, DL);
                 break;
               }

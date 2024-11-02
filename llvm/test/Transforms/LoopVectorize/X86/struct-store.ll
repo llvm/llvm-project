@@ -15,8 +15,8 @@ entry:
 
 loop:
   %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 0, %entry ]
-  %tmp = getelementptr inbounds [16 x { i64, i64 }], [16 x { i64, i64 }]* @glbl, i64 0, i64 %indvars.iv
-  store { i64, i64 } { i64 ptrtoint (void ()* @fn to i64), i64 0 }, { i64, i64 }* %tmp, align 16
+  %tmp = getelementptr inbounds [16 x { i64, i64 }], ptr @glbl, i64 0, i64 %indvars.iv
+  store { i64, i64 } { i64 ptrtoint (ptr @fn to i64), i64 0 }, ptr %tmp, align 16
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 16

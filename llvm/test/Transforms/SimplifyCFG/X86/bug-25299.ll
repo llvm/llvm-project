@@ -13,7 +13,7 @@ entry:
           to label %continue unwind label %unwind
 
 unwind:                                           ; preds = %entry
-  %tmp101 = landingpad { i8*, i32 }
+  %tmp101 = landingpad { ptr, i32 }
           cleanup
   br i1 %B, label %resume, label %then
 
@@ -21,9 +21,9 @@ then:                                             ; preds = %cleanup1
   br label %resume
 
 resume:                                           ; preds = %cleanup2, %then, %cleanup1, %unwind
-  %tmp104 = phi { i8*, i32 } [ %tmp101, %then ], [ %tmp106, %cleanup2 ], [ %tmp101, %unwind ]
-;CHECK-NOT: resume { i8*, i32 } %tmp104
-  resume { i8*, i32 } %tmp104
+  %tmp104 = phi { ptr, i32 } [ %tmp101, %then ], [ %tmp106, %cleanup2 ], [ %tmp101, %unwind ]
+;CHECK-NOT: resume { ptr, i32 } %tmp104
+  resume { ptr, i32 } %tmp104
 
 continue:                                         ; preds = %entry, %continue
 ;CHECK: continue:                                         ; preds = %entry, %continue
@@ -32,7 +32,7 @@ continue:                                         ; preds = %entry, %continue
           to label %continue unwind label %cleanup2
 
 cleanup2:                                         ; preds = %continue
-  %tmp106 = landingpad { i8*, i32 }
+  %tmp106 = landingpad { ptr, i32 }
           cleanup
   br label %resume
 }

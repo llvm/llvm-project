@@ -412,6 +412,10 @@ LLVM_16 {
     clang_CXXMethod_isDeleted;
     clang_CXXMethod_isCopyAssignmentOperator;
     clang_CXXMethod_isMoveAssignmentOperator;
+    clang_createAPISet;
+    clang_disposeAPISet;
+    clang_getSymbolGraphForCursor;
+    clang_getSymbolGraphForUSR;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

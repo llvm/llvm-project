@@ -139,13 +139,13 @@ entry:
   call void @llvm.dbg.value(metadata i64 %bar, metadata !21, metadata !DIExpression()), !dbg !22
   %0 = trunc i64 %bar to i32, !dbg !22
   call void @llvm.dbg.value(metadata i32 %0, metadata !21, metadata !DIExpression()), !dbg !22
-  store i32 %0, i32 *@glob32, !dbg !22
+  store i32 %0, ptr @glob32, !dbg !22
   %1 = trunc i32 %0 to i16, !dbg !22
   call void @llvm.dbg.value(metadata i16 %1, metadata !21, metadata !DIExpression()), !dbg !22
-  store i16 %1, i16 *@glob16, !dbg !22
+  store i16 %1, ptr @glob16, !dbg !22
   %2 = trunc i16 %1 to i8, !dbg !22
   call void @llvm.dbg.value(metadata i8 %2, metadata !21, metadata !DIExpression()), !dbg !22
-  store i8 %2, i8 *@glob8, !dbg !22
+  store i8 %2, ptr @glob8, !dbg !22
   ret i32 0, !dbg !22
 }
 
@@ -197,7 +197,7 @@ entry:
 
 slippers:
   call void @llvm.dbg.value(metadata i16 %moo, metadata !31, metadata !DIExpression()), !dbg !32
-  store i16 %moo, i16 *@glob16, !dbg !32
+  store i16 %moo, ptr @glob16, !dbg !32
   ret i32 0, !dbg !32
 
 shoes:
@@ -242,16 +242,16 @@ shoes:
 
 ; FASTISEL-INSTRREF-LABEL: bb.1.lala:
 ; FASTISEL-INSTRREF:      DBG_INSTR_REF 1, 0, ![[KNEES]], !DIExpression(DW_OP_deref),
-declare i64 @cheddar(i32 *%arg)
+declare i64 @cheddar(ptr %arg)
 
-define void @qux(i32* noalias sret(i32) %agg.result) !dbg !40 {
+define void @qux(ptr noalias sret(i32) %agg.result) !dbg !40 {
 entry:
-  call void @llvm.dbg.declare(metadata i32 *%agg.result, metadata !41, metadata !DIExpression()), !dbg !42
-  %foo = call i64 @cheddar(i32 *%agg.result), !dbg !42
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !41, metadata !DIExpression()), !dbg !42
+  %foo = call i64 @cheddar(ptr %agg.result), !dbg !42
   br label %lala
 
 lala:
-  call void @llvm.dbg.declare(metadata i32 *%agg.result, metadata !45, metadata !DIExpression()), !dbg !44
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !45, metadata !DIExpression()), !dbg !44
   ret void, !dbg !44
 }
 

@@ -19,8 +19,8 @@ source_filename = "debug-label-inline.c"
 
 define i32 @f2() local_unnamed_addr #0 !dbg !4 {
 entry:
-  %0 = load i32, i32* @ga, align 4, !dbg !1
-  %1 = load i32, i32* @gb, align 4, !dbg !1
+  %0 = load i32, ptr @ga, align 4, !dbg !1
+  %1 = load i32, ptr @gb, align 4, !dbg !1
   call void @llvm.dbg.label(metadata !15), !dbg !17
   %add.i = add nsw i32 %1, %0, !dbg !18
   ret i32 %add.i, !dbg !1

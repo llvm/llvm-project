@@ -32,7 +32,7 @@ block data
 end
 ! CHECK: End BlockData
 
-! CHECK: ModuleLike
+! CHECK: Module test_mod
 module test_mod
 interface
   ! check specification parts are not part of the PFT.
@@ -75,9 +75,9 @@ contains
   end function
   ! CHECK: End Function foo2
 end module
-! CHECK: End ModuleLike
+! CHECK: End Module test_mod
 
-! CHECK: ModuleLike
+! CHECK: Submodule test_mod_impl: submodule(test_mod) test_mod_impl
 submodule (test_mod) test_mod_impl
 contains
   ! CHECK: Subroutine foo
@@ -114,7 +114,7 @@ contains
     ! CHECK: <<End IfConstruct>>
   end procedure
 end submodule
-! CHECK: End ModuleLike
+! CHECK: End Submodule test_mod_impl
 
 ! CHECK: BlockData
 block data named_block

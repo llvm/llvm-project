@@ -116,7 +116,7 @@ class DbgVariable : public DbgEntity {
   /// Index of the entry list in DebugLocs.
   unsigned DebugLocListIndex = ~0u;
   /// DW_OP_LLVM_tag_offset value from DebugLocs.
-  Optional<uint8_t> DebugLocListTagOffset;
+  std::optional<uint8_t> DebugLocListTagOffset;
 
   /// Single value location description.
   std::unique_ptr<DbgValueLoc> ValueLoc = nullptr;
@@ -175,7 +175,9 @@ public:
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
   void setDebugLocListTagOffset(uint8_t O) { DebugLocListTagOffset = O; }
-  Optional<uint8_t> getDebugLocListTagOffset() const { return DebugLocListTagOffset; }
+  std::optional<uint8_t> getDebugLocListTagOffset() const {
+    return DebugLocListTagOffset;
+  }
   StringRef getName() const { return getVariable()->getName(); }
   const DbgValueLoc *getValueLoc() const { return ValueLoc.get(); }
   /// Get the FI entries, sorted by fragment offset.

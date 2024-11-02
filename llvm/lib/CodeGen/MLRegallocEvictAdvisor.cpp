@@ -1113,7 +1113,7 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
 }
 
 bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
-  Optional<float> CachedReward;
+  std::optional<float> CachedReward;
   auto GetReward = [&]() {
     if (!CachedReward)
       CachedReward = static_cast<float>(

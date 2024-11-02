@@ -3530,3 +3530,30 @@ entry:
   store <4 x float> %21, ptr undef, align 16
   ret void
 }
+
+; Inifite loop test case reported on 5ca77541446d
+define void @autogen_SD25931() {
+; CHECK-LABEL: autogen_SD25931:
+; CHECK:       # %bb.0: # %BB
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB139_1: # %CF242
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    jmp .LBB139_1
+BB:
+  %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
+  %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>
+  %Shuff33 = shufflevector <2 x i1> %Shuff19, <2 x i1> zeroinitializer, <2 x i32> <i32 0, i32 2>
+  br label %CF250
+
+CF250:                                            ; preds = %CF250, %BB
+  br i1 poison, label %CF250, label %CF259
+
+CF259:                                            ; preds = %CF250
+  %Cmp83 = icmp ule <2 x i1> %Shuff19, zeroinitializer
+  br label %CF242
+
+CF242:                                            ; preds = %CF242, %CF259
+  %Shuff153 = shufflevector <2 x i1> %Shuff33, <2 x i1> poison, <2 x i32> <i32 3, i32 1>
+  %Shuff161 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp83, <2 x i32> <i32 1, i32 3>
+  br label %CF242
+}

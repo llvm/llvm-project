@@ -5,19 +5,19 @@ target triple = "x86_64-apple-darwin8"
 	%struct.bar = type { i32 }
 	%struct.foo = type { i32 }
 
-define i32 @"Func64"(%struct.bar* %F) {
+define i32 @"Func64"(ptr %F) {
 entry:
 	ret i32 1
 }
 
-define i32 @Func64(%struct.bar* %B) {
+define i32 @Func64(ptr %B) {
 entry:
 	ret i32 0
 }
 
 define i32 @test() {
 entry:
-	%tmp = tail call i32 @"Func64"( %struct.bar* null )		; <i32> [#uses=0]
-	%tmp1 = tail call i32 @Func64( %struct.bar* null )		; <i32> [#uses=0]
+	%tmp = tail call i32 @"Func64"( ptr null )		; <i32> [#uses=0]
+	%tmp1 = tail call i32 @Func64( ptr null )		; <i32> [#uses=0]
 	ret i32 undef
 }

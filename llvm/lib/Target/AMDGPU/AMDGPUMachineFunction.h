@@ -116,7 +116,7 @@ public:
   static bool isKnownAddressLDSGlobal(const GlobalVariable &GV);
   static unsigned calculateKnownAddressOfLDSGlobal(const GlobalVariable &GV);
 
-  static Optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
+  static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 

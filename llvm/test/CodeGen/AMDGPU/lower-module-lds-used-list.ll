@@ -5,6 +5,13 @@
 
 ; CHECK: %llvm.amdgcn.module.lds.t = type { float }
 ; CHECK: @ignored = addrspace(1) global i64 0
+
+; @ignored still in list, @tolower removed, llvm.amdgcn.module.lds appended
+; Start with one value to replace and one to ignore in the .use list
+
+; @ignored still in list, @tolower removed
+; CHECK: @llvm.used = appending global [1 x i8*] [i8* addrspacecast (i8 addrspace(1)* bitcast (i64 addrspace(1)* @ignored to i8 addrspace(1)*) to i8*)], section "llvm.metadata"
+
 ; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 8
 
 ; CHECK-NOT: @tolower
@@ -14,12 +21,6 @@
 ; A variable that is unchanged by pass
 @ignored = addrspace(1) global i64 0
 
-
-; @ignored still in list, @tolower removed, llvm.amdgcn.module.lds appended
-; Start with one value to replace and one to ignore in the .use list
-
-; @ignored still in list, @tolower removed
-; CHECK: @llvm.used = appending global [1 x i8*] [i8* addrspacecast (i8 addrspace(1)* bitcast (i64 addrspace(1)* @ignored to i8 addrspace(1)*) to i8*)], section "llvm.metadata"
 
 @llvm.used = appending global [2 x i8*] [i8* addrspacecast (i8 addrspace(3)* bitcast (float addrspace(3)* @tolower to i8 addrspace(3)*) to i8*), i8* addrspacecast (i8 addrspace(1)* bitcast (i64 addrspace(1)* @ignored to i8 addrspace(1)*) to i8*)], section "llvm.metadata"
 

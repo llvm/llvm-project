@@ -165,17 +165,17 @@ exit:
   ret i32 %res
 }
 
-define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
+define i32 @simple_mul_loop(ptr %A, ptr %B, i32 %N) {
 ; CHECK-T1-SIZE-LABEL: 'simple_mul_loop'
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -187,11 +187,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -203,11 +203,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -219,11 +219,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -235,11 +235,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -251,11 +251,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -267,11 +267,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -283,11 +283,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -299,11 +299,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -315,11 +315,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
@@ -331,11 +331,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
@@ -347,11 +347,11 @@ define i32 @simple_mul_loop(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, i32* %A, i32 %iv
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, i32* %addr.a, align 4
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = getelementptr i32, ptr %A, i32 %iv
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i32, ptr %addr.a, align 4
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %load, %load
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, i32* %B, i32 %iv
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = getelementptr i32, ptr %B, i32 %iv
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
@@ -367,11 +367,11 @@ preheader:
 
 loop:
   %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-  %addr.a = getelementptr i32, i32* %A, i32 %iv
-  %load = load i32, i32* %addr.a
+  %addr.a = getelementptr i32, ptr %A, i32 %iv
+  %load = load i32, ptr %addr.a
   %mul = mul i32 %load, %load
-  %addr.b = getelementptr i32, i32* %B, i32 %iv
-  store i32 %mul, i32* %addr.b
+  %addr.b = getelementptr i32, ptr %B, i32 %iv
+  store i32 %mul, ptr %addr.b
   %iv.next = add nuw i32 %iv, 1
   %cmp = icmp ne i32 %iv.next, %N
   br i1 %cmp, label %loop, label %exit
@@ -381,21 +381,21 @@ exit:
   ret i32 %res
 }
 
-define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
+define i32 @simple_mul_ext_lsr_loop(ptr %A, ptr %B, i32 %N) {
 ; CHECK-T1-SIZE-LABEL: 'simple_mul_ext_lsr_loop'
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = icmp eq i32 %N, 0
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-T1-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -406,15 +406,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -425,15 +425,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -444,15 +444,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -463,15 +463,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-T1-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -482,15 +482,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-V8M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -501,15 +501,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-V8_1M-LATENCY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -520,15 +520,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -539,15 +539,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-V8M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -558,15 +558,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %loop
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-V8_1M-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -577,15 +577,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-MVE-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -596,15 +596,15 @@ define i32 @simple_mul_ext_lsr_loop(i16* %A, i32* %B, i32 %N) {
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %zero, label %exit, label %preheader
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %loop
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, i16* %addr.a, align 2
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load i16, ptr %addr.a, align 2
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext = sext i16 %load to i32
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mul = mul i32 %sext, 7
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, i32* %addr.b, align 4
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %mul, ptr %addr.b, align 4
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %iv.next = add nuw i32 %iv, 1
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp ne i32 %iv.next, %N
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %cmp, label %loop, label %exit
 ; CHECK-NEON-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
@@ -619,15 +619,15 @@ preheader:
 
 loop:
   %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
-  %addr.a = phi i16* [ %A, %preheader ], [ %addr.a, %loop ]
-  %addr.b = phi i32* [ %B, %preheader ], [ %addr.b, %loop ]
-  %load = load i16, i16* %addr.a
+  %addr.a = phi ptr [ %A, %preheader ], [ %addr.a, %loop ]
+  %addr.b = phi ptr [ %B, %preheader ], [ %addr.b, %loop ]
+  %load = load i16, ptr %addr.a
   %sext = sext i16 %load to i32
   %mul = mul i32 %sext, 7
-  store i32 %mul, i32* %addr.b
+  store i32 %mul, ptr %addr.b
   %iv.next = add nuw i32 %iv, 1
-  %addr.a.next = getelementptr i16, i16* %addr.a, i32 1
-  %addr.b.next = getelementptr i32, i32* %addr.b, i32 1
+  %addr.a.next = getelementptr i16, ptr %addr.a, i32 1
+  %addr.b.next = getelementptr i32, ptr %addr.b, i32 1
   %cmp = icmp ne i32 %iv.next, %N
   br i1 %cmp, label %loop, label %exit
 

@@ -2,24 +2,22 @@
 ; RUN: opt -passes=globalopt < %s -S | FileCheck %s
 
 ; Check that we don't try to set a global initializer to a value of a different type.
-; In this case, we were trying to set @0's initializer to be i32* null.
+; In this case, we were trying to set @0's initializer to be ptr null.
 
-%T = type { i32* }
+%T = type { ptr }
 
-@0 = internal global %T* null
+@0 = internal global ptr null
 
 define void @a() {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:    ret void
 ;
-  %1 = tail call i8* @_Znwm(i64 8)
-  %2 = bitcast i8* %1 to %T*
-  %3 = getelementptr inbounds %T, %T* %2, i64 0, i32 0
-  store i32* null, i32** %3, align 8
-  store i8* %1, i8** bitcast (%T** @0 to i8**), align 8
-  %4 = load i64*, i64** bitcast (%T** @0 to i64**), align 8
-  %5 = load atomic i64, i64* %4 acquire, align 8
+  %1 = tail call ptr @_Znwm(i64 8)
+  store ptr null, ptr %1, align 8
+  store ptr %1, ptr @0, align 8
+  %2 = load ptr, ptr @0, align 8
+  %3 = load atomic i64, ptr %2 acquire, align 8
   ret void
 }
 
-declare i8* @_Znwm(i64)
+declare ptr @_Znwm(i64)

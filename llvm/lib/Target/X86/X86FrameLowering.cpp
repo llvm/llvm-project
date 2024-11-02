@@ -1293,11 +1293,11 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
 
         BuildMI(headMBB, DL,
                 TII.get(Uses64BitFramePtr ? X86::CMP64rr : X86::CMP32rr))
-            .addReg(FinalStackProbed)
             .addReg(StackPtr)
+            .addReg(FinalStackProbed)
             .setMIFlag(MachineInstr::FrameSetup);
 
-        // jump
+        // jump to the footer if StackPtr < FinalStackProbed
         BuildMI(headMBB, DL, TII.get(X86::JCC_1))
             .addMBB(footMBB)
             .addImm(X86::COND_B)
@@ -1329,7 +1329,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
             .addReg(StackPtr)
             .setMIFlag(MachineInstr::FrameSetup);
 
-        // jump
+        // jump back while FinalStackProbed < StackPtr
         BuildMI(bodyMBB, DL, TII.get(X86::JCC_1))
             .addMBB(bodyMBB)
             .addImm(X86::COND_B)

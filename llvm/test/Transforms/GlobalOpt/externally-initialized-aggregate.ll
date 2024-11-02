@@ -16,8 +16,8 @@ define i32 @foo() {
 ; CHECK-LABEL: define i32 @foo
 entry:
 ; This load uses the split global, but cannot be constant-propagated away.
-; CHECK: %0 = load i32, i32* @a.0
-  %0 = load i32, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @a, i32 0, i32 0), align 4
+; CHECK: %0 = load i32, ptr @a.0
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 }
 
@@ -25,8 +25,8 @@ define i32 @bar() {
 ; CHECK-LABEL: define i32 @bar
 entry:
 ; This load uses the split global, but cannot be constant-propagated away.
-; CHECK: %0 = load i32, i32* @b.0
-  %0 = load i32, i32* getelementptr inbounds ({i32, i32}, {i32, i32}* @b, i32 0, i32 0), align 4
+; CHECK: %0 = load i32, ptr @b.0
+  %0 = load i32, ptr getelementptr inbounds ({i32, i32}, ptr @b, i32 0, i32 0), align 4
   ret i32 %0
 }
 
@@ -34,17 +34,17 @@ define void @init() {
 ; CHECK-LABEL: define void @init
 entry:
 ; This store uses the split global, but cannot be constant-propagated away.
-; CHECK: store i32 1, i32* @a.0
-  store i32 1, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @a, i32 0, i32 0), align 4
+; CHECK: store i32 1, ptr @a.0
+  store i32 1, ptr @a, align 4
 ; This store can be removed, because the second element of @a is never read.
-; CHECK-NOT: store i32 2, i32* @a.1
-  store i32 2, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @a, i32 0, i32 1), align 4
+; CHECK-NOT: store i32 2, ptr @a.1
+  store i32 2, ptr getelementptr inbounds ([2 x i32], ptr @a, i32 0, i32 1), align 4
 
 ; This store uses the split global, but cannot be constant-propagated away.
-; CHECK: store i32 3, i32* @b.0
-  store i32 3, i32* getelementptr inbounds ({i32, i32}, {i32, i32}* @b, i32 0, i32 0), align 4
+; CHECK: store i32 3, ptr @b.0
+  store i32 3, ptr getelementptr inbounds ({i32, i32}, ptr @b, i32 0, i32 0), align 4
 ; This store can be removed, because the second element of @b is never read.
-; CHECK-NOT: store i32 4, i32* @b.1
-  store i32 4, i32* getelementptr inbounds ({i32, i32}, {i32, i32}* @b, i32 0, i32 1), align 4
+; CHECK-NOT: store i32 4, ptr @b.1
+  store i32 4, ptr getelementptr inbounds ({i32, i32}, ptr @b, i32 0, i32 1), align 4
   ret void
 }

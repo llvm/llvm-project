@@ -1,10 +1,10 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2  -S | FileCheck %s
 
-define void @test1(float* noalias nocapture %a, float* noalias nocapture readonly %b) {
+define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; CHECK-LABEL: @test1(
 ; CHECK:       vector.body:
-; CHECK:         [[WIDE_LOAD:%.*]] = load <2 x float>, <2 x float>* {{.*}}, align 4
-; CHECK:         [[WIDE_LOAD1:%.*]] = load <2 x float>, <2 x float>* {{.*}}, align 4
+; CHECK:         [[WIDE_LOAD:%.*]] = load <2 x float>, ptr {{.*}}, align 4
+; CHECK:         [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr {{.*}}, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD]], <float 1.000000e+02, float 1.000000e+02>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD1]], <float 1.000000e+02, float 1.000000e+02>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
@@ -20,13 +20,13 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %b, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %cmp1 = fcmp ogt float %0, 1.000000e+02
   tail call void @llvm.assume(i1 %cmp1)
   %add = fadd float %0, 1.000000e+00
-  %arrayidx5 = getelementptr inbounds float, float* %a, i64 %indvars.iv
-  store float %add, float* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  store float %add, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body
@@ -39,9 +39,9 @@ declare void @llvm.assume(i1) #0
 
 attributes #0 = { nounwind willreturn }
 
-%struct.data = type { float*, float* }
+%struct.data = type { ptr, ptr }
 
-define void @test2(%struct.data* nocapture readonly %d) {
+define void @test2(ptr nocapture readonly %d) {
 ; CHECK-LABEL: @test2(
 ; CHECK:       entry:
 ; CHECK:         [[MASKCOND:%.*]] = icmp eq i64 %maskedptr, 0
@@ -53,14 +53,13 @@ define void @test2(%struct.data* nocapture readonly %d) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK:       for.body:
 entry:
-  %b = getelementptr inbounds %struct.data, %struct.data* %d, i64 0, i32 1
-  %0 = load float*, float** %b, align 8
-  %ptrint = ptrtoint float* %0 to i64
+  %b = getelementptr inbounds %struct.data, ptr %d, i64 0, i32 1
+  %0 = load ptr, ptr %b, align 8
+  %ptrint = ptrtoint ptr %0 to i64
   %maskedptr = and i64 %ptrint, 31
   %maskcond = icmp eq i64 %maskedptr, 0
-  %a = getelementptr inbounds %struct.data, %struct.data* %d, i64 0, i32 0
-  %1 = load float*, float** %a, align 8
-  %ptrint2 = ptrtoint float* %1 to i64
+  %1 = load ptr, ptr %d, align 8
+  %ptrint2 = ptrtoint ptr %1 to i64
   %maskedptr3 = and i64 %ptrint2, 31
   %maskcond4 = icmp eq i64 %maskedptr3, 0
   br label %for.body
@@ -69,12 +68,12 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.assume(i1 %maskcond)
-  %arrayidx = getelementptr inbounds float, float* %0, i64 %indvars.iv
-  %2 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %0, i64 %indvars.iv
+  %2 = load float, ptr %arrayidx, align 4
   %add = fadd float %2, 1.000000e+00
   tail call void @llvm.assume(i1 %maskcond4)
-  %arrayidx5 = getelementptr inbounds float, float* %1, i64 %indvars.iv
-  store float %add, float* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds float, ptr %1, i64 %indvars.iv
+  store float %add, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body
@@ -86,7 +85,7 @@ for.end:                                          ; preds = %for.body
 ; Test case for PR43620. Make sure we can vectorize with predication in presence
 ; of assume calls. For now, check that we drop all assumes in predicated blocks
 ; in the vector body.
-define void @predicated_assume(float* noalias nocapture readonly %a, float* noalias nocapture %b, i32 %n) {
+define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias nocapture %b, i32 %n) {
 ; Check that the vector.body does not contain any assumes.
 ; CHECK-LABEL: @predicated_assume(
 ; CHECK:       vector.body:
@@ -118,11 +117,11 @@ if.else:                                          ; preds = %for.body
 
 if.end5:                                          ; preds = %for.body, %if.else
   %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %indvars.iv
-  %1 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx, align 4
   %mul = fmul float %x.0, %1
-  %arrayidx7 = getelementptr inbounds float, float* %b, i64 %indvars.iv
-  store float %mul, float* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds float, ptr %b, i64 %indvars.iv
+  store float %mul, ptr %arrayidx7, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cmp = icmp eq i64 %indvars.iv.next, %0
   br i1 %cmp, label %for.cond.cleanup.loopexit, label %for.body

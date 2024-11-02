@@ -551,7 +551,7 @@ TEST_F(IRBuilderTest, UnaryOperators) {
 TEST_F(IRBuilderTest, FastMathFlags) {
   IRBuilder<> Builder(BB);
   Value *F, *FC;
-  Instruction *FDiv, *FAdd, *FCmp, *FCall;
+  Instruction *FDiv, *FAdd, *FCmp, *FCall, *FNeg, *FSub, *FMul, *FRem;
 
   F = Builder.CreateLoad(GV->getValueType(), GV);
   F = Builder.CreateFAdd(F, F);
@@ -732,6 +732,36 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   EXPECT_TRUE(FDiv->hasNoNaNs());
   EXPECT_FALSE(FDiv->hasAllowReciprocal());
 
+  // Test that CreateF*FMF functions copy flags from the source instruction
+  // instead of using the builder default.
+  Instruction *const FMFSource = FAdd;
+  EXPECT_FALSE(Builder.getFastMathFlags().noNaNs());
+  EXPECT_TRUE(FMFSource->hasNoNaNs());
+
+  F = Builder.CreateFNegFMF(F, FMFSource);
+  ASSERT_TRUE(isa<Instruction>(F));
+  FNeg = cast<Instruction>(F);
+  EXPECT_TRUE(FNeg->hasNoNaNs());
+  F = Builder.CreateFAddFMF(F, F, FMFSource);
+  ASSERT_TRUE(isa<Instruction>(F));
+  FAdd = cast<Instruction>(F);
+  EXPECT_TRUE(FAdd->hasNoNaNs());
+  F = Builder.CreateFSubFMF(F, F, FMFSource);
+  ASSERT_TRUE(isa<Instruction>(F));
+  FSub = cast<Instruction>(F);
+  EXPECT_TRUE(FSub->hasNoNaNs());
+  F = Builder.CreateFMulFMF(F, F, FMFSource);
+  ASSERT_TRUE(isa<Instruction>(F));
+  FMul = cast<Instruction>(F);
+  EXPECT_TRUE(FMul->hasNoNaNs());
+  F = Builder.CreateFDivFMF(F, F, FMFSource);
+  ASSERT_TRUE(isa<Instruction>(F));
+  FDiv = cast<Instruction>(F);
+  EXPECT_TRUE(FDiv->hasNoNaNs());
+  F = Builder.CreateFRemFMF(F, F, FMFSource);
+  ASSERT_TRUE(isa<Instruction>(F));
+  FRem = cast<Instruction>(F);
+  EXPECT_TRUE(FRem->hasNoNaNs());
 }
 
 TEST_F(IRBuilderTest, WrapFlags) {

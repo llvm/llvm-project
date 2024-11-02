@@ -12,7 +12,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb3, %bb
-  %tmp = load i32, i32* @global
+  %tmp = load i32, ptr @global
   %tmp2 = select i1 false, i16 1, i16 0
   br label %bb3
 

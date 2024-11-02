@@ -10,18 +10,18 @@ source_filename = "thinlto-vtable-summary.ll"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 %struct.B = type { %struct.A }
 %struct.C = type { %struct.A }
 
-@_ZTV1B = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1
-@_ZTV1C = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.C*, i32)* @_ZN1C1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !2
+@_ZTV1B = constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @_ZN1B1fEi, ptr @_ZN1A1nEi] }, !type !0, !type !1
+@_ZTV1C = constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @_ZN1C1fEi, ptr @_ZN1A1nEi] }, !type !0, !type !2
 
-declare i32 @_ZN1B1fEi(%struct.B*, i32)
+declare i32 @_ZN1B1fEi(ptr, i32)
 
-declare i32 @_ZN1A1nEi(%struct.A*, i32)
+declare i32 @_ZN1A1nEi(ptr, i32)
 
-declare i32 @_ZN1C1fEi(%struct.C*, i32)
+declare i32 @_ZN1C1fEi(ptr, i32)
 
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTS1B"}

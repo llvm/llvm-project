@@ -34,9 +34,7 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value shape;
   if (!extents.empty()) {
     if (lbounds.empty()) {
-      auto shapeType =
-          fir::ShapeType::get(builder.getContext(), extents.size());
-      shape = builder.create<fir::ShapeOp>(loc, shapeType, extents);
+      shape = builder.create<fir::ShapeOp>(loc, extents);
     } else {
       llvm::SmallVector<mlir::Value> shapeShiftBounds;
       for (auto [lb, extent] : llvm::zip(lbounds, extents)) {

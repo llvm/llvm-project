@@ -26,12 +26,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @var1 = global i32 10, align 4
 define i32 @testVar1() {
-  %1 = load i32, i32* @var1, align 4
+  %1 = load i32, ptr @var1, align 4
   ret i32 %1
 }
 
 @var2 = global i32 11, align 4
 define i32 @testVar2() {
-  %1 = load i32, i32* @var2, align 4
+  %1 = load i32, ptr @var2, align 4
   ret i32 %1
 }

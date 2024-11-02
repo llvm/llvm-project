@@ -89,7 +89,7 @@ label.9:		; preds = %endif.0
 then.6:		; preds = %label.9
 	br label %endif.6
 endif.6:		; preds = %then.6, %label.9
-	store i32 0, i32* null
+	store i32 0, ptr null
 	br label %switchexit
 switchexit:		; preds = %endif.6, %loopentry.2, %loopentry.1, %loopentry.0, %endif.0
 	br i1 false, label %endif.7, label %then.7

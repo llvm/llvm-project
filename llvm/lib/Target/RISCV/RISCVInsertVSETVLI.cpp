@@ -1195,21 +1195,35 @@ static void doUnion(DemandedFields &A, DemandedFields B) {
   A.MaskPolicy |= B.MaskPolicy;
 }
 
-// Return true if we can mutate PrevMI's VTYPE to match MI's
-// without changing any the fields which have been used.
-// TODO: Restructure code to allow code reuse between this and isCompatible
-// above.
+// Return true if we can mutate PrevMI to match MI without changing any the
+// fields which would be observed.
 static bool canMutatePriorConfig(const MachineInstr &PrevMI,
                                  const MachineInstr &MI,
                                  const DemandedFields &Used) {
-  // TODO: Extend this to handle cases where VL does change, but VL
-  // has not been used.  (e.g. over a vmv.x.s)
-  if (!isVLPreservingConfig(MI))
-    // Note: `vsetvli x0, x0, vtype' is the canonical instruction
-    // for this case.  If you find yourself wanting to add other forms
-    // to this "unused VTYPE" case, we're probably missing a
-    // canonicalization earlier.
-    return false;
+  // If the VL values aren't equal, return false if either a) the former is
+  // demanded, or b) we can't rewrite the former to be the later for
+  // implementation reasons.
+  if (!isVLPreservingConfig(MI)) {
+    if (Used.VL)
+      return false;
+
+    // TODO: Requires more care in the mutation...
+    if (isVLPreservingConfig(PrevMI))
+      return false;
+
+    // TODO: Track whether the register is defined between
+    // PrevMI and MI.
+    if (MI.getOperand(1).isReg() &&
+        RISCV::X0 != MI.getOperand(1).getReg())
+      return false;
+
+    // TODO: We need to change the result register to allow this rewrite
+    // without the result forming a vl preserving vsetvli which is not
+    // a correct state merge.
+    if (PrevMI.getOperand(0).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
+      return false;
+  }
 
   if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
     return false;
@@ -1220,34 +1234,44 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
 }
 
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
-  MachineInstr *PrevMI = nullptr;
+  MachineInstr *NextMI = nullptr;
+  // We can have arbitrary code in successors, so VL and VTYPE
+  // must be considered demanded.
   DemandedFields Used;
+  Used.VL = true;
+  Used.demandVTYPE();
   SmallVector<MachineInstr*> ToDelete;
-  for (MachineInstr &MI : MBB) {
-    // Note: Must be *before* vsetvli handling to account for config cases
-    // which only change some subfields.
-    doUnion(Used, getDemanded(MI));
+  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
-    if (!isVectorConfigInstr(MI))
+    if (!isVectorConfigInstr(MI)) {
+      doUnion(Used, getDemanded(MI));
       continue;
-
-    if (PrevMI) {
-      if (!Used.VL && !Used.usedVTYPE()) {
-        ToDelete.push_back(PrevMI);
-        // fallthrough
-      } else if (canMutatePriorConfig(*PrevMI, MI, Used)) {
-        PrevMI->getOperand(2).setImm(MI.getOperand(2).getImm());
-        ToDelete.push_back(&MI);
-        // Leave PrevMI unchanged
-        continue;
-      }
     }
-    PrevMI = &MI;
-    Used = getDemanded(MI);
+
     Register VRegDef = MI.getOperand(0).getReg();
     if (VRegDef != RISCV::X0 &&
         !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
       Used.VL = true;
+
+    if (NextMI) {
+      if (!Used.VL && !Used.usedVTYPE()) {
+        ToDelete.push_back(&MI);
+        // Leave NextMI unchanged
+        continue;
+      } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
+        if (!isVLPreservingConfig(*NextMI)) {
+          if (NextMI->getOperand(1).isImm())
+            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
+          else
+            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
+        }
+        MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
+        ToDelete.push_back(NextMI);
+        // fallthrough
+      }
+    }
+    NextMI = &MI;
+    Used = getDemanded(MI);
   }
 
   for (auto *MI : ToDelete)

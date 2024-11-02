@@ -194,6 +194,7 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
   let extraClassDeclaration = [{
     using Triplet = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
     using Subscript = std::variant<mlir::Value, Triplet>;
+    using Subscripts = llvm::SmallVector<Subscript, 8>;
   }];
 
   let builders = [
@@ -203,7 +204,13 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
       CArg<"mlir::ValueRange", "{}">:$substring,
       CArg<"llvm::Optional<bool>", "{}">:$complex_part,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>];
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
+
+    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$memref,
+      "mlir::ValueRange":$indices,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>
+    ];
 
   let hasVerifier = 1;
 }
@@ -331,5 +338,103 @@ def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndR
   let assemblyFormat = "$val attr-dict `:` type($val)";
 }
 
+def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
+  let summary = "elemental expression";
+  let description = [{
+    Represent an elemental expression as a function of the indices.
+    This operation contain a region whose block arguments are one
+    based indices iterating over the elemental expression shape.
+    Given these indices, the element value for the given iteration
+    can be computed in the region and yielded with the hlfir.yield_element
+    operation.
+
+    The shape and typeparams operands represent the extents and type
+    parameters of the resulting array value.
+
+
+    Example: Y + X,  with Integer :: X(10, 20), Y(10,20)
+    ```
+      %0 = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
+      %5 = hlfir.elemental %0 : (!fir.shape<2>) -> !hlfir.expr<10x20xi32> {
+      ^bb0(%i: index, %j: index):
+        %6 = hlfir.designate %x (%i, %j)  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
+        %7 = hlfir.designate %y (%i, %j)  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
+        %8 = fir.load %6 : !fir.ref<i32>
+        %9 = fir.load %7 : !fir.ref<i32>
+        %10 = arith.addi %8, %9 : i32
+        hlfir.yield_element %10 : i32
+      }
+    ```
+  }];
+
+  let arguments = (ins
+    AnyShapeType:$shape,
+    Variadic<AnyIntegerType>:$typeparams
+  );
+
+  let results = (outs hlfir_ExprType);
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = [{
+    $shape (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+    $region
+    }];
+
+  let extraClassDeclaration = [{
+      mlir::Block *getBody() { return &getRegion().front(); }
+
+      // Get the indices iterating over the shape.
+      mlir::Block::BlockArgListType getIndices() {
+       return getBody()->getArguments();
+      }
+  }];
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$shape,
+      CArg<"mlir::ValueRange", "{}">:$typeparams)>];
+
+}
+
+def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator, HasParent<"ElementalOp">]> {
+  let summary = "Yield the elemental value in an ElementalOp";
+  let description = [{
+    Yield the element value of the current elemental expression iteration
+    in an hlfir.elemental region. See hlfir.elemental description for an
+    example.
+  }];
+
+  let arguments = (ins AnyType:$element_value);
+
+  let assemblyFormat = "$element_value attr-dict `:` type($element_value)";
+}
+
+def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]> {
+  let summary = "get the element value of an expression";
+  let description = [{
+    Given an hlfir.expr array value, hlfir.apply allow retrieving
+    the value for an element given one based indices.
+    When hlfir.apply is used on an hlfir.elemental, and if the hlfir.elemental
+    operation evaluation can be moved to the location of the hlfir.apply, it is
+    as if the hlfir.elemental body was evaluated given the hlfir.apply indices.
+  }];
+
+  let arguments = (ins hlfir_ExprType:$expr,
+                   Variadic<Index>:$indices,
+                   Variadic<AnyIntegerType>:$typeparams
+                  );
+  let results = (outs AnyFortranValue:$element_value);
+
+  let assemblyFormat = [{
+    $expr `,` $indices (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$expr, "mlir::ValueRange":$indices,
+      "mlir::ValueRange":$typeparams)>
+  ];
+}
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

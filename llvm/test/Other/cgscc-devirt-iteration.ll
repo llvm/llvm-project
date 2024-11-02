@@ -31,9 +31,9 @@ define void @test1() {
 ; AFTER: Function Attrs: nofree nosync memory(none)
 ; CHECK-LABEL: define void @test1()
 entry:
-  %fptr = alloca void ()*
-  store void ()* @readnone, void ()** %fptr
-  %f = load void ()*, void ()** %fptr
+  %fptr = alloca ptr
+  store ptr @readnone, ptr %fptr
+  %f = load ptr, ptr %fptr
   call void %f()
   ret void
 }
@@ -50,24 +50,24 @@ entry:
 ; to make that possible. This forces us to first deduce readonly, then
 ; devirtualize again, and then deduce readnone.
 
-declare void @readnone_with_arg(void ()**) readnone
+declare void @readnone_with_arg(ptr) readnone
 ; CHECK: Function Attrs: nofree nosync memory(none)
-; CHECK-LABEL: declare void @readnone_with_arg(void ()**)
+; CHECK-LABEL: declare void @readnone_with_arg(ptr)
 
-define void @test2_a(void ()** %ignore) {
+define void @test2_a(ptr %ignore) {
 ; BEFORE-NOT: Function Attrs
 ; AFTER1: Function Attrs: nofree memory(read)
 ; AFTER2: Function Attrs: nofree nosync memory(none)
-; BEFORE: define void @test2_a(void ()** %ignore)
-; AFTER: define void @test2_a(void ()** readnone %ignore)
+; BEFORE: define void @test2_a(ptr %ignore)
+; AFTER: define void @test2_a(ptr readnone %ignore)
 entry:
-  %f1ptr = alloca void (void ()**)*
-  store void (void ()**)* @readnone_with_arg, void (void ()**)** %f1ptr
-  %f1 = load void (void ()**)*, void (void ()**)** %f1ptr
+  %f1ptr = alloca ptr
+  store ptr @readnone_with_arg, ptr %f1ptr
+  %f1 = load ptr, ptr %f1ptr
   ; This indirect call is the first to be resolved, allowing us to deduce
   ; readonly but not (yet) readnone.
-  call void %f1(void ()** %ignore)
-; CHECK: call void @readnone_with_arg(void ()** %ignore)
+  call void %f1(ptr %ignore)
+; CHECK: call void @readnone_with_arg(ptr %ignore)
 
   ; Bogus call to test2_b to make this a cycle.
   call void @test2_b()
@@ -81,13 +81,13 @@ define void @test2_b() {
 ; AFTER2: Function Attrs: nofree nosync memory(none)
 ; CHECK-LABEL: define void @test2_b()
 entry:
-  %f2ptr = alloca void ()*
-  store void ()* @readnone, void ()** %f2ptr
+  %f2ptr = alloca ptr
+  store ptr @readnone, ptr %f2ptr
   ; Call the other function here to prevent forwarding until the SCC has had
   ; function attrs deduced.
-  call void @test2_a(void ()** %f2ptr)
+  call void @test2_a(ptr %f2ptr)
 
-  %f2 = load void ()*, void ()** %f2ptr
+  %f2 = load ptr, ptr %f2ptr
   ; This is the second indirect call to be resolved, and can only be resolved
   ; after we deduce 'readonly' for the rest of the SCC. Once it is
   ; devirtualized, we can deduce readnone for the SCC.
@@ -98,8 +98,8 @@ entry:
   ret void
 }
 
-declare i8* @memcpy(i8*, i8*, i64)
-; CHECK-LABEL: i8* @memcpy(
+declare ptr @memcpy(ptr, ptr, i64)
+; CHECK-LABEL: ptr @memcpy(
 
 ; The @test3 function checks that when we refine an indirect call to an
 ; intrinsic we still revisit the SCC pass. This also covers cases where the
@@ -107,28 +107,28 @@ declare i8* @memcpy(i8*, i8*, i64)
 ; creates the memcpy intrinsic call, and we rely on the count of indirect calls
 ; decreasing and the count of direct calls increasing.
 ; Adding 'noinline' attribute to force attributes for improved matching.
-define void @test3(i8* %src, i8* %dest, i64 %size) noinline {
+define void @test3(ptr %src, ptr %dest, i64 %size) noinline {
 ; CHECK: Function Attrs
 ; CHECK-NOT: read
 ; CHECK-SAME: noinline
-; BEFORE-LABEL: define void @test3(i8* %src, i8* %dest, i64 %size)
-; AFTER-LABEL: define void @test3(i8* nocapture readonly %src, i8* nocapture writeonly %dest, i64 %size)
-  %fptr = alloca i8* (i8*, i8*, i64)*
-  store i8* (i8*, i8*, i64)* @memcpy, i8* (i8*, i8*, i64)** %fptr
-  %f = load i8* (i8*, i8*, i64)*, i8* (i8*, i8*, i64)** %fptr
-  call i8* %f(i8* %dest, i8* %src, i64 %size)
+; BEFORE-LABEL: define void @test3(ptr %src, ptr %dest, i64 %size)
+; AFTER-LABEL: define void @test3(ptr nocapture readonly %src, ptr nocapture writeonly %dest, i64 %size)
+  %fptr = alloca ptr
+  store ptr @memcpy, ptr %fptr
+  %f = load ptr, ptr %fptr
+  call ptr %f(ptr %dest, ptr %src, i64 %size)
 ; CHECK: call void @llvm.memcpy
   ret void
 }
 
 ; A boring function that just keeps our declarations around.
-define void @keep(i8** %sink) {
+define void @keep(ptr %sink) {
 ; CHECK-NOT: Function Attrs
 ; CHECK-LABEL: define void @keep(
 entry:
-  store volatile i8* bitcast (void ()* @readnone to i8*), i8** %sink
-  store volatile i8* bitcast (void ()* @unknown to i8*), i8** %sink
-  store volatile i8* bitcast (i8* (i8*, i8*, i64)* @memcpy to i8*), i8** %sink
+  store volatile ptr @readnone, ptr %sink
+  store volatile ptr @unknown, ptr %sink
+  store volatile ptr @memcpy, ptr %sink
   call void @unknown()
   ret void
 }

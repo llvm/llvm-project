@@ -2,28 +2,27 @@
 ; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-@G = internal global i32* null
+@G = internal global ptr null
 
 define void @init() {
 ; CHECK-LABEL: @init(
 ; CHECK-NEXT:    ret void
 ;
-  %malloccall = tail call i8* @malloc(i64 4)
-  %P = bitcast i8* %malloccall to i32*
-  store i32* %P, i32** @G
-  %GV = load i32*, i32** @G
-  store i32 0, i32* %GV
+  %malloccall = tail call ptr @malloc(i64 4)
+  store ptr %malloccall, ptr @G
+  %GV = load ptr, ptr @G
+  store i32 0, ptr %GV
   ret void
 }
 
-declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 define i32 @get() {
 ; CHECK-LABEL: @get(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %GV = load i32*, i32** @G
-  %V = load i32, i32* %GV
+  %GV = load ptr, ptr @G
+  %V = load i32, ptr %GV
   ret i32 %V
 }
 
@@ -33,7 +32,7 @@ define void @foo(i64 %Size) nounwind noinline #0 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32*, i32** @G, align 4
+  %0 = load ptr, ptr @G, align 4
   ret void
 }
 

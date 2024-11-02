@@ -45,6 +45,8 @@ public:
   void ungetc(char c);
 
   size_t chars_read() { return cur_chars_read; }
+
+  bool has_error();
 };
 
 } // namespace scanf_core

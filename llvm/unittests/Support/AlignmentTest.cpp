@@ -234,10 +234,6 @@ std::vector<uint64_t> getValidAlignmentsForDeathTest() {
 
 std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
 
-TEST(AlignmentDeathTest, CantConvertUnsetMaybe) {
-  EXPECT_DEATH((*MaybeAlign(0)), ".*");
-}
-
 TEST(AlignmentDeathTest, InvalidCTors) {
   EXPECT_DEATH((Align(0)), "Value must not be 0");
   for (uint64_t Value : getNonPowerOfTwo()) {

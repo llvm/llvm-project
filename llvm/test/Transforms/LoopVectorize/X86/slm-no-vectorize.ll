@@ -8,7 +8,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @no_vec(i32 %LastIndex, i16* nocapture readonly %InputData, i16 signext %lag, i16 signext %Scale) {
+define i32 @no_vec(i32 %LastIndex, ptr nocapture readonly %InputData, i16 signext %lag, i16 signext %Scale) {
 entry:
 ; MSG: LV: Selecting VF: 1.
   %cmp17 = icmp sgt i32 %LastIndex, 0
@@ -32,12 +32,12 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %Accumulator.018 = phi i64 [ 0, %for.body.lr.ph ], [ %add7, %for.body ]
-  %arrayidx = getelementptr inbounds i16, i16* %InputData, i64 %indvars.iv
-  %1 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %InputData, i64 %indvars.iv
+  %1 = load i16, ptr %arrayidx, align 2
   %conv = sext i16 %1 to i64
   %2 = add nsw i64 %indvars.iv, %0
-  %arrayidx3 = getelementptr inbounds i16, i16* %InputData, i64 %2
-  %3 = load i16, i16* %arrayidx3, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %InputData, i64 %2
+  %3 = load i16, ptr %arrayidx3, align 2
   %conv4 = sext i16 %3 to i64
   %mul = mul nsw i64 %conv4, %conv
   %shr = ashr i64 %mul, %sh_prom

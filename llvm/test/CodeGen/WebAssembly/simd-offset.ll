@@ -949,10 +949,8 @@ define void @store_narrowing_v8i16_with_folded_offset(<8 x i8> %v, <8 x i8>* %p)
 ; CHECK:         .functype store_narrowing_v8i16_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane 16, 0
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint <8 x i8>* %p to i32
   %r = add nuw i32 %q, 16
@@ -979,10 +977,8 @@ define void @store_narrowing_v8i16_with_folded_gep_offset(<8 x i8> %v, <8 x i8>*
 ; CHECK:         .functype store_narrowing_v8i16_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 8
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane 8, 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 1
   store <8 x i8> %v , <8 x i8>* %s
@@ -1100,9 +1096,9 @@ define void @store_narrowing_v8i16_to_numeric_address(<8 x i8> %v, <8 x i8>* %p)
 ; CHECK-LABEL: store_narrowing_v8i16_to_numeric_address:
 ; CHECK:         .functype store_narrowing_v8i16_to_numeric_address (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane 32, 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 32 to <8 x i8>*
   store <8 x i8> %v , <8 x i8>* %s
@@ -1125,9 +1121,9 @@ define void @store_narrowing_v8i16_to_global_address(<8 x i8> %v) {
 ; CHECK-LABEL: store_narrowing_v8i16_to_global_address:
 ; CHECK:         .functype store_narrowing_v8i16_to_global_address (v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_v8i8
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane gv_v8i8, 0
 ; CHECK-NEXT:    # fallthrough-return
   store <8 x i8> %v , <8 x i8>* @gv_v8i8
   ret void
@@ -1417,11 +1413,11 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_with_folded_gep_offset(<4 x i8>* %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:  v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:  local.get 0
-; CHECK-NEXT:  v128.load32_zero 4
-; CHECK-NEXT:  i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
-; CHECK-NEXT:  # fallthrough-return
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 4
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
+; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x i8>, <4 x i8>* %p, i32 1
   %v = load <4 x i8>, <4 x i8>* %s
   %v2 = zext <4 x i8> %v to <4 x i32>
@@ -2032,10 +2028,8 @@ define void @store_narrowing_v4i32_with_folded_offset(<4 x i16> %v, <4 x i16>* %
 ; CHECK:         .functype store_narrowing_v4i32_with_folded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane 16, 0
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint <4 x i16>* %p to i32
   %r = add nuw i32 %q, 16
@@ -2062,10 +2056,8 @@ define void @store_narrowing_v4i32_with_folded_gep_offset(<4 x i16> %v, <4 x i16
 ; CHECK:         .functype store_narrowing_v4i32_with_folded_gep_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 8
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane 8, 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 1
   store <4 x i16> %v , <4 x i16>* %s
@@ -2183,9 +2175,9 @@ define void @store_narrowing_v4i32_to_numeric_address(<4 x i16> %v) {
 ; CHECK-LABEL: store_narrowing_v4i32_to_numeric_address:
 ; CHECK:         .functype store_narrowing_v4i32_to_numeric_address (v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 32
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane 32, 0
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 32 to <4 x i16>*
   store <4 x i16> %v , <4 x i16>* %s
@@ -2208,9 +2200,9 @@ define void @store_narrowing_v4i32_to_global_address(<4 x i16> %v) {
 ; CHECK-LABEL: store_narrowing_v4i32_to_global_address:
 ; CHECK:         .functype store_narrowing_v4i32_to_global_address (v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_v4i16
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    v128.store64_lane gv_v4i16, 0
 ; CHECK-NEXT:    # fallthrough-return
   store <4 x i16> %v , <4 x i16>* @gv_v4i16
   ret void

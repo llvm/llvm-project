@@ -60,6 +60,10 @@ defm SRAX : F3_S<"srax", 0b100111, 1, sra, i64, shift_imm6, I64Regs>;
 
 // Single-instruction patterns.
 
+// Zero immediate.
+def : Pat<(i64 0), (COPY (i64 G0))>,
+  Requires<[Is64Bit]>;
+
 // The ALU instructions want their simm13 operands as i32 immediates.
 def as_i32imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);

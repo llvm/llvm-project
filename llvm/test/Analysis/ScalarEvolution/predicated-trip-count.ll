@@ -21,7 +21,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @test1(i32 %N, i32 %M) {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  Classifying expressions for: @test1
-; CHECK-NEXT:    %tmp = getelementptr [1000 x i32], [1000 x i32]* @A, i32 0, i16 %i.0
+; CHECK-NEXT:    %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i16 %i.0
 ; CHECK-NEXT:    --> ((4 * (sext i16 {0,+,1}<%bb3> to i64))<nsw> + @A) U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %bb3: Computable }
 ; CHECK-NEXT:    %tmp2 = add i16 %i.0, 1
 ; CHECK-NEXT:    --> {1,+,1}<%bb3> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb3: Computable }
@@ -41,8 +41,8 @@ entry:
   br label %bb3
 
 bb:             ; preds = %bb3
-  %tmp = getelementptr [1000 x i32], [1000 x i32]* @A, i32 0, i16 %i.0          ; <i32*> [#uses=1]
-  store i32 123, i32* %tmp
+  %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i16 %i.0          ; <ptr> [#uses=1]
+  store i32 123, ptr %tmp
   %tmp2 = add i16 %i.0, 1         ; <i32> [#uses=1]
   br label %bb3
 
@@ -88,7 +88,7 @@ return:         ; preds = %bb5
 define void @test2(i32 %N, i32 %M, i16 %Start) {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  Classifying expressions for: @test2
-; CHECK-NEXT:    %tmp = getelementptr [1000 x i32], [1000 x i32]* @A, i32 0, i16 %i.0
+; CHECK-NEXT:    %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i16 %i.0
 ; CHECK-NEXT:    --> ((4 * (sext i16 {%Start,+,-1}<%bb3> to i64))<nsw> + @A) U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %bb3: Computable }
 ; CHECK-NEXT:    %tmp2 = sub i16 %i.0, 1
 ; CHECK-NEXT:    --> {(-1 + %Start),+,-1}<%bb3> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb3: Computable }
@@ -108,8 +108,8 @@ entry:
   br label %bb3
 
 bb:             ; preds = %bb3
-  %tmp = getelementptr [1000 x i32], [1000 x i32]* @A, i32 0, i16 %i.0          ; <i32*> [#uses=1]
-  store i32 123, i32* %tmp
+  %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i16 %i.0          ; <ptr> [#uses=1]
+  store i32 123, ptr %tmp
   %tmp2 = sub i16 %i.0, 1         ; <i32> [#uses=1]
   br label %bb3
 

@@ -2283,16 +2283,18 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 // may be able to use a W instruction and CSE with the other instruction if
 // this has happened. We could try to detect that the CSE opportunity exists
 // before doing this, but that would be more complicated.
-// TODO: Does this need to look through AND/OR/XOR to their users to find more
-// opportunities.
-bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
+bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
+                                        const unsigned Depth) const {
   assert((Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::SUB ||
           Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL ||
           Node->getOpcode() == ISD::SRL || Node->getOpcode() == ISD::AND ||
           Node->getOpcode() == ISD::OR || Node->getOpcode() == ISD::XOR ||
           Node->getOpcode() == ISD::SIGN_EXTEND_INREG ||
-          isa<ConstantSDNode>(Node)) &&
+          isa<ConstantSDNode>(Node) || Depth != 0) &&
          "Unexpected opcode");
+
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
 
   for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
     SDNode *User = *UI;
@@ -2353,15 +2355,25 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
         return false;
       break;
     case RISCV::ANDI:
-      if (Bits < (64 - countLeadingZeros(User->getConstantOperandVal(1))))
-        return false;
-      break;
+      if (Bits >= (64 - countLeadingZeros(User->getConstantOperandVal(1))))
+        break;
+      goto RecCheck;
     case RISCV::ORI: {
       uint64_t Imm = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
-      if (Bits < (64 - countLeadingOnes(Imm)))
+      if (Bits >= (64 - countLeadingOnes(Imm)))
+        break;
+      [[fallthrough]];
+    }
+    case RISCV::AND:
+    case RISCV::OR:
+    case RISCV::XOR:
+    case RISCV::ANDN:
+    case RISCV::ORN:
+    case RISCV::XNOR:
+    RecCheck:
+      if (!hasAllNBitUsers(User, Bits, Depth + 1))
         return false;
       break;
-    }
     case RISCV::SEXT_B:
     case RISCV::PACKH:
       if (Bits < 8)

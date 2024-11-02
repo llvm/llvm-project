@@ -130,7 +130,7 @@ define i8 @udiv_umax(i8 %x, i8 %y, i8 %z) {
 ; Negative test, cannot take exact log2
 define i8 @udiv_umin_(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_umin_(
-; CHECK-NEXT:    [[Y2:%.*]] = shl i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y2]], i8 [[Z:%.*]])
 ; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    ret i8 [[D]]
@@ -144,8 +144,8 @@ define i8 @udiv_umin_(i8 %x, i8 %y, i8 %z) {
 ; Negative test, extra use
 define i8 @udiv_umin_extra_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_umin_extra_use(
-; CHECK-NEXT:    [[Y2:%.*]] = shl i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z2:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y2]], i8 [[Z2]])
 ; CHECK-NEXT:    call void @use(i8 [[M]])
 ; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
@@ -162,8 +162,8 @@ define i8 @udiv_umin_extra_use(i8 %x, i8 %y, i8 %z) {
 ; Negative test, signed min/max
 define i8 @udiv_smin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_smin(
-; CHECK-NEXT:    [[Y2:%.*]] = shl i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z2:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y2]], i8 [[Z2]])
 ; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    ret i8 [[D]]
@@ -178,8 +178,8 @@ define i8 @udiv_smin(i8 %x, i8 %y, i8 %z) {
 ; Negative test, signed min/max
 define i8 @udiv_smax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_smax(
-; CHECK-NEXT:    [[Y2:%.*]] = shl i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z2:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y2]], i8 [[Z2]])
 ; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
 ; CHECK-NEXT:    ret i8 [[D]]
@@ -226,7 +226,7 @@ define <2 x i32> @t9(<2 x i32> %x) {
 
 define i32 @t10(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t10(
-; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %shl = shl nsw i32 %x, %y
@@ -236,7 +236,7 @@ define i32 @t10(i32 %x, i32 %y) {
 
 define <2 x i32> @t11(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[R:%.*]] = shl nsw <2 x i32> <i32 1, i32 1>, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i32> <i32 1, i32 1>, [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shl = shl nsw <2 x i32> %x, %y

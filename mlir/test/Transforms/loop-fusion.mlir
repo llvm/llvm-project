@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
 
 // Part II of fusion tests in  mlir/test/Transforms/loop-fusion=2.mlir.
 // Part III of fusion tests in mlir/test/Transforms/loop-fusion-3.mlir

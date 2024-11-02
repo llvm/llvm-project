@@ -79,8 +79,8 @@ public:
     uint32_t Characteristics;
     uint32_t VersionInfo;
 
-    Optional<uint32_t> Style;
-    Optional<uint32_t> ExStyle;
+    std::optional<uint32_t> Style;
+    std::optional<uint32_t> ExStyle;
     StringRef Caption;
     struct FontInfo {
       uint32_t Size;
@@ -89,7 +89,7 @@ public:
       bool IsItalic;
       uint32_t Charset;
     };
-    Optional<FontInfo> Font;
+    std::optional<FontInfo> Font;
     IntOrString Class;
 
     ObjectInfo()
@@ -103,7 +103,7 @@ public:
     using BundleKey = std::pair<uint16_t, uint16_t>;
     // Each bundle is in fact an array of 16 strings.
     struct Bundle {
-      std::array<Optional<std::vector<StringRef>>, 16> Data;
+      std::array<std::optional<std::vector<StringRef>>, 16> Data;
       ObjectInfo DeclTimeInfo;
       uint16_t MemoryFlags;
       Bundle(const ObjectInfo &Info, uint16_t Flags)

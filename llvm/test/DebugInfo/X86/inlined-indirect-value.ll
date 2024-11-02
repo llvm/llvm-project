@@ -29,12 +29,12 @@ define i32 @main() !dbg !12 {
 ; CHECK: movl $1
 
 entry:
-  %0 = load volatile i32, i32* @x, align 4, !dbg !15, !tbaa !19
+  %0 = load volatile i32, ptr @x, align 4, !dbg !15, !tbaa !19
   %mul.i = mul nsw i32 %0, 3, !dbg !23
   %cmp.i = icmp slt i32 %mul.i, 14, !dbg !24
   %..i = select i1 %cmp.i, i32 1, i32 2, !dbg !25
-  store volatile i32 %..i, i32* @x, align 4, !dbg !27, !tbaa !19
-  %1 = load volatile i32, i32* @x, align 4, !dbg !28, !tbaa !19
+  store volatile i32 %..i, ptr @x, align 4, !dbg !27, !tbaa !19
+  %1 = load volatile i32, ptr @x, align 4, !dbg !28, !tbaa !19
   %tobool = icmp ne i32 %1, 0, !dbg !28
   br i1 %tobool, label %select.end, label %select.mid
 
@@ -43,7 +43,7 @@ select.mid:                                       ; preds = %entry
 
 select.end:                                       ; preds = %select.mid, %entry
   %cond = phi i32 [ 1, %entry ], [ 2, %select.mid ]
-  store volatile i32 %cond, i32* @x, align 4, !dbg !29, !tbaa !19
+  store volatile i32 %cond, ptr @x, align 4, !dbg !29, !tbaa !19
   ret i32 0, !dbg !30
 }
 

@@ -7,27 +7,20 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements the ExtractAPIAction, and ASTVisitor/Consumer to
-/// collect API information.
+/// This file implements the ExtractAPIAction, and ASTConsumer to collect API
+/// information.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "TypedefUnderlyingTypeResolver.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/ParentMapContext.h"
-#include "clang/AST/RawCommentList.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/APIIgnoresList.h"
-#include "clang/ExtractAPI/AvailabilityInfo.h"
-#include "clang/ExtractAPI/DeclarationFragments.h"
+#include "clang/ExtractAPI/ExtractAPIVisitor.h"
 #include "clang/ExtractAPI/FrontendActions.h"
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Frontend/ASTConsumers.h"
@@ -55,16 +48,9 @@ using namespace extractapi;
 
 namespace {
 
-StringRef getTypedefName(const TagDecl *Decl) {
-  if (const auto *TypedefDecl = Decl->getTypedefNameForAnonDecl())
-    return TypedefDecl->getName();
-
-  return {};
-}
-
-std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
-                                                  StringRef File,
-                                                  bool *IsQuoted = nullptr) {
+Optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
+                                             StringRef File,
+                                             bool *IsQuoted = nullptr) {
   assert(CI.hasFileManager() &&
          "CompilerInstance does not have a FileNamager!");
 
@@ -177,7 +163,7 @@ std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
 }
 
 struct LocationFileChecker {
-  bool isLocationInKnownFile(SourceLocation Loc) {
+  bool operator()(SourceLocation Loc) {
     // If the loc refers to a macro expansion we need to first get the file
     // location of the expansion.
     auto &SM = CI.getSourceManager();
@@ -231,516 +217,6 @@ private:
   SmallVector<std::pair<SmallString<32>, bool>> &KnownFiles;
   llvm::DenseSet<const FileEntry *> KnownFileEntries;
   llvm::DenseSet<const FileEntry *> ExternalFileEntries;
-};
-
-/// The RecursiveASTVisitor to traverse symbol declarations and collect API
-/// information.
-class ExtractAPIVisitor : public RecursiveASTVisitor<ExtractAPIVisitor> {
-public:
-  ExtractAPIVisitor(ASTContext &Context, LocationFileChecker &LCF, APISet &API)
-      : Context(Context), API(API), LCF(LCF) {}
-
-  const APISet &getAPI() const { return API; }
-
-  bool VisitVarDecl(const VarDecl *Decl) {
-    // Skip function parameters.
-    if (isa<ParmVarDecl>(Decl))
-      return true;
-
-    // Skip non-global variables in records (struct/union/class).
-    if (Decl->getDeclContext()->isRecord())
-      return true;
-
-    // Skip local variables inside function or method.
-    if (!Decl->isDefinedOutsideFunctionOrMethod())
-      return true;
-
-    // If this is a template but not specialization or instantiation, skip.
-    if (Decl->getASTContext().getTemplateOrSpecializationInfo(Decl) &&
-        Decl->getTemplateSpecializationKind() == TSK_Undeclared)
-      return true;
-
-    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
-      return true;
-
-    // Collect symbol information.
-    StringRef Name = Decl->getName();
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-
-    // Build declaration fragments and sub-heading for the variable.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForVar(Decl);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
-
-    // Add the global variable record to the API set.
-    API.addGlobalVar(Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment,
-                     Declaration, SubHeading);
-    return true;
-  }
-
-  bool VisitFunctionDecl(const FunctionDecl *Decl) {
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
-      // Skip member function in class templates.
-      if (Method->getParent()->getDescribedClassTemplate() != nullptr)
-        return true;
-
-      // Skip methods in records.
-      for (auto P : Context.getParents(*Method)) {
-        if (P.get<CXXRecordDecl>())
-          return true;
-      }
-
-      // Skip ConstructorDecl and DestructorDecl.
-      if (isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method))
-        return true;
-    }
-
-    // Skip templated functions.
-    switch (Decl->getTemplatedKind()) {
-    case FunctionDecl::TK_NonTemplate:
-    case FunctionDecl::TK_DependentNonTemplate:
-      break;
-    case FunctionDecl::TK_MemberSpecialization:
-    case FunctionDecl::TK_FunctionTemplateSpecialization:
-      if (auto *TemplateInfo = Decl->getTemplateSpecializationInfo()) {
-        if (!TemplateInfo->isExplicitInstantiationOrSpecialization())
-          return true;
-      }
-      break;
-    case FunctionDecl::TK_FunctionTemplate:
-    case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
-      return true;
-    }
-
-    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
-      return true;
-
-    // Collect symbol information.
-    StringRef Name = Decl->getName();
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-
-    // Build declaration fragments, sub-heading, and signature of the function.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForFunction(Decl);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
-    FunctionSignature Signature =
-        DeclarationFragmentsBuilder::getFunctionSignature(Decl);
-
-    // Add the function record to the API set.
-    API.addGlobalFunction(Name, USR, Loc, AvailabilitySet(Decl), Linkage,
-                          Comment, Declaration, SubHeading, Signature);
-    return true;
-  }
-
-  bool VisitEnumDecl(const EnumDecl *Decl) {
-    if (!Decl->isComplete())
-      return true;
-
-    // Skip forward declaration.
-    if (!Decl->isThisDeclarationADefinition())
-      return true;
-
-    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
-      return true;
-
-    // Collect symbol information.
-    std::string NameString = Decl->getQualifiedNameAsString();
-    StringRef Name(NameString);
-    if (Name.empty())
-      Name = getTypedefName(Decl);
-
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-
-    // Build declaration fragments and sub-heading for the enum.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForEnum(Decl);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
-
-    EnumRecord *EnumRecord =
-        API.addEnum(API.copyString(Name), USR, Loc, AvailabilitySet(Decl),
-                    Comment, Declaration, SubHeading);
-
-    // Now collect information about the enumerators in this enum.
-    recordEnumConstants(EnumRecord, Decl->enumerators());
-
-    return true;
-  }
-
-  bool VisitRecordDecl(const RecordDecl *Decl) {
-    if (!Decl->isCompleteDefinition())
-      return true;
-
-    // Skip C++ structs/classes/unions
-    // TODO: support C++ records
-    if (isa<CXXRecordDecl>(Decl))
-      return true;
-
-    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
-      return true;
-
-    // Collect symbol information.
-    StringRef Name = Decl->getName();
-    if (Name.empty())
-      Name = getTypedefName(Decl);
-    if (Name.empty())
-      return true;
-
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-
-    // Build declaration fragments and sub-heading for the struct.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForStruct(Decl);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
-
-    StructRecord *StructRecord =
-        API.addStruct(Name, USR, Loc, AvailabilitySet(Decl), Comment,
-                      Declaration, SubHeading);
-
-    // Now collect information about the fields in this struct.
-    recordStructFields(StructRecord, Decl->fields());
-
-    return true;
-  }
-
-  bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *Decl) {
-    // Skip forward declaration for classes (@class)
-    if (!Decl->isThisDeclarationADefinition())
-      return true;
-
-    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
-      return true;
-
-    // Collect symbol information.
-    StringRef Name = Decl->getName();
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-
-    // Build declaration fragments and sub-heading for the interface.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForObjCInterface(Decl);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
-
-    // Collect super class information.
-    SymbolReference SuperClass;
-    if (const auto *SuperClassDecl = Decl->getSuperClass()) {
-      SuperClass.Name = SuperClassDecl->getObjCRuntimeNameAsString();
-      SuperClass.USR = API.recordUSR(SuperClassDecl);
-    }
-
-    ObjCInterfaceRecord *ObjCInterfaceRecord =
-        API.addObjCInterface(Name, USR, Loc, AvailabilitySet(Decl), Linkage,
-                             Comment, Declaration, SubHeading, SuperClass);
-
-    // Record all methods (selectors). This doesn't include automatically
-    // synthesized property methods.
-    recordObjCMethods(ObjCInterfaceRecord, Decl->methods());
-    recordObjCProperties(ObjCInterfaceRecord, Decl->properties());
-    recordObjCInstanceVariables(ObjCInterfaceRecord, Decl->ivars());
-    recordObjCProtocols(ObjCInterfaceRecord, Decl->protocols());
-
-    return true;
-  }
-
-  bool VisitObjCProtocolDecl(const ObjCProtocolDecl *Decl) {
-    // Skip forward declaration for protocols (@protocol).
-    if (!Decl->isThisDeclarationADefinition())
-      return true;
-
-    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
-      return true;
-
-    // Collect symbol information.
-    StringRef Name = Decl->getName();
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-
-    // Build declaration fragments and sub-heading for the protocol.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForObjCProtocol(Decl);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
-
-    ObjCProtocolRecord *ObjCProtocolRecord =
-        API.addObjCProtocol(Name, USR, Loc, AvailabilitySet(Decl), Comment,
-                            Declaration, SubHeading);
-
-    recordObjCMethods(ObjCProtocolRecord, Decl->methods());
-    recordObjCProperties(ObjCProtocolRecord, Decl->properties());
-    recordObjCProtocols(ObjCProtocolRecord, Decl->protocols());
-
-    return true;
-  }
-
-  bool VisitTypedefNameDecl(const TypedefNameDecl *Decl) {
-    // Skip ObjC Type Parameter for now.
-    if (isa<ObjCTypeParamDecl>(Decl))
-      return true;
-
-    if (!Decl->isDefinedOutsideFunctionOrMethod())
-      return true;
-
-    if (!LCF.isLocationInKnownFile(Decl->getLocation()))
-      return true;
-
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    StringRef Name = Decl->getName();
-    StringRef USR = API.recordUSR(Decl);
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-
-    QualType Type = Decl->getUnderlyingType();
-    SymbolReference SymRef =
-        TypedefUnderlyingTypeResolver(Context).getSymbolReferenceForType(Type,
-                                                                         API);
-
-    API.addTypedef(Name, USR, Loc, AvailabilitySet(Decl), Comment,
-                   DeclarationFragmentsBuilder::getFragmentsForTypedef(Decl),
-                   DeclarationFragmentsBuilder::getSubHeading(Decl), SymRef);
-
-    return true;
-  }
-
-  bool VisitObjCCategoryDecl(const ObjCCategoryDecl *Decl) {
-    // Collect symbol information.
-    StringRef Name = Decl->getName();
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    DocComment Comment;
-    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
-    // Build declaration fragments and sub-heading for the category.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForObjCCategory(Decl);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
-
-    const ObjCInterfaceDecl *InterfaceDecl = Decl->getClassInterface();
-    SymbolReference Interface(InterfaceDecl->getName(),
-                              API.recordUSR(InterfaceDecl));
-
-    ObjCCategoryRecord *ObjCCategoryRecord =
-        API.addObjCCategory(Name, USR, Loc, AvailabilitySet(Decl), Comment,
-                            Declaration, SubHeading, Interface);
-
-    recordObjCMethods(ObjCCategoryRecord, Decl->methods());
-    recordObjCProperties(ObjCCategoryRecord, Decl->properties());
-    recordObjCInstanceVariables(ObjCCategoryRecord, Decl->ivars());
-    recordObjCProtocols(ObjCCategoryRecord, Decl->protocols());
-
-    return true;
-  }
-
-private:
-  /// Collect API information for the enum constants and associate with the
-  /// parent enum.
-  void recordEnumConstants(EnumRecord *EnumRecord,
-                           const EnumDecl::enumerator_range Constants) {
-    for (const auto *Constant : Constants) {
-      // Collect symbol information.
-      StringRef Name = Constant->getName();
-      StringRef USR = API.recordUSR(Constant);
-      PresumedLoc Loc =
-          Context.getSourceManager().getPresumedLoc(Constant->getLocation());
-      DocComment Comment;
-      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Constant))
-        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                                Context.getDiagnostics());
-
-      // Build declaration fragments and sub-heading for the enum constant.
-      DeclarationFragments Declaration =
-          DeclarationFragmentsBuilder::getFragmentsForEnumConstant(Constant);
-      DeclarationFragments SubHeading =
-          DeclarationFragmentsBuilder::getSubHeading(Constant);
-
-      API.addEnumConstant(EnumRecord, Name, USR, Loc, AvailabilitySet(Constant),
-                          Comment, Declaration, SubHeading);
-    }
-  }
-
-  /// Collect API information for the struct fields and associate with the
-  /// parent struct.
-  void recordStructFields(StructRecord *StructRecord,
-                          const RecordDecl::field_range Fields) {
-    for (const auto *Field : Fields) {
-      // Collect symbol information.
-      StringRef Name = Field->getName();
-      StringRef USR = API.recordUSR(Field);
-      PresumedLoc Loc =
-          Context.getSourceManager().getPresumedLoc(Field->getLocation());
-      DocComment Comment;
-      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Field))
-        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                                Context.getDiagnostics());
-
-      // Build declaration fragments and sub-heading for the struct field.
-      DeclarationFragments Declaration =
-          DeclarationFragmentsBuilder::getFragmentsForField(Field);
-      DeclarationFragments SubHeading =
-          DeclarationFragmentsBuilder::getSubHeading(Field);
-
-      API.addStructField(StructRecord, Name, USR, Loc, AvailabilitySet(Field),
-                         Comment, Declaration, SubHeading);
-    }
-  }
-
-  /// Collect API information for the Objective-C methods and associate with the
-  /// parent container.
-  void recordObjCMethods(ObjCContainerRecord *Container,
-                         const ObjCContainerDecl::method_range Methods) {
-    for (const auto *Method : Methods) {
-      // Don't record selectors for properties.
-      if (Method->isPropertyAccessor())
-        continue;
-
-      StringRef Name = API.copyString(Method->getSelector().getAsString());
-      StringRef USR = API.recordUSR(Method);
-      PresumedLoc Loc =
-          Context.getSourceManager().getPresumedLoc(Method->getLocation());
-      DocComment Comment;
-      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Method))
-        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                                Context.getDiagnostics());
-
-      // Build declaration fragments, sub-heading, and signature for the method.
-      DeclarationFragments Declaration =
-          DeclarationFragmentsBuilder::getFragmentsForObjCMethod(Method);
-      DeclarationFragments SubHeading =
-          DeclarationFragmentsBuilder::getSubHeading(Method);
-      FunctionSignature Signature =
-          DeclarationFragmentsBuilder::getFunctionSignature(Method);
-
-      API.addObjCMethod(Container, Name, USR, Loc, AvailabilitySet(Method),
-                        Comment, Declaration, SubHeading, Signature,
-                        Method->isInstanceMethod());
-    }
-  }
-
-  void recordObjCProperties(ObjCContainerRecord *Container,
-                            const ObjCContainerDecl::prop_range Properties) {
-    for (const auto *Property : Properties) {
-      StringRef Name = Property->getName();
-      StringRef USR = API.recordUSR(Property);
-      PresumedLoc Loc =
-          Context.getSourceManager().getPresumedLoc(Property->getLocation());
-      DocComment Comment;
-      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Property))
-        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                                Context.getDiagnostics());
-
-      // Build declaration fragments and sub-heading for the property.
-      DeclarationFragments Declaration =
-          DeclarationFragmentsBuilder::getFragmentsForObjCProperty(Property);
-      DeclarationFragments SubHeading =
-          DeclarationFragmentsBuilder::getSubHeading(Property);
-
-      StringRef GetterName =
-          API.copyString(Property->getGetterName().getAsString());
-      StringRef SetterName =
-          API.copyString(Property->getSetterName().getAsString());
-
-      // Get the attributes for property.
-      unsigned Attributes = ObjCPropertyRecord::NoAttr;
-      if (Property->getPropertyAttributes() &
-          ObjCPropertyAttribute::kind_readonly)
-        Attributes |= ObjCPropertyRecord::ReadOnly;
-      if (Property->getPropertyAttributes() & ObjCPropertyAttribute::kind_class)
-        Attributes |= ObjCPropertyRecord::Class;
-
-      API.addObjCProperty(
-          Container, Name, USR, Loc, AvailabilitySet(Property), Comment,
-          Declaration, SubHeading,
-          static_cast<ObjCPropertyRecord::AttributeKind>(Attributes),
-          GetterName, SetterName, Property->isOptional());
-    }
-  }
-
-  void recordObjCInstanceVariables(
-      ObjCContainerRecord *Container,
-      const llvm::iterator_range<
-          DeclContext::specific_decl_iterator<ObjCIvarDecl>>
-          Ivars) {
-    for (const auto *Ivar : Ivars) {
-      StringRef Name = Ivar->getName();
-      StringRef USR = API.recordUSR(Ivar);
-      PresumedLoc Loc =
-          Context.getSourceManager().getPresumedLoc(Ivar->getLocation());
-      DocComment Comment;
-      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Ivar))
-        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                                Context.getDiagnostics());
-
-      // Build declaration fragments and sub-heading for the instance variable.
-      DeclarationFragments Declaration =
-          DeclarationFragmentsBuilder::getFragmentsForField(Ivar);
-      DeclarationFragments SubHeading =
-          DeclarationFragmentsBuilder::getSubHeading(Ivar);
-
-      ObjCInstanceVariableRecord::AccessControl Access =
-          Ivar->getCanonicalAccessControl();
-
-      API.addObjCInstanceVariable(Container, Name, USR, Loc,
-                                  AvailabilitySet(Ivar), Comment, Declaration,
-                                  SubHeading, Access);
-    }
-  }
-
-  void recordObjCProtocols(ObjCContainerRecord *Container,
-                           ObjCInterfaceDecl::protocol_range Protocols) {
-    for (const auto *Protocol : Protocols)
-      Container->Protocols.emplace_back(Protocol->getName(),
-                                        API.recordUSR(Protocol));
-  }
-
-  ASTContext &Context;
-  APISet &API;
-  LocationFileChecker &LCF;
 };
 
 class ExtractAPIConsumer : public ASTConsumer {
@@ -803,7 +279,7 @@ public:
       if (PM.MD->getMacroInfo()->isUsedForHeaderGuard())
         continue;
 
-      if (!LCF.isLocationInKnownFile(PM.MacroNameToken.getLocation()))
+      if (!LCF(PM.MacroNameToken.getLocation()))
         continue;
 
       StringRef Name = PM.MacroNameToken.getIdentifierInfo()->getName();
@@ -814,7 +290,8 @@ public:
       API.addMacroDefinition(
           Name, USR, Loc,
           DeclarationFragmentsBuilder::getFragmentsForMacro(Name, PM.MD),
-          DeclarationFragmentsBuilder::getSubHeadingForMacro(Name));
+          DeclarationFragmentsBuilder::getSubHeadingForMacro(Name),
+          SM.isInSystemHeader(PM.MacroNameToken.getLocation()));
     }
 
     PendingMacros.clear();
@@ -844,13 +321,13 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (!OS)
     return nullptr;
 
-  ProductName = CI.getFrontendOpts().ProductName;
+  auto ProductName = CI.getFrontendOpts().ProductName;
 
   // Now that we have enough information about the language options and the
   // target triple, let's create the APISet before anyone uses it.
   API = std::make_unique<APISet>(
       CI.getTarget().getTriple(),
-      CI.getFrontendOpts().Inputs.back().getKind().getLanguage());
+      CI.getFrontendOpts().Inputs.back().getKind().getLanguage(), ProductName);
 
   auto LCF = std::make_unique<LocationFileChecker>(CI, KnownInputFiles);
 
@@ -942,7 +419,7 @@ void ExtractAPIAction::EndSourceFileAction() {
   // Setup a SymbolGraphSerializer to write out collected API information in
   // the Symbol Graph format.
   // FIXME: Make the kind of APISerializer configurable.
-  SymbolGraphSerializer SGSerializer(*API, ProductName, IgnoresList);
+  SymbolGraphSerializer SGSerializer(*API, IgnoresList);
   SGSerializer.serialize(*OS);
   OS.reset();
 }

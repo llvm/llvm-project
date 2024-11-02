@@ -35,39 +35,88 @@ using namespace mlir;
 
 #define PASS_NAME "convert-cf-to-llvm"
 
+static std::string generateGlobalMsgSymbolName(ModuleOp moduleOp) {
+  std::string prefix = "assert_msg_";
+  int counter = 0;
+  while (moduleOp.lookupSymbol(prefix + std::to_string(counter)))
+    ++counter;
+  return prefix + std::to_string(counter);
+}
+
+/// Generate IR that prints the given string to stderr.
+static void createPrintMsg(OpBuilder &builder, Location loc, ModuleOp moduleOp,
+                           StringRef msg) {
+  auto ip = builder.saveInsertionPoint();
+  builder.setInsertionPointToStart(moduleOp.getBody());
+  MLIRContext *ctx = builder.getContext();
+
+  // Create a zero-terminated byte representation and allocate global symbol.
+  SmallVector<uint8_t> elementVals;
+  elementVals.append(msg.begin(), msg.end());
+  elementVals.push_back(0);
+  auto dataAttrType = RankedTensorType::get(
+      {static_cast<int64_t>(elementVals.size())}, builder.getI8Type());
+  auto dataAttr =
+      DenseElementsAttr::get(dataAttrType, llvm::makeArrayRef(elementVals));
+  auto arrayTy =
+      LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), elementVals.size());
+  std::string symbolName = generateGlobalMsgSymbolName(moduleOp);
+  auto globalOp = builder.create<LLVM::GlobalOp>(
+      loc, arrayTy, /*constant=*/true, LLVM::Linkage::Private, symbolName,
+      dataAttr);
+
+  // Emit call to `printStr` in runtime library.
+  builder.restoreInsertionPoint(ip);
+  auto msgAddr = builder.create<LLVM::AddressOfOp>(
+      loc, LLVM::LLVMPointerType::get(arrayTy), globalOp.getName());
+  SmallVector<LLVM::GEPArg> indices(1, 0);
+  Value gep = builder.create<LLVM::GEPOp>(
+      loc, LLVM::LLVMPointerType::get(builder.getI8Type()), msgAddr, indices);
+  Operation *printer = LLVM::lookupOrCreatePrintStrFn(moduleOp);
+  builder.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(printer),
+                               gep);
+}
+
 namespace {
 /// Lower `cf.assert`. The default lowering calls the `abort` function if the
 /// assertion is violated and has no effect otherwise. The failure message is
 /// ignored by the default lowering but should be propagated by any custom
 /// lowering.
 struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
-  using ConvertOpToLLVMPattern<cf::AssertOp>::ConvertOpToLLVMPattern;
+  explicit AssertOpLowering(LLVMTypeConverter &typeConverter,
+                            bool abortOnFailedAssert = true)
+      : ConvertOpToLLVMPattern<cf::AssertOp>(typeConverter, /*benefit=*/1),
+        abortOnFailedAssert(abortOnFailedAssert) {}
 
   LogicalResult
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-
-    // Insert the `abort` declaration if necessary.
     auto module = op->getParentOfType<ModuleOp>();
-    auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
-    if (!abortFunc) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module.getBody());
-      auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
-      abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
-                                                    "abort", abortFuncTy);
-    }
 
     // Split block at `assert` operation.
     Block *opBlock = rewriter.getInsertionBlock();
     auto opPosition = rewriter.getInsertionPoint();
     Block *continuationBlock = rewriter.splitBlock(opBlock, opPosition);
 
-    // Generate IR to call `abort`.
+    // Failed block: Generate IR to print the message and call `abort`.
     Block *failureBlock = rewriter.createBlock(opBlock->getParent());
-    rewriter.create<LLVM::CallOp>(loc, abortFunc, std::nullopt);
-    rewriter.create<LLVM::UnreachableOp>(loc);
+    createPrintMsg(rewriter, loc, module, op.getMsg());
+    if (abortOnFailedAssert) {
+      // Insert the `abort` declaration if necessary.
+      auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
+      if (!abortFunc) {
+        OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointToStart(module.getBody());
+        auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
+        abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
+                                                      "abort", abortFuncTy);
+      }
+      rewriter.create<LLVM::CallOp>(loc, abortFunc, std::nullopt);
+      rewriter.create<LLVM::UnreachableOp>(loc);
+    } else {
+      rewriter.create<LLVM::BrOp>(loc, ValueRange(), continuationBlock);
+    }
 
     // Generate assertion test.
     rewriter.setInsertionPointToEnd(opBlock);
@@ -76,6 +125,11 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
 
     return success();
   }
+
+private:
+  /// If set to `false`, messages are printed but program execution continues.
+  /// This is useful for testing asserts.
+  bool abortOnFailedAssert = true;
 };
 
 /// The cf->LLVM lowerings for branching ops require that the blocks they jump
@@ -193,6 +247,12 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
       CondBranchOpLowering,
       SwitchOpLowering>(converter);
   // clang-format on
+}
+
+void mlir::cf::populateAssertToLLVMConversionPattern(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool abortOnFailure) {
+  patterns.add<AssertOpLowering>(converter, abortOnFailure);
 }
 
 //===----------------------------------------------------------------------===//

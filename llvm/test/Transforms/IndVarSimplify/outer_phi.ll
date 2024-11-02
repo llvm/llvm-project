@@ -398,10 +398,10 @@ exit:
 
 ; Same as test_01, but non-negativity of %b is known without context.
 ; FIXME: We can remove 2nd check in loop.
-define i32 @test_05(i32 %a, i32* %bp) {
+define i32 @test_05(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -427,7 +427,7 @@ define i32 @test_05(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:
@@ -462,10 +462,10 @@ exit:
 
 
 ; Same as test_01a, but non-negativity of %b is known without context.
-define i32 @test_05a(i32 %a, i32* %bp) {
+define i32 @test_05a(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -490,7 +490,7 @@ define i32 @test_05a(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:
@@ -524,10 +524,10 @@ exit:
 }
 
 ; Similar to test_05a, but inverted 2nd condition.
-define i32 @test_05b(i32 %a, i32* %bp) {
+define i32 @test_05b(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -552,7 +552,7 @@ define i32 @test_05b(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:
@@ -586,10 +586,10 @@ exit:
 }
 
 ; We should prove implication: iv <s b, b <s 0 => iv <u b.
-define i32 @test_05c(i32 %a, i32* %bp) {
+define i32 @test_05c(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -614,7 +614,7 @@ define i32 @test_05c(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !1
+  %b = load i32, ptr %bp, !range !1
   br label %outer
 
 outer:
@@ -648,10 +648,10 @@ exit:
 }
 
 ; Same as test_05c, but 2nd condition reversed.
-define i32 @test_05d(i32 %a, i32* %bp) {
+define i32 @test_05d(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05d(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG1]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG1]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -676,7 +676,7 @@ define i32 @test_05d(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !1
+  %b = load i32, ptr %bp, !range !1
   br label %outer
 
 outer:
@@ -711,10 +711,10 @@ exit:
 
 
 ; Same as test_05a, but 1st condition inverted.
-define i32 @test_05e(i32 %a, i32* %bp) {
+define i32 @test_05e(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05e(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -739,7 +739,7 @@ define i32 @test_05e(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:
@@ -773,10 +773,10 @@ exit:
 }
 
 ; Same as test_05b, but 1st condition inverted.
-define i32 @test_05f(i32 %a, i32* %bp) {
+define i32 @test_05f(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -801,7 +801,7 @@ define i32 @test_05f(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:
@@ -835,10 +835,10 @@ exit:
 }
 
 ; Same as test_05c, but 1st condition inverted.
-define i32 @test_05g(i32 %a, i32* %bp) {
+define i32 @test_05g(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG1]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG1]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -863,7 +863,7 @@ define i32 @test_05g(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !1
+  %b = load i32, ptr %bp, !range !1
   br label %outer
 
 outer:
@@ -897,10 +897,10 @@ exit:
 }
 
 ; Same as test_05d, but 1st condition inverted.
-define i32 @test_05h(i32 %a, i32* %bp) {
+define i32 @test_05h(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_05h(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG1]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG1]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -925,7 +925,7 @@ define i32 @test_05h(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !1
+  %b = load i32, ptr %bp, !range !1
   br label %outer
 
 outer:
@@ -960,10 +960,10 @@ exit:
 
 ; Same as test_02, but non-negativity of %b is known without context.
 ; FIXME: We can remove 2nd check in loop.
-define i32 @test_06(i32 %a, i32* %bp) {
+define i32 @test_06(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_06(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -989,7 +989,7 @@ define i32 @test_06(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:
@@ -1025,10 +1025,10 @@ exit:
 
 ; Same as test_03, but non-negativity of %b is known without context.
 ; FIXME: We can remove 2nd check in loop.
-define i32 @test_07(i32 %a, i32* %bp) {
+define i32 @test_07(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_07(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -1063,7 +1063,7 @@ define i32 @test_07(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:
@@ -1103,10 +1103,10 @@ exit:
 
 ; Same as test_04, but non-negativity of %b is known without context.
 ; FIXME: We can remove 2nd check in loop.
-define i32 @test_08(i32 %a, i32* %bp) {
+define i32 @test_08(i32 %a, ptr %bp) {
 ; CHECK-LABEL: @test_08(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[BP:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
@@ -1146,7 +1146,7 @@ define i32 @test_08(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %b = load i32, i32* %bp, !range !0
+  %b = load i32, ptr %bp, !range !0
   br label %outer
 
 outer:

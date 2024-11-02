@@ -24,28 +24,28 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local void @b() local_unnamed_addr #0 !dbg !7 {
 entry:
   %c = alloca i8, align 1, !DIAssignID !13
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !13, metadata i8* %c, metadata !DIExpression()), !dbg !14
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %c) #4, !dbg !15
-  store i8 0, i8* %c, align 1, !dbg !16, !DIAssignID !20
-  call void @llvm.dbg.assign(metadata i8 0, metadata !11, metadata !DIExpression(), metadata !20, metadata i8* %c, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !13, metadata ptr %c, metadata !DIExpression()), !dbg !14
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %c) #4, !dbg !15
+  store i8 0, ptr %c, align 1, !dbg !16, !DIAssignID !20
+  call void @llvm.dbg.assign(metadata i8 0, metadata !11, metadata !DIExpression(), metadata !20, metadata ptr %c, metadata !DIExpression()), !dbg !14
   tail call void (...) @d() #4, !dbg !21
 
   ; --- VV  Hand written  VV --- ;
-  store i8 1, i8* %c, align 1, !dbg !16, !DIAssignID !31
+  store i8 1, ptr %c, align 1, !dbg !16, !DIAssignID !31
   ; Check that a dbg.value(0) is inserted here.
   tail call void (...) @d() #4, !dbg !21
-  call void @llvm.dbg.assign(metadata i8 1, metadata !11, metadata !DIExpression(), metadata !31, metadata i8* %c, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.assign(metadata i8 1, metadata !11, metadata !DIExpression(), metadata !31, metadata ptr %c, metadata !DIExpression()), !dbg !14
   ; --- AA  Hand written  AA --- ;
 
-  call void @a(i8* nonnull %c) #4, !dbg !22
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %c) #4, !dbg !23
+  call void @a(ptr nonnull %c) #4, !dbg !22
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %c) #4, !dbg !23
   ret void, !dbg !23
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare !dbg !24 dso_local void @d(...) local_unnamed_addr #2
-declare !dbg !27 dso_local void @a(i8*) local_unnamed_addr #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare !dbg !27 dso_local void @a(ptr) local_unnamed_addr #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!0}

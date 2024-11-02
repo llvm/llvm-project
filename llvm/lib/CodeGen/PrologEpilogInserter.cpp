@@ -1282,7 +1282,13 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
         if (!MO.isReg())
           continue;
 
-        for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(MO.getReg()))
+        MCRegister Reg = MO.getReg();
+
+        // This picks up sibling registers (e.q. %al -> %ah).
+        for (MCRegUnitIterator Unit(Reg, &TRI); Unit.isValid(); ++Unit)
+          RegsToZero.reset(*Unit);
+
+        for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(Reg))
           RegsToZero.reset(SReg);
       }
     }

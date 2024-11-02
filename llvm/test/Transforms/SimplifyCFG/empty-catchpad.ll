@@ -5,7 +5,7 @@ declare void @f()
 declare void @llvm.foo(i32) nounwind
 declare void @ProcessCLRException()
 
-define void @test1() personality void ()* @ProcessCLRException {
+define void @test1() personality ptr @ProcessCLRException {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
@@ -37,7 +37,7 @@ exit:
 ; Remove unreachble catch2, leave catch1 as-is
 
 ; Remove both catchpads and the catchswitch from exn.dispatch
-define void @test2() personality void ()* @ProcessCLRException {
+define void @test2() personality ptr @ProcessCLRException {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @f()
@@ -92,7 +92,7 @@ exit:
 
 ; Same as @test2, but exn.dispatch catchswitch has an unwind dest that
 ; preds need to be reidrected to
-define void @test3() personality void ()* @ProcessCLRException {
+define void @test3() personality ptr @ProcessCLRException {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()

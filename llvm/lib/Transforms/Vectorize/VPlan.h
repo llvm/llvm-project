@@ -30,7 +30,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2670,6 +2669,8 @@ public:
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
+
+  bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
 
   const std::string &getName() const { return Name; }
 

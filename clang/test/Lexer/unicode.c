@@ -43,6 +43,7 @@ extern int  \U00016AA2; // TANGSA LETTER GA - Added in Unicode 14
 extern int  \U0001E4D0; // 𞓐 NAG MUNDARI LETTER O - Added in Unicode 15
 extern int _\N{TANGSA LETTER GA};
 extern int _\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a valid Unicode character name}} \
+                                // expected-error {{expected ';' after top level declarator}} \
                                 // expected-note {{characters names in Unicode escape sequences are sensitive to case and whitespace}}
 
 

@@ -36,7 +36,7 @@ class AMDGPUTargetStreamer : public MCTargetStreamer {
 
 protected:
   // TODO: Move HSAMetadataStream to AMDGPUTargetStreamer.
-  Optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
+  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
 
   MCContext &getContext() const { return Streamer.getContext(); }
 
@@ -98,10 +98,10 @@ public:
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
-  const Optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() const {
+  const std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() const {
     return TargetID;
   }
-  Optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() {
+  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() {
     return TargetID;
   }
   void initializeTargetID(const MCSubtargetInfo &STI) {

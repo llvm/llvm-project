@@ -2018,7 +2018,7 @@ CGDebugInfo::CollectTemplateParams(Optional<TemplateArgs> OArgs,
     } break;
     case TemplateArgument::Integral: {
       llvm::DIType *TTy = getOrCreateType(TA.getIntegralType(), Unit);
-      if (Args.TList && CGM.getCodeGenOpts().DwarfVersion >= 5)
+      if (Args.TList)
         if (auto *templateType = dyn_cast_or_null<NonTypeTemplateParmDecl>(
                 Args.TList->getParam(i)))
           if (templateType->hasDefaultArgument() &&

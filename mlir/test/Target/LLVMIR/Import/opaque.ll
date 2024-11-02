@@ -38,8 +38,8 @@ define ptr @opaque_ptr_alloca(i32 %0) {
 
 ; CHECK-LABEL: @opaque_ptr_gep
 define ptr @opaque_ptr_gep(ptr %0, i32 %1) {
-  ; CHECK: = llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr, f32
-  %3 = getelementptr float, ptr %0, i32 %1
+  ; CHECK: = llvm.getelementptr inbounds %{{.*}}[%{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %3 = getelementptr inbounds float, ptr %0, i32 %1
   ret ptr %3
 }
 

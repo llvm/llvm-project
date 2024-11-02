@@ -10,6 +10,12 @@ add_libc_unittest(
     libc.src.stdlib.atof
 )
 
+add_header_library(
+  atoi_test_support
+  HDRS
+    AtoiTest.h
+)
+
 add_libc_unittest(
   atoi_test
   SUITE
@@ -17,6 +23,7 @@ add_libc_unittest(
   SRCS
     atoi_test.cpp
   DEPENDS
+    .atoi_test_support
     libc.src.stdlib.atoi
 )
 
@@ -27,6 +34,7 @@ add_libc_unittest(
   SRCS
     atol_test.cpp
   DEPENDS
+    .atoi_test_support
     libc.src.stdlib.atol
 )
 
@@ -37,6 +45,7 @@ add_libc_unittest(
   SRCS
     atoll_test.cpp
   DEPENDS
+    .atoi_test_support
     libc.src.stdlib.atoll
 )
 

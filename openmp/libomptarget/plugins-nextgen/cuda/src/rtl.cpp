@@ -486,6 +486,24 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "Error in cuStreamSynchronize: %s");
   }
 
+  /// Query for the completion of the pending operations on the async info.
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override {
+    CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo.Queue);
+    CUresult Res = cuStreamQuery(Stream);
+
+    // Not ready streams must be considered as successful operations.
+    if (Res == CUDA_ERROR_NOT_READY)
+      return Plugin::success();
+
+    // Once the stream is synchronized and the operations completed (or an error
+    // occurs), return it to stream pool and reset AsyncInfo. This is to make
+    // sure the synchronization only works for its own tasks.
+    CUDAStreamManager.returnResource(Stream);
+    AsyncInfo.Queue = nullptr;
+
+    return Plugin::check(Res, "Error in cuStreamQuery: %s");
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {

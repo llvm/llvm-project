@@ -9437,8 +9437,7 @@ define dso_local void @test_atomic_load_xor_i64_noret_seq_cst(i64 %offset) nounw
 
 define dso_local i128 @test_atomic_load_i128() nounwind {
 ; CHECK-LABEL: test_atomic_load_i128:
-; CHECK: ldxp
-; CHECK: stxp
+; CHECK: casp
 
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_i128:
 ; OUTLINE-ATOMICS: ldxp

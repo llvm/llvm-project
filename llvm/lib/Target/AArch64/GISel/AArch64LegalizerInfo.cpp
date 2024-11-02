@@ -686,6 +686,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf([=](const LegalityQuery &Query) {
         return !Query.Types[1].isVector();
       })
+      .moreElementsIf(
+          [](const LegalityQuery &Query) {
+            return Query.Types[0].isVector() && Query.Types[1].isVector() &&
+                   Query.Types[0].getNumElements() >
+                       Query.Types[1].getNumElements();
+          },
+          changeTo(1, 0))
       .moreElementsToNextPow2(0)
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64);

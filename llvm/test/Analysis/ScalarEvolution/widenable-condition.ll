@@ -32,7 +32,7 @@ entry:
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
   %iv.next = add i32 %iv, 1
-  store i32 %iv, i32 *@G
+  store i32 %iv, ptr @G
   %cond_1 = icmp slt i32 %iv.next, 2000
   %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
   %exiplicit_guard_cond4 = and i1 %cond_1, %widenable_cond3

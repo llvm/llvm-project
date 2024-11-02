@@ -16,23 +16,24 @@
 #include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
+using namespace llvm;
 
 class EmulateInstructionRISCV;
 
 struct Rd {
   uint32_t rd;
   bool Write(EmulateInstructionRISCV &emulator, uint64_t value);
-  bool WriteAPFloat(EmulateInstructionRISCV &emulator, llvm::APFloat value);
+  bool WriteAPFloat(EmulateInstructionRISCV &emulator, APFloat value);
 };
 
 struct Rs {
   uint32_t rs;
-  llvm::Optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
-  llvm::Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
-  llvm::Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
-  llvm::Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
-  llvm::Optional<llvm::APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
-                                            bool isDouble);
+  Optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
+  Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
+  Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
+  Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
+  Optional<APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
+                                bool isDouble);
 };
 
 #define I_TYPE_INST(NAME)                                                      \
@@ -215,6 +216,42 @@ I_TYPE_INST(FCVT_LU_S);
 I_TYPE_INST(FCVT_S_L);
 I_TYPE_INST(FCVT_S_LU);
 
+// RV32D inst (Extension for Double-Precision Floating-Point)
+I_TYPE_INST(FLD);
+S_TYPE_INST(FSD);
+R4_TYPE_INST(FMADD_D);
+R4_TYPE_INST(FMSUB_D);
+R4_TYPE_INST(FNMSUB_D);
+R4_TYPE_INST(FNMADD_D);
+R_TYPE_INST(FADD_D);
+R_TYPE_INST(FSUB_D);
+R_TYPE_INST(FMUL_D);
+R_TYPE_INST(FDIV_D);
+I_TYPE_INST(FSQRT_D);
+R_TYPE_INST(FSGNJ_D);
+R_TYPE_INST(FSGNJN_D);
+R_TYPE_INST(FSGNJX_D);
+R_TYPE_INST(FMIN_D);
+R_TYPE_INST(FMAX_D);
+I_TYPE_INST(FCVT_S_D);
+I_TYPE_INST(FCVT_D_S);
+R_TYPE_INST(FEQ_D);
+R_TYPE_INST(FLT_D);
+R_TYPE_INST(FLE_D);
+I_TYPE_INST(FCLASS_D);
+I_TYPE_INST(FCVT_W_D);
+I_TYPE_INST(FCVT_WU_D);
+I_TYPE_INST(FCVT_D_W);
+I_TYPE_INST(FCVT_D_WU);
+
+// RV64D inst (Extension for Double-Precision Floating-Point)
+I_TYPE_INST(FCVT_L_D);
+I_TYPE_INST(FCVT_LU_D);
+I_TYPE_INST(FMV_X_D);
+I_TYPE_INST(FCVT_D_L);
+I_TYPE_INST(FCVT_D_LU);
+I_TYPE_INST(FMV_D_X);
+
 /// Invalid and reserved instructions, the `inst` fields are used for debugging.
 INVALID_INST(INVALID);
 INVALID_INST(RESERVED);
@@ -233,8 +270,12 @@ using RISCVInst = std::variant<
     AMOMAXU_D, FLW, FSW, FMADD_S, FMSUB_S, FNMADD_S, FNMSUB_S, FADD_S, FSUB_S,
     FMUL_S, FDIV_S, FSQRT_S, FSGNJ_S, FSGNJN_S, FSGNJX_S, FMIN_S, FMAX_S,
     FCVT_W_S, FCVT_WU_S, FMV_X_W, FEQ_S, FLT_S, FLE_S, FCLASS_S, FCVT_S_W,
-    FCVT_S_WU, FMV_W_X, FCVT_L_S, FCVT_LU_S, FCVT_S_L, FCVT_S_LU, INVALID,
-    EBREAK, RESERVED, HINT, NOP>;
+    FCVT_S_WU, FMV_W_X, FCVT_L_S, FCVT_LU_S, FCVT_S_L, FCVT_S_LU, FLD, FSD,
+    FMADD_D, FMSUB_D, FNMSUB_D, FNMADD_D, FADD_D, FSUB_D, FMUL_D, FDIV_D,
+    FSQRT_D, FSGNJ_D, FSGNJN_D, FSGNJX_D, FMIN_D, FMAX_D, FCVT_S_D, FCVT_D_S,
+    FEQ_D, FLT_D, FLE_D, FCLASS_D, FCVT_W_D, FCVT_WU_D, FCVT_D_W, FCVT_D_WU,
+    FCVT_L_D, FCVT_LU_D, FMV_X_D, FCVT_D_L, FCVT_D_LU, FMV_D_X, INVALID, EBREAK,
+    RESERVED, HINT, NOP>;
 
 constexpr uint8_t RV32 = 1;
 constexpr uint8_t RV64 = 2;

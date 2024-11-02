@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H
 
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
@@ -238,4 +238,4 @@ bool isExpandedFromParameterPack(const ParmVarDecl *D);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H

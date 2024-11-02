@@ -9,7 +9,7 @@ target triple = "x86_64-w64-windows-gnu"
 
 define i32 @a() !dbg !8 {
 entry:
-  call void @llvm.dbg.declare(metadata [6 x i8]* undef, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 80, 48)), !dbg !15
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 80, 48)), !dbg !15
   %0 = tail call x86_fp80 asm sideeffect "", "={st},~{dirflag},~{fpsr},~{flags}"(), !dbg !16, !srcloc !17
   call void @llvm.dbg.value(metadata x86_fp80 %0, metadata !13, metadata !DIExpression()), !dbg !18
   ret i32 undef, !dbg !19

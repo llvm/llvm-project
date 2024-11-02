@@ -78,9 +78,10 @@ add_object_library(
   SRCS
     converter.cpp
     string_converter.cpp
+    int_converter.cpp
   HDRS
     converter.h
-    string_converter.h
+    int_converter.h
   DEPENDS
     .reader
     .core_structs

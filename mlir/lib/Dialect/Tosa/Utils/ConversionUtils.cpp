@@ -46,3 +46,17 @@ Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,
       rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, max, arg);
   return rewriter.create<arith::SelectOp>(loc, largerThanMax, max, minOrArg);
 }
+
+bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {
+  uint64_t bitwidth = ty.getIntOrFloatBitWidth();
+  if (ty.getSignedness() == IntegerType::Unsigned) {
+    uint64_t uvalue = value;
+    APInt intMin = APInt::getMinValue(bitwidth);
+    APInt intMax = APInt::getMaxValue(bitwidth);
+    return uvalue >= intMin.getZExtValue() && uvalue <= intMax.getZExtValue();
+  }
+
+  APInt intMin = APInt::getSignedMinValue(bitwidth);
+  APInt intMax = APInt::getSignedMaxValue(bitwidth);
+  return value >= intMin.getSExtValue() && value <= intMax.getSExtValue();
+}

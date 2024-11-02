@@ -13,7 +13,7 @@
 
 define i32 @createtask() {
         %v1 = alloca i32                ;; Alloca should have one use! 
-        %reg112 = load i32, i32* %v1         ;; This load should not use the global!
+        %reg112 = load i32, ptr %v1         ;; This load should not use the global!
         ret i32 %reg112
 }
 

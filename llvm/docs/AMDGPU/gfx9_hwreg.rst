@@ -24,27 +24,27 @@ The bits of this operand have the following meaning:
 
 This operand may be specified as one of the following:
 
-* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
-* An *hwreg* value described below.
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range from 0 to 0xFFFF.
+* An *hwreg* value which is described below.
 
-    ==================================== ============================================================================
+    ==================================== ===============================================================================
     Hwreg Value Syntax                   Description
-    ==================================== ============================================================================
-    hwreg({0..63})                       All bits of a register indicated by its *id*.
-    hwreg(<*name*>)                      All bits of a register indicated by its *name*.
-    hwreg({0..63}, {0..31}, {1..32})     Register bits indicated by register *id*, first bit *offset* and *size*.
-    hwreg(<*name*>, {0..31}, {1..32})    Register bits indicated by register *name*, first bit *offset* and *size*.
-    ==================================== ============================================================================
+    ==================================== ===============================================================================
+    hwreg({0..63})                       All bits of a register indicated by the register *id*.
+    hwreg(<*name*>)                      All bits of a register indicated by the register *name*.
+    hwreg({0..63}, {0..31}, {1..32})     Register bits indicated by the register *id*, first bit *offset* and *size*.
+    hwreg(<*name*>, {0..31}, {1..32})    Register bits indicated by the register *name*, first bit *offset* and *size*.
+    ==================================== ===============================================================================
 
 Numeric values may be specified as positive :ref:`integer numbers<amdgpu_synid_integer_number>`
 or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
-Defined register *names* include:
+Predefined register *names* include:
 
     ============================== ==========================================
     Name                           Description
     ============================== ==========================================
-    HW_REG_MODE                    Shader writeable mode bits.
+    HW_REG_MODE                    Shader writable mode bits.
     HW_REG_STATUS                  Shader read-only status.
     HW_REG_TRAPSTS                 Trap status.
     HW_REG_HW_ID                   Id of wave, simd, compute unit, etc.

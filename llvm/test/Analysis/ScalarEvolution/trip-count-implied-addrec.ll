@@ -117,7 +117,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
-  store volatile i8 %iv, i8* @G
+  store volatile i8 %iv, ptr @G
   %iv.next = add i8 %iv, 1
   %zext = zext i8 %iv to i16
   %cmp = icmp ult i16 %zext, 257
@@ -145,7 +145,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i8 %iv, 1
-  store i8 %iv, i8* @G
+  store i8 %iv, ptr @G
   %zext = zext i8 %iv.next to i16
   %cmp = icmp ult i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end
@@ -170,7 +170,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i8 %iv, 3
-  store i8 %iv, i8* @G
+  store i8 %iv, ptr @G
   %zext = zext i8 %iv.next to i16
   %cmp = icmp ult i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end
@@ -197,7 +197,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i8 %iv, %step
-  store i8 %iv, i8* @G
+  store i8 %iv, ptr @G
   %zext = zext i8 %iv.next to i16
   %cmp = icmp ult i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end
@@ -222,7 +222,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i8 %iv, %step
-  store i8 %iv, i8* @G
+  store i8 %iv, ptr @G
   %zext = zext i8 %iv.next to i16
   %cmp = icmp ult i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end
@@ -249,7 +249,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i8 %iv, 2
-  store i8 %iv, i8* @G
+  store i8 %iv, ptr @G
   %zext = zext i8 %iv.next to i16
   %cmp = icmp ult i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end
@@ -276,7 +276,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i8 %iv, 1
-  store i8 %iv, i8* @G
+  store i8 %iv, ptr @G
   %zext = zext i8 %iv.next to i16
   %cmp = icmp ult i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end
@@ -304,7 +304,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i8 %iv, 1
-  store i8 %iv, i8* @G
+  store i8 %iv, ptr @G
   %zext = zext i8 %iv.next to i16
   %cmp = icmp ult i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end

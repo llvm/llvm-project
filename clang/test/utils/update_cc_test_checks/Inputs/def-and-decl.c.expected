@@ -6,7 +6,7 @@ int foo(int arg);
 
 void empty_function(void);
 
-// CHECK-LABEL: define {{[^@]+}}@main(
+// CHECK-LABEL: @main(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
@@ -19,7 +19,7 @@ int main(void) {
   return foo(1);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@foo(
+// CHECK-LABEL: @foo(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[ARG:%.*]], i32* [[ARG_ADDR]], align 4
@@ -30,7 +30,7 @@ int foo(int arg) {
   return arg;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@empty_function(
+// CHECK-LABEL: @empty_function(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //

@@ -28,9 +28,9 @@ define void @foo() !dbg !6 {
   ret void, !dbg !9
 }
 
-define void @bar(i32* %0) !dbg !15 {
-  store i32 1, i32* %0, align 4, !dbg !16
-  store i32 1, i32* %0, align 4, !dbg !21
+define void @bar(ptr %0) !dbg !15 {
+  store i32 1, ptr %0, align 4, !dbg !16
+  store i32 1, ptr %0, align 4, !dbg !21
   ret void, !dbg !16
 }
 

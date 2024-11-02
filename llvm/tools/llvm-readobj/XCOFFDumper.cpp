@@ -40,7 +40,8 @@ public:
   void printNeededLibraries() override;
   void printStringTable() override;
   void printExceptionSection() override;
-  void printLoaderSection(bool PrintHeader, bool PrintSymbolTable) override;
+  void printLoaderSection(bool PrintHeader, bool PrintSymbols,
+                          bool PrintRelocations) override;
 
   ScopedPrinter &getScopedPrinter() const { return W; }
 
@@ -71,7 +72,16 @@ private:
   void printLoaderSectionSymbols(uintptr_t LoaderSectAddr);
   template <typename LoaderSectionSymbolEntry, typename LoaderSectionHeader>
   void printLoaderSectionSymbolsHelper(uintptr_t LoaderSectAddr);
+  template <typename LoadSectionRelocTy>
+  void printLoaderSectionRelocationEntry(LoadSectionRelocTy *LoaderSecRelEntPtr,
+                                         StringRef SymbolName);
+  void printLoaderSectionRelocationEntries(uintptr_t LoaderSectAddr);
+  template <typename LoaderSectionHeader, typename LoaderSectionSymbolEntry,
+            typename LoaderSectionRelocationEntry>
+  void printLoaderSectionRelocationEntriesHelper(uintptr_t LoaderSectAddr);
+
   const XCOFFObjectFile &Obj;
+  const static int32_t FirstSymIdxOfLoaderSec = 3;
 };
 } // anonymous namespace
 
@@ -138,7 +148,8 @@ void XCOFFDumper::printSectionHeaders() {
     printSectionHeaders(Obj.sections32());
 }
 
-void XCOFFDumper::printLoaderSection(bool PrintHeader, bool PrintSymbolTable) {
+void XCOFFDumper::printLoaderSection(bool PrintHeader, bool PrintSymbols,
+                                     bool PrintRelocations) {
   DictScope DS(W, "Loader Section");
   Expected<uintptr_t> LoaderSectionAddrOrError =
       Obj.getSectionFileOffsetToRawData(XCOFF::STYP_LOADER);
@@ -155,13 +166,12 @@ void XCOFFDumper::printLoaderSection(bool PrintHeader, bool PrintSymbolTable) {
   if (PrintHeader)
     printLoaderSectionHeader(LoaderSectionAddr);
 
-  if (PrintSymbolTable)
+  if (PrintSymbols)
     printLoaderSectionSymbols(LoaderSectionAddr);
 
-  // TODO: Need to add printing of relocation entry of loader section later.
-  // For example:
-  //           if (PrintRelocation)
-  //             printLoaderSectionRelocationEntry();
+  if (PrintRelocations)
+    printLoaderSectionRelocationEntries(LoaderSectionAddr);
+
   W.unindent();
 }
 
@@ -261,6 +271,140 @@ void XCOFFDumper::printLoaderSectionSymbols(uintptr_t LoaderSectionAddr) {
                                     LoaderSectionHeader32>(LoaderSectionAddr);
 }
 
+const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
+#define ECase(X)                                                               \
+  { #X, XCOFF::X }
+    ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
+    ECase(R_REL),    ECase(R_TOC),    ECase(R_TRL),    ECase(R_TRLA),
+    ECase(R_GL),     ECase(R_TCL),    ECase(R_REF),    ECase(R_BA),
+    ECase(R_BR),     ECase(R_RBA),    ECase(R_RBR),    ECase(R_TLS),
+    ECase(R_TLS_IE), ECase(R_TLS_LD), ECase(R_TLS_LE), ECase(R_TLSM),
+    ECase(R_TLSML),  ECase(R_TOCU),   ECase(R_TOCL)
+#undef ECase
+};
+
+// From the XCOFF specification: there are five implicit external symbols, one
+// each for the .text, .data, .bss, .tdata, and .tbss sections. These symbols
+// are referenced from the relocation table entries using symbol table index
+// values 0, 1, 2, -1, and -2, respectively.
+static const char *getImplicitLoaderSectionSymName(int SymIndx) {
+  switch (SymIndx) {
+  default:
+    return "Unkown Symbol Name";
+  case -2:
+    return ".tbss";
+  case -1:
+    return ".tdata";
+  case 0:
+    return ".text";
+  case 1:
+    return ".data";
+  case 2:
+    return ".bss";
+  }
+}
+
+template <typename LoadSectionRelocTy>
+void XCOFFDumper::printLoaderSectionRelocationEntry(
+    LoadSectionRelocTy *LoaderSecRelEntPtr, StringRef SymbolName) {
+  uint16_t Type = LoaderSecRelEntPtr->Type;
+  if (opts::ExpandRelocs) {
+    DictScope DS(W, "Relocation");
+    auto IsRelocationSigned = [](uint8_t Info) {
+      return Info & XCOFF::XR_SIGN_INDICATOR_MASK;
+    };
+    auto IsFixupIndicated = [](uint8_t Info) {
+      return Info & XCOFF::XR_FIXUP_INDICATOR_MASK;
+    };
+    auto GetRelocatedLength = [](uint8_t Info) {
+      // The relocation encodes the bit length being relocated minus 1. Add
+      // back
+      //   the 1 to get the actual length being relocated.
+      return (Info & XCOFF::XR_BIASED_LENGTH_MASK) + 1;
+    };
+
+    uint8_t Info = Type >> 8;
+    W.printHex("Virtual Address", LoaderSecRelEntPtr->VirtualAddr);
+    W.printNumber("Symbol", SymbolName, LoaderSecRelEntPtr->SymbolIndex);
+    W.printString("IsSigned", IsRelocationSigned(Info) ? "Yes" : "No");
+    W.printNumber("FixupBitValue", IsFixupIndicated(Info) ? 1 : 0);
+    W.printNumber("Length", GetRelocatedLength(Info));
+    W.printEnum("Type", static_cast<uint8_t>(Type),
+                makeArrayRef(RelocationTypeNameclass));
+    W.printNumber("SectionNumber", LoaderSecRelEntPtr->SectionNum);
+  } else {
+    W.startLine() << format_hex(LoaderSecRelEntPtr->VirtualAddr,
+                                Obj.is64Bit() ? 18 : 10)
+                  << " " << format_hex(Type, 6) << " ("
+                  << XCOFF::getRelocationTypeString(
+                         static_cast<XCOFF::RelocationType>(Type))
+                  << ")" << format_decimal(LoaderSecRelEntPtr->SectionNum, 8)
+                  << "    " << SymbolName << " ("
+                  << LoaderSecRelEntPtr->SymbolIndex << ")\n";
+  }
+}
+
+template <typename LoaderSectionHeader, typename LoaderSectionSymbolEntry,
+          typename LoaderSectionRelocationEntry>
+void XCOFFDumper::printLoaderSectionRelocationEntriesHelper(
+    uintptr_t LoaderSectionAddr) {
+  const LoaderSectionHeader *LoaderSec =
+      reinterpret_cast<const LoaderSectionHeader *>(LoaderSectionAddr);
+  const LoaderSectionRelocationEntry *LoaderSecRelEntPtr =
+      reinterpret_cast<const LoaderSectionRelocationEntry *>(
+          LoaderSectionAddr + uintptr_t(LoaderSec->getOffsetToRelEnt()));
+
+  if (!opts::ExpandRelocs)
+    W.startLine() << center_justify("Vaddr", Obj.is64Bit() ? 18 : 10)
+                  << center_justify("Type", 15) << right_justify("SecNum", 8)
+                  << center_justify("SymbolName (Index) ", 24) << "\n";
+
+  for (uint32_t i = 0; i < LoaderSec->NumberOfRelTabEnt;
+       ++i, ++LoaderSecRelEntPtr) {
+    StringRef SymbolName;
+    if (LoaderSecRelEntPtr->SymbolIndex >= FirstSymIdxOfLoaderSec) {
+      // Because there are implicit symbol index values (-2, -1, 0, 1, 2),
+      // LoaderSecRelEnt.SymbolIndex - FirstSymIdxOfLoaderSec will get the
+      // real symbol from the symbol table.
+      const uint64_t SymOffset =
+          (LoaderSecRelEntPtr->SymbolIndex - FirstSymIdxOfLoaderSec) *
+          sizeof(LoaderSectionSymbolEntry);
+      const LoaderSectionSymbolEntry *LoaderSecRelSymEntPtr =
+          reinterpret_cast<LoaderSectionSymbolEntry *>(
+              LoaderSectionAddr + uintptr_t(LoaderSec->getOffsetToSymTbl()) +
+              SymOffset);
+
+      Expected<StringRef> SymbolNameOrErr =
+          LoaderSecRelSymEntPtr->getSymbolName(LoaderSec);
+      if (!SymbolNameOrErr) {
+        reportUniqueWarning(SymbolNameOrErr.takeError());
+        return;
+      }
+      SymbolName = SymbolNameOrErr.get();
+    } else
+      SymbolName =
+          getImplicitLoaderSectionSymName(LoaderSecRelEntPtr->SymbolIndex);
+
+    printLoaderSectionRelocationEntry(LoaderSecRelEntPtr, SymbolName);
+  }
+}
+
+void XCOFFDumper::printLoaderSectionRelocationEntries(
+    uintptr_t LoaderSectionAddr) {
+  DictScope DS(W, "Loader Section Relocations");
+
+  if (Obj.is64Bit())
+    printLoaderSectionRelocationEntriesHelper<LoaderSectionHeader64,
+                                              LoaderSectionSymbolEntry64,
+                                              LoaderSectionRelocationEntry64>(
+        LoaderSectionAddr);
+  else
+    printLoaderSectionRelocationEntriesHelper<LoaderSectionHeader32,
+                                              LoaderSectionSymbolEntry32,
+                                              LoaderSectionRelocationEntry32>(
+        LoaderSectionAddr);
+}
+
 template <typename T>
 void XCOFFDumper::printExceptionSectionEntry(const T &ExceptionSectEnt) const {
   if (ExceptionSectEnt.getReason())
@@ -308,18 +452,6 @@ void XCOFFDumper::printRelocations() {
   else
     printRelocations<XCOFFSectionHeader32, XCOFFRelocation32>(Obj.sections32());
 }
-
-const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
-    ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
-    ECase(R_REL),    ECase(R_TOC),    ECase(R_TRL),    ECase(R_TRLA),
-    ECase(R_GL),     ECase(R_TCL),    ECase(R_REF),    ECase(R_BA),
-    ECase(R_BR),     ECase(R_RBA),    ECase(R_RBR),    ECase(R_TLS),
-    ECase(R_TLS_IE), ECase(R_TLS_LD), ECase(R_TLS_LE), ECase(R_TLSM),
-    ECase(R_TLSML),  ECase(R_TOCU),   ECase(R_TOCL)
-#undef ECase
-};
 
 template <typename RelTy> void XCOFFDumper::printRelocation(RelTy Reloc) {
   Expected<StringRef> ErrOrSymbolName =

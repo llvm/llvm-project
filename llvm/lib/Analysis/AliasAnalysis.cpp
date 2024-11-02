@@ -599,7 +599,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
 }
 
 ModRefInfo AAResults::getModRefInfo(const Instruction *I,
-                                    const Optional<MemoryLocation> &OptLoc,
+                                    const std::optional<MemoryLocation> &OptLoc,
                                     AAQueryInfo &AAQIP) {
   if (OptLoc == std::nullopt) {
     if (const auto *Call = dyn_cast<CallBase>(I))

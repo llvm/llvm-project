@@ -208,7 +208,7 @@ bool TFModelEvaluatorImpl::checkReportAndInvalidate(const TfLiteTensor *Tensor,
   return IsValid;
 }
 
-Optional<TFModelEvaluator::EvaluationResult> TFModelEvaluator::evaluate() {
+std::optional<TFModelEvaluator::EvaluationResult> TFModelEvaluator::evaluate() {
   if (!isValid())
     return std::nullopt;
   return EvaluationResult(Impl->evaluate());

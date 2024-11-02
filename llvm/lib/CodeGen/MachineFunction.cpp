@@ -437,16 +437,8 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
 /// `new MachineBasicBlock'.
 MachineBasicBlock *
 MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
-  MachineBasicBlock *MBB =
-      new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
-          MachineBasicBlock(*this, bb);
-  // Set BBID for `-basic-block=sections=labels` and
-  // `-basic-block-sections=list` to allow robust mapping of profiles to basic
-  // blocks.
-  if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
-      Target.getBBSectionsType() == BasicBlockSection::List)
-    MBB->setBBID(NextBBID++);
-  return MBB;
+  return new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
+             MachineBasicBlock(*this, bb);
 }
 
 /// Delete the given MachineBasicBlock.

@@ -16,7 +16,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; will not be invalidated by the wrapping checks.
 
 ; #include <stdlib.h>
-; void test(float * __restrict__ out, float * __restrict__ in, size_t size)
+; void test(ptr __restrict__ out, ptr __restrict__ in, size_t size)
 ; {
 ;    for (size_t out_offset = 0; out_offset < size; ++out_offset)
 ;      {
@@ -26,10 +26,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; }
 
 ; CHECK: vector.body:
-; CHECK-NOT: %wide.vec = load <8 x i32>, <8 x i32>* {{.*}}, align 4
+; CHECK-NOT: %wide.vec = load <8 x i32>, ptr {{.*}}, align 4
 ; CHECK-NOT: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 
-define void @_Z4testPfS_m(float* noalias nocapture %out, float* noalias nocapture readonly %in, i64 %size) local_unnamed_addr {
+define void @_Z4testPfS_m(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %size) local_unnamed_addr {
 entry:
   %cmp7 = icmp eq i64 %size, 0
   br i1 %cmp7, label %for.cond.cleanup, label %for.body.preheader
@@ -46,12 +46,10 @@ for.cond.cleanup:
 for.body:
   %out_offset.08 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %mul = shl i64 %out_offset.08, 1
-  %arrayidx = getelementptr inbounds float, float* %in, i64 %mul
-  %0 = bitcast float* %arrayidx to i32*
-  %1 = load i32, i32* %0, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %out, i64 %out_offset.08
-  %2 = bitcast float* %arrayidx1 to i32*
-  store i32 %1, i32* %2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %in, i64 %mul
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %out, i64 %out_offset.08
+  store i32 %0, ptr %arrayidx1, align 4
   %inc = add nuw i64 %out_offset.08, 1
   %exitcond = icmp eq i64 %inc, %size
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body

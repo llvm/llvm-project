@@ -51,7 +51,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
                                                   const GlobalVariable &GV,
                                                   Align Trailing) {
-  auto Entry = LocalMemoryObjects.insert(std::make_pair(&GV, 0));
+  auto Entry = LocalMemoryObjects.insert(std::pair(&GV, 0));
   if (!Entry.second)
     return Entry.first->second;
 
@@ -196,7 +196,7 @@ void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
   }
 }
 
-Optional<uint32_t>
+std::optional<uint32_t>
 AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
   auto MD = F.getMetadata("llvm.amdgcn.lds.kernel.id");
   if (MD && MD->getNumOperands() == 1) {

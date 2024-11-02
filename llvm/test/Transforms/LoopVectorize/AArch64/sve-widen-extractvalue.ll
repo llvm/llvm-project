@@ -2,7 +2,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @widen_extractvalue(i64* %dst, {i64, i64} %sv) #0 {
+define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-LABEL: @widen_extractvalue(
 ; CHECK: vector.body:
 ; CHECK:        [[EXTRACT0:%.*]] = extractvalue { i64, i64 } [[SV:%.*]], 0
@@ -19,9 +19,9 @@ loop.body:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.body ]
   %a = extractvalue { i64, i64 } %sv, 0
   %b = extractvalue { i64, i64 } %sv, 1
-  %addr = getelementptr i64, i64* %dst, i32 %iv
+  %addr = getelementptr i64, ptr %dst, i32 %iv
   %add = add i64 %a, %b
-  store i64 %add, i64* %addr
+  store i64 %add, ptr %addr
   %iv.next = add nsw i32 %iv, 1
   %cond = icmp ne i32 %iv.next, 0
   br i1 %cond, label %loop.body, label %exit, !llvm.loop !0
