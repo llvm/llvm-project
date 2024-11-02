@@ -13,6 +13,7 @@
 #include "PluginInterface.h"
 
 #if defined(LIBOMPTARGET_RPC_SUPPORT)
+#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "llvmlibc_rpc_server.h"
 #endif
 

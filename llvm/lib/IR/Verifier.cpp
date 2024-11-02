@@ -2691,6 +2691,11 @@ void Verifier::visitFunction(const Function &F) {
   Check(verifyAttributeCount(Attrs, FT->getNumParams()),
         "Attribute after last parameter!", &F);
 
+  CheckDI(F.IsNewDbgInfoFormat == F.getParent()->IsNewDbgInfoFormat,
+          "Function debug format should match parent module", &F,
+          F.IsNewDbgInfoFormat, F.getParent(),
+          F.getParent()->IsNewDbgInfoFormat);
+
   bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
@@ -3033,6 +3038,11 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   {
     Check(I.getParent() == &BB, "Instruction has bogus parent pointer!");
   }
+
+  CheckDI(BB.IsNewDbgInfoFormat == BB.getParent()->IsNewDbgInfoFormat,
+          "BB debug format should match parent function", &BB,
+          BB.IsNewDbgInfoFormat, BB.getParent(),
+          BB.getParent()->IsNewDbgInfoFormat);
 
   // Confirm that no issues arise from the debug program.
   if (BB.IsNewDbgInfoFormat)
@@ -4999,6 +5009,9 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::seh_scope_end ||
                 F->getIntrinsicID() == Intrinsic::coro_resume ||
                 F->getIntrinsicID() == Intrinsic::coro_destroy ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_void ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_bool ||
+                F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||

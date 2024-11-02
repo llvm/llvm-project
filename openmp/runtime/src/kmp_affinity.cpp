@@ -1829,14 +1829,8 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
 
   // Figure out the depth and types in the topology
   depth = 0;
-  pu = hwloc_get_pu_obj_by_os_index(tp, __kmp_affin_fullMask->begin());
-  KMP_ASSERT(pu);
-  obj = pu;
-  types[depth] = KMP_HW_THREAD;
-  hwloc_types[depth] = obj->type;
-  depth++;
-  while (obj != root && obj != NULL) {
-    obj = obj->parent;
+  obj = hwloc_get_pu_obj_by_os_index(tp, __kmp_affin_fullMask->begin());
+  while (obj && obj != root) {
 #if HWLOC_API_VERSION >= 0x00020000
     if (obj->memory_arity) {
       hwloc_obj_t memory;
@@ -1858,6 +1852,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       hwloc_types[depth] = obj->type;
       depth++;
     }
+    obj = obj->parent;
   }
   KMP_ASSERT(depth > 0);
 
@@ -2829,7 +2824,8 @@ static void __kmp_dispatch_set_hierarchy_values() {
       nPackages * nCoresPerPkg * __kmp_nThreadsPerCore;
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L1 + 1] = __kmp_ncores;
 #if KMP_ARCH_X86_64 &&                                                         \
-    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_WINDOWS) &&     \
+    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||    \
+     KMP_OS_WINDOWS) &&                                                        \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L2 + 1] = __kmp_ncores / 2;
@@ -2845,7 +2841,8 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L1 + 1] =
       __kmp_nThreadsPerCore;
 #if KMP_ARCH_X86_64 &&                                                         \
-    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_WINDOWS) &&     \
+    (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||    \
+     KMP_OS_WINDOWS) &&                                                        \
     KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L2 + 1] =
@@ -5559,7 +5556,7 @@ void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
   }
 }
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
 // We don't need this entry for Windows because
 // there is GetProcessAffinityMask() api
 //

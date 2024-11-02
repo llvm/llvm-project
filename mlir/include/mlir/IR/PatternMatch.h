@@ -432,11 +432,22 @@ public:
     /// Note: This notification is not triggered when unlinking an operation.
     virtual void notifyOperationErased(Operation *op) {}
 
-    /// Notify the listener that the pattern failed to match the given
-    /// operation, and provide a callback to populate a diagnostic with the
-    /// reason why the failure occurred. This method allows for derived
-    /// listeners to optionally hook into the reason why a rewrite failed, and
-    /// display it to users.
+    /// Notify the listener that the specified pattern is about to be applied
+    /// at the specified root operation.
+    virtual void notifyPatternBegin(const Pattern &pattern, Operation *op) {}
+
+    /// Notify the listener that a pattern application finished with the
+    /// specified status. "success" indicates that the pattern was applied
+    /// successfully. "failure" indicates that the pattern could not be
+    /// applied. The pattern may have communicated the reason for the failure
+    /// with `notifyMatchFailure`.
+    virtual void notifyPatternEnd(const Pattern &pattern,
+                                  LogicalResult status) {}
+
+    /// Notify the listener that the pattern failed to match, and provide a
+    /// callback to populate a diagnostic with the reason why the failure
+    /// occurred. This method allows for derived listeners to optionally hook
+    /// into the reason why a rewrite failed, and display it to users.
     virtual void
     notifyMatchFailure(Location loc,
                        function_ref<void(Diagnostic &)> reasonCallback) {}
@@ -477,6 +488,15 @@ public:
     void notifyOperationErased(Operation *op) override {
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
         rewriteListener->notifyOperationErased(op);
+    }
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyPatternBegin(pattern, op);
+    }
+    void notifyPatternEnd(const Pattern &pattern,
+                          LogicalResult status) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyPatternEnd(pattern, status);
     }
     void notifyMatchFailure(
         Location loc,
@@ -628,7 +648,10 @@ public:
     for (auto it : llvm::zip(from, to))
       replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
   }
-  void replaceAllUsesWith(Operation *from, ValueRange to) {
+  // Note: This function cannot be called `replaceAllUsesWith` because the
+  // overload resolution, when called with an op that can be implicitly
+  // converted to a Value, would be ambiguous.
+  void replaceAllOpUsesWith(Operation *from, ValueRange to) {
     replaceAllUsesWith(from->getResults(), to);
   }
 
@@ -642,9 +665,12 @@ public:
   void replaceUsesWithIf(ValueRange from, ValueRange to,
                          function_ref<bool(OpOperand &)> functor,
                          bool *allUsesReplaced = nullptr);
-  void replaceUsesWithIf(Operation *from, ValueRange to,
-                         function_ref<bool(OpOperand &)> functor,
-                         bool *allUsesReplaced = nullptr) {
+  // Note: This function cannot be called `replaceOpUsesWithIf` because the
+  // overload resolution, when called with an op that can be implicitly
+  // converted to a Value, would be ambiguous.
+  void replaceOpUsesWithIf(Operation *from, ValueRange to,
+                           function_ref<bool(OpOperand &)> functor,
+                           bool *allUsesReplaced = nullptr) {
     replaceUsesWithIf(from->getResults(), to, functor, allUsesReplaced);
   }
 
@@ -652,9 +678,9 @@ public:
   /// the listener about every in-place op modification (for every use that was
   /// replaced). The optional `allUsesReplaced` flag is set to "true" if all
   /// uses were replaced.
-  void replaceUsesWithinBlock(Operation *op, ValueRange newValues, Block *block,
-                              bool *allUsesReplaced = nullptr) {
-    replaceUsesWithIf(
+  void replaceOpUsesWithinBlock(Operation *op, ValueRange newValues,
+                                Block *block, bool *allUsesReplaced = nullptr) {
+    replaceOpUsesWithIf(
         op, newValues,
         [block](OpOperand &use) {
           return block->getParentOp()->isProperAncestor(use.getOwner());

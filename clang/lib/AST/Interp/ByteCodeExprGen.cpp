@@ -2959,6 +2959,8 @@ bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
+  if (SubExpr->getType()->isAnyComplexType())
+    return this->VisitComplexUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
@@ -3109,16 +3111,97 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
   case UO_Real: // __real x
-    if (T)
-      return this->delegate(SubExpr);
-    return this->emitComplexReal(SubExpr);
+    assert(T);
+    return this->delegate(SubExpr);
   case UO_Imag: { // __imag x
-    if (T) {
-      if (!this->discard(SubExpr))
+    assert(T);
+    if (!this->discard(SubExpr))
+      return false;
+    return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+  }
+  case UO_Extension:
+    return this->delegate(SubExpr);
+  case UO_Coawait:
+    assert(false && "Unhandled opcode");
+  }
+
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
+    const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isAnyComplexType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  std::optional<PrimType> ResT = classify(E);
+  auto prepareResult = [=]() -> bool {
+    if (!ResT && !Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(SubExpr, /*IsExtended=*/false);
+      if (!LocalIndex)
         return false;
-      return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+      return this->emitGetPtrLocal(*LocalIndex, E);
     }
 
+    return true;
+  };
+
+  // The offset of the temporary, if we created one.
+  unsigned SubExprOffset = ~0u;
+  auto createTemp = [=, &SubExprOffset]() -> bool {
+    SubExprOffset = this->allocateLocalPrimitive(SubExpr, PT_Ptr, true, false);
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitSetLocal(PT_Ptr, SubExprOffset, E);
+  };
+
+  PrimType ElemT = classifyComplexElementType(SubExpr->getType());
+  auto getElem = [=](unsigned Offset, unsigned Index) -> bool {
+    if (!this->emitGetLocal(PT_Ptr, Offset, E))
+      return false;
+    return this->emitArrayElemPop(ElemT, Index, E);
+  };
+
+  switch (E->getOpcode()) {
+  case UO_Minus:
+    if (!prepareResult())
+      return false;
+    if (!createTemp())
+      return false;
+    for (unsigned I = 0; I != 2; ++I) {
+      if (!getElem(SubExprOffset, I))
+        return false;
+      if (!this->emitNeg(ElemT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    break;
+
+  case UO_Plus:   // +x
+  case UO_AddrOf: // &x
+  case UO_Deref:  // *x
+    return this->delegate(SubExpr);
+
+  case UO_LNot:
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitComplexBoolCast(SubExpr))
+      return false;
+    if (!this->emitInvBool(E))
+      return false;
+    if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
+      return this->emitCast(PT_Bool, ET, E);
+    return true;
+
+  case UO_Real:
+    return this->emitComplexReal(SubExpr);
+
+  case UO_Imag:
     if (!this->visit(SubExpr))
       return false;
 
@@ -3131,14 +3214,12 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // Since our _Complex implementation does not map to a primitive type,
     // we sometimes have to do the lvalue-to-rvalue conversion here manually.
     return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
-  }
-  case UO_Extension:
-    return this->delegate(SubExpr);
-  case UO_Coawait:
-    assert(false && "Unhandled opcode");
+
+  default:
+    return this->emitInvalid(E);
   }
 
-  return false;
+  return true;
 }
 
 template <class Emitter>

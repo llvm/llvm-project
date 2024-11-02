@@ -169,7 +169,9 @@ Basic Operations
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | fmodf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fmodl        |         |         |         |         |         |         |         |         |         |         |         |         |
+| fmodl        | |check| | |check| |         | |check| | |check| |         |         | |check| |         |         |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| fmodf128     | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | frexp        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
@@ -248,6 +250,8 @@ Basic Operations
 | modff        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | modfl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
++--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
+| modff128     | |check| | |check| |         | |check| |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | nan          | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
@@ -565,13 +569,13 @@ Legends:
 Performance
 ===========
 
-* Simple performance testings are located at: `libc/test/src/math/differential_testing <https://github.com/llvm/llvm-project/tree/main/libc/test/src/math/differential_testing>`_.
+* Simple performance testings are located at: `libc/test/src/math/performance_testing <https://github.com/llvm/llvm-project/tree/main/libc/test/src/math/performance_testing>`_.
 
 * We also use the *perf* tool from the `CORE-MATH <https://core-math.gitlabpages.inria.fr/>`_
   project: `link <https://gitlab.inria.fr/core-math/core-math/-/tree/master>`_.
   The performance results from the CORE-MATH's perf tool are reported in the
   table below, using the system library as reference (such as the `GNU C library <https://www.gnu.org/software/libc/>`_
-  on Linux). Fmod performance results obtained with "differential_testing".
+  on Linux). Fmod performance results obtained with "performance_testing".
 
 +--------------+-------------------------------+-------------------------------+-------------------------------------+----------------------------------------------------------------------+
 | <Func>       | Reciprocal throughput (clk)   | Latency (clk)                 | Testing ranges                      | Testing configuration                                                |

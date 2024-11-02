@@ -156,6 +156,7 @@ if(APPLE)
 
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
+  option(COMPILER_RT_ENABLE_XROS "Enable building for xrOS - Experimental" Off)
 
 else()
   option(COMPILER_RT_DEFAULT_TARGET_ONLY "Build builtins only for the default target" Off)

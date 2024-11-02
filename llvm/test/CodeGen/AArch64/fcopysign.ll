@@ -162,8 +162,6 @@ define <3 x float> @copysign_v3f32(<3 x float> %a, <3 x float> %b) {
 ; CHECK-GI-NEXT:    mov v3.s[1], w8
 ; CHECK-GI-NEXT:    mov v2.s[2], w9
 ; CHECK-GI-NEXT:    mov v3.s[2], w8
-; CHECK-GI-NEXT:    mov v2.s[3], w8
-; CHECK-GI-NEXT:    mov v3.s[3], w8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -223,8 +221,6 @@ define <7 x half> @copysign_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NEXT:    mov v5.h[5], v3.h[0]
 ; CHECK-GI-NEXT:    mov v4.h[6], v2.h[0]
 ; CHECK-GI-NEXT:    mov v5.h[6], v3.h[0]
-; CHECK-GI-NEXT:    mov v4.h[7], v0.h[0]
-; CHECK-GI-NEXT:    mov v5.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v4.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v5.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b

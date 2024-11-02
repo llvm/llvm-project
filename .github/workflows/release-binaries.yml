@@ -71,8 +71,8 @@ jobs:
       # | X.Y.Z     | -final
       run: |
         tag="${{ github.ref_name }}"
-        trimmed=$(echo ${{ inputs.tag }} | xargs)
-        [[ "$trimmed" != "" ]] && tag="$trimmed"
+        trimmed=$(echo ${{ inputs.release-version }} | xargs)
+        [[ "$trimmed" != "" ]] && tag="llvmorg-$trimmed"
         if [ "$tag" = "main" ]; then
           # If tag is main, then we've been triggered by a scheduled so pass so
           # use the head commit as the tag.

@@ -145,6 +145,19 @@ define i32 @pat5(i32 %a) nounwind {
   ret i32 %or
 }
 
+;; The high bits of `const` are zero.
+define i32 @pat5_high_zeros(i32 %a) nounwind {
+; CHECK-LABEL: pat5_high_zeros:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a1, 1
+; CHECK-NEXT:    ori $a1, $a1, 564
+; CHECK-NEXT:    bstrins.w $a0, $a1, 31, 16
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 65535      ; 0x0000ffff
+  %or = or i32 %and, 305397760  ; 0x12340000
+  ret i32 %or
+}
+
 ;; Pattern 6: a = b | ((c & mask) << shamt)
 ;; In this testcase b is 0x10000002, but in fact we do not require b being a
 ;; constant. As long as all positions in b to be overwritten by the incoming
