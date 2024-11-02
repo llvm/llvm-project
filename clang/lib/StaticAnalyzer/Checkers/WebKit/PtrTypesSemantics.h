@@ -10,6 +10,7 @@
 #define LLVM_CLANG_ANALYZER_WEBKIT_PTRTYPESEMANTICS_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Optional.h"
 
 namespace clang {
 class CXXBaseSpecifier;

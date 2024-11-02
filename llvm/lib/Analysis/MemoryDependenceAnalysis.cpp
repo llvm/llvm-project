@@ -24,7 +24,6 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
-#include "llvm/Analysis/PhiValues.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1493,8 +1492,6 @@ void MemoryDependenceResults::invalidateCachedPointerInfo(Value *Ptr) {
   removeCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, false));
   // Flush load info for the pointer.
   removeCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, true));
-  // Invalidate phis that use the pointer.
-  PV.invalidateValue(Ptr);
 }
 
 void MemoryDependenceResults::invalidateCachedPredecessors() {
@@ -1663,9 +1660,6 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
     }
   }
 
-  // Invalidate phis that use the removed instruction.
-  PV.invalidateValue(RemInst);
-
   assert(!NonLocalDepsMap.count(RemInst) && "RemInst got reinserted?");
   LLVM_DEBUG(verifyRemoved(RemInst));
 }
@@ -1728,8 +1722,7 @@ MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &PV = AM.getResult<PhiValuesAnalysis>(F);
-  return MemoryDependenceResults(AA, AC, TLI, DT, PV, DefaultBlockScanLimit);
+  return MemoryDependenceResults(AA, AC, TLI, DT, DefaultBlockScanLimit);
 }
 
 char MemoryDependenceWrapperPass::ID = 0;
@@ -1740,7 +1733,6 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PhiValuesWrapperPass)
 INITIALIZE_PASS_END(MemoryDependenceWrapperPass, "memdep",
                     "Memory Dependence Analysis", false, true)
 
@@ -1758,7 +1750,6 @@ void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<PhiValuesWrapperPass>();
   AU.addRequiredTransitive<AAResultsWrapperPass>();
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
@@ -1774,8 +1765,7 @@ bool MemoryDependenceResults::invalidate(Function &F, const PreservedAnalyses &P
   // Check whether the analyses we depend on became invalid for any reason.
   if (Inv.invalidate<AAManager>(F, PA) ||
       Inv.invalidate<AssumptionAnalysis>(F, PA) ||
-      Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
-      Inv.invalidate<PhiValuesAnalysis>(F, PA))
+      Inv.invalidate<DominatorTreeAnalysis>(F, PA))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -1791,7 +1781,6 @@ bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &PV = getAnalysis<PhiValuesWrapperPass>().getResult();
-  MemDep.emplace(AA, AC, TLI, DT, PV, BlockScanLimit);
+  MemDep.emplace(AA, AC, TLI, DT, BlockScanLimit);
   return false;
 }

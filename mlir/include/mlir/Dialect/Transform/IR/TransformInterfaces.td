@@ -51,23 +51,12 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
   ];
 
   let extraSharedClassDeclaration = [{
-    /// Emits a generic transform error for the current transform operation
-    /// targeting the given Payload IR operation and returns failure. Should
-    /// be only used as a last resort when the transformation itself provides
-    /// no further indication as to the reason of the failure.
-    ::mlir::LogicalResult reportUnknownTransformError(
-        ::mlir::Operation *target) {
-      ::mlir::InFlightDiagnostic diag = $_op->emitError() << "failed to apply";
-      diag.attachNote(target->getLoc()) << "attempted to apply to this op";
-      return diag;
-    }
-
     /// Creates the silenceable failure object with a diagnostic located at the
     /// current operation. Silenceable failure must be suppressed or reported
     /// explicitly at some later time.
     DiagnosedSilenceableFailure
     emitSilenceableError(const ::llvm::Twine &message = {}) {
-      return ::mlir::emitSilenceableFailure($_op);
+      return ::mlir::emitSilenceableFailure($_op, message);
     }
 
     /// Creates the definite failure object with a diagnostic located at the
@@ -76,6 +65,17 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
     DiagnosedDefiniteFailure
     emitDefiniteFailure(const ::llvm::Twine &message = {}) {
       return ::mlir::emitDefiniteFailure($_op, message);
+    }
+
+    /// Emits a generic definite failure for the current transform operation
+    /// targeting the given Payload IR operation and returns failure. Should
+    /// be only used as a last resort when the transformation itself provides
+    /// no further indication as to the reason of the failure.
+    DiagnosedDefiniteFailure emitDefaultDefiniteFailure(
+        ::mlir::Operation *target) {
+      auto diag = ::mlir::emitDefiniteFailure($_op, "failed to apply");
+      diag.attachNote(target->getLoc()) << "attempted to apply to this op";
+      return diag;
     }
 
     /// Creates the default silenceable failure for a transform op that failed

@@ -29,24 +29,24 @@ tstart:
     lrw r0,0x01020304
     lrw r0,0xFFFFFFFE
 
-# CHECK:        0:      	lrw16	r0, 0x28 <$d.4>
-# CHECK-NEXT:   2:      	lrw16	r0, 0x2c  <$d.4+0x4>
-# CHECK-NEXT:   4:      	lrw16	r0, 0x30  <$d.4+0x8>
+# CHECK:        0:      	lrw16	r0, 0x28
+# CHECK-NEXT:   2:      	lrw16	r0, 0x2c
+# CHECK-NEXT:   4:      	lrw16	r0, 0x30
 
 # CHECK:        6:	        00 1c	.short	0x1c00
 
-# CHECK:        8:      	lrw16	r0, 0x34 <$d.4+0xc>
-# CHECK-NEXT:   a:      	lrw16	r0, 0x38  <$d.4+0x10>
-# CHECK-NEXT:   c:      	lrw16	r0, 0x3c <$d.4+0x14>
+# CHECK:        8:      	lrw16	r0, 0x34
+# CHECK-NEXT:   a:      	lrw16	r0, 0x38
+# CHECK-NEXT:   c:      	lrw16	r0, 0x3c
 # CHECK-NEXT:   e:      	movi16	r0, 0
 # CHECK-NEXT:  10:      	movi32	r0, 65535
 # CHECK-NEXT:  14:      	movi32	r31, 0
-# CHECK-NEXT:  18:              lrw32	r31, 0x40 <$d.4+0x18>
-# CHECK-NEXT:  1c:              lrw16	r0,  0x44 <$d.4+0x1c>
-# CHECK-NEXT:  1e:              lrw16	r0,  0x48 <$d.4+0x20>
-# CHECK-NEXT:  20:              lrw16	r0,  0x4c <$d.4+0x24>
-# CHECK-NEXT:  22:              lrw16	r0,  0x50 <$d.4+0x28>
-# CHECK-NEXT:  24:              lrw16	r0,  0x54 <$d.4+0x2c>
+# CHECK-NEXT:  18:              lrw32	r31, 0x40
+# CHECK-NEXT:  1c:              lrw16	r0,  0x44
+# CHECK-NEXT:  1e:              lrw16	r0,  0x48
+# CHECK-NEXT:  20:              lrw16	r0,  0x4c
+# CHECK-NEXT:  22:              lrw16	r0,  0x50
+# CHECK-NEXT:  24:              lrw16	r0,  0x54
 
 # CHECK:       28:	    00 00 00 00	.word	0x00000000
 # CHECK-NEXT:       	      00000028:  R_CKCORE_ADDR32	lnk

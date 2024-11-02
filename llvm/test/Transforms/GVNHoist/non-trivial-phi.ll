@@ -1,4 +1,4 @@
-; RUN: opt -passes=gvn-hoist %s -S -o - | FileCheck %s
+; RUN: opt -passes=gvn-hoist -S < %s | FileCheck %s
 
 ; CHECK: store
 ; CHECK-NOT: store

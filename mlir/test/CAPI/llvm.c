@@ -70,7 +70,7 @@ static void testTypeCreation(MlirContext ctx) {
           mlirTypeEqual(i32_i64_s, i32_i64_s_ref));
 }
 
-int main() {
+int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__llvm__(), ctx);
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("llvm"));

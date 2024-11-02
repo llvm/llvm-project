@@ -25,7 +25,10 @@ class OwningOpRef;
 /// should create a new MLIR Operation in the given context and return a
 /// pointer to it, or a nullptr in case of any error.
 using TranslateSourceMgrToMLIRFunction = std::function<OwningOpRef<Operation *>(
-    llvm::SourceMgr &sourceMgr, MLIRContext *)>;
+    const std::shared_ptr<llvm::SourceMgr> &sourceMgr, MLIRContext *)>;
+using TranslateRawSourceMgrToMLIRFunction =
+    std::function<OwningOpRef<Operation *>(llvm::SourceMgr &sourceMgr,
+                                           MLIRContext *)>;
 
 /// Interface of the function that translates the given string to MLIR. The
 /// implementation should create a new MLIR Operation in the given context. If
@@ -45,7 +48,8 @@ using TranslateFromMLIRFunction =
 /// all MLIR constructs needed during the process inside the given context. This
 /// can be used for round-tripping external formats through the MLIR system.
 using TranslateFunction = std::function<LogicalResult(
-    llvm::SourceMgr &sourceMgr, llvm::raw_ostream &output, MLIRContext *)>;
+    const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+    llvm::raw_ostream &output, MLIRContext *)>;
 
 /// This class contains all of the components necessary for performing a
 /// translation.
@@ -64,7 +68,7 @@ public:
   Optional<llvm::Align> getInputAlignment() const { return inputAlignment; }
 
   /// Invoke the translation function with the given input and output streams.
-  LogicalResult operator()(llvm::SourceMgr &sourceMgr,
+  LogicalResult operator()(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
                            llvm::raw_ostream &output,
                            MLIRContext *context) const {
     return function(sourceMgr, output, context);
@@ -100,6 +104,10 @@ struct TranslateToMLIRRegistration {
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateSourceMgrToMLIRFunction &function,
+      Optional<llvm::Align> inputAlignment = std::nullopt);
+  TranslateToMLIRRegistration(
+      llvm::StringRef name, llvm::StringRef description,
+      const TranslateRawSourceMgrToMLIRFunction &function,
       Optional<llvm::Align> inputAlignment = std::nullopt);
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,

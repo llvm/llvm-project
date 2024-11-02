@@ -4,7 +4,7 @@
 declare void @foo()
 
 define internal void @bar() {
-; CHECK-LABEL: @bar(
+; CHECK-LABEL: define {{[^@]+}}@bar(
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    ret void
 ;

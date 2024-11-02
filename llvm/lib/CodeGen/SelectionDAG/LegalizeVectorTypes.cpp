@@ -1012,6 +1012,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ABS:
   case ISD::BITREVERSE:
+  case ISD::VP_BITREVERSE:
   case ISD::BSWAP:
   case ISD::VP_BSWAP:
   case ISD::CTLZ:
@@ -4091,6 +4092,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ABS:
   case ISD::BITREVERSE:
+  case ISD::VP_BITREVERSE:
   case ISD::BSWAP:
   case ISD::VP_BSWAP:
   case ISD::CTLZ:

@@ -331,7 +331,7 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 
     switchSection(P.first, P.second);
   } else {
-    if (Symbol->declareCommon(Size, ByteAlignment.value()))
+    if (Symbol->declareCommon(Size, ByteAlignment))
       report_fatal_error(Twine("Symbol: ") + Symbol->getName() +
                          " redeclared as different type");
   }

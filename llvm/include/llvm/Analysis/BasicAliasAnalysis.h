@@ -46,20 +46,19 @@ class BasicAAResult : public AAResultBase {
   const TargetLibraryInfo &TLI;
   AssumptionCache &AC;
   DominatorTree *DT;
-  PhiValues *PV;
 
 public:
   BasicAAResult(const DataLayout &DL, const Function &F,
                 const TargetLibraryInfo &TLI, AssumptionCache &AC,
-                DominatorTree *DT = nullptr, PhiValues *PV = nullptr)
-      : DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), PV(PV) {}
+                DominatorTree *DT = nullptr)
+      : DL(DL), F(F), TLI(TLI), AC(AC), DT(DT) {}
 
   BasicAAResult(const BasicAAResult &Arg)
       : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
-        DT(Arg.DT), PV(Arg.PV) {}
+        DT(Arg.DT) {}
   BasicAAResult(BasicAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
-        AC(Arg.AC), DT(Arg.DT), PV(Arg.PV) {}
+        AC(Arg.AC), DT(Arg.DT) {}
 
   /// Handle invalidation events in the new pass manager.
   bool invalidate(Function &Fn, const PreservedAnalyses &PA,

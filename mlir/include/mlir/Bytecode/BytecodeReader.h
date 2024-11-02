@@ -18,6 +18,7 @@
 
 namespace llvm {
 class MemoryBufferRef;
+class SourceMgr;
 } // namespace llvm
 
 namespace mlir {
@@ -29,6 +30,12 @@ bool isBytecode(llvm::MemoryBufferRef buffer);
 /// bytecode, into the provided block.
 LogicalResult readBytecodeFile(llvm::MemoryBufferRef buffer, Block *block,
                                const ParserConfig &config);
+/// An overload with a source manager whose main file buffer is used for
+/// parsing. The lifetime of the source manager may be freely extended during
+/// parsing such that the source manager is not destroyed before the parsed IR.
+LogicalResult
+readBytecodeFile(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                 Block *block, const ParserConfig &config);
 } // namespace mlir
 
 #endif // MLIR_BYTECODE_BYTECODEREADER_H

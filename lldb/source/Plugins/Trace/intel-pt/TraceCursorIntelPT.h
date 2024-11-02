@@ -69,17 +69,17 @@ private:
   /// Timing information and cached values.
   /// \{
 
-  /// TSC -> nanos conversion utility. \a None if not available at all.
+  /// TSC -> nanos conversion utility. \a std::nullopt if not available at all.
   llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
-  /// Lowest nanoseconds timestamp seen in any thread trace, \a None if not
-  /// available at all.
+  /// Lowest nanoseconds timestamp seen in any thread trace, \a std::nullopt if
+  /// not available at all.
   llvm::Optional<uint64_t> m_beginning_of_time_nanos;
   /// Range of trace items with the same TSC that includes the current trace
-  /// item, \a None if not calculated or not available.
+  /// item, \a std::nullopt if not calculated or not available.
   llvm::Optional<DecodedThread::TSCRange> mutable m_tsc_range;
   bool mutable m_tsc_range_calculated = false;
   /// Range of trace items with the same non-interpolated timestamps in
-  /// nanoseconds that includes the current trace item, \a None if not
+  /// nanoseconds that includes the current trace item, \a std::nullopt if not
   /// calculated or not available.
   llvm::Optional<DecodedThread::NanosecondsRange> mutable m_nanoseconds_range;
   bool mutable m_nanoseconds_range_calculated = false;

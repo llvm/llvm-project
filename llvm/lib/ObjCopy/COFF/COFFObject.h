@@ -87,7 +87,7 @@ struct Symbol {
   StringRef AuxFile;
   ssize_t TargetSectionId;
   ssize_t AssociativeComdatTargetSectionId = 0;
-  Optional<size_t> WeakTargetSymbolId;
+  std::optional<size_t> WeakTargetSymbolId;
   size_t UniqueId;
   size_t RawIndex;
   bool Referenced;

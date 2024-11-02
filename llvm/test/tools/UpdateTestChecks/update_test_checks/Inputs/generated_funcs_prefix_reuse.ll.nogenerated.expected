@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 @G = external dso_local global i32, align 4
 
 define void @foo(i32) {
-; REUSE-LABEL: @foo(
+; REUSE-LABEL: define {{[^@]+}}@foo(
 ; REUSE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 0
 ; REUSE-NEXT:    tail call void @_Z10sideeffectv()
 ; REUSE-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]
@@ -31,7 +31,7 @@ exit:
 }
 
 define void @bar(i32) {
-; REUSE-LABEL: @bar(
+; REUSE-LABEL: define {{[^@]+}}@bar(
 ; REUSE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 0
 ; REUSE-NEXT:    tail call void @_Z10sideeffectv()
 ; REUSE-NEXT:    br i1 [[TMP2]], label [[CODEREPL:%.*]], label [[EXIT:%.*]]

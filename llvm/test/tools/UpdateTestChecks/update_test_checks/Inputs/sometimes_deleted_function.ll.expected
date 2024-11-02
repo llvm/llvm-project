@@ -8,11 +8,11 @@
 ; Also verify we use "ONE_AND_FOUR" for the unmodified @sometimes_here version and "THREE" for the version without the add.
 
 define internal void @sometimes_here() {
-; ONE_AND_FOUR-LABEL: @sometimes_here(
+; ONE_AND_FOUR-LABEL: define {{[^@]+}}@sometimes_here(
 ; ONE_AND_FOUR-NEXT:    [[C:%.*]] = add i32 undef, undef
 ; ONE_AND_FOUR-NEXT:    ret void
 ;
-; THREE-LABEL: @sometimes_here(
+; THREE-LABEL: define {{[^@]+}}@sometimes_here(
 ; THREE-NEXT:    ret void
 ;
   %c = add i32 undef, undef
@@ -20,7 +20,7 @@ define internal void @sometimes_here() {
 }
 
 define void @always_here() {
-; ALL-LABEL: @always_here(
+; ALL-LABEL: define {{[^@]+}}@always_here(
 ; ALL-NEXT:    ret void
 ;
   ret void

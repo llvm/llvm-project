@@ -2538,12 +2538,11 @@ define <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coer
 ; CHECK-LABEL: cmplx_mul_combined_re_im:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsr x8, x0, #16
+; CHECK-NEXT:    adrp x9, .LCPI196_0
 ; CHECK-NEXT:    fmov d4, x0
 ; CHECK-NEXT:    rev32 v5.8h, v0.8h
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    adrp x8, .LCPI196_0
-; CHECK-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI196_0]
+; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI196_0]
 ; CHECK-NEXT:    sqneg v2.8h, v1.8h
 ; CHECK-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
 ; CHECK-NEXT:    sqdmull v2.4s, v0.4h, v4.h[0]

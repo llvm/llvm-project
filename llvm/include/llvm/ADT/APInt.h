@@ -31,7 +31,6 @@ class raw_ostream;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
-template <typename T> class Optional;
 template <typename T, typename Enable> struct DenseMapInfo;
 
 class APInt;
@@ -2254,8 +2253,8 @@ std::optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
 
 /// Compare two values, and if they are different, return the position of the
 /// most significant bit that is different in the values.
-Optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
-                                                  const APInt &B);
+std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
+                                                       const APInt &B);
 
 /// Splat/Merge neighboring bits to widen/narrow the bitmask represented
 /// by \param A to \param NewBitWidth bits.

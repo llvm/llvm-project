@@ -1579,6 +1579,13 @@ public:
   /// chain.
   DISubprogram *getSubprogram() const;
 
+  /// Traverses the scope chain rooted at RootScope until it hits a Subprogram,
+  /// recreating the chain with "NewSP" instead.
+  static DILocalScope *
+  cloneScopeForSubprogram(DILocalScope &RootScope, DISubprogram &NewSP,
+                          LLVMContext &Ctx,
+                          DenseMap<const MDNode *, MDNode *> &Cache);
+
   /// Get the first non DILexicalBlockFile scope of this scope.
   ///
   /// Return this if it's not a \a DILexicalBlockFIle; otherwise, look up the

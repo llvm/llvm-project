@@ -19,6 +19,7 @@
 #include "Debug.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -128,6 +129,36 @@ using UInt32Envar = Envar<uint32_t>;
 using UInt64Envar = Envar<uint64_t>;
 using StringEnvar = Envar<std::string>;
 using BoolEnvar = Envar<bool>;
+
+/// Utility class for thread-safe reference counting. Any class that needs
+/// objects' reference counting can inherit from this entity or have it as a
+/// class data member.
+template <typename Ty = uint32_t,
+          std::memory_order MemoryOrder = std::memory_order_relaxed>
+struct RefCountTy {
+  /// Create a refcount object initialized to zero.
+  RefCountTy() : Refs(0) {}
+
+  ~RefCountTy() { assert(Refs == 0 && "Destroying with non-zero refcount"); }
+
+  /// Increase the reference count atomically.
+  void increase() { Refs.fetch_add(1, MemoryOrder); }
+
+  /// Decrease the reference count and return whether it became zero. Decreasing
+  /// the counter in more units than it was previously increased results in
+  /// undefined behavior.
+  bool decrease() {
+    Ty Prev = Refs.fetch_sub(1, MemoryOrder);
+    assert(Prev > 0 && "Invalid refcount");
+    return (Prev == 1);
+  }
+
+  Ty get() const { return Refs.load(MemoryOrder); }
+
+private:
+  /// The atomic reference counter.
+  std::atomic<Ty> Refs;
+};
 
 template <>
 inline bool StringParser::parse(const char *ValueStr, bool &Result) {

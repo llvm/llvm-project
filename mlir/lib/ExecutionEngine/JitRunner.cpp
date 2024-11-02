@@ -129,8 +129,8 @@ static OwningOpRef<Operation *> parseMLIRInput(StringRef inputFilename,
     return nullptr;
   }
 
-  llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
+  auto sourceMgr = std::make_shared<llvm::SourceMgr>();
+  sourceMgr->AddNewSourceBuffer(std::move(file), SMLoc());
   OwningOpRef<Operation *> module =
       parseSourceFileForTool(sourceMgr, context, insertImplicitModule);
   if (!module)

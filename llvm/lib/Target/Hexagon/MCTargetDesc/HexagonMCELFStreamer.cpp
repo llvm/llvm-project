@@ -87,7 +87,7 @@ void HexagonMCELFStreamer::EmitSymbol(const MCInst &Inst) {
 // parameter.
 void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
                                                      uint64_t Size,
-                                                     unsigned ByteAlignment,
+                                                     Align ByteAlignment,
                                                      unsigned AccessSize) {
   getAssembler().registerSymbol(*Symbol);
   StringRef sbss[4] = {".sbss.1", ".sbss.2", ".sbss.4", ".sbss.8"};
@@ -111,13 +111,13 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     switchSection(&Section);
 
     if (ELFSymbol->isUndefined()) {
-      emitValueToAlignment(Align(ByteAlignment), 0, 1, 0);
+      emitValueToAlignment(ByteAlignment, 0, 1, 0);
       emitLabel(Symbol);
       emitZeros(Size);
     }
 
     // Update the maximum alignment of the section if necessary.
-    Section.ensureMinAlignment(Align(ByteAlignment));
+    Section.ensureMinAlignment(ByteAlignment);
 
     switchSection(P.first, P.second);
   } else {
@@ -137,16 +137,15 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
 }
 
 void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol,
-                                                         uint64_t Size,
-                                                         unsigned ByteAlignment,
-                                                         unsigned AccessSize) {
+                                                          uint64_t Size,
+                                                          Align ByteAlignment,
+                                                          unsigned AccessSize) {
   getAssembler().registerSymbol(*Symbol);
   auto ELFSymbol = cast<MCSymbolELF>(Symbol);
   ELFSymbol->setBinding(ELF::STB_LOCAL);
   ELFSymbol->setExternal(false);
   HexagonMCEmitCommonSymbol(Symbol, Size, ByteAlignment, AccessSize);
 }
-
 
 namespace llvm {
 MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,

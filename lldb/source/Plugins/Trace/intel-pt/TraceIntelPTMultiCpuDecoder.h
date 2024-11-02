@@ -96,8 +96,8 @@ private:
       llvm::DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
       m_continuous_executions_per_thread;
   llvm::DenseMap<lldb::tid_t, DecodedThreadSP> m_decoded_threads;
-  /// This variable will be non-None if a severe error happened during the setup
-  /// of the decoder and we don't want decoding to be reattempted.
+  /// This variable will not be std::nullopt if a severe error happened during
+  /// the setup of the decoder and we don't want decoding to be reattempted.
   llvm::Optional<std::string> m_setup_error;
   uint64_t m_unattributed_psb_blocks = 0;
   uint64_t m_total_psb_blocks = 0;

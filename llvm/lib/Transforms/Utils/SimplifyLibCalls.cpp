@@ -3746,12 +3746,9 @@ void LibCallSimplifier::eraseFromParent(Instruction *I) {
 // Fortified Library Call Optimizations
 //===----------------------------------------------------------------------===//
 
-bool
-FortifiedLibCallSimplifier::isFortifiedCallFoldable(CallInst *CI,
-                                                    unsigned ObjSizeOp,
-                                                    Optional<unsigned> SizeOp,
-                                                    Optional<unsigned> StrOp,
-                                                    Optional<unsigned> FlagOp) {
+bool FortifiedLibCallSimplifier::isFortifiedCallFoldable(
+    CallInst *CI, unsigned ObjSizeOp, std::optional<unsigned> SizeOp,
+    std::optional<unsigned> StrOp, std::optional<unsigned> FlagOp) {
   // If this function takes a flag argument, the implementation may use it to
   // perform extra checks. Don't fold into the non-checking variant.
   if (FlagOp) {

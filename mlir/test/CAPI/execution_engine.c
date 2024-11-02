@@ -46,7 +46,7 @@ void lowerModuleToLLVM(MlirContext ctx, MlirModule module) {
 }
 
 // CHECK-LABEL: Running test 'testSimpleExecution'
-void testSimpleExecution() {
+void testSimpleExecution(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
 
@@ -84,7 +84,7 @@ void testSimpleExecution() {
   mlirContextDestroy(ctx);
 }
 
-int main() {
+int main(void) {
 
 #define _STRINGIFY(x) #x
 #define STRINGIFY(x) _STRINGIFY(x)

@@ -804,7 +804,7 @@ public:
   bool isRationalSubsetOf(const IntegerRelation &rel);
 
   /// Returns the current sample point if it is integral. Otherwise, returns
-  /// None.
+  /// std::nullopt.
   Optional<SmallVector<MPInt, 8>> getSamplePointIfIntegral() const;
 
   /// Returns the current sample point, which may contain non-integer (rational)

@@ -345,7 +345,8 @@ FailureOr<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
                                     const LinalgPromotionOptions &options);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
-LogicalResult vectorize(RewriterBase &builder, LinalgOp linalgOp);
+LogicalResult vectorize(RewriterBase &builder, LinalgOp linalgOp,
+                        bool vectorizeNDExtract = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -371,7 +372,8 @@ LogicalResult promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options);
 
 /// Return success if the operation can be vectorized.
-LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp);
+LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
+                                            bool vectorizeNDExtract = false);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
@@ -865,6 +867,9 @@ protected:
 void populatePadOpVectorizationPatterns(RewritePatternSet &patterns,
                                         PatternBenefit baseBenefit = 1);
 
+void populateExtractOpVectorizationPatterns(RewritePatternSet &patterns,
+                                            PatternBenefit baseBenefit = 1);
+
 /// Match and rewrite for the pattern:
 /// ```
 ///    %alloc = ...
@@ -930,7 +935,7 @@ struct ExtractSliceOfPadTensorSwapPattern
   /// A function to control pattern application and rewrite logic.
   ///
   /// The function will be given the slice op and should return:
-  /// -  None: to fail the match and not apply the pattern;
+  /// -  std::nullopt: to fail the match and not apply the pattern;
   /// -  true: to apply the pattern with zero slice guard;
   /// - false: to apply the pattern without zero slice guard.
   ///

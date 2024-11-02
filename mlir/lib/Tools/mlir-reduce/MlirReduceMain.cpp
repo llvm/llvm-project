@@ -41,8 +41,8 @@ OwningOpRef<Operation *> loadModule(MLIRContext &context,
     return nullptr;
   }
 
-  llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
+  auto sourceMgr = std::make_shared<llvm::SourceMgr>();
+  sourceMgr->AddNewSourceBuffer(std::move(file), SMLoc());
   return parseSourceFileForTool(sourceMgr, &context, insertImplictModule);
 }
 

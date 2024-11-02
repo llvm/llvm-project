@@ -79,8 +79,9 @@ public:
   void parseBuildID();
 
   /// The build-id is typically a stream of 20 bytes. Return these bytes in
-  /// printable hexadecimal form if they are available, or NoneType otherwise.
-  Optional<std::string> getPrintableBuildID() const;
+  /// printable hexadecimal form if they are available, or std::nullopt
+  /// otherwise.
+  std::optional<std::string> getPrintableBuildID() const;
 
   /// If this instance uses a profile, return appropriate profile reader.
   const ProfileReaderBase *getProfileReader() const {
@@ -474,12 +475,12 @@ private:
   uint64_t NextAvailableAddress{0};
 
   /// Location and size of dynamic relocations.
-  Optional<uint64_t> DynamicRelocationsAddress;
+  std::optional<uint64_t> DynamicRelocationsAddress;
   uint64_t DynamicRelocationsSize{0};
   uint64_t DynamicRelativeRelocationsCount{0};
 
   /// PLT relocations are special kind of dynamic relocations stored separately.
-  Optional<uint64_t> PLTRelocationsAddress;
+  std::optional<uint64_t> PLTRelocationsAddress;
   uint64_t PLTRelocationsSize{0};
 
   /// True if relocation of specified type came from .rela.plt

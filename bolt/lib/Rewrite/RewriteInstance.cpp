@@ -30,7 +30,6 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -679,7 +678,7 @@ void RewriteInstance::parseBuildID() {
   BuildID = Buf.slice(Offset, Offset + DescSz);
 }
 
-Optional<std::string> RewriteInstance::getPrintableBuildID() const {
+std::optional<std::string> RewriteInstance::getPrintableBuildID() const {
   if (BuildID.empty())
     return std::nullopt;
 
@@ -1454,7 +1453,7 @@ void RewriteInstance::adjustFunctionBoundaries() {
       NextFunction = &std::next(BFI)->second;
 
     // Check if it's a fragment of a function.
-    Optional<StringRef> FragName =
+    std::optional<StringRef> FragName =
         Function.hasRestoredNameRegex(".*\\.cold(\\.[0-9]+)?");
     if (FragName) {
       static bool PrintedWarning = false;
@@ -1683,7 +1682,7 @@ Error RewriteInstance::readSpecialSections() {
 
   // Parse build-id
   parseBuildID();
-  if (Optional<std::string> FileBuildID = getPrintableBuildID())
+  if (std::optional<std::string> FileBuildID = getPrintableBuildID())
     BC->setFileBuildID(*FileBuildID);
 
   parseSDTNotes();
@@ -2769,7 +2768,7 @@ void RewriteInstance::selectFunctionsToProcess() {
           return true;
 
       // Non-regex check (-funcs-no-regex and -funcs-file-no-regex).
-      Optional<StringRef> Match =
+      std::optional<StringRef> Match =
           Function.forEachName([&ForceFunctionsNR](StringRef Name) {
             return ForceFunctionsNR.count(Name.str());
           });

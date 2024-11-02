@@ -33,10 +33,9 @@ public:
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void EmitSymbol(const MCInst &Inst);
   void HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                      unsigned ByteAlignment,
-                                      unsigned AccessSize);
+                                      Align ByteAlignment, unsigned AccessSize);
   void HexagonMCEmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                 unsigned ByteAlignment, unsigned AccessSize);
+                                 Align ByteAlignment, unsigned AccessSize);
 };
 
 MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,

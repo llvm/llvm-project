@@ -47,7 +47,7 @@ class BoltAddressTranslation;
 /// best match.
 ///
 /// Return a common part of LTO name for a given \p Name.
-Optional<StringRef> getLTOCommonName(const StringRef Name);
+std::optional<StringRef> getLTOCommonName(const StringRef Name);
 
 class ProfileReaderBase {
 protected:

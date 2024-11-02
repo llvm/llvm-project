@@ -1500,7 +1500,7 @@ transform.sequence failures(propagate) {
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func.func @not_vectorize_nd_tensor_extract(%arg0: tensor<3x3xf32>, %arg1: tensor<4x3xi32>, %arg2: tensor<4x3xi32>, %arg3: tensor<4x7x2xf32>, %arg4: tensor<4x7x3x2xf32>) -> tensor<4x7x3x2xf32> {
+func.func @vectorize_nd_tensor_extract(%arg0: tensor<3x3xf32>, %arg1: tensor<4x3xi32>, %arg2: tensor<4x3xi32>, %arg3: tensor<4x7x2xf32>, %arg4: tensor<4x7x3x2xf32>) -> tensor<4x7x3x2xf32> {
   %2 = linalg.generic {
     indexing_maps = [#map0, #map0, #map1, #map2],
     iterator_types = ["parallel", "parallel", "parallel", "parallel"]
@@ -1513,14 +1513,34 @@ func.func @not_vectorize_nd_tensor_extract(%arg0: tensor<3x3xf32>, %arg1: tensor
   } -> tensor<4x7x3x2xf32>
   return %2 : tensor<4x7x3x2xf32>
 }
-// CHECK-LABEL: func.func @not_vectorize_nd_tensor_extract
-// CHECK: tensor.extract
+// CHECK-LABEL: func.func @vectorize_nd_tensor_extract
+// CHECK-SAME: %[[ARG0:.*]]: tensor<3x3xf32>
+// CHECK-SAME: %[[ARG1:arg1]]: tensor<4x3xi32>
+// CHECK-SAME: %[[ARG2:arg2]]: tensor<4x3xi32>
+// CHECK-SAME: %[[ARG3:.*]]: tensor<4x7x2xf32>
+// CHECK-SAME: %[[ARG4:.*]]: tensor<4x7x3x2xf32>
+// CHECK:    %[[C0:.*]] = arith.constant 0 : index
+// CHECK:    %[[C0_i32:.*]] = arith.constant 0 : i32
+// CHECK:    %[[CST:.*]] = arith.constant dense<3> : vector<7x2x4x3xindex>
+// CHECK:    %[[CST_1:.*]] = arith.constant dense<true> : vector<4x7x3x2xi1>
+// CHECK:    %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<4x7x3x2xf32>
+// CHECK:    %[[V0:.*]] = vector.transfer_read %[[ARG1]][%[[C0]], %[[C0]]], %[[C0_i32]] {in_bounds = [true, true]} : tensor<4x3xi32>, vector<4x3xi32>
+// CHECK:    %[[V1:.*]] = vector.transfer_read %[[ARG2]][%[[C0]], %[[C0]]], %[[C0_i32]] {in_bounds = [true, true]} : tensor<4x3xi32>, vector<4x3xi32>
+// CHECK:    %[[CAST:.*]] = arith.index_cast %[[V0]] : vector<4x3xi32> to vector<4x3xindex>
+// CHECK:    %[[B1:.*]] = vector.broadcast %[[CAST]] : vector<4x3xindex> to vector<7x2x4x3xindex>
+// CHECK:    %[[CAST_1:.*]] = arith.index_cast %[[V1]] : vector<4x3xi32> to vector<4x3xindex>
+// CHECK:    %[[B2:.*]] = vector.broadcast %[[CAST_1]] : vector<4x3xindex> to vector<7x2x4x3xindex>
+// CHECK:    %[[MULI:.*]] = arith.muli %[[B1]], %[[CST]] : vector<7x2x4x3xindex>
+// CHECK:    %[[ADDI:.*]] = arith.addi %[[B2]], %[[MULI]] : vector<7x2x4x3xindex>
+// CHECK:    %[[T:.*]] = vector.transpose %[[ADDI]], [2, 0, 3, 1] : vector<7x2x4x3xindex> to vector<4x7x3x2xindex>
+// CHECK:    %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]], %[[C0]]] [%[[T]]], %[[CST_1]], %[[PASSTHRU]] : tensor<3x3xf32>, vector<4x7x3x2xindex>, vector<4x7x3x2xi1>, vector<4x7x3x2xf32> into vector<4x7x3x2xf32>
+// CHECK:    vector.transfer_write %[[GATHER]], %[[ARG4]][%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true, true]} : vector<4x7x3x2xf32>, tensor<4x7x3x2xf32>
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  %2 = transform.structured.vectorize %1
+  %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
 }
 
 // -----

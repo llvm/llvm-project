@@ -7,7 +7,7 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 target triple = "hexagon"
 
 ; CHECK-LABEL: danny:
-; CHECK: vmem
+; CHECK: memh
 define void @danny(i16* %a0) #0 {
 b0:
   %v1 = load i16, i16* %a0, align 2
@@ -29,7 +29,7 @@ b0:
 }
 
 ; CHECK-LABEL: sammy:
-; CHECK: vmem
+; CHECK: memh
 define void @sammy(i16* %a0) #1 {
 b0:
   %v1 = load i16, i16* %a0, align 2

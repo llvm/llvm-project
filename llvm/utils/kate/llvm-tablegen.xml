@@ -31,7 +31,7 @@
       <item> !strconcat </item>
       <item> !cast </item>
       <item> !listconcat </item>
-      <item> !listreplace </item>
+      <item> !listremove </item>
       <item> !listsplat </item>
       <item> !size </item>
       <item> !foldl </item>

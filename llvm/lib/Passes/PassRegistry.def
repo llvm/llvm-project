@@ -241,8 +241,6 @@ FUNCTION_ANALYSIS("divergence", DivergenceAnalysis())
   FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
 FUNCTION_ALIAS_ANALYSIS("basic-aa", BasicAA())
-FUNCTION_ALIAS_ANALYSIS("cfl-anders-aa", CFLAndersAA())
-FUNCTION_ALIAS_ANALYSIS("cfl-steens-aa", CFLSteensAA())
 FUNCTION_ALIAS_ANALYSIS("objc-arc-aa", objcarc::ObjCARCAA())
 FUNCTION_ALIAS_ANALYSIS("scev-aa", SCEVAA())
 FUNCTION_ALIAS_ANALYSIS("scoped-noalias-aa", ScopedNoAliasAA())

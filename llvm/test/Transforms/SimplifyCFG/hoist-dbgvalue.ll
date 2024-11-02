@@ -71,14 +71,16 @@ exit:
 define i16 @hoist_with_debug3_pr49982(i32 %x, i1 %c.2) !dbg !26 {
 ; CHECK-LABEL: @hoist_with_debug3_pr49982(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_COND:%.*]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    [[C_0:%.*]] = icmp sgt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[C_0]], i1 true, i1 [[C_2:%.*]]
-; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[C_0]], i16 0, i16 20
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[COMMON_RET:%.*]], label [[FOR_COND]]
+; CHECK-NEXT:    [[C_0_OLD:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[C_0_OLD]], label [[COMMON_RET:%.*]], label [[LATCH:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[COMMON_RET_OP_SEL:%.*]] = select i1 [[C_2:%.*]], i16 20, i16 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C_2]], i1 true, i1 [[C_0]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[COMMON_RET]], label [[LATCH]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    ret i16 [[DOTMUX]]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i16 [ [[COMMON_RET_OP_SEL]], [[LATCH]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i16 [[COMMON_RET_OP]]
 ;
 entry:
   br label %for.cond

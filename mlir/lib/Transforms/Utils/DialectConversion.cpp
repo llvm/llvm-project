@@ -495,7 +495,7 @@ struct ArgConverter {
     Block *origBlock;
 
     /// The conversion information for each of the arguments. The information is
-    /// None if the argument was dropped during conversion.
+    /// std::nullopt if the argument was dropped during conversion.
     SmallVector<Optional<ConvertedArgInfo>, 1> argInfo;
 
     /// The type converter used to convert the arguments.

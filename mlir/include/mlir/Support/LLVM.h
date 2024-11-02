@@ -129,7 +129,6 @@ using SetVector = llvm::SetVector<T, Vector, Set>;
 template <typename AllocatorTy = llvm::MallocAllocator>
 using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;
-using llvm::None;
 using llvm::Optional;
 using llvm::PointerUnion;
 using llvm::SmallPtrSet;

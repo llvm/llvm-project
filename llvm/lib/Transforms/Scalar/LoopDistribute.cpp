@@ -593,7 +593,7 @@ private:
 
   /// Assign new LoopIDs for the partition's cloned loop.
   void setNewLoopID(MDNode *OrigLoopID, InstPartition *Part) {
-    Optional<MDNode *> PartitionID = makeFollowupLoopID(
+    std::optional<MDNode *> PartitionID = makeFollowupLoopID(
         OrigLoopID,
         {LLVMLoopDistributeFollowupAll,
          Part->hasDepCycle() ? LLVMLoopDistributeFollowupSequential

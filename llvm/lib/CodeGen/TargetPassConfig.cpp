@@ -16,8 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
-#include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -208,18 +206,6 @@ static cl::opt<bool> MISchedPostRA(
 // Experimental option to run live interval analysis early.
 static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
     cl::desc("Run live interval analysis earlier in the pipeline"));
-
-// Experimental option to use CFL-AA in codegen
-static cl::opt<CFLAAType> UseCFLAA(
-    "use-cfl-aa-in-codegen", cl::init(CFLAAType::None), cl::Hidden,
-    cl::desc("Enable the new, experimental CFL alias analysis in CodeGen"),
-    cl::values(clEnumValN(CFLAAType::None, "none", "Disable CFL-AA"),
-               clEnumValN(CFLAAType::Steensgaard, "steens",
-                          "Enable unification-based CFL-AA"),
-               clEnumValN(CFLAAType::Andersen, "anders",
-                          "Enable inclusion-based CFL-AA"),
-               clEnumValN(CFLAAType::Both, "both",
-                          "Enable both variants of CFL-AA")));
 
 /// Option names for limiting the codegen pipeline.
 /// Those are used in error reporting and we didn't want
@@ -493,7 +479,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
   SET_BOOLEAN_OPTION(EnableMachineOutliner)
   SET_BOOLEAN_OPTION(MISchedPostRA)
-  SET_BOOLEAN_OPTION(UseCFLAA)
   SET_BOOLEAN_OPTION(DisableMergeICmps)
   SET_BOOLEAN_OPTION(DisableLSR)
   SET_BOOLEAN_OPTION(DisableConstantHoisting)
@@ -858,21 +843,6 @@ void TargetPassConfig::addIRPasses() {
     addPass(createVerifierPass());
 
   if (getOptLevel() != CodeGenOpt::None) {
-    switch (UseCFLAA) {
-    case CFLAAType::Steensgaard:
-      addPass(createCFLSteensAAWrapperPass());
-      break;
-    case CFLAAType::Andersen:
-      addPass(createCFLAndersAAWrapperPass());
-      break;
-    case CFLAAType::Both:
-      addPass(createCFLAndersAAWrapperPass());
-      addPass(createCFLSteensAAWrapperPass());
-      break;
-    default:
-      break;
-    }
-
     // Basic AliasAnalysis support.
     // Add TypeBasedAliasAnalysis before BasicAliasAnalysis so that
     // BasicAliasAnalysis wins if they disagree. This is intended to help

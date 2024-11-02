@@ -454,7 +454,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
 uint64_t ELFWriter::SymbolValue(const MCSymbol &Sym,
                                 const MCAsmLayout &Layout) {
   if (Sym.isCommon())
-    return Sym.getCommonAlignment();
+    return Sym.getCommonAlignment()->value();
 
   uint64_t Res;
   if (!Layout.getSymbolOffset(Sym, Res))

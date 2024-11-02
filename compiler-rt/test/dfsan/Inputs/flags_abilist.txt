@@ -13,3 +13,9 @@ fun:my_dfsan_conditional_callback=discard
 
 fun:dfsan_set_conditional_callback=uninstrumented
 fun:dfsan_set_conditional_callback=discard
+
+fun:my_dfsan_reaches_function_callback=uninstrumented
+fun:my_dfsan_reaches_function_callback=discard
+
+fun:dfsan_set_reaches_function_callback=uninstrumented
+fun:dfsan_set_reaches_function_callback=discard
