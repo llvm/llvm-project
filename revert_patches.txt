@@ -29,9 +29,4 @@ Ron
 breaks hipRuntime build
 054c23d7 X86: Improve cost model of fp16 conversion (#113195)
 Ron
----
-revert: breaks oclBlender*
-18311093abe6 [InstCombine] Do not fold `shufflevector(select)` if the select condition is a vector (#113993)
-5903c6af4425 InstCombine: Fold shufflevector(select) and shufflevector(phi) (#113746)
-Ron
 --
