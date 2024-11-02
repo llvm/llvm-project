@@ -344,12 +344,9 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
   // this lowers the common case's overhead to O(Blocks) instead of O(Edges).
   SmallSetVector<BasicBlock *, 16> Targets;
   for (auto &BB : F) {
-    auto *IBI = dyn_cast<IndirectBrInst>(BB.getTerminator());
-    if (!IBI)
-      continue;
-
-    for (unsigned Succ = 0, E = IBI->getNumSuccessors(); Succ != E; ++Succ)
-      Targets.insert(IBI->getSuccessor(Succ));
+    if (isa<IndirectBrInst>(BB.getTerminator()))
+      for (BasicBlock *Succ : successors(&BB))
+        Targets.insert(Succ);
   }
 
   if (Targets.empty())

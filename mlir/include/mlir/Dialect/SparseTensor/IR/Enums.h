@@ -165,7 +165,7 @@ enum class Action : uint32_t {
 /// where we need to store an undefined or indeterminate `LevelType`.
 /// It should not be used externally, since it does not indicate an
 /// actual/representable format.
-enum class LevelType : uint8_t {
+enum class LevelType : uint64_t {
   Undef = 0,                // 0b00000_00
   Dense = 4,                // 0b00001_00
   Compressed = 8,           // 0b00010_00
@@ -184,7 +184,7 @@ enum class LevelType : uint8_t {
 };
 
 /// This enum defines all supported storage format without the level properties.
-enum class LevelFormat : uint8_t {
+enum class LevelFormat : uint64_t {
   Dense = 4,            // 0b00001_00
   Compressed = 8,       // 0b00010_00
   Singleton = 16,       // 0b00100_00
@@ -193,7 +193,7 @@ enum class LevelFormat : uint8_t {
 };
 
 /// This enum defines all the nondefault properties for storage formats.
-enum class LevelPropertyNondefault : uint8_t {
+enum class LevelPropertyNondefault : uint64_t {
   Nonunique = 1,  // 0b00000_01
   Nonordered = 2, // 0b00000_10
 };
@@ -237,8 +237,8 @@ constexpr const char *toMLIRString(LevelType lt) {
 
 /// Check that the `LevelType` contains a valid (possibly undefined) value.
 constexpr bool isValidLT(LevelType lt) {
-  const uint8_t formatBits = static_cast<uint8_t>(lt) >> 2;
-  const uint8_t propertyBits = static_cast<uint8_t>(lt) & 3;
+  const uint64_t formatBits = static_cast<uint64_t>(lt) >> 2;
+  const uint64_t propertyBits = static_cast<uint64_t>(lt) & 3;
   // If undefined or dense, then must be unique and ordered.
   // Otherwise, the format must be one of the known ones.
   return (formatBits <= 1 || formatBits == 16)
@@ -251,32 +251,32 @@ constexpr bool isUndefLT(LevelType lt) { return lt == LevelType::Undef; }
 
 /// Check if the `LevelType` is dense (regardless of properties).
 constexpr bool isDenseLT(LevelType lt) {
-  return (static_cast<uint8_t>(lt) & ~3) ==
-         static_cast<uint8_t>(LevelType::Dense);
+  return (static_cast<uint64_t>(lt) & ~3) ==
+         static_cast<uint64_t>(LevelType::Dense);
 }
 
 /// Check if the `LevelType` is compressed (regardless of properties).
 constexpr bool isCompressedLT(LevelType lt) {
-  return (static_cast<uint8_t>(lt) & ~3) ==
-         static_cast<uint8_t>(LevelType::Compressed);
+  return (static_cast<uint64_t>(lt) & ~3) ==
+         static_cast<uint64_t>(LevelType::Compressed);
 }
 
 /// Check if the `LevelType` is singleton (regardless of properties).
 constexpr bool isSingletonLT(LevelType lt) {
-  return (static_cast<uint8_t>(lt) & ~3) ==
-         static_cast<uint8_t>(LevelType::Singleton);
+  return (static_cast<uint64_t>(lt) & ~3) ==
+         static_cast<uint64_t>(LevelType::Singleton);
 }
 
 /// Check if the `LevelType` is loose compressed (regardless of properties).
 constexpr bool isLooseCompressedLT(LevelType lt) {
-  return (static_cast<uint8_t>(lt) & ~3) ==
-         static_cast<uint8_t>(LevelType::LooseCompressed);
+  return (static_cast<uint64_t>(lt) & ~3) ==
+         static_cast<uint64_t>(LevelType::LooseCompressed);
 }
 
 /// Check if the `LevelType` is 2OutOf4 (regardless of properties).
 constexpr bool is2OutOf4LT(LevelType lt) {
-  return (static_cast<uint8_t>(lt) & ~3) ==
-         static_cast<uint8_t>(LevelType::TwoOutOfFour);
+  return (static_cast<uint64_t>(lt) & ~3) ==
+         static_cast<uint64_t>(LevelType::TwoOutOfFour);
 }
 
 /// Check if the `LevelType` needs positions array.
@@ -292,12 +292,12 @@ constexpr bool isWithCrdLT(LevelType lt) {
 
 /// Check if the `LevelType` is ordered (regardless of storage format).
 constexpr bool isOrderedLT(LevelType lt) {
-  return !(static_cast<uint8_t>(lt) & 2);
+  return !(static_cast<uint64_t>(lt) & 2);
 }
 
 /// Check if the `LevelType` is unique (regardless of storage format).
 constexpr bool isUniqueLT(LevelType lt) {
-  return !(static_cast<uint8_t>(lt) & 1);
+  return !(static_cast<uint64_t>(lt) & 1);
 }
 
 /// Convert a LevelType to its corresponding LevelFormat.
@@ -305,7 +305,7 @@ constexpr bool isUniqueLT(LevelType lt) {
 constexpr std::optional<LevelFormat> getLevelFormat(LevelType lt) {
   if (lt == LevelType::Undef)
     return std::nullopt;
-  return static_cast<LevelFormat>(static_cast<uint8_t>(lt) & ~3);
+  return static_cast<LevelFormat>(static_cast<uint64_t>(lt) & ~3);
 }
 
 /// Convert a LevelFormat to its corresponding LevelType with the given
@@ -313,7 +313,7 @@ constexpr std::optional<LevelFormat> getLevelFormat(LevelType lt) {
 /// for the input level format.
 constexpr std::optional<LevelType> buildLevelType(LevelFormat lf, bool ordered,
                                                   bool unique) {
-  auto lt = static_cast<LevelType>(static_cast<uint8_t>(lf) |
+  auto lt = static_cast<LevelType>(static_cast<uint64_t>(lf) |
                                    (ordered ? 0 : 2) | (unique ? 0 : 1));
   return isValidLT(lt) ? std::optional(lt) : std::nullopt;
 }
@@ -530,27 +530,27 @@ static_assert((isUniqueLT(LevelType::Dense) &&
 ///
 constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
   if (cf != 0) {
-    assert(cf <= 0xfffff && cm == 0 && i <= 0xfffff);
-    return (0x01ULL << 60) | (cf << 20) | i;
+    assert(cf <= 0xfffffu && cm == 0 && i <= 0xfffffu);
+    return (static_cast<uint64_t>(0x01u) << 60) | (cf << 20) | i;
   }
   if (cm != 0) {
-    assert(cm <= 0xfffff && i <= 0xfffff);
-    return (0x02ULL << 60) | (cm << 20) | i;
+    assert(cm <= 0xfffffu && i <= 0xfffffu);
+    return (static_cast<uint64_t>(0x02u) << 60) | (cm << 20) | i;
   }
   assert(i <= 0x0fffffffffffffffu);
   return i;
 }
 constexpr uint64_t encodeLvl(uint64_t i, uint64_t c, uint64_t ii) {
   if (c != 0) {
-    assert(c <= 0xfffff && ii <= 0xfffff && i <= 0xfffff);
-    return (0x03ULL << 60) | (c << 20) | (ii << 40) | i;
+    assert(c <= 0xfffffu && ii <= 0xfffffu && i <= 0xfffffu);
+    return (static_cast<uint64_t>(0x03u) << 60) | (c << 20) | (ii << 40) | i;
   }
   assert(i <= 0x0fffffffffffffffu);
   return i;
 }
-constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01; }
-constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02; }
-constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03; }
+constexpr bool isEncodedFloor(uint64_t v) { return (v >> 60) == 0x01u; }
+constexpr bool isEncodedMod(uint64_t v) { return (v >> 60) == 0x02u; }
+constexpr bool isEncodedMul(uint64_t v) { return (v >> 60) == 0x03u; }
 constexpr uint64_t decodeIndex(uint64_t v) { return v & 0xfffffu; }
 constexpr uint64_t decodeConst(uint64_t v) { return (v >> 20) & 0xfffffu; }
 constexpr uint64_t decodeMulc(uint64_t v) { return (v >> 20) & 0xfffffu; }

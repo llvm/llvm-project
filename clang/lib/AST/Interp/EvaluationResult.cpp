@@ -151,8 +151,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
   const auto *CAT =
       cast<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe());
   return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
-
-  return true;
 }
 
 void EvaluationResult::dump() const {
@@ -186,9 +184,12 @@ void EvaluationResult::dump() const {
     OS << "\n";
     break;
   }
-
-  default:
-    llvm_unreachable("Can't print that.");
+  case Invalid:
+    OS << "Invalid\n";
+  break;
+  case Valid:
+    OS << "Valid\n";
+  break;
   }
 }
 

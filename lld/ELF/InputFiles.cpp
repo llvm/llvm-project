@@ -1788,7 +1788,12 @@ void BinaryFile::parse() {
 }
 
 InputFile *elf::createInternalFile(StringRef name) {
-  return make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+  auto *file =
+      make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+  // References from an internal file do not lead to --warn-backrefs
+  // diagnostics.
+  file->groupId = 0;
+  return file;
 }
 
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,

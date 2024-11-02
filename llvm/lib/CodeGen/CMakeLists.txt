@@ -22,19 +22,6 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 endif()
 
-# This provides the implementation of MVT and LLT.
-# Be careful to append deps on this, since Targets' tablegens depend on this.
-add_llvm_component_library(LLVMCodeGenTypes
-  LowLevelType.cpp
-  PARTIAL_SOURCES_INTENDED
-
-  DEPENDS
-  vt_gen
-
-  LINK_COMPONENTS
-  Support
-  )
-
 add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
   AllocationOrder.cpp
@@ -56,7 +43,6 @@ add_llvm_component_library(LLVMCodeGen
   CFIInstrInserter.cpp
   CodeGen.cpp
   CodeGenCommonISel.cpp
-  CodeGenPassBuilder.cpp
   CodeGenPrepare.cpp
   CommandFlags.cpp
   ComplexDeinterleavingPass.cpp
@@ -79,6 +65,7 @@ add_llvm_component_library(LLVMCodeGen
   FEntryInserter.cpp
   FinalizeISel.cpp
   FixupStatepointCallerSaved.cpp
+  FreeMachineFunction.cpp
   FuncletLayout.cpp
   GCMetadata.cpp
   GCMetadataPrinter.cpp

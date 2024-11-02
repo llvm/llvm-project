@@ -7,7 +7,7 @@ define void @test() {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x i32> [ poison, [[BB10:%.*]] ], [ zeroinitializer, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <2 x i32> <i32 6, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <2 x i32> <i32 7, i32 7>
 ; CHECK-NEXT:    switch i32 0, label [[BB16:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[BB14:%.*]]
 ; CHECK-NEXT:      i32 1, label [[BB11:%.*]]

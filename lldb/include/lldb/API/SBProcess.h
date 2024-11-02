@@ -398,6 +398,15 @@ public:
   /// valid.
   lldb::SBProcessInfo GetProcessInfo();
 
+  /// Get the file specification for the core file that is currently being used
+  /// for the process. If the process is not loaded from a core file, then an
+  /// invalid file specification will be returned.
+  ///
+  /// \return
+  ///     The path to the core file for this target or an invalid file spec if
+  ///     the process isn't loaded from a core file.
+  lldb::SBFileSpec GetCoreFile();
+
   /// Allocate memory within the process.
   ///
   /// This function will allocate memory in the process's address space.

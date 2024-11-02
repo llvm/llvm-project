@@ -283,7 +283,7 @@ LIBC_INLINE static double log2_eval(double x) {
   int p1 = (bs.get_mantissa() >> (FPB::FRACTION_LEN - LOG_P1_BITS)) &
            (LOG_P1_SIZE - 1);
 
-  bs.bits &= FPB::FRACTION_MASK >> LOG_P1_BITS;
+  bs.set_uintval(bs.uintval() & (FPB::FRACTION_MASK >> LOG_P1_BITS));
   bs.set_biased_exponent(FPB::EXP_BIAS);
   double dx = (bs.get_val() - 1.0) * LOG_P1_1_OVER[p1];
 
@@ -313,7 +313,7 @@ LIBC_INLINE static double log_eval(double x) {
   int p1 = static_cast<int>(bs.get_mantissa() >> (FPB::FRACTION_LEN - 7));
 
   // Set bs to (1 + (mx - p1*2^(-7))
-  bs.bits &= FPB::FRACTION_MASK >> 7;
+  bs.set_uintval(bs.uintval() & (FPB::FRACTION_MASK >> 7));
   bs.set_biased_exponent(FPB::EXP_BIAS);
   // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
   double dx = (bs.get_val() - 1.0) * ONE_OVER_F[p1];

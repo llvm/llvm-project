@@ -55,12 +55,12 @@
   source_filename = "test.cpp"
   target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
 
-  %rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
-  %eh.CatchableType = type { i32, i8*, i32, i32, i32, i32, i8* }
-  %eh.CatchableTypeArray.1 = type { i32, [1 x %eh.CatchableType*] }
-  %eh.ThrowInfo = type { i32, i8*, i8*, i8* }
-  %CXXExceptionRegistration = type { i8*, %EHRegistrationNode, i32 }
-  %EHRegistrationNode = type { %EHRegistrationNode*, i8* }
+  %rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
+  %eh.CatchableType = type { i32, ptr, i32, i32, i32, i32, ptr }
+  %eh.CatchableTypeArray.1 = type { i32, [1 x ptr] }
+  %eh.ThrowInfo = type { i32, ptr, ptr, ptr }
+  %CXXExceptionRegistration = type { ptr, %EHRegistrationNode, i32 }
+  %EHRegistrationNode = type { ptr, ptr }
   %struct.object = type { i32 }
 
   $"_R0H@8" = comdat any
@@ -72,14 +72,14 @@
   $_TI1H = comdat any
 
   @v__3HC = dso_local global i32 0, align 4
-  @"_7type_info__6B@" = external constant i8*
-  @"_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { i8** @"_7type_info__6B@", i8* null, [3 x i8] c".H\00" }, comdat
-  @"_CT_R0H@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 1, i8* bitcast (%rtti.TypeDescriptor2* @"_R0H@8" to i8*), i32 0, i32 -1, i32 0, i32 4, i8* null }, section ".xdata", comdat
-  @_CTA1H = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x %eh.CatchableType*] [%eh.CatchableType* @"_CT_R0H@84"] }, section ".xdata", comdat
-  @_TI1H = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i8* null, i8* null, i8* bitcast (%eh.CatchableTypeArray.1* @_CTA1H to i8*) }, section ".xdata", comdat
+  @"_7type_info__6B@" = external constant ptr
+  @"_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { ptr @"_7type_info__6B@", ptr null, [3 x i8] c".H\00" }, comdat
+  @"_CT_R0H@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 1, ptr @"_R0H@8", i32 0, i32 -1, i32 0, i32 4, ptr null }, section ".xdata", comdat
+  @_CTA1H = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x ptr] [ptr @"_CT_R0H@84"] }, section ".xdata", comdat
+  @_TI1H = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, ptr null, ptr null, ptr @_CTA1H }, section ".xdata", comdat
 
   ; Function Attrs: noinline nounwind sspstrong
-  define weak dso_local void @"escape__YAXPAH@Z"(i32* %p) local_unnamed_addr #0 {
+  define weak dso_local void @"escape__YAXPAH@Z"(ptr %p) local_unnamed_addr #0 {
   entry:
     ret void
   }
@@ -88,36 +88,36 @@
   define dso_local i32 @main() local_unnamed_addr #1 personality i32 (...)* @__CxxFrameHandler3 {
   entry:
     %0 = alloca %CXXExceptionRegistration, align 4
-    %1 = bitcast %CXXExceptionRegistration* %0 to i8*
-    call void @llvm.x86.seh.ehregnode(i8* %1)
-    %2 = call i8* @llvm.stacksave()
-    %3 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 0
-    store i8* %2, i8** %3, align 4
-    %4 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 2
-    store i32 -1, i32* %4, align 4
-    %5 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 1
-    %6 = getelementptr inbounds %EHRegistrationNode, %EHRegistrationNode* %5, i32 0, i32 1
-    store i8* bitcast (i32 (i8*, i8*, i8*, i8*)* @"__ehhandler$main" to i8*), i8** %6, align 4
-    %7 = load %EHRegistrationNode*, %EHRegistrationNode* addrspace(257)* null, align 4
-    %8 = getelementptr inbounds %EHRegistrationNode, %EHRegistrationNode* %5, i32 0, i32 0
-    store %EHRegistrationNode* %7, %EHRegistrationNode** %8, align 4
-    store %EHRegistrationNode* %5, %EHRegistrationNode* addrspace(257)* null, align 4
+    %1 = bitcast ptr %0 to ptr
+    call void @llvm.x86.seh.ehregnode(ptr %1)
+    %2 = call ptr @llvm.stacksave()
+    %3 = getelementptr inbounds %CXXExceptionRegistration, ptr %0, i32 0, i32 0
+    store ptr %2, ptr %3, align 4
+    %4 = getelementptr inbounds %CXXExceptionRegistration, ptr %0, i32 0, i32 2
+    store i32 -1, ptr %4, align 4
+    %5 = getelementptr inbounds %CXXExceptionRegistration, ptr %0, i32 0, i32 1
+    %6 = getelementptr inbounds %EHRegistrationNode, ptr %5, i32 0, i32 1
+    store ptr @"__ehhandler$main", ptr %6, align 4
+    %7 = load ptr, ptr addrspace(257) null, align 4
+    %8 = getelementptr inbounds %EHRegistrationNode, ptr %5, i32 0, i32 0
+    store ptr %7, ptr %8, align 4
+    store ptr %5, ptr addrspace(257) null, align 4
     %tmp.i.i = alloca i32, align 4
     %o.i = alloca %struct.object, align 4
-    %zx = alloca i32*, align 4
-    %exp.i = alloca i32*, align 4
-    %9 = bitcast i32** %exp.i to i8*
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %9)
-    %10 = bitcast %struct.object* %o.i to i8*
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %10) #7
-    %i.i.i1 = bitcast %struct.object* %o.i to i32*
-    store i32 1, i32* %i.i.i1, align 4
-    %11 = bitcast i32* %tmp.i.i to i8*
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %11)
-    store i32 999, i32* %tmp.i.i, align 4
-    %12 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 2
-    store i32 1, i32* %12, align 4
-    invoke void @_CxxThrowException(i8* nonnull %11, %eh.ThrowInfo* nonnull @_TI1H) #8
+    %zx = alloca ptr, align 4
+    %exp.i = alloca ptr, align 4
+    %9 = bitcast ptr %exp.i to ptr
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %9)
+    %10 = bitcast ptr %o.i to ptr
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %10) #7
+    %i.i.i1 = bitcast ptr %o.i to ptr
+    store i32 1, ptr %i.i.i1, align 4
+    %11 = bitcast ptr %tmp.i.i to ptr
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %11)
+    store i32 999, ptr %tmp.i.i, align 4
+    %12 = getelementptr inbounds %CXXExceptionRegistration, ptr %0, i32 0, i32 2
+    store i32 1, ptr %12, align 4
+    invoke void @_CxxThrowException(ptr nonnull %11, ptr nonnull @_TI1H) #8
             to label %.noexc.i unwind label %ehcleanup.i
 
   .noexc.i:                                         ; preds = %entry
@@ -125,64 +125,64 @@
 
   ehcleanup.i:                                      ; preds = %entry
     %13 = cleanuppad within none []
-    %14 = bitcast %struct.object* %o.i to i32*
-    %15 = bitcast %struct.object* %o.i to i8*
-    store i32 9999, i32* %14, align 4
-    call void @"escape__YAXPAH@Z"(i32* nonnull %14) #7 [ "funclet"(token %13) ]
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %15) #7
+    %14 = bitcast ptr %o.i to ptr
+    %15 = bitcast ptr %o.i to ptr
+    store i32 9999, ptr %14, align 4
+    call void @"escape__YAXPAH@Z"(ptr nonnull %14) #7 [ "funclet"(token %13) ]
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %15) #7
     cleanupret from %13 unwind label %catch.dispatch.i
 
   catch.dispatch.i:                                 ; preds = %ehcleanup.i
     %16 = catchswitch within none [label %catch.i] unwind to caller
 
   catch.i:                                          ; preds = %catch.dispatch.i
-    %17 = catchpad within %16 [%rtti.TypeDescriptor2* @"_R0H@8", i32 8, i32** %exp.i]
-    %18 = load i32*, i32** %exp.i, align 4
-    %19 = load i32, i32* %18, align 4
-    store atomic volatile i32 %19, i32* @v__3HC release, align 4
+    %17 = catchpad within %16 [ptr @"_R0H@8", i32 8, ptr %exp.i]
+    %18 = load ptr, ptr %exp.i, align 4
+    %19 = load i32, ptr %18, align 4
+    store atomic volatile i32 %19, ptr @v__3HC release, align 4
     catchret from %17 to label %func__YAXXZ.exit
 
   func__YAXXZ.exit:                                 ; preds = %catch.i
-    %20 = bitcast i32** %exp.i to i8*
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %20)
-    %21 = getelementptr inbounds %CXXExceptionRegistration, %CXXExceptionRegistration* %0, i32 0, i32 1
-    %22 = getelementptr inbounds %EHRegistrationNode, %EHRegistrationNode* %21, i32 0, i32 0
-    %23 = load %EHRegistrationNode*, %EHRegistrationNode** %22, align 4
-    store %EHRegistrationNode* %23, %EHRegistrationNode* addrspace(257)* null, align 4
+    %20 = bitcast ptr %exp.i to ptr
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %20)
+    %21 = getelementptr inbounds %CXXExceptionRegistration, ptr %0, i32 0, i32 1
+    %22 = getelementptr inbounds %EHRegistrationNode, ptr %21, i32 0, i32 0
+    %23 = load ptr, ptr %22, align 4
+    store ptr %23, ptr addrspace(257) null, align 4
     ret i32 0
   }
 
   ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
   ; Function Attrs: nofree
   declare dso_local i32 @__CxxFrameHandler3(...) #3
 
   ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
   ; Function Attrs: nofree
-  declare dso_local x86_stdcallcc void @_CxxThrowException(i8*, %eh.ThrowInfo*) local_unnamed_addr #3
+  declare dso_local x86_stdcallcc void @_CxxThrowException(ptr, ptr) local_unnamed_addr #3
 
-  declare i32 @_setjmp3(i8*, i32, ...)
+  declare i32 @_setjmp3(ptr, i32, ...)
 
   ; Function Attrs: nofree nosync nounwind willreturn
-  declare i8* @llvm.stacksave() #4
+  declare ptr @llvm.stacksave() #4
 
-  define internal i32 @"__ehhandler$main"(i8* %0, i8* %1, i8* %2, i8* %3) #5 {
+  define internal i32 @"__ehhandler$main"(ptr %0, ptr %1, ptr %2, ptr %3) #5 {
   entry:
-    %4 = call i8* @llvm.x86.seh.lsda(i8* bitcast (i32 ()* @main to i8*))
-    %5 = tail call i32 bitcast (i32 (...)* @__CxxFrameHandler3 to i32 (i8*, i8*, i8*, i8*, i8*)*)(i8* inreg %4, i8* %0, i8* %1, i8* %2, i8* %3)
+    %4 = call ptr @llvm.x86.seh.lsda(ptr @main)
+    %5 = tail call i32 @__CxxFrameHandler3(ptr inreg %4, ptr %0, ptr %1, ptr %2, ptr %3)
     ret i32 %5
   }
 
   ; Function Attrs: nounwind readnone
-  declare i8* @llvm.x86.seh.lsda(i8*) #6
+  declare ptr @llvm.x86.seh.lsda(ptr) #6
 
-  declare x86_stdcallcc void @__CxxLongjmpUnwind(i8*)
+  declare x86_stdcallcc void @__CxxLongjmpUnwind(ptr)
 
   ; Function Attrs: nounwind
-  declare void @llvm.x86.seh.ehregnode(i8*) #7
+  declare void @llvm.x86.seh.ehregnode(ptr) #7
 
   attributes #0 = { noinline nounwind sspstrong "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { norecurse sspstrong "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -320,9 +320,9 @@ body:             |
     MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, -1 :: (store (s32) into %ir.4)
     %1:gr32 = nuw LEA32r %stack.0.zx, 1, $noreg, 4, $noreg
     MOV32mi %stack.0.zx, 1, $noreg, 8, $noreg, @"__ehhandler$main" :: (store (s32) into %ir.6)
-    %2:gr32 = MOV32rm $noreg, 1, $noreg, 0, $fs :: (load (s32) from `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    %2:gr32 = MOV32rm $noreg, 1, $noreg, 0, $fs :: (load (s32) from `ptr addrspace(257) null`, addrspace 257)
     MOV32mr %stack.0.zx, 1, $noreg, 4, $noreg, killed %2 :: (store (s32) into %ir.8)
-    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %1 :: (store (s32) into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %1 :: (store (s32) into `ptr addrspace(257) null`, addrspace 257)
     MOV32mi %stack.2.o.i, 1, $noreg, 0, $noreg, 1 :: (store (s32) into %ir.i.i.i1)
     MOV32mi %stack.1.tmp.i.i, 1, $noreg, 0, $noreg, 999 :: (store (s32) into %ir.tmp.i.i)
     MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, 1 :: (store (s32) into %ir.12)
@@ -366,7 +366,7 @@ body:             |
 
   bb.5.func__YAXXZ.exit:
     %9:gr32 = MOV32rm %stack.0.zx, 1, $noreg, 4, $noreg :: (dereferenceable load (s32) from %ir.22)
-    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %9 :: (store (s32) into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %9 :: (store (s32) into `ptr addrspace(257) null`, addrspace 257)
     %10:gr32 = MOV32r0 implicit-def dead $eflags
     $eax = COPY %10
     RET 0, $eax

@@ -2276,7 +2276,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_one_as_scope
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB3_2
 ; GFX1132-DPP-NEXT:  .LBB3_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %divValue = call float @div.float.value()
+  %divValue = call float @div.float.value() strictfp
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("one-as") monotonic
   ret void
 }
@@ -4174,7 +4174,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    global_atomic_add_f32 v4, v0, s[0:1]
 ; GFX1132-DPP-NEXT:  .LBB6_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %divValue = call float @div.float.value()
+  %divValue = call float @div.float.value() strictfp
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic
   ret void
 }
@@ -5403,7 +5403,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB8_2
 ; GFX1132-DPP-NEXT:  .LBB8_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %divValue = call float @div.float.value()
+  %divValue = call float @div.float.value() strictfp
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue monotonic, align 4
   ret void
 }

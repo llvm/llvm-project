@@ -259,21 +259,8 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   // Resolve our internal configuration for the target. If at some point the
   // CPUArch alone becomes too unprecise, we can find more details in the
   // Tag_CPU_arch_profile.
-  aarch32::ArmConfig ArmCfg;
-  using namespace ARMBuildAttrs;
-  auto Arch = static_cast<CPUArch>(ARM::getArchAttr(AK));
-  switch (Arch) {
-  case v7:
-  case v8_A:
-    ArmCfg = aarch32::getArmConfigForCPUArch(Arch);
-    assert(ArmCfg.Stubs != aarch32::StubsFlavor::Unsupported &&
-           "Provide a config for each supported CPU");
-    break;
-  default:
-    return make_error<JITLinkError>(
-        "Failed to build ELF link graph: Unsupported CPU arch " +
-        StringRef(aarch32::getCPUArchName(Arch)));
-  }
+  auto Arch = static_cast<ARMBuildAttrs::CPUArch>(ARM::getArchAttr(AK));
+  aarch32::ArmConfig ArmCfg = aarch32::getArmConfigForCPUArch(Arch);
 
   // Populate the link-graph.
   switch (TT.getArch()) {
@@ -318,11 +305,15 @@ void link_ELF_aarch32(std::unique_ptr<LinkGraph> G,
       PassCfg.PrePrunePasses.push_back(markAllSymbolsLive);
 
     switch (ArmCfg.Stubs) {
+    case aarch32::StubsFlavor::pre_v7:
+      PassCfg.PostPrunePasses.push_back(
+          buildTables_ELF_aarch32<aarch32::StubsManager_prev7>);
+      break;
     case aarch32::StubsFlavor::v7:
       PassCfg.PostPrunePasses.push_back(
           buildTables_ELF_aarch32<aarch32::StubsManager_v7>);
       break;
-    case aarch32::StubsFlavor::Unsupported:
+    case aarch32::StubsFlavor::Undefined:
       llvm_unreachable("Check before building graph");
     }
   }

@@ -1,4 +1,5 @@
 ; RUN: opt %s -passes=declare-to-assign -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=declare-to-assign -S | FileCheck %s
 
 ;; Check AssignmentTrackingPass ignores a dbg.declare with an empty metadata
 ;; location operand.

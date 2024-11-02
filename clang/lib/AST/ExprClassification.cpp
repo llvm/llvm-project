@@ -216,6 +216,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     return ClassifyInternal(Ctx,
                  cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
 
+  case Expr::PackIndexingExprClass:
+    return ClassifyInternal(Ctx, cast<PackIndexingExpr>(E)->getSelectedExpr());
+
     // C, C++98 [expr.sub]p1: The result is an lvalue of type "T".
     // C++11 (DR1213): in the case of an array operand, the result is an lvalue
     //                 if that operand is an lvalue and an xvalue otherwise.

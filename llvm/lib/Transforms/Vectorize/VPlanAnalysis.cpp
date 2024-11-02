@@ -35,6 +35,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case Instruction::ICmp: {
+    // TODO: Check if types for both operands agree. This also requires
+    // type-inference for the vector-trip-count, which is missing at the moment.
+    Type *ResTy = inferScalarType(R->getOperand(0));
+    return ResTy;
+  }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
     VPValue *OtherV = R->getOperand(1);
@@ -230,7 +236,13 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             return V->getUnderlyingValue()->getType();
           })
           .Case<VPWidenCastRecipe>(
-              [](const VPWidenCastRecipe *R) { return R->getResultType(); });
+              [](const VPWidenCastRecipe *R) { return R->getResultType(); })
+          .Case<VPScalarCastRecipe>(
+              [](const VPScalarCastRecipe *R) { return R->getResultType(); })
+          .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
+            return R->getSCEV()->getType();
+          });
+
   assert(ResultTy && "could not infer type for the given VPValue");
   CachedTypes[V] = ResultTy;
   return ResultTy;

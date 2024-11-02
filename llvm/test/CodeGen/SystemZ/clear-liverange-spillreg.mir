@@ -12,9 +12,9 @@
   @rec_mbY8x8 = external local_unnamed_addr global [16 x [16 x i16]], align 2
   @bi_pred_me = external local_unnamed_addr global i32, align 4
 
-  declare signext i32 @Get_Direct_Cost8x8(i32 signext, i32*) local_unnamed_addr #0
-  declare void @store_coding_state(i32*) local_unnamed_addr #0
-  declare void @reset_coding_state(i32*) local_unnamed_addr #0
+  declare signext i32 @Get_Direct_Cost8x8(i32 signext, ptr) local_unnamed_addr #0
+  declare void @store_coding_state(ptr) local_unnamed_addr #0
+  declare void @reset_coding_state(ptr) local_unnamed_addr #0
   declare void @SetRefAndMotionVectors(i32 signext, i32 signext, i32 signext, i32 signext, i32 signext) local_unnamed_addr #2
   declare signext i32 @Get_Direct_CostMB(double) local_unnamed_addr #0
   declare void @SetModesAndRefframeForBlocks(i32 signext) local_unnamed_addr #1

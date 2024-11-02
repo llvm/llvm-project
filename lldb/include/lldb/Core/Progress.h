@@ -93,6 +93,9 @@ public:
   void Increment(uint64_t amount = 1,
                  std::optional<std::string> updated_detail = {});
 
+  /// Used to indicate a non-deterministic progress report
+  static constexpr uint64_t kNonDeterministicTotal = UINT64_MAX;
+
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;

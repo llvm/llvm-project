@@ -767,6 +767,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     DEPENDS
       libc.include.math
       libc.src.math.ilogb
+      libc.src.__support.CPP.limits
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.FPUtil.manipulation_functions
   )
@@ -782,6 +783,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     DEPENDS
       libc.include.math
       libc.src.math.ilogbf
+      libc.src.__support.CPP.limits
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.FPUtil.manipulation_functions
   )
@@ -798,6 +800,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ilogbl
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -813,6 +816,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ldexp
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -828,6 +832,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ldexpf
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -843,6 +848,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.ldexpl
+    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )

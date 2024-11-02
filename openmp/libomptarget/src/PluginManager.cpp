@@ -89,19 +89,6 @@ Error PluginAdaptorTy::init() {
   return Error::success();
 }
 
-void PluginAdaptorTy::addOffloadEntries(DeviceImageTy &DI) {
-  for (int32_t I = 0, E = getNumberOfUserDevices(); I < E; ++I) {
-    auto DeviceOrErr = PM->getDevice(DeviceOffset + I);
-    if (!DeviceOrErr)
-      FATAL_MESSAGE(DeviceOffset + I, "%s",
-                    toString(DeviceOrErr.takeError()).c_str());
-
-    DeviceTy &Device = *DeviceOrErr;
-    for (__tgt_offload_entry &Entry : DI.entries())
-      Device.addOffloadEntry(OffloadEntryTy(DI, Entry));
-  }
-}
-
 void PluginManager::init() {
   TIMESCOPE();
   DP("Loading RTLs...\n");
@@ -259,9 +246,6 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       PM->TrlTblMtx.unlock();
       FoundRTL = &R;
 
-      // Register all offload entries with the devices handled by the plugin.
-      R.addOffloadEntries(DI);
-
       // if an RTL was found we are done - proceed to register the next image
       break;
     }
@@ -301,34 +285,6 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
         continue;
 
       FoundRTL = &R;
-
-      // Execute dtors for static objects if the device has been used, i.e.
-      // if its PendingCtors list has been emptied.
-      for (int32_t I = 0; I < FoundRTL->getNumberOfUserDevices(); ++I) {
-        auto DeviceOrErr = PM->getDevice(FoundRTL->DeviceOffset + I);
-        if (!DeviceOrErr)
-          FATAL_MESSAGE(FoundRTL->DeviceOffset + I, "%s",
-                        toString(DeviceOrErr.takeError()).c_str());
-
-        DeviceTy &Device = *DeviceOrErr;
-        Device.PendingGlobalsMtx.lock();
-        if (Device.PendingCtorsDtors[Desc].PendingCtors.empty()) {
-          AsyncInfoTy AsyncInfo(Device);
-          for (auto &Dtor : Device.PendingCtorsDtors[Desc].PendingDtors) {
-            int Rc =
-                target(nullptr, Device, Dtor, CTorDTorKernelArgs, AsyncInfo);
-            if (Rc != OFFLOAD_SUCCESS) {
-              DP("Running destructor " DPxMOD " failed.\n", DPxPTR(Dtor));
-            }
-          }
-          // Remove this library's entry from PendingCtorsDtors
-          Device.PendingCtorsDtors.erase(Desc);
-          // All constructors have been issued, wait for them now.
-          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
-            DP("Failed synchronizing destructors kernels.\n");
-        }
-        Device.PendingGlobalsMtx.unlock();
-      }
 
       DP("Unregistered image " DPxMOD " from RTL " DPxMOD "!\n",
          DPxPTR(Img->ImageStart), DPxPTR(R.LibraryHandler.get()));

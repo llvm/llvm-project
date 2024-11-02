@@ -49,7 +49,7 @@ for.end:
 ; CHECK:       %offset.idx = sub i64 %n, %index
 ; CHECK-NOT:   getelementptr
 ; CHECK:       %[[G0:.+]] = getelementptr inbounds i32, ptr %a, i64 %offset.idx
-; CHECK:       getelementptr inbounds i32, ptr %[[G0]], i64 -3
+; CHECK:       getelementptr inbounds i8, ptr %[[G0]], i64 -12
 ; CHECK-NOT:   getelementptr
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -162,7 +162,7 @@ for.end:
 ; INTER:       %offset.idx = sub i64 %n, %index
 ; INTER-NOT:   getelementptr
 ; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %offset.idx, i32 0
-; INTER:       getelementptr inbounds i32, ptr %[[G0]], i64 -6
+; INTER:       getelementptr inbounds i8, ptr %[[G0]], i64 -24
 ; INTER-NOT:   getelementptr
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -210,7 +210,7 @@ for.end:
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
-define void @predicated_store(%pair *%p, i32 %x, i64 %n) {
+define void @predicated_store(ptr %p, i32 %x, i64 %n) {
 entry:
   br label %for.body
 
@@ -459,7 +459,7 @@ for.end:
 ; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTER:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
-define void @pointer_operand_geps_with_different_indexed_types(i64* %A, i8* %B, i64 %n) {
+define void @pointer_operand_geps_with_different_indexed_types(ptr %A, ptr %B, i64 %n) {
 entry:
   br label %for.body
 

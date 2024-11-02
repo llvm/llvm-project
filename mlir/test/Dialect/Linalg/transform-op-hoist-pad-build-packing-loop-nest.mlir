@@ -177,8 +177,10 @@ module attributes {transform.with_named_sequence} {
     %pad = transform.get_producer_of_operand %matmul_padded[2]
       : (!transform.any_op) -> !transform.any_op
 
+    transform.apply_licm to %loops_l1#1 : !transform.any_op
+
     transform.structured.hoist_pad.build_packing_loop_nest %pad above %loops_l1#1
        : (!transform.any_op, !transform.any_op) -> !transform.any_op
-       transform.yield
+    transform.yield
   }
 }

@@ -138,6 +138,16 @@ bool SystemZTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
+unsigned SystemZTargetInfo::getMinGlobalAlign(uint64_t Size,
+                                              bool HasNonWeakDef) const {
+  // Don't enforce the minimum alignment on an external or weak symbol if
+  // -munaligned-symbols is passed.
+  if (UnalignedSymbols && !HasNonWeakDef)
+    return 0;
+
+  return MinGlobalAlign;
+}
+
 void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   Builder.defineMacro("__s390__");

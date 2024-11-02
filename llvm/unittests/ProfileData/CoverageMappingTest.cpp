@@ -890,6 +890,42 @@ TEST_P(CoverageMappingTest, non_code_region_bitmask) {
   ASSERT_EQ(1U, Names.size());
 }
 
+// Test the order of MCDCDecision before Expansion
+TEST_P(CoverageMappingTest, decision_before_expansion) {
+  startFunction("foo", 0x1234);
+  addCMR(Counter::getCounter(0), "foo", 3, 23, 5, 2);
+
+  // This(4:11) was put after Expansion(4:11) before the fix
+  addMCDCDecisionCMR(0, 2, "foo", 4, 11, 4, 20);
+
+  addExpansionCMR("foo", "A", 4, 11, 4, 12);
+  addExpansionCMR("foo", "B", 4, 19, 4, 20);
+  addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
+  addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 1, 2, 0, "A",
+                   1, 14, 1, 17);
+  addCMR(Counter::getCounter(1), "B", 1, 14, 1, 17);
+  addMCDCBranchCMR(Counter::getCounter(1), Counter::getCounter(2), 2, 0, 0, "B",
+                   1, 14, 1, 17);
+
+  // InputFunctionCoverageData::Regions is rewritten after the write.
+  auto InputRegions = InputFunctions.back().Regions;
+
+  writeAndReadCoverageRegions();
+
+  const auto &OutputRegions = OutputFunctions.back().Regions;
+
+  size_t N = ArrayRef(InputRegions).size();
+  ASSERT_EQ(N, OutputRegions.size());
+  for (size_t I = 0; I < N; ++I) {
+    ASSERT_EQ(InputRegions[I].Kind, OutputRegions[I].Kind);
+    ASSERT_EQ(InputRegions[I].FileID, OutputRegions[I].FileID);
+    ASSERT_EQ(InputRegions[I].ExpandedFileID, OutputRegions[I].ExpandedFileID);
+    ASSERT_EQ(InputRegions[I].startLoc(), OutputRegions[I].startLoc());
+    ASSERT_EQ(InputRegions[I].endLoc(), OutputRegions[I].endLoc());
+  }
+}
+
 TEST_P(CoverageMappingTest, strip_filename_prefix) {
   ProfileWriter.addRecord({"file1:func", 0x1234, {0}}, Err);
 

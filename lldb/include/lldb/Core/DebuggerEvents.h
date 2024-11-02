@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/StructuredData.h"
 
@@ -39,7 +40,7 @@ public:
   GetAsStructuredData(const Event *event_ptr);
 
   uint64_t GetID() const { return m_id; }
-  bool IsFinite() const { return m_total != UINT64_MAX; }
+  bool IsFinite() const { return m_total != Progress::kNonDeterministicTotal; }
   uint64_t GetCompleted() const { return m_completed; }
   uint64_t GetTotal() const { return m_total; }
   std::string GetMessage() const {

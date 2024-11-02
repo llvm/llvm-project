@@ -164,13 +164,16 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     InterfaceMethod<[{
         Return the mutable operand range of values that are yielded to the next
         iteration by the loop terminator.
+
+        For loop operations that dont yield a value, this should return
+        std::nullopt.
       }],
-      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
+      /*retTy=*/"std::optional<::llvm::MutableArrayRef<::mlir::OpOperand>>",
       /*methodName=*/"getYieldedValuesMutable",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return {};
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -217,7 +220,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::failure();
       }]
-    >,
+    >
   ];
 
   let extraClassDeclaration = [{
@@ -244,16 +247,17 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
           });
     }
 
-    /// Return the values that are yielded to the next iteration.
+    /// Return the values that are yielded to the next iteration. If
+    /// the loop doesnt yield any values return `{}`.
     ::mlir::ValueRange getYieldedValues() {
       auto mutableValues = $_op.getYieldedValuesMutable();
-      if (mutableValues.empty())
+      if (!mutableValues || mutableValues->empty())
         return {};
-      Operation *yieldOp = mutableValues.begin()->getOwner();
-      unsigned firstOperandIndex = mutableValues.begin()->getOperandNumber();
+      Operation *yieldOp = mutableValues->begin()->getOwner();
+      unsigned firstOperandIndex = mutableValues->begin()->getOperandNumber();
       return OperandRange(
           yieldOp->operand_begin() + firstOperandIndex,
-          yieldOp->operand_begin() + firstOperandIndex + mutableValues.size());
+          yieldOp->operand_begin() + firstOperandIndex + mutableValues->size());
     }
 
     /// Return the "init" operands that are used as initialization values for
@@ -318,14 +322,17 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
 
     /// Return the yielded value that corresponds to the given region iter_arg.
     /// Return "nullptr" if the given block argument is not a region iter_arg
-    /// of this loop op.
+    /// of this loop op or if there is no yield corresponding to this `bbArg`.
     OpOperand *getTiedLoopYieldedValue(BlockArgument bbArg) {
       auto iterArgs = $_op.getRegionIterArgs();
       auto it = llvm::find(iterArgs, bbArg);
       if (it == iterArgs.end())
         return {};
-      return
-          &$_op.getYieldedValuesMutable()[std::distance(iterArgs.begin(), it)];
+      std::optional<llvm::MutableArrayRef<::mlir::OpOperand>> yieldValues =
+        $_op.getYieldedValuesMutable();
+      if (!yieldValues)
+        return {};
+      return &yieldValues.value()[std::distance(iterArgs.begin(), it)];
     }
 
     /// Return the loop result that corresponds to the given init operand.

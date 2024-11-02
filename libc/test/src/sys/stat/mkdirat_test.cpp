@@ -15,7 +15,8 @@
 
 TEST(LlvmLibcMkdiratTest, CreateAndRemove) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata/mkdirat.testdir";
+  constexpr const char *FILENAME = "testdata/mkdirat.testdir";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
   ASSERT_THAT(LIBC_NAMESPACE::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU),
               Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::rmdir(TEST_DIR), Succeeds(0));

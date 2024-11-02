@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
-; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
+; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X86
 ; Control Flow Guard is currently only available on Windows
 
 
@@ -12,23 +12,23 @@ entry:
   call x86_vectorcallcc void %0(%struct.HVA inreg %3)
   ret void
 
-  ; X32-LABEL: func_cf_vector_x86
-  ; X32: 	     movl 12(%ebp), %eax
-  ; X32: 	     movl 8(%ebp), %ecx
-  ; X32: 	     movsd 24(%eax), %xmm4         # xmm4 = mem[0],zero
-  ; X32: 	     movsd %xmm4, 24(%esp)
-  ; X32: 	     movsd 16(%eax), %xmm5         # xmm5 = mem[0],zero
-  ; X32: 	     movsd %xmm5, 16(%esp)
-  ; X32: 	     movsd (%eax), %xmm6           # xmm6 = mem[0],zero
-  ; X32: 	     movsd 8(%eax), %xmm7          # xmm7 = mem[0],zero
-  ; X32: 	     movsd %xmm7, 8(%esp)
-  ; X32: 	     movsd %xmm6, (%esp)
-  ; X32: 	     calll *___guard_check_icall_fptr
-  ; X32: 	     movaps %xmm6, %xmm0
-  ; X32: 	     movaps %xmm7, %xmm1
-  ; X32: 	     movaps %xmm5, %xmm2
-  ; X32: 	     movaps %xmm4, %xmm3
-  ; X32: 	     calll  *%ecx
+  ; X86-LABEL: func_cf_vector_x86
+  ; X86: 	     movl 12(%ebp), %eax
+  ; X86: 	     movl 8(%ebp), %ecx
+  ; X86: 	     movsd 24(%eax), %xmm4         # xmm4 = mem[0],zero
+  ; X86: 	     movsd %xmm4, 24(%esp)
+  ; X86: 	     movsd 16(%eax), %xmm5         # xmm5 = mem[0],zero
+  ; X86: 	     movsd %xmm5, 16(%esp)
+  ; X86: 	     movsd (%eax), %xmm6           # xmm6 = mem[0],zero
+  ; X86: 	     movsd 8(%eax), %xmm7          # xmm7 = mem[0],zero
+  ; X86: 	     movsd %xmm7, 8(%esp)
+  ; X86: 	     movsd %xmm6, (%esp)
+  ; X86: 	     calll *___guard_check_icall_fptr
+  ; X86: 	     movaps %xmm6, %xmm0
+  ; X86: 	     movaps %xmm7, %xmm1
+  ; X86: 	     movaps %xmm5, %xmm2
+  ; X86: 	     movaps %xmm4, %xmm3
+  ; X86: 	     calll  *%ecx
 }
 attributes #0 = { "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
 

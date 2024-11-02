@@ -23,12 +23,14 @@ void SMEAttrs::set(unsigned M, bool Enable) {
          "SM_Enabled and SM_Compatible are mutually exclusive");
 
   // ZA Attrs
-  assert(!(hasNewZABody() && sharesZA()) &&
-         "ZA_New and ZA_Shared are mutually exclusive");
-  assert(!(hasNewZABody() && preservesZA()) &&
-         "ZA_New and ZA_Preserved are mutually exclusive");
-  assert(!(hasNewZABody() && (Bitmask & SME_ABI_Routine)) &&
+  assert(!(isNewZA() && (Bitmask & SME_ABI_Routine)) &&
          "ZA_New and SME_ABI_Routine are mutually exclusive");
+
+  assert(
+      (!sharesZA() ||
+       (isNewZA() ^ isInZA() ^ isInOutZA() ^ isOutZA() ^ isPreservesZA())) &&
+      "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
+      "'aarch64_inout_za' and 'aarch64_preserves_za' are mutually exclusive");
 
   // ZT0 Attrs
   assert(
@@ -49,8 +51,8 @@ SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
   if (FuncName == "__arm_tpidr2_save" || FuncName == "__arm_sme_state")
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine);
   if (FuncName == "__arm_tpidr2_restore")
-    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
-                SMEAttrs::SME_ABI_Routine);
+    Bitmask |= SMEAttrs::SM_Compatible | encodeZAState(StateValue::In) |
+               SMEAttrs::SME_ABI_Routine;
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
@@ -61,12 +63,16 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= SM_Compatible;
   if (Attrs.hasFnAttr("aarch64_pstate_sm_body"))
     Bitmask |= SM_Body;
-  if (Attrs.hasFnAttr("aarch64_pstate_za_shared"))
-    Bitmask |= ZA_Shared;
-  if (Attrs.hasFnAttr("aarch64_pstate_za_new"))
-    Bitmask |= ZA_New;
-  if (Attrs.hasFnAttr("aarch64_pstate_za_preserved"))
-    Bitmask |= ZA_Preserved;
+  if (Attrs.hasFnAttr("aarch64_in_za"))
+    Bitmask |= encodeZAState(StateValue::In);
+  if (Attrs.hasFnAttr("aarch64_out_za"))
+    Bitmask |= encodeZAState(StateValue::Out);
+  if (Attrs.hasFnAttr("aarch64_inout_za"))
+    Bitmask |= encodeZAState(StateValue::InOut);
+  if (Attrs.hasFnAttr("aarch64_preserves_za"))
+    Bitmask |= encodeZAState(StateValue::Preserved);
+  if (Attrs.hasFnAttr("aarch64_new_za"))
+    Bitmask |= encodeZAState(StateValue::New);
   if (Attrs.hasFnAttr("aarch64_in_zt0"))
     Bitmask |= encodeZT0State(StateValue::In);
   if (Attrs.hasFnAttr("aarch64_out_zt0"))

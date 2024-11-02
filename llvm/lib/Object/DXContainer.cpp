@@ -341,7 +341,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
     SigOutputElements.Stride = SigPatchOrPrimElements.Stride =
         SigInputElements.Stride;
 
-    if (Data.end() - Current < ElementCount * SigInputElements.Stride)
+    if (Data.end() - Current <
+        (ptrdiff_t)(ElementCount * SigInputElements.Stride))
       return parseFailed(
           "Signature elements extend beyond the size of the part");
 

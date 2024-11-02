@@ -9,7 +9,7 @@
 // This file contains functions used for auto conversion between
 // ASCII/EBCDIC codepages specific to z/OS.
 //
-//===----------------------------------------------------------------------===//i
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_AUTOCONVERT_H
 #define LLVM_SUPPORT_AUTOCONVERT_H

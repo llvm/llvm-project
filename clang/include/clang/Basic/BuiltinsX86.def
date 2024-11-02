@@ -26,13 +26,6 @@
 #  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
-// Miscellaneous builtin for checking x86 cpu features.
-// TODO: Make this somewhat generic so that other backends
-// can use it?
-BUILTIN(__builtin_cpu_init, "v", "n")
-BUILTIN(__builtin_cpu_supports, "bcC*", "nc")
-BUILTIN(__builtin_cpu_is, "bcC*", "nc")
-
 // Undefined Values
 //
 TARGET_BUILTIN(__builtin_ia32_undef128, "V2d", "ncV:128:", "")

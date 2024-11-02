@@ -42,7 +42,7 @@ void test(std::string expected, std::string_view fmt, color arg, std::size_t off
   std::formatter<color, char> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
-  auto it = formatter.parse(parse_ctx);
+  std::same_as<typename std::string_view::iterator> auto it = formatter.parse(parse_ctx);
   assert(it == fmt.end() - offset);
 
   std::string result;

@@ -63,7 +63,7 @@ define i32 @vec_store_load_first_constexpr(ptr %p) {
 define i32 @vec_store_load_second(ptr %p) {
 ; CHECK-LABEL: @vec_store_load_second(
 ; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P3]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;

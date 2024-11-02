@@ -607,3 +607,6 @@ def FRM    : RISCVReg<0, "frm">;
 
 // Shadow Stack register
 def SSP    : RISCVReg<0, "ssp">;
+
+// Dummy VCIX state register
+def VCIX_STATE : RISCVReg<0, "vcix_state">;

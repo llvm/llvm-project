@@ -85,7 +85,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
+        return FPBits::inf(Sign::NEG).get_val();
       }
       // Normalize denormal inputs.
       xbits = FPBits(xbits.get_val() * 0x1.0p23f);
@@ -124,7 +124,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         // Return NaN and raise FE_INVALID
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::build_quiet_nan().get_val();
+        return FPBits::quiet_nan().get_val();
       }
       // x is +inf or nan
       return x;
@@ -149,7 +149,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   // Set bits to 1.m
   xbits.set_biased_exponent(0x7F);
 
-  float u = static_cast<float>(xbits);
+  float u = xbits.get_val();
   double v;
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.

@@ -85,6 +85,12 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       getCodeModel() == CodeModel::Large) {
     if (!GV->getValueType()->isSized())
       return true;
+    // Linker defined start/stop symbols can point to arbitrary points in the
+    // binary, so treat them as large.
+    if (GV->isDeclaration() && (GV->getName() == "__ehdr_start" ||
+                                GV->getName().starts_with("__start_") ||
+                                GV->getName().starts_with("__stop_")))
+      return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
     uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
     return Size == 0 || Size > LargeDataThreshold;
@@ -213,6 +219,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
 }
 
 bool TargetMachine::useEmulatedTLS() const { return Options.EmulatedTLS; }
+bool TargetMachine::useTLSDESC() const { return Options.EnableTLSDESC; }
 
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;

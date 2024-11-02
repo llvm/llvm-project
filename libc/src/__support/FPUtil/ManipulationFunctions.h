@@ -14,12 +14,12 @@
 #include "NormalFloat.h"
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <limits.h>
 #include <math.h>
 
 namespace LIBC_NAMESPACE {
@@ -49,13 +49,13 @@ LIBC_INLINE T modf(T x, T &iptr) {
     return x;
   } else if (bits.is_inf()) {
     iptr = x;
-    return T(FPBits<T>::zero(bits.sign()));
+    return FPBits<T>::zero(bits.sign()).get_val();
   } else {
     iptr = trunc(x);
     if (x == iptr) {
       // If x is already an integer value, then return zero with the right
       // sign.
-      return T(FPBits<T>::zero(bits.sign()));
+      return FPBits<T>::zero(bits.sign()).get_val();
     } else {
       return x - iptr;
     }
@@ -66,7 +66,7 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T copysign(T x, T y) {
   FPBits<T> xbits(x);
   xbits.set_sign(FPBits<T>(y).sign());
-  return T(xbits);
+  return xbits.get_val();
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -103,12 +103,12 @@ LIBC_INLINE T logb(T x) {
   if (bits.is_zero()) {
     // TODO(Floating point exception): Raise div-by-zero exception.
     // TODO(errno): POSIX requires setting errno to ERANGE.
-    return T(FPBits<T>::inf(Sign::NEG));
+    return FPBits<T>::inf(Sign::NEG).get_val();
   } else if (bits.is_nan()) {
     return x;
   } else if (bits.is_inf()) {
     // Return positive infinity.
-    return T(FPBits<T>::inf());
+    return FPBits<T>::inf().get_val();
   }
 
   NormalFloat<T> normal(bits);
@@ -131,11 +131,11 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // calculating the limit.
   int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
-    return T(FPBits<T>::inf(bits.sign()));
+    return FPBits<T>::inf(bits.sign()).get_val();
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (exp < -exp_limit)
-    return T(FPBits<T>::zero(bits.sign()));
+    return FPBits<T>::zero(bits.sign()).get_val();
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   NormalFloat<T> normal(bits);

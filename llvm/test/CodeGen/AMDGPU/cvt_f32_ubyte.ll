@@ -1385,7 +1385,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(ptr addrspace(1) noalias
 
 ; The other use of shuffle0_0 make it profitable to lower into v_perm
 
-define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned_multiuse(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %out1, <4 x i8> addrspace(1)* noalias %in, <4 x i8> addrspace(1)* noalias %in1) nounwind {
+define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned_multiuse(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %out1, ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %in1) nounwind {
 ; SI-LABEL: load_v4i8_to_v4f32_unaligned_multiuse:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -1547,14 +1547,14 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned_multiuse(<4 x float> add
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in, i32 %tid
-  %gep1 = getelementptr <4 x i8>, <4 x i8> addrspace(1)* %in1, i32 %tid
-  %load = load <4 x i8>, <4 x i8> addrspace(1)* %gep, align 1
-  %load1 = load <4 x i8>, <4 x i8> addrspace(1)* %gep1, align 1
+  %gep = getelementptr <4 x i8>, ptr addrspace(1) %in, i32 %tid
+  %gep1 = getelementptr <4 x i8>, ptr addrspace(1) %in1, i32 %tid
+  %load = load <4 x i8>, ptr addrspace(1) %gep, align 1
+  %load1 = load <4 x i8>, ptr addrspace(1) %gep1, align 1
   %shuffle0_0 = shufflevector <4 x i8> %load, <4 x i8> %load1, <4 x i32> <i32 3, i32 2, i32 6, i32 2>
   %cvt = uitofp <4 x i8> %shuffle0_0 to <4 x float>
-  store <4 x float> %cvt, <4 x float> addrspace(1)* %out, align 16
-  store <4 x i8> %shuffle0_0, <4 x i8> addrspace(1)* %out1, align 4
+  store <4 x float> %cvt, ptr addrspace(1) %out, align 16
+  store <4 x i8> %shuffle0_0, ptr addrspace(1) %out1, align 4
   ret void
 }
 

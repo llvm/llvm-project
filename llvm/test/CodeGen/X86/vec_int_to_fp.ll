@@ -1907,7 +1907,7 @@ define <4 x float> @uitofp_2i64_to_4f32(<2 x i64> %a) {
 ;
 ; SSE41-LABEL: uitofp_2i64_to_4f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1,1]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [1,1]
 ; SSE41-NEXT:    pand %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psrlq $1, %xmm2
@@ -2022,7 +2022,7 @@ define <4 x float> @uitofp_2i64_to_2f32(<2 x i64> %a) {
 ;
 ; SSE41-LABEL: uitofp_2i64_to_2f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1,1]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [1,1]
 ; SSE41-NEXT:    pand %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psrlq $1, %xmm2
@@ -2136,7 +2136,7 @@ define <4 x float> @uitofp_4i64_to_4f32_undef(<2 x i64> %a) {
 ;
 ; SSE41-LABEL: uitofp_4i64_to_4f32_undef:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1,1]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [1,1]
 ; SSE41-NEXT:    pand %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psrlq $1, %xmm2
@@ -2531,7 +2531,7 @@ define <4 x float> @uitofp_4i64_to_4f32(<4 x i64> %a) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm4 = [1,1]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    movdqa %xmm1, %xmm3
 ; SSE41-NEXT:    psrlq $1, %xmm3
@@ -4329,7 +4329,7 @@ define <4 x float> @uitofp_load_4i64_to_4f32(ptr%a) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa (%rdi), %xmm1
 ; SSE41-NEXT:    movdqa 16(%rdi), %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm4 = [1,1]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    movdqa %xmm1, %xmm3
@@ -4735,7 +4735,7 @@ define <8 x float> @uitofp_load_8i64_to_8f32(ptr%a) {
 ; SSE41-NEXT:    movdqa 16(%rdi), %xmm5
 ; SSE41-NEXT:    movdqa 32(%rdi), %xmm6
 ; SSE41-NEXT:    movdqa 48(%rdi), %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [1,1]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm7 = [1,1]
 ; SSE41-NEXT:    movdqa %xmm4, %xmm0
 ; SSE41-NEXT:    pand %xmm7, %xmm0
 ; SSE41-NEXT:    movdqa %xmm4, %xmm1
@@ -5625,7 +5625,7 @@ define void @PR43609(ptr nocapture %x, <2 x i64> %y) #0 {
 ;
 ; SSE41-LABEL: PR43609:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2,2]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [2,2]
 ; SSE41-NEXT:    paddq %xmm0, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm2
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3

@@ -154,6 +154,20 @@ namespace i128 {
   constexpr uint128_t ui128Zero{};
   static_assert(ui128Zero == 0, "");
 
+
+  enum LargeEnum : signed __int128 {
+    LV = (signed __int128)1 << 127,
+  };
+
+  constexpr LargeEnum F = LV;
+  static_assert(F ==  (signed __int128)1 << 127, "");
+  constexpr LargeEnum getLargeEnum() {
+    return LV;
+  }
+  static_assert(getLargeEnum() ==  (signed __int128)1 << 127, "");
+
+
+
 #if __cplusplus >= 201402L
   template <typename T>
   constexpr T CastFrom(__int128_t A) {

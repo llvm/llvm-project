@@ -57,7 +57,7 @@ template <uint32_t lane_size = gpu::LANE_SIZE> struct alignas(64) Packet {
 };
 
 /// The maximum number of parallel ports that the RPC interface can support.
-constexpr uint64_t MAX_PORT_COUNT = 512;
+constexpr uint64_t MAX_PORT_COUNT = 4096;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains a read-only inbox and a write-only outbox used
@@ -519,7 +519,7 @@ LIBC_INLINE void Port<T, S>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.
-  for (uint32_t index = 0;; ++index) {
+  for (uint32_t index = gpu::get_cluster_id();; ++index) {
     // Start from the beginning if we run out of ports to check.
     if (index >= process.port_count)
       index = 0;

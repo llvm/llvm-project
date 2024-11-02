@@ -25,7 +25,6 @@ add_llvm_unittest(CodeGenTests
   AMDGPUMetadataTest.cpp
   AsmPrinterDwarfTest.cpp
   CCStateTest.cpp
-  CodeGenPassBuilderTest.cpp
   DIEHashTest.cpp
   DIETest.cpp
   DwarfStringPoolEntryRefTest.cpp

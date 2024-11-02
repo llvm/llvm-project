@@ -37,6 +37,10 @@ public:
     VK_RISCV_CALL,
     VK_RISCV_CALL_PLT,
     VK_RISCV_32_PCREL,
+    VK_RISCV_TLSDESC_HI,
+    VK_RISCV_TLSDESC_LOAD_LO,
+    VK_RISCV_TLSDESC_ADD_LO,
+    VK_RISCV_TLSDESC_CALL,
     VK_RISCV_Invalid // Must be the last item
   };
 

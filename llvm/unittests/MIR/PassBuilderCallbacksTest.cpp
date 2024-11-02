@@ -248,7 +248,6 @@ public:
     }
 
   public:
-    static MachinePassKey Key;
     PreservedAnalyses run(MachineFunction &IR,
                           MachineFunctionAnalysisManager::Base &AM) {
       return Handle->run(IR, AM);
@@ -278,9 +277,6 @@ struct MockAnalysisHandle : public MockAnalysisHandleBase<MockAnalysisHandle> {
 
   MockAnalysisHandle() { setDefaults(); }
 };
-
-template <typename DerivedT>
-MachinePassKey MockPassHandleBase<DerivedT>::Pass::Key;
 
 template <typename DerivedT>
 AnalysisKey MockAnalysisHandleBase<DerivedT>::Analysis::Key;
@@ -436,6 +432,12 @@ TEST_F(MachineFunctionCallbacksTest, InstrumentedPasses) {
   EXPECT_CALL(
       CallbacksHandle,
       runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), HasName("test")))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("test"), _))

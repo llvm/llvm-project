@@ -677,9 +677,9 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       if (isModSet(AA->getModRefInfo(SI, LoadLoc)))
         UseMemMove = true;
 
-      uint64_t Size = DL.getTypeStoreSize(T);
-
       IRBuilder<> Builder(P);
+      Value *Size = Builder.CreateTypeSize(Builder.getInt64Ty(),
+                                           DL.getTypeStoreSize(T));
       Instruction *M;
       if (UseMemMove)
         M = Builder.CreateMemMove(

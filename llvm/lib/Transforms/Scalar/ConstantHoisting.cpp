@@ -576,9 +576,6 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                            ConstCandVecType::iterator &MaxCostItr) {
   unsigned NumUses = 0;
 
-  bool OptForSize = Entry->getParent()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(Entry->getParent(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
   if (!OptForSize || std::distance(S,E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
@@ -948,6 +945,10 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;
+  this->OptForSize = Entry.getParent()->hasOptSize() ||
+                     llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
+                                                 PGSOQueryType::IRPass);
+
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 

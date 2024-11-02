@@ -21,7 +21,7 @@
   target triple = "riscv64"
 
   ; Function Attrs: nounwind
-  define weak_odr dso_local void @foo(i8* %ay) nounwind {
+  define weak_odr dso_local void @foo(ptr %ay) nounwind {
   ; CHECK-LABEL: foo:
   ; CHECK:       # %bb.0: # %entry
   ; CHECK-NEXT:    addi sp, sp, -2032

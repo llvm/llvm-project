@@ -46,11 +46,11 @@ func.func @unpack_and_extract_slice(%arg0: tensor<2x8x8x2xf32>, %arg1: tensor<13
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
 // CHECK:         %{{.+}} = scf.for %[[I:[a-zA-Z0-9]+]] =
-// CHECK:           %[[OUT_I_SZ:.+]] = affine.min #[[MAP0]](%[[I]])
 // CHECK:           %{{.+}} = scf.for %[[J:[a-zA-Z0-9]+]] =
-// CHECK:             %[[OUT_J_SZ:.+]] = affine.min #[[MAP1]](%[[J]])
-// CHECK:             %[[IN_I:.+]] = affine.apply #[[MAP2]](%[[I]])
-// CHECK:             %[[IN_J:.+]] = affine.apply #[[MAP3]](%[[J]])
+// CHECK-DAG:         %[[OUT_I_SZ:.+]] = affine.min #[[MAP0]](%[[I]])
+// CHECK-DAG:         %[[OUT_J_SZ:.+]] = affine.min #[[MAP1]](%[[J]])
+// CHECK-DAG:         %[[IN_I:.+]] = affine.apply #[[MAP2]](%[[I]])
+// CHECK-DAG:         %[[IN_J:.+]] = affine.apply #[[MAP3]](%[[J]])
 // CHECK:             %[[SRC_SLICE:.+]] = tensor.extract_slice %[[SRC]]
 // CHECK-SAME:          [%[[IN_I]], %[[IN_J]], 0, 0] [1, 1, 8, 2] [1, 1, 1, 1]
 // CHECK:             %[[ITER_SLICE:.+]] = tensor.extract_slice %{{[a-zA-Z0-9]+}}

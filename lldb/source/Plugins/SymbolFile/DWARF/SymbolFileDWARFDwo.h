@@ -47,6 +47,8 @@ public:
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
+  uint64_t GetDebugInfoSize() override;
+
   bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                               lldb::offset_t &offset,
                               std::vector<Value> &stack) const override;
@@ -55,6 +57,15 @@ public:
                            const CompilerDeclContext &parent_decl_ctx,
                            uint32_t max_matches,
                            VariableList &variables) override;
+
+  SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
+
+  bool GetDebugInfoIndexWasLoadedFromCache() const override;
+  void SetDebugInfoIndexWasLoadedFromCache() override;
+  bool GetDebugInfoIndexWasSavedToCache() const override;
+  void SetDebugInfoIndexWasSavedToCache() override;
+  bool GetDebugInfoHadFrameVariableErrors() const override;
+  void SetDebugInfoHadFrameVariableErrors() override;
 
 protected:
   DIEToTypePtr &GetDIEToType() override;
@@ -74,8 +85,6 @@ protected:
   FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,
                                        ConstString type_name,
                                        bool must_be_implementation) override;
-
-  SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
 
   /// If this file contains exactly one compile unit, this function will return
   /// it. Otherwise it returns nullptr.

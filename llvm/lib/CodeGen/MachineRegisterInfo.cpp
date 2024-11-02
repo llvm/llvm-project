@@ -167,6 +167,15 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   return Reg;
 }
 
+Register MachineRegisterInfo::createVirtualRegister(VRegAttrs RegAttr,
+                                                    StringRef Name) {
+  Register Reg = createIncompleteVirtualRegister(Name);
+  VRegInfo[Reg].first = RegAttr.RCOrRB;
+  setType(Reg, RegAttr.Ty);
+  noteNewVirtualRegister(Reg);
+  return Reg;
+}
+
 Register MachineRegisterInfo::cloneVirtualRegister(Register VReg,
                                                    StringRef Name) {
   Register Reg = createIncompleteVirtualRegister(Name);

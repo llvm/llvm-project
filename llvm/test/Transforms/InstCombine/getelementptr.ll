@@ -42,7 +42,7 @@ define ptr @test2(ptr %I) {
 ; Test that two array indexing geps fold
 define ptr @test3(ptr %I) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[I:%.*]], i64 21
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[I:%.*]], i64 84
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
   %A = getelementptr i32, ptr %I, i64 17
@@ -53,7 +53,7 @@ define ptr @test3(ptr %I) {
 ; Test that two getelementptr insts fold
 define ptr @test4(ptr %I) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr { i32 }, ptr [[I:%.*]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[I:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[A]]
 ;
   %A = getelementptr { i32 }, ptr %I, i64 1
@@ -162,8 +162,8 @@ define i1 @test10(ptr %x, ptr %y) {
 
 define i1 @test10_addrspacecast(ptr %x, ptr addrspace(3) %y) {
 ; CHECK-LABEL: @test10_addrspacecast(
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr { i32, i32 }, ptr [[X:%.*]], i64 0, i32 1
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr { i32, i32 }, ptr addrspace(3) [[Y:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr i8, ptr addrspace(3) [[Y:%.*]], i64 4
 ; CHECK-NEXT:    [[T3_C:%.*]] = addrspacecast ptr addrspace(3) [[T3]] to ptr
 ; CHECK-NEXT:    [[T4:%.*]] = icmp eq ptr [[T1]], [[T3_C]]
 ; CHECK-NEXT:    ret i1 [[T4]]
@@ -190,7 +190,7 @@ define i1 @test11(ptr %X) {
 define i32 @test12(ptr %a) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr [[STRUCT_A:%.*]], ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; CHECK-NEXT:    store i32 10, ptr [[G3]], align 4
 ; CHECK-NEXT:    ret i32 10
 ;
@@ -596,7 +596,7 @@ define i32 @test27(ptr %to, ptr %from) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FROM_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[T344:%.*]] = load ptr, ptr [[FROM_ADDR]], align 8
-; CHECK-NEXT:    [[T348:%.*]] = getelementptr [[STRUCT_SIGINFO_T:%.*]], ptr [[T344]], i64 0, i32 3, i32 0, i32 3
+; CHECK-NEXT:    [[T348:%.*]] = getelementptr i8, ptr [[T344]], i64 24
 ; CHECK-NEXT:    [[T351:%.*]] = load i32, ptr [[T348]], align 8
 ; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], ptr elementtype([[STRUCT___LARGE_STRUCT:%.*]]) null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
@@ -623,14 +623,15 @@ define i32 @test28() nounwind  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
 ; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0]]
+; CHECK-NEXT:    [[T45:%.*]] = getelementptr inbounds i8, ptr [[ORIENTATIONS]], i64 1
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[BB10]] ]
 ; CHECK-NEXT:    [[T12_REC:%.*]] = xor i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[T12_REC]] to i64
-; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds [1 x [1 x %struct.x]], ptr [[ORIENTATIONS]], i64 1, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds [[STRUCT_X:%.*]], ptr [[T45]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[T16:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str1, ptr nonnull [[T12]]) #[[ATTR0]]
-; CHECK-NEXT:    [[T84:%.*]] = icmp eq i32 [[INDVAR]], 0
+; CHECK-NEXT:    [[T84:%.*]] = icmp eq ptr [[T12]], [[ORIENTATIONS]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[T84]], label [[BB17:%.*]], label [[BB10]]
 ; CHECK:       bb17:
@@ -732,9 +733,9 @@ define ptr @test32(ptr %v) {
 ; CHECK-LABEL: @test32(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x ptr], align 16
 ; CHECK-NEXT:    store ptr null, ptr [[A]], align 8
-; CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds { [16 x i8] }, ptr [[A]], i64 0, i32 0, i64 8
+; CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    store ptr [[V:%.*]], ptr [[D]], align 8
-; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [4 x ptr], ptr [[A]], i64 0, i64 2
+; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[G:%.*]] = load ptr, ptr [[F]], align 8
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
@@ -753,7 +754,7 @@ define ptr @test32(ptr %v) {
 
 define ptr @test33(ptr %A) {
 ; CHECK-LABEL: @test33(
-; CHECK-NEXT:    [[C:%.*]] = getelementptr [[STRUCT_ANON:%.*]], ptr [[A:%.*]], i64 0, i32 2
+; CHECK-NEXT:    [[C:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[C]]
 ;
   %C = getelementptr %struct.anon, ptr %A, i32 0, i32 2
@@ -762,7 +763,7 @@ define ptr @test33(ptr %A) {
 
 define ptr addrspace(1) @test33_as1(ptr addrspace(1) %A) {
 ; CHECK-LABEL: @test33_as1(
-; CHECK-NEXT:    [[C:%.*]] = getelementptr [[STRUCT_ANON:%.*]], ptr addrspace(1) [[A:%.*]], i16 0, i32 2
+; CHECK-NEXT:    [[C:%.*]] = getelementptr i8, ptr addrspace(1) [[A:%.*]], i16 4
 ; CHECK-NEXT:    ret ptr addrspace(1) [[C]]
 ;
   %C = getelementptr %struct.anon, ptr addrspace(1) %A, i32 0, i32 2
@@ -771,7 +772,7 @@ define ptr addrspace(1) @test33_as1(ptr addrspace(1) %A) {
 
 define ptr addrspace(1) @test33_array_as1(ptr addrspace(1) %A) {
 ; CHECK-LABEL: @test33_array_as1(
-; CHECK-NEXT:    [[C:%.*]] = getelementptr [5 x i32], ptr addrspace(1) [[A:%.*]], i16 0, i16 2
+; CHECK-NEXT:    [[C:%.*]] = getelementptr i8, ptr addrspace(1) [[A:%.*]], i16 8
 ; CHECK-NEXT:    ret ptr addrspace(1) [[C]]
 ;
   %C = getelementptr [5 x i32], ptr addrspace(1) %A, i32 0, i32 2
@@ -781,7 +782,7 @@ define ptr addrspace(1) @test33_array_as1(ptr addrspace(1) %A) {
 ; Make sure the GEP indices use the right pointer sized integer
 define ptr addrspace(1) @test33_array_struct_as1(ptr addrspace(1) %A) {
 ; CHECK-LABEL: @test33_array_struct_as1(
-; CHECK-NEXT:    [[C:%.*]] = getelementptr [20 x i32], ptr addrspace(1) [[A:%.*]], i16 0, i16 2
+; CHECK-NEXT:    [[C:%.*]] = getelementptr i8, ptr addrspace(1) [[A:%.*]], i16 8
 ; CHECK-NEXT:    ret ptr addrspace(1) [[C]]
 ;
   %C = getelementptr [20 x i32], ptr addrspace(1) %A, i32 0, i32 2
@@ -791,7 +792,7 @@ define ptr addrspace(1) @test33_array_struct_as1(ptr addrspace(1) %A) {
 define ptr addrspace(1) @test33_addrspacecast(ptr %A) {
 ; CHECK-LABEL: @test33_addrspacecast(
 ; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr [[A:%.*]] to ptr addrspace(1)
-; CHECK-NEXT:    [[C:%.*]] = getelementptr [[STRUCT_ANON:%.*]], ptr addrspace(1) [[B]], i16 0, i32 2
+; CHECK-NEXT:    [[C:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i16 4
 ; CHECK-NEXT:    ret ptr addrspace(1) [[C]]
 ;
   %B = addrspacecast ptr %A to ptr addrspace(1)
@@ -871,7 +872,7 @@ declare void @pr10322_f3(ptr)
 define void @pr10322_f1(ptr %foo) {
 ; CHECK-LABEL: @pr10322_f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [[PR10322_T:%.*]], ptr [[FOO:%.*]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 16
 ; CHECK-NEXT:    call void @pr10322_f2(ptr nonnull [[ARRAYIDX8]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @pr10322_f3(ptr nonnull [[ARRAYIDX8]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
@@ -891,7 +892,7 @@ entry:
 
 define void @three_gep_f(ptr %x) {
 ; CHECK-LABEL: @three_gep_f(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [[THREE_GEP_T2:%.*]], ptr [[X:%.*]], i64 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 8
 ; CHECK-NEXT:    call void @three_gep_h(ptr [[GEP1]])
 ; CHECK-NEXT:    call void @three_gep_g(ptr [[GEP1]])
 ; CHECK-NEXT:    ret void
@@ -911,7 +912,7 @@ declare void @three_gep_h(ptr)
 
 define void @test39(ptr %arg, i8 %arg1) nounwind {
 ; CHECK-LABEL: @test39(
-; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds [[STRUCT_HAM:%.*]], ptr [[ARG:%.*]], i64 0, i32 2
+; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 16
 ; CHECK-NEXT:    [[T2:%.*]] = load ptr, ptr [[T]], align 8
 ; CHECK-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[T2]], i64 -8
 ; CHECK-NEXT:    store i8 [[ARG1:%.*]], ptr [[T4]], align 8
@@ -1162,7 +1163,7 @@ define ptr @test48(ptr %I, i64 %C, i64 %D) {
 
 define ptr @test49(ptr %I, i64 %C) {
 ; CHECK-LABEL: @test49(
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[I:%.*]], i64 -1
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[I:%.*]], i64 -4
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
   %notC = xor i64 -1, %C
@@ -1229,7 +1230,7 @@ define ptr @test_nzgep_zgep(ptr %base, i64 %idx) {
 
 define ptr @test_gep_inbounds_of_gep(ptr %base) {
 ; CHECK-LABEL: @test_gep_inbounds_of_gep(
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 8
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 32
 ; CHECK-NEXT:    ret ptr [[PTR2]]
 ;
   %ptr1 = getelementptr i32, ptr %base, i64 4
@@ -1318,7 +1319,7 @@ define i32 @test_gep_bitcast_malloc(ptr %a) {
 ; CHECK-LABEL: @test_gep_bitcast_malloc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(16) ptr @malloc(i64 16)
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr [[STRUCT_A:%.*]], ptr [[CALL]], i64 0, i32 2
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr i8, ptr [[CALL]], i64 12
 ; CHECK-NEXT:    [[A_C:%.*]] = load i32, ptr [[G3]], align 4
 ; CHECK-NEXT:    ret i32 [[A_C]]
 ;
@@ -1331,9 +1332,9 @@ entry:
 
 define ptr @gep_of_gep_multiuse_const_and_const(ptr %p, i64 %idx) {
 ; CHECK-LABEL: @gep_of_gep_multiuse_const_and_const(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr { i32, i32 }, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr { i32, i32 }, ptr [[P]], i64 1, i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[P]], i64 12
 ; CHECK-NEXT:    ret ptr [[GEP2]]
 ;
   %gep1 = getelementptr { i32, i32 }, ptr %p, i64 1
@@ -1346,7 +1347,7 @@ define ptr @gep_of_gep_multiuse_var_and_const(ptr %p, i64 %idx) {
 ; CHECK-LABEL: @gep_of_gep_multiuse_var_and_const(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr { i32, i32 }, ptr [[P:%.*]], i64 [[IDX:%.*]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr { i32, i32 }, ptr [[P]], i64 [[IDX]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP2]]
 ;
   %gep1 = getelementptr { i32, i32 }, ptr %p, i64 %idx

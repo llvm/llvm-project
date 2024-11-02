@@ -547,18 +547,20 @@ static void PrintVersion(raw_ostream &OS) {
 // Dump the configuration.
 static int dumpConfig(bool IsSTDIN) {
   std::unique_ptr<llvm::MemoryBuffer> Code;
-  // We can't read the code to detect the language if there's no file name.
-  if (!IsSTDIN) {
-    // Read in the code in case the filename alone isn't enough to detect the
-    // language.
-    ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-        MemoryBuffer::getFileOrSTDIN(FileNames[0]);
-    if (std::error_code EC = CodeOrErr.getError()) {
-      llvm::errs() << EC.message() << "\n";
-      return 1;
-    }
-    Code = std::move(CodeOrErr.get());
+
+  // `FileNames` must have at least "-" in it even if no file was specified.
+  assert(!FileNames.empty());
+
+  // Read in the code in case the filename alone isn't enough to detect the
+  // language.
+  ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+      MemoryBuffer::getFileOrSTDIN(FileNames[0]);
+  if (std::error_code EC = CodeOrErr.getError()) {
+    llvm::errs() << EC.message() << "\n";
+    return 1;
   }
+  Code = std::move(CodeOrErr.get());
+
   llvm::Expected<clang::format::FormatStyle> FormatStyle =
       clang::format::getStyle(Style, IsSTDIN ? AssumeFileName : FileNames[0],
                               FallbackStyle, Code ? Code->getBuffer() : "");

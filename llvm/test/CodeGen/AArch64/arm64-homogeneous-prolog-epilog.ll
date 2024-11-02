@@ -74,6 +74,6 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ; CHECK-LINUX-NEXT: ret     x16
 
 ; nothing to check - hit assert if not bailing out for swiftasync
-define void @swift_async(i8* swiftasync %ctx) minsize "frame-pointer"="all" {
+define void @swift_async(ptr swiftasync %ctx) minsize "frame-pointer"="all" {
   ret void
 }

@@ -27,7 +27,7 @@ define <2 x i32> @scalarize_v2i32(<2 x ptr> %p, <2 x i1> %mask, <2 x i32> %passt
 ; CHECK-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i32> [ [[RES1]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ]
 ; CHECK-NEXT:    ret <2 x i32> [[RES_PHI_ELSE3]]
 ;
-  %ret = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x ptr> %p, i32 8, <2 x i1> %mask, <2 x i32> %passthru)
+  %ret = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> %p, i32 8, <2 x i1> %mask, <2 x i32> %passthru)
   ret <2 x i32> %ret
 }
 
@@ -54,9 +54,9 @@ define void @scalarize_v2i64(<2 x ptr> %p, <2 x i1> %mask, <2 x i64> %value) {
 ; CHECK:       else2:
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64> %value, <2 x ptr> %p, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %value, <2 x ptr> %p, i32 8, <2 x i1> %mask)
   ret void
 }
 
-declare <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*>, i32, <2 x i1>, <2 x i32>)
-declare void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64>, <2 x i64*>, i32, <2 x i1>)
+declare <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i32>)
+declare void @llvm.masked.scatter.v2i64.v2p0(<2 x i64>, <2 x ptr>, i32, <2 x i1>)

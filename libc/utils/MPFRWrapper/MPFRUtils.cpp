@@ -451,7 +451,7 @@ public:
     if (is_nan()) {
       if (FPBits<T>(input).is_nan())
         return MPFRNumber(0.0);
-      return MPFRNumber(static_cast<T>(FPBits<T>::inf()));
+      return MPFRNumber(FPBits<T>::inf().get_val());
     }
 
     int thisExponent = FPBits<T>(thisAsT).get_exponent();

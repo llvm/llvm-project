@@ -56,11 +56,17 @@
 
 #elif TEST_STD_VER > 23
 
-# ifndef __cpp_lib_fstream_native_handle
-#   error "__cpp_lib_fstream_native_handle should be defined in c++26"
-# endif
-# if __cpp_lib_fstream_native_handle != 202306L
-#   error "__cpp_lib_fstream_native_handle should have the value 202306L in c++26"
+# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))
+#   ifndef __cpp_lib_fstream_native_handle
+#     error "__cpp_lib_fstream_native_handle should be defined in c++26"
+#   endif
+#   if __cpp_lib_fstream_native_handle != 202306L
+#     error "__cpp_lib_fstream_native_handle should have the value 202306L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_fstream_native_handle
+#     error "__cpp_lib_fstream_native_handle should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))' is not met!"
+#   endif
 # endif
 
 #endif // TEST_STD_VER > 23

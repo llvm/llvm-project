@@ -643,7 +643,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
                                                                   : "200704");
     Builder.defineMacro("__cpp_constexpr_in_decltype", "201711L");
     Builder.defineMacro("__cpp_range_based_for",
-                        LangOpts.CPlusPlus17 ? "201603L" : "200907");
+                        LangOpts.CPlusPlus23   ? "202211L"
+                        : LangOpts.CPlusPlus17 ? "201603L"
+                                               : "200907");
     Builder.defineMacro("__cpp_static_assert", LangOpts.CPlusPlus26 ? "202306L"
                                                : LangOpts.CPlusPlus17
                                                    ? "201411L"

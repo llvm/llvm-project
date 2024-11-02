@@ -728,8 +728,8 @@ wrapper functions that are registered as global constructors in
 ``llvm.global_ctors`` and which contain a call to ``__cxa_atexit`` to register
 their destructor functions.
 
-``loweratomic``: Lower atomic intrinsics to non-atomic form
------------------------------------------------------------
+``lower-atomic``: Lower atomic intrinsics to non-atomic form
+------------------------------------------------------------
 
 This pass lowers atomic intrinsics to non-atomic form for use in a known
 non-preemptible environment.
@@ -739,8 +739,8 @@ this would require knowledge of the entire call graph of the program including
 any libraries which may not be available in bitcode form); it simply lowers
 every atomic intrinsic.
 
-``lowerinvoke``: Lower invokes to calls, for unwindless code generators
------------------------------------------------------------------------
+``lower-invoke``: Lower invokes to calls, for unwindless code generators
+------------------------------------------------------------------------
 
 This transformation is designed for use by code generators which do not yet
 support stack unwinding.  This pass converts ``invoke`` instructions to
@@ -748,8 +748,8 @@ support stack unwinding.  This pass converts ``invoke`` instructions to
 become dead code (which can be removed by running the ``-simplifycfg`` pass
 afterwards).
 
-``lowerswitch``: Lower ``SwitchInst``\ s to branches
-----------------------------------------------------
+``lower-switch``: Lower ``SwitchInst``\ s to branches
+-----------------------------------------------------
 
 Rewrites switch instructions with a sequence of branches, which allows targets
 to get away with not implementing the switch instruction until it is

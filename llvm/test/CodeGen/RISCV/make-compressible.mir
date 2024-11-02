@@ -5,284 +5,284 @@
 # RUN:   -run-pass=riscv-make-compressible | FileCheck --check-prefix=RV64 %s
 --- |
 
-  define void @store_common_value(i32* %a, i32* %b, i32* %c) #0 {
+  define void @store_common_value(ptr %a, ptr %b, ptr %c) #0 {
   entry:
-    store i32 0, i32* %a, align 4
-    store i32 0, i32* %b, align 4
-    store i32 0, i32* %c, align 4
+    store i32 0, ptr %a, align 4
+    store i32 0, ptr %b, align 4
+    store i32 0, ptr %c, align 4
     ret void
   }
 
-  define void @store_common_value_float(float* %a, float* %b, float* %c, float %d, float %e, float %f, float %g, float %h, float %i, float %j) #0 {
+  define void @store_common_value_float(ptr %a, ptr %b, ptr %c, float %d, float %e, float %f, float %g, float %h, float %i, float %j) #0 {
   entry:
-    store float %j, float* %a, align 4
-    store float %j, float* %b, align 4
-    store float %j, float* %c, align 4
+    store float %j, ptr %a, align 4
+    store float %j, ptr %b, align 4
+    store float %j, ptr %c, align 4
     ret void
   }
 
-  define void @store_common_value_double(double* %a, double* %b, double* %c, double %d, double %e, double %f, double %g, double %h, double %i, double %j) #0 {
+  define void @store_common_value_double(ptr %a, ptr %b, ptr %c, double %d, double %e, double %f, double %g, double %h, double %i, double %j) #0 {
   entry:
-    store double %j, double* %a, align 8
-    store double %j, double* %b, align 8
-    store double %j, double* %c, align 8
+    store double %j, ptr %a, align 8
+    store double %j, ptr %b, align 8
+    store double %j, ptr %c, align 8
     ret void
   }
 
-  define void @store_common_ptr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32* %p) #0 {
+  define void @store_common_ptr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %p) #0 {
   entry:
-    store volatile i32 1, i32* %p, align 4
-    store volatile i32 3, i32* %p, align 4
-    store volatile i32 5, i32* %p, align 4
+    store volatile i32 1, ptr %p, align 4
+    store volatile i32 3, ptr %p, align 4
+    store volatile i32 5, ptr %p, align 4
     ret void
   }
 
-  define void @store_common_ptr_self(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32* %p) #0 {
+  define void @store_common_ptr_self(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %p) #0 {
   entry:
-    %q = bitcast i32* %p to i32**
-    store volatile i32 1, i32* %p, align 4
-    store volatile i32 3, i32* %p, align 4
-    store volatile i32* %p, i32** %q, align 4
+    %q = bitcast ptr %p to ptr
+    store volatile i32 1, ptr %p, align 4
+    store volatile i32 3, ptr %p, align 4
+    store volatile ptr %p, ptr %q, align 4
     ret void
   }
 
-  define void @store_common_ptr_float(float %a, float %b, float %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, float* %p) #0 {
+  define void @store_common_ptr_float(float %a, float %b, float %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, ptr %p) #0 {
   entry:
-    store volatile float %a, float* %p, align 4
-    store volatile float %b, float* %p, align 4
-    store volatile float %c, float* %p, align 4
+    store volatile float %a, ptr %p, align 4
+    store volatile float %b, ptr %p, align 4
+    store volatile float %c, ptr %p, align 4
     ret void
   }
 
-  define void @store_common_ptr_double(double %a, double %b, double %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, double* %p) #0 {
+  define void @store_common_ptr_double(double %a, double %b, double %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, ptr %p) #0 {
   entry:
-    store volatile double %a, double* %p, align 8
-    store volatile double %b, double* %p, align 8
-    store volatile double %c, double* %p, align 8
+    store volatile double %a, ptr %p, align 8
+    store volatile double %b, ptr %p, align 8
+    store volatile double %c, ptr %p, align 8
     ret void
   }
 
-  define void @load_common_ptr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32* %p) #0 {
+  define void @load_common_ptr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %p) #0 {
   entry:
-    %g = load volatile i32, i32* %p, align 4
-    %h = load volatile i32, i32* %p, align 4
-    %i = load volatile i32, i32* %p, align 4
+    %g = load volatile i32, ptr %p, align 4
+    %h = load volatile i32, ptr %p, align 4
+    %i = load volatile i32, ptr %p, align 4
     ret void
   }
 
-  define void @load_common_ptr_float(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, float* %g) #0 {
+  define void @load_common_ptr_float(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) #0 {
   entry:
-    %0 = load float, float* %g, align 4
-    %arrayidx1 = getelementptr inbounds float, float* %g, i32 1
-    %1 = load float, float* %arrayidx1, align 4
-    %arrayidx2 = getelementptr inbounds float, float* %g, i32 2
-    %2 = load float, float* %arrayidx2, align 4
+    %0 = load float, ptr %g, align 4
+    %arrayidx1 = getelementptr inbounds float, ptr %g, i32 1
+    %1 = load float, ptr %arrayidx1, align 4
+    %arrayidx2 = getelementptr inbounds float, ptr %g, i32 2
+    %2 = load float, ptr %arrayidx2, align 4
     tail call void @load_common_ptr_float_1(float %0, float %1, float %2)
     ret void
   }
 
   declare void @load_common_ptr_float_1(float, float, float) #0
 
-  define void @load_common_ptr_double(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, double* %g) #0 {
+  define void @load_common_ptr_double(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) #0 {
   entry:
-    %0 = load double, double* %g, align 8
-    %arrayidx1 = getelementptr inbounds double, double* %g, i32 1
-    %1 = load double, double* %arrayidx1, align 8
-    %arrayidx2 = getelementptr inbounds double, double* %g, i32 2
-    %2 = load double, double* %arrayidx2, align 8
+    %0 = load double, ptr %g, align 8
+    %arrayidx1 = getelementptr inbounds double, ptr %g, i32 1
+    %1 = load double, ptr %arrayidx1, align 8
+    %arrayidx2 = getelementptr inbounds double, ptr %g, i32 2
+    %2 = load double, ptr %arrayidx2, align 8
     tail call void @load_common_ptr_double_1(double %0, double %1, double %2)
     ret void
   }
 
   declare void @load_common_ptr_double_1(double, double, double) #0
 
-  define void @store_large_offset(i32* %p) #0 {
+  define void @store_large_offset(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i32, i32* %p, i32 100
-    store volatile i32 1, i32* %0, align 4
-    %1 = getelementptr inbounds i32, i32* %p, i32 101
-    store volatile i32 3, i32* %1, align 4
-    %2 = getelementptr inbounds i32, i32* %p, i32 102
-    store volatile i32 5, i32* %2, align 4
-    %3 = getelementptr inbounds i32, i32* %p, i32 103
-    store volatile i32 7, i32* %3, align 4
+    %0 = getelementptr inbounds i32, ptr %p, i32 100
+    store volatile i32 1, ptr %0, align 4
+    %1 = getelementptr inbounds i32, ptr %p, i32 101
+    store volatile i32 3, ptr %1, align 4
+    %2 = getelementptr inbounds i32, ptr %p, i32 102
+    store volatile i32 5, ptr %2, align 4
+    %3 = getelementptr inbounds i32, ptr %p, i32 103
+    store volatile i32 7, ptr %3, align 4
     ret void
   }
 
-  define void @store_large_offset_float(float* %p, float %a, float %b, float %c, float %d) #0 {
+  define void @store_large_offset_float(ptr %p, float %a, float %b, float %c, float %d) #0 {
   entry:
-    %0 = getelementptr inbounds float, float* %p, i32 100
-    store volatile float %a, float* %0, align 4
-    %1 = getelementptr inbounds float, float* %p, i32 101
-    store volatile float %b, float* %1, align 4
-    %2 = getelementptr inbounds float, float* %p, i32 102
-    store volatile float %c, float* %2, align 4
-    %3 = getelementptr inbounds float, float* %p, i32 103
-    store volatile float %d, float* %3, align 4
+    %0 = getelementptr inbounds float, ptr %p, i32 100
+    store volatile float %a, ptr %0, align 4
+    %1 = getelementptr inbounds float, ptr %p, i32 101
+    store volatile float %b, ptr %1, align 4
+    %2 = getelementptr inbounds float, ptr %p, i32 102
+    store volatile float %c, ptr %2, align 4
+    %3 = getelementptr inbounds float, ptr %p, i32 103
+    store volatile float %d, ptr %3, align 4
     ret void
   }
 
-  define void @store_large_offset_double(double* %p, double %a, double %b, double %c, double %d) #0 {
+  define void @store_large_offset_double(ptr %p, double %a, double %b, double %c, double %d) #0 {
   entry:
-    %0 = getelementptr inbounds double, double* %p, i32 100
-    store volatile double %a, double* %0, align 8
-    %1 = getelementptr inbounds double, double* %p, i32 101
-    store volatile double %b, double* %1, align 8
-    %2 = getelementptr inbounds double, double* %p, i32 102
-    store volatile double %c, double* %2, align 8
-    %3 = getelementptr inbounds double, double* %p, i32 103
-    store volatile double %d, double* %3, align 8
+    %0 = getelementptr inbounds double, ptr %p, i32 100
+    store volatile double %a, ptr %0, align 8
+    %1 = getelementptr inbounds double, ptr %p, i32 101
+    store volatile double %b, ptr %1, align 8
+    %2 = getelementptr inbounds double, ptr %p, i32 102
+    store volatile double %c, ptr %2, align 8
+    %3 = getelementptr inbounds double, ptr %p, i32 103
+    store volatile double %d, ptr %3, align 8
     ret void
   }
 
-  define void @load_large_offset(i32* %p) #0 {
+  define void @load_large_offset(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i32, i32* %p, i32 100
-    %a = load volatile i32, i32* %0, align 4
-    %1 = getelementptr inbounds i32, i32* %p, i32 101
-    %b = load volatile i32, i32* %1, align 4
-    %2 = getelementptr inbounds i32, i32* %p, i32 102
-    %c = load volatile i32, i32* %2, align 4
-    %3 = getelementptr inbounds i32, i32* %p, i32 103
-    %d = load volatile i32, i32* %3, align 4
+    %0 = getelementptr inbounds i32, ptr %p, i32 100
+    %a = load volatile i32, ptr %0, align 4
+    %1 = getelementptr inbounds i32, ptr %p, i32 101
+    %b = load volatile i32, ptr %1, align 4
+    %2 = getelementptr inbounds i32, ptr %p, i32 102
+    %c = load volatile i32, ptr %2, align 4
+    %3 = getelementptr inbounds i32, ptr %p, i32 103
+    %d = load volatile i32, ptr %3, align 4
     ret void
   }
 
-  define void @load_large_offset_float(float* %p) #0 {
+  define void @load_large_offset_float(ptr %p) #0 {
   entry:
-    %arrayidx = getelementptr inbounds float, float* %p, i32 100
-    %0 = load float, float* %arrayidx, align 4
-    %arrayidx1 = getelementptr inbounds float, float* %p, i32 101
-    %1 = load float, float* %arrayidx1, align 4
-    %arrayidx2 = getelementptr inbounds float, float* %p, i32 102
-    %2 = load float, float* %arrayidx2, align 4
+    %arrayidx = getelementptr inbounds float, ptr %p, i32 100
+    %0 = load float, ptr %arrayidx, align 4
+    %arrayidx1 = getelementptr inbounds float, ptr %p, i32 101
+    %1 = load float, ptr %arrayidx1, align 4
+    %arrayidx2 = getelementptr inbounds float, ptr %p, i32 102
+    %2 = load float, ptr %arrayidx2, align 4
     tail call void @load_large_offset_float_1(float %0, float %1, float %2)
     ret void
   }
 
   declare void @load_large_offset_float_1(float, float, float) #0
 
-  define void @load_large_offset_double(double* %p) #0 {
+  define void @load_large_offset_double(ptr %p) #0 {
   entry:
-    %arrayidx = getelementptr inbounds double, double* %p, i32 100
-    %0 = load double, double* %arrayidx, align 8
-    %arrayidx1 = getelementptr inbounds double, double* %p, i32 101
-    %1 = load double, double* %arrayidx1, align 8
-    %arrayidx2 = getelementptr inbounds double, double* %p, i32 102
-    %2 = load double, double* %arrayidx2, align 8
+    %arrayidx = getelementptr inbounds double, ptr %p, i32 100
+    %0 = load double, ptr %arrayidx, align 8
+    %arrayidx1 = getelementptr inbounds double, ptr %p, i32 101
+    %1 = load double, ptr %arrayidx1, align 8
+    %arrayidx2 = getelementptr inbounds double, ptr %p, i32 102
+    %2 = load double, ptr %arrayidx2, align 8
     tail call void @load_large_offset_double_1(double %0, double %1, double %2)
     ret void
   }
 
   declare void @load_large_offset_double_1(double, double, double) #0
 
-  define void @store_common_value_no_opt(i32* %a) #0 {
+  define void @store_common_value_no_opt(ptr %a) #0 {
   entry:
-    store i32 0, i32* %a, align 4
+    store i32 0, ptr %a, align 4
     ret void
   }
 
-  define void @store_common_value_float_no_opt(float* %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h) #0 {
+  define void @store_common_value_float_no_opt(ptr %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h) #0 {
   entry:
-    store float %h, float* %a, align 4
+    store float %h, ptr %a, align 4
     ret void
   }
 
-  define void @store_common_value_double_no_opt(double* %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h) #0 {
+  define void @store_common_value_double_no_opt(ptr %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h) #0 {
   entry:
-    store double %h, double* %a, align 8
+    store double %h, ptr %a, align 8
     ret void
   }
 
-  define void @store_common_ptr_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32* %p) #0 {
+  define void @store_common_ptr_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %p) #0 {
   entry:
-    store volatile i32 1, i32* %p, align 4
+    store volatile i32 1, ptr %p, align 4
     ret void
   }
 
-  define void @store_common_ptr_float_no_opt(float %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, float* %p) #0 {
+  define void @store_common_ptr_float_no_opt(float %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, ptr %p) #0 {
   entry:
-    store volatile float %a, float* %p, align 4
+    store volatile float %a, ptr %p, align 4
     ret void
   }
 
-  define void @store_common_ptr_double_no_opt(double %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, double* %p) #0 {
+  define void @store_common_ptr_double_no_opt(double %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, ptr %p) #0 {
   entry:
-    store volatile double %a, double* %p, align 8
+    store volatile double %a, ptr %p, align 8
     ret void
   }
 
-  define void @load_common_ptr_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32* %p) #0 {
+  define void @load_common_ptr_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %p) #0 {
   entry:
-    %g = load volatile i32, i32* %p, align 4
+    %g = load volatile i32, ptr %p, align 4
     ret void
   }
 
-  define float @load_common_ptr_float_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, float* %g) #0 {
+  define float @load_common_ptr_float_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) #0 {
   entry:
-    %0 = load float, float* %g, align 4
+    %0 = load float, ptr %g, align 4
     ret float %0
   }
 
-  define double @load_common_ptr_double_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, double* %g) #0 {
+  define double @load_common_ptr_double_no_opt(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, ptr %g) #0 {
   entry:
-    %0 = load double, double* %g, align 8
+    %0 = load double, ptr %g, align 8
     ret double %0
   }
 
-  define void @store_large_offset_no_opt(i32* %p) #0 {
+  define void @store_large_offset_no_opt(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i32, i32* %p, i32 100
-    store volatile i32 1, i32* %0, align 4
-    %1 = getelementptr inbounds i32, i32* %p, i32 101
-    store volatile i32 3, i32* %1, align 4
+    %0 = getelementptr inbounds i32, ptr %p, i32 100
+    store volatile i32 1, ptr %0, align 4
+    %1 = getelementptr inbounds i32, ptr %p, i32 101
+    store volatile i32 3, ptr %1, align 4
     ret void
   }
 
-  define void @store_large_offset_float_no_opt(float* %p, float %a, float %b) #0 {
+  define void @store_large_offset_float_no_opt(ptr %p, float %a, float %b) #0 {
   entry:
-    %0 = getelementptr inbounds float, float* %p, i32 100
-    store volatile float %a, float* %0, align 4
-    %1 = getelementptr inbounds float, float* %p, i32 101
-    store volatile float %b, float* %1, align 4
+    %0 = getelementptr inbounds float, ptr %p, i32 100
+    store volatile float %a, ptr %0, align 4
+    %1 = getelementptr inbounds float, ptr %p, i32 101
+    store volatile float %b, ptr %1, align 4
     ret void
   }
 
-  define void @store_large_offset_double_no_opt(double* %p, double %a, double %b) #0 {
+  define void @store_large_offset_double_no_opt(ptr %p, double %a, double %b) #0 {
   entry:
-    %0 = getelementptr inbounds double, double* %p, i32 100
-    store volatile double %a, double* %0, align 8
-    %1 = getelementptr inbounds double, double* %p, i32 101
-    store volatile double %b, double* %1, align 8
+    %0 = getelementptr inbounds double, ptr %p, i32 100
+    store volatile double %a, ptr %0, align 8
+    %1 = getelementptr inbounds double, ptr %p, i32 101
+    store volatile double %b, ptr %1, align 8
     ret void
   }
 
-  define void @load_large_offset_no_opt(i32* %p) #0 {
+  define void @load_large_offset_no_opt(ptr %p) #0 {
   entry:
-    %0 = getelementptr inbounds i32, i32* %p, i32 100
-    %a = load volatile i32, i32* %0, align 4
-    %1 = getelementptr inbounds i32, i32* %p, i32 101
-    %b = load volatile i32, i32* %1, align 4
+    %0 = getelementptr inbounds i32, ptr %p, i32 100
+    %a = load volatile i32, ptr %0, align 4
+    %1 = getelementptr inbounds i32, ptr %p, i32 101
+    %b = load volatile i32, ptr %1, align 4
     ret void
   }
 
-  define { float, float } @load_large_offset_float_no_opt(float* %p) #0 {
+  define { float, float } @load_large_offset_float_no_opt(ptr %p) #0 {
   entry:
-    %arrayidx = getelementptr inbounds float, float* %p, i32 100
-    %0 = load float, float* %arrayidx, align 4
-    %arrayidx1 = getelementptr inbounds float, float* %p, i32 101
-    %1 = load float, float* %arrayidx1, align 4
+    %arrayidx = getelementptr inbounds float, ptr %p, i32 100
+    %0 = load float, ptr %arrayidx, align 4
+    %arrayidx1 = getelementptr inbounds float, ptr %p, i32 101
+    %1 = load float, ptr %arrayidx1, align 4
     %2 = insertvalue { float, float } undef, float %0, 0
     %3 = insertvalue { float, float } %2, float %1, 1
     ret { float, float } %3
   }
 
-  define { double, double } @load_large_offset_double_no_opt(double* %p) #0 {
+  define { double, double } @load_large_offset_double_no_opt(ptr %p) #0 {
   entry:
-    %arrayidx = getelementptr inbounds double, double* %p, i32 100
-    %0 = load double, double* %arrayidx, align 8
-    %arrayidx1 = getelementptr inbounds double, double* %p, i32 101
-    %1 = load double, double* %arrayidx1, align 8
+    %arrayidx = getelementptr inbounds double, ptr %p, i32 100
+    %0 = load double, ptr %arrayidx, align 8
+    %arrayidx1 = getelementptr inbounds double, ptr %p, i32 101
+    %1 = load double, ptr %arrayidx1, align 8
     %2 = insertvalue { double, double } undef, double %0, 0
     %3 = insertvalue { double, double } %2, double %1, 1
     ret { double, double } %3

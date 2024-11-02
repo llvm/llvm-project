@@ -54,11 +54,11 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   }
 
   // Create a descriptor for the string.
-  Descriptor *Desc =
-      allocateDescriptor(S, CharType, std::nullopt, S->getLength() + 1,
-                         /*isConst=*/true,
-                         /*isTemporary=*/false,
-                         /*isMutable=*/false);
+  Descriptor *Desc = allocateDescriptor(S, CharType, Descriptor::InlineDescMD,
+                                        S->getLength() + 1,
+                                        /*isConst=*/true,
+                                        /*isTemporary=*/false,
+                                        /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -67,6 +67,8 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   auto *G = new (Allocator, Sz) Global(Desc, /*isStatic=*/true,
                                        /*isExtern=*/false);
   G->block()->invokeCtor();
+
+  new (G->block()->rawData()) InlineDescriptor(Desc);
   Globals.push_back(G);
 
   // Construct the string in storage.
@@ -78,16 +80,19 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
       case PT_Sint8: {
         using T = PrimConv<PT_Sint8>::T;
         Field.deref<T>() = T::from(CodePoint, BitWidth);
+        Field.initialize();
         break;
       }
       case PT_Uint16: {
         using T = PrimConv<PT_Uint16>::T;
         Field.deref<T>() = T::from(CodePoint, BitWidth);
+        Field.initialize();
         break;
       }
       case PT_Uint32: {
         using T = PrimConv<PT_Uint32>::T;
         Field.deref<T>() = T::from(CodePoint, BitWidth);
+        Field.initialize();
         break;
       }
       default:
@@ -190,12 +195,13 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
-  if (auto T = Ctx.classify(Ty)) {
-    Desc = createDescriptor(D, *T, std::nullopt, IsConst, IsTemporary);
-  } else {
-    Desc = createDescriptor(D, Ty.getTypePtr(), std::nullopt, IsConst,
-                            IsTemporary);
-  }
+  if (std::optional<PrimType> T = Ctx.classify(Ty))
+    Desc =
+        createDescriptor(D, *T, Descriptor::InlineDescMD, IsConst, IsTemporary);
+  else
+    Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::InlineDescMD,
+                            IsConst, IsTemporary);
+
   if (!Desc)
     return std::nullopt;
 
@@ -206,6 +212,8 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
       Global(getCurrentDecl(), Desc, IsStatic, IsExtern);
   G->block()->invokeCtor();
 
+  // Initialize InlineDescriptor fields.
+  new (G->block()->rawData()) InlineDescriptor(Desc);
   Globals.push_back(G);
 
   return I;
@@ -339,7 +347,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
         const Descriptor *ElemDesc = createDescriptor(
-            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
+            D, ElemTy.getTypePtr(), MDSize, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
         unsigned ElemSize =
@@ -355,14 +363,14 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     // is forbidden on pointers to such objects.
     if (isa<IncompleteArrayType>(ArrayType)) {
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
-        return allocateDescriptor(D, *T, IsTemporary,
+        return allocateDescriptor(D, *T, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
         const Descriptor *Desc = createDescriptor(D, ElemTy.getTypePtr(),
                                                   MDSize, IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
-        return allocateDescriptor(D, Desc, IsTemporary,
+        return allocateDescriptor(D, Desc, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});
       }
     }

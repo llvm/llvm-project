@@ -185,9 +185,7 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.ends_with("+"))
-        Val = Val.substr(0, Val.size() - 1);
-      else {
+      if (!Val.consume_back("+")) {
         [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
         assert(!Invalid && "Failed to parse value");
         CmdArgs.push_back(
@@ -353,6 +351,8 @@ void Flang::addTargetOptions(const ArgList &Args,
     CmdArgs.push_back("-target-cpu");
     CmdArgs.push_back(Args.MakeArgString(CPU));
   }
+
+  addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
 
   // Add the target features.
   switch (TC.getArch()) {

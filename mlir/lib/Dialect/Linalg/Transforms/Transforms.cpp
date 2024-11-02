@@ -377,8 +377,11 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
                                                    tensor::UnPackOp unPackOp) {
   // 1. Filter out NYI cases.
-  if (!unPackOp.getOuterDimsPerm().empty())
-    return rewriter.notifyMatchFailure(unPackOp, "outer dims perm NYI");
+  if (!unPackOp.getOuterDimsPerm().empty() &&
+      !isIdentityPermutation(unPackOp.getOuterDimsPerm())) {
+    return rewriter.notifyMatchFailure(unPackOp,
+                                       "non-identity outer dims perm NYI");
+  }
 
   Location loc = unPackOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);

@@ -8,7 +8,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: LIBCXX-AIX-FIXME
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 // https://github.com/llvm/llvm-project/issues/72893
 // XFAIL: target={{x86_64-.*}} && tsan

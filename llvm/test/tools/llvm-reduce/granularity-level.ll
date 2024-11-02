@@ -1,6 +1,6 @@
 ; Test that llvm-reduce produces the same output when starting at a higher granularity level.
 ;
-; RUN: llvm-reduce --delta-passes=functions,instructions --starting-granularity-level=2 --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=functions,instructions --starting-granularity-level=2 --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck -implicit-check-not=uninteresting --check-prefixes=CHECK-ALL,CHECK-FINAL %s
 
 define i32 @uninteresting1() {

@@ -5,7 +5,7 @@ declare void @private_za_callee()
 declare float @llvm.cos.f32(float)
 
 ; Test lazy-save mechanism for a single callee.
-define void @test_lazy_save_1_callee() nounwind "aarch64_pstate_za_shared" {
+define void @test_lazy_save_1_callee() nounwind "aarch64_inout_za" {
 ; CHECK-LABEL: test_lazy_save_1_callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -38,7 +38,7 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_pstate_za_shared" {
 }
 
 ; Test lazy-save mechanism for multiple callees.
-define void @test_lazy_save_2_callees() nounwind "aarch64_pstate_za_shared" {
+define void @test_lazy_save_2_callees() nounwind "aarch64_inout_za" {
 ; CHECK-LABEL: test_lazy_save_2_callees:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
@@ -85,7 +85,7 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_pstate_za_shared" {
 }
 
 ; Test a call of an intrinsic that gets expanded to a library call.
-define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_pstate_za_shared" {
+define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_inout_za" {
 ; CHECK-LABEL: test_lazy_save_expanded_intrinsic:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -118,7 +118,7 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_psta
 }
 
 ; Test a combination of streaming-compatible -> normal call with lazy-save.
-define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_pstate_za_shared" "aarch64_pstate_sm_compatible" {
+define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za" "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: test_lazy_save_and_conditional_smstart:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill

@@ -30,7 +30,7 @@ define void @zt0_in_caller_no_state_callee() "aarch64_in_zt0" nounwind {
 ; Expect spill & fill of ZT0 around call
 ; Expect setup and restore lazy-save around call
 ; Expect smstart za after call
-define void @za_zt0_shared_caller_no_state_callee() "aarch64_pstate_za_shared" "aarch64_in_zt0" nounwind {
+define void @za_zt0_shared_caller_no_state_callee() "aarch64_inout_za" "aarch64_in_zt0" nounwind {
 ; CHECK-LABEL: za_zt0_shared_caller_no_state_callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
@@ -84,7 +84,7 @@ define void @zt0_shared_caller_zt0_shared_callee() "aarch64_in_zt0" nounwind {
 }
 
 ; Expect spill & fill of ZT0 around call
-define void @za_zt0_shared_caller_za_shared_callee() "aarch64_pstate_za_shared" "aarch64_in_zt0" nounwind {
+define void @za_zt0_shared_caller_za_shared_callee() "aarch64_inout_za" "aarch64_in_zt0" nounwind {
 ; CHECK-LABEL: za_zt0_shared_caller_za_shared_callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
@@ -106,12 +106,12 @@ define void @za_zt0_shared_caller_za_shared_callee() "aarch64_pstate_za_shared" 
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @callee() "aarch64_pstate_za_shared";
+  call void @callee() "aarch64_inout_za";
   ret void;
 }
 
 ; Caller and callee have shared ZA & ZT0
-define void @za_zt0_shared_caller_za_zt0_shared_callee() "aarch64_pstate_za_shared" "aarch64_in_zt0" nounwind {
+define void @za_zt0_shared_caller_za_zt0_shared_callee() "aarch64_inout_za" "aarch64_in_zt0" nounwind {
 ; CHECK-LABEL: za_zt0_shared_caller_za_zt0_shared_callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -128,7 +128,7 @@ define void @za_zt0_shared_caller_za_zt0_shared_callee() "aarch64_pstate_za_shar
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @callee() "aarch64_pstate_za_shared" "aarch64_in_zt0";
+  call void @callee() "aarch64_inout_za" "aarch64_in_zt0";
   ret void;
 }
 
@@ -189,7 +189,7 @@ define void @zt0_new_caller() "aarch64_new_zt0" nounwind {
 ; Expect commit of lazy-save if ZA is dormant
 ; Expect smstart ZA, clear ZA & clear ZT0
 ; Before return, expect smstop ZA
-define void @new_za_zt0_caller() "aarch64_pstate_za_new" "aarch64_new_zt0" nounwind {
+define void @new_za_zt0_caller() "aarch64_new_za" "aarch64_new_zt0" nounwind {
 ; CHECK-LABEL: new_za_zt0_caller:
 ; CHECK:       // %bb.0: // %prelude
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -219,12 +219,12 @@ define void @new_za_zt0_caller() "aarch64_pstate_za_new" "aarch64_new_zt0" nounw
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @callee() "aarch64_pstate_za_shared" "aarch64_in_zt0";
+  call void @callee() "aarch64_inout_za" "aarch64_in_zt0";
   ret void;
 }
 
 ; Expect clear ZA on entry
-define void @new_za_shared_zt0_caller() "aarch64_pstate_za_new" "aarch64_in_zt0" nounwind {
+define void @new_za_shared_zt0_caller() "aarch64_new_za" "aarch64_in_zt0" nounwind {
 ; CHECK-LABEL: new_za_shared_zt0_caller:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -242,12 +242,12 @@ define void @new_za_shared_zt0_caller() "aarch64_pstate_za_new" "aarch64_in_zt0"
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @callee() "aarch64_pstate_za_shared" "aarch64_in_zt0";
+  call void @callee() "aarch64_inout_za" "aarch64_in_zt0";
   ret void;
 }
 
 ; Expect clear ZT0 on entry
-define void @shared_za_new_zt0() "aarch64_pstate_za_shared" "aarch64_new_zt0" nounwind {
+define void @shared_za_new_zt0() "aarch64_inout_za" "aarch64_new_zt0" nounwind {
 ; CHECK-LABEL: shared_za_new_zt0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -265,6 +265,6 @@ define void @shared_za_new_zt0() "aarch64_pstate_za_shared" "aarch64_new_zt0" no
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @callee() "aarch64_pstate_za_shared" "aarch64_in_zt0";
+  call void @callee() "aarch64_inout_za" "aarch64_in_zt0";
   ret void;
 }

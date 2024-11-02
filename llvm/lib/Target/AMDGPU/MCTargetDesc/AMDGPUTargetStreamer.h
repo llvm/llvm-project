@@ -173,6 +173,7 @@ class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
 
   unsigned getEFlagsV3();
   unsigned getEFlagsV4();
+  unsigned getEFlagsV6();
 
 public:
   AMDGPUTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);

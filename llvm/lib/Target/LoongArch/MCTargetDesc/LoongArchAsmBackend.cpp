@@ -17,9 +17,12 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "loongarch-asmbackend"
 
@@ -174,6 +177,70 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   for (unsigned I = 0; I != NumBytes; ++I) {
     Data[Offset + I] |= uint8_t((Value >> (I * 8)) & 0xff);
   }
+}
+
+// Linker relaxation may change code size. We have to insert Nops
+// for .align directive when linker relaxation enabled. So then Linker
+// could satisfy alignment by removing Nops.
+// The function returns the total Nops Size we need to insert.
+bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
+    const MCAlignFragment &AF, unsigned &Size) {
+  // Calculate Nops Size only when linker relaxation enabled.
+  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
+    return false;
+
+  // Ignore alignment if MaxBytesToEmit is less than the minimum Nop size.
+  const unsigned MinNopLen = 4;
+  if (AF.getMaxBytesToEmit() < MinNopLen)
+    return false;
+  Size = AF.getAlignment().value() - MinNopLen;
+  return AF.getAlignment() > MinNopLen;
+}
+
+// We need to insert R_LARCH_ALIGN relocation type to indicate the
+// position of Nops and the total bytes of the Nops have been inserted
+// when linker relaxation enabled.
+// The function inserts fixup_loongarch_align fixup which eventually will
+// transfer to R_LARCH_ALIGN relocation type.
+// The improved R_LARCH_ALIGN requires symbol index. The lowest 8 bits of
+// addend represent alignment and the other bits of addend represent the
+// maximum number of bytes to emit. The maximum number of bytes is zero
+// means ignore the emit limit.
+bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
+    MCAssembler &Asm, const MCAsmLayout &Layout, MCAlignFragment &AF) {
+  // Insert the fixup only when linker relaxation enabled.
+  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
+    return false;
+
+  // Calculate total Nops we need to insert. If there are none to insert
+  // then simply return.
+  unsigned Count;
+  if (!shouldInsertExtraNopBytesForCodeAlign(AF, Count))
+    return false;
+
+  MCSection *Sec = AF.getParent();
+  MCContext &Ctx = Asm.getContext();
+  const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
+  // Create fixup_loongarch_align fixup.
+  MCFixup Fixup =
+      MCFixup::create(0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_align));
+  const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
+  if (MCSym == nullptr) {
+    // Create a symbol and make the value of symbol is zero.
+    MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
+    Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
+    Asm.registerSymbol(*Sym);
+    MCSym = MCSymbolRefExpr::create(Sym, Ctx);
+    getSecToAlignSym()[Sec] = MCSym;
+  }
+
+  uint64_t FixedValue = 0;
+  unsigned Lo = Log2_64(Count) + 1;
+  unsigned Hi = AF.getMaxBytesToEmit() >= Count ? 0 : AF.getMaxBytesToEmit();
+  MCValue Value = MCValue::get(MCSym, nullptr, Hi << 8 | Lo);
+  Asm.getWriter().recordRelocation(Asm, Layout, &AF, Fixup, Value, FixedValue);
+
+  return true;
 }
 
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,

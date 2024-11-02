@@ -1812,8 +1812,10 @@ struct CounterCoverageMappingBuilder
     assert(S->isConstexpr());
 
     // evaluate constant condition...
-    const auto *E = cast<ConstantExpr>(S->getCond());
-    const bool isTrue = E->getResultAsAPSInt().getExtValue();
+    const bool isTrue =
+        S->getCond()
+            ->EvaluateKnownConstInt(CVM.getCodeGenModule().getContext())
+            .getBoolValue();
 
     extendRegion(S);
 

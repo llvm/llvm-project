@@ -10218,20 +10218,6 @@ INTERCEPTOR(int, __xuname, int size, void *utsname) {
 #define INIT___XUNAME
 #endif
 
-#if SANITIZER_INTERCEPT_HEXDUMP
-INTERCEPTOR(void, hexdump, const void *ptr, int length, const char *header, int flags) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, hexdump, ptr, length, header, flags);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, length);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, header, internal_strlen(header) + 1);
-  REAL(hexdump)(ptr, length, header, flags);
-}
-
-#define INIT_HEXDUMP COMMON_INTERCEPT_FUNCTION(hexdump);
-#else
-#define INIT_HEXDUMP
-#endif
-
 #if SANITIZER_INTERCEPT_ARGP_PARSE
 INTERCEPTOR(int, argp_parse, const struct argp *argp, int argc, char **argv,
             unsigned flags, int *arg_index, void *input) {
@@ -10581,7 +10567,6 @@ static void InitializeCommonInterceptors() {
   INIT_PROCCTL
   INIT_UNAME;
   INIT___XUNAME;
-  INIT_HEXDUMP;
   INIT_ARGP_PARSE;
   INIT_CPUSET_GETAFFINITY;
 

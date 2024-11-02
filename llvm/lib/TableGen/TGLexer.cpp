@@ -360,6 +360,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
                             .Case("foreach", tgtok::Foreach)
                             .Case("defm", tgtok::Defm)
                             .Case("defset", tgtok::Defset)
+                            .Case("deftype", tgtok::Deftype)
                             .Case("multiclass", tgtok::MultiClass)
                             .Case("field", tgtok::Field)
                             .Case("let", tgtok::Let)

@@ -337,6 +337,10 @@ bool DPValue::isKillAddress() const {
   return !Addr || isa<UndefValue>(Addr);
 }
 
+const Instruction *DPValue::getInstruction() const {
+  return Marker->MarkedInstr;
+}
+
 const BasicBlock *DPValue::getParent() const {
   return Marker->MarkedInstr->getParent();
 }
@@ -430,13 +434,23 @@ void DPMarker::removeMarker() {
   // instruction. If there isn't a next instruction, put them on the
   // "trailing" list.
   DPMarker *NextMarker = Owner->getParent()->getNextMarker(Owner);
-  if (NextMarker == nullptr) {
-    NextMarker = new DPMarker();
-    Owner->getParent()->setTrailingDPValues(NextMarker);
+  if (NextMarker) {
+    NextMarker->absorbDebugValues(*this, true);
+    eraseFromParent();
+  } else {
+    // We can avoid a deallocation -- just store this marker onto the next
+    // instruction. Unless we're at the end of the block, in which case this
+    // marker becomes the trailing marker of a degenerate block.
+    BasicBlock::iterator NextIt = std::next(Owner->getIterator());
+    if (NextIt == getParent()->end()) {
+      getParent()->setTrailingDPValues(this);
+      MarkedInstr = nullptr;
+    } else {
+      NextIt->DbgMarker = this;
+      MarkedInstr = &*NextIt;
+    }
   }
-  NextMarker->absorbDebugValues(*this, true);
-
-  eraseFromParent();
+  Owner->DbgMarker = nullptr;
 }
 
 void DPMarker::removeFromParent() {

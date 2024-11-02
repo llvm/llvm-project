@@ -147,8 +147,7 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
 /// Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
 bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
-  return UA->isUniform(T) ||
-         T->getMetadata("structurizecfg.uniform") != nullptr;
+  return UA->isUniform(T) || T->hasMetadata("structurizecfg.uniform");
 }
 
 /// Is BB the last block saved on the stack ?

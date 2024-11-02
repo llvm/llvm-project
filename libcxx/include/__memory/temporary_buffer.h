@@ -11,7 +11,6 @@
 #define _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
 
 #include <__config>
-#include <__type_traits/alignment_of.h>
 #include <__utility/pair.h>
 #include <cstddef>
 #include <new>

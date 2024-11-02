@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/time_utils.h"
+#include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
 #include "src/__support/common.h"
-
-#include <limits.h>
 
 namespace LIBC_NAMESPACE {
 namespace time_utils {

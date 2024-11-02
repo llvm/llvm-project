@@ -159,7 +159,8 @@ private:
   void SkipToEndOfLine();
   bool MustSkipToEndOfLine() const;
   void NextChar();
-  void SkipToNextSignificantCharacter();
+  // True when input flowed to a continuation line
+  bool SkipToNextSignificantCharacter();
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);

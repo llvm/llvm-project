@@ -130,6 +130,9 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::FRM);
   markSuperRegs(Reserved, RISCV::FFLAGS);
 
+  // SiFive VCIX state registers.
+  markSuperRegs(Reserved, RISCV::VCIX_STATE);
+
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     if (Subtarget.isRVE())
       report_fatal_error("Graal reserved registers do not exist in RVE");
@@ -753,6 +756,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
+  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
@@ -776,7 +780,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
   // This is all of the compressible binary instructions. If an instruction
   // needs GPRC register class operands \p NeedGPRC will be set to true.
-  auto isCompressible = [](const MachineInstr &MI, bool &NeedGPRC) {
+  auto isCompressible = [&Subtarget](const MachineInstr &MI, bool &NeedGPRC) {
     NeedGPRC = false;
     switch (MI.getOpcode()) {
     default:
@@ -789,9 +793,16 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::SUBW:
       NeedGPRC = true;
       return true;
-    case RISCV::ANDI:
+    case RISCV::ANDI: {
       NeedGPRC = true;
-      return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
+      if (!MI.getOperand(2).isImm())
+        return false;
+      int64_t Imm = MI.getOperand(2).getImm();
+      if (isInt<6>(Imm))
+        return true;
+      // c.zext.b
+      return Subtarget.hasStdExtZcb() && Imm == 255;
+    }
     case RISCV::SRAI:
     case RISCV::SRLI:
       NeedGPRC = true;
@@ -802,6 +813,24 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::ADDI:
     case RISCV::ADDIW:
       return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
+    case RISCV::MUL:
+    case RISCV::SEXT_B:
+    case RISCV::SEXT_H:
+    case RISCV::ZEXT_H_RV32:
+    case RISCV::ZEXT_H_RV64:
+      // c.mul, c.sext.b, c.sext.h, c.zext.h
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb();
+    case RISCV::ADD_UW:
+      // c.zext.w
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb() && MI.getOperand(2).isReg() &&
+             MI.getOperand(2).getReg() == RISCV::X0;
+    case RISCV::XORI:
+      // c.not
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb() && MI.getOperand(2).isImm() &&
+             MI.getOperand(2).getImm() == -1;
     }
   };
 
@@ -823,13 +852,15 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     bool NeedGPRC;
     if (isCompressible(MI, NeedGPRC)) {
       if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-        if (!NeedGPRC || isCompressibleOpnd(MI.getOperand(2)))
+        if (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
+            MI.getOpcode() == RISCV::ADD_UW ||
+            isCompressibleOpnd(MI.getOperand(2)))
           tryAddHint(MO, MI.getOperand(1), NeedGPRC);
         if (MI.isCommutable() && MI.getOperand(2).isReg() &&
             (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1))))
           tryAddHint(MO, MI.getOperand(2), NeedGPRC);
-      } else if (OpIdx == 1 &&
-                 (!NeedGPRC || isCompressibleOpnd(MI.getOperand(2)))) {
+      } else if (OpIdx == 1 && (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
+                                isCompressibleOpnd(MI.getOperand(2)))) {
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       } else if (MI.isCommutable() && OpIdx == 2 &&
                  (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1)))) {

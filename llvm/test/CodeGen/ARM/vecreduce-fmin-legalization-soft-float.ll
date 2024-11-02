@@ -9,44 +9,41 @@ declare fp128 @llvm.vector.reduce.fmin.v2f128(<2 x fp128>)
 define half @test_v4f16(<4 x half> %a) nounwind {
 ; CHECK-LABEL: test_v4f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, r8, r9, r11, lr}
-; CHECK-NEXT:    mov r9, #255
-; CHECK-NEXT:    mov r8, r3
-; CHECK-NEXT:    orr r9, r9, #65280
-; CHECK-NEXT:    mov r6, r2
-; CHECK-NEXT:    and r0, r0, r9
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    mov r8, #255
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    orr r8, r8, #65280
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    and r0, r0, r8
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    and r0, r5, r9
+; CHECK-NEXT:    and r0, r6, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    bl fminf
+; CHECK-NEXT:    bl __aeabi_f2h
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    and r0, r5, r8
 ; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    and r0, r6, r8
+; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    bl __aeabi_fcmplt
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    and r0, r6, r9
-; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    cmp r4, #0
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    movne r5, r7
-; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    bl __aeabi_fcmplt
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    and r0, r8, r9
-; CHECK-NEXT:    moveq r5, r6
-; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    bl __aeabi_fcmplt
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    moveq r5, r4
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    bl fminf
 ; CHECK-NEXT:    bl __aeabi_f2h
-; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, r9, r11, lr}
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    and r0, r4, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    and r0, r5, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    bl fminf
+; CHECK-NEXT:    bl __aeabi_f2h
+; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast half @llvm.vector.reduce.fmin.v4f16(<4 x half> %a)
   ret half %b

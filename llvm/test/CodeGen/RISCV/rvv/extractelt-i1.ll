@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-define i1 @extractelt_nxv1i1(<vscale x 1 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv1i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
@@ -13,13 +13,13 @@ define i1 @extractelt_nxv1i1(<vscale x 1 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 1 x i8>, <vscale x 1 x i8>* %x
+  %a = load <vscale x 1 x i8>, ptr %x
   %b = icmp eq <vscale x 1 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 1 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv2i1(<vscale x 2 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv2i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
@@ -30,13 +30,13 @@ define i1 @extractelt_nxv2i1(<vscale x 2 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 2 x i8>, <vscale x 2 x i8>* %x
+  %a = load <vscale x 2 x i8>, ptr %x
   %b = icmp eq <vscale x 2 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 2 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv4i1(<vscale x 4 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv4i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
@@ -47,13 +47,13 @@ define i1 @extractelt_nxv4i1(<vscale x 4 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 4 x i8>, <vscale x 4 x i8>* %x
+  %a = load <vscale x 4 x i8>, ptr %x
   %b = icmp eq <vscale x 4 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 4 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv8i1(<vscale x 8 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv8i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1r.v v8, (a0)
@@ -64,13 +64,13 @@ define i1 @extractelt_nxv8i1(<vscale x 8 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 8 x i8>, <vscale x 8 x i8>* %x
+  %a = load <vscale x 8 x i8>, ptr %x
   %b = icmp eq <vscale x 8 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 8 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv16i1(<vscale x 16 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv16i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
@@ -82,13 +82,13 @@ define i1 @extractelt_nxv16i1(<vscale x 16 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 16 x i8>, <vscale x 16 x i8>* %x
+  %a = load <vscale x 16 x i8>, ptr %x
   %b = icmp eq <vscale x 16 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 16 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv32i1(<vscale x 32 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv32i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4r.v v8, (a0)
@@ -100,13 +100,13 @@ define i1 @extractelt_nxv32i1(<vscale x 32 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 32 x i8>, <vscale x 32 x i8>* %x
+  %a = load <vscale x 32 x i8>, ptr %x
   %b = icmp eq <vscale x 32 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 32 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv64i1(<vscale x 64 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv64i1(ptr %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v8, (a0)
@@ -118,13 +118,13 @@ define i1 @extractelt_nxv64i1(<vscale x 64 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 64 x i8>, <vscale x 64 x i8>* %x
+  %a = load <vscale x 64 x i8>, ptr %x
   %b = icmp eq <vscale x 64 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 64 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
+define i1 @extractelt_nxv128i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_nxv128i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    csrr a2, vlenb
@@ -204,13 +204,13 @@ define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
-  %a = load <vscale x 128 x i8>, <vscale x 128 x i8>* %x
+  %a = load <vscale x 128 x i8>, ptr %x
   %b = icmp eq <vscale x 128 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 128 x i1> %b, i64 %idx
   ret i1 %c
 }
 
-define i1 @extractelt_nxv1i1_idx0(<vscale x 1 x i8>* %x) nounwind {
+define i1 @extractelt_nxv1i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_nxv1i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
@@ -219,13 +219,13 @@ define i1 @extractelt_nxv1i1_idx0(<vscale x 1 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vfirst.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 1 x i8>, <vscale x 1 x i8>* %x
+  %a = load <vscale x 1 x i8>, ptr %x
   %b = icmp eq <vscale x 1 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 1 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_nxv2i1_idx0(<vscale x 2 x i8>* %x) nounwind {
+define i1 @extractelt_nxv2i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_nxv2i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
@@ -234,13 +234,13 @@ define i1 @extractelt_nxv2i1_idx0(<vscale x 2 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vfirst.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 2 x i8>, <vscale x 2 x i8>* %x
+  %a = load <vscale x 2 x i8>, ptr %x
   %b = icmp eq <vscale x 2 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 2 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_nxv4i1_idx0(<vscale x 4 x i8>* %x) nounwind {
+define i1 @extractelt_nxv4i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_nxv4i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
@@ -249,13 +249,13 @@ define i1 @extractelt_nxv4i1_idx0(<vscale x 4 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vfirst.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 4 x i8>, <vscale x 4 x i8>* %x
+  %a = load <vscale x 4 x i8>, ptr %x
   %b = icmp eq <vscale x 4 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 4 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_nxv8i1_idx0(<vscale x 8 x i8>* %x) nounwind {
+define i1 @extractelt_nxv8i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_nxv8i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1r.v v8, (a0)
@@ -264,13 +264,13 @@ define i1 @extractelt_nxv8i1_idx0(<vscale x 8 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vfirst.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 8 x i8>, <vscale x 8 x i8>* %x
+  %a = load <vscale x 8 x i8>, ptr %x
   %b = icmp eq <vscale x 8 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 8 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_nxv16i1_idx0(<vscale x 16 x i8>* %x) nounwind {
+define i1 @extractelt_nxv16i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_nxv16i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
@@ -279,13 +279,13 @@ define i1 @extractelt_nxv16i1_idx0(<vscale x 16 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vfirst.m a0, v10
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 16 x i8>, <vscale x 16 x i8>* %x
+  %a = load <vscale x 16 x i8>, ptr %x
   %b = icmp eq <vscale x 16 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 16 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_nxv32i1_idx0(<vscale x 32 x i8>* %x) nounwind {
+define i1 @extractelt_nxv32i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_nxv32i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4r.v v8, (a0)
@@ -294,13 +294,13 @@ define i1 @extractelt_nxv32i1_idx0(<vscale x 32 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vfirst.m a0, v12
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 32 x i8>, <vscale x 32 x i8>* %x
+  %a = load <vscale x 32 x i8>, ptr %x
   %b = icmp eq <vscale x 32 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 32 x i1> %b, i64 0
   ret i1 %c
 }
 
-define i1 @extractelt_nxv64i1_idx0(<vscale x 64 x i8>* %x) nounwind {
+define i1 @extractelt_nxv64i1_idx0(ptr %x) nounwind {
 ; CHECK-LABEL: extractelt_nxv64i1_idx0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v8, (a0)
@@ -309,7 +309,7 @@ define i1 @extractelt_nxv64i1_idx0(<vscale x 64 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vfirst.m a0, v16
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
-  %a = load <vscale x 64 x i8>, <vscale x 64 x i8>* %x
+  %a = load <vscale x 64 x i8>, ptr %x
   %b = icmp eq <vscale x 64 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 64 x i1> %b, i64 0
   ret i1 %c

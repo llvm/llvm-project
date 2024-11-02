@@ -340,8 +340,8 @@ set(TARGET_ENTRYPOINT_NAME_LIST "")
 foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(FIND ${entrypoint} "." last_dot_loc REVERSE)
   if(${last_dot_loc} EQUAL -1)
-    message(FATAL "Invalid entrypoint target name ${entrypoint}; Expected a '.' "
-                  "(dot) in the name.")
+    message(FATAL_ERROR "Invalid entrypoint target name ${entrypoint}; Expected"
+                        " a '.' (dot) in the name.")
   endif()
   math(EXPR name_loc "${last_dot_loc} + 1")
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)

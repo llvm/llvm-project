@@ -94,7 +94,7 @@ define void @PR37005(ptr %base, ptr %in) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds ptr, ptr [[E1]], i64 6
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>
@@ -126,7 +126,7 @@ define void @PR37005_2(ptr %base, ptr %in) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds ptr, ptr [[E1]], i64 6
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint ptr [[E2]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[PI1]], 14
 ; CHECK-NEXT:    [[SL1:%.*]] = and i64 [[TMP0]], 1125899906842496
@@ -156,7 +156,7 @@ define void @PR37005_3(<2 x ptr> %base, ptr %in) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds ptr, ptr [[E1]], i64 6
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds i8, ptr [[E1]], i64 48
 ; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>

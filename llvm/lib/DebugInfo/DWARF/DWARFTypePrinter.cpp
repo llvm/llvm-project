@@ -616,6 +616,9 @@ void DWARFTypePrinter::appendSubroutineNameAfter(
     case CallingConvention::DW_CC_LLVM_PreserveAll:
       OS << " __attribute__((preserve_all))";
       break;
+    case CallingConvention::DW_CC_LLVM_PreserveNone:
+      OS << " __attribute__((preserve_none))";
+      break;
     case CallingConvention::DW_CC_LLVM_X86RegCall:
       OS << " __attribute__((regcall))";
       break;

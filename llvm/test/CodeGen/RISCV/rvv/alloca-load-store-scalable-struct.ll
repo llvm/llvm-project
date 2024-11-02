@@ -6,7 +6,7 @@ target triple = "riscv64-unknown-unknown-elf"
 
 %struct.test = type { <vscale x 1 x double>, <vscale x 1 x double> }
 
-define <vscale x 1 x double> @test(%struct.test* %addr, i64 %vl) {
+define <vscale x 1 x double> @test(ptr %addr, i64 %vl) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -34,9 +34,9 @@ define <vscale x 1 x double> @test(%struct.test* %addr, i64 %vl) {
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %ret = alloca %struct.test, align 8
-  %val = load %struct.test, %struct.test* %addr
-  store %struct.test %val, %struct.test* %ret, align 8
-  %0 = load %struct.test, %struct.test* %ret, align 8
+  %val = load %struct.test, ptr %addr
+  store %struct.test %val, ptr %ret, align 8
+  %0 = load %struct.test, ptr %ret, align 8
   %1 = extractvalue %struct.test %0, 0
   %2 = extractvalue %struct.test %0, 1
   %3 = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(

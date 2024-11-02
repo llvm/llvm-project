@@ -313,3 +313,55 @@ llvm.func @foo() {
   // expected-error @below{{must appear at the module level}}
   llvm.linker_options ["test"]
 }
+
+// -----
+
+module @does_not_exist {
+  // expected-error @below{{resource does not exist}}
+  llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xf32>) : !llvm.array<4 x f32>
+}
+
+// -----
+
+module @raw_data_does_not_match_element_type_size {
+  // expected-error @below{{raw data size does not match element type size}}
+  llvm.mlir.global internal constant @constant(dense_resource<test1> : tensor<5xf32>) : !llvm.array<4 x f32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
+
+// -----
+
+module @does_not_exist {
+  // expected-error @below{{unsupported dense_resource type}}
+  llvm.mlir.global internal constant @constant(dense_resource<test1> : memref<4xf32>) : !llvm.array<4 x f32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
+
+// -----
+
+module @no_known_conversion_innermost_eltype {
+  // expected-error @below{{no known conversion for innermost element type}}
+  llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xi4>) : !llvm.array<4 x i4>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}

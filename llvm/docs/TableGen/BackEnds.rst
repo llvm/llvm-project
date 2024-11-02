@@ -506,6 +506,12 @@ following fixed keys:
   specified by the TableGen input (if it is ``false``), or invented by
   TableGen itself (if ``true``).
 
+* ``!locs``: an array of strings giving the source locations associated with
+  this record. For records instantiated from a ``multiclass``, this gives the
+  location of each ``def`` or ``defm``, starting with the inner-most
+  ``multiclass``, and ending with the top-level ``defm``. Each string contains
+  the file name and line number, separated by a colon.
+
 For each variable defined in a record, the ``def`` object for that
 record also has a key for the variable name. The corresponding value
 is a translation into JSON of the variable's value, using the

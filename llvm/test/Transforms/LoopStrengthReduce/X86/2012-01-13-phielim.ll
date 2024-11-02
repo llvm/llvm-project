@@ -147,7 +147,7 @@ while.end:                                        ; preds = %entry
 ; Test redundant phi elimination when the deleted phi's increment is
 ; itself a phi.
 ;
-define fastcc void @test3(double* nocapture %u) nounwind uwtable ssp {
+define fastcc void @test3(ptr nocapture %u) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[MESHBB1_PREHEADER:%.*]], label [[MESHBB5:%.*]]

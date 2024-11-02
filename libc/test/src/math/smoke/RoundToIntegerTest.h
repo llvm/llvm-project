@@ -30,11 +30,11 @@ private:
   using StorageType = typename FPBits::StorageType;
   using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const F zero = F(FPBits::zero(Sign::POS));
-  const F neg_zero = F(FPBits::zero(Sign::NEG));
-  const F inf = F(FPBits::inf(Sign::POS));
-  const F neg_inf = F(FPBits::inf(Sign::NEG));
-  const F nan = F(FPBits::build_quiet_nan());
+  const F zero = FPBits::zero(Sign::POS).get_val();
+  const F neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const F inf = FPBits::inf(Sign::POS).get_val();
+  const F neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const F nan = FPBits::quiet_nan().get_val();
 
   static constexpr StorageType MAX_SUBNORMAL =
       FPBits::max_subnormal().uintval();
@@ -46,7 +46,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
@@ -119,7 +119,7 @@ public:
     constexpr StorageType COUNT = 1'000'001;
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
-      F x = F(FPBits(i));
+      F x = FPBits(i).get_val();
       if (x == F(0.0))
         continue;
       // All subnormal numbers should round to zero.

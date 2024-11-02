@@ -3173,7 +3173,7 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; AVX512F-NEXT:    callq __truncdfhf2@PLT
 ; AVX512F-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; AVX512F-NEXT:    vmovaps {{.*#+}} xmm1 = [16,0,0,0]
+; AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = [16,0,0,0]
 ; AVX512F-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512F-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
@@ -3195,7 +3195,7 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; AVX512-FASTLANE-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX512-FASTLANE-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-FASTLANE-NEXT:    vpbroadcastw %xmm0, %xmm1
-; AVX512-FASTLANE-NEXT:    vmovaps {{.*#+}} xmm0 = [4,0,0,0]
+; AVX512-FASTLANE-NEXT:    vmovss {{.*#+}} xmm0 = [4,0,0,0]
 ; AVX512-FASTLANE-NEXT:    vpermi2ps (%rsp), %xmm1, %xmm0 # 16-byte Folded Reload
 ; AVX512-FASTLANE-NEXT:    addq $40, %rsp
 ; AVX512-FASTLANE-NEXT:    retq

@@ -832,7 +832,7 @@ void DebugSHandler::advanceRelocIndex(SectionChunk *sc,
   assert(vaBegin > 0);
   auto relocs = sc->getRelocs();
   for (; nextRelocIndex < relocs.size(); ++nextRelocIndex) {
-    if (relocs[nextRelocIndex].VirtualAddress >= vaBegin)
+    if (relocs[nextRelocIndex].VirtualAddress >= (uint32_t)vaBegin)
       break;
   }
 }

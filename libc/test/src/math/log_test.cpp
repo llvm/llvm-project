@@ -63,7 +63,7 @@ TEST_F(LlvmLibcLogTest, TrickyInputs) {
       0x3fefbfdaa448ed98,
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
                                    LIBC_NAMESPACE::log(x), 0.5);
   }
@@ -100,7 +100,7 @@ TEST_F(LlvmLibcLogTest, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::log(x);
       ++cc;
       if (isnan(result) || isinf(result))

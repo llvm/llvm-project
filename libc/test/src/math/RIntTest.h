@@ -34,11 +34,11 @@ private:
   using StorageType = typename FPBits::StorageType;
   using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T inf = T(FPBits::inf(Sign::POS));
-  const T neg_inf = T(FPBits::inf(Sign::NEG));
-  const T zero = T(FPBits::zero(Sign::POS));
-  const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan());
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
   static constexpr StorageType MIN_SUBNORMAL =
       FPBits::min_subnormal().uintval();
@@ -104,7 +104,7 @@ public:
     constexpr StorageType COUNT = 100'001;
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
-      T x = T(FPBits(i));
+      T x = FPBits(i).get_val();
       for (int mode : ROUNDING_MODES) {
         LIBC_NAMESPACE::fputil::set_round(mode);
         mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
@@ -117,7 +117,7 @@ public:
     constexpr StorageType COUNT = 100'001;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType i = MIN_NORMAL; i <= MAX_NORMAL; i += STEP) {
-      T x = T(FPBits(i));
+      T x = FPBits(i).get_val();
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
       if (isnan(x)) {

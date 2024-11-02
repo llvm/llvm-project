@@ -1531,14 +1531,17 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 }
 
 ModulePassManager
-PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level) {
+PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
+                                        bool EmitSummary) {
   ModulePassManager MPM;
-  // FatLTO always uses UnifiedLTO, so use the ThinLTOPreLink pipeline
-  MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
-  MPM.addPass(EmbedBitcodePass());
+  if (ThinLTO)
+    MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
+  else
+    MPM.addPass(buildLTOPreLinkDefaultPipeline(Level));
+  MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary));
 
-  // Use the ThinLTO post-link pipeline with sample profiling, other
-  if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
+  // Use the ThinLTO post-link pipeline with sample profiling
+  if (ThinLTO && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     MPM.addPass(buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
   else {
     // otherwise, just use module optimization

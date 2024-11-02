@@ -2153,6 +2153,19 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   Code = serialization::EXPR_SIZEOF_PACK;
 }
 
+void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->TransformedExpressions);
+  Record.AddSourceLocation(E->getEllipsisLoc());
+  Record.AddSourceLocation(E->getRSquareLoc());
+  Record.AddStmt(E->getPackIdExpression());
+  Record.AddStmt(E->getIndexExpr());
+  Record.push_back(E->TransformedExpressions);
+  for (Expr *Sub : E->getExpressions())
+    Record.AddStmt(Sub);
+  Code = serialization::EXPR_PACK_INDEXING;
+}
+
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);

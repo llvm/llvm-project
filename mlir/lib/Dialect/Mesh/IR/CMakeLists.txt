@@ -5,9 +5,7 @@ add_mlir_dialect_library(MLIRMeshDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Mesh
 
   DEPENDS
-  MLIRMeshOpsAttrIncGen
-  MLIRMeshOpsEnumsIncGen
-  MLIRMeshOpsIncGen
+  MLIRMeshIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

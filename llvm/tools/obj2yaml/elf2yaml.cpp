@@ -626,7 +626,6 @@ ELFDumper<ELFT>::dumpSections() {
     case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
       return
           [this](const Elf_Shdr *S) { return dumpCallGraphProfileSection(S); };
-    case ELF::SHT_LLVM_BB_ADDR_MAP_V0:
     case ELF::SHT_LLVM_BB_ADDR_MAP:
       return [this](const Elf_Shdr *S) { return dumpBBAddrMapSection(S); };
     case ELF::SHT_STRTAB:
@@ -893,6 +892,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
   uint8_t Feature = 0;
+  uint64_t Address = 0;
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
@@ -903,19 +903,41 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
                 Twine(static_cast<int>(Version)));
       Feature = Data.getU8(Cur);
     }
-    uint64_t Address = Data.getAddress(Cur);
-    uint64_t NumBlocks = Data.getULEB128(Cur);
-    std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
-    // Read the specified number of BB entries, or until decoding fails.
-    for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks; ++BlockIndex) {
-      uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
-      uint64_t Offset = Data.getULEB128(Cur);
-      uint64_t Size = Data.getULEB128(Cur);
-      uint64_t Metadata = Data.getULEB128(Cur);
-      BBEntries.push_back({ID, Offset, Size, Metadata});
+    uint64_t NumBBRanges = 1;
+    uint64_t NumBlocks = 0;
+    auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(Feature);
+    if (!FeatureOrErr)
+      return FeatureOrErr.takeError();
+    if (FeatureOrErr->MultiBBRange) {
+      NumBBRanges = Data.getULEB128(Cur);
+    } else {
+      Address = Data.getAddress(Cur);
+      NumBlocks = Data.getULEB128(Cur);
+    }
+    std::vector<ELFYAML::BBAddrMapEntry::BBRangeEntry> BBRanges;
+    uint64_t BaseAddress = 0;
+    for (uint64_t BBRangeN = 0; Cur && BBRangeN != NumBBRanges; ++BBRangeN) {
+      if (FeatureOrErr->MultiBBRange) {
+        BaseAddress = Data.getAddress(Cur);
+        NumBlocks = Data.getULEB128(Cur);
+      } else {
+        BaseAddress = Address;
+      }
+
+      std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
+      // Read the specified number of BB entries, or until decoding fails.
+      for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks;
+           ++BlockIndex) {
+        uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
+        uint64_t Offset = Data.getULEB128(Cur);
+        uint64_t Size = Data.getULEB128(Cur);
+        uint64_t Metadata = Data.getULEB128(Cur);
+        BBEntries.push_back({ID, Offset, Size, Metadata});
+      }
+      BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
     }
     Entries.push_back(
-        {Version, Feature, Address, /*NumBlocks=*/{}, std::move(BBEntries)});
+        {Version, Feature, /*NumBBRanges=*/{}, std::move(BBRanges)});
   }
 
   if (!Cur) {

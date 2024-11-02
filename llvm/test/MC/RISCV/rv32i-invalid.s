@@ -170,7 +170,8 @@ xor s2, s2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 
 # Instruction not in the base ISA
 div a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
-amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions){{$}}
+amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions) or 'Zaamo' (Atomic Memory Operations){{$}}
+lr.w t0, (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions) or 'Zalrsc' (Load-Reserved/Store-Conditional){{$}}
 fadd.s ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
 fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point){{$}}
 fadd.s a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfinx' (Float in Integer){{$}}

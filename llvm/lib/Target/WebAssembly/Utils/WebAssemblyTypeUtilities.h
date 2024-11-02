@@ -18,7 +18,7 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "WasmAddressSpaces.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
 

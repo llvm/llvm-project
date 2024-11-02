@@ -22,9 +22,9 @@ call_destructor.exit:                             ; preds = %entry
   %0 = shl nsw i32 %h.s0.x.x.us, 5
   %1 = add i32 %0, %tmp22.us
   %2 = add nsw i32 %1, 16
-  %3 = getelementptr inbounds i32, i32* null, i32 %2
-  %4 = bitcast i32* %3 to <16 x i32>*
-  store <16 x i32> zeroinitializer, <16 x i32>* %4, align 4, !tbaa !2
+  %3 = getelementptr inbounds i32, ptr null, i32 %2
+  %4 = bitcast ptr %3 to ptr
+  store <16 x i32> zeroinitializer, ptr %4, align 4, !tbaa !2
   %5 = add nuw nsw i32 %h.s0.x.x.us, 1
   br label %"for h.s0.x.x.us"
 }

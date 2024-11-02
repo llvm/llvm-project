@@ -696,17 +696,17 @@ public:
       // TODO(boomanaiden154): Add in support for using validation counters when
       // using LBR counters.
       if (ValidationCounters.size() > 0)
-        return llvm::make_error<llvm::StringError>(
+        return make_error<StringError>(
             "Using LBR is not currently supported with validation counters",
-            llvm::errc::invalid_argument);
+            errc::invalid_argument);
 
       return std::make_unique<X86LbrCounter>(
           X86LbrPerfEvent(LbrSamplingPeriod));
 #else
-      return llvm::make_error<llvm::StringError>(
+      return make_error<StringError>(
           "LBR counter requested without HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES, "
           "or running on Linux.",
-          llvm::errc::invalid_argument);
+          errc::invalid_argument);
 #endif
     }
     return ExegesisTarget::createCounter(CounterName, State, ValidationCounters,
@@ -825,9 +825,9 @@ private:
     report_fatal_error("Running X86 exegesis on unsupported target");
 #endif
 #endif
-    return llvm::make_error<llvm::StringError>(
+    return make_error<StringError>(
         "LBR not supported on this kernel and/or platform",
-        llvm::errc::not_supported);
+        errc::not_supported);
   }
 
   std::unique_ptr<SavedState> withSavedState() const override {
@@ -1296,7 +1296,7 @@ std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
   bool Exploration = false;
   SmallVector<SmallVector<MCOperand, 1>, 4> VariableChoices;
   VariableChoices.resize(Instr.Variables.size());
-  for (auto I : llvm::zip(Instr.Variables, VariableChoices)) {
+  for (auto I : zip(Instr.Variables, VariableChoices)) {
     const Variable &Var = std::get<0>(I);
     SmallVectorImpl<MCOperand> &Choices = std::get<1>(I);
 

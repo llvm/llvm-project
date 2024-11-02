@@ -24,6 +24,8 @@ Other components include:
 the `libc++ C++ standard library <https://libcxx.llvm.org>`_,
 the `LLD linker <https://lld.llvm.org>`_, and more.
 
+.. _sources:
+
 Getting the Source Code and Building LLVM
 =========================================
 
@@ -330,6 +332,8 @@ Unix utilities. Specifically:
 .. _below:
 .. _check here:
 
+.. _host_cpp_toolchain:
+
 Host C++ Toolchain, both Compiler and Standard Library
 ------------------------------------------------------
 
@@ -504,60 +508,6 @@ appropriate pathname on your local system.  All these paths are absolute:
   This is the top level directory of the LLVM object tree (i.e. the tree where
   object files and compiled programs will be placed.  It can be the same as
   SRC_ROOT).
-
-Unpacking the LLVM Archives
----------------------------
-
-If you have the LLVM distribution, you will need to unpack it before you can
-begin to compile it.  LLVM is distributed as a number of different
-subprojects. Each one has its own download which is a TAR archive that is
-compressed with the gzip program.
-
-The files are as follows, with *x.y* marking the version number:
-
-``llvm-x.y.tar.gz``
-
-  Source release for the LLVM libraries and tools.
-
-``cfe-x.y.tar.gz``
-
-  Source release for the Clang frontend.
-
-.. _checkout:
-
-Checkout LLVM from Git
-----------------------
-
-You can also checkout the source code for LLVM from Git.
-
-.. note::
-
-  Passing ``--config core.autocrlf=false`` should not be required in
-  the future after we adjust the .gitattribute settings correctly, but
-  is required for Windows users at the time of this writing.
-
-Simply run:
-
-.. code-block:: console
-
-  % git clone https://github.com/llvm/llvm-project.git
-
-or on Windows,
-
-.. code-block:: console
-
-  % git clone --config core.autocrlf=false https://github.com/llvm/llvm-project.git
-
-This will create an '``llvm-project``' directory in the current directory and
-fully populate it with all of the source code, test directories, and local
-copies of documentation files for LLVM and all the related subprojects. Note
-that unlike the tarballs, which contain each subproject in a separate file, the
-git repository contains all of the projects together.
-
-If you want to get a specific release (as opposed to the most recent revision),
-you can check out a tag after cloning the repository. E.g., `git checkout
-llvmorg-6.0.1` inside the ``llvm-project`` directory created by the above
-command.  Use `git tag -l` to list all of them.
 
 Sending patches
 ^^^^^^^^^^^^^^^

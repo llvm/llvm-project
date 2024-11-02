@@ -1585,17 +1585,17 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s24, s33
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s33, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_xor_saveexec_b32 s16, -1
-; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
-; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v33, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 exec_lo, s16
 ; WAVE32-WWM-PREALLOC-NEXT:    s_add_i32 s32, s32, 0x1200
-; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $vgpr33 : SGPR spill to VGPR lane
-; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v32, s30, 0
-; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v32, s31, 1
+; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $vgpr32 : SGPR spill to VGPR lane
+; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v33, s30, 0
+; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v33, s31, 1
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s16, s32
-; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v33, s16, 0
+; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v32, s16, 0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s16, s16, 5
-; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v33, s16, 1
+; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v32, s16, 1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, 42
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -1673,18 +1673,18 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $sgpr18
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v30, s18
 ; WAVE32-WWM-PREALLOC-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s5, v33, 1
-; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s4, v33, 0
+; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s5, v32, 1
+; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s4, v32, 0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
 ; WAVE32-WWM-PREALLOC-NEXT:    ; use s5
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
-; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s31, v32, 1
-; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s30, v32, 0
-; WAVE32-WWM-PREALLOC-NEXT:    ; kill: killed $vgpr33
+; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s31, v33, 1
+; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s30, v33, 0
+; WAVE32-WWM-PREALLOC-NEXT:    ; kill: killed $vgpr32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_xor_saveexec_b32 s4, -1
-; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
-; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_add_i32 s32, s32, 0xffffee00
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s33, s24

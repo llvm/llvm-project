@@ -1527,7 +1527,8 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ; SKX-NEXT:    kmovd %eax, %k1 ## encoding: [0xc5,0xfb,0x92,0xc8]
 ; SKX-NEXT:    kshiftlw $1, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x01]
 ; SKX-NEXT:    korw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x45,0xc9]
-; SKX-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7f,0x89,0x6f,0x05,A,A,A,A]
+; SKX-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; SKX-NEXT:    ## encoding: [0x62,0xf1,0x7f,0x89,0x6f,0x05,A,A,A,A]
 ; SKX-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; SKX-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
 ; SKX-NEXT:    retq ## encoding: [0xc3]

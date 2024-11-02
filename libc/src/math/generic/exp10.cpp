@@ -268,7 +268,7 @@ double set_exceptional(double x) {
     fputil::raise_except_if_required(FE_OVERFLOW);
   }
   // x is +inf or nan
-  return x + static_cast<double>(FPBits::inf());
+  return x + FPBits::inf().get_val();
 }
 
 } // namespace

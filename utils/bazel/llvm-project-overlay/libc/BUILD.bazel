@@ -25,7 +25,6 @@ licenses(["notice"])
 
 PRINTF_COPTS = [
     "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
-    "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE",
     "LIBC_COPT_PRINTF_DISABLE_WRITE_INT",
 ]
 
@@ -88,6 +87,8 @@ libc_support_library(
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
+        ":llvm_libc_macros_float_macros",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -210,6 +211,7 @@ libc_support_library(
     deps = [
         "__support_cpp_type_traits",
         "__support_macros_attributes",
+        ":llvm_libc_macros_limits_macros",
     ],
 )
 
@@ -416,7 +418,6 @@ libc_support_library(
         "src/__support/ryu_constants.h",
         "src/__support/ryu_long_double_constants.h",
     ],
-    defines = ["LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE"],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
@@ -591,6 +592,7 @@ libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -666,6 +668,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_libc_assert",
         ":__support_macros_attributes",
         ":__support_macros_properties_float",
         ":__support_math_extras",
@@ -708,6 +711,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
@@ -953,6 +957,22 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
     ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_float_macros",
+    hdrs = ["include/llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_float128",
+    hdrs = ["include/llvm-libc-types/float128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
 )
 
 ############################### errno targets ################################
@@ -2496,7 +2516,53 @@ libc_function(
     ],
 )
 
-############################### unistd targets ###############################
+################################ fcntl targets #################################
+
+libc_function(
+    name = "open",
+    srcs = ["src/fcntl/linux/open.cpp"],
+    hdrs = ["src/fcntl/open.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "openat",
+    srcs = ["src/fcntl/linux/openat.cpp"],
+    hdrs = ["src/fcntl/openat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "creat",
+    srcs = ["src/fcntl/linux/creat.cpp"],
+    hdrs = ["src/fcntl/creat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+################################ unistd targets ################################
+
+libc_function(
+    name = "access",
+    srcs = ["src/unistd/linux/access.cpp"],
+    hdrs = ["src/unistd/access.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
 
 libc_function(
     name = "chdir",
@@ -2513,6 +2579,50 @@ libc_function(
     name = "close",
     srcs = ["src/unistd/linux/close.cpp"],
     hdrs = ["src/unistd/close.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "dup",
+    srcs = ["src/unistd/linux/dup.cpp"],
+    hdrs = ["src/unistd/dup.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "dup2",
+    srcs = ["src/unistd/linux/dup2.cpp"],
+    hdrs = ["src/unistd/dup2.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "dup3",
+    srcs = ["src/unistd/linux/dup3.cpp"],
+    hdrs = ["src/unistd/dup3.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "environ",
+    srcs = ["src/unistd/environ.cpp"],
+    hdrs = ["src/unistd/environ.h"],
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2546,6 +2656,86 @@ libc_function(
     name = "ftruncate",
     srcs = ["src/unistd/linux/ftruncate.cpp"],
     hdrs = ["src/unistd/ftruncate.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+# libc_function(
+#     name = "getcwd",
+#     srcs = ["src/unistd/linux/getcwd.cpp"],
+#     hdrs = ["src/unistd/getcwd.h"],
+#     deps = [
+#         ":__support_common",
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
+
+libc_function(
+    name = "geteuid",
+    srcs = ["src/unistd/linux/geteuid.cpp"],
+    hdrs = ["src/unistd/geteuid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "getpid",
+    srcs = ["src/unistd/linux/getpid.cpp"],
+    hdrs = ["src/unistd/getpid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "getppid",
+    srcs = ["src/unistd/linux/getppid.cpp"],
+    hdrs = ["src/unistd/getppid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "getuid",
+    srcs = ["src/unistd/linux/getuid.cpp"],
+    hdrs = ["src/unistd/getuid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+# libc_function(
+#     name = "getopt",
+#     srcs = ["src/unistd/getopt.cpp"],
+#     hdrs = ["src/unistd/getopt.h"],
+#     deps = [
+#         ":__support_common",
+#         ":__support_cpp_optional",
+#         ":__support_cpp_string_view",
+#         ":__support_file_file",
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
+
+libc_function(
+    name = "isatty",
+    srcs = ["src/unistd/linux/isatty.cpp"],
+    hdrs = ["src/unistd/isatty.h"],
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2588,11 +2778,34 @@ libc_function(
 )
 
 libc_function(
+    name = "pread",
+    srcs = ["src/unistd/linux/pread.cpp"],
+    hdrs = ["src/unistd/pread.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "pwrite",
+    srcs = ["src/unistd/linux/pwrite.cpp"],
+    hdrs = ["src/unistd/pwrite.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
     name = "read",
     srcs = ["src/unistd/linux/read.cpp"],
     hdrs = ["src/unistd/read.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -2646,6 +2859,31 @@ libc_function(
     name = "symlinkat",
     srcs = ["src/unistd/linux/symlinkat.cpp"],
     hdrs = ["src/unistd/symlinkat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+#TODO: Enable once fullbuild is added to bazel, since this depends on a macro
+# definition in the public header
+
+# libc_function(
+#     name = "syscall",
+#     srcs = ["src/unistd/linux/syscall.cpp"],
+#     hdrs = ["src/unistd/syscall.h"],
+#     deps = [
+#         ":__support_common",
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
+
+libc_function(
+    name = "swab",
+    srcs = ["src/unistd/swab.cpp"],
+    hdrs = ["src/unistd/swab.h"],
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2936,3 +3174,72 @@ libc_function(
         ":vfprintf_internal",
     ],
 )
+
+libc_function(
+    name = "remove",
+    srcs = ["src/stdio/linux/remove.cpp"],
+    hdrs = ["src/stdio/remove.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+############################### sys/stat targets ###############################
+
+libc_function(
+    name = "mkdir",
+    srcs = ["src/sys/stat/linux/mkdir.cpp"],
+    hdrs = ["src/sys/stat/mkdir.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mkdirat",
+    srcs = ["src/sys/stat/linux/mkdirat.cpp"],
+    hdrs = ["src/sys/stat/mkdirat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+############################## sys/epoll targets ###############################
+
+libc_function(
+    name = "epoll_wait",
+    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_wait.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_pwait",
+    srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+#TODO: Enable once epoll_pwait2 availablilty can be checked first.
+# https://github.com/llvm/llvm-project/issues/80060
+# libc_function(
+#     name = "epoll_pwait2",
+#     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+#     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+#     deps = [
+#         ":__support_osutil_syscall",
+#         ":errno",
+#     ],
+# )
