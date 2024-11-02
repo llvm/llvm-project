@@ -200,6 +200,28 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
                                       ctx.arg.ltoPartitions,
                                       ltoModes[ctx.arg.ltoKind]);
 
+  // Write a remapping file for the final native link. Non-lazy bitcode files
+  // are mapped to native object files. If lazy bitcode files is a minimized
+  // bitcode, it cannot participate the final link. Print /dev/null to ignore
+  // it.
+  if (!ctx.arg.thinLTOIndex.empty()) {
+    if (auto os = openFile(ctx.arg.thinLTOIndex)) {
+      for (BitcodeFile *file : ctx.bitcodeFiles) {
+        StringRef nativeDir = ctx.arg.thinLTOPrefixReplaceNativeObject.empty()
+                               ? ctx.arg.thinLTOPrefixReplaceNew
+                               : ctx.arg.thinLTOPrefixReplaceNativeObject;
+        *os << file->getName() << '='
+            << lto::getThinLTOOutputFile(replaceThinLTOSuffix(file->getName()),
+                                         ctx.arg.thinLTOPrefixReplaceOld,
+                                         nativeDir)
+            << '\n';
+      }
+      for (BitcodeFile *file : ctx.lazyBitcodeFiles)
+        if (file->lazy)
+          *os << file->getName() << "=/dev/null\n";
+    }
+  }
+
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;

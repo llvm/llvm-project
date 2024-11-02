@@ -219,6 +219,7 @@ struct Config {
   llvm::StringRef soName;
   llvm::StringRef sysroot;
   llvm::StringRef thinLTOCacheDir;
+  llvm::StringRef thinLTOIndex;
   llvm::StringRef thinLTOIndexOnlyArg;
   llvm::StringRef whyExtract;
   llvm::StringRef cmseInputLib;
