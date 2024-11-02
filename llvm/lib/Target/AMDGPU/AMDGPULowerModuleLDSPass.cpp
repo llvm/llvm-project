@@ -1131,6 +1131,11 @@ private:
         continue;
       }
 
+      if (GV.isAbsoluteSymbolRef()) {
+        // If the variable is already allocated, don't change the alignment
+        continue;
+      }
+
       Align Alignment = AMDGPU::getAlign(DL, &GV);
       TypeSize GVSize = DL.getTypeAllocSize(GV.getValueType());
 

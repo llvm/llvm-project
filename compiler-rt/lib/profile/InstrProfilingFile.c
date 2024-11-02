@@ -1259,7 +1259,7 @@ int __llvm_profile_register_write_file_atexit(void) {
   lprofSetupValueProfiler();
 
   HasBeenRegistered = 1;
-  return atexit(writeFileWithoutReturn);
+  return lprofAtExit(writeFileWithoutReturn);
 }
 
 COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,

@@ -11,5 +11,5 @@ entry:
   ret void
 }
 
-; CHECK: attributes #0 = { sanitize_hwaddress uwtable }
+; CHECK: attributes #0 = { nobuiltin sanitize_hwaddress uwtable }
 attributes #0 = { sanitize_hwaddress memory(argmem: write) uwtable }

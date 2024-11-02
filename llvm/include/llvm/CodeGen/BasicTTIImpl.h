@@ -1641,7 +1641,7 @@ public:
       return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
                                              VarMask, Alignment, CostKind, I);
     }
-    case Intrinsic::experimental_stepvector: {
+    case Intrinsic::stepvector: {
       if (isa<ScalableVectorType>(RetTy))
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       // The cost of materialising a constant integer vector.
@@ -1789,8 +1789,8 @@ public:
       Type *NewVecTy = VectorType::get(
           NewEltTy, cast<VectorType>(Args[0]->getType())->getElementCount());
 
-      IntrinsicCostAttributes StepVecAttrs(Intrinsic::experimental_stepvector,
-                                           NewVecTy, {}, FMF);
+      IntrinsicCostAttributes StepVecAttrs(Intrinsic::stepvector, NewVecTy, {},
+                                           FMF);
       InstructionCost Cost =
           thisT()->getIntrinsicInstrCost(StepVecAttrs, CostKind);
 

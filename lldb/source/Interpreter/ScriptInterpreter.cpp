@@ -53,7 +53,7 @@ bool ScriptInterpreter::LoadScriptingModule(const char *filename,
                                             lldb_private::Status &error,
                                             StructuredData::ObjectSP *module_sp,
                                             FileSpec extra_search_dir) {
-  error.SetErrorString(
+  error = Status::FromErrorString(
       "This script interpreter does not support importing modules.");
   return false;
 }

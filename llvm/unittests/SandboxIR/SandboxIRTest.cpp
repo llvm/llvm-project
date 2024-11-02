@@ -121,10 +121,12 @@ define void @foo(i32 %v0) {
   auto *FortyTwo = cast<sandboxir::ConstantInt>(Add0->getOperand(1));
 
   // Check that creating an identical constant gives us the same object.
-  auto *NewCI = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+  auto *NewCI =
+      sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
   EXPECT_EQ(NewCI, FortyTwo);
   // Check new constant.
-  auto *FortyThree = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 43, Ctx);
+  auto *FortyThree =
+      sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 43);
   EXPECT_NE(FortyThree, FortyTwo);
 }
 
@@ -580,6 +582,68 @@ define void @foo(i8 %v1) {
   EXPECT_EQ(I0->getNextNode(), Ret);
 }
 
+TEST_F(SandboxIRTest, VAArgInst) {
+  parseIR(C, R"IR(
+define void @foo(ptr %va) {
+  %va_arg = va_arg ptr %va, i32
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *VA = cast<sandboxir::VAArgInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check getPointerOperand().
+  EXPECT_EQ(VA->getPointerOperand(), Arg);
+  // Check getPOinterOperandIndex().
+  EXPECT_EQ(sandboxir::VAArgInst::getPointerOperandIndex(),
+            llvm::VAArgInst::getPointerOperandIndex());
+  // Check create().
+  auto *NewVATy = sandboxir::Type::getInt8Ty(Ctx);
+  auto *NewVA = sandboxir::VAArgInst::create(Arg, NewVATy, Ret->getIterator(),
+                                             Ret->getParent(), Ctx, "NewVA");
+  EXPECT_EQ(NewVA->getNextNode(), Ret);
+  EXPECT_EQ(NewVA->getType(), NewVATy);
+#ifndef NDEBUG
+  EXPECT_EQ(NewVA->getName(), "NewVA");
+#endif // NDEBUG
+}
+
+TEST_F(SandboxIRTest, FreezeInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg) {
+  freeze i8 %arg
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Freeze = cast<sandboxir::FreezeInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_TRUE(isa<sandboxir::UnaryInstruction>(Freeze));
+  EXPECT_EQ(Freeze->getOperand(0), Arg);
+
+  // Check create().
+  auto *NewFreeze = sandboxir::FreezeInst::create(
+      Arg, Ret->getIterator(), Ret->getParent(), Ctx, "NewFreeze");
+  EXPECT_EQ(NewFreeze->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewFreeze->getName(), "NewFreeze");
+#endif // NDEBUG
+}
+
 TEST_F(SandboxIRTest, FenceInst) {
   parseIR(C, R"IR(
 define void @foo() {
@@ -681,10 +745,10 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   }
   {
     // Check SelectInst::create() Folded.
-    auto *False = sandboxir::ConstantInt::get(llvm::Type::getInt1Ty(C), 0, Ctx,
-                                              /*IsSigned=*/false);
+    auto *False = sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx),
+                                              0, /*IsSigned=*/false);
     auto *FortyTwo =
-        sandboxir::ConstantInt::get(llvm::Type::getInt1Ty(C), 42, Ctx,
+        sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx), 42,
                                     /*IsSigned=*/false);
     auto *NewSel =
         sandboxir::SelectInst::create(False, FortyTwo, FortyTwo, Ret, Ctx);
@@ -776,7 +840,7 @@ define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
 
   auto *LLVMArg0 = LLVMF.getArg(0);
   auto *LLVMArgVec = LLVMF.getArg(2);
-  auto *Zero = sandboxir::ConstantInt::get(Type::getInt8Ty(C), 0, Ctx);
+  auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 0);
   auto *LLVMZero = llvm::ConstantInt::get(Type::getInt8Ty(C), 0);
   EXPECT_EQ(
       sandboxir::InsertElementInst::isValidOperands(ArgVec, Arg0, Zero),
@@ -888,7 +952,7 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   // convertShuffleMaskForBitcode
   {
     auto *C = sandboxir::ShuffleVectorInst::convertShuffleMaskForBitcode(
-        ArrayRef<int>({2, 3}), ArgV1->getType(), Ctx);
+        ArrayRef<int>({2, 3}), ArgV1->getType());
     SmallVector<int, 2> Result;
     sandboxir::ShuffleVectorInst::getShuffleMask(C, Result);
     EXPECT_THAT(Result, testing::ElementsAre(2, 3));
@@ -1197,6 +1261,217 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
         ArrayRef<int>({0, 7, 1, 6, 2, 5, 3, 4}), 8, 2, 2, NumSubElts,
         RotateAmt));
   }
+}
+
+TEST_F(SandboxIRTest, ExtractValueInst) {
+  parseIR(C, R"IR(
+define void @foo({i32, float} %agg) {
+  %ext_simple = extractvalue {i32, float} %agg, 0
+  %ext_nested = extractvalue {float, {i32}} undef, 1, 0
+  %const1 = extractvalue {i32, float} {i32 0, float 99.0}, 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  [[maybe_unused]] auto *LLVMExtSimple =
+      cast<llvm::ExtractValueInst>(&*LLVMIt++);
+  auto *LLVMExtNested = cast<llvm::ExtractValueInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *ArgAgg = F.getArg(0);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *ExtSimple = cast<sandboxir::ExtractValueInst>(&*It++);
+  auto *ExtNested = cast<sandboxir::ExtractValueInst>(&*It++);
+  auto *Const1 = cast<sandboxir::ExtractValueInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(ExtSimple->getOperand(0), ArgAgg);
+
+  // create before instruction
+  auto *NewExtBeforeRet =
+      cast<sandboxir::ExtractValueInst>(sandboxir::ExtractValueInst::create(
+          ArgAgg, ArrayRef<unsigned>({0}), Ret->getIterator(), Ret->getParent(),
+          Ctx, "NewExtBeforeRet"));
+  EXPECT_EQ(NewExtBeforeRet->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewExtBeforeRet->getName(), "NewExtBeforeRet");
+#endif // NDEBUG
+
+  // create at end of BB
+  auto *NewExtAtEnd =
+      cast<sandboxir::ExtractValueInst>(sandboxir::ExtractValueInst::create(
+          ArgAgg, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx, "NewExtAtEnd"));
+  EXPECT_EQ(NewExtAtEnd->getPrevNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewExtAtEnd->getName(), "NewExtAtEnd");
+#endif // NDEBUG
+
+  // Test the path that creates a folded constant.
+  auto *ShouldBeConstant = sandboxir::ExtractValueInst::create(
+      Const1->getOperand(0), ArrayRef<unsigned>({0}), BB->end(), BB, Ctx);
+  EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
+
+  auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  EXPECT_EQ(ShouldBeConstant, Zero);
+
+  // getIndexedType
+  sandboxir::Type *AggType = ExtNested->getAggregateOperand()->getType();
+  llvm::Type *LLVMAggType = LLVMExtNested->getAggregateOperand()->getType();
+  EXPECT_EQ(sandboxir::ExtractValueInst::getIndexedType(
+                AggType, ArrayRef<unsigned>({1, 0})),
+            Ctx.getType(llvm::ExtractValueInst::getIndexedType(
+                LLVMAggType, ArrayRef<unsigned>({1, 0}))));
+
+  EXPECT_EQ(sandboxir::ExtractValueInst::getIndexedType(
+                AggType, ArrayRef<unsigned>({2})),
+            nullptr);
+
+  // idx_begin / idx_end
+  {
+    SmallVector<int, 2> IndicesSimple(ExtSimple->idx_begin(),
+                                      ExtSimple->idx_end());
+    EXPECT_THAT(IndicesSimple, testing::ElementsAre(0u));
+
+    SmallVector<int, 2> IndicesNested(ExtNested->idx_begin(),
+                                      ExtNested->idx_end());
+    EXPECT_THAT(IndicesNested, testing::ElementsAre(1u, 0u));
+  }
+
+  // indices
+  {
+    SmallVector<int, 2> IndicesSimple(ExtSimple->indices());
+    EXPECT_THAT(IndicesSimple, testing::ElementsAre(0u));
+
+    SmallVector<int, 2> IndicesNested(ExtNested->indices());
+    EXPECT_THAT(IndicesNested, testing::ElementsAre(1u, 0u));
+  }
+
+  // getAggregateOperand
+  EXPECT_EQ(ExtSimple->getAggregateOperand(), ArgAgg);
+  const auto *ConstExtSimple = ExtSimple;
+  EXPECT_EQ(ConstExtSimple->getAggregateOperand(), ArgAgg);
+
+  // getAggregateOperandIndex
+  EXPECT_EQ(sandboxir::ExtractValueInst::getAggregateOperandIndex(),
+            llvm::ExtractValueInst::getAggregateOperandIndex());
+
+  // getIndices
+  EXPECT_EQ(ExtSimple->getIndices().size(), 1u);
+  EXPECT_EQ(ExtSimple->getIndices()[0], 0u);
+
+  // getNumIndices
+  EXPECT_EQ(ExtSimple->getNumIndices(), 1u);
+
+  // hasIndices
+  EXPECT_EQ(ExtSimple->hasIndices(), true);
+}
+
+TEST_F(SandboxIRTest, InsertValueInst) {
+  parseIR(C, R"IR(
+define void @foo({i32, float} %agg, i32 %i) {
+  %ins_simple = insertvalue {i32, float} %agg, i32 %i, 0
+  %ins_nested = insertvalue {float, {i32}} undef, i32 %i, 1, 0
+  %const1 = insertvalue {i32, float} {i32 99, float 99.0}, i32 %i, 0
+  %const2 = insertvalue {i32, float} {i32 0, float 99.0}, i32 %i, 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *ArgAgg = F.getArg(0);
+  auto *ArgInt = F.getArg(1);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *InsSimple = cast<sandboxir::InsertValueInst>(&*It++);
+  auto *InsNested = cast<sandboxir::InsertValueInst>(&*It++);
+  // These "const" instructions are helpers to create constant struct operands.
+  // TODO: Remove them once sandboxir::ConstantStruct gets added.
+  auto *Const1 = cast<sandboxir::InsertValueInst>(&*It++);
+  auto *Const2 = cast<sandboxir::InsertValueInst>(&*It++);
+  auto *Ret = &*It++;
+
+  EXPECT_EQ(InsSimple->getOperand(0), ArgAgg);
+  EXPECT_EQ(InsSimple->getOperand(1), ArgInt);
+
+  // create before instruction
+  auto *NewInsBeforeRet =
+      cast<sandboxir::InsertValueInst>(sandboxir::InsertValueInst::create(
+          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), Ret->getIterator(),
+          Ret->getParent(), Ctx, "NewInsBeforeRet"));
+  EXPECT_EQ(NewInsBeforeRet->getNextNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewInsBeforeRet->getName(), "NewInsBeforeRet");
+#endif // NDEBUG
+
+  // create at end of BB
+  auto *NewInsAtEnd =
+      cast<sandboxir::InsertValueInst>(sandboxir::InsertValueInst::create(
+          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx,
+          "NewInsAtEnd"));
+  EXPECT_EQ(NewInsAtEnd->getPrevNode(), Ret);
+#ifndef NDEBUG
+  EXPECT_EQ(NewInsAtEnd->getName(), "NewInsAtEnd");
+#endif // NDEBUG
+
+  // Test the path that creates a folded constant.
+  auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  auto *ShouldBeConstant = sandboxir::InsertValueInst::create(
+      Const1->getOperand(0), Zero, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx);
+  auto *ExpectedConstant = Const2->getOperand(0);
+  EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
+  EXPECT_EQ(ShouldBeConstant, ExpectedConstant);
+
+  // idx_begin / idx_end
+  {
+    SmallVector<int, 2> IndicesSimple(InsSimple->idx_begin(),
+                                      InsSimple->idx_end());
+    EXPECT_THAT(IndicesSimple, testing::ElementsAre(0u));
+
+    SmallVector<int, 2> IndicesNested(InsNested->idx_begin(),
+                                      InsNested->idx_end());
+    EXPECT_THAT(IndicesNested, testing::ElementsAre(1u, 0u));
+  }
+
+  // indices
+  {
+    SmallVector<int, 2> IndicesSimple(InsSimple->indices());
+    EXPECT_THAT(IndicesSimple, testing::ElementsAre(0u));
+
+    SmallVector<int, 2> IndicesNested(InsNested->indices());
+    EXPECT_THAT(IndicesNested, testing::ElementsAre(1u, 0u));
+  }
+
+  // getAggregateOperand
+  EXPECT_EQ(InsSimple->getAggregateOperand(), ArgAgg);
+  const auto *ConstInsSimple = InsSimple;
+  EXPECT_EQ(ConstInsSimple->getAggregateOperand(), ArgAgg);
+
+  // getAggregateOperandIndex
+  EXPECT_EQ(sandboxir::InsertValueInst::getAggregateOperandIndex(),
+            llvm::InsertValueInst::getAggregateOperandIndex());
+
+  // getInsertedValueOperand
+  EXPECT_EQ(InsSimple->getInsertedValueOperand(), ArgInt);
+  EXPECT_EQ(ConstInsSimple->getInsertedValueOperand(), ArgInt);
+
+  // getInsertedValueOperandIndex
+  EXPECT_EQ(sandboxir::InsertValueInst::getInsertedValueOperandIndex(),
+            llvm::InsertValueInst::getInsertedValueOperandIndex());
+
+  // getIndices
+  EXPECT_EQ(InsSimple->getIndices().size(), 1u);
+  EXPECT_EQ(InsSimple->getIndices()[0], 0u);
+
+  // getNumIndices
+  EXPECT_EQ(InsSimple->getNumIndices(), 1u);
+
+  // hasIndices
+  EXPECT_EQ(InsSimple->hasIndices(), true);
 }
 
 TEST_F(SandboxIRTest, BranchInst) {
@@ -1545,7 +1820,8 @@ define i8 @foo(i8 %arg0, i32 %arg1, ptr %indirectFoo) {
     // Check classof(Value *).
     EXPECT_TRUE(isa<sandboxir::CallBase>((sandboxir::Value *)Call));
     // Check getFunctionType().
-    EXPECT_EQ(Call->getFunctionType(), LLVMCall->getFunctionType());
+    EXPECT_EQ(Call->getFunctionType(),
+              Ctx.getType(LLVMCall->getFunctionType()));
     // Check data_ops().
     EXPECT_EQ(range_size(Call->data_ops()), range_size(LLVMCall->data_ops()));
     auto DataOpIt = Call->data_operands_begin();
@@ -1676,7 +1952,7 @@ define i8 @foo(i8 %arg) {
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
   EXPECT_EQ(Call->getNumOperands(), 2u);
   EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Ret);
-  FunctionType *FTy = F.getFunctionType();
+  sandboxir::FunctionType *FTy = F.getFunctionType();
   SmallVector<sandboxir::Value *, 1> Args;
   Args.push_back(Arg0);
   {
@@ -1911,6 +2187,67 @@ define void @foo(i8 %arg) {
     EXPECT_EQ(NewCallBr->getNextNode(), nullptr);
     EXPECT_EQ(NewCallBr->getParent(), BB0);
   }
+}
+
+TEST_F(SandboxIRTest, LandingPadInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+unwind:
+  %lpad = landingpad { ptr, i32 }
+            catch ptr null
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwind = getBasicBlockByName(LLVMF, "unwind");
+  auto *LLVMLPad = cast<llvm::LandingPadInst>(&*LLVMUnwind->begin());
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Unwind = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwind));
+  auto *BB = cast<sandboxir::BasicBlock>(
+      Ctx.getValue(getBasicBlockByName(LLVMF, "bb")));
+  auto It = Unwind->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check isCleanup().
+  EXPECT_EQ(LPad->isCleanup(), LLVMLPad->isCleanup());
+  // Check setCleanup().
+  auto OrigIsCleanup = LPad->isCleanup();
+  auto NewIsCleanup = true;
+  EXPECT_NE(NewIsCleanup, OrigIsCleanup);
+  LPad->setCleanup(NewIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), NewIsCleanup);
+  LPad->setCleanup(OrigIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), OrigIsCleanup);
+  // Check getNumClauses().
+  EXPECT_EQ(LPad->getNumClauses(), LLVMLPad->getNumClauses());
+  // Check getClause().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->getClause(Idx), Ctx.getValue(LLVMLPad->getClause(Idx)));
+  // Check isCatch().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->isCatch(Idx), LLVMLPad->isCatch(Idx));
+  // Check isFilter().
+  for (auto Idx : seq<unsigned>(0, LPad->getNumClauses()))
+    EXPECT_EQ(LPad->isFilter(Idx), LLVMLPad->isFilter(Idx));
+  // Check create().
+  auto *BBRet = &*BB->begin();
+  auto *NewLPad =
+      cast<sandboxir::LandingPadInst>(sandboxir::LandingPadInst::create(
+          sandboxir::Type::getInt8Ty(Ctx), 0, BBRet->getIterator(),
+          BBRet->getParent(), Ctx, "NewLPad"));
+  EXPECT_EQ(NewLPad->getNextNode(), BBRet);
+  EXPECT_FALSE(NewLPad->isCleanup());
+#ifndef NDEBUG
+  EXPECT_EQ(NewLPad->getName(), "NewLPad");
+#endif // NDEBUG
 }
 
 TEST_F(SandboxIRTest, FuncletPadInst_CatchPadInst_CleanupPadInst) {
@@ -2164,9 +2501,11 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
     // Check classof().
     auto *GEP = cast<sandboxir::GetElementPtrInst>(Ctx.getValue(LLVMGEP));
     // Check getSourceElementType().
-    EXPECT_EQ(GEP->getSourceElementType(), LLVMGEP->getSourceElementType());
+    EXPECT_EQ(GEP->getSourceElementType(),
+              Ctx.getType(LLVMGEP->getSourceElementType()));
     // Check getResultElementType().
-    EXPECT_EQ(GEP->getResultElementType(), LLVMGEP->getResultElementType());
+    EXPECT_EQ(GEP->getResultElementType(),
+              Ctx.getType(LLVMGEP->getResultElementType()));
     // Check getAddressSpace().
     EXPECT_EQ(GEP->getAddressSpace(), LLVMGEP->getAddressSpace());
     // Check indices().
@@ -2182,7 +2521,8 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
     // Check getPointerOperandIndex().
     EXPECT_EQ(GEP->getPointerOperandIndex(), LLVMGEP->getPointerOperandIndex());
     // Check getPointerOperandType().
-    EXPECT_EQ(GEP->getPointerOperandType(), LLVMGEP->getPointerOperandType());
+    EXPECT_EQ(GEP->getPointerOperandType(),
+              Ctx.getType(LLVMGEP->getPointerOperandType()));
     // Check getPointerAddressSpace().
     EXPECT_EQ(GEP->getPointerAddressSpace(), LLVMGEP->getPointerAddressSpace());
     // Check getNumIndices().
@@ -2433,6 +2773,45 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(NewCSI->getParentPad(), CS0);
 }
 
+TEST_F(SandboxIRTest, ResumeInst) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+bb:
+  ret void
+unwind:
+  %lpad = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } %lpad
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwindBB = getBasicBlockByName(LLVMF, "unwind");
+  auto LLVMIt = LLVMUnwindBB->begin();
+  [[maybe_unused]] auto *LLVMLPad = cast<llvm::LandingPadInst>(&*LLVMIt++);
+  auto *LLVMResume = cast<llvm::ResumeInst>(&*LLVMIt++);
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *UnwindBB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwindBB));
+  auto It = UnwindBB->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  auto *Resume = cast<sandboxir::ResumeInst>(&*It++);
+  // Check getValue().
+  EXPECT_EQ(Resume->getValue(), LPad);
+  EXPECT_EQ(Resume->getValue(), Ctx.getValue(LLVMResume->getValue()));
+  // Check getNumSuccessors().
+  EXPECT_EQ(Resume->getNumSuccessors(), LLVMResume->getNumSuccessors());
+  // Check create().
+  auto *NewResume =
+      sandboxir::ResumeInst::create(LPad, UnwindBB->end(), UnwindBB, Ctx);
+  EXPECT_EQ(NewResume->getValue(), LPad);
+  EXPECT_EQ(NewResume->getParent(), UnwindBB);
+  EXPECT_EQ(NewResume->getNextNode(), nullptr);
+}
+
 TEST_F(SandboxIRTest, SwitchInst) {
   parseIR(C, R"IR(
 define void @foo(i32 %cond0, i32 %cond1) {
@@ -2504,8 +2883,8 @@ define void @foo(i32 %cond0, i32 %cond1) {
   Switch->setSuccessor(0, OrigSucc);
   EXPECT_EQ(Switch->getSuccessor(0), OrigSucc);
   // Check case_begin(), case_end(), CaseIt.
-  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
-  auto *One = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 1, Ctx);
+  auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  auto *One = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 1);
   auto CaseIt = Switch->case_begin();
   {
     sandboxir::SwitchInst::CaseHandle Case = *CaseIt++;
@@ -2542,7 +2921,7 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
   EXPECT_EQ(Switch->findCaseDest(Entry), nullptr);
   // Check addCase().
-  auto *Two = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 2, Ctx);
+  auto *Two = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 2);
   Switch->addCase(Two, Entry);
   auto CaseTwoIt = Switch->findCaseValue(Two);
   auto CaseTwo = *CaseTwoIt;
@@ -2807,7 +3186,8 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
   {
     // Check create() when it gets folded.
-    auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+    auto *FortyTwo =
+        sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
     auto *NewV = sandboxir::BinaryOperator::create(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo,
         /*InsertBefore=*/Ret, Ctx, "Folded");
@@ -2863,12 +3243,38 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
   }
   {
     // Check createWithCopiedFlags() when it gets folded.
-    auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+    auto *FortyTwo =
+        sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
     auto *NewV = sandboxir::BinaryOperator::createWithCopiedFlags(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo, CopyFrom,
         /*InsertBefore=*/Ret, Ctx, "Folded");
     EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
   }
+}
+
+TEST_F(SandboxIRTest, PossiblyDisjointInst) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint(), isDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  PDI->setIsDisjoint(OrigIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
 }
 
 TEST_F(SandboxIRTest, AtomicRMWInst) {
@@ -3260,8 +3666,8 @@ define void @foo() {
   EXPECT_EQ(AllocaArray->getArraySize(),
             Ctx.getValue(LLVMAllocaArray->getArraySize()));
   // Check getType().
-  EXPECT_EQ(AllocaScalar->getType(), LLVMAllocaScalar->getType());
-  EXPECT_EQ(AllocaArray->getType(), LLVMAllocaArray->getType());
+  EXPECT_EQ(AllocaScalar->getType(), Ctx.getType(LLVMAllocaScalar->getType()));
+  EXPECT_EQ(AllocaArray->getType(), Ctx.getType(LLVMAllocaArray->getType()));
   // Check getAddressSpace().
   EXPECT_EQ(AllocaScalar->getAddressSpace(),
             LLVMAllocaScalar->getAddressSpace());
@@ -3278,12 +3684,12 @@ define void @foo() {
             LLVMAllocaArray->getAllocationSizeInBits(DL));
   // Check getAllocatedType().
   EXPECT_EQ(AllocaScalar->getAllocatedType(),
-            LLVMAllocaScalar->getAllocatedType());
+            Ctx.getType(LLVMAllocaScalar->getAllocatedType()));
   EXPECT_EQ(AllocaArray->getAllocatedType(),
-            LLVMAllocaArray->getAllocatedType());
+            Ctx.getType(LLVMAllocaArray->getAllocatedType()));
   // Check setAllocatedType().
   auto *OrigType = AllocaScalar->getAllocatedType();
-  auto *NewType = PointerType::get(C, 0);
+  auto *NewType = sandboxir::PointerType::get(Ctx, 0);
   EXPECT_NE(NewType, OrigType);
   AllocaScalar->setAllocatedType(NewType);
   EXPECT_EQ(AllocaScalar->getAllocatedType(), NewType);
@@ -3314,10 +3720,10 @@ define void @foo() {
   AllocaScalar->setUsedWithInAlloca(OrigUsedWithInAlloca);
   EXPECT_EQ(AllocaScalar->isUsedWithInAlloca(), OrigUsedWithInAlloca);
 
-  auto *Ty = Type::getInt32Ty(C);
+  auto *Ty = sandboxir::Type::getInt32Ty(Ctx);
   unsigned AddrSpace = 42;
-  auto *PtrTy = PointerType::get(C, AddrSpace);
-  auto *ArraySize = sandboxir::ConstantInt::get(Ty, 43, Ctx);
+  auto *PtrTy = sandboxir::PointerType::get(Ctx, AddrSpace);
+  auto *ArraySize = sandboxir::ConstantInt::get(Ty, 43);
   {
     // Check create() WhereIt, WhereBB.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
@@ -3394,13 +3800,13 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
 
-  Type *Ti64 = Type::getInt64Ty(C);
-  Type *Ti32 = Type::getInt32Ty(C);
-  Type *Ti16 = Type::getInt16Ty(C);
-  Type *Tdouble = Type::getDoubleTy(C);
-  Type *Tfloat = Type::getFloatTy(C);
-  Type *Tptr = Tfloat->getPointerTo();
-  Type *Tptr1 = Tfloat->getPointerTo(1);
+  auto *Ti64 = sandboxir::Type::getInt64Ty(Ctx);
+  auto *Ti32 = sandboxir::Type::getInt32Ty(Ctx);
+  auto *Ti16 = sandboxir::Type::getInt16Ty(Ctx);
+  auto *Tdouble = sandboxir::Type::getDoubleTy(Ctx);
+  auto *Tfloat = sandboxir::Type::getFloatTy(Ctx);
+  auto *Tptr = sandboxir::PointerType::get(Tfloat, 0);
+  auto *Tptr1 = sandboxir::PointerType::get(Tfloat, 1);
 
   // Check classof(), getOpcode(), getSrcTy(), getDstTy()
   auto *ZExt = cast<sandboxir::CastInst>(&*It++);
@@ -3567,13 +3973,58 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   }
 }
 
+TEST_F(SandboxIRTest, PossiblyNonNegInst) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
+  %zext = zext i32 %arg to i64
+  %uitofp = uitofp i32 %arg to float
+
+  %sext = sext i32 %arg to i64
+  %fptoui = fptoui float %farg to i32
+  %fptosi = fptosi float %farg to i32
+  %fpext = fpext float %farg to double
+  %ptrtoint = ptrtoint ptr %ptr to i32
+  %inttoptr = inttoptr i32 %arg to ptr
+  %sitofp = sitofp i32 %arg to float
+  %trunc = trunc i32 %arg to i16
+  %fptrunc = fptrunc double %darg to float
+  %bitcast = bitcast i32 %arg to float
+  %addrspacecast = addrspacecast ptr %ptr to ptr addrspace(1)
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *PNNI0 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  auto *PNNI1 = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+  for (auto ItE = BB->end(); It != ItE; ++It)
+    EXPECT_FALSE(isa<sandboxir::PossiblyNonNegInst>(&*It++));
+
+  for (auto *PNNI : {PNNI0, PNNI1}) {
+    // Check setNonNeg(), hasNonNeg().
+    auto OrigNonNeg = PNNI->hasNonNeg();
+    auto NewNonNeg = true;
+    EXPECT_NE(NewNonNeg, OrigNonNeg);
+    PNNI->setNonNeg(NewNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+    PNNI->setNonNeg(OrigNonNeg);
+    EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
+  }
+}
+
 /// CastInst's subclasses are very similar so we can use a common test function
 /// for them.
 template <typename SubclassT, sandboxir::Instruction::Opcode OpcodeT>
-void testCastInst(llvm::Module &M, Type *SrcTy, Type *DstTy) {
+void testCastInst(llvm::Module &M, llvm::Type *LLVMSrcTy,
+                  llvm::Type *LLVMDstTy) {
   Function &LLVMF = *M.getFunction("foo");
   sandboxir::Context Ctx(M.getContext());
   sandboxir::Function *F = Ctx.createFunction(&LLVMF);
+  sandboxir::Type *SrcTy = Ctx.getType(LLVMSrcTy);
+  sandboxir::Type *DstTy = Ctx.getType(LLVMDstTy);
   unsigned ArgIdx = 0;
   auto *Arg = F->getArg(ArgIdx++);
   auto *BB = &*F->begin();
@@ -3983,4 +4434,11 @@ define void @foo() {
       sandboxir::UnreachableInst::create(/*InsertAtEnd=*/BB, Ctx);
   EXPECT_EQ(NewUIEnd->getParent(), BB);
   EXPECT_EQ(NewUIEnd->getNextNode(), nullptr);
+}
+
+/// Makes sure that all Instruction sub-classes have a classof().
+TEST_F(SandboxIRTest, CheckClassof) {
+#define DEF_INSTR(ID, OPC, CLASS)                                              \
+  EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
+#include "llvm/SandboxIR/SandboxIRValues.def"
 }

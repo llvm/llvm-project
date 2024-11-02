@@ -243,10 +243,10 @@ defm : X86WriteRes<WriteFStoreNT,      [ICXPort78,ICXPort49], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTX,     [ICXPort78,ICXPort49], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTY,     [ICXPort78,ICXPort49], 1, [1,1], 2>;
 
-defm : X86WriteRes<WriteFMaskedStore32,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore64,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
+defm : X86WriteRes<WriteFMaskedStore32,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
 
 defm : X86WriteRes<WriteFMove,         [ICXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [ICXPort015], 1, [1], 1>;
@@ -359,10 +359,10 @@ defm : X86WriteRes<WriteVecStoreX,       [ICXPort78,ICXPort49], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [ICXPort78,ICXPort49], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [ICXPort78,ICXPort49], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [ICXPort78,ICXPort49], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [ICXPort78,ICXPort49,ICXPort0], 2, [1,1,1], 3>;
 defm : X86WriteRes<WriteVecMove,         [ICXPort05],  1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [ICXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [ICXPort015], 1, [1], 1>;
@@ -900,10 +900,10 @@ def ICXWriteResGroup38 : SchedWriteRes<[ICXPort15,ICXPort01]> {
 }
 def: InstRW<[ICXWriteResGroup38], (instregex "(V?)PH(ADD|SUB)SW(Y?)rr")>;
 
-def ICXWriteResGroup41 : SchedWriteRes<[ICXPort5,ICXPort0156]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
+def ICXWriteResGroup41 : SchedWriteRes<[ICXPort5]> {
+  let Latency = 4;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[ICXWriteResGroup41], (instrs MMX_PACKSSDWrr,
                                           MMX_PACKSSWBrr,

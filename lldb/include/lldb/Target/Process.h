@@ -616,10 +616,8 @@ public:
   virtual Status LoadCore();
 
   virtual Status DoLoadCore() {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support loading core files.", GetPluginName());
-    return error;
   }
 
   /// The "ShadowListener" for a process is just an ordinary Listener that
@@ -990,9 +988,7 @@ public:
   /// \return
   ///     Returns an error object.
   virtual Status DoConnectRemote(llvm::StringRef remote_url) {
-    Status error;
-    error.SetErrorString("remote connections are not supported");
-    return error;
+    return Status::FromErrorString("remote connections are not supported");
   }
 
   /// Attach to an existing process using a process ID.
@@ -1011,11 +1007,9 @@ public:
   /// hanming : need flag
   virtual Status DoAttachToProcessWithID(lldb::pid_t pid,
                                          const ProcessAttachInfo &attach_info) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support attaching to a process by pid",
         GetPluginName());
-    return error;
   }
 
   /// Attach to an existing process using a partial process name.
@@ -1034,9 +1028,7 @@ public:
   virtual Status
   DoAttachToProcessWithName(const char *process_name,
                             const ProcessAttachInfo &attach_info) {
-    Status error;
-    error.SetErrorString("attach by name is not supported");
-    return error;
+    return Status::FromErrorString("attach by name is not supported");
   }
 
   /// Called after attaching a process.
@@ -1101,10 +1093,8 @@ public:
   ///     An Status instance indicating success or failure of the
   ///     operation.
   virtual Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support launching processes", GetPluginName());
-    return error;
   }
 
   /// Called after launching a process.
@@ -1136,10 +1126,8 @@ public:
   /// \see Thread:Step()
   /// \see Thread:Suspend()
   virtual Status DoResume() {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support resuming processes", GetPluginName());
-    return error;
   }
 
   /// Called after resuming a process.
@@ -1171,10 +1159,8 @@ public:
   ///     Returns \b true if the process successfully halts, \b false
   ///     otherwise.
   virtual Status DoHalt(bool &caused_stop) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support halting processes", GetPluginName());
-    return error;
   }
 
   /// Called after halting a process.
@@ -1197,11 +1183,9 @@ public:
   ///     Returns \b true if the process successfully detaches, \b
   ///     false otherwise.
   virtual Status DoDetach(bool keep_stopped) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support detaching from processes",
         GetPluginName());
-    return error;
   }
 
   /// Called after detaching from a process.
@@ -1228,11 +1212,9 @@ public:
   /// \return
   ///     Returns an error object.
   virtual Status DoSignal(int signal) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support sending signals to processes",
         GetPluginName());
-    return error;
   }
 
   virtual Status WillDestroy() { return Status(); }
@@ -1686,7 +1668,7 @@ public:
   ///     The number of bytes that were actually written.
   virtual size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
                                size_t size, Status &error) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "error: {0} does not support writing to processes", GetPluginName());
     return 0;
   }
@@ -1769,7 +1751,7 @@ public:
 
   virtual lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                         Status &error) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "error: {0} does not support allocating in the debug process",
         GetPluginName());
     return LLDB_INVALID_ADDRESS;
@@ -2036,11 +2018,9 @@ public:
   /// \return
   ///     \b true if the memory was deallocated, \b false otherwise.
   virtual Status DoDeallocateMemory(lldb::addr_t ptr) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support deallocating in the debug process",
         GetPluginName());
-    return error;
   }
 
   /// The public interface to deallocating memory in the process.
@@ -2133,7 +2113,7 @@ public:
   ///     less than \a buf_size, another call to this function should
   ///     be made to write the rest of the data.
   virtual size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) {
-    error.SetErrorString("stdin unsupported");
+    error = Status::FromErrorString("stdin unsupported");
     return 0;
   }
 
@@ -2156,17 +2136,13 @@ public:
   size_t GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site);
 
   virtual Status EnableBreakpointSite(BreakpointSite *bp_site) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support enabling breakpoints", GetPluginName());
-    return error;
   }
 
   virtual Status DisableBreakpointSite(BreakpointSite *bp_site) {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support disabling breakpoints", GetPluginName());
-    return error;
   }
 
   // This is implemented completely using the lldb::Process API. Subclasses
@@ -2523,8 +2499,8 @@ void PruneThreadPlans();
   bool CurrentThreadIsPrivateStateThread();
 
   virtual Status SendEventData(const char *data) {
-    Status return_error("Sending an event is not supported for this process.");
-    return return_error;
+    return Status::FromErrorString(
+        "Sending an event is not supported for this process.");
   }
 
   lldb::ThreadCollectionSP GetHistoryThreads(lldb::addr_t addr);
@@ -2572,7 +2548,7 @@ void PruneThreadPlans();
   ///     processes address space, LLDB_INVALID_ADDRESS otherwise.
   virtual Status GetFileLoadAddress(const FileSpec &file, bool &is_loaded,
                                     lldb::addr_t &load_addr) {
-    return Status("Not supported");
+    return Status::FromErrorString("Not supported");
   }
 
   /// Fetch process defined metadata.
@@ -2858,7 +2834,8 @@ protected:
   ///     An error value.
   virtual Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                        MemoryRegionInfo &range_info) {
-    return Status("Process::DoGetMemoryRegionInfo() not supported");
+    return Status::FromErrorString(
+        "Process::DoGetMemoryRegionInfo() not supported");
   }
 
   /// Provide an override value in the subclass for lldb's
@@ -3057,10 +3034,8 @@ protected:
   ///     Status telling you whether the write succeeded.
   virtual Status DoWriteMemoryTags(lldb::addr_t addr, size_t len, int32_t type,
                                    const std::vector<uint8_t> &tags) {
-    Status status;
-    status.SetErrorStringWithFormatv("{0} does not support writing memory tags",
-                                     GetPluginName());
-    return status;
+    return Status::FromErrorStringWithFormatv(
+        "{0} does not support writing memory tags", GetPluginName());
   }
 
   // Type definitions

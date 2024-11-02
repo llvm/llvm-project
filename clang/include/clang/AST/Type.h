@@ -44,6 +44,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -1684,6 +1685,7 @@ class ExtQualsTypeCommonBase {
   friend class ExtQuals;
   friend class QualType;
   friend class Type;
+  friend class ASTReader;
 
   /// The "base" type of an extended qualifiers type (\c ExtQuals) or
   /// a self-referential pointer (for \c Type).
@@ -6155,6 +6157,54 @@ public:
   }
 };
 
+class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
+public:
+  struct Attributes {
+    // Data gathered from HLSL resource attributes
+    llvm::dxil::ResourceClass ResourceClass;
+    uint8_t IsROV : 1;
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV)
+        : ResourceClass(ResourceClass), IsROV(IsROV) {}
+    Attributes() : ResourceClass(llvm::dxil::ResourceClass::UAV), IsROV(0) {}
+  };
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType WrappedType;
+  QualType ContainedType;
+  const Attributes Attrs;
+
+  HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
+                             QualType Contained, const Attributes &Attrs)
+      : Type(HLSLAttributedResource, Canon, Wrapped->getDependence()),
+        WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+public:
+  QualType getWrappedType() const { return WrappedType; }
+  QualType getContainedType() const { return ContainedType; }
+  const Attributes &getAttrs() const { return Attrs; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getWrappedType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedType, ContainedType, Attrs);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      QualType Contained, const Attributes &Attrs) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(Contained.getAsOpaquePtr());
+    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+    ID.AddBoolean(Attrs.IsROV);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLAttributedResource;
+  }
+};
+
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
@@ -8577,6 +8627,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
     if (const auto *A = dyn_cast<AttributedType>(Ty))
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
       Ty = E->desugar().getTypePtr();

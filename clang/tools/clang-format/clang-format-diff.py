@@ -168,7 +168,7 @@ def main():
                 'Failed to run "%s" - %s"' % (" ".join(command), e.strerror)
             )
 
-        stdout, stderr = p.communicate()
+        stdout, _stderr = p.communicate()
         if p.returncode != 0:
             return p.returncode
 

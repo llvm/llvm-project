@@ -194,7 +194,7 @@ entry:
 
 define i8 @test_load_noattr(ptr %a) {
 ; CHECK-LABEL: define i8 @test_load_noattr
-; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i8 [[B]]
@@ -206,7 +206,7 @@ entry:
 
 define i8 @test_load_notmyattr(ptr %a) sanitize_address {
 ; CHECK-LABEL: define i8 @test_load_notmyattr
-; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i8 [[B]]

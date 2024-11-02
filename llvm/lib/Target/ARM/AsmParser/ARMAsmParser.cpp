@@ -247,7 +247,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   }
 
   // Map of register aliases registers via the .req directive.
-  StringMap<unsigned> RegisterReqs;
+  StringMap<MCRegister> RegisterReqs;
 
   bool NextSymbolIsThumb;
 
@@ -4253,7 +4253,7 @@ int ARMAsmParser::tryParseRegister(bool AllowOutOfBoundReg) {
     // Check for aliases registered via .req. Canonicalize to lower case.
     // That's more consistent since register names are case insensitive, and
     // it's how the original entry was passed in from MC/MCParser/AsmParser.
-    StringMap<unsigned>::const_iterator Entry = RegisterReqs.find(lowerCase);
+    auto Entry = RegisterReqs.find(lowerCase);
     // If no match, return failure.
     if (Entry == RegisterReqs.end())
       return -1;

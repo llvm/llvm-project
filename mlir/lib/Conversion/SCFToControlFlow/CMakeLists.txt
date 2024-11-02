@@ -7,12 +7,10 @@ add_mlir_conversion_library(MLIRSCFToControlFlow
   DEPENDS
   MLIRConversionPassIncGen
 
-  LINK_COMPONENTS
-  Core
-
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRControlFlowDialect
+  MLIRLLVMDialect
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRTransforms

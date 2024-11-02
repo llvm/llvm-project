@@ -75,7 +75,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;
-  let ActiveElementsAffectResult = 1;
+  let ElementsDependOn = EltDepsVLMask;
 }
 
 class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
@@ -99,7 +99,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;
-  let ActiveElementsAffectResult = 1;
+  let ElementsDependOn = EltDepsVLMask;
 }
 
 class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,

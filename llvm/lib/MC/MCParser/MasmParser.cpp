@@ -7125,7 +7125,7 @@ bool MasmParser::parseDirectiveForc(SMLoc DirectiveLoc, StringRef Directive) {
   StringRef Values(Argument);
   for (std::size_t I = 0, End = Values.size(); I != End; ++I) {
     MCAsmMacroArgument Arg;
-    Arg.emplace_back(AsmToken::Identifier, Values.slice(I, I + 1));
+    Arg.emplace_back(AsmToken::Identifier, Values.substr(I, 1));
 
     if (expandMacro(OS, M->Body, Parameter, Arg, M->Locals, getTok().getLoc()))
       return true;

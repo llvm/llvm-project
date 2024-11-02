@@ -2062,7 +2062,7 @@ bool equal(L &&LRange, R &&RRange, BinaryPredicate P) {
 template <typename R> bool all_equal(R &&Range) {
   auto Begin = adl_begin(Range);
   auto End = adl_end(Range);
-  return Begin == End || std::equal(Begin + 1, End, Begin);
+  return Begin == End || std::equal(std::next(Begin), End, Begin);
 }
 
 /// Returns true if all Values in the initializer lists are equal or the list

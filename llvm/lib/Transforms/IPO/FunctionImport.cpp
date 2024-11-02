@@ -359,6 +359,15 @@ FunctionImporter::ImportMapTy::getSourceModules() const {
   return Modules;
 }
 
+std::optional<GlobalValueSummary::ImportKind>
+FunctionImporter::ImportMapTy::getImportType(
+    const FunctionsToImportTy &GUIDToImportType, GlobalValue::GUID GUID) const {
+  auto Iter = GUIDToImportType.find(GUID);
+  if (Iter == GUIDToImportType.end())
+    return std::nullopt;
+  return Iter->second;
+}
+
 /// Import globals referenced by a function or other globals that are being
 /// imported, if importing such global is possible.
 class GlobalsImporter final {
@@ -1082,28 +1091,36 @@ numGlobalVarSummaries(const ModuleSummaryIndex &Index,
   return NumGVS;
 }
 
-// Given ImportMap, return the number of global variable summaries and record
-// the number of defined function summaries as output parameter.
-static unsigned
-numGlobalVarSummaries(const ModuleSummaryIndex &Index,
-                      const FunctionImporter::FunctionsToImportTy &ImportMap,
-                      unsigned &DefinedFS) {
+struct ImportStatistics {
   unsigned NumGVS = 0;
-  DefinedFS = 0;
-  for (auto &[GUID, Type] : ImportMap) {
-    if (isGlobalVarSummary(Index, GUID))
-      ++NumGVS;
-    else if (Type == GlobalValueSummary::Definition)
-      ++DefinedFS;
+  unsigned DefinedFS = 0;
+  unsigned Count = 0;
+};
+
+// Compute import statistics for each source module in ImportList.
+static DenseMap<StringRef, ImportStatistics>
+collectImportStatistics(const ModuleSummaryIndex &Index,
+                        const FunctionImporter::ImportMapTy &ImportList) {
+  DenseMap<StringRef, ImportStatistics> Histogram;
+
+  for (const auto &[FromModule, GUIDs] : ImportList.getImportMap()) {
+    ImportStatistics &Entry = Histogram[FromModule];
+    for (const auto &[GUID, Type] : GUIDs) {
+      ++Entry.Count;
+      if (isGlobalVarSummary(Index, GUID))
+        ++Entry.NumGVS;
+      else if (Type == GlobalValueSummary::Definition)
+        ++Entry.DefinedFS;
+    }
   }
-  return NumGVS;
+  return Histogram;
 }
 #endif
 
 #ifndef NDEBUG
 static bool checkVariableImport(
     const ModuleSummaryIndex &Index,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   DenseSet<GlobalValue::GUID> FlattenedImports;
 
@@ -1144,7 +1161,7 @@ void llvm::ComputeCrossModuleImport(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    FunctionImporter::ImportListsTy &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   auto MIS = ModuleImportsManager::create(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
@@ -1217,21 +1234,19 @@ void llvm::ComputeCrossModuleImport(
     auto ModName = ModuleImports.first;
     auto &Exports = ExportLists[ModName];
     unsigned NumGVS = numGlobalVarSummaries(Index, Exports);
+    DenseMap<StringRef, ImportStatistics> Histogram =
+        collectImportStatistics(Index, ModuleImports.second);
     LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports "
                       << Exports.size() - NumGVS << " functions and " << NumGVS
-                      << " vars. Imports from "
-                      << ModuleImports.second.getImportMap().size()
+                      << " vars. Imports from " << Histogram.size()
                       << " modules.\n");
-    for (const auto &Src : ModuleImports.second.getImportMap()) {
-      auto SrcModName = Src.first;
-      unsigned DefinedFS = 0;
-      unsigned NumGVSPerMod =
-          numGlobalVarSummaries(Index, Src.second, DefinedFS);
-      LLVM_DEBUG(dbgs() << " - " << DefinedFS << " function definitions and "
-                        << Src.second.size() - NumGVSPerMod - DefinedFS
+    for (const auto &[SrcModName, Stats] : Histogram) {
+      LLVM_DEBUG(dbgs() << " - " << Stats.DefinedFS
+                        << " function definitions and "
+                        << Stats.Count - Stats.NumGVS - Stats.DefinedFS
                         << " function declarations imported from " << SrcModName
                         << "\n");
-      LLVM_DEBUG(dbgs() << " - " << NumGVSPerMod
+      LLVM_DEBUG(dbgs() << " - " << Stats.NumGVS
                         << " global vars imported from " << SrcModName << "\n");
     }
   }
@@ -1242,17 +1257,17 @@ void llvm::ComputeCrossModuleImport(
 static void dumpImportListForModule(const ModuleSummaryIndex &Index,
                                     StringRef ModulePath,
                                     FunctionImporter::ImportMapTy &ImportList) {
+  DenseMap<StringRef, ImportStatistics> Histogram =
+      collectImportStatistics(Index, ImportList);
   LLVM_DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
-                    << ImportList.getImportMap().size() << " modules.\n");
-  for (const auto &Src : ImportList.getImportMap()) {
-    auto SrcModName = Src.first;
-    unsigned DefinedFS = 0;
-    unsigned NumGVSPerMod = numGlobalVarSummaries(Index, Src.second, DefinedFS);
-    LLVM_DEBUG(dbgs() << " - " << DefinedFS << " function definitions and "
-                      << Src.second.size() - DefinedFS - NumGVSPerMod
+                    << Histogram.size() << " modules.\n");
+  for (const auto &[SrcModName, Stats] : Histogram) {
+    LLVM_DEBUG(dbgs() << " - " << Stats.DefinedFS
+                      << " function definitions and "
+                      << Stats.Count - Stats.DefinedFS - Stats.NumGVS
                       << " function declarations imported from " << SrcModName
                       << "\n");
-    LLVM_DEBUG(dbgs() << " - " << NumGVSPerMod << " vars imported from "
+    LLVM_DEBUG(dbgs() << " - " << Stats.NumGVS << " vars imported from "
                       << SrcModName << "\n");
   }
 }
@@ -1497,9 +1512,25 @@ void llvm::gatherImportedSummariesForModule(
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
+
+  // Forward port the heterogeneous std::map::operator[]() from C++26, which
+  // lets us look up the map without allocating an instance of std::string when
+  // the key-value pair exists in the map.
+  // TODO: Remove this in favor of the heterogenous std::map::operator[]() from
+  // C++26 when it becomes available for our codebase.
+  auto LookupOrCreate = [](ModuleToSummariesForIndexTy &Map,
+                           StringRef Key) -> GVSummaryMapTy & {
+    auto It = Map.find(Key);
+    if (It == Map.end())
+      std::tie(It, std::ignore) =
+          Map.try_emplace(std::string(Key), GVSummaryMapTy());
+    return It->second;
+  };
+
   // Include summaries for imports.
   for (const auto &ILI : ImportList.getImportMap()) {
-    auto &SummariesForIndex = ModuleToSummariesForIndex[std::string(ILI.first)];
+    auto &SummariesForIndex =
+        LookupOrCreate(ModuleToSummariesForIndex, ILI.first);
 
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ILI.first);
@@ -1778,15 +1809,6 @@ Expected<bool> FunctionImporter::importFunctions(
 
   IRMover Mover(DestModule);
 
-  auto getImportType = [&](const FunctionsToImportTy &GUIDToImportType,
-                           GlobalValue::GUID GUID)
-      -> std::optional<GlobalValueSummary::ImportKind> {
-    auto Iter = GUIDToImportType.find(GUID);
-    if (Iter == GUIDToImportType.end())
-      return std::nullopt;
-    return Iter->second;
-  };
-
   // Do the actual import of functions now, one Module at a time
   for (const auto &Name : ImportList.getSourceModules()) {
     // Get the module for the import
@@ -1813,7 +1835,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!F.hasName())
         continue;
       auto GUID = F.getGUID();
-      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+      auto MaybeImportType = ImportList.getImportType(ImportGUIDs, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
@@ -1849,7 +1871,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
-      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+      auto MaybeImportType = ImportList.getImportType(ImportGUIDs, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
@@ -1869,7 +1891,7 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
         continue;
       auto GUID = GA.getGUID();
-      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+      auto MaybeImportType = ImportList.getImportType(ImportGUIDs, GUID);
       bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
 
       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")

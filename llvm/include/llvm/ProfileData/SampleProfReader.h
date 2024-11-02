@@ -380,6 +380,17 @@ public:
     return sampleprof_error::success;
   }
 
+  /// Read sample profiles for the given functions.
+  std::error_code read(const DenseSet<StringRef> &FuncsToUse) {
+    DenseSet<StringRef> S;
+    for (StringRef F : FuncsToUse)
+      if (Profiles.find(FunctionId(F)) == Profiles.end())
+        S.insert(F);
+    if (std::error_code EC = read(S, Profiles))
+      return EC;
+    return sampleprof_error::success;
+  }
+
   /// The implementaion to read sample profiles from the associated file.
   virtual std::error_code readImpl() = 0;
 
@@ -484,9 +495,9 @@ public:
   /// are present.
   virtual void setProfileUseMD5() { ProfileIsMD5 = true; }
 
-  /// Don't read profile without context if the flag is set. This is only meaningful
-  /// for ExtBinary format.
-  virtual void setSkipFlatProf(bool Skip) {}
+  /// Don't read profile without context if the flag is set.
+  void setSkipFlatProf(bool Skip) { SkipFlatProf = Skip; }
+
   /// Return whether any name in the profile contains ".__uniq." suffix.
   virtual bool hasUniqSuffix() { return false; }
 
@@ -520,7 +531,25 @@ protected:
   /// Compute summary for this profile.
   void computeSummary();
 
+  /// Read sample profiles for the given functions and write them to the given
+  /// profile map. Currently it's only used for extended binary format to load
+  /// the profiles on-demand.
+  virtual std::error_code read(const DenseSet<StringRef> &FuncsToUse,
+                               SampleProfileMap &Profiles) {
+    return sampleprof_error::not_implemented;
+  }
+
   std::unique_ptr<SampleProfileReaderItaniumRemapper> Remapper;
+
+  // A map from a function's context hash to its meta data section range, used
+  // for on-demand read function profile metadata.
+  std::unordered_map<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
+      FuncMetadataIndex;
+
+  std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
+
+  /// Whether the profile has attribute metadata.
+  bool ProfileHasAttribute = false;
 
   /// \brief Whether samples are collected based on pseudo probes.
   bool ProfileIsProbeBased = false;
@@ -552,6 +581,10 @@ protected:
   /// Whether the profile uses MD5 for Sample Contexts and function names. This
   /// can be one-way overriden by the user to force use MD5.
   bool ProfileIsMD5 = false;
+
+  /// If SkipFlatProf is true, skip functions marked with !Flat in text mode or
+  /// sections with SecFlagFlat flag in ExtBinary mode.
+  bool SkipFlatProf = false;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {
@@ -621,6 +654,8 @@ protected:
 
   /// Read the next function profile instance.
   std::error_code readFuncProfile(const uint8_t *Start);
+  std::error_code readFuncProfile(const uint8_t *Start,
+                                  SampleProfileMap &Profiles);
 
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
@@ -720,11 +755,15 @@ protected:
   std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
+  std::error_code readFuncMetadata(bool ProfileHasAttribute,
+                                   SampleProfileMap &Profiles);
   std::error_code readFuncMetadata(bool ProfileHasAttribute);
   std::error_code readFuncMetadata(bool ProfileHasAttribute,
                                    FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
+  std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
+                                   SampleProfileMap &Profiles);
   std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList();
@@ -754,10 +793,6 @@ protected:
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
-  /// If SkipFlatProf is true, skip the sections with
-  /// SecFlagFlat flag.
-  bool SkipFlatProf = false;
-
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
@@ -780,7 +815,13 @@ public:
     return std::move(ProfSymList);
   };
 
-  void setSkipFlatProf(bool Skip) override { SkipFlatProf = Skip; }
+private:
+  /// Read the profiles on-demand for the given functions. This is used after
+  /// stale call graph matching finds new functions whose profiles aren't loaded
+  /// at the beginning and we need to loaded the profiles explicitly for
+  /// potential matching.
+  std::error_code read(const DenseSet<StringRef> &FuncsToUse,
+                       SampleProfileMap &Profiles) override;
 };
 
 class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {

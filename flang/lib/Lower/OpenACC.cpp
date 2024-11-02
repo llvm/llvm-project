@@ -2080,6 +2080,13 @@ static mlir::acc::LoopOp createLoopOp(
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), *combinedConstructs));
 
+  // TODO: retrieve directives from NonLabelDoStmt pft::Evaluation, and add them
+  // as attribute to the acc.loop as an extra attribute. It is not quite clear
+  // how useful these $dir are in acc contexts, but they could still provide
+  // more information about the loop acc codegen. They can be obtained by
+  // looking for the first lexicalSuccessor of eval that is a NonLabelDoStmt,
+  // and using the related `dirs` member.
+
   return loopOp;
 }
 

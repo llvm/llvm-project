@@ -173,16 +173,22 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
     return PreservedAnalyses::all();
   }
 
-  OS << "Function Info:\n";
-  for (const auto &[Guid, FuncInfo] : C.FuncInfo)
-    OS << Guid << " : " << FuncInfo.Name
-       << ". MaxCounterID: " << FuncInfo.NextCounterIndex
-       << ". MaxCallsiteID: " << FuncInfo.NextCallsiteIndex << "\n";
+  if (Mode == PrintMode::Everything) {
+    OS << "Function Info:\n";
+    for (const auto &[Guid, FuncInfo] : C.FuncInfo)
+      OS << Guid << " : " << FuncInfo.Name
+         << ". MaxCounterID: " << FuncInfo.NextCounterIndex
+         << ". MaxCallsiteID: " << FuncInfo.NextCallsiteIndex << "\n";
+  }
 
   const auto JSONed = ::llvm::json::toJSON(C.profiles());
 
-  OS << "\nCurrent Profile:\n";
+  if (Mode == PrintMode::Everything)
+    OS << "\nCurrent Profile:\n";
   OS << formatv("{0:2}", JSONed);
+  if (Mode == PrintMode::JSON)
+    return PreservedAnalyses::all();
+
   OS << "\n";
   OS << "\nFlat Profile:\n";
   auto Flat = C.flatten();
@@ -209,34 +215,49 @@ InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
   return nullptr;
 }
 
-static void
-preorderVisit(const PGOCtxProfContext::CallTargetMapTy &Profiles,
-              function_ref<void(const PGOCtxProfContext &)> Visitor) {
-  std::function<void(const PGOCtxProfContext &)> Traverser =
-      [&](const auto &Ctx) {
-        Visitor(Ctx);
-        for (const auto &[_, SubCtxSet] : Ctx.callsites())
-          for (const auto &[__, Subctx] : SubCtxSet)
-            Traverser(Subctx);
-      };
-  for (const auto &[_, P] : Profiles)
+template <class ProfilesTy, class ProfTy>
+static void preorderVisit(ProfilesTy &Profiles,
+                          function_ref<void(ProfTy &)> Visitor,
+                          GlobalValue::GUID Match = 0) {
+  std::function<void(ProfTy &)> Traverser = [&](auto &Ctx) {
+    if (!Match || Ctx.guid() == Match)
+      Visitor(Ctx);
+    for (auto &[_, SubCtxSet] : Ctx.callsites())
+      for (auto &[__, Subctx] : SubCtxSet)
+        Traverser(Subctx);
+  };
+  for (auto &[_, P] : Profiles)
     Traverser(P);
+}
+
+void PGOContextualProfile::update(Visitor V, const Function *F) {
+  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
+  preorderVisit<PGOCtxProfContext::CallTargetMapTy, PGOCtxProfContext>(
+      *Profiles, V, G);
+}
+
+void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
+  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
+  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
+                const PGOCtxProfContext>(*Profiles, V, G);
 }
 
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {
   assert(Profiles.has_value());
   CtxProfFlatProfile Flat;
-  preorderVisit(*Profiles, [&](const PGOCtxProfContext &Ctx) {
-    auto [It, Ins] = Flat.insert({Ctx.guid(), {}});
-    if (Ins) {
-      llvm::append_range(It->second, Ctx.counters());
-      return;
-    }
-    assert(It->second.size() == Ctx.counters().size() &&
-           "All contexts corresponding to a function should have the exact "
-           "same number of counters.");
-    for (size_t I = 0, E = It->second.size(); I < E; ++I)
-      It->second[I] += Ctx.counters()[I];
-  });
+  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
+                const PGOCtxProfContext>(
+      *Profiles, [&](const PGOCtxProfContext &Ctx) {
+        auto [It, Ins] = Flat.insert({Ctx.guid(), {}});
+        if (Ins) {
+          llvm::append_range(It->second, Ctx.counters());
+          return;
+        }
+        assert(It->second.size() == Ctx.counters().size() &&
+               "All contexts corresponding to a function should have the exact "
+               "same number of counters.");
+        for (size_t I = 0, E = It->second.size(); I < E; ++I)
+          It->second[I] += Ctx.counters()[I];
+      });
   return Flat;
 }

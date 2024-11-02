@@ -247,6 +247,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::BitInt:
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
+    case Type::HLSLAttributedResource:
       CanPrefixQualifiers = true;
       break;
 
@@ -2045,6 +2046,23 @@ void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
 
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
                                              raw_ostream &OS) {
+  printAfter(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printHLSLAttributedResourceBefore(
+    const HLSLAttributedResourceType *T, raw_ostream &OS) {
+  printBefore(T->getWrappedType(), OS);
+
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  OS << " [[hlsl::resource_class("
+     << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
+     << ")]]";
+  if (Attrs.IsROV)
+    OS << " [[hlsl::is_rov()]]";
+}
+
+void TypePrinter::printHLSLAttributedResourceAfter(
+    const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
 }
 

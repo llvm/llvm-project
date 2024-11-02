@@ -52,6 +52,7 @@ Changes to the LLVM IR
 
 * The ``x86_mmx`` IR type has been removed. It will be translated to
   the standard vector type ``<1 x i64>`` in bitcode upgrade.
+* Renamed ``llvm.experimental.stepvector`` intrinsic to ``llvm.stepvector``.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -188,6 +189,9 @@ Changes to the C API
   * ``LLVMIsAtomic`` to check if an instruction is atomic, for use with the above functions.
     Because of backwards compatibility, ``LLVMIsAtomicSingleThread`` and
     ``LLVMSetAtomicSingleThread`` continue to work with any instruction type.
+
+* The `LLVMSetPersonalityFn` and `LLVMSetInitializer` APIs now support clearing the
+  personality function and initializer respectively by passing a null pointer.
 
 
 Changes to the CodeGen infrastructure

@@ -1835,8 +1835,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (!SrcTy.isScalar()) {
-      report("Source type must be a scalar", MI);
+    if (!SrcTy.isScalar() && !SrcTy.isPointer()) {
+      report("Source type must be a scalar or pointer", MI);
       break;
     }
 

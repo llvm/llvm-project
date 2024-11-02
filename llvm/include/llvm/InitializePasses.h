@@ -264,6 +264,7 @@ void initializeRegionOnlyViewerPass(PassRegistry &);
 void initializeRegionPrinterPass(PassRegistry &);
 void initializeRegionViewerPass(PassRegistry &);
 void initializeRegisterCoalescerPass(PassRegistry &);
+void initializeRemoveLoadsIntoFakeUsesPass(PassRegistry &);
 void initializeRemoveRedundantDebugValuesPass(PassRegistry &);
 void initializeRenameIndependentSubregsPass(PassRegistry &);
 void initializeReplaceWithVeclibLegacyPass(PassRegistry &);

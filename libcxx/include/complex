@@ -1019,9 +1019,9 @@ inline _LIBCPP_HIDE_FROM_ABI typename __libcpp_complex_overload_traits<_Tp>::_Co
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> polar(const _Tp& __rho, const _Tp& __theta = _Tp()) {
-  if (std::__constexpr_isnan(__rho) || std::signbit(__rho))
+  if (std::isnan(__rho) || std::signbit(__rho))
     return complex<_Tp>(_Tp(NAN), _Tp(NAN));
-  if (std::__constexpr_isnan(__theta)) {
+  if (std::isnan(__theta)) {
     if (std::__constexpr_isinf(__rho))
       return complex<_Tp>(__rho, __theta);
     return complex<_Tp>(__theta, __theta);
@@ -1032,10 +1032,10 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> polar(const _Tp& __rho, const _Tp& __theta = 
     return complex<_Tp>(_Tp(NAN), _Tp(NAN));
   }
   _Tp __x = __rho * std::cos(__theta);
-  if (std::__constexpr_isnan(__x))
+  if (std::isnan(__x))
     __x = 0;
   _Tp __y = __rho * std::sin(__theta);
-  if (std::__constexpr_isnan(__y))
+  if (std::isnan(__y))
     __y = 0;
   return complex<_Tp>(__x, __y);
 }
@@ -1062,10 +1062,8 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> sqrt(const complex<_Tp>& __x) {
     return complex<_Tp>(_Tp(INFINITY), __x.imag());
   if (std::__constexpr_isinf(__x.real())) {
     if (__x.real() > _Tp(0))
-      return complex<_Tp>(
-          __x.real(), std::__constexpr_isnan(__x.imag()) ? __x.imag() : std::copysign(_Tp(0), __x.imag()));
-    return complex<_Tp>(
-        std::__constexpr_isnan(__x.imag()) ? __x.imag() : _Tp(0), std::copysign(__x.real(), __x.imag()));
+      return complex<_Tp>(__x.real(), std::isnan(__x.imag()) ? __x.imag() : std::copysign(_Tp(0), __x.imag()));
+    return complex<_Tp>(std::isnan(__x.imag()) ? __x.imag() : _Tp(0), std::copysign(__x.real(), __x.imag()));
   }
   return std::polar(std::sqrt(std::abs(__x)), std::arg(__x) / _Tp(2));
 }
@@ -1080,9 +1078,9 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> exp(const complex<_Tp>& __x) {
   }
   if (std::__constexpr_isinf(__x.real())) {
     if (__x.real() < _Tp(0)) {
-      if (!std::__constexpr_isfinite(__i))
+      if (!std::isfinite(__i))
         __i = _Tp(1);
-    } else if (__i == 0 || !std::__constexpr_isfinite(__i)) {
+    } else if (__i == 0 || !std::isfinite(__i)) {
       if (std::__constexpr_isinf(__i))
         __i = _Tp(NAN);
       return complex<_Tp>(__x.real(), __i);
@@ -1131,13 +1129,13 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> asinh(const complex<_Tp>& __x) {
   const _Tp __pi(atan2(+0., -0.));
   if (std::__constexpr_isinf(__x.real())) {
-    if (std::__constexpr_isnan(__x.imag()))
+    if (std::isnan(__x.imag()))
       return __x;
     if (std::__constexpr_isinf(__x.imag()))
       return complex<_Tp>(__x.real(), std::copysign(__pi * _Tp(0.25), __x.imag()));
     return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
   }
-  if (std::__constexpr_isnan(__x.real())) {
+  if (std::isnan(__x.real())) {
     if (std::__constexpr_isinf(__x.imag()))
       return complex<_Tp>(__x.imag(), __x.real());
     if (__x.imag() == 0)
@@ -1156,7 +1154,7 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> acosh(const complex<_Tp>& __x) {
   const _Tp __pi(atan2(+0., -0.));
   if (std::__constexpr_isinf(__x.real())) {
-    if (std::__constexpr_isnan(__x.imag()))
+    if (std::isnan(__x.imag()))
       return complex<_Tp>(std::abs(__x.real()), __x.imag());
     if (std::__constexpr_isinf(__x.imag())) {
       if (__x.real() > 0)
@@ -1168,7 +1166,7 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> acosh(const complex<_Tp>& __x) {
       return complex<_Tp>(-__x.real(), std::copysign(__pi, __x.imag()));
     return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
   }
-  if (std::__constexpr_isnan(__x.real())) {
+  if (std::isnan(__x.real())) {
     if (std::__constexpr_isinf(__x.imag()))
       return complex<_Tp>(std::abs(__x.imag()), __x.real());
     return complex<_Tp>(__x.real(), __x.real());
@@ -1187,12 +1185,12 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> atanh(const complex<_Tp>& __x) {
   if (std::__constexpr_isinf(__x.imag())) {
     return complex<_Tp>(std::copysign(_Tp(0), __x.real()), std::copysign(__pi / _Tp(2), __x.imag()));
   }
-  if (std::__constexpr_isnan(__x.imag())) {
+  if (std::isnan(__x.imag())) {
     if (std::__constexpr_isinf(__x.real()) || __x.real() == 0)
       return complex<_Tp>(std::copysign(_Tp(0), __x.real()), __x.imag());
     return complex<_Tp>(__x.imag(), __x.imag());
   }
-  if (std::__constexpr_isnan(__x.real())) {
+  if (std::isnan(__x.real())) {
     return complex<_Tp>(__x.real(), __x.real());
   }
   if (std::__constexpr_isinf(__x.real())) {
@@ -1209,11 +1207,11 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> atanh(const complex<_Tp>& __x) {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> sinh(const complex<_Tp>& __x) {
-  if (std::__constexpr_isinf(__x.real()) && !std::__constexpr_isfinite(__x.imag()))
+  if (std::__constexpr_isinf(__x.real()) && !std::isfinite(__x.imag()))
     return complex<_Tp>(__x.real(), _Tp(NAN));
-  if (__x.real() == 0 && !std::__constexpr_isfinite(__x.imag()))
+  if (__x.real() == 0 && !std::isfinite(__x.imag()))
     return complex<_Tp>(__x.real(), _Tp(NAN));
-  if (__x.imag() == 0 && !std::__constexpr_isfinite(__x.real()))
+  if (__x.imag() == 0 && !std::isfinite(__x.real()))
     return __x;
   return complex<_Tp>(std::sinh(__x.real()) * std::cos(__x.imag()), std::cosh(__x.real()) * std::sin(__x.imag()));
 }
@@ -1222,13 +1220,13 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> sinh(const complex<_Tp>& __x) {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> cosh(const complex<_Tp>& __x) {
-  if (std::__constexpr_isinf(__x.real()) && !std::__constexpr_isfinite(__x.imag()))
+  if (std::__constexpr_isinf(__x.real()) && !std::isfinite(__x.imag()))
     return complex<_Tp>(std::abs(__x.real()), _Tp(NAN));
-  if (__x.real() == 0 && !std::__constexpr_isfinite(__x.imag()))
+  if (__x.real() == 0 && !std::isfinite(__x.imag()))
     return complex<_Tp>(_Tp(NAN), __x.real());
   if (__x.real() == 0 && __x.imag() == 0)
     return complex<_Tp>(_Tp(1), __x.imag());
-  if (__x.imag() == 0 && !std::__constexpr_isfinite(__x.real()))
+  if (__x.imag() == 0 && !std::isfinite(__x.real()))
     return complex<_Tp>(std::abs(__x.real()), __x.imag());
   return complex<_Tp>(std::cosh(__x.real()) * std::cos(__x.imag()), std::sinh(__x.real()) * std::sin(__x.imag()));
 }
@@ -1238,11 +1236,11 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> cosh(const complex<_Tp>& __x) {
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> tanh(const complex<_Tp>& __x) {
   if (std::__constexpr_isinf(__x.real())) {
-    if (!std::__constexpr_isfinite(__x.imag()))
+    if (!std::isfinite(__x.imag()))
       return complex<_Tp>(std::copysign(_Tp(1), __x.real()), _Tp(0));
     return complex<_Tp>(std::copysign(_Tp(1), __x.real()), std::copysign(_Tp(0), std::sin(_Tp(2) * __x.imag())));
   }
-  if (std::__constexpr_isnan(__x.real()) && __x.imag() == 0)
+  if (std::isnan(__x.real()) && __x.imag() == 0)
     return __x;
   _Tp __2r(_Tp(2) * __x.real());
   _Tp __2i(_Tp(2) * __x.imag());
@@ -1267,7 +1265,7 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> acos(const complex<_Tp>& __x) {
   const _Tp __pi(atan2(+0., -0.));
   if (std::__constexpr_isinf(__x.real())) {
-    if (std::__constexpr_isnan(__x.imag()))
+    if (std::isnan(__x.imag()))
       return complex<_Tp>(__x.imag(), __x.real());
     if (std::__constexpr_isinf(__x.imag())) {
       if (__x.real() < _Tp(0))
@@ -1278,7 +1276,7 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> acos(const complex<_Tp>& __x) {
       return complex<_Tp>(__pi, std::signbit(__x.imag()) ? -__x.real() : __x.real());
     return complex<_Tp>(_Tp(0), std::signbit(__x.imag()) ? __x.real() : -__x.real());
   }
-  if (std::__constexpr_isnan(__x.real())) {
+  if (std::isnan(__x.real())) {
     if (std::__constexpr_isinf(__x.imag()))
       return complex<_Tp>(__x.real(), -__x.imag());
     return complex<_Tp>(__x.real(), __x.real());

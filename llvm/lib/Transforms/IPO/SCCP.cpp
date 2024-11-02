@@ -296,6 +296,13 @@ static bool runIPSCCP(
       F->addRangeRetAttr(CR);
       continue;
     }
+    // Infer nonnull return attribute.
+    if (F->getReturnType()->isPointerTy() && ReturnValue.isNotConstant() &&
+        ReturnValue.getNotConstant()->isNullValue() &&
+        !F->hasRetAttribute(Attribute::NonNull)) {
+      F->addRetAttr(Attribute::NonNull);
+      continue;
+    }
     if (F->getReturnType()->isVoidTy())
       continue;
     if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())

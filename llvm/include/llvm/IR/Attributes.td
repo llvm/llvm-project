@@ -212,9 +212,6 @@ def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", [FnAttr]>;
 /// No SanitizeCoverage instrumentation.
 def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", [FnAttr]>;
 
-/// No SanitizeRealtime instrumentation.
-def NoSanitizeRealtime : EnumAttr<"nosanitize_realtime", [FnAttr]>;
-
 /// Null pointer in address space zero is valid.
 def NullPointerIsValid : EnumAttr<"null_pointer_is_valid", [FnAttr]>;
 

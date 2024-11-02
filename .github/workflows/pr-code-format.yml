@@ -12,6 +12,7 @@ on:
 jobs:
   code_formatter:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources

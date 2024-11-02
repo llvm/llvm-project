@@ -294,11 +294,16 @@ struct RangeTy {
     return *this;
   }
 
-  /// Comparison for sorting ranges by offset.
+  /// Comparison for sorting ranges.
   ///
-  /// Returns true if the offset \p L is less than that of \p R.
-  inline static bool OffsetLessThan(const RangeTy &L, const RangeTy &R) {
-    return L.Offset < R.Offset;
+  /// Returns true if the offset of \p L is less than that of \p R. If the two
+  /// offsets are same, compare the sizes instead.
+  inline static bool LessThan(const RangeTy &L, const RangeTy &R) {
+    if (L.Offset < R.Offset)
+      return true;
+    if (L.Offset == R.Offset)
+      return L.Size < R.Size;
+    return false;
   }
 
   /// Constants used to represent special offsets or sizes.
@@ -5809,7 +5814,7 @@ struct AAPointerInfo : public AbstractAttribute {
     // Helpers required for std::set_difference
     using value_type = RangeTy;
     void push_back(const RangeTy &R) {
-      assert((Ranges.empty() || RangeTy::OffsetLessThan(Ranges.back(), R)) &&
+      assert((Ranges.empty() || RangeTy::LessThan(Ranges.back(), R)) &&
              "Ensure the last element is the greatest.");
       Ranges.push_back(R);
     }
@@ -5818,7 +5823,7 @@ struct AAPointerInfo : public AbstractAttribute {
     static void set_difference(const RangeList &L, const RangeList &R,
                                RangeList &D) {
       std::set_difference(L.begin(), L.end(), R.begin(), R.end(),
-                          std::back_inserter(D), RangeTy::OffsetLessThan);
+                          std::back_inserter(D), RangeTy::LessThan);
     }
 
     unsigned size() const { return Ranges.size(); }
@@ -5856,7 +5861,7 @@ struct AAPointerInfo : public AbstractAttribute {
 
     /// Insert \p R at the given iterator \p Pos, and merge if necessary.
     ///
-    /// This assumes that all ranges before \p Pos are OffsetLessThan \p R, and
+    /// This assumes that all ranges before \p Pos are LessThan \p R, and
     /// then maintains the sorted order for the suffix list.
     ///
     /// \return The place of insertion and true iff anything changed.
@@ -5868,7 +5873,7 @@ struct AAPointerInfo : public AbstractAttribute {
       }
 
       // Maintain this as a sorted vector of unique entries.
-      auto LB = std::lower_bound(Pos, Ranges.end(), R, RangeTy::OffsetLessThan);
+      auto LB = std::lower_bound(Pos, Ranges.end(), R, RangeTy::LessThan);
       if (LB == Ranges.end() || LB->Offset != R.Offset)
         return std::make_pair(Ranges.insert(LB, R), true);
       bool Changed = *LB != R;

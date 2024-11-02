@@ -129,7 +129,6 @@ for arch in ${architectures}; do
                 -C "${llvm_root}/libcxx/cmake/caches/Apple.cmake" \
                 -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
                 -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
-                -DCMAKE_INSTALL_NAME_DIR="/usr/lib" \
                 -DCMAKE_OSX_ARCHITECTURES="${arch}" \
                 -DLIBCXXABI_LIBRARY_VERSION="${version}" \
                 -DLIBCXX_LIBRARY_VERSION="${version}" \

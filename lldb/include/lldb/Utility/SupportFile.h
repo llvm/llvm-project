@@ -14,10 +14,10 @@
 
 namespace lldb_private {
 
-/// Wraps either a FileSpec that represents a local file or a source
-/// file whose contents is known (for example because it can be
-/// reconstructed from debug info), but that hasn't been written to a
-/// file yet. This also stores an optional checksum of the on-disk content.
+/// Wraps a FileSpec and an optional Checksum. The FileSpec represents either a
+/// path to a file or a source file whose contents is known (for example because
+/// it can be reconstructed from debug info), but that hasn't been written to a
+/// file yet.
 class SupportFile {
 public:
   SupportFile() : m_file_spec(), m_checksum() {}

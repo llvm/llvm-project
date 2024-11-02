@@ -25,6 +25,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/ScopeExit.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTARMSMETOLLVM
@@ -481,6 +482,9 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
         loc, rewriter.getI32IntegerAttr(zeroMask));
 
     // Create a placeholder op to preserve dataflow.
+    // Note: Place the `get_tile` op at the start of the block. This ensures
+    // that if there are multiple `zero` ops the intrinsics will be consecutive.
+    rewriter.setInsertionPointToStart(zero->getBlock());
     rewriter.replaceOpWithNewOp<arm_sme::GetTileOp>(zero, zero.getVectorType());
 
     return success();
@@ -855,6 +859,36 @@ struct StreamingVLOpConversion
   }
 };
 
+/// Merges consecutive `arm_sme.intr.zero` operations in a block by bitwise
+/// or-ing the zero masks. Note: In future the backend _should_ handle this.
+static void mergeConsecutiveTileZerosInBlock(Block *block) {
+  uint32_t mergedZeroMask = 0;
+  SmallVector<arm_sme::aarch64_sme_zero, 16> zeroOpsToMerge;
+  auto replaceMergedZeroOps = [&] {
+    auto cleanup = llvm::make_scope_exit([&] {
+      mergedZeroMask = 0;
+      zeroOpsToMerge.clear();
+    });
+    if (zeroOpsToMerge.size() <= 1)
+      return;
+    IRRewriter rewriter(zeroOpsToMerge.front());
+    rewriter.create<arm_sme::aarch64_sme_zero>(
+        zeroOpsToMerge.front().getLoc(),
+        rewriter.getI32IntegerAttr(mergedZeroMask));
+    for (auto zeroOp : zeroOpsToMerge)
+      rewriter.eraseOp(zeroOp);
+  };
+  for (Operation &op : *block) {
+    if (auto zeroOp = dyn_cast<arm_sme::aarch64_sme_zero>(op)) {
+      mergedZeroMask |= zeroOp.getTileMask();
+      zeroOpsToMerge.push_back(zeroOp);
+    } else {
+      replaceMergedZeroOps();
+    }
+  }
+  replaceMergedZeroOps();
+}
+
 } // namespace
 
 namespace {
@@ -878,6 +912,8 @@ struct ConvertArmSMEToLLVMPass
 
     if (failed(applyPartialConversion(function, target, std::move(patterns))))
       signalPassFailure();
+
+    function->walk(mergeConsecutiveTileZerosInBlock);
 
     // Walk the function and fail if there are unexpected operations on SME
     // tile types after conversion.

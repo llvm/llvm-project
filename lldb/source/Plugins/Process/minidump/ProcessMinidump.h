@@ -81,10 +81,8 @@ public:
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
   Status WillResume() override {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support resuming processes", GetPluginName());
-    return error;
   }
 
   std::optional<MinidumpParser> m_minidump_parser;

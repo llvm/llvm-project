@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -14,7 +15,13 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/PassInstrumentation.h"
+#include "llvm/ProfileData/PGOCtxProfReader.h"
+#include "llvm/ProfileData/PGOCtxProfWriter.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -455,4 +462,154 @@ declare void @_ZN5Base35func3Ev(ptr)
   // Promotion inserts 3 icmp instructions and 2 or instructions, and removes
   // 1 call instruction from the entry block.
   EXPECT_EQ(F->front().size(), OrigEntryBBSize + 4);
+}
+
+TEST(CallPromotionUtilsTest, PromoteWithIcmpAndCtxProf) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"IR(
+define i32 @testfunc1(ptr %d) !guid !0 {
+  call void @llvm.instrprof.increment(ptr @testfunc1, i64 0, i32 1, i32 0)
+  call void @llvm.instrprof.callsite(ptr @testfunc1, i64 0, i32 1, i32 0, ptr %d)
+  %call = call i32 %d()
+  ret i32 %call
+}
+
+define i32 @f1() !guid !1 {
+  call void @llvm.instrprof.increment(ptr @f1, i64 0, i32 1, i32 0)
+  ret i32 2
+}
+
+define i32 @f2() !guid !2 {
+  call void @llvm.instrprof.increment(ptr @f2, i64 0, i32 1, i32 0)
+  call void @llvm.instrprof.callsite(ptr @f2, i64 0, i32 1, i32 0, ptr @f4)
+  %r = call i32 @f4()
+  ret i32 %r
+}
+
+define i32 @testfunc2(ptr %p) !guid !4 {
+  call void @llvm.instrprof.increment(ptr @testfunc2, i64 0, i32 1, i32 0)
+  call void @llvm.instrprof.callsite(ptr @testfunc2, i64 0, i32 1, i32 0, ptr @testfunc1)
+  %r = call i32 @testfunc1(ptr %p)
+  ret i32 %r
+}
+
+declare i32 @f3()
+
+define i32 @f4() !guid !3 {
+  ret i32 3
+}
+
+!0 = !{i64 1000}
+!1 = !{i64 1001}
+!2 = !{i64 1002}
+!3 = !{i64 1004}
+!4 = !{i64 1005}
+)IR");
+
+  const char *Profile = R"json(
+    [
+    {
+      "Guid": 1000,
+      "Counters": [1],
+      "Callsites": [
+        [{ "Guid": 1001,
+            "Counters": [10]}, 
+          { "Guid": 1002,
+            "Counters": [11],
+            "Callsites": [[{"Guid": 1004, "Counters":[13]}]]
+          },
+          { "Guid": 1003,
+            "Counters": [12]
+          }]]
+    },
+    {
+      "Guid": 1005,
+      "Counters": [2],
+      "Callsites": [
+        [{ "Guid": 1000,
+            "Counters": [1],
+            "Callsites": [
+              [{ "Guid": 1001,
+                  "Counters": [101]}, 
+                { "Guid": 1002,
+                  "Counters": [102],
+                  "Callsites": [[{"Guid": 1004, "Counters":[104]}]]
+                },
+                { "Guid": 1003,
+                  "Counters": [103]
+                }]]}]]}]
+    )json";
+
+  llvm::unittest::TempFile ProfileFile("ctx_profile", "", "", /*Unique=*/true);
+  {
+    std::error_code EC;
+    raw_fd_stream Out(ProfileFile.path(), EC);
+    ASSERT_FALSE(EC);
+    // "False" means no error.
+    ASSERT_FALSE(llvm::createCtxProfFromJSON(Profile, Out));
+  }
+
+  ModuleAnalysisManager MAM;
+  MAM.registerPass([&]() { return CtxProfAnalysis(ProfileFile.path()); });
+  MAM.registerPass([&]() { return PassInstrumentationAnalysis(); });
+  auto &CtxProf = MAM.getResult<CtxProfAnalysis>(*M);
+  auto *Caller = M->getFunction("testfunc1");
+  ASSERT_NE(Caller, nullptr);
+  auto *Callee = M->getFunction("f2");
+  ASSERT_NE(Callee, nullptr);
+  auto *IndirectCS = [&]() -> CallBase * {
+    for (auto &BB : *Caller)
+      for (auto &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I); CB && CB->isIndirectCall())
+          return CB;
+    return nullptr;
+  }();
+  ASSERT_NE(IndirectCS, nullptr);
+  promoteCallWithIfThenElse(*IndirectCS, *Callee, CtxProf);
+
+  std::string Str;
+  raw_string_ostream OS(Str);
+  CtxProfAnalysisPrinterPass Printer(
+      OS, CtxProfAnalysisPrinterPass::PrintMode::JSON);
+  Printer.run(*M, MAM);
+  const char *Expected = R"json(
+  [
+  {
+    "Guid": 1000,
+    "Counters": [1, 11, 22],
+    "Callsites": [
+      [{ "Guid": 1001,
+          "Counters": [10]}, 
+        { "Guid": 1003,
+          "Counters": [12]
+        }], 
+        [{ "Guid": 1002,
+          "Counters": [11],
+          "Callsites": [
+          [{ "Guid": 1004,
+            "Counters": [13] }]]}]]
+  },
+  {
+    "Guid": 1005,
+    "Counters": [2],
+    "Callsites": [
+      [{ "Guid": 1000,
+         "Counters": [1, 102, 204],
+         "Callsites": [
+            [{ "Guid": 1001,
+               "Counters": [101]}, 
+             { "Guid": 1003,
+               "Counters": [103]}],
+            [{ "Guid": 1002,
+               "Counters": [102],
+               "Callsites": [
+            [{ "Guid": 1004,
+               "Counters": [104]}]]}]]}]]}
+])json";
+  auto ExpectedJSON = json::parse(Expected);
+  ASSERT_TRUE(!!ExpectedJSON);
+  auto ProducedJSON = json::parse(Str);
+  ASSERT_TRUE(!!ProducedJSON);
+  EXPECT_EQ(*ProducedJSON, *ExpectedJSON);
 }

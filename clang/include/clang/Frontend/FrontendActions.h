@@ -152,11 +152,13 @@ private:
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
 };
 
+bool BeginInvocationForModules(CompilerInstance &CI);
+
 /// Generates full BMI (which contains full information to generate the object
 /// files) for C++20 Named Modules.
 class GenerateModuleInterfaceAction : public GenerateModuleAction {
 protected:
-  bool BeginSourceFileAction(CompilerInstance &CI) override;
+  bool BeginInvocation(CompilerInstance &CI) override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;

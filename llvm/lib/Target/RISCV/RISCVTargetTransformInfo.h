@@ -252,6 +252,12 @@ public:
     if (DataTypeVT.isFixedLengthVector() && !ST->useRVVForFixedLengthVectors())
       return false;
 
+    // We also need to check if the vector of address is valid.
+    EVT PointerTypeVT = EVT(TLI->getPointerTy(DL));
+    if (DataTypeVT.isScalableVector() &&
+        !TLI->isLegalElementTypeForRVV(PointerTypeVT))
+      return false;
+
     EVT ElemType = DataTypeVT.getScalarType();
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;

@@ -930,6 +930,10 @@ LogicalResult tosa::TileOp::verify() {
     return emitOpError("expect 'multiples' array to have length ")
            << outputType.getRank() << " but got " << multiples.size() << ".";
 
+  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
+    return emitOpError(
+        "expect element of 'multiples' to be positive integer or -1.");
+
   return success();
 }
 

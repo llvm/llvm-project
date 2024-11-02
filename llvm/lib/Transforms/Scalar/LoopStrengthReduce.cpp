@@ -5304,17 +5304,17 @@ static bool IsSimplerBaseSCEVForTarget(const TargetTransformInfo &TTI,
        cast<SCEVAddRecExpr>(Best)->getLoop() !=
            cast<SCEVAddRecExpr>(Reg)->getLoop()))
     return false;
-  const auto *Diff = dyn_cast<SCEVConstant>(SE.getMinusSCEV(Best, Reg));
+  std::optional<APInt> Diff = SE.computeConstantDifference(Best, Reg);
   if (!Diff)
     return false;
 
   return TTI.isLegalAddressingMode(
              AccessType.MemTy, /*BaseGV=*/nullptr,
-             /*BaseOffset=*/Diff->getAPInt().getSExtValue(),
+             /*BaseOffset=*/Diff->getSExtValue(),
              /*HasBaseReg=*/true, /*Scale=*/0, AccessType.AddrSpace) &&
          !TTI.isLegalAddressingMode(
              AccessType.MemTy, /*BaseGV=*/nullptr,
-             /*BaseOffset=*/-Diff->getAPInt().getSExtValue(),
+             /*BaseOffset=*/-Diff->getSExtValue(),
              /*HasBaseReg=*/true, /*Scale=*/0, AccessType.AddrSpace);
 }
 

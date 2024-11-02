@@ -366,6 +366,36 @@ llvm.func @fn_with_gl() {
 
 // -----
 
+// Test that imported entries correctly generates 'retainedNodes' in the
+// subprogram.
+
+llvm.func @imp_fn() {
+  llvm.return
+} loc(#loc2)
+#file = #llvm.di_file<"test.f90" in "">
+#SP_TY = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
+#CU = #llvm.di_compile_unit<id = distinct[0]<>,
+  sourceLanguage = DW_LANG_Fortran95, file = #file, isOptimized = false,
+  emissionKind = Full>
+#MOD = #llvm.di_module<file = #file, scope = #CU, name = "mod1">
+#MOD1 = #llvm.di_module<file = #file, scope = #CU, name = "mod2">
+#SP = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #CU, scope = #file,
+  name = "imp_fn", file = #file, subprogramFlags = Definition, type = #SP_TY,
+  retainedNodes = #llvm.di_imported_entity<tag = DW_TAG_imported_module,
+  entity = #MOD1, file = #file, line = 1>, #llvm.di_imported_entity<tag
+  = DW_TAG_imported_module, entity = #MOD, file = #file, line = 1>>
+#loc1 = loc("test.f90":12:14)
+#loc2 = loc(fused<#SP>[#loc1])
+
+// CHECK-DAG: ![[SP:[0-9]+]] = {{.*}}!DISubprogram(name: "imp_fn"{{.*}}retainedNodes: ![[NODES:[0-9]+]])
+// CHECK-DAG: ![[NODES]] = !{![[NODE2:[0-9]+]], ![[NODE1:[0-9]+]]}
+// CHECK-DAG: ![[NODE1]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD1:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[NODE2]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD2:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[MOD1]] = !DIModule({{.*}}name: "mod1"{{.*}})
+// CHECK-DAG: ![[MOD2]] = !DIModule({{.*}}name: "mod2"{{.*}})
+
+// -----
+
 // Nameless and scopeless global constant.
 
 // CHECK-LABEL: @.str.1 = external constant [10 x i8]

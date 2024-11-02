@@ -592,7 +592,20 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
   return bodyGenStatus;
 }
 
+namespace {
+/// Contains the arguments for an LLVM store operation
+struct DeferredStore {
+  DeferredStore(llvm::Value *value, llvm::Value *address)
+      : value(value), address(address) {}
+
+  llvm::Value *value;
+  llvm::Value *address;
+};
+} // namespace
+
 /// Allocate space for privatized reduction variables.
+/// `deferredStores` contains information to create store operations which needs
+/// to be inserted after all allocas
 template <typename T>
 static LogicalResult
 allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
@@ -602,13 +615,13 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
                    SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
                    SmallVectorImpl<llvm::Value *> &privateReductionVariables,
                    DenseMap<Value, llvm::Value *> &reductionVariableMap,
+                   SmallVectorImpl<DeferredStore> &deferredStores,
                    llvm::ArrayRef<bool> isByRefs) {
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
 
   // delay creating stores until after all allocas
-  SmallVector<std::pair<llvm::Value *, llvm::Value *>> storesToCreate;
-  storesToCreate.reserve(loop.getNumReductionVars());
+  deferredStores.reserve(loop.getNumReductionVars());
 
   for (std::size_t i = 0; i < loop.getNumReductionVars(); ++i) {
     Region &allocRegion = reductionDecls[i].getAllocRegion();
@@ -628,7 +641,7 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
       // variable allocated in the inlined region)
       llvm::Value *var = builder.CreateAlloca(
           moduleTranslation.convertType(reductionDecls[i].getType()));
-      storesToCreate.emplace_back(phis[0], var);
+      deferredStores.emplace_back(phis[0], var);
 
       privateReductionVariables[i] = var;
       moduleTranslation.mapValue(reductionArgs[i], phis[0]);
@@ -643,10 +656,6 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
       reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
     }
   }
-
-  // TODO: further delay this so it doesn't come in the entry block at all
-  for (auto [data, addr] : storesToCreate)
-    builder.CreateStore(data, addr);
 
   return success();
 }
@@ -819,11 +828,18 @@ static LogicalResult allocAndInitializeReductionVars(
   if (op.getNumReductionVars() == 0)
     return success();
 
+  SmallVector<DeferredStore> deferredStores;
+
   if (failed(allocReductionVars(op, reductionArgs, builder, moduleTranslation,
                                 allocaIP, reductionDecls,
                                 privateReductionVariables, reductionVariableMap,
-                                isByRef)))
+                                deferredStores, isByRef)))
     return failure();
+
+  // store result of the alloc region to the allocated pointer to the real
+  // reduction variable
+  for (auto [data, addr] : deferredStores)
+    builder.CreateStore(data, addr);
 
   // Before the loop, store the initial values of reductions into reduction
   // variables. Although this could be done after allocas, we don't want to mess
@@ -1359,6 +1375,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   collectReductionDecls(opInst, reductionDecls);
   SmallVector<llvm::Value *> privateReductionVariables(
       opInst.getNumReductionVars());
+  SmallVector<DeferredStore> deferredStores;
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Allocate reduction vars
@@ -1373,10 +1390,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         InsertPointTy(allocaIP.getBlock(),
                       allocaIP.getBlock()->getTerminator()->getIterator());
 
-    if (failed(allocReductionVars(opInst, reductionArgs, builder,
-                                  moduleTranslation, allocaIP, reductionDecls,
-                                  privateReductionVariables,
-                                  reductionVariableMap, isByRef)))
+    if (failed(allocReductionVars(
+            opInst, reductionArgs, builder, moduleTranslation, allocaIP,
+            reductionDecls, privateReductionVariables, reductionVariableMap,
+            deferredStores, isByRef)))
       bodyGenStatus = failure();
 
     // Initialize reduction vars
@@ -1400,6 +1417,12 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     }
 
     builder.SetInsertPoint(initBlock->getFirstNonPHIOrDbgOrAlloca());
+
+    // insert stores deferred until after all allocas
+    // these store the results of the alloc region into the allocation for the
+    // pointer to the reduction variable
+    for (auto [data, addr] : deferredStores)
+      builder.CreateStore(data, addr);
 
     for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
       SmallVector<llvm::Value *> phis;

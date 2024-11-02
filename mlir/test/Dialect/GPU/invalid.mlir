@@ -848,3 +848,15 @@ module attributes {gpu.container_module} {
   gpu.module @kernel <> {
   }
 }
+
+// -----
+
+gpu.binary @binary [#gpu.object<#rocdl.target<chip = "gfx900">,
+  // expected-error@+1{{expected all kernels to be uniquely named}}
+    kernels = #gpu.kernel_table<[
+      #gpu.kernel_metadata<"kernel", (i32) -> ()>,
+      #gpu.kernel_metadata<"kernel", (i32, f32) -> (), metadata = {sgpr_count = 255}>
+  // expected-error@below{{failed to parse GPU_ObjectAttr parameter 'kernels' which is to be a `KernelTableAttr`}}
+    ]>,
+    bin = "BLOB">
+  ]

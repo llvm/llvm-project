@@ -176,25 +176,19 @@ public:
   virtual Status ExecuteMultipleLines(
       const char *in_string,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) {
-    Status error;
-    error.SetErrorString("not implemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual Status
   ExportFunctionDefinitionToInterpreter(StringList &function_def) {
-    Status error;
-    error.SetErrorString("not implemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual Status GenerateBreakpointCommandCallbackData(StringList &input,
                                                        std::string &output,
                                                        bool has_extra_args,
                                                        bool is_callback) {
-    Status error;
-    error.SetErrorString("not implemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual bool GenerateWatchpointCommandCallbackData(StringList &input,
@@ -280,8 +274,9 @@ public:
   virtual StructuredData::GenericSP
   CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
                          const StructuredDataImpl &args_data, Status &error) {
-    error.SetErrorString("Creating scripted stop-hooks with the current "
-                         "script interpreter is not supported.");
+    error =
+        Status::FromErrorString("Creating scripted stop-hooks with the current "
+                                "script interpreter is not supported.");
     return StructuredData::GenericSP();
   }
 
@@ -308,9 +303,7 @@ public:
   virtual Status GenerateFunction(const char *signature,
                                   const StringList &input,
                                   bool is_callback) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   virtual void CollectDataForBreakpointCommandCallback(
@@ -329,18 +322,14 @@ public:
   virtual Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                               const char *callback_text,
                                               bool is_callback) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   /// This one is for deserialization:
   virtual Status SetBreakpointCommandCallback(
       BreakpointOptions &bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   Status SetBreakpointCommandCallbackFunction(
@@ -352,9 +341,7 @@ public:
   SetBreakpointCommandCallbackFunction(BreakpointOptions &bp_options,
                                        const char *function_name,
                                        StructuredData::ObjectSP extra_args_sp) {
-    Status error;
-    error.SetErrorString("unimplemented");
-    return error;
+    return Status::FromErrorString("not implemented");
   }
 
   /// Set a one-liner as the callback for the watchpoint.
@@ -453,33 +440,33 @@ public:
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function, Thread *thread,
                                       std::string &output, Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function, Target *target,
                                       std::string &output, Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       StackFrame *frame, std::string &output,
                                       Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       ValueObject *value, std::string &output,
                                       Status &error) {
-    error.SetErrorString("unimplemented");
+    error = Status::FromErrorString("unimplemented");
     return false;
   }
 

@@ -37,8 +37,8 @@ public:
                            const SourceManager::File &rhs);
 
   public:
-    File(const FileSpec &file_spec, lldb::TargetSP target_sp);
-    File(const FileSpec &file_spec, lldb::DebuggerSP debugger_sp);
+    File(lldb::SupportFileSP support_file_sp, lldb::TargetSP target_sp);
+    File(lldb::SupportFileSP support_file_sp, lldb::DebuggerSP debugger_sp);
 
     bool ModificationTimeIsStale() const;
     bool PathRemappingIsStale() const;
@@ -56,7 +56,10 @@ public:
 
     bool LineIsValid(uint32_t line);
 
-    const FileSpec &GetFileSpec() { return m_file_spec; }
+    lldb::SupportFileSP GetSupportFile() const {
+      assert(m_support_file_sp && "SupportFileSP must always be valid");
+      return m_support_file_sp;
+    }
 
     uint32_t GetSourceMapModificationID() const { return m_source_map_mod_id; }
 
@@ -70,15 +73,13 @@ public:
 
   protected:
     /// Set file and update modification time.
-    void SetFileSpec(FileSpec file_spec);
+    void SetSupportFile(lldb::SupportFileSP support_file_sp);
 
     bool CalculateLineOffsets(uint32_t line = UINT32_MAX);
 
-    FileSpec m_file_spec_orig; // The original file spec that was used (can be
-                               // different from m_file_spec)
-    FileSpec m_file_spec; // The actually file spec being used (if the target
-                          // has source mappings, this might be different from
-                          // m_file_spec_orig)
+    /// The support file. If the target has source mappings, this might be
+    /// different from the original support file passed to the constructor.
+    lldb::SupportFileSP m_support_file_sp;
 
     // Keep the modification time that this file data is valid for
     llvm::sys::TimePoint<> m_mod_time;
@@ -93,7 +94,8 @@ public:
     lldb::TargetWP m_target_wp;
 
   private:
-    void CommonInitializer(const FileSpec &file_spec, lldb::TargetSP target_sp);
+    void CommonInitializer(lldb::SupportFileSP support_file_sp,
+                           lldb::TargetSP target_sp);
   };
 
   typedef std::shared_ptr<File> FileSP;

@@ -77,6 +77,7 @@ public:
   bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
+  bool hasAtomCas16() const { return SmVersion >= 70 && PTXVersion >= 63; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
   bool hasImageHandles() const;

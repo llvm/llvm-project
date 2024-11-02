@@ -1500,7 +1500,7 @@ foreach i = ["", "2", "3", "4", "8", "16"] in {
     defm : DemangledVectorLoadStoreBuiltin<"vload_half", 2, 2, 173>;
     defm : DemangledVectorLoadStoreBuiltin<"vstore_half", 3, 3, 175>;
   } else {
-    defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload_half", i), 3, 3, 174>;
+    defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload_half", i), 2, 2, 174>;
     defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstore_half", i), 3, 3, 177>;
   }
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload", i), 2, 2, 171>;
