@@ -844,6 +844,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE;
   case Attribute::DeadOnUnwind:
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
+  case Attribute::Range:
+    return bitc::ATTR_KIND_RANGE;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -854,6 +856,39 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
   }
 
   llvm_unreachable("Trying to encode unknown attribute");
+}
+
+static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
+  if ((int64_t)V >= 0)
+    Vals.push_back(V << 1);
+  else
+    Vals.push_back((-V << 1) | 1);
+}
+
+static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
+  // We have an arbitrary precision integer value to write whose
+  // bit width is > 64. However, in canonical unsigned integer
+  // format it is likely that the high bits are going to be zero.
+  // So, we only write the number of active words.
+  unsigned NumWords = A.getActiveWords();
+  const uint64_t *RawData = A.getRawData();
+  for (unsigned i = 0; i < NumWords; i++)
+    emitSignedInt64(Vals, RawData[i]);
+}
+
+static void emitConstantRange(SmallVectorImpl<uint64_t> &Record,
+                              const ConstantRange &CR) {
+  unsigned BitWidth = CR.getBitWidth();
+  Record.push_back(BitWidth);
+  if (BitWidth > 64) {
+    Record.push_back(CR.getLower().getActiveWords() |
+                     (uint64_t(CR.getUpper().getActiveWords()) << 32));
+    emitWideAPInt(Record, CR.getLower());
+    emitWideAPInt(Record, CR.getUpper());
+  } else {
+    emitSignedInt64(Record, CR.getLower().getSExtValue());
+    emitSignedInt64(Record, CR.getUpper().getSExtValue());
+  }
 }
 
 void ModuleBitcodeWriter::writeAttributeGroupTable() {
@@ -889,13 +924,17 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
           Record.append(Val.begin(), Val.end());
           Record.push_back(0);
         }
-      } else {
-        assert(Attr.isTypeAttribute());
+      } else if (Attr.isTypeAttribute()) {
         Type *Ty = Attr.getValueAsType();
         Record.push_back(Ty ? 6 : 5);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
         if (Ty)
           Record.push_back(VE.getTypeID(Attr.getValueAsType()));
+      } else {
+        assert(Attr.isConstantRangeAttribute());
+        Record.push_back(7);
+        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
+        emitConstantRange(Record, Attr.getValueAsConstantRange());
       }
     }
 
@@ -1714,24 +1753,6 @@ void ModuleBitcodeWriter::writeDIGenericSubrange(
 
   Stream.EmitRecord(bitc::METADATA_GENERIC_SUBRANGE, Record, Abbrev);
   Record.clear();
-}
-
-static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
-  if ((int64_t)V >= 0)
-    Vals.push_back(V << 1);
-  else
-    Vals.push_back((-V << 1) | 1);
-}
-
-static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
-  // We have an arbitrary precision integer value to write whose
-  // bit width is > 64. However, in canonical unsigned integer
-  // format it is likely that the high bits are going to be zero.
-  // So, we only write the number of active words.
-  unsigned NumWords = A.getActiveWords();
-  const uint64_t *RawData = A.getRawData();
-  for (unsigned i = 0; i < NumWords; i++)
-    emitSignedInt64(Vals, RawData[i]);
 }
 
 void ModuleBitcodeWriter::writeDIEnumerator(const DIEnumerator *N,
