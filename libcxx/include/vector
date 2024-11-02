@@ -1821,8 +1821,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x)
   std::swap(this->__begin_, __x.__begin_);
   std::swap(this->__end_, __x.__end_);
   std::swap(this->__end_cap(), __x.__end_cap());
-  std::__swap_allocator(
-      this->__alloc(), __x.__alloc(), integral_constant<bool, __alloc_traits::propagate_on_container_swap::value>());
+  std::__swap_allocator(this->__alloc(), __x.__alloc());
 }
 
 template <class _Tp, class _Allocator>
@@ -2820,8 +2819,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::swap(vector& __x)
   std::swap(this->__begin_, __x.__begin_);
   std::swap(this->__size_, __x.__size_);
   std::swap(this->__cap(), __x.__cap());
-  std::__swap_allocator(
-      this->__alloc(), __x.__alloc(), integral_constant<bool, __alloc_traits::propagate_on_container_swap::value>());
+  std::__swap_allocator(this->__alloc(), __x.__alloc());
 }
 
 template <class _Allocator>

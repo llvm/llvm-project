@@ -377,6 +377,8 @@ CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedCharKind)(
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKind)(
     const char *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKindMasked)(
+    const char *, int, void *, int, int);
 
 // SELECTED_LOGICAL_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedLogicalKind)(
@@ -385,6 +387,8 @@ CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedLogicalKind)(
 // SELECTED_REAL_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKind)(
     const char *, int, void *, int, void *, int, void *, int);
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedRealKindMasked)(
+    const char *, int, void *, int, void *, int, void *, int, int);
 
 // SPACING
 CppTypeFor<TypeCategory::Real, 4> RTDECL(Spacing4)(

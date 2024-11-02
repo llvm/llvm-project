@@ -542,6 +542,40 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(It, BB->end());
 }
 
+TEST_F(TrackerTest, FenceInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+  fence syncscope("singlethread") seq_cst
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Fence = cast<sandboxir::FenceInst>(&*It++);
+
+  // Check setOrdering().
+  auto OrigOrdering = Fence->getOrdering();
+  auto NewOrdering = AtomicOrdering::Release;
+  EXPECT_NE(NewOrdering, OrigOrdering);
+  Ctx.save();
+  Fence->setOrdering(NewOrdering);
+  EXPECT_EQ(Fence->getOrdering(), NewOrdering);
+  Ctx.revert();
+  EXPECT_EQ(Fence->getOrdering(), OrigOrdering);
+  // Check setSyncScopeID().
+  auto OrigSSID = Fence->getSyncScopeID();
+  auto NewSSID = SyncScope::System;
+  EXPECT_NE(NewSSID, OrigSSID);
+  Ctx.save();
+  Fence->setSyncScopeID(NewSSID);
+  EXPECT_EQ(Fence->getSyncScopeID(), NewSSID);
+  Ctx.revert();
+  EXPECT_EQ(Fence->getSyncScopeID(), OrigSSID);
+}
+
 TEST_F(TrackerTest, CallBaseSetters) {
   parseIR(C, R"IR(
 declare void @bar1(i8)

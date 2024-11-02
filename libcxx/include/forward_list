@@ -620,8 +620,7 @@ inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
     _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
 {
-  std::__swap_allocator(
-      __alloc(), __x.__alloc(), integral_constant<bool, __node_traits::propagate_on_container_swap::value>());
+  std::__swap_allocator(__alloc(), __x.__alloc());
   using std::swap;
   swap(__before_begin()->__next_, __x.__before_begin()->__next_);
 }
