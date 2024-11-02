@@ -23,7 +23,6 @@
 static constexpr const char kIntegerPrefix[] = "i_0x";
 static constexpr const char kDoublePrefix[] = "f_";
 static constexpr const char kInvalidOperand[] = "INVALID";
-static constexpr llvm::StringLiteral kNoRegister("%noreg");
 
 namespace llvm {
 
@@ -34,29 +33,8 @@ namespace {
 struct YamlContext {
   YamlContext(const exegesis::LLVMState &State)
       : State(&State), ErrorStream(LastError),
-        OpcodeNameToOpcodeIdx(
-            generateOpcodeNameToOpcodeIdxMapping(State.getInstrInfo())),
-        RegNameToRegNo(generateRegNameToRegNoMapping(State.getRegInfo())) {}
-
-  static StringMap<unsigned>
-  generateOpcodeNameToOpcodeIdxMapping(const MCInstrInfo &InstrInfo) {
-    StringMap<unsigned> Map(InstrInfo.getNumOpcodes());
-    for (unsigned I = 0, E = InstrInfo.getNumOpcodes(); I < E; ++I)
-      Map[InstrInfo.getName(I)] = I;
-    assert(Map.size() == InstrInfo.getNumOpcodes() && "Size prediction failed");
-    return Map;
-  };
-
-  StringMap<unsigned>
-  generateRegNameToRegNoMapping(const MCRegisterInfo &RegInfo) {
-    StringMap<unsigned> Map(RegInfo.getNumRegs());
-    // Special-case RegNo 0, which would otherwise be spelled as ''.
-    Map[kNoRegister] = 0;
-    for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)
-      Map[RegInfo.getName(I)] = I;
-    assert(Map.size() == RegInfo.getNumRegs() && "Size prediction failed");
-    return Map;
-  };
+        OpcodeNameToOpcodeIdx(State.getOpcodeNameToOpcodeIdxMapping()),
+        RegNameToRegNo(State.getRegNameToRegNoMapping()) {}
 
   void serializeMCInst(const MCInst &MCInst, raw_ostream &OS) {
     OS << getInstrName(MCInst.getOpcode());
@@ -174,8 +152,8 @@ private:
   const exegesis::LLVMState *State;
   std::string LastError;
   raw_string_ostream ErrorStream;
-  const StringMap<unsigned> OpcodeNameToOpcodeIdx;
-  const StringMap<unsigned> RegNameToRegNo;
+  const StringMap<unsigned> &OpcodeNameToOpcodeIdx;
+  const StringMap<unsigned> &RegNameToRegNo;
 };
 } // namespace
 

@@ -48,6 +48,7 @@ void a(void) {}
 int n;
 void *p = __builtin_function_start(n);               // expected-error {{argument must be a function}}
 static_assert(__builtin_function_start(a) == a, ""); // expected-error {{static assertion expression is not an integral constant expression}}
+// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
 } // namespace function_start
 
 void no_ms_builtins() {

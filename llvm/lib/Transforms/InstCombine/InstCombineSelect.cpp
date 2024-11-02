@@ -2718,7 +2718,7 @@ static Instruction *foldNestedSelects(SelectInst &OuterSel,
     std::swap(InnerSel, OuterSelFalseVal);
 
   // Profitability check - avoid increasing instruction count.
-  if (none_of(ArrayRef<Value *>({OuterCond, InnerSel}),
+  if (none_of(ArrayRef<Value *>({OuterSel.getCondition(), InnerSel}),
               [](Value *V) { return V->hasOneUse(); }))
     return nullptr;
 

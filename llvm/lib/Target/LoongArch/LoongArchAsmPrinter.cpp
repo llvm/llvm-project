@@ -90,22 +90,23 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (ExtraCode)
     return true;
 
+  // We only support memory operands like "Base + Offset", where base must be a
+  // register, and offset can be a register or an immediate value.
   const MachineOperand &BaseMO = MI->getOperand(OpNo);
   // Base address must be a register.
   if (!BaseMO.isReg())
     return true;
   // Print the base address register.
   OS << "$" << LoongArchInstPrinter::getRegisterName(BaseMO.getReg());
-  // Print the offset register or immediate if has.
-  if (OpNo + 1 < MI->getNumOperands()) {
-    const MachineOperand &OffsetMO = MI->getOperand(OpNo + 1);
-    if (OffsetMO.isReg())
-      OS << ", $" << LoongArchInstPrinter::getRegisterName(OffsetMO.getReg());
-    else if (OffsetMO.isImm())
-      OS << ", " << OffsetMO.getImm();
-    else
-      return true;
-  }
+  // Print the offset operand.
+  const MachineOperand &OffsetMO = MI->getOperand(OpNo + 1);
+  if (OffsetMO.isReg())
+    OS << ", $" << LoongArchInstPrinter::getRegisterName(OffsetMO.getReg());
+  else if (OffsetMO.isImm())
+    OS << ", " << OffsetMO.getImm();
+  else
+    return true;
+
   return false;
 }
 

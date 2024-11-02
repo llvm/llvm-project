@@ -8308,6 +8308,7 @@ cc_library(
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
         ":LinalgUtils",
+        ":MaskableOpInterface",
         ":MathDialect",
         ":MemRefDialect",
         ":MemRefTransforms",

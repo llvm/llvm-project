@@ -1617,6 +1617,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   // exceptions even for SNANs.
   case Intrinsic::fabs:
   case Intrinsic::copysign:
+  case Intrinsic::is_fpclass:
   // Non-constrained variants of rounding operations means default FP
   // environment, they can be folded in any case.
   case Intrinsic::ceil:
@@ -2626,6 +2627,26 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         break;
       }
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
+      switch (IntrinsicID) {
+      case Intrinsic::is_fpclass: {
+        uint32_t Mask = Op2C->getZExtValue();
+        bool Result =
+          ((Mask & fcSNan) && Op1V.isNaN() && Op1V.isSignaling()) ||
+          ((Mask & fcQNan) && Op1V.isNaN() && !Op1V.isSignaling()) ||
+          ((Mask & fcNegInf) && Op1V.isInfinity() && Op1V.isNegative()) ||
+          ((Mask & fcNegNormal) && Op1V.isNormal() && Op1V.isNegative()) ||
+          ((Mask & fcNegSubnormal) && Op1V.isDenormal() && Op1V.isNegative()) ||
+          ((Mask & fcNegZero) && Op1V.isZero() && Op1V.isNegative()) ||
+          ((Mask & fcPosZero) && Op1V.isZero() && !Op1V.isNegative()) ||
+          ((Mask & fcPosSubnormal) && Op1V.isDenormal() && !Op1V.isNegative()) ||
+          ((Mask & fcPosNormal) && Op1V.isNormal() && !Op1V.isNegative()) ||
+          ((Mask & fcPosInf) && Op1V.isInfinity() && !Op1V.isNegative());
+        return ConstantInt::get(Ty, Result);
+      }
+      default:
+        break;
+      }
+
       if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
         return nullptr;
       if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy())

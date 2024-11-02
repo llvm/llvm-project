@@ -239,9 +239,7 @@ protected:
       if (getRandom() & 1)
         return ConstantFP::getAllOnesValue(Tp);
       return ConstantFP::getNullValue(Tp);
-    } else if (Tp->isVectorTy()) {
-      auto *VTp = cast<FixedVectorType>(Tp);
-
+    } else if (auto *VTp = dyn_cast<FixedVectorType>(Tp)) {
       std::vector<Constant*> TempValues;
       TempValues.reserve(VTp->getNumElements());
       for (unsigned i = 0; i < VTp->getNumElements(); ++i)
@@ -288,20 +286,21 @@ protected:
   }
 
   /// Pick a random vector type.
-  Type *pickVectorType(unsigned len = (unsigned)-1) {
+  Type *pickVectorType(VectorType *VTy = nullptr) {
     // Pick a random vector width in the range 2**0 to 2**4.
     // by adding two randoms we are generating a normal-like distribution
     // around 2**3.
     unsigned width = 1<<((getRandom() % 3) + (getRandom() % 3));
-    Type *Ty;
+    if (VTy) {
+      auto *VecTy = cast<FixedVectorType>(VTy);
+      width = VecTy->getNumElements();
+    }
 
     // Vectors of x86mmx are illegal; keep trying till we get something else.
+    Type *Ty;
     do {
       Ty = pickScalarType();
     } while (Ty->isX86_MMXTy());
-
-    if (len != (unsigned)-1)
-      width = len;
     return FixedVectorType::get(Ty, width);
   }
 
@@ -542,10 +541,8 @@ struct CastModifier: public Modifier {
     Type *DestTy = pickScalarType();
 
     // Handle vector casts vectors.
-    if (VTy->isVectorTy()) {
-      auto *VecTy = cast<FixedVectorType>(VTy);
-      DestTy = pickVectorType(VecTy->getNumElements());
-    }
+    if (VTy->isVectorTy())
+      DestTy = pickVectorType(cast<VectorType>(VTy));
 
     // no need to cast.
     if (VTy == DestTy) return;
@@ -625,11 +622,9 @@ struct SelectModifier: public Modifier {
 
     // If the value type is a vector, and we allow vector select, then in 50%
     // of the cases generate a vector select.
-    if (isa<FixedVectorType>(Val0->getType()) && (getRandom() & 1)) {
-      unsigned NumElem =
-          cast<FixedVectorType>(Val0->getType())->getNumElements();
-      CondTy = FixedVectorType::get(CondTy, NumElem);
-    }
+    if (auto *VTy = dyn_cast<FixedVectorType>(Val0->getType()))
+      if (getRandom() & 1)
+        CondTy = FixedVectorType::get(CondTy, VTy->getNumElements());
 
     Value *Cond = getRandomValue(CondTy);
     Value *V = SelectInst::Create(Cond, Val0, Val1, "Sl", BB->getTerminator());

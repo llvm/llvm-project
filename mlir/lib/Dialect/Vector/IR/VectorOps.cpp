@@ -447,6 +447,15 @@ void ReductionOp::print(OpAsmPrinter &p) {
   p << " : " << getVector().getType() << " into " << getDest().getType();
 }
 
+// MaskableOpInterface methods.
+
+/// Returns the mask type expected by this operation.
+Type ReductionOp::getExpectedMaskType() {
+  auto vecType = getVectorType();
+  return vecType.cloneWith(std::nullopt,
+                           IntegerType::get(vecType.getContext(), /*width=*/1));
+}
+
 Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
                                          OpBuilder &builder, Location loc,
                                          Value vector) {
@@ -3461,6 +3470,14 @@ LogicalResult TransferReadOp::verify() {
                               [&](Twine t) { return emitOpError(t); });
 }
 
+// MaskableOpInterface methods.
+
+/// Returns the mask type expected by this operation. Mostly used for
+/// verification purposes. It requires the operation to be vectorized."
+Type TransferReadOp::getExpectedMaskType() {
+  return inferTransferReadMaskType(getVectorType(), getPermutationMap());
+}
+
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // TODO: support more aggressive createOrFold on:
@@ -3901,6 +3918,14 @@ LogicalResult TransferWriteOp::verify() {
 
   return verifyPermutationMap(permutationMap,
                               [&](Twine t) { return emitOpError(t); });
+}
+
+// MaskableOpInterface methods.
+
+/// Returns the mask type expected by this operation. Mostly used for
+/// verification purposes.
+Type TransferWriteOp::getExpectedMaskType() {
+  return inferTransferWriteMaskType(getVectorType(), getPermutationMap());
 }
 
 /// Fold:
@@ -5377,9 +5402,10 @@ LogicalResult MaskOp::verify() {
         "expects result type to match maskable operation result type");
 
   // Mask checks.
-  if (getMask().getType() != maskableOp.getExpectedMaskType())
-    return emitOpError("expects a ") << maskableOp.getExpectedMaskType()
-                                     << " mask for the maskable operation";
+  Type expectedMaskType = maskableOp.getExpectedMaskType();
+  if (getMask().getType() != expectedMaskType)
+    return emitOpError("expects a ")
+           << expectedMaskType << " mask for the maskable operation";
 
   // Passthru checks.
   Value passthru = getPassthru();
