@@ -1681,7 +1681,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case 'i':
     return Name == "ilogb" || Name == "ilogbf";
   case 'l':
-    return Name == "log" || Name == "logf" || Name == "logl" ||
+    return Name == "ldexp" || Name == "ldexpf" || Name == "ldexpl" ||
+           Name == "log" || Name == "logf" || Name == "logl" ||
            Name == "log2" || Name == "log2f" || Name == "log10" ||
            Name == "log10f" || Name == "logb" || Name == "logbf" ||
            Name == "log1p" || Name == "log1pf";
@@ -1694,7 +1695,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "rint" || Name == "rintf" ||
            Name == "round" || Name == "roundf";
   case 's':
-    return Name == "sin" || Name == "sinf" ||
+    return Name == "scalbn" || Name == "scalbnf" || Name == "scalbnl" ||
+           Name == "scalbln" || Name == "scalblnf" || Name == "scalblnl" ||
+           Name == "sin" || Name == "sinf" ||
            Name == "sinh" || Name == "sinhf" ||
            Name == "sqrt" || Name == "sqrtf";
   case 't':
@@ -2371,6 +2374,18 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         U.roundToIntegral(APFloat::rmTowardNegative);
         return ConstantFP::get(Ty->getContext(), U);
       }
+      break;
+    case LibFunc_ldexp:
+    case LibFunc_ldexpf:
+    case LibFunc_ldexpl:
+    case LibFunc_scalbn:
+    case LibFunc_scalbnf:
+    case LibFunc_scalbnl:
+    case LibFunc_scalbln:
+    case LibFunc_scalblnf:
+    case LibFunc_scalblnl:
+      if (TLI->has(Func))
+        return ConstantFoldFP(ldexp, APF, Ty);
       break;
     case LibFunc_log:
     case LibFunc_logf:

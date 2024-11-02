@@ -3157,42 +3157,6 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
   return ConstantFP::get(CI->getType(), MaxVal);
 }
 
-Value *LibCallSimplifier::optimizeScalbn(CallInst *CI, IRBuilderBase &B) {
-  Value *Base = CI->getArgOperand(0);
-  Value *Expo = CI->getArgOperand(1);
-  // Function *Callee = CI->getCalledFunction();
-  // StringRef Name = Callee->getName();
-  Type *Ty = CI->getType();
-  Module *M = CI->getModule();
-  // bool AllowApprox = CI->hasApproxFunc();
-  // bool Ignored;
-
-  // Propagate the math semantics from the call to any created instructions.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(CI->getFastMathFlags());
-  // Evaluate special cases related to the base.
-
-  // Scalbn(0.0, exp) -> 0.0
-  if (match(Base, m_SpecificFP(0.0)))
-    return Base;
-
-  // Scalbn(arg, 0) -> arg
-  if (match(Expo, m_Zero()))
-    return Base;
-
-  // Scalbn(arg, 1) -> arg * 2.0
-  if (match(Expo, m_SpecificInt(1)))
-    return B.CreateFMul(Base, ConstantFP::get(Ty, 2.0), "mul");
-
-  // Scalbn(1.0, exp) -> FLT_RADIX ^ exp
-  auto pow = createPowWithIntegerExponent(ConstantFP::get(Ty, 2.0), Expo, M, B);
-  if (match(Base, m_SpecificFP(1.0)))
-    return pow;
-
-  // otherwise
-  return B.CreateFMul(Base, pow, "mul");
-}
-
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//

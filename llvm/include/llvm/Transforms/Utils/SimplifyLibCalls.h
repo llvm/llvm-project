@@ -213,7 +213,6 @@ private:
   Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
   Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFdim(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeScalbn(CallInst *CI, IRBuilderBase &B);
   // Wrapper for all floating point library call optimizations
   Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
                                       IRBuilderBase &B);
