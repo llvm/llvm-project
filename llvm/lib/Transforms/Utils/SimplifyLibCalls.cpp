@@ -4105,13 +4105,6 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_remquof:
   case LibFunc_remquol:
     return optimizeRemquo(CI, Builder);
-  case LibFunc_scalbln:
-  case LibFunc_scalblnf:
-  case LibFunc_scalblnl:
-  case LibFunc_scalbn:
-  case LibFunc_scalbnf:
-  case LibFunc_scalbnl:
-    return optimizeScalbn(CI, Builder);
   case LibFunc_nan:
   case LibFunc_nanf:
   case LibFunc_nanl:
