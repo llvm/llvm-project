@@ -1348,7 +1348,7 @@ struct AttributorConfig {
   DenseSet<const char *> *Allowed = nullptr;
 
   /// Maximum number of iterations to run until fixpoint.
-  std::optional<unsigned> MaxFixpointIterations = None;
+  std::optional<unsigned> MaxFixpointIterations = std::nullopt;
 
   /// A callback function that returns an ORE object from a Function pointer.
   ///{
@@ -4392,7 +4392,7 @@ struct AAValueConstantRange
           AA::getWithType(*ConstantInt::get(Ty->getContext(), *C), *Ty));
     }
     if (RangeV.isEmptySet())
-      return llvm::None;
+      return std::nullopt;
     return nullptr;
   }
 
@@ -4647,7 +4647,7 @@ struct AAPotentialConstantValues
     if (getAssumedSet().size() == 0) {
       if (undefIsContained())
         return UndefValue::get(getAssociatedValue().getType());
-      return llvm::None;
+      return std::nullopt;
     }
 
     return nullptr;

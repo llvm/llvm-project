@@ -800,7 +800,7 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
     CmpInst *Cmp = dyn_cast<CmpInst>(Condition);
     if (!Cmp) {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
-      return None;
+      return std::nullopt;
     }
 
     CmpInst::Predicate Pred;
@@ -813,7 +813,7 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
       OtherOp = Cmp->getOperand(0);
     } else {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
-      return None;
+      return std::nullopt;
     }
 
     // Invert predicate along false edge.
@@ -825,7 +825,7 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
   case PT_Switch:
     if (Condition != RenamedOp) {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
-      return None;
+      return std::nullopt;
     }
 
     return {{CmpInst::ICMP_EQ, cast<PredicateSwitch>(this)->CaseValue}};

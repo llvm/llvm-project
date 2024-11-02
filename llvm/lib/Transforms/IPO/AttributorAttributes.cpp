@@ -2861,7 +2861,7 @@ private:
         // If it is known (which we tested above) but it doesn't have a value,
         // then we can assume `undef` and hence the instruction is UB.
         KnownUBInsts.insert(I);
-        return llvm::None;
+        return std::nullopt;
       }
       if (!*SimplifiedV)
         return nullptr;
@@ -2869,7 +2869,7 @@ private:
     }
     if (isa<UndefValue>(V)) {
       KnownUBInsts.insert(I);
-      return llvm::None;
+      return std::nullopt;
     }
     return V;
   }
@@ -5534,7 +5534,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     Optional<Constant *> COpt = AA.getAssumedConstant(A);
 
     if (!COpt) {
-      SimplifiedAssociatedValue = llvm::None;
+      SimplifiedAssociatedValue = std::nullopt;
       A.recordDependence(AA, *this, DepClassTy::OPTIONAL);
       return true;
     }
@@ -6091,7 +6091,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       if (!isa<UndefValue>(InitVal)) {
         IRBuilder<> Builder(Alloca->getNextNode());
         // TODO: Use alignment above if align!=1
-        Builder.CreateMemSet(Alloca, InitVal, Size, None);
+        Builder.CreateMemSet(Alloca, InitVal, Size, std::nullopt);
       }
       HasChanged = ChangeStatus::CHANGED;
     }
@@ -6108,7 +6108,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       return APInt(64, 0);
     if (auto *CI = dyn_cast_or_null<ConstantInt>(SimpleV.value()))
       return CI->getValue();
-    return llvm::None;
+    return std::nullopt;
   }
 
   Optional<APInt> getSize(Attributor &A, const AbstractAttribute &AA,
@@ -6439,7 +6439,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 namespace {
 struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
   AAPrivatizablePtrImpl(const IRPosition &IRP, Attributor &A)
-      : AAPrivatizablePtr(IRP, A), PrivatizableType(llvm::None) {}
+      : AAPrivatizablePtr(IRP, A), PrivatizableType(std::nullopt) {}
 
   ChangeStatus indicatePessimisticFixpoint() override {
     AAPrivatizablePtr::indicatePessimisticFixpoint();
@@ -9630,7 +9630,7 @@ private:
       if (Unreachable.count(&Fn))
         return false;
 
-      return llvm::None;
+      return std::nullopt;
     }
 
     /// Set of functions that we know for sure is reachable.
@@ -9909,7 +9909,7 @@ askForAssumedConstant(Attributor &A, const AbstractAttribute &QueryingAA,
 
   if (!COpt.has_value()) {
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
-    return llvm::None;
+    return std::nullopt;
   }
   if (auto *C = COpt.value()) {
     A.recordDependence(AA, QueryingAA, DepClassTy::OPTIONAL);
@@ -9972,7 +9972,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return &IRP.getAssociatedValue();
     Optional<Constant *> C = askForAssumedConstant<AAType>(A, AA, IRP, Ty);
     if (!C)
-      return llvm::None;
+      return std::nullopt;
     if (C.value())
       if (auto *CC = AA::getWithType(**C, Ty))
         return CC;

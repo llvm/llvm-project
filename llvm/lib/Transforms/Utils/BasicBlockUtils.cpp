@@ -427,7 +427,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       VariableMap;
   for (auto &I : *BB) {
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
-      DebugVariable Key(DVI->getVariable(), None,
+      DebugVariable Key(DVI->getVariable(), std::nullopt,
                         DVI->getDebugLoc()->getInlinedAt());
       auto VMI = VariableMap.find(Key);
       auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
@@ -488,7 +488,7 @@ static bool remomveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   DenseSet<DebugVariable> SeenDefForAggregate;
   // Returns the DebugVariable for DVI with no fragment info.
   auto GetAggregateVariable = [](DbgValueInst *DVI) {
-    return DebugVariable(DVI->getVariable(), None,
+    return DebugVariable(DVI->getVariable(), std::nullopt,
                          DVI->getDebugLoc()->getInlinedAt());
   };
 

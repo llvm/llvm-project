@@ -146,7 +146,7 @@ static void inlineVolatileOrAtomicWithExtraArgs(bool *Inline, bool Volatile,
 
 static Optional<uint64_t> getSizeInBytes(Optional<uint64_t> SizeInBits) {
   if (!SizeInBits || *SizeInBits % 8 != 0)
-    return None;
+    return std::nullopt;
   return *SizeInBits / 8;
 }
 
@@ -300,7 +300,7 @@ void MemoryOpRemark::visitSizeOperand(Value *V, DiagnosticInfoIROptimization &R)
 static Optional<StringRef> nameOrNone(const Value *V) {
   if (V->hasName())
     return V->getName();
-  return None;
+  return std::nullopt;
 }
 
 void MemoryOpRemark::visitVariable(const Value *V,
@@ -341,7 +341,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
   // If not, get it from the alloca.
   Optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
   Optional<uint64_t> Size =
-      TySize ? getSizeInBytes(TySize->getFixedSize()) : None;
+      TySize ? getSizeInBytes(TySize->getFixedSize()) : std::nullopt;
   VariableInfo Var{nameOrNone(AI), Size};
   if (!Var.isEmpty())
     Result.push_back(std::move(Var));
@@ -361,7 +361,7 @@ void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimizat
     uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
     if (!Size)
       return;
-    VIs.push_back({None, Size});
+    VIs.push_back({std::nullopt, Size});
   }
 
   R << (IsRead ? "\n Read Variables: " : "\n Written Variables: ");

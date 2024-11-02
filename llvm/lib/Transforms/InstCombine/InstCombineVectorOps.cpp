@@ -871,7 +871,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   if (NumAggElts > 2)
     return nullptr;
 
-  static constexpr auto NotFound = None;
+  static constexpr auto NotFound = std::nullopt;
   static constexpr auto FoundMismatch = nullptr;
 
   // Try to find a value of each element of an aggregate.
@@ -1032,7 +1032,8 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   Optional<Value *> SourceAggregate;
 
   // Can we find the source aggregate without looking at predecessors?
-  SourceAggregate = FindCommonSourceAggregate(/*UseBB=*/None, /*PredBB=*/None);
+  SourceAggregate = FindCommonSourceAggregate(/*UseBB=*/std::nullopt,
+                                              /*PredBB=*/std::nullopt);
   if (Describe(SourceAggregate) != AggregateDescription::NotFound) {
     if (Describe(SourceAggregate) == AggregateDescription::FoundMismatch)
       return nullptr; // Conflicting source aggregates!

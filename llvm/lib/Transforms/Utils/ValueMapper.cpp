@@ -391,8 +391,9 @@ Value *Mapper::mapValue(const Value *V) {
       // ensures metadata operands only reference defined SSA values.
       return (Flags & RF_IgnoreMissingLocals)
                  ? nullptr
-                 : MetadataAsValue::get(V->getContext(),
-                                        MDTuple::get(V->getContext(), None));
+                 : MetadataAsValue::get(
+                       V->getContext(),
+                       MDTuple::get(V->getContext(), std::nullopt));
     }
     if (auto *AL = dyn_cast<DIArgList>(MD)) {
       SmallVector<ValueAsMetadata *, 4> MappedArgs;
@@ -578,7 +579,7 @@ Optional<Metadata *> MDNodeMapper::tryToMapOperand(const Metadata *Op) {
   const MDNode &N = *cast<MDNode>(Op);
   if (N.isDistinct())
     return mapDistinctNode(N);
-  return None;
+  return std::nullopt;
 }
 
 MDNode *MDNodeMapper::mapDistinctNode(const MDNode &N) {
@@ -619,7 +620,7 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
   if (auto *CMD = dyn_cast<ConstantAsMetadata>(Op))
     return wrapConstantAsMetadata(*CMD, M.getVM().lookup(CMD->getValue()));
 
-  return None;
+  return std::nullopt;
 }
 
 Metadata &MDNodeMapper::UniquedGraph::getFwdReference(MDNode &Op) {
@@ -848,7 +849,7 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
 
-  return None;
+  return std::nullopt;
 }
 
 Metadata *Mapper::mapMetadata(const Metadata *MD) {
