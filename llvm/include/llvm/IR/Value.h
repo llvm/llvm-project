@@ -723,12 +723,16 @@ public:
       bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
           nullptr) const;
-  Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
-                                           bool AllowNonInbounds,
-                                           bool AllowInvariantGroup = false) {
+
+  Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr) {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
-            DL, Offset, AllowNonInbounds, AllowInvariantGroup));
+            DL, Offset, AllowNonInbounds, AllowInvariantGroup,
+            ExternalAnalysis));
   }
 
   /// This is a wrapper around stripAndAccumulateConstantOffsets with the
