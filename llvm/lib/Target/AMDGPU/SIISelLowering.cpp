@@ -3739,11 +3739,9 @@ void SITargetLowering::passSpecialInputs(
    };
   // clang-format on
 
-  for (auto Attr : ImplicitAttrs) {
-    AMDGPUFunctionArgInfo::PreloadedValue InputID = Attr.first;
-
+  for (auto [InputID, Attr] : ImplicitAttrs) {
     // If the callee does not use the attribute value, skip copying the value.
-    if (CLI.CB->hasFnAttr(Attr.second))
+    if (CLI.CB->hasFnAttr(Attr))
       continue;
 
     const auto [OutgoingArg, ArgRC, ArgTy] =
@@ -4379,10 +4377,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
-  for (auto &RegToPass : RegsToPass) {
-    Ops.push_back(
-        DAG.getRegister(RegToPass.first, RegToPass.second.getValueType()));
-  }
+  for (auto &[Reg, Val] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, Val.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
@@ -9988,16 +9984,16 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
 
   SDValue VData = Op.getOperand(2);
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-  auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+  auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
   auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
   SDValue Ops[] = {
       Op.getOperand(0),                      // Chain
       VData,                                 // vdata
       Rsrc,                                  // rsrc
       DAG.getConstant(0, DL, MVT::i32),      // vindex
-      Offsets.first,                         // voffset
+      VOffset,                               // voffset
       SOffset,                               // soffset
-      Offsets.second,                        // offset
+      Offset,                                // offset
       Op.getOperand(6),                      // cachepolicy
       DAG.getTargetConstant(0, DL, MVT::i1), // idxen
   };
@@ -10016,16 +10012,16 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
 
   SDValue VData = Op.getOperand(2);
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-  auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+  auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
   auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
   SDValue Ops[] = {
       Op.getOperand(0),                      // Chain
       VData,                                 // vdata
       Rsrc,                                  // rsrc
       Op.getOperand(4),                      // vindex
-      Offsets.first,                         // voffset
+      VOffset,                               // voffset
       SOffset,                               // soffset
-      Offsets.second,                        // offset
+      Offset,                                // offset
       Op.getOperand(7),                      // cachepolicy
       DAG.getTargetConstant(1, DL, MVT::i1), // idxen
   };
@@ -10106,15 +10102,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         IntrID == Intrinsic::amdgcn_raw_ptr_buffer_load_format;
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(3), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(3), DAG);
     auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(5),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
@@ -10133,15 +10129,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         IntrID == Intrinsic::amdgcn_struct_ptr_buffer_load_format;
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         Op.getOperand(3),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
@@ -10153,16 +10149,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(3), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(3), DAG);
     auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
 
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(5),                      // format
         Op.getOperand(6),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
@@ -10180,16 +10176,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
 
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
         Op.getOperand(3),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // format
         Op.getOperand(7),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
@@ -10310,7 +10306,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
@@ -10318,9 +10314,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         Op.getOperand(3),                      // cmp
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(7),                      // cachepolicy
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
@@ -10334,7 +10330,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op->getOperand(4), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(6), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(6), DAG);
     auto SOffset = selectSOffset(Op.getOperand(7), DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
@@ -10342,9 +10338,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         Op.getOperand(3),                      // cmp
         Rsrc,                                  // rsrc
         Op.getOperand(5),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(8),                      // cachepolicy
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
@@ -10885,16 +10881,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,                                 // vdata
         Rsrc,                                  // rsrc
         Op.getOperand(4),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(7),                      // format
         Op.getOperand(8),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
@@ -10913,16 +10909,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,                                 // vdata
         Rsrc,                                  // rsrc
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // format
         Op.getOperand(7),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
@@ -10958,16 +10954,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
     auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,
         Rsrc,
         DAG.getConstant(0, DL, MVT::i32),      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(6),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(0, DL, MVT::i1), // idxen
     };
@@ -11009,16 +11005,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     auto Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto Offsets = splitBufferOffsets(Op.getOperand(5), DAG);
+    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
     auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,
         Rsrc,
         Op.getOperand(4),                      // vindex
-        Offsets.first,                         // voffset
+        VOffset,                               // voffset
         SOffset,                               // soffset
-        Offsets.second,                        // offset
+        Offset,                                // offset
         Op.getOperand(7),                      // cachepolicy, swizzled buffer
         DAG.getTargetConstant(1, DL, MVT::i1), // idxen
     };
