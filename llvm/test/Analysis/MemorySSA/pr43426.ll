@@ -8,7 +8,7 @@ entry:
   br label %header
 
 header:
-  store i32 1, i32* null, align 4
+  store i32 1, ptr null, align 4
   br i1 true, label %cleanup53, label %body
 
 body:
@@ -24,7 +24,7 @@ deadblock:
   br i1 undef, label %unreachable, label %deadblock
 
 cleanup53:
-  %val = load i32, i32* null, align 4
+  %val = load i32, ptr null, align 4
   %cmpv = icmp eq i32 %val, 0
   br i1 %cmpv, label %cleanup63, label %latch
 

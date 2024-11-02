@@ -7,13 +7,17 @@ target triple = "aarch64--linux-gnu"
 %pair = type { i8, i8 }
 
 ; CHECK-LABEL: test
-; CHECK: Found an estimated cost of 17 for VF 2 For instruction:   {{.*}} load i8
+; CHECK: Found an estimated cost of 14 for VF 2 For instruction:   {{.*}} load i8
 ; CHECK: Found an estimated cost of 0 for VF 2 For instruction:   {{.*}} load i8
-; CHECK: vector.body
-; CHECK: load <4 x i8>
+; CHECK-LABEL: entry:
+; CHECK-LABEL: vector.body:
+; CHECK: [[LOAD1:%.*]] = load i8
+; CHECK: [[LOAD2:%.*]] = load i8
+; CHECK: [[INSERT:%.*]] = insertelement <2 x i8> poison, i8 [[LOAD1]], i32 0
+; CHECK: insertelement <2 x i8> [[INSERT]], i8 [[LOAD2]], i32 1
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body
 
-define void @test(%pair* %p, i64 %n) {
+define void @test(%pair* %p, i8* %q, i64 %n) {
 entry:
   br label %for.body
 
@@ -23,6 +27,9 @@ for.body:
   %tmp1 = load i8, i8* %tmp0, align 1
   %tmp2 = getelementptr %pair, %pair* %p, i64 %i, i32 1
   %tmp3 = load i8, i8* %tmp2, align 1
+  %add = add i8 %tmp1, %tmp3
+  %qi = getelementptr i8, i8* %q, i64 %i
+  store i8 %add, i8* %qi, align 1
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp eq i64 %i.next, %n
   br i1 %cond, label %for.end, label %for.body
@@ -30,4 +37,3 @@ for.body:
 for.end:
   ret void
 }
-

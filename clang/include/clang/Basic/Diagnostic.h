@@ -545,6 +545,7 @@ public:
   DiagnosticsEngine &operator=(const DiagnosticsEngine &) = delete;
   ~DiagnosticsEngine();
 
+  friend void DiagnosticsTestHelper(DiagnosticsEngine &);
   LLVM_DUMP_METHOD void dump() const;
   LLVM_DUMP_METHOD void dump(StringRef DiagName) const;
 
@@ -891,9 +892,9 @@ public:
     LastDiagLevel = Other.LastDiagLevel;
   }
 
-  /// Reset the state of the diagnostic object to its initial
-  /// configuration.
-  void Reset();
+  /// Reset the state of the diagnostic object to its initial configuration.
+  /// \param[in] soft - if true, doesn't reset the diagnostic mappings and state
+  void Reset(bool soft = false);
 
   //===--------------------------------------------------------------------===//
   // DiagnosticsEngine classification and reporting interfaces.
@@ -1345,8 +1346,8 @@ public:
   // It is necessary to limit this to rvalue reference to avoid calling this
   // function with a bitfield lvalue argument since non-const reference to
   // bitfield is not allowed.
-  template <typename T, typename = typename std::enable_if<
-                            !std::is_lvalue_reference<T>::value>::type>
+  template <typename T,
+            typename = std::enable_if_t<!std::is_lvalue_reference<T>::value>>
   const DiagnosticBuilder &operator<<(T &&V) const {
     assert(isActive() && "Clients must not add to cleared diagnostic!");
     const StreamingDiagnostic &DB = *this;

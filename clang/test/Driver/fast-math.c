@@ -151,14 +151,14 @@
 // RUN:     -fno-signed-zeros -fno-trapping-math -fapprox-func -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH %s
 // CHECK-UNSAFE-MATH: "-cc1"
-// CHECK-UNSAFE-MATH: "-menable-unsafe-fp-math"
+// CHECK-UNSAFE-MATH: "-funsafe-math-optimizations"
 // CHECK-UNSAFE-MATH: "-mreassociate"
 //
 // RUN: %clang -### -fno-fast-math -fno-math-errno -fassociative-math -freciprocal-math \
 // RUN:     -fno-signed-zeros -fno-trapping-math -fapprox-func -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-UNSAFE-MATH %s
 // CHECK-NO-FAST-MATH-UNSAFE-MATH: "-cc1"
-// CHECK-NO-FAST-MATH-UNSAFE-MATH: "-menable-unsafe-fp-math"
+// CHECK-NO-FAST-MATH-UNSAFE-MATH: "-funsafe-math-optimizations"
 // CHECK-NO-FAST-MATH-UNSAFE-MATH: "-mreassociate"
 
 // The 2nd -fno-fast-math overrides -fassociative-math.
@@ -167,7 +167,7 @@
 // RUN:     -fno-fast-math -fno-signed-zeros -fno-trapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH-NO-FAST-MATH %s
 // CHECK-UNSAFE-MATH-NO-FAST-MATH: "-cc1"
-// CHECK-UNSAFE-MATH-NO-FAST-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-UNSAFE-MATH-NO-FAST-MATH-NOT: "-funsafe-math-optimizations"
 // CHECK-UNSAFE-MATH-NO-FAST-MATH-NOT: "-mreassociate"
 //
 // Check that various umbrella flags also enable these frontend options.
@@ -280,7 +280,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
 
 // CHECK-NO-UNSAFE-MATH: "-cc1"
-// CHECK-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-NO-UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
 // CHECK-NO_UNSAFE-MATH-NOT: "-mreassociate"
 // CHECK-NO-UNSAFE-MATH: "-o"
 
@@ -292,9 +292,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-REASSOC-NO-UNSAFE-MATH %s
 
 // CHECK-REASSOC-NO-UNSAFE-MATH: "-cc1"
-// CHECK-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-REASSOC-NO_UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
 // CHECK-REASSOC-NO_UNSAFE-MATH: "-mreassociate"
-// CHECK-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-REASSOC-NO-UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
 // CHECK-REASSOC-NO-UNSAFE-MATH: "-o"
 
 
@@ -309,9 +309,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-REASSOC-NO-UNSAFE-MATH %s
 
 // CHECK-NO-REASSOC-NO-UNSAFE-MATH: "-cc1"
-// CHECK-NO-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-NO-REASSOC-NO_UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
 // CHECK-NO-REASSOC-NO_UNSAFE-MATH-NOT: "-mreassociate"
-// CHECK-NO-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-NO-REASSOC-NO_UNSAFE-MATH-NOT: "-funsafe-math-optimizations"
 // CHECK-NO-REASSOC-NO-UNSAFE-MATH: "-o"
 
 

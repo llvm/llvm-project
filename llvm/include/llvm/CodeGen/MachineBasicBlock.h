@@ -143,9 +143,13 @@ private:
   /// Indicate that this basic block is entered via an exception handler.
   bool IsEHPad = false;
 
-  /// Indicate that this basic block is potentially the target of an indirect
-  /// branch.
-  bool AddressTaken = false;
+  /// Indicate that this MachineBasicBlock is referenced somewhere other than
+  /// as predecessor/successor, a terminator MachineInstr, or a jump table.
+  bool MachineBlockAddressTaken = false;
+
+  /// If this MachineBasicBlock corresponds to an IR-level "blockaddress"
+  /// constant, this contains a pointer to that block.
+  BasicBlock *AddressTakenIRBlock = nullptr;
 
   /// Indicate that this basic block needs its symbol be emitted regardless of
   /// whether the flow just falls-through to it.
@@ -216,12 +220,35 @@ public:
   /// Return a formatted string to identify this block and its parent function.
   std::string getFullName() const;
 
-  /// Test whether this block is potentially the target of an indirect branch.
-  bool hasAddressTaken() const { return AddressTaken; }
+  /// Test whether this block is used as as something other than the target
+  /// of a terminator, exception-handling target, or jump table. This is
+  /// either the result of an IR-level "blockaddress", or some form
+  /// of target-specific branch lowering.
+  bool hasAddressTaken() const {
+    return MachineBlockAddressTaken || AddressTakenIRBlock;
+  }
 
-  /// Set this block to reflect that it potentially is the target of an indirect
-  /// branch.
-  void setHasAddressTaken() { AddressTaken = true; }
+  /// Test whether this block is used as something other than the target of a
+  /// terminator, exception-handling target, jump table, or IR blockaddress.
+  /// For example, its address might be loaded into a register, or
+  /// stored in some branch table that isn't part of MachineJumpTableInfo.
+  bool isMachineBlockAddressTaken() const { return MachineBlockAddressTaken; }
+
+  /// Test whether this block is the target of an IR BlockAddress.  (There can
+  /// more than one MBB associated with an IR BB where the address is taken.)
+  bool isIRBlockAddressTaken() const { return AddressTakenIRBlock; }
+
+  /// Retrieves the BasicBlock which corresponds to this MachineBasicBlock.
+  BasicBlock *getAddressTakenIRBlock() const { return AddressTakenIRBlock; }
+
+  /// Set this block to indicate that its address is used as something other
+  /// than the target of a terminator, exception-handling target, jump table,
+  /// or IR-level "blockaddress".
+  void setMachineBlockAddressTaken() { MachineBlockAddressTaken = true; }
+
+  /// Set this block to reflect that it corresponds to an IR-level basic block
+  /// with a BlockAddress.
+  void setAddressTakenIRBlock(BasicBlock *BB) { AddressTakenIRBlock = BB; }
 
   /// Test whether this block must have its label emitted.
   bool hasLabelMustBeEmitted() const { return LabelMustBeEmitted; }
@@ -246,6 +273,7 @@ public:
       MachineInstrBundleIterator<const MachineInstr, true>;
 
   unsigned size() const { return (unsigned)Insts.size(); }
+  bool sizeWithoutDebugLargerThan(unsigned Limit) const;
   bool empty() const { return Insts.empty(); }
 
   MachineInstr       &instr_front()       { return Insts.front(); }
@@ -405,7 +433,7 @@ public:
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
   using livein_iterator = LiveInVector::const_iterator;
-#ifndef NDEBUG
+
   /// Unlike livein_begin, this method does not check that the liveness
   /// information is accurate. Still for debug purposes it may be useful
   /// to have iterators that won't assert if the liveness information
@@ -414,7 +442,7 @@ public:
   iterator_range<livein_iterator> liveins_dbg() const {
     return make_range(livein_begin_dbg(), livein_end());
   }
-#endif
+
   livein_iterator livein_begin() const;
   livein_iterator livein_end()   const { return LiveIns.end(); }
   bool            livein_empty() const { return LiveIns.empty(); }
@@ -735,6 +763,15 @@ public:
   /// all, for example if this block ends with an unconditional branch to some
   /// other block.
   bool isLayoutSuccessor(const MachineBasicBlock *MBB) const;
+
+  /// Return the successor of this block if it has a single successor.
+  /// Otherwise return a null pointer.
+  ///
+  const MachineBasicBlock *getSingleSuccessor() const;
+  MachineBasicBlock *getSingleSuccessor() {
+    return const_cast<MachineBasicBlock *>(
+        static_cast<const MachineBasicBlock *>(this)->getSingleSuccessor());
+  }
 
   /// Return the fallthrough block if the block can implicitly
   /// transfer control to the block after it by falling off the end of

@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -symbol-dce -split-input-file -verify-diagnostics | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(symbol-dce)" -split-input-file | FileCheck %s --check-prefix=NESTED
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(builtin.module(symbol-dce))" -split-input-file | FileCheck %s --check-prefix=NESTED
 
 // Check that trivially dead and trivially live non-nested cases are handled.
 

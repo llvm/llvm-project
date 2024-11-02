@@ -326,6 +326,14 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     case 's': k = ConversionSpecifier::sArg; break;
     case 'u': k = ConversionSpecifier::uArg; break;
     case 'x': k = ConversionSpecifier::xArg; break;
+    // C23.
+    case 'b':
+      if (isFreeBSDKPrintf)
+        k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
+      else
+        k = ConversionSpecifier::bArg;
+      break;
+    case 'B': k = ConversionSpecifier::BArg; break;
     // POSIX specific.
     case 'C': k = ConversionSpecifier::CArg; break;
     case 'S': k = ConversionSpecifier::SArg; break;
@@ -337,11 +345,6 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     case '@': k = ConversionSpecifier::ObjCObjArg; break;
     // Glibc specific.
     case 'm': k = ConversionSpecifier::PrintErrno; break;
-    // FreeBSD kernel specific.
-    case 'b':
-      if (isFreeBSDKPrintf)
-        k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
-      break;
     case 'r':
       if (isFreeBSDKPrintf)
         k = ConversionSpecifier::FreeBSDrArg; // int
@@ -497,7 +500,7 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       case LengthModifier::AsShort:
         if (Ctx.getTargetInfo().getTriple().isOSMSVCRT())
           return Ctx.IntTy;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       default:
         return ArgType::Invalid();
     }
@@ -844,7 +847,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   }
 
   // Handle size_t, ptrdiff_t, etc. that have dedicated length modifiers in C99.
-  if (isa<TypedefType>(QT) && (LangOpt.C99 || LangOpt.CPlusPlus11))
+  if (LangOpt.C99 || LangOpt.CPlusPlus11)
     namedTypeToLengthModifier(QT, LM);
 
   // If fixing the length modifier was enough, we might be done.
@@ -874,7 +877,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 
   // Set conversion specifier and disable any flags which do not apply to it.
   // Let typedefs to char fall through to int, as %c is silly for uint8_t.
-  if (!isa<TypedefType>(QT) && QT->isCharType()) {
+  if (!QT->getAs<TypedefType>() && QT->isCharType()) {
     CS.setKind(ConversionSpecifier::cArg);
     LM.setKind(LengthModifier::None);
     Precision.setHowSpecified(OptionalAmount::NotSpecified);
@@ -885,12 +888,10 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   // Test for Floating type first as LongDouble can pass isUnsignedIntegerType
   else if (QT->isRealFloatingType()) {
     CS.setKind(ConversionSpecifier::fArg);
-  }
-  else if (QT->isSignedIntegerType()) {
+  } else if (QT->isSignedIntegerType()) {
     CS.setKind(ConversionSpecifier::dArg);
     HasAlternativeForm = false;
-  }
-  else if (QT->isUnsignedIntegerType()) {
+  } else if (QT->isUnsignedIntegerType()) {
     CS.setKind(ConversionSpecifier::uArg);
     HasAlternativeForm = false;
     HasPlusPrefix = false;
@@ -963,8 +964,10 @@ bool PrintfSpecifier::hasValidAlternativeForm() const {
   if (!HasAlternativeForm)
     return true;
 
-  // Alternate form flag only valid with the oxXaAeEfFgG conversions
+  // Alternate form flag only valid with the bBoxXaAeEfFgG conversions
   switch (CS.getKind()) {
+  case ConversionSpecifier::bArg:
+  case ConversionSpecifier::BArg:
   case ConversionSpecifier::oArg:
   case ConversionSpecifier::OArg:
   case ConversionSpecifier::xArg:
@@ -990,8 +993,10 @@ bool PrintfSpecifier::hasValidLeadingZeros() const {
   if (!HasLeadingZeroes)
     return true;
 
-  // Leading zeroes flag only valid with the diouxXaAeEfFgG conversions
+  // Leading zeroes flag only valid with the bBdiouxXaAeEfFgG conversions
   switch (CS.getKind()) {
+  case ConversionSpecifier::bArg:
+  case ConversionSpecifier::BArg:
   case ConversionSpecifier::dArg:
   case ConversionSpecifier::DArg:
   case ConversionSpecifier::iArg:
@@ -1082,8 +1087,10 @@ bool PrintfSpecifier::hasValidPrecision() const {
   if (Precision.getHowSpecified() == OptionalAmount::NotSpecified)
     return true;
 
-  // Precision is only valid with the diouxXaAeEfFgGsP conversions
+  // Precision is only valid with the bBdiouxXaAeEfFgGsP conversions
   switch (CS.getKind()) {
+  case ConversionSpecifier::bArg:
+  case ConversionSpecifier::BArg:
   case ConversionSpecifier::dArg:
   case ConversionSpecifier::DArg:
   case ConversionSpecifier::iArg:

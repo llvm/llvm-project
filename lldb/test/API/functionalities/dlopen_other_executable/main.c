@@ -4,7 +4,7 @@
 int main() {
   int i = 0; // break here
   // dlopen the 'other' test executable.
-  int h = dlopen("other", RTLD_LAZY);
+  int h = (int) dlopen("other", RTLD_LAZY);
   assert(h && "dlopen failed?");
   return i; // break after dlopen
 }

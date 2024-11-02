@@ -117,6 +117,47 @@ TEST(ASTNodeKind, UnknownKind) {
   EXPECT_FALSE(DNT<Foo>().isSame(DNT<Foo>()));
 }
 
+template <typename T>
+constexpr bool HasPointerIdentity =
+    ASTNodeKind::getFromNodeKind<T>().hasPointerIdentity();
+
+TEST(ASTNodeKind, ConstexprHasPointerIdentity) {
+  EXPECT_TRUE(HasPointerIdentity<Decl>);
+  EXPECT_TRUE(HasPointerIdentity<Stmt>);
+  EXPECT_FALSE(HasPointerIdentity<TypeLoc>);
+  EXPECT_FALSE(HasPointerIdentity<QualType>);
+  EXPECT_FALSE(HasPointerIdentity<Foo>);
+
+  constexpr bool DefaultConstructedHasPointerIdentity =
+      ASTNodeKind().hasPointerIdentity();
+  EXPECT_FALSE(DefaultConstructedHasPointerIdentity);
+}
+
+template <typename T, typename U>
+constexpr bool NodeKindIsSame =
+    ASTNodeKind::getFromNodeKind<T>().isSame(ASTNodeKind::getFromNodeKind<U>());
+
+TEST(ASTNodeKind, ConstexprIsSame) {
+  EXPECT_TRUE((NodeKindIsSame<Decl, Decl>));
+  EXPECT_FALSE((NodeKindIsSame<Decl, VarDecl>));
+  EXPECT_FALSE((NodeKindIsSame<Foo, Foo>));
+
+  constexpr bool DefaultConstructedIsSameToDefaultConstructed =
+      ASTNodeKind().isSame(ASTNodeKind());
+  EXPECT_FALSE(DefaultConstructedIsSameToDefaultConstructed);
+}
+
+template <typename T>
+constexpr bool NodeKindIsNone = ASTNodeKind::getFromNodeKind<T>().isNone();
+
+TEST(ASTNodeKind, ConstexprIsNone) {
+  EXPECT_FALSE(NodeKindIsNone<Decl>);
+  EXPECT_TRUE(NodeKindIsNone<Foo>);
+
+  constexpr bool DefaultConstructedIsNone = ASTNodeKind().isNone();
+  EXPECT_TRUE(DefaultConstructedIsNone);
+}
+
 TEST(ASTNodeKind, Name) {
   EXPECT_EQ("<None>", ASTNodeKind().asStringRef());
 #define VERIFY_NAME(Node) EXPECT_EQ(#Node, DNT<Node>().asStringRef());

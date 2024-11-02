@@ -1444,8 +1444,15 @@ void request_initialize(const llvm::json::Object &request) {
   auto log_cb = [](const char *buf, void *baton) -> void {
     g_vsc.SendOutput(OutputType::Console, llvm::StringRef{buf});
   };
+
+  auto arguments = request.getObject("arguments");
+  // sourceInitFile option is not from formal DAP specification. It is only
+  // used by unit tests to prevent sourcing .lldbinit files from environment
+  // which may affect the outcome of tests.
+  bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
+
   g_vsc.debugger =
-      lldb::SBDebugger::Create(true /*source_init_files*/, log_cb, nullptr);
+      lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
   // Start our event thread so we can receive events from the debugger, target,
@@ -1532,6 +1539,8 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLoadedSourcesRequest", false);
   // The debug adapter supports sending progress reporting events.
   body.try_emplace("supportsProgressReporting", true);
+  // The debug adapter supports 'logMessage' in breakpoint.
+  body.try_emplace("supportsLogPoints", true);
 
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -2079,9 +2088,10 @@ void request_setBreakpoints(const llvm::json::Object &request) {
           }
         }
         // At this point the breakpoint is new
-        src_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(src_bp.bp, response_breakpoints, path, src_bp.line);
-        g_vsc.source_breakpoints[path][src_bp.line] = std::move(src_bp);
+        g_vsc.source_breakpoints[path][src_bp.line] = src_bp;
+        SourceBreakpoint &new_bp = g_vsc.source_breakpoints[path][src_bp.line];
+        new_bp.SetBreakpoint(path.data());
+        AppendBreakpoint(new_bp.bp, response_breakpoints, path, new_bp.line);
       }
     }
   }
@@ -2304,10 +2314,11 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
   // Any breakpoints that are left in "request_bps" are breakpoints that
   // need to be set.
   for (auto &pair : request_bps) {
-    pair.second.SetBreakpoint();
     // Add this breakpoint info to the response
-    AppendBreakpoint(pair.second.bp, response_breakpoints);
     g_vsc.function_breakpoints[pair.first()] = std::move(pair.second);
+    FunctionBreakpoint &new_bp = g_vsc.function_breakpoints[pair.first()];
+    new_bp.SetBreakpoint();
+    AppendBreakpoint(new_bp.bp, response_breakpoints);
   }
 
   llvm::json::Object body;
@@ -2929,7 +2940,51 @@ void request_variables(const llvm::json::Object &request) {
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
+    if (variablesReference == VARREF_REGS) {
+      // Change the default format of any pointer sized registers in the first
+      // register set to be the lldb::eFormatAddressInfo so we show the pointer
+      // and resolve what the pointer resolves to. Only change the format if the
+      // format was set to the default format or if it was hex as some registers
+      // have formats set for them.
+      const uint32_t addr_size = g_vsc.target.GetProcess().GetAddressByteSize();
+      lldb::SBValue reg_set = g_vsc.variables.registers.GetValueAtIndex(0);
+      const uint32_t num_regs = reg_set.GetNumChildren();
+      for (uint32_t reg_idx=0; reg_idx<num_regs; ++reg_idx) {
+        lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
+        const lldb::Format format = reg.GetFormat();
+        if (format == lldb::eFormatDefault || format == lldb::eFormatHex) {
+          if (reg.GetByteSize() == addr_size)
+            reg.SetFormat(lldb::eFormatAddressInfo);
+        }
+      }
+    }
+
     num_children = top_scope->GetSize();
+    if (num_children == 0 && variablesReference == VARREF_LOCALS) {
+      // Check for an error in the SBValueList that might explain why we don't
+      // have locals. If we have an error display it as the sole value in the
+      // the locals.
+
+      // "error" owns the error string so we must keep it alive as long as we
+      // want to use the returns "const char *"
+      lldb::SBError error = top_scope->GetError();
+      const char *var_err = error.GetCString();
+      if (var_err) {
+        // Create a fake variable named "error" to explain why variables were
+        // not available. This new error will help let users know when there was
+        // a problem that kept variables from being available for display and
+        // allow users to fix this issue instead of seeing no variables. The
+        // errors are only set when there is a problem that the user could
+        // fix, so no error will show up when you have no debug info, only when
+        // we do have debug info and something that is fixable can be done.
+        llvm::json::Object object;
+        EmplaceSafeString(object, "name", "<error>");
+        EmplaceSafeString(object, "type", "const char *");
+        EmplaceSafeString(object, "value", var_err);
+        object.try_emplace("variablesReference", (int64_t)0);
+        variables.emplace_back(std::move(object));
+      }
+    }
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated

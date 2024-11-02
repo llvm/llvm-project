@@ -20,63 +20,61 @@
 ;  return *q;
 ;}
 
-define signext i32 @f(i32* %p, i32* %q, i32* %r) {
+define signext i32 @f(ptr %p, ptr %q, ptr %r) {
 entry:
   br label %bb1
 
 bb1:
-  %p.addr = alloca i32*, align 8
-  %q.addr = alloca i32*, align 8
-  %r.addr = alloca i32*, align 8
+  %p.addr = alloca ptr, align 8
+  %q.addr = alloca ptr, align 8
+  %r.addr = alloca ptr, align 8
   %i = alloca i32, align 4
-  store i32* %p, i32** %p.addr, align 8
-  store i32* %q, i32** %q.addr, align 8
-  store i32* %r, i32** %r.addr, align 8
-  %0 = bitcast i32* %i to i8*
-  store i32 0, i32* %i, align 4
-  %1 = load i32*, i32** %r.addr, align 8
-  %2 = load i32, i32* %1, align 4
-  %tobool = icmp ne i32 %2, 0
+  store ptr %p, ptr %p.addr, align 8
+  store ptr %q, ptr %q.addr, align 8
+  store ptr %r, ptr %r.addr, align 8
+  store i32 0, ptr %i, align 4
+  %0 = load ptr, ptr %r.addr, align 8
+  %1 = load i32, ptr %0, align 4
+  %tobool = icmp ne i32 %1, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:
-  store i32 1, i32* %i, align 4
+  store i32 1, ptr %i, align 4
   br label %bb2
 
 bb2:
   br label %if.end
 
 if.else:
-  call void bitcast (void (...)* @g to void ()*)()
+  call void @g()
   br label %if.end
 
 if.end:
-  %3 = load i32*, i32** %q.addr, align 8
-  %4 = load i32, i32* %3, align 4
-  %add = add nsw i32 %4, 1
-  %5 = load i32*, i32** %p.addr, align 8
-  store i32 %add, i32* %5, align 4
-  %6 = load i32, i32* %i, align 4
-  %tobool1 = icmp ne i32 %6, 0
+  %2 = load ptr, ptr %q.addr, align 8
+  %3 = load i32, ptr %2, align 4
+  %add = add nsw i32 %3, 1
+  %4 = load ptr, ptr %p.addr, align 8
+  store i32 %add, ptr %4, align 4
+  %5 = load i32, ptr %i, align 4
+  %tobool1 = icmp ne i32 %5, 0
   br i1 %tobool1, label %if.then2, label %if.end3
 
 if.then2:
-  %7 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %7, 1
+  %6 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %6, 1
   br label %bb3
 
 bb3:
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %if.end3
 
 if.end3:
   br label %bb4
 
 bb4:
-  %8 = load i32*, i32** %q.addr, align 8
-  %9 = load i32, i32* %8, align 4
-  %10 = bitcast i32* %i to i8*
-  ret i32 %9
+  %7 = load ptr, ptr %q.addr, align 8
+  %8 = load i32, ptr %7, align 4
+  ret i32 %8
 }
 
 declare void @g(...)

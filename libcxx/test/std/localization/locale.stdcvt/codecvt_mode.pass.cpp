@@ -8,6 +8,8 @@
 
 // <codecvt>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // enum codecvt_mode
 // {
 //     consume_header = 4,

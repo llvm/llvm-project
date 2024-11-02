@@ -49,7 +49,7 @@ define i32 @f2(double %f) {
 }
 
 ; Test f128->i32.
-define i32 @f3(fp128 *%src) {
+define i32 @f3(ptr %src) {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %f0, 0(%r2)
@@ -66,7 +66,7 @@ define i32 @f3(fp128 *%src) {
 ; CHECK-NEXT:    cfxbr %r2, 5, %f0
 ; CHECK-NEXT:    xilf %r2, 2147483648
 ; CHECK-NEXT:    br %r14
-  %f = load fp128, fp128 *%src
+  %f = load fp128, ptr %src
   %conv = fptoui fp128 %f to i32
   ret i32 %conv
 }

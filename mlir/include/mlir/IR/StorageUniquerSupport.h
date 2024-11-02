@@ -53,6 +53,16 @@ protected:
   }
 };
 
+namespace StorageUserTrait {
+/// This trait is used to determine if a storage user, like Type, is mutable
+/// or not. A storage user is mutable if ImplType of the derived class defines
+/// a `mutate` function with a proper signature. Note that this trait is not
+/// supposed to be used publicly. Users should use alias names like
+/// `TypeTrait::IsMutable` instead.
+template <typename ConcreteType>
+struct IsMutable : public StorageUserTraitBase<ConcreteType, IsMutable> {};
+} // namespace StorageUserTrait
+
 //===----------------------------------------------------------------------===//
 // StorageUserBase
 //===----------------------------------------------------------------------===//
@@ -95,7 +105,8 @@ public:
 
   /// Provide an implementation of 'classof' that compares the type id of the
   /// provided value with that of the concrete type.
-  template <typename T> static bool classof(T val) {
+  template <typename T>
+  static bool classof(T val) {
     static_assert(std::is_convertible<ConcreteT, T>::value,
                   "casting from a non-convertible type");
     return val.getTypeID() == getTypeID();
@@ -127,6 +138,8 @@ public:
     if (!abstract)
       llvm::report_fatal_error("Registering an interface for an attribute/type "
                                "that is not itself registered.");
+
+    (checkInterfaceTarget<IfaceModels>(), ...);
     abstract->interfaceMap.template insert<IfaceModels...>();
   }
 
@@ -167,21 +180,56 @@ public:
     return ConcreteT((const typename BaseT::ImplType *)ptr);
   }
 
+  /// Utility for easy access to the storage instance.
+  ImplType *getImpl() const { return static_cast<ImplType *>(this->impl); }
+
 protected:
   /// Mutate the current storage instance. This will not change the unique key.
   /// The arguments are forwarded to 'ConcreteT::mutate'.
-  template <typename... Args> LogicalResult mutate(Args &&...args) {
+  template <typename... Args>
+  LogicalResult mutate(Args &&...args) {
+    static_assert(std::is_base_of<StorageUserTrait::IsMutable<ConcreteT>,
+                                  ConcreteT>::value,
+                  "The `mutate` function expects mutable trait "
+                  "(e.g. TypeTrait::IsMutable) to be attached on parent.");
     return UniquerT::template mutate<ConcreteT>(this->getContext(), getImpl(),
                                                 std::forward<Args>(args)...);
   }
 
   /// Default implementation that just returns success.
-  template <typename... Args> static LogicalResult verify(Args... args) {
+  template <typename... Args>
+  static LogicalResult verify(Args... args) {
     return success();
   }
 
-  /// Utility for easy access to the storage instance.
-  ImplType *getImpl() const { return static_cast<ImplType *>(this->impl); }
+private:
+  /// Trait to check if T provides a 'ConcreteEntity' type alias.
+  template <typename T>
+  using has_concrete_entity_t = typename T::ConcreteEntity;
+
+  /// A struct-wrapped type alias to T::ConcreteEntity if provided and to
+  /// ConcreteT otherwise. This is akin to std::conditional but doesn't fail on
+  /// the missing typedef. Useful for checking if the interface is targeting the
+  /// right class.
+  template <typename T,
+            bool = llvm::is_detected<has_concrete_entity_t, T>::value>
+  struct IfaceTargetOrConcreteT {
+    using type = typename T::ConcreteEntity;
+  };
+  template <typename T>
+  struct IfaceTargetOrConcreteT<T, false> {
+    using type = ConcreteT;
+  };
+
+  /// A hook for static assertion that the external interface model T is
+  /// targeting a base class of the concrete attribute/type. The model can also
+  /// be a fallback model that works for every attribute/type.
+  template <typename T>
+  static void checkInterfaceTarget() {
+    static_assert(std::is_base_of<typename IfaceTargetOrConcreteT<T>::type,
+                                  ConcreteT>::value,
+                  "attaching an interface to the wrong attribute/type kind");
+  }
 };
 } // namespace detail
 } // namespace mlir

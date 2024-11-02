@@ -16,6 +16,7 @@
 
 # RUN: llvm-size -B %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=BERKELEY-1
 # RUN: llvm-size -A %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=SYSV-1
+# RUN: llvm-size -m %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=DARWIN-1
 
 ## Case 3: Multiple members.
 # RUN: rm -f %t3.a
@@ -23,6 +24,7 @@
 
 # RUN: llvm-size -B %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=BERKELEY-1,BERKELEY-2
 # RUN: llvm-size -A %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=SYSV-1,SYSV-2
+# RUN: llvm-size -m %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=DARWIN-1,DARWIN-2
 
 ## Case 4: Mixing archives and non-archives produces sensible output:
 # RUN: llvm-size -B %t1 %t2.a %t2 %t3.a \
@@ -31,6 +33,9 @@
 # RUN: llvm-size -A %t1 %t2.a %t2 %t3.a \
 # RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
 # RUN:                  --check-prefixes=SYSV-1,SYSV-2,SYSV-3
+# RUN: llvm-size -B %t1 %t2.a %t2 %t3.a \
+# RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
+# RUN:                  --check-prefixes=DARWIN-1,DARWIN-2,DARWIN-3
 
 # BERKELEY-1:     text    data     bss     dec     hex filename
 # BERKELEY-3-NEXT:   1       2       4       7       7 [[FILE1]]
@@ -80,6 +85,14 @@
 # SYSV-2-NEXT: .bss          32      8
 # SYSV-2-NEXT: Total         56
 # SYSV-1-NOT:{{.}}
+
+# DARWIN-1:     text    data     bss     dec     hex filename
+# DARWIN-3-NEXT:   1       2       4       7       7 [[FILE1]]
+# DARWIN-3-NEXT:   1       2       4       7       7 archive.test.tmp1 (ex [[ARCHIVE2]])
+# DARWIN-3-NEXT:   8      16      32      56      38 [[FILE2]]
+# DARWIN-1-NEXT:   1       2       4       7       7 archive.test.tmp1 (ex [[ARCHIVE]])
+# DARWIN-2-NEXT:   8      16      32      56      38 archive.test.tmp2 (ex [[ARCHIVE]])
+# DARWIN-1-NOT:{{.}}
 
 --- !ELF
 FileHeader:

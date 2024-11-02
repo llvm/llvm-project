@@ -37,7 +37,7 @@ TEST(Record, classify) {
 
 TEST(ModuleRecord, parse) {
   EXPECT_EQ(ModuleRecord(llvm::Triple::Linux, llvm::Triple::x86_64,
-                         UUID::fromData("@ABCDEFGHIJKLMNO", 16)),
+                         UUID("@ABCDEFGHIJKLMNO", 16)),
             ModuleRecord::parse(
                 "MODULE Linux x86_64 404142434445464748494a4b4c4d4e4f0 a.out"));
 
@@ -49,7 +49,7 @@ TEST(ModuleRecord, parse) {
 }
 
 TEST(InfoRecord, parse) {
-  EXPECT_EQ(InfoRecord(UUID::fromData("@ABCDEFGHIJKLMNO", 16)),
+  EXPECT_EQ(InfoRecord(UUID("@ABCDEFGHIJKLMNO", 16)),
             InfoRecord::parse("INFO CODE_ID 404142434445464748494a4b4c4d4e4f"));
   EXPECT_EQ(InfoRecord(UUID()), InfoRecord::parse("INFO CODE_ID 47 a.exe"));
 

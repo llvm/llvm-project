@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple mips -mcpu=mips32r2 -mattr=+micromips %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MICROMIPSR2
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MICROMIPSR2
 # RUN: llvm-mc -filetype=obj -triple mips -mcpu=mips32r6 -mattr=+micromips %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MICROMIPSR6
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MICROMIPSR6
 
 # MICROMIPSR2:  61 83 b0 00    sc   $12, 0($3)
 # MICROMIPSR6:  61 83 b0 00    sc   $12, 0($3)

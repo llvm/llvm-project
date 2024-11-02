@@ -30,6 +30,6 @@ i32 0, i32 2>
   %20 = shufflevector <4 x i32> %19, <4 x i32> undef, <3 x i32> <i32 0, i32 1,
 i32 2>
   %21 = or <3 x i32> %20, zeroinitializer
-  store <3 x i32> %21, <3 x i32> addrspace(1)* undef, align 16
+  store <3 x i32> %21, ptr addrspace(1) undef, align 16
   ret void
 }

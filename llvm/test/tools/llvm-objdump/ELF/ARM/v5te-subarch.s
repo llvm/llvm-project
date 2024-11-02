@@ -6,5 +6,5 @@ strd:
 strd r0, r1, [r2, +r3]
 
 @ CHECK-LABEL strd
-@ CHECK: f3 00 82 e1 strd r0, r1, [r2, r3]
+@ CHECK: e18200f3    strd r0, r1, [r2, r3]
 

@@ -35,11 +35,11 @@ public:
 } // namespace printf_core
 } // namespace __llvm_libc
 
-#define EXPECT_FORMAT_EQ(expected, actual)                                     \
+#define EXPECT_PFORMAT_EQ(expected, actual)                                    \
   EXPECT_THAT(actual, __llvm_libc::printf_core::testing::FormatSectionMatcher( \
                           expected))
 
-#define ASSERT_FORMAT_EQ(expected, actual)                                     \
+#define ASSERT_PFORMAT_EQ(expected, actual)                                    \
   ASSERT_THAT(actual, __llvm_libc::printf_core::testing::FormatSectionMatcher( \
                           expected))
 

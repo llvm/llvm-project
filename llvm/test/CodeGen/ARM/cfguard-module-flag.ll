@@ -1,5 +1,6 @@
 
 ; RUN: llc < %s -mtriple=arm-pc-windows-msvc | FileCheck %s
+; RUN: llc < %s -mtriple=arm-w64-windows-gnu | FileCheck %s
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are not added in modules with the

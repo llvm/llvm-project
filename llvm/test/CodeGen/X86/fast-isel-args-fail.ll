@@ -11,12 +11,12 @@ entry:
 }
 
 ; We don't handle the Windows CC, yet.
-define i32 @foo(i32* %p) {
+define i32 @foo(ptr %p) {
 entry:
 ; WIN32: foo
 ; WIN32: movl (%rcx), %eax
 ; WIN64: foo
 ; WIN64: movl (%rdi), %eax
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   ret i32 %0
 }

@@ -9,66 +9,61 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @w = constant [2 x i8] c"w\00"
 @null = constant [1 x i8] zeroinitializer
 
-declare i8* @strpbrk(i8*, i8*)
+declare ptr @strpbrk(ptr, ptr)
 
 ; Check strpbrk(s, "") -> NULL.
 
-define i8* @test_simplify1(i8* %str) {
+define ptr @test_simplify1(ptr %str) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret ptr null
 ;
-  %pat = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
 
-  %ret = call i8* @strpbrk(i8* %str, i8* %pat)
-  ret i8* %ret
+  %ret = call ptr @strpbrk(ptr %str, ptr @null)
+  ret ptr %ret
 }
 
 ; Check strpbrk("", s) -> NULL.
 
-define i8* @test_simplify2(i8* %pat) {
+define ptr @test_simplify2(ptr %pat) {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret ptr null
 ;
-  %str = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
 
-  %ret = call i8* @strpbrk(i8* %str, i8* %pat)
-  ret i8* %ret
+  %ret = call ptr @strpbrk(ptr @null, ptr %pat)
+  ret ptr %ret
 }
 
 ; Check strpbrk(s1, s2), where s1 and s2 are constants.
 
-define i8* @test_simplify3() {
+define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([12 x i8], [12 x i8]* @hello, i32 0, i32 6)
+; CHECK-NEXT:    ret ptr getelementptr inbounds ([12 x i8], ptr @hello, i32 0, i32 6)
 ;
-  %str = getelementptr [12 x i8], [12 x i8]* @hello, i32 0, i32 0
-  %pat = getelementptr [2 x i8], [2 x i8]* @w, i32 0, i32 0
 
-  %ret = call i8* @strpbrk(i8* %str, i8* %pat)
-  ret i8* %ret
+  %ret = call ptr @strpbrk(ptr @hello, ptr @w)
+  ret ptr %ret
 }
 
 ; Check strpbrk(s, "a") -> strchr(s, 'a').
 
-define i8* @test_simplify4(i8* %str) {
+define ptr @test_simplify4(ptr %str) {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[STRCHR:%.*]] = call i8* @strchr(i8* noundef nonnull dereferenceable(1) [[STR:%.*]], i32 119)
-; CHECK-NEXT:    ret i8* [[STRCHR]]
+; CHECK-NEXT:    [[STRCHR:%.*]] = call ptr @strchr(ptr noundef nonnull dereferenceable(1) [[STR:%.*]], i32 119)
+; CHECK-NEXT:    ret ptr [[STRCHR]]
 ;
-  %pat = getelementptr [2 x i8], [2 x i8]* @w, i32 0, i32 0
 
-  %ret = call i8* @strpbrk(i8* %str, i8* %pat)
-  ret i8* %ret
+  %ret = call ptr @strpbrk(ptr %str, ptr @w)
+  ret ptr %ret
 }
 
 ; Check cases that shouldn't be simplified.
 
-define i8* @test_no_simplify1(i8* %str, i8* %pat) {
+define ptr @test_no_simplify1(ptr %str, ptr %pat) {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strpbrk(i8* [[STR:%.*]], i8* [[PAT:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strpbrk(ptr [[STR:%.*]], ptr [[PAT:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
-  %ret = call i8* @strpbrk(i8* %str, i8* %pat)
-  ret i8* %ret
+  %ret = call ptr @strpbrk(ptr %str, ptr %pat)
+  ret ptr %ret
 }

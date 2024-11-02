@@ -439,8 +439,8 @@ static void collectLeaves(Value *Root, SmallVectorImpl<Instruction *> &Leaves) {
 
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
-     if (!Visited.insert(V).second)
-       continue;
+    if (!Visited.insert(V).second)
+      continue;
 
     if (auto *PN = dyn_cast<PHINode>(V)) {
       // PHI node should have single use unless it is the root node, then it
@@ -466,7 +466,7 @@ static void collectLeaves(Value *Root, SmallVectorImpl<Instruction *> &Leaves) {
         // gets us back to this node.
         if (BO->hasNUses(BO == Root ? 3 : 2)) {
           PHINode *PN = nullptr;
-          for (auto *U : Root->users())
+          for (auto *U : BO->users())
             if (auto *P = dyn_cast<PHINode>(U))
               if (!Visited.count(P))
                 PN = P;

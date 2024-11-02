@@ -8,11 +8,16 @@
 
 // UNSUPPORTED: c++03
 
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
 // <experimental/memory_resource>
 
 // template <class T> class polymorphic_allocator
 
 // polymorphic_allocator<T>::polymorphic_allocator(memory_resource *)
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

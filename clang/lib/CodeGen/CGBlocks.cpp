@@ -521,7 +521,7 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
     unsigned BlockAlign = GenPtrAlign.getQuantity();
     if (auto *Helper =
             CGM.getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
-      for (auto I : Helper->getCustomFieldTypes()) /* custom fields */ {
+      for (auto *I : Helper->getCustomFieldTypes()) /* custom fields */ {
         // TargetOpenCLBlockHelp needs to make sure the struct is packed.
         // If necessary, add padding fields to the custom fields.
         unsigned Align = CGM.getDataLayout().getABITypeAlignment(I);
@@ -1356,7 +1356,7 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
     fields.add(buildBlockDescriptor(CGM, blockInfo));
   } else if (auto *Helper =
                  CGM.getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
-    for (auto I : Helper->getCustomFieldValues(CGM, blockInfo)) {
+    for (auto *I : Helper->getCustomFieldValues(CGM, blockInfo)) {
       fields.add(I);
     }
   }

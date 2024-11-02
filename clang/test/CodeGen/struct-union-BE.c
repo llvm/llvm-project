@@ -22,9 +22,9 @@ void fstr(int n, ...) {
   if (x.c !=  10)
     abort();
   va_end (ap);
-// MIPS-NOT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %argp.cur, i32 3
-// MIPS64-NOT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %argp.cur, i64 7
-// ARM-NOT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %argp.cur, i32 3
+// MIPS-NOT: %{{[0-9]+}} = getelementptr inbounds i8, ptr %argp.cur, i32 3
+// MIPS64-NOT: %{{[0-9]+}} = getelementptr inbounds i8, ptr %argp.cur, i64 7
+// ARM-NOT: %{{[0-9]+}} = getelementptr inbounds i8, ptr %argp.cur, i32 3
 }
 
 void funi(int n, ...) {
@@ -35,9 +35,9 @@ void funi(int n, ...) {
   if (x.c !=  10)
     abort();
   va_end (ap);
-// MIPS-NOT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %argp.cur, i32 3
-// MIPS64-NOT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %argp.cur, i64 7
-// ARM-NOT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %argp.cur, i32 3
+// MIPS-NOT: %{{[0-9]+}} = getelementptr inbounds i8, ptr %argp.cur, i32 3
+// MIPS64-NOT: %{{[0-9]+}} = getelementptr inbounds i8, ptr %argp.cur, i64 7
+// ARM-NOT: %{{[0-9]+}} = getelementptr inbounds i8, ptr %argp.cur, i32 3
 }
 
 void foo(void) {

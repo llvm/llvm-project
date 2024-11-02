@@ -312,7 +312,16 @@ void NativeProcessProtocol::SynchronouslyNotifyProcessStateChanged(
   Log *log = GetLog(LLDBLog::Process);
 
   m_delegate.ProcessStateChanged(this, state);
-  NotifyTracersProcessStateChanged(state);
+
+  switch (state) {
+  case eStateStopped:
+  case eStateExited:
+  case eStateCrashed:
+    NotifyTracersProcessDidStop();
+    break;
+  default:
+    break;
+  }
 
   LLDB_LOG(log, "sent state notification [{0}] from process {1}", state,
            GetID());
@@ -321,6 +330,8 @@ void NativeProcessProtocol::SynchronouslyNotifyProcessStateChanged(
 void NativeProcessProtocol::NotifyDidExec() {
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "process {0} exec()ed", GetID());
+
+  m_software_breakpoints.clear();
 
   m_delegate.DidExec(this);
 }
@@ -492,8 +503,12 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
   static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
   static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-  static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08}; // trap
+  static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08};   // trap
   static const uint8_t g_ppcle_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+  static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
+  static const uint8_t g_riscv_opcode_c[] = {0x02, 0x90};           // c.ebreak
+  static const uint8_t g_loongarch_opcode[] = {0x05, 0x00, 0x2a,
+                                               0x00}; // break 0x5
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
@@ -522,6 +537,16 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   case llvm::Triple::ppc64le:
     return llvm::makeArrayRef(g_ppcle_opcode);
 
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64: {
+    return size_hint == 2 ? llvm::makeArrayRef(g_riscv_opcode_c)
+                          : llvm::makeArrayRef(g_riscv_opcode);
+  }
+
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
+    return llvm::makeArrayRef(g_loongarch_opcode);
+
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "CPU type not supported!");
@@ -546,6 +571,10 @@ size_t NativeProcessProtocol::GetSoftwareBreakpointPCOffset() {
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
     // On these architectures the PC doesn't get updated for breakpoint hits.
     return 0;
 

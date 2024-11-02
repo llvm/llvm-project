@@ -253,7 +253,7 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
     auto *CPI = cast<CatchPadInst>(BB->getFirstNonPHI());
     // In case of a single catch (...), we don't need to emit a personalify
     // function call
-    if (CPI->getNumArgOperands() == 1 &&
+    if (CPI->arg_size() == 1 &&
         cast<Constant>(CPI->getArgOperand(0))->isNullValue())
       prepareEHPad(BB, false);
     else

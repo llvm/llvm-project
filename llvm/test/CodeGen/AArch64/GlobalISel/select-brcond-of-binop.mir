@@ -10,6 +10,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_not
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
@@ -29,8 +30,7 @@ body:             |
     %4:gpr(s32) = G_ANYEXT %8(s8)
     %5:gpr(s32) = G_CONSTANT i32 1
     %6:gpr(s32) = G_XOR %4, %5
-    %3:gpr(s1) = G_TRUNC %6(s32)
-    G_BRCOND %3(s1), %bb.3
+    G_BRCOND %6, %bb.3
 
   bb.2:
     RET_ReallyLR
@@ -49,6 +49,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_not_64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
@@ -71,8 +72,8 @@ body:             |
     %4:gpr(s64) = G_ANYEXT %8(s8)
     %5:gpr(s64) = G_CONSTANT i64 1
     %6:gpr(s64) = G_XOR %4, %5
-    %3:gpr(s1) = G_TRUNC %6(s64)
-    G_BRCOND %3(s1), %bb.3
+    %3:gpr(s32) = G_TRUNC %6(s64)
+    G_BRCOND %3(s32), %bb.3
 
   bb.2:
     RET_ReallyLR
@@ -89,6 +90,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_and
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBNZW %lhs, 0, %bb.2
@@ -104,8 +106,7 @@ body:             |
     %lhs:gpr(s32) = COPY $w0
     %rhs:gpr(s32) = G_CONSTANT i32 1
     %op:gpr(s32) = G_AND %lhs, %rhs
-    %trunc:gpr(s1) = G_TRUNC %op(s32)
-    G_BRCOND %trunc(s1), %bb.3
+    G_BRCOND %op, %bb.3
 
   bb.2:
     RET_ReallyLR
@@ -122,6 +123,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_and_no_cst
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   %rhs:gpr32 = COPY $w1
@@ -139,8 +141,7 @@ body:             |
     %lhs:gpr(s32) = COPY $w0
     %rhs:gpr(s32) = COPY $w1
     %op:gpr(s32) = G_AND %lhs, %rhs
-    %trunc:gpr(s1) = G_TRUNC %op(s32)
-    G_BRCOND %trunc(s1), %bb.3
+    G_BRCOND %op, %bb.3
 
   bb.2:
     RET_ReallyLR
@@ -157,6 +158,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_shl
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   %op:gpr32 = UBFMWri %lhs, 31, 30
@@ -177,8 +179,7 @@ body:             |
     %lhs:gpr(s32) = COPY $w0
     %rhs:gpr(s32) = G_CONSTANT i32 1
     %op:gpr(s32) = G_SHL %lhs, %rhs
-    %trunc:gpr(s1) = G_TRUNC %op(s32)
-    G_BRCOND %trunc(s1), %bb.3
+    G_BRCOND %op, %bb.3
 
   bb.2:
     RET_ReallyLR
@@ -195,6 +196,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_ashr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBNZW %lhs, 1, %bb.2
@@ -214,8 +216,7 @@ body:             |
     %lhs:gpr(s32) = COPY $w0
     %rhs:gpr(s32) = G_CONSTANT i32 1
     %op:gpr(s32) = G_ASHR %lhs, %rhs
-    %trunc:gpr(s1) = G_TRUNC %op(s32)
-    G_BRCOND %trunc(s1), %bb.3
+    G_BRCOND %op, %bb.3
 
   bb.2:
     RET_ReallyLR
@@ -232,6 +233,7 @@ body:             |
   ; CHECK-LABEL: name: tbnzx
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr64 = COPY $x0
   ; CHECK-NEXT:   TBNZX %lhs, 63, %bb.2
@@ -247,8 +249,8 @@ body:             |
     %lhs:gpr(s64) = COPY $x0
     %rhs:gpr(s64) = G_CONSTANT i64 8589934592
     %op:gpr(s64) = G_ASHR %lhs, %rhs
-    %trunc:gpr(s1) = G_TRUNC %op(s64)
-    G_BRCOND %trunc(s1), %bb.3
+    %trunc:gpr(s32) = G_TRUNC %op(s64)
+    G_BRCOND %trunc, %bb.3
   bb.2:
     RET_ReallyLR
   bb.3:

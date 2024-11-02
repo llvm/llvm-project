@@ -12,7 +12,8 @@
 
 #include "src/__support/arg_list.h"
 
-#include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
@@ -28,7 +29,6 @@ namespace printf_core {
 
 FormatSection Parser::get_next_section() {
   FormatSection section;
-  section.raw_string = str + cur_pos;
   size_t starting_pos = cur_pos;
   if (str[cur_pos] == '%') {
     // format section
@@ -121,7 +121,7 @@ FormatSection Parser::get_next_section() {
         break;
       }
       break;
-      // TODO(michaelrj): add a flag to disable float point values here
+#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
     case ('f'):
     case ('F'):
     case ('e'):
@@ -132,12 +132,16 @@ FormatSection Parser::get_next_section() {
     case ('G'):
       if (lm != LengthModifier::L)
         section.conv_val_raw =
-            bit_cast<uint64_t>(GET_ARG_VAL_SIMPLEST(double, conv_index));
+            cpp::bit_cast<uint64_t>(GET_ARG_VAL_SIMPLEST(double, conv_index));
       else
-        section.conv_val_raw = bit_cast<fputil::FPBits<long double>::UIntType>(
-            GET_ARG_VAL_SIMPLEST(long double, conv_index));
+        section.conv_val_raw =
+            cpp::bit_cast<fputil::FPBits<long double>::UIntType>(
+                GET_ARG_VAL_SIMPLEST(long double, conv_index));
       break;
+#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
     case ('n'):
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
     case ('p'):
     case ('s'):
       section.conv_val_ptr = GET_ARG_VAL_SIMPLEST(void *, conv_index);
@@ -147,14 +151,18 @@ FormatSection Parser::get_next_section() {
       section.has_conv = false;
       break;
     }
-    ++cur_pos;
+    // If the end of the format section is on the '\0'. This means we need to
+    // not advance the cur_pos.
+    if (str[cur_pos] != '\0')
+      ++cur_pos;
+
   } else {
     // raw section
     section.has_conv = false;
     while (str[cur_pos] != '%' && str[cur_pos] != '\0')
       ++cur_pos;
   }
-  section.raw_len = cur_pos - starting_pos;
+  section.raw_string = {str + starting_pos, cur_pos - starting_pos};
   return section;
 }
 
@@ -337,7 +345,7 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
           break;
         }
         break;
-      // TODO(michaelrj): add a flag to disable float point values here
+#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
       case ('f'):
       case ('F'):
       case ('e'):
@@ -351,7 +359,10 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
         else
           conv_size = TYPE_DESC<long double>;
         break;
+#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
       case ('n'):
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
       case ('p'):
       case ('s'):
         conv_size = TYPE_DESC<void *>;
@@ -365,7 +376,10 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
       if (conv_index == index)
         return conv_size;
     }
-    ++local_pos;
+    // If the end of the format section is on the '\0'. This means we need to
+    // not advance the local_pos.
+    if (str[local_pos] != '\0')
+      ++local_pos;
   }
 
   // If there is no size for the requested index, then just guess that it's an
@@ -391,12 +405,13 @@ void Parser::args_to_index(size_t index) {
       args_cur.next_var<uint32_t>();
     else if (cur_type_desc == TYPE_DESC<uint64_t>)
       args_cur.next_var<uint64_t>();
-    // TODO(michaelrj): add a flag to disable float point values here
+#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
     // Floating point numbers are stored separately from the other arguments.
     else if (cur_type_desc == TYPE_DESC<double>)
       args_cur.next_var<double>();
     else if (cur_type_desc == TYPE_DESC<long double>)
       args_cur.next_var<long double>();
+#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
     // pointers may be stored separately from normal values.
     else if (cur_type_desc == TYPE_DESC<void *>)
       args_cur.next_var<void *>();

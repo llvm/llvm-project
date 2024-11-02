@@ -16,6 +16,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <mach-o/loader.h>
 #include <mach/mach.h>
+#include <optional>
 #include <pthread.h>
 #include <sys/signal.h>
 #include <uuid/uuid.h>
@@ -73,9 +74,11 @@ public:
     uint64_t load_address;
     uint64_t mod_date; // may not be available - 0 if so
     struct mach_o_information macho_info;
+    bool is_valid_mach_header;
 
     binary_image_information()
-        : filename(), load_address(INVALID_NUB_ADDRESS), mod_date(0) {}
+        : filename(), load_address(INVALID_NUB_ADDRESS), mod_date(0),
+          is_valid_mach_header(false) {}
   };
 
   // Child process control
@@ -250,7 +253,7 @@ public:
   DeploymentInfo GetDeploymentInfo(const struct load_command &,
                                    uint64_t load_command_address,
                                    bool is_executable);
-  static const char *GetPlatformString(unsigned char platform);
+  static std::optional<std::string> GetPlatformString(unsigned char platform);
   bool GetMachOInformationFromMemory(uint32_t platform,
                                      nub_addr_t mach_o_header_addr,
                                      int wordsize,

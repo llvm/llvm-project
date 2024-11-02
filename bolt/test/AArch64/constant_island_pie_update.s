@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -Wl,-q -nostdlib -Wl,-z,notext
-# RUN: llvm-bolt %t.exe -o %t.bolt -use-old-text=0 -lite=0
+# RUN: llvm-bolt %t.exe -o %t.bolt --use-old-text=0 --lite=0
 # RUN: llvm-objdump -j .text -dR %t.bolt | FileCheck %s
 
 # CHECK: R_AARCH64_RELATIVE *ABS*+0x[[#%x,ADDR:]]

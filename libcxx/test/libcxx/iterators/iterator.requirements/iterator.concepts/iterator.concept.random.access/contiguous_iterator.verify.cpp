@@ -49,6 +49,6 @@ struct no_element_type {
 
 void test() {
     (void) std::contiguous_iterator<no_element_type>;
-		// expected-error@*:* {{implicit instantiation of undefined template}}
-		// expected-note@*:* {{to_address}}
+        // expected-error@*:* {{implicit instantiation of undefined template}}
+        // expected-note@*:* {{to_address}}
 }

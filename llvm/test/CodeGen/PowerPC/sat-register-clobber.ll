@@ -2,7 +2,7 @@
 ; RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   %s -o - -verify-machineinstrs -mcpu=pwr9 | FileCheck %s
 
-define <4 x i32> @test(<4 x i32> %a, <4 x i32> %b, <4 x i32> %aa, <8 x i16>* %FromVSCR) {
+define <4 x i32> @test(<4 x i32> %a, <4 x i32> %b, <4 x i32> %aa, ptr %FromVSCR) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsumsws v5, v2, v3
@@ -24,7 +24,7 @@ entry:
   %1 = tail call <8 x i16> @llvm.ppc.altivec.vpkswus(<4 x i32> %a, <4 x i32> %b)
   %2 = bitcast <8 x i16> %1 to <4 x i32>
   %3 = tail call <8 x i16> @llvm.ppc.altivec.mfvscr()
-  store <8 x i16> %3, <8 x i16>* %FromVSCR, align 16
+  store <8 x i16> %3, ptr %FromVSCR, align 16
   %4 = tail call <8 x i16> @llvm.ppc.altivec.vpkswus(<4 x i32> %b, <4 x i32> %aa)
   %5 = bitcast <8 x i16> %4 to <4 x i32>
   %add1 = add <4 x i32> %add, %0

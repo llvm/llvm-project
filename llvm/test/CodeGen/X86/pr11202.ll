@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
-@bb = constant [1 x i8*] [i8* blockaddress(@main, %l2)]
+@bb = constant [1 x ptr] [ptr blockaddress(@main, %l2)]
 
 define void @main() {
 entry:

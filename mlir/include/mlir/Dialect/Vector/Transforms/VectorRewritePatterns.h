@@ -128,6 +128,19 @@ struct UnrollVectorOptions {
     };
     return *this;
   }
+
+  /// Function that returns the traversal order (in terms of "for loop order",
+  /// i.e. slowest varying dimension to fastest varying dimension) that shoudl
+  /// be used when unrolling the given operation into units of the native vector
+  /// size.
+  using UnrollTraversalOrderFnType =
+      std::function<Optional<SmallVector<int64_t>>(Operation *op)>;
+  UnrollTraversalOrderFnType traversalOrderCallback = nullptr;
+  UnrollVectorOptions &
+  setUnrollTraversalOrderFn(UnrollTraversalOrderFnType traversalOrderFn) {
+    traversalOrderCallback = std::move(traversalOrderFn);
+    return *this;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -137,7 +150,8 @@ struct UnrollVectorOptions {
 /// Insert TransposeLowering patterns into extraction/insertion.
 void populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns,
-    VectorTransformsOptions options = VectorTransformsOptions());
+    VectorTransformsOptions options = VectorTransformsOptions(),
+    PatternBenefit benefit = 1);
 
 /// Collect a set of patterns to convert vector.multi_reduction op into
 /// a sequence of vector.reduction ops. The patterns comprise:
@@ -162,20 +176,24 @@ void populateVectorTransposeLoweringPatterns(
 /// the other patterns can kick in, thus fully exiting out of the
 /// vector.multi_reduction abstraction.
 void populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options);
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit = 1);
 
 /// Collects patterns to progressively lower vector contraction ops on high-D
 /// into low-D reduction and product ops.
 void populateVectorContractLoweringPatterns(
     RewritePatternSet &patterns,
-    VectorTransformsOptions options = VectorTransformsOptions());
+    VectorTransformsOptions options = VectorTransformsOptions(),
+    PatternBenefit benefit = 1);
 
 /// Collect patterns to convert reduction op to vector.contract and fold
 /// transpose/broadcast ops into the contract.
-void populateVectorReductionToContractPatterns(RewritePatternSet &patterns);
+void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
+                                               PatternBenefit benefit = 1);
 
 /// Collect patterns to convert scan op
-void populateVectorScanLoweringPatterns(RewritePatternSet &patterns);
+void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
+                                        PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // Vector.transfer patterns.
@@ -233,14 +251,14 @@ void populateVectorScanLoweringPatterns(RewritePatternSet &patterns);
 ///         permutation_map: (d0, d1, d2, d3) -> (d1, 0, d3)
 ///     vector.broadcast %v
 void populateVectorTransferPermutationMapLoweringPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
 /// Collect a set of patterns to reduce the rank of the operands of vector
 /// transfer ops to operate on the largest contigious vector.
 /// These patterns are useful when lowering to dialects with 1d vector type
 /// such as llvm and it will result fewer memory reads.
 void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
 /// Populate `patterns` with the following patterns.
 ///
@@ -265,7 +283,18 @@ void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
 /// For such cases, we can rewrite it to ExtractOp/ExtractElementOp + lower
 /// rank ExtractStridedSliceOp + InsertOp/InsertElementOp for the n-D case.
 void populateVectorInsertExtractStridedSliceDecompositionPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+/// Populate `patterns` with a pattern to breaks down 1-D extract_strided_slice
+/// ops into a chain of Extract ops to extract each element from the source, and
+/// then a chain of Insert ops to insert to the target vector.
+///
+/// If `controlFn` is not nullptr, the pattern will only be invoked on ops that
+/// `controlFn` returns true. Otherwise runs on ops.
+void populateVectorExtractStridedSliceToExtractInsertChainPatterns(
+    RewritePatternSet &patterns,
+    std::function<bool(ExtractStridedSliceOp)> controlFn = nullptr,
+    PatternBenefit benefit = 1);
 
 /// Populate `patterns` with the following patterns.
 ///
@@ -286,7 +315,7 @@ void populateVectorInsertExtractStridedSliceDecompositionPatterns(
 /// =========================================
 /// For such cases, we can lower it to a ShuffleOp.
 void populateVectorInsertExtractStridedSliceTransforms(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
 /// Collect a set of pattern to unroll vector operations to a smaller shapes.
 /// `options` structure controls which operations are unrolled and the target
@@ -319,7 +348,8 @@ void populateVectorInsertExtractStridedSliceTransforms(
 /// Other local patterns then kick in iteratively (including DCE) and compose
 /// to combine the ExtractStridedSlice/InsertStridedSlice.
 void populateVectorUnrollPatterns(RewritePatternSet &patterns,
-                                  const UnrollVectorOptions &options);
+                                  const UnrollVectorOptions &options,
+                                  PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // Finer-grained patterns exposed for more control over individual lowerings.
@@ -364,7 +394,8 @@ private:
 class ContractionOpToMatmulOpLowering
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
+
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
 
@@ -374,8 +405,9 @@ public:
 
   ContractionOpToMatmulOpLowering(
       vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context, FilterConstraintType constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context),
+      MLIRContext *context, PatternBenefit benefit = 1,
+      FilterConstraintType constraint = defaultFilter)
+      : OpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
@@ -406,7 +438,8 @@ private:
 class ContractionOpToOuterProductOpLowering
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
+
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
 
@@ -416,8 +449,9 @@ public:
 
   ContractionOpToOuterProductOpLowering(
       vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context, FilterConstraintType constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context),
+      MLIRContext *context, PatternBenefit benefit = 1,
+      FilterConstraintType constraint = defaultFilter)
+      : OpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
@@ -451,7 +485,8 @@ private:
 class ContractionOpToDotLowering
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
+
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
 
@@ -461,9 +496,9 @@ public:
 
   ContractionOpToDotLowering(
       vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context,
+      MLIRContext *context, PatternBenefit benefit = 1,
       const FilterConstraintType &constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context),
+      : OpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
@@ -491,7 +526,7 @@ private:
 /// to Dot or when other contraction patterns fail.
 class ContractionOpLowering : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
 
@@ -500,9 +535,9 @@ public:
   }
 
   ContractionOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
-                        MLIRContext *context,
+                        MLIRContext *context, PatternBenefit benefit = 1,
                         FilterConstraintType constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context),
+      : OpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
@@ -514,11 +549,12 @@ private:
   vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
   // Lower one parallel dimension.
-  Value lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
-                      int64_t rhsIndex, PatternRewriter &rewriter) const;
+  FailureOr<Value> lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
+                                 int64_t rhsIndex,
+                                 PatternRewriter &rewriter) const;
   // Lower one reduction dimension.
-  Value lowerReduction(vector::ContractionOp op,
-                       PatternRewriter &rewriter) const;
+  FailureOr<Value> lowerReduction(vector::ContractionOp op,
+                                  PatternRewriter &rewriter) const;
 };
 
 } // namespace vector

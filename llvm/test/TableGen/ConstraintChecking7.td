@@ -2,5 +2,5 @@
 
 include "ConstraintChecking.inc"
 
-// CHECK: [[FILE]]:[[@LINE+1]]:1: error: Operand '$src1' of 'Foo' cannot have multiple constraints!
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: Operand '$src1' of 'Foo' cannot have multiple constraints!
 def Foo : TestInstructionWithConstraints<"$dest1 = $src1, $dest2 = $src1">;

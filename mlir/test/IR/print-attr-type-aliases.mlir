@@ -11,7 +11,7 @@
 // CHECK-DAG: #_0_test_alias = "alias_test:prefixed_digit"
 "test.op"() {alias_test = "alias_test:prefixed_digit"} : () -> ()
 
-// CHECK-DAG: #test_alias_conflict0_0 = "alias_test:sanitize_conflict_a"
+// CHECK-DAG: #test_alias_conflict0_ = "alias_test:sanitize_conflict_a"
 // CHECK-DAG: #test_alias_conflict0_1 = "alias_test:sanitize_conflict_b"
 "test.op"() {alias_test = ["alias_test:sanitize_conflict_a", "alias_test:sanitize_conflict_b"]} : () -> ()
 
@@ -28,3 +28,7 @@
 // CHECK-DAG: !test_ui8_ = !test.int<unsigned, 8>
 // CHECK-DAG: tensor<32x!test_ui8_>
 "test.op"() : () -> tensor<32x!test.int<unsigned, 8>>
+
+// CHECK-DAG: #loc2 = loc("nested")
+// CHECK-DAG: #loc3 = loc(fused<#loc2>["test.mlir":10:8])
+"test.op"() {alias_test = loc(fused<loc("nested")>["test.mlir":10:8])} : () -> ()

@@ -26,38 +26,37 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``-z pack-relative-relocs`` is now available to support ``DT_RELR`` for glibc 2.36+.
-  (`D120701 <https://reviews.llvm.org/D120701>`_)
-* ``--no-fortran-common`` (pre 12.0.0 behavior) is now the default.
+* ``ELFCOMPRESS_ZSTD`` compressed input sections are now supported.
+  (`D129406 <https://reviews.llvm.org/D129406>`_)
+* ``--compress-debug-sections=zstd`` is now available to compress debug
+  sections with zstd (``ELFCOMPRESS_ZSTD``).
+  (`D133548 <https://reviews.llvm.org/D133548>`_)
+* ``--no-warnings``/``-w`` is now available to suppress warnings.
+  (`D136569 <https://reviews.llvm.org/D136569>`_)
 
 Breaking changes
 ----------------
 
-* The GNU ld incompatible ``--no-define-common`` has been removed.
-* The obscure ``-dc``/``-dp`` options have been removed.
-* ``-d`` is now ignored.
-* If a prevailing COMDAT group defines STB_WEAK symbol, having a STB_GLOBAL symbol in a non-prevailing group is now rejected with a diagnostic.
-  (`D120626 <https://reviews.llvm.org/D120626>`_)
-
 COFF Improvements
 -----------------
 
-* Added autodetection of MSVC toolchain, a la clang-cl.  Also added
-  ``/winsysroot:`` support for explicit specification of MSVC toolchain
-  location, similar to clang-cl's ``/winsysroot``. For now,
-  ``/winsysroot:`` requires also passing in an explicit ``/machine:`` flag.
-  (`D118070 <https://reviews.llvm.org/D118070>`_)
 * ...
 
 MinGW Improvements
 ------------------
 
-* ...
+* The lld-specific options ``--guard-cf``, ``--no-guard-cf``,
+  ``--guard-longjmp`` and ``--no-guard-longjmp`` has been added to allow
+  enabling Control Flow Guard and long jump hardening. These options are
+  disabled by default, but enabling ``--guard-cf`` will also enable
+  ``--guard-longjmp`` unless ``--no-guard-longjmp`` is also specified.
+  ``--guard-longjmp`` depends on ``--guard-cf`` and cannot be used by itself.
+  Note that these features require the ``_load_config_used`` symbol to contain
+  the load config directory and be filled with the required symbols.
+  (`D132808 <https://reviews.llvm.org/D132808>`_)
 
 MachO Improvements
 ------------------
-
-* Item 1.
 
 WebAssembly Improvements
 ------------------------

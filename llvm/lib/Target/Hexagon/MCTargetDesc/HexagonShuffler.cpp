@@ -295,7 +295,7 @@ void HexagonShuffler::restrictBranchOrder(HexagonPacketSummary const &Summary) {
     Summary.branchInsts[0]->Core.setUnits(jumpSlot.first);
     Summary.branchInsts[1]->Core.setUnits(jumpSlot.second);
 
-    const bool HasShuffledPacket = tryAuction(Summary).hasValue();
+    const bool HasShuffledPacket = tryAuction(Summary).has_value();
     if (HasShuffledPacket)
       return;
 
@@ -488,10 +488,10 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
     case HexagonII::TypeCVI_GATHER_DV:
     case HexagonII::TypeCVI_GATHER_RST:
       ++Summary.NonZCVIloads;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeCVI_ZW:
       ++Summary.AllCVIloads;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeLD:
       ++Summary.loads;
       ++Summary.memory;
@@ -510,7 +510,7 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
     case HexagonII::TypeCVI_SCATTER_NEW_RST:
     case HexagonII::TypeCVI_SCATTER_NEW_ST:
       ++Summary.CVIstores;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeST:
       ++Summary.stores;
       ++Summary.memory;
@@ -599,7 +599,7 @@ void HexagonShuffler::restrictPreferSlot3(HexagonPacketSummary const &Summary,
   // and then pin it to slot #3
   const unsigned saveUnits = PrefSlot3Inst->Core.getUnits();
   PrefSlot3Inst->Core.setUnits(saveUnits & Slot3Mask);
-  const bool HasShuffledPacket = tryAuction(Summary).hasValue();
+  const bool HasShuffledPacket = tryAuction(Summary).has_value();
   if (HasShuffledPacket)
     return;
 

@@ -188,9 +188,8 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
               ? std::chrono::duration_cast<std::chrono::milliseconds>(*timeout)
                     .count()
               : INFINITE;
-      DWORD wait_result =
-          ::WaitForMultipleObjects(llvm::array_lengthof(m_event_handles),
-                                   m_event_handles, FALSE, milliseconds);
+      DWORD wait_result = ::WaitForMultipleObjects(
+          std::size(m_event_handles), m_event_handles, FALSE, milliseconds);
       // All of the events are manual reset events, so make sure we reset them
       // to non-signalled.
       switch (wait_result) {

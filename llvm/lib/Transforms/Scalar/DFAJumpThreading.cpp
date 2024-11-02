@@ -724,7 +724,7 @@ private:
 
     // Make DeterminatorBB the first element in Path.
     PathType Path = TPath.getPath();
-    auto ItDet = std::find(Path.begin(), Path.end(), DeterminatorBB);
+    auto ItDet = llvm::find(Path, DeterminatorBB);
     std::rotate(Path.begin(), ItDet, Path.end());
 
     bool IsDetBBSeen = false;
@@ -798,7 +798,7 @@ private:
 
       // Otherwise update Metrics for all blocks that will be cloned. If any
       // block is already cloned and would be reused, don't double count it.
-      auto DetIt = std::find(PathBBs.begin(), PathBBs.end(), Determinator);
+      auto DetIt = llvm::find(PathBBs, Determinator);
       for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
         BB = *BBIt;
         VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
@@ -828,9 +828,19 @@ private:
         });
         return false;
       }
+
+      if (!Metrics.NumInsts.isValid()) {
+        LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, contains "
+                          << "instructions with invalid cost.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "ConvergentInst", Switch)
+                 << "Contains instructions with invalid cost.";
+        });
+        return false;
+      }
     }
 
-    unsigned DuplicationCost = 0;
+    InstructionCost DuplicationCost = 0;
 
     unsigned JumpTableSize = 0;
     TTI->getEstimatedNumberOfCaseClusters(*Switch, JumpTableSize, nullptr,
@@ -933,7 +943,7 @@ private:
     if (PathBBs.front() == Determinator)
       PathBBs.pop_front();
 
-    auto DetIt = std::find(PathBBs.begin(), PathBBs.end(), Determinator);
+    auto DetIt = llvm::find(PathBBs, Determinator);
     auto Prev = std::prev(DetIt);
     BasicBlock *PrevBB = *Prev;
     for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
@@ -1202,7 +1212,7 @@ private:
         PhiToRemove.push_back(Phi);
       }
       for (PHINode *PN : PhiToRemove) {
-        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
         PN->eraseFromParent();
       }
       return;
@@ -1251,7 +1261,7 @@ private:
 
   /// Returns true if IncomingBB is a predecessor of BB.
   bool isPredecessor(BasicBlock *BB, BasicBlock *IncomingBB) {
-    return llvm::find(predecessors(BB), IncomingBB) != pred_end(BB);
+    return llvm::is_contained(predecessors(BB), IncomingBB);
   }
 
   AllSwitchPaths *SwitchPaths;

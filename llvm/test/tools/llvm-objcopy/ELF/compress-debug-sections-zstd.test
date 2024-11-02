@@ -1,0 +1,57 @@
+# REQUIRES: zstd
+## Test --compress-debug-sections=zstd and decompression.
+
+# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t && llvm-objcopy %t
+# RUN: llvm-objcopy --compress-debug-sections=zstd %t %t-zstd
+# RUN: llvm-objcopy --decompress-debug-sections %t-zstd %t-de
+# RUN: cmp %t %t-de
+
+# RUN: llvm-readelf -S -r -x .debug_foo %t-zstd | FileCheck %s --check-prefixes=CHECK,COMPRESSED
+# RUN: llvm-readelf -S -r -x .debug_foo %t-de | FileCheck %s --check-prefixes=CHECK,DECOMPRESSED
+
+# CHECK:             Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# COMPRESSED:        .debug_foo        PROGBITS        0000000000000000 000040 {{.*}} 00   C  0   0  8
+# COMPRESSED-NEXT:   .notdebug_foo     PROGBITS        0000000000000000 {{.*}} 000008 00      0   0  0
+# DECOMPRESSED:      .debug_foo        PROGBITS        0000000000000000 000040 000008 00      0   0  0
+# DECOMPRESSED-NEXT: .notdebug_foo     PROGBITS        0000000000000000 {{.*}} 000008 00      0   0  0
+
+## Relocations do not change.
+# CHECK:             Relocation section '.rela.debug_foo' at offset {{.*}} contains 2 entries:
+# CHECK-NEXT:            Offset
+# CHECK-NEXT:        0000000000000001  000000010000000a R_X86_64_32            0000000000000000 .debug_foo + 0
+# CHECK-NEXT:        0000000000000002  000000020000000a R_X86_64_32            0000000000000000 .notdebug_foo + 0
+
+# COMPRESSED:        Hex dump of section '.debug_foo':
+## ch_type == ELFCOMPRESS_ZSTD (2)
+# COMPRESSED-NEXT:   0x00000000 02000000 00000000 08000000 00000000
+# COMPRESSED-NEXT:   0x00000010 00000000 00000000 {{.*}}
+
+## --compress-debug-sections does not update a compressed section. Its compression
+## type does not change.
+# RUN: llvm-objcopy --compress-debug-sections=zstd %t-zstd %t-zstd-zstd
+# RUN: cmp %t-zstd %t-zstd-zstd
+# RUN: %if zlib %{ llvm-objcopy --compress-debug-sections=zlib %t-zstd %t-zstd-zlib && cmp %t-zstd %t-zstd-zlib %}
+
+## Test roundtrip for ELFCLASS32.
+# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t32 && llvm-objcopy %t32
+# RUN: llvm-objcopy --compress-debug-sections=zstd %t32 %t32-zstd
+# RUN: llvm-objcopy --decompress-debug-sections %t32-zstd %t32-de
+# RUN: cmp %t32 %t32-de
+
+# RUN: yaml2obj %s -o %t-corrupted
+# RUN: not llvm-objcopy --decompress-debug-sections %t-corrupted /dev/null 2>&1 | FileCheck %s -DFILE=%t-corrupted --check-prefix=ERR
+
+# ERR: error: '[[FILE]]': failed to decompress section '.debug_info': Src size is incorrect
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Type:         SHT_PROGBITS
+    Name:         .debug_info
+    Flags:        [ SHF_COMPRESSED ]
+    AddressAlign: 8
+    Content:      "020000000000000004000000000000000100000000000000ffffffff"

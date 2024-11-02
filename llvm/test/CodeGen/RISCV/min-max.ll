@@ -620,3 +620,102 @@ define signext i32 @umax_undef_i32() {
   ret i32 %c
 }
 
+define signext i32 @smax_i32_pos_constant(i32 signext %a) {
+; NOZBB-LABEL: smax_i32_pos_constant:
+; NOZBB:       # %bb.0:
+; NOZBB-NEXT:    li a1, 10
+; NOZBB-NEXT:    blt a1, a0, .LBB24_2
+; NOZBB-NEXT:  # %bb.1:
+; NOZBB-NEXT:    li a0, 10
+; NOZBB-NEXT:  .LBB24_2:
+; NOZBB-NEXT:    ret
+;
+; ZBB-LABEL: smax_i32_pos_constant:
+; ZBB:       # %bb.0:
+; ZBB-NEXT:    li a1, 10
+; ZBB-NEXT:    max a0, a0, a1
+; ZBB-NEXT:    ret
+  %c = call i32 @llvm.smax.i32(i32 %a, i32 10)
+  ret i32 %c
+}
+
+define signext i32 @smax_i32_pos_constant_trailing_zeros(i32 signext %a) {
+; NOZBB-LABEL: smax_i32_pos_constant_trailing_zeros:
+; NOZBB:       # %bb.0:
+; NOZBB-NEXT:    andi a0, a0, -8
+; NOZBB-NEXT:    li a1, 16
+; NOZBB-NEXT:    blt a1, a0, .LBB25_2
+; NOZBB-NEXT:  # %bb.1:
+; NOZBB-NEXT:    li a0, 16
+; NOZBB-NEXT:  .LBB25_2:
+; NOZBB-NEXT:    ret
+;
+; ZBB-LABEL: smax_i32_pos_constant_trailing_zeros:
+; ZBB:       # %bb.0:
+; ZBB-NEXT:    andi a0, a0, -8
+; ZBB-NEXT:    li a1, 16
+; ZBB-NEXT:    max a0, a0, a1
+; ZBB-NEXT:    ret
+  %b = and i32 %a, -8
+  %c = call i32 @llvm.smax.i32(i32 %b, i32 16)
+  %d = and i32 %c, -4
+  ret i32 %d
+}
+
+define signext i32 @smin_i32_negone(i32 signext %a) {
+; NOZBB-LABEL: smin_i32_negone:
+; NOZBB:       # %bb.0:
+; NOZBB-NEXT:    slti a1, a0, -1
+; NOZBB-NEXT:    addi a1, a1, -1
+; NOZBB-NEXT:    or a0, a1, a0
+; NOZBB-NEXT:    ret
+;
+; ZBB-LABEL: smin_i32_negone:
+; ZBB:       # %bb.0:
+; ZBB-NEXT:    li a1, -1
+; ZBB-NEXT:    min a0, a0, a1
+; ZBB-NEXT:    ret
+  %c = call i32 @llvm.smin.i32(i32 %a, i32 -1)
+  ret i32 %c
+}
+
+define i64 @smin_i64_negone(i64 %a) {
+; RV32I-LABEL: smin_i64_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slti a2, a1, -1
+; RV32I-NEXT:    li a3, -1
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    beq a1, a3, .LBB27_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:  .LBB27_2:
+; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: smin_i64_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slti a1, a0, -1
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: smin_i64_negone:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    li a2, -1
+; RV32ZBB-NEXT:    beq a1, a2, .LBB27_2
+; RV32ZBB-NEXT:  # %bb.1:
+; RV32ZBB-NEXT:    slti a3, a1, -1
+; RV32ZBB-NEXT:    addi a3, a3, -1
+; RV32ZBB-NEXT:    or a0, a3, a0
+; RV32ZBB-NEXT:  .LBB27_2:
+; RV32ZBB-NEXT:    min a1, a1, a2
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: smin_i64_negone:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    li a1, -1
+; RV64ZBB-NEXT:    min a0, a0, a1
+; RV64ZBB-NEXT:    ret
+  %c = call i64 @llvm.smin.i64(i64 %a, i64 -1)
+  ret i64 %c
+}

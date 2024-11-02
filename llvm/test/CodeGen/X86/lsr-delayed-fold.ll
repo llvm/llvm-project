@@ -42,7 +42,7 @@ for.cond:                                         ; preds = %lbl_264, %for.inc, 
 
 lbl_264:                                          ; preds = %if.end, %lbl_264.preheader
   %g_263.tmp.0 = phi i8 [ %g_263.tmp.1, %for.cond ] ; <i8> [#uses=1]
-  %tmp7 = load i16, i16* undef                         ; <i16> [#uses=1]
+  %tmp7 = load i16, ptr undef                         ; <i16> [#uses=1]
   %conv8 = trunc i16 %tmp7 to i8                  ; <i8> [#uses=1]
   %mul.i = mul i8 %p_95.addr.0, %p_95.addr.0      ; <i8> [#uses=1]
   %mul.i18 = mul i8 %mul.i, %conv8                ; <i8> [#uses=1]
@@ -56,7 +56,7 @@ lbl_264:                                          ; preds = %if.end, %lbl_264.pr
 
 %struct.Bu = type { i32, i32, i32 }
 
-define void @_Z3fooP2Bui(%struct.Bu* nocapture %bu) {
+define void @_Z3fooP2Bui(ptr nocapture %bu) {
 entry:
   br label %for.body
 
@@ -98,8 +98,8 @@ lor.lhs.false:                                    ; preds = %for.body
   %add106 = trunc i64 %tmp43 to i32               ; <i32> [#uses=1]
   %add112 = trunc i64 %tmp45 to i32               ; <i32> [#uses=1]
   %add118 = trunc i64 %tmp47 to i32               ; <i32> [#uses=1]
-  %tmp10 = getelementptr %struct.Bu, %struct.Bu* %bu, i64 %indvar, i32 2 ; <i32*> [#uses=1]
-  %tmp11 = load i32, i32* %tmp10                       ; <i32> [#uses=0]
+  %tmp10 = getelementptr %struct.Bu, ptr %bu, i64 %indvar, i32 2 ; <ptr> [#uses=1]
+  %tmp11 = load i32, ptr %tmp10                       ; <i32> [#uses=0]
   tail call void undef(i32 %add22)
   tail call void undef(i32 %add28)
   tail call void undef(i32 %add34)
@@ -169,7 +169,7 @@ bb11:                                             ; preds = %bb10
   br label %bb14
 
 bb14:                                             ; preds = %bb11
-  store i32 %t13, i32* null
+  store i32 %t13, ptr null
   ret i32 %t8
 
 bb16:                                             ; preds = %bb10

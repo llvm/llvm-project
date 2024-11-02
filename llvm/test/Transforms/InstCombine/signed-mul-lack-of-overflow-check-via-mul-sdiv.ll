@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; Fold
-;   ((%x * %y) s/ %x) == %y
+;   ((ptr %y) s/ %x) == %y
 ; to
 ;   @llvm.smul.with.overflow(%x, %y) + extractvalue + not
 

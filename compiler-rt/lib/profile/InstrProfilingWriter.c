@@ -263,11 +263,11 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
       (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) != 0ULL;
 
   /* Calculate size of sections. */
-  const uint64_t DataSize =
+  const uint64_t DataSectionSize =
       DebugInfoCorrelate ? 0 : __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t NumData =
       DebugInfoCorrelate ? 0 : __llvm_profile_get_num_data(DataBegin, DataEnd);
-  const uint64_t CountersSize =
+  const uint64_t CountersSectionSize =
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
   const uint64_t NumCounters =
       __llvm_profile_get_num_counters(CountersBegin, CountersEnd);
@@ -276,16 +276,14 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   /* Create the header. */
   __llvm_profile_header Header;
 
-  if (!NumData && (!DebugInfoCorrelate || !NumCounters))
-    return 0;
-
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
       PaddingBytesAfterNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
-      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
+      DataSectionSize, CountersSectionSize, NamesSize,
+      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+      &PaddingBytesAfterNames);
 
   {
     // TODO: Unfortunately the header's fields are named DataSize and
@@ -321,9 +319,10 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Write the profile data. */
   ProfDataIOVec IOVecData[] = {
-      {DebugInfoCorrelate ? NULL : DataBegin, sizeof(uint8_t), DataSize, 0},
+      {DebugInfoCorrelate ? NULL : DataBegin, sizeof(uint8_t), DataSectionSize,
+       0},
       {NULL, sizeof(uint8_t), PaddingBytesBeforeCounters, 1},
-      {CountersBegin, sizeof(uint8_t), CountersSize, 0},
+      {CountersBegin, sizeof(uint8_t), CountersSectionSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
       {(SkipNameDataWrite || DebugInfoCorrelate) ? NULL : NamesBegin,
        sizeof(uint8_t), NamesSize, 0},

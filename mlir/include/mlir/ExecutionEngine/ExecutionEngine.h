@@ -24,7 +24,8 @@
 #include <memory>
 
 namespace llvm {
-template <typename T> class Expected;
+template <typename T>
+class Expected;
 class Module;
 class ExecutionEngine;
 class JITEventListener;
@@ -33,7 +34,7 @@ class MemoryBuffer;
 
 namespace mlir {
 
-class ModuleOp;
+class Operation;
 
 /// A simple object cache following Lang's LLJITWithObjectCache example.
 class SimpleObjectCache : public llvm::ObjectCache {
@@ -45,15 +46,18 @@ public:
   /// Dump cached object to output file `filename`.
   void dumpToObjectFile(StringRef filename);
 
+  /// Returns `true` if cache hasn't been populated yet.
+  bool isEmpty();
+
 private:
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> cachedObjects;
 };
 
 struct ExecutionEngineOptions {
-  /// If `llvmModuleBuilder` is provided, it will be used to create LLVM module
-  /// from the given MLIR module. Otherwise, a default `translateModuleToLLVMIR`
-  /// function will be used to translate MLIR module to LLVM IR.
-  llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
+  /// If `llvmModuleBuilder` is provided, it will be used to create an LLVM
+  /// module from the given MLIR IR. Otherwise, a default
+  /// `translateModuleToLLVMIR` function will be used to translate to LLVM IR.
+  llvm::function_ref<std::unique_ptr<llvm::Module>(Operation *,
                                                    llvm::LLVMContext &)>
       llvmModuleBuilder = nullptr;
 
@@ -76,8 +80,8 @@ struct ExecutionEngineOptions {
 
   /// If `enableObjectCache` is set, the JIT compiler will create one to store
   /// the object generated for the given module. The contents of the cache can
-  /// be dumped to a file via the `dumpToObjectfile` method.
-  bool enableObjectCache = false;
+  /// be dumped to a file via the `dumpToObjectFile` method.
+  bool enableObjectDump = false;
 
   /// If enable `enableGDBNotificationListener` is set, the JIT compiler will
   /// notify the llvm's global GDB notification listener.
@@ -88,9 +92,9 @@ struct ExecutionEngineOptions {
   bool enablePerfNotificationListener = true;
 };
 
-/// JIT-backed execution engine for MLIR modules.  Assumes the module can be
-/// converted to LLVM IR.  For each function, creates a wrapper function with
-/// the fixed interface
+/// JIT-backed execution engine for MLIR. Assumes the IR can be converted to
+/// LLVM IR. For each function, creates a wrapper function with the fixed
+/// interface
 ///
 ///     void _mlir_funcName(void **)
 ///
@@ -100,12 +104,12 @@ struct ExecutionEngineOptions {
 /// be used to invoke the JIT-compiled function.
 class ExecutionEngine {
 public:
-  ExecutionEngine(bool enableObjectCache, bool enableGDBNotificationListener,
+  ExecutionEngine(bool enableObjectDump, bool enableGDBNotificationListener,
                   bool enablePerfNotificationListener);
 
-  /// Creates an execution engine for the given module.
+  /// Creates an execution engine for the given MLIR IR.
   static llvm::Expected<std::unique_ptr<ExecutionEngine>>
-  create(ModuleOp m, const ExecutionEngineOptions &options = {});
+  create(Operation *op, const ExecutionEngineOptions &options = {});
 
   /// Looks up a packed-argument function wrapping the function with the given
   /// name and returns a pointer to it. Propagates errors in case of failure.
@@ -171,9 +175,7 @@ public:
     llvm::SmallVector<void *> argsArray;
     // Pack every arguments in an array of pointers. Delegate the packing to a
     // trait so that it can be overridden per argument type.
-    // TODO: replace with a fold expression when migrating to C++17.
-    int dummy[] = {0, ((void)Argument<Args>::pack(argsArray, args), 0)...};
-    (void)dummy;
+    (Argument<Args>::pack(argsArray, args), ...);
     return invokePacked(adapterName, argsArray);
   }
 
@@ -199,6 +201,9 @@ private:
 
   /// Underlying cache.
   std::unique_ptr<SimpleObjectCache> cache;
+
+  /// Names of functions that may be looked up.
+  std::vector<std::string> functionNames;
 
   /// GDB notification listener.
   llvm::JITEventListener *gdbListener;

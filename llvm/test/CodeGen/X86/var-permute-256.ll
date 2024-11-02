@@ -1184,8 +1184,6 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $64, %rsp
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [7,7,7,7]
-; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm1, %eax
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX2-NEXT:    andl $3, %eax
@@ -1208,8 +1206,6 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX512-NEXT:    andq $-32, %rsp
 ; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [7,7,7,7]
-; AVX512-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovd %xmm1, %eax
 ; AVX512-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512-NEXT:    andl $3, %eax
@@ -1233,7 +1229,6 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX512VL-NEXT:    movq %rsp, %rbp
 ; AVX512VL-NEXT:    andq $-32, %rsp
 ; AVX512VL-NEXT:    subq $64, %rsp
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovd %xmm1, %eax
 ; AVX512VL-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512VL-NEXT:    andl $3, %eax

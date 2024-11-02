@@ -16,6 +16,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
+#include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/KindMapping.h"
@@ -35,13 +36,22 @@ class BoxValue;
 
 /// Extends the MLIR OpBuilder to provide methods for building common FIR
 /// patterns.
-class FirOpBuilder : public mlir::OpBuilder {
+class FirOpBuilder : public mlir::OpBuilder, public mlir::OpBuilder::Listener {
 public:
   explicit FirOpBuilder(mlir::Operation *op, const fir::KindMapping &kindMap)
-      : OpBuilder{op}, kindMap{kindMap} {}
+      : OpBuilder{op, /*listener=*/this}, kindMap{kindMap} {}
   explicit FirOpBuilder(mlir::OpBuilder &builder,
                         const fir::KindMapping &kindMap)
-      : OpBuilder{builder}, kindMap{kindMap} {}
+      : OpBuilder{builder}, kindMap{kindMap} {
+    setListener(this);
+  }
+
+  // The listener self-reference has to be updated in case of copy-construction.
+  FirOpBuilder(const FirOpBuilder &other)
+      : OpBuilder{other}, kindMap{other.kindMap}, fastMathFlags{
+                                                      other.fastMathFlags} {
+    setListener(this);
+  }
 
   /// Get the current Region of the insertion point.
   mlir::Region &getRegion() { return *getBlock()->getParent(); }
@@ -89,7 +99,7 @@ public:
   /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
 
-  /// Get character length type
+  /// Get character length type.
   mlir::Type getCharacterLengthType() { return getIndexType(); }
 
   /// Get the integer type whose bit width corresponds to the width of pointer
@@ -176,10 +186,11 @@ public:
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name,
                              mlir::StringAttr linkage = {},
-                             mlir::Attribute value = {}, bool isConst = false);
+                             mlir::Attribute value = {}, bool isConst = false,
+                             bool isTarget = false);
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
-                             llvm::StringRef name, bool isConst,
+                             llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {});
 
@@ -188,7 +199,8 @@ public:
                                      llvm::StringRef name,
                                      mlir::StringAttr linkage = {},
                                      mlir::Attribute value = {}) {
-    return createGlobal(loc, type, name, linkage, value, /*isConst=*/true);
+    return createGlobal(loc, type, name, linkage, value, /*isConst=*/true,
+                        /*isTarget=*/false);
   }
 
   fir::GlobalOp
@@ -196,8 +208,8 @@ public:
                        llvm::StringRef name,
                        std::function<void(FirOpBuilder &)> bodyBuilder,
                        mlir::StringAttr linkage = {}) {
-    return createGlobal(loc, type, name, /*isConst=*/true, bodyBuilder,
-                        linkage);
+    return createGlobal(loc, type, name, /*isConst=*/true, /*isTarget=*/false,
+                        bodyBuilder, linkage);
   }
 
   /// Convert a StringRef string into a fir::StringLitOp.
@@ -292,6 +304,7 @@ public:
   mlir::Value genShape(mlir::Location loc, llvm::ArrayRef<mlir::Value> shift,
                        llvm::ArrayRef<mlir::Value> exts);
   mlir::Value genShape(mlir::Location loc, llvm::ArrayRef<mlir::Value> exts);
+  mlir::Value genShift(mlir::Location loc, llvm::ArrayRef<mlir::Value> shift);
 
   /// Create one of the shape ops given an extended value. For a boxed value,
   /// this may create a `fir.shift` op.
@@ -306,8 +319,10 @@ public:
   /// \p exv is an extended value holding a memory reference to the object that
   /// must be boxed. This function will crash if provided something that is not
   /// a memory reference type.
-  /// Array entities are boxed with a shape and character with their length.
-  mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv);
+  /// Array entities are boxed with a shape and possibly a shift. Character
+  /// entities are boxed with a LEN parameter.
+  mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv,
+                        bool isPolymorphic = false);
 
   /// Create constant i1 with value 1. if \p b is true or 0. otherwise
   mlir::Value createBool(mlir::Location loc, bool b) {
@@ -377,10 +392,10 @@ public:
   }
 
   /// Generate code testing \p addr is not a null address.
-  mlir::Value genIsNotNull(mlir::Location loc, mlir::Value addr);
+  mlir::Value genIsNotNullAddr(mlir::Location loc, mlir::Value addr);
 
   /// Generate code testing \p addr is a null address.
-  mlir::Value genIsNull(mlir::Location loc, mlir::Value addr);
+  mlir::Value genIsNullAddr(mlir::Location loc, mlir::Value addr);
 
   /// Compute the extent of (lb:ub:step) as max((ub-lb+step)/step, 0). See
   /// Fortran 2018 9.5.3.3.2 section for more details.
@@ -388,11 +403,35 @@ public:
                                    mlir::Value ub, mlir::Value step,
                                    mlir::Type type);
 
+  /// Set default FastMathFlags value for all operations
+  /// supporting mlir::arith::FastMathAttr that will be created
+  /// by this builder.
+  void setFastMathFlags(mlir::arith::FastMathFlags flags) {
+    fastMathFlags = flags;
+  }
+
+  /// Set default FastMathFlags value from the passed MathOptionsBase
+  /// config.
+  void setFastMathFlags(Fortran::common::MathOptionsBase options);
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
 private:
+  /// Set attributes (e.g. FastMathAttr) to \p op operation
+  /// based on the current attributes setting.
+  void setCommonAttributes(mlir::Operation *op) const;
+
+  /// FirOpBuilder hook for creating new operation.
+  void notifyOperationInserted(mlir::Operation *op) override {
+    setCommonAttributes(op);
+  }
+
   const KindMapping &kindMap;
+
+  /// FastMathFlags that need to be set for operations that support
+  /// mlir::arith::FastMathAttr.
+  mlir::arith::FastMathFlags fastMathFlags{};
 };
 
 } // namespace fir
@@ -440,18 +479,18 @@ llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &exv);
 
-/// Return length parameters associated to \p exv that are not deferred (that
-/// are available without having to read any fir.box values).
-/// Empty if \p exv has no length parameters or if they are all deferred.
+/// Return LEN parameters associated to \p exv that are not deferred (that are
+/// available without having to read any fir.box values). Empty if \p exv has no
+/// LEN parameters or if they are all deferred.
 llvm::SmallVector<mlir::Value>
-getNonDeferredLengthParams(const fir::ExtendedValue &exv);
+getNonDeferredLenParams(const fir::ExtendedValue &exv);
 
 //===----------------------------------------------------------------------===//
 // String literal helper helpers
 //===----------------------------------------------------------------------===//
 
-/// Create a !fir.char<1> string literal global and returns a
-/// fir::CharBoxValue with its address and length.
+/// Create a !fir.char<1> string literal global and returns a fir::CharBoxValue
+/// with its address and length.
 fir::ExtendedValue createStringLiteral(fir::FirOpBuilder &, mlir::Location,
                                        llvm::StringRef string);
 
@@ -486,9 +525,9 @@ fir::ExtendedValue componentToExtendedValue(fir::FirOpBuilder &builder,
 
 /// Given the address of an array element and the ExtendedValue describing the
 /// array, returns the ExtendedValue describing the array element. The purpose
-/// is to propagate the length parameters of the array to the element.
-/// This can be used for elements of `array` or `array(i:j:k)`. If \p element
-/// belongs to an array section `array%x` whose base is \p array,
+/// is to propagate the LEN parameters of the array to the element. This can be
+/// used for elements of `array` or `array(i:j:k)`. If \p element belongs to an
+/// array section `array%x` whose base is \p array,
 /// arraySectionElementToExtendedValue must be used instead.
 fir::ExtendedValue arrayElementToExtendedValue(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
@@ -542,6 +581,28 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Unwrap integer constant from an mlir::Value.
 llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value);
 
+/// Get the integer constants of triplet and compute the extent.
+llvm::Optional<std::int64_t>
+getExtentFromTriplet(mlir::Value lb, mlir::Value ub, mlir::Value stride);
+
+/// Generate max(\p value, 0) where \p value is a scalar integer.
+mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value value);
+
+/// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
+/// component of integer 64, and the component is the C address. Get the C
+/// address.
+mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value cPtr, mlir::Type ty);
+
+/// Get the C address value.
+mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, mlir::Value cPtr);
+
+/// Create a fir.box from a fir::ExtendedValue and wrap it in a fir::BoxValue
+/// to keep all the lower bound and explicit parameter information.
+fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                             const fir::ExtendedValue &exv);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

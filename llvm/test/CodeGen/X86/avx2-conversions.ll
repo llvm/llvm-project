@@ -192,7 +192,7 @@ define <16 x i8> @trunc_16i16_16i8(<16 x i16> %z) {
   ret <16 x i8> %t
 }
 
-define <4 x i64> @load_sext_test1(<4 x i32> *%ptr) {
+define <4 x i64> @load_sext_test1(ptr%ptr) {
 ; X32-LABEL: load_sext_test1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -203,12 +203,12 @@ define <4 x i64> @load_sext_test1(<4 x i32> *%ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmovsxdq (%rdi), %ymm0
 ; X64-NEXT:    retq
- %X = load <4 x i32>, <4 x i32>* %ptr
+ %X = load <4 x i32>, ptr %ptr
  %Y = sext <4 x i32> %X to <4 x i64>
  ret <4 x i64>%Y
 }
 
-define <4 x i64> @load_sext_test2(<4 x i8> *%ptr) {
+define <4 x i64> @load_sext_test2(ptr%ptr) {
 ; X32-LABEL: load_sext_test2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -219,12 +219,12 @@ define <4 x i64> @load_sext_test2(<4 x i8> *%ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmovsxbq (%rdi), %ymm0
 ; X64-NEXT:    retq
- %X = load <4 x i8>, <4 x i8>* %ptr
+ %X = load <4 x i8>, ptr %ptr
  %Y = sext <4 x i8> %X to <4 x i64>
  ret <4 x i64>%Y
 }
 
-define <4 x i64> @load_sext_test3(<4 x i16> *%ptr) {
+define <4 x i64> @load_sext_test3(ptr%ptr) {
 ; X32-LABEL: load_sext_test3:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -235,12 +235,12 @@ define <4 x i64> @load_sext_test3(<4 x i16> *%ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmovsxwq (%rdi), %ymm0
 ; X64-NEXT:    retq
- %X = load <4 x i16>, <4 x i16>* %ptr
+ %X = load <4 x i16>, ptr %ptr
  %Y = sext <4 x i16> %X to <4 x i64>
  ret <4 x i64>%Y
 }
 
-define <8 x i32> @load_sext_test4(<8 x i16> *%ptr) {
+define <8 x i32> @load_sext_test4(ptr%ptr) {
 ; X32-LABEL: load_sext_test4:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -251,12 +251,12 @@ define <8 x i32> @load_sext_test4(<8 x i16> *%ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmovsxwd (%rdi), %ymm0
 ; X64-NEXT:    retq
- %X = load <8 x i16>, <8 x i16>* %ptr
+ %X = load <8 x i16>, ptr %ptr
  %Y = sext <8 x i16> %X to <8 x i32>
  ret <8 x i32>%Y
 }
 
-define <8 x i32> @load_sext_test5(<8 x i8> *%ptr) {
+define <8 x i32> @load_sext_test5(ptr%ptr) {
 ; X32-LABEL: load_sext_test5:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -267,7 +267,7 @@ define <8 x i32> @load_sext_test5(<8 x i8> *%ptr) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmovsxbd (%rdi), %ymm0
 ; X64-NEXT:    retq
- %X = load <8 x i8>, <8 x i8>* %ptr
+ %X = load <8 x i8>, ptr %ptr
  %Y = sext <8 x i8> %X to <8 x i32>
  ret <8 x i32>%Y
 }

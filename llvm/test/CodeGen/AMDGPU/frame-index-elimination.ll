@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca,+enable-flat-scratch -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11 %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -302,6 +303,33 @@ bb:
   br label %ret
 
 ret:
+  ret void
+}
+
+%struct0 = type { [4224 x %type.i16] }
+%type.i16 = type { i16 }
+@_ZZN0 = external hidden addrspace(3) global %struct0, align 8
+
+; GFX11-LABEL: tied_operand_test:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11:         scratch_load_d16_hi_b16 [[LDRESULT:v[0-9]+]], off, off offset:4
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v{{[0-9]+}}, [[LDRESULT]] offset:8
+; GFX11-NEXT:    s_endpgm
+define protected amdgpu_kernel void @tied_operand_test(i1 %c1, i1 %c2, i32 %val) {
+entry:
+  %scratch0 = alloca i16, align 4, addrspace(5)
+  %scratch1 = alloca i16, align 4, addrspace(5)
+  %first = select i1 %c1, i16 addrspace(5)* %scratch0, i16 addrspace(5)* %scratch1
+  %spec.select = select i1 %c2, i16 addrspace(5)* %first, i16 addrspace(5)* %scratch0
+  %dead.load = load i16, i16 addrspace(5)* %spec.select, align 2
+  %scratch0.load = load i16, i16 addrspace(5)* %scratch0, align 4
+  %add4 = add nuw nsw i32 %val, 4
+  %addr0 = getelementptr inbounds %struct0, %struct0 addrspace(3)* bitcast (%struct0 addrspace(3)* @_ZZN0 to %struct0 addrspace(3)*), i32 0, i32 0, i32 %add4, i32 0
+  store i16 123, i16 addrspace(3)* %addr0, align 2
+  %add5 = add nuw nsw i32 %val, 5
+  %addr1 = getelementptr inbounds %struct0, %struct0 addrspace(3)* bitcast (%struct0 addrspace(3)* @_ZZN0 to %struct0 addrspace(3)*), i32 0, i32 0, i32 %add5, i32 0
+  store i16 %scratch0.load, i16 addrspace(3)* %addr1, align 2
   ret void
 }
 

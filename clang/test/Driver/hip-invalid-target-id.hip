@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: not %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx908xnack \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -9,7 +9,7 @@
 
 // NOPLUS: error: invalid target ID 'gfx908xnack'
 
-// RUN: not %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx908:xnack+:xnack+ \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -17,7 +17,7 @@
 
 // ORDER: error: invalid target ID 'gfx908:xnack+:xnack+'
 
-// RUN: not %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx908:unknown+ \
 // RUN:   --offload-arch=gfx908+sramecc+unknown \
@@ -27,7 +27,7 @@
 
 // UNK: error: invalid target ID 'gfx908:unknown+'
 
-// RUN: not %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx908:sramecc+:unknown+ \
 // RUN:   --offload-arch=gfx900+xnack \
@@ -36,7 +36,7 @@
 
 // MIXED: error: invalid target ID 'gfx908:sramecc+:unknown+'
 
-// RUN: not %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx900:sramecc+ \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -44,7 +44,7 @@
 
 // UNSUP: error: invalid target ID 'gfx900:sramecc+'
 
-/ RUN: not %clang -### -target x86_64-linux-gnu \
+/ RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx900:xnack \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -52,7 +52,7 @@
 
 // NOSIGN: error: invalid target ID 'gfx900:xnack'
 
-// RUN: not %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx900+xnack \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -60,7 +60,7 @@
 
 // NOCOLON: error: invalid target ID 'gfx900+xnack'
 
-// RUN: not %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx908:xnack+ \
 // RUN:   --rocm-path=%S/Inputs/rocm \

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
-
 // Note: libc++ supports string_view before C++17, but literals were introduced in C++14
+// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: !stdlib=libc++ && c++14
 
 #include <string_view>
 #include <cassert>
 
 #include "test_macros.h"
 
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     typedef std::u8string_view u8string_view;
 #else
     typedef std::string_view   u8string_view;

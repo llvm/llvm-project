@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
 
@@ -376,15 +377,7 @@ static bool HasNative(AMDGPULibFunc::EFuncId id) {
   return false;
 }
 
-struct TableRef {
-  size_t size;
-  const TableEntry *table; // variable size: from 0 to (size - 1)
-
-  TableRef() : size(0), table(nullptr) {}
-
-  template <size_t N>
-  TableRef(const TableEntry (&tbl)[N]) : size(N), table(&tbl[0]) {}
-};
+using TableRef = ArrayRef<TableEntry>;
 
 static TableRef getOptTable(AMDGPULibFunc::EFuncId id) {
   switch(id) {
@@ -698,11 +691,10 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
 bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
   // Table-Driven optimization
   const TableRef tr = getOptTable(FInfo.getId());
-  if (tr.size==0)
+  if (tr.empty())
     return false;
 
-  int const sz = (int)tr.size;
-  const TableEntry * const ftbl = tr.table;
+  int const sz = (int)tr.size();
   Value *opr0 = CI->getArgOperand(0);
 
   if (getVecSize(FInfo) > 1) {
@@ -714,8 +706,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
         assert(eltval && "Non-FP arguments in math function!");
         bool found = false;
         for (int i=0; i < sz; ++i) {
-          if (eltval->isExactlyValue(ftbl[i].input)) {
-            DVal.push_back(ftbl[i].result);
+          if (eltval->isExactlyValue(tr[i].input)) {
+            DVal.push_back(tr[i].result);
             found = true;
             break;
           }
@@ -746,8 +738,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     // Scalar version
     if (ConstantFP *CF = dyn_cast<ConstantFP>(opr0)) {
       for (int i = 0; i < sz; ++i) {
-        if (CF->isExactlyValue(ftbl[i].input)) {
-          Value *nval = ConstantFP::get(CF->getType(), ftbl[i].result);
+        if (CF->isExactlyValue(tr[i].input)) {
+          Value *nval = ConstantFP::get(CF->getType(), tr[i].result);
           LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
           replaceCall(nval);
           return true;

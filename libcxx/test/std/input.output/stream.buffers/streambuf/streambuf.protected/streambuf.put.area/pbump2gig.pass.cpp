@@ -8,6 +8,8 @@
 
 // <streambuf>
 
+// UNSUPPORTED: c++03
+
 // template <class charT, class traits = char_traits<charT> >
 // class basic_streambuf;
 

@@ -13,17 +13,17 @@
 ;; We do not have the source to reproduce this as this was IR was obtained
 ;; using a reducer from a failing compile.
 
-define dso_local void @_ZL4ncatPcjz(i8* %0, i32 %1, ...) unnamed_addr  align 32 !dbg !22 {
+define dso_local void @_ZL4ncatPcjz(ptr %0, i32 %1, ...) unnamed_addr  align 32 !dbg !22 {
 .critedge3:
   call void @llvm.dbg.value(metadata i32 157, metadata !27, metadata !DIExpression()), !dbg !46
-  call void @llvm.va_start(i8* nonnull undef), !dbg !47
+  call void @llvm.va_start(ptr nonnull undef), !dbg !47
   br label %2
 
 2:                                                ; preds = %2, %.critedge3
   br label %2
 }
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

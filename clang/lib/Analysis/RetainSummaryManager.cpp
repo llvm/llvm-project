@@ -32,7 +32,7 @@ constexpr static bool isOneOf() {
 /// rest of varargs.
 template <class T, class P, class... ToCompare>
 constexpr static bool isOneOf() {
-  return std::is_same<T, P>::value || isOneOf<T, ToCompare...>();
+  return std::is_same_v<T, P> || isOneOf<T, ToCompare...>();
 }
 
 namespace {
@@ -892,7 +892,7 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 /// has a typedef with a given name @c Name.
 static bool hasTypedefNamed(QualType QT,
                             StringRef Name) {
-  while (auto *T = dyn_cast<TypedefType>(QT)) {
+  while (auto *T = QT->getAs<TypedefType>()) {
     const auto &Context = T->getDecl()->getASTContext();
     if (T->getDecl()->getIdentifier() == &Context.Idents.get(Name))
       return true;

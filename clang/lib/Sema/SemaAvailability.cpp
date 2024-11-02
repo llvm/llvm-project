@@ -192,6 +192,9 @@ shouldDiagnoseAvailabilityByDefault(const ASTContext &Context,
   case llvm::Triple::MacOSX:
     ForceAvailabilityFromVersion = VersionTuple(/*Major=*/10, /*Minor=*/13);
     break;
+  case llvm::Triple::ShaderModel:
+    // Always enable availability diagnostics for shader models.
+    return true;
   default:
     // New targets should always warn about availability.
     return Triple.getVendor() == llvm::Triple::Apple;
@@ -501,7 +504,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         SmallVector<StringRef, 12> SelectorSlotNames;
         Optional<unsigned> NumParams = tryParseObjCMethodName(
             Replacement, SelectorSlotNames, S.getLangOpts());
-        if (NumParams && NumParams.getValue() == Sel.getNumArgs()) {
+        if (NumParams && *NumParams == Sel.getNumArgs()) {
           assert(SelectorSlotNames.size() == Locs.size());
           for (unsigned I = 0; I < Locs.size(); ++I) {
             if (!Sel.getNameForSlot(I).empty()) {

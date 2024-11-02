@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 
 ; Test that unused lanes in the s_xor result are masked out with v_cndmask.
 

@@ -401,7 +401,8 @@ void g() { f<void>(); }
 namespace PR21332 {
   template<typename T> void f1() {
     struct S {  // expected-note{{in instantiation of member class 'S' requested here}}
-      void g1(int n = T::error);  // expected-error{{type 'int' cannot be used prior to '::' because it has no members}}
+      void g1(int n = T::error);  // expected-error{{type 'int' cannot be used prior to '::' because it has no members}} \
+                                  // expected-note {{in instantiation of default function argument expression for 'g1<int>' required here}}
     };
   }
   template void f1<int>();  // expected-note{{in instantiation of function template specialization 'PR21332::f1<int>' requested here}}
@@ -438,7 +439,8 @@ namespace PR21332 {
     class S {  // expected-note {{in instantiation of member function 'PR21332::f6()::S::get' requested here}}
       void get() {
         class S2 {  // expected-note {{in instantiation of member class 'S2' requested here}}
-          void g1(int n = T::error);  // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+          void g1(int n = T::error);  // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} \
+                                      // expected-note  {{in instantiation of default function argument expression for 'g1<int>' required here}}
         };
       }
     };
@@ -460,16 +462,18 @@ namespace rdar23721638 {
 
   template <typename T> void foo() {
     struct Inner { // expected-note {{in instantiation}}
-      void operator()(T a = "") {} // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}}
-      // expected-note@-1 {{passing argument to parameter 'a' here}}
+      void operator()(T a = "") {} // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}} \
+                                   // expected-note  {{in instantiation of default function argument expression for 'operator()<rdar23721638::A>' required here}} \
+                                   // expected-note  {{passing argument to parameter 'a' here}}
     };
-    Inner()(); // expected-error {{type 'Inner' does not provide a call operator}}
+    Inner()();
   }
-  template void foo<A>(); // expected-note 2 {{in instantiation}}
+  template void foo<A>(); // expected-note {{in instantiation}}
 
   template <typename T> void bar() {
-    auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}}
-      // expected-note@-1 {{passing argument to parameter 'a' here}}
+    auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}} \
+                                   // expected-note  {{in instantiation of default function argument expression for 'operator()<rdar23721638::A>' required here}} \
+                                   // expected-note  {{passing argument to parameter 'a' here}}
     lambda();
   }
   template void bar<A>(); // expected-note {{in instantiation}}
@@ -490,7 +494,8 @@ namespace PR45000 {
   template <typename T>
   void f(int x = [](T x = nullptr) -> int { return x; }());
   // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'std::nullptr_t'}}
-  // expected-note@-2 {{passing argument to parameter 'x' here}}
+  // expected-note@-2  {{in instantiation of default function argument expression for 'operator()<int>' required here}}
+  // expected-note@-3  {{passing argument to parameter 'x' here}}
 
   void g() { f<int>(); }
   // expected-note@-1 {{in instantiation of default function argument expression for 'f<int>' required here}}

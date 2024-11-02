@@ -17,6 +17,7 @@ config.flang_examples = @FLANG_BUILD_EXAMPLES@
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.flang_standalone_build = @FLANG_STANDALONE_BUILD@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
+config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@
 config.cc = "@CMAKE_C_COMPILER@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 

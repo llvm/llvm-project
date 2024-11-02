@@ -41,9 +41,9 @@ static cl::opt<unsigned> SmallDataThreshold("hexagon-small-data-threshold",
 static cl::opt<bool> NoSmallDataSorting("mno-sort-sda", cl::init(false),
   cl::Hidden, cl::desc("Disable small data sections sorting"));
 
-static cl::opt<bool> StaticsInSData("hexagon-statics-in-small-data",
-  cl::init(false), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Allow static variables in .sdata"));
+static cl::opt<bool>
+    StaticsInSData("hexagon-statics-in-small-data", cl::Hidden,
+                   cl::desc("Allow static variables in .sdata"));
 
 static cl::opt<bool> TraceGVPlacement("trace-gv-placement",
   cl::Hidden, cl::init(false),
@@ -332,7 +332,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::X86_MMXTyID:
   case Type::X86_AMXTyID:
   case Type::TokenTyID:
-  case Type::DXILPointerTyID:
+  case Type::TypedPointerTyID:
     return 0;
   }
 
@@ -430,7 +430,7 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
 const Function *
 HexagonTargetObjectFile::getLutUsedFunction(const GlobalObject *GO) const {
   const Function *ReturnFn = nullptr;
-  for (auto U : GO->users()) {
+  for (const auto *U : GO->users()) {
     // validate each instance of user to be a live function.
     auto *I = dyn_cast<Instruction>(U);
     if (!I)

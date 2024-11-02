@@ -21,7 +21,7 @@ namespace cert {
 /// actually launched.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-env33-c.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert/env33-c.html
 class CommandProcessorCheck : public ClangTidyCheck {
 public:
   CommandProcessorCheck(StringRef Name, ClangTidyContext *Context)

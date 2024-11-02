@@ -999,6 +999,17 @@ define <2 x i1> @known_positive_une_with_negative_constant_splat_vec(<2 x i32> %
   ret <2 x i1> %cmp
 }
 
+define i1 @pr58046(i64 %arg) {
+; CHECK-LABEL: @pr58046(
+; CHECK-NEXT:    ret i1 true
+;
+  %fp = uitofp i64 %arg to double
+  %mul = fmul double -0.000000e+00, %fp
+  %div = fdiv double 1.000000e+00, %mul
+  %cmp = fcmp oeq double %div, 0xFFF0000000000000
+  ret i1 %cmp
+}
+
 define i1 @nonans1(double %in1, double %in2) {
 ; CHECK-LABEL: @nonans1(
 ; CHECK-NEXT:    ret i1 false
@@ -1228,5 +1239,25 @@ define i1 @isNotKnownNeverNegativeInfinity_sitofp(i17 %x) {
 ;
   %f = sitofp i17 %x to half
   %r = fcmp oeq half %f, 0xHfc00
+  ret i1 %r
+}
+
+define i1 @isKnownNeverInfinity_fpext(float %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_fpext(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf float %x, 1.0
+  %e = fpext float %a to double
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverInfinity_fpext_sitofp(i16 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_fpext_sitofp(
+; CHECK-NEXT:    ret i1 false
+;
+  %f = sitofp i16 %x to half
+  %e = fpext half %f to double
+  %r = fcmp oeq double %e, 0xfff0000000000000
   ret i1 %r
 }

@@ -108,7 +108,7 @@ defm : FPFMADynFrmAlias_m<FMSUB_H,  "fmsub.h",  HINX>;
 defm : FPFMADynFrmAlias_m<FNMSUB_H, "fnmsub.h", HINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_H, "fnmadd.h", HINX>;
 
-let SchedRW = [WriteFALU16, ReadFALU16, ReadFALU16] in {
+let SchedRW = [WriteFAdd16, ReadFAdd16, ReadFAdd16] in {
 defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", HINX, /*Commutable*/1>;
 defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", HINX>;
 }
@@ -296,6 +296,10 @@ def : Pat<(any_fma (fneg FPR16:$rs1), FPR16:$rs2, FPR16:$rs3),
 def : Pat<(any_fma (fneg FPR16:$rs1), FPR16:$rs2, (fneg FPR16:$rs3)),
           (FNMADD_H FPR16:$rs1, FPR16:$rs2, FPR16:$rs3, 0b111)>;
 
+// fnmadd: -(rs1 * rs2 + rs3) (the nsz flag on the FMA)
+def : Pat<(fneg (any_fma_nsz FPR16:$rs1, FPR16:$rs2, FPR16:$rs3)),
+          (FNMADD_H FPR16:$rs1, FPR16:$rs2, FPR16:$rs3, 0b111)>;
+
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
 // LLVM's fminnum and fmaxnum
 // <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
@@ -332,7 +336,9 @@ def : PatSetCC<FPR16, any_fsetccs, SETOLT, FLT_H>;
 def : PatSetCC<FPR16, any_fsetccs, SETLE, FLE_H>;
 def : PatSetCC<FPR16, any_fsetccs, SETOLE, FLE_H>;
 
-def Select_FPR16_Using_CC_GPR : SelectCC_rrirr<FPR16, GPR>;
+defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16>;
+
+def PseudoFROUND_H : PseudoFROUND<FPR16>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZfhOrZfhmin] in {

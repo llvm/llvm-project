@@ -3,7 +3,6 @@ Test lldb-vscode disconnect request
 """
 
 
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -15,8 +14,6 @@ import os
 
 
 class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     source = 'main.cpp'
 
     def disconnect_and_assert_no_output_printed(self):

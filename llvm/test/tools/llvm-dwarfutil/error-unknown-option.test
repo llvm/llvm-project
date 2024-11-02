@@ -1,0 +1,6 @@
+## This test checks the error message displayed if an unknown
+## option is specified.
+
+# RUN: not llvm-dwarfutil --unknown-option 2>&1 | FileCheck %s
+
+# CHECK: error: unknown option: --unknown-option

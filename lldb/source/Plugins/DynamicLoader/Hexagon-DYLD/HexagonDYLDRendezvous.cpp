@@ -49,6 +49,10 @@ HexagonDYLDRendezvous::HexagonDYLDRendezvous(Process *process)
     : m_process(process), m_rendezvous_addr(LLDB_INVALID_ADDRESS), m_current(),
       m_previous(), m_soentries(), m_added_soentries(), m_removed_soentries() {
   m_thread_info.valid = false;
+  m_thread_info.dtv_offset = 0;
+  m_thread_info.dtv_slot_size = 0;
+  m_thread_info.modid_offset = 0;
+  m_thread_info.tls_offset = 0;
 
   // Cache a copy of the executable path
   if (m_process) {
@@ -164,8 +168,7 @@ bool HexagonDYLDRendezvous::UpdateSOEntriesForAddition() {
     if (entry.path.empty() || ::strcmp(entry.path.c_str(), m_exe_path) == 0)
       continue;
 
-    pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
-    if (pos == m_soentries.end()) {
+    if (!llvm::is_contained(m_soentries, entry)) {
       m_soentries.push_back(entry);
       m_added_soentries.push_back(entry);
     }
@@ -184,8 +187,7 @@ bool HexagonDYLDRendezvous::UpdateSOEntriesForDeletion() {
     return false;
 
   for (iterator I = begin(); I != end(); ++I) {
-    pos = std::find(entry_list.begin(), entry_list.end(), *I);
-    if (pos == entry_list.end())
+    if (!llvm::is_contained(entry_list, *I))
       m_removed_soentries.push_back(*I);
   }
 

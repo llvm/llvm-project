@@ -31,7 +31,6 @@ constexpr bool test_constexpr()
 
 int main(int, char**)
 {
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     char16_t s1[] = {1, 2, 3};
     assert(std::char_traits<char16_t>::find(s1, 3, char16_t(1)) == s1);
     assert(std::char_traits<char16_t>::find(s1, 3, char16_t(2)) == s1+1);
@@ -43,7 +42,6 @@ int main(int, char**)
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "" );
 #endif
-#endif // TEST_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

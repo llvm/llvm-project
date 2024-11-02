@@ -13,8 +13,6 @@ from lldbsuite.test import lldbtest
 
 class PlatformProcessCrashInfoTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.runCmd("settings set auto-confirm true")
@@ -39,7 +37,9 @@ class PlatformProcessCrashInfoTestCase(TestBase):
                     patterns=["Process .* launched: .*a.out"])
 
         self.expect('process status --verbose',
-                    patterns=["\"message\".*pointer being freed was not allocated"])
+                    patterns=["Extended Crash Information",
+                              "Crash-Info Annotations",
+                              "pointer being freed was not allocated"])
 
 
     @skipIfAsan # The test process intentionally hits a memory bug.

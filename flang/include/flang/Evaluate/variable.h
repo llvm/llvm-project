@@ -174,7 +174,6 @@ public:
   Triplet &set_stride(Expr<SubscriptInteger> &&);
 
   bool operator==(const Triplet &) const;
-  bool IsStrideOne() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:

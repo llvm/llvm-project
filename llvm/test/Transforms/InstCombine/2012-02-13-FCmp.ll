@@ -3,12 +3,12 @@
 @.str = private unnamed_addr constant [35 x i8] c"\0Ain_range input (should be 0): %f\0A\00", align 1
 @.str1 = external hidden unnamed_addr constant [35 x i8], align 1
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 define i64 @_Z8tempCastj(i32 %val) uwtable ssp {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([35 x i8], [35 x i8]* @.str1, i64 0, i64 0), i32 %val)
+  %call = call i32 (ptr, ...) @printf(ptr @.str1, i32 %val)
   %conv = uitofp i32 %val to double
-  %call.i = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([35 x i8], [35 x i8]* @.str, i64 0, i64 0), double %conv)
+  %call.i = call i32 (ptr, ...) @printf(ptr @.str, double %conv)
   %cmp.i = fcmp oge double %conv, -1.000000e+00
   br i1 %cmp.i, label %land.rhs.i, label %if.end.critedge
 ; CHECK:  br i1 true, label %land.rhs.i, label %if.end.critedge

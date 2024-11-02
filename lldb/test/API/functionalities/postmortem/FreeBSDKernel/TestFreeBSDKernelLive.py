@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 class FreeBSDKernelVMCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_mem(self):
         kernel_exec = "/boot/kernel/kernel"
         mem_device = "/dev/mem"

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <string_view>
 
@@ -98,13 +97,13 @@ constexpr bool test() {
   // Test that we're not trying to use the type's conversion operator to string_view in the constructor.
   {
     const DeletedConversionOperator d;
-    std::basic_string_view<char> csv = d;
+    std::basic_string_view<char> csv = std::basic_string_view<char>(d);
     assert(csv == "test");
   }
 
   {
     DeletedConstConversionOperator dc;
-    std::basic_string_view<char> sv = dc;
+    std::basic_string_view<char> sv = std::basic_string_view<char>(dc);
     assert(sv == "test");
   }
 
@@ -185,6 +184,8 @@ void test_throwing() {
   }
 }
 #endif
+
+static_assert(!std::is_convertible_v<std::vector<char>, std::string_view>);
 
 int main(int, char**) {
   test();

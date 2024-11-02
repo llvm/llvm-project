@@ -5,7 +5,7 @@
 
 ;; Check that without linkerscript bar is inlined.
 ; RUN: ld.lld %t1.o %t2.o -o %t3 -save-temps
-; RUN: llvm-objdump -d %t3 | FileCheck %s --check-prefix=IPO
+; RUN: llvm-objdump --no-print-imm-hex -d %t3 | FileCheck %s --check-prefix=IPO
 ; IPO:      Disassembly of section .text:
 ; IPO:      <_start>:
 ; IPO-NEXT:   movl $1, %eax
@@ -13,7 +13,7 @@
 
 ;; Check that LTO does not do IPO for symbols assigned by script.
 ; RUN: ld.lld %t1.o %t2.o -o %t4 --script %t.script -save-temps
-; RUN: llvm-objdump -d %t4 | FileCheck %s --check-prefix=NOIPO
+; RUN: llvm-objdump --no-print-imm-hex -d %t4 | FileCheck %s --check-prefix=NOIPO
 ; NOIPO:      Disassembly of section .text:
 ; NOIPO:      <foo>:
 ; NOIPO-NEXT:   movl $2, %eax

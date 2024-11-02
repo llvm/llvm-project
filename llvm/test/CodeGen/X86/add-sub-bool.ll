@@ -68,11 +68,11 @@ define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; X64-LABEL: test_i32_add_add_idx0:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rsi), %eax
 ; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    leal (%rdx,%rdi), %eax
+; X64-NEXT:    addl %esi, %eax
 ; X64-NEXT:    retq
   %add = add i32 %y, %x
   %mask = and i32 %z, 1
@@ -390,7 +390,7 @@ define i64 @test_i64_add_add_var(i64 %x, i64 %y, i64 %z, i64 %w) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -529,7 +529,7 @@ define i32 @test_i32_sub_add_sext_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_add_sext_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    sarl $31, %edx

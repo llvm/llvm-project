@@ -19,7 +19,6 @@
 
 int main(int, char**)
 {
-#ifndef TEST_HAS_NO_UNICODE_CHARS
 #if TEST_STD_VER >= 11
     assert(std::char_traits<char16_t>::not_eof(u'a') == u'a');
     assert(std::char_traits<char16_t>::not_eof(u'A') == u'A');
@@ -27,7 +26,6 @@ int main(int, char**)
     assert(std::char_traits<char16_t>::not_eof(0) == 0);
     assert(std::char_traits<char16_t>::not_eof(std::char_traits<char16_t>::eof()) !=
            std::char_traits<char16_t>::eof());
-#endif // TEST_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

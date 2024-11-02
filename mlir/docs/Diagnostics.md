@@ -300,9 +300,13 @@ This handler is a wrapper around a llvm::SourceMgr that is used to verify that
 certain diagnostics have been emitted to the context. To use this handler,
 annotate your source file with expected diagnostics in the form of:
 
-*   `expected-(error|note|remark|warning) {{ message }}`
+*   `expected-(error|note|remark|warning)(-re)? {{ message }}`
 
-A few examples are shown below:
+The provided `message` is a string expected to be contained within the generated
+diagnostic. The `-re` suffix may be used to enable regex matching within the
+`message`. When present, the `message` may define regex match sequences within
+`{{` `}}` blocks. The regular expression matcher supports Extended POSIX regular
+expressions (ERE). A few examples are shown below:
 
 ```mlir
 // Expect an error on the same line.
@@ -327,6 +331,12 @@ func.func @baz(%a : f32)
 // expected-remark@above {{remark on function above}}
 // expected-remark@above {{another remark on function above}}
 
+// Expect an error mentioning the parent function, but use regex to avoid
+// hardcoding the name.
+func.func @foo() -> i32 {
+  // expected-error-re@+1 {{'func.return' op has 0 operands, but enclosing function (@{{.*}}) returns 1}}
+  return
+}
 ```
 
 The handler will report an error if any unexpected diagnostics were seen, or if
@@ -381,7 +391,7 @@ ParallelDiagnosticHandler handler(context);
 
 // Process a list of operations in parallel.
 std::vector<Operation *> opsToProcess = ...;
-llvm::parallelForEachN(0, opsToProcess.size(), [&](size_t i) {
+llvm::parallelFor(0, opsToProcess.size(), [&](size_t i) {
   // Notify the handler that we are processing the i'th operation.
   handler.setOrderIDForThread(i);
   auto *op = opsToProcess[i];

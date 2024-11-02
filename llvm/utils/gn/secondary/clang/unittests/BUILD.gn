@@ -19,6 +19,7 @@ group("unittests") {
     "Rewrite:RewriteTests",
     "Sema:SemaTests",
     "Serialization:SerializationTests",
+    "Support:ClangSupportTests",
     "Tooling:ToolingTests",
     "Tooling/Syntax:SyntaxTests",
   ]

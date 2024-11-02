@@ -6,7 +6,7 @@
 
 ; Make sure we spill the high numbered zmm registers and K registers with the right encoding.
 
-define x86_intrcc void @foo(i8* byval(i8) %frame) {
+define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-KNL-LABEL: foo:
 ; CHECK64-KNL:       ## %bb.0:
 ; CHECK64-KNL-NEXT:    pushq %rax ## encoding: [0x50]

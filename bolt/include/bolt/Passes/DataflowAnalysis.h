@@ -315,6 +315,8 @@ public:
   void run() {
     derived().preflight();
 
+    if (Func.begin() == Func.end())
+      return;
     // Initialize state for all points of the function
     for (BinaryBasicBlock &BB : Func) {
       StateTy &St = getOrCreateStateAt(BB);
@@ -324,7 +326,6 @@ public:
         St = derived().getStartingStateAtPoint(Inst);
       }
     }
-    assert(Func.begin() != Func.end() && "Unexpected empty function");
 
     std::queue<BinaryBasicBlock *> Worklist;
     // TODO: Pushing this in a DFS ordering will greatly speed up the dataflow
@@ -438,13 +439,18 @@ public:
 /// Define an iterator for navigating the expressions calculated by a
 /// dataflow analysis at each program point, when they are backed by a
 /// BitVector.
-class ExprIterator
-    : public std::iterator<std::forward_iterator_tag, const MCInst *> {
+class ExprIterator {
   const BitVector *BV;
   const std::vector<MCInst *> &Expressions;
   int Idx;
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = const MCInst *;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   ExprIterator &operator++() {
     assert(Idx != -1 && "Iterator already at the end");
     Idx = BV->find_next(Idx);

@@ -6,6 +6,7 @@
 define fastcc <256 x i64> @insert_rr_v256i64(i32 signext %idx, i64 %s) {
 ; CHECK-LABEL: insert_rr_v256i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lsv %v0(%s0), %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x i64> undef, i64 %s, i32 %idx
@@ -46,6 +47,7 @@ define fastcc <256 x i32> @insert_rr_v256i32(i32 signext %idx, i32 signext %s) {
 ; CHECK-LABEL: insert_rr_v256i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lsv %v0(%s0), %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x i32> undef, i32 %s, i32 %idx
@@ -94,6 +96,9 @@ define fastcc <512 x i32> @insert_rr_v512i32(i32 signext %idx, i32 signext %s) {
 ; CHECK-NEXT:    nnd %s2, %s0, (63)0
 ; CHECK-NEXT:    sla.w.sx %s2, %s2, 5
 ; CHECK-NEXT:    sll %s1, %s1, %s2
+; CHECK-NEXT:    lea %s3, -2
+; CHECK-NEXT:    and %s3, %s3, (32)0
+; CHECK-NEXT:    and %s0, %s0, %s3
 ; CHECK-NEXT:    srl %s0, %s0, 1
 ; CHECK-NEXT:    lvs %s3, %v0(%s0)
 ; CHECK-NEXT:    srl %s2, (32)1, %s2
@@ -110,6 +115,7 @@ define fastcc <512 x i32> @insert_rr_v512i32(i32 signext %idx, i32 signext %s) {
 define fastcc <256 x double> @insert_rr_v256f64(i32 signext %idx, double %s) {
 ; CHECK-LABEL: insert_rr_v256f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lsv %v0(%s0), %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x double> undef, double %s, i32 %idx
@@ -149,6 +155,7 @@ define fastcc <512 x double> @insert_ri_v512f64(double %s) {
 define fastcc <256 x float> @insert_rr_v256f32(i32 signext %idx, float %s) {
 ; CHECK-LABEL: insert_rr_v256f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lsv %v0(%s0), %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x float> undef, float %s, i32 %idx
@@ -193,7 +200,10 @@ define fastcc <512 x float> @insert_rr_v512f32(i32 signext %idx, float %s) {
 ; CHECK-LABEL: insert_rr_v512f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sra.l %s1, %s1, 32
-; CHECK-NEXT:    srl %s2, %s0, 1
+; CHECK-NEXT:    lea %s2, -2
+; CHECK-NEXT:    and %s2, %s2, (32)0
+; CHECK-NEXT:    and %s2, %s0, %s2
+; CHECK-NEXT:    srl %s2, %s2, 1
 ; CHECK-NEXT:    lvs %s3, %v0(%s2)
 ; CHECK-NEXT:    nnd %s0, %s0, (63)0
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5

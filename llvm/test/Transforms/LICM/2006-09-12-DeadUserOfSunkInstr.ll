@@ -2,11 +2,11 @@
 ; PR908
 ; END.
 
-	%struct.alloc_chain = type { i8*, %struct.alloc_chain* }
-	%struct.oggpack_buffer = type { i32, i32, i8*, i8*, i32 }
-	%struct.vorbis_block = type { float**, %struct.oggpack_buffer, i32, i32, i32, i32, i32, i32, i64, i64, %struct.vorbis_dsp_state*, i8*, i32, i32, i32, %struct.alloc_chain*, i32, i32, i32, i32, i8* }
-	%struct.vorbis_dsp_state = type { i32, %struct.vorbis_info*, float**, float**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, i8* }
-	%struct.vorbis_info = type { i32, i32, i32, i32, i32, i32, i32, i8* }
+	%struct.alloc_chain = type { ptr, ptr }
+	%struct.oggpack_buffer = type { i32, i32, ptr, ptr, i32 }
+	%struct.vorbis_block = type { ptr, %struct.oggpack_buffer, i32, i32, i32, i32, i32, i32, i64, i64, ptr, ptr, i32, i32, i32, ptr, i32, i32, i32, i32, ptr }
+	%struct.vorbis_dsp_state = type { i32, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, ptr }
+	%struct.vorbis_info = type { i32, i32, i32, i32, i32, i32, i32, ptr }
 
 define fastcc void @_01forward() {
 entry:

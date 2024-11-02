@@ -1,5 +1,5 @@
 !RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s --check-prefixes="FIRDialect,OMPDialect"
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="OMPDialect"
+!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="LLVMDialect,OMPDialect"
 
 !FIRDialect-LABEL: func @_QPparallel_simple
 subroutine parallel_simple()
@@ -152,7 +152,10 @@ end subroutine parallel_proc_bind
 subroutine parallel_allocate()
    use omp_lib
    integer :: x
-   !OMPDialect: omp.parallel allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+   !OMPDialect: omp.parallel allocate(
+   !FIRDialect: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
+   !LLVMDialect: %{{.+}} : i32 -> %{{.+}} : !llvm.ptr<i32>
+   !OMPDialect: ) {
    !$omp parallel allocate(omp_high_bw_mem_alloc: x) private(x)
    !FIRDialect: arith.addi
    x = x + 12
@@ -191,7 +194,10 @@ subroutine parallel_multiple_clauses(alpha, num_threads)
    !OMPDialect: omp.terminator
    !$omp end parallel
 
-   !OMPDialect: omp.parallel if({{.*}} : i1) num_threads({{.*}} : i32) allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+   !OMPDialect: omp.parallel if({{.*}} : i1) num_threads({{.*}} : i32) allocate(
+   !FIRDialect: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
+   !LLVMDialect: %{{.+}} : i32 -> %{{.+}} : !llvm.ptr<i32>
+   !OMPDialect: ) {
    !$omp parallel num_threads(num_threads) if(alpha .le. 0) allocate(omp_high_bw_mem_alloc: alpha) private(alpha)
    !FIRDialect: fir.call
    call f3()

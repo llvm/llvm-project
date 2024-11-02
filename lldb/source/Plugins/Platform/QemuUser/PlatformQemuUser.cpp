@@ -23,6 +23,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(PlatformQemuUser)
 
+namespace {
 #define LLDB_PROPERTIES_platformqemuuser
 #include "PlatformQemuUserProperties.inc"
 
@@ -70,6 +71,8 @@ public:
     return Environment(args);
   }
 };
+
+} // namespace
 
 static PluginProperties &GetGlobalProperties() {
   static PluginProperties g_settings;

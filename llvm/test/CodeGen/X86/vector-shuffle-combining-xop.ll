@@ -140,10 +140,16 @@ define <4 x double> @demandedelts_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x
 ; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: demandedelts_vpermil2pd256_as_shufpd:
-; X64:       # %bb.0:
-; X64-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm1[0,0],ymm0[3],ymm1[3]
-; X64-NEXT:    retq
+; X64-AVX-LABEL: demandedelts_vpermil2pd256_as_shufpd:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm1[0,0],ymm0[3],ymm1[3]
+; X64-AVX-NEXT:    retq
+;
+; X64-AVX2-LABEL: demandedelts_vpermil2pd256_as_shufpd:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[3]
+; X64-AVX2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
+; X64-AVX2-NEXT:    retq
   %res0 = insertelement <4 x i64> <i64 0, i64 4, i64 2, i64 7>, i64 %a2, i32 0
   %res1 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> %res0, i8 0)
   %res2 = shufflevector <4 x double> %res1, <4 x double> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
@@ -272,7 +278,7 @@ define <16 x i8> @combine_shuffle_proti_v4i32(<4 x i32> %a0) {
 }
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 
-define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
+define void @buildvector_v4f32_0404(float %a, float %b, ptr %ptr) {
 ; X86-LABEL: buildvector_v4f32_0404:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -296,11 +302,11 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
   %v1 = insertelement <4 x float> %v0,   float %b, i32 1
   %v2 = insertelement <4 x float> %v1,   float %a, i32 2
   %v3 = insertelement <4 x float> %v2,   float %b, i32 3
-  store <4 x float> %v3, <4 x float>* %ptr
+  store <4 x float> %v3, ptr %ptr
   ret void
 }
 
-define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr) {
+define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, ptr %ptr) {
 ; X86-LABEL: buildvector_v4f32_07z6:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -320,7 +326,7 @@ define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr)
   %v1 = insertelement <4 x float> %v0,   float %b3, i32 1
   %v2 = insertelement <4 x float> %v1,   float 0.0, i32 2
   %v3 = insertelement <4 x float> %v2,   float %b2, i32 3
-  store <4 x float> %v3, <4 x float>* %ptr
+  store <4 x float> %v3, ptr %ptr
   ret void
 }
 
@@ -369,7 +375,7 @@ define <16 x i8> @constant_fold_vpperm() {
   ret <16 x i8> %1
 }
 
-define <4 x float> @PR31296(i8* %in) {
+define <4 x float> @PR31296(ptr %in) {
 ; X86-LABEL: PR31296:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -379,16 +385,13 @@ define <4 x float> @PR31296(i8* %in) {
 ;
 ; X64-LABEL: PR31296:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    vmovq %rax, %xmm0
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,mem[0]
 ; X64-NEXT:    retq
 entry:
-  %0 = getelementptr i8, i8* %in, i32 0
-  %1 = bitcast i8* %0 to i32*
-  %2 = load i32, i32* %1
-  %3 = zext i32 %2 to i128
-  %4 = bitcast i128 %3 to <4 x float>
-  %5 = shufflevector <4 x float> %4, <4 x float> <float 0.000000e+00, float 1.000000e+00, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 4, i32 5>
-  ret <4 x float> %5
+  %0 = load i32, ptr %in
+  %1 = zext i32 %0 to i128
+  %2 = bitcast i128 %1 to <4 x float>
+  %3 = shufflevector <4 x float> %2, <4 x float> <float 0.000000e+00, float 1.000000e+00, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 4, i32 5>
+  ret <4 x float> %3
 }

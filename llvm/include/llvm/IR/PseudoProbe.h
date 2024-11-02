@@ -24,7 +24,14 @@ class Instruction;
 
 constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
 
+enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
+
 enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
+
+enum class PseudoProbeAttributes {
+  Reserved = 0x1,
+  Sentinel = 0x2, // A place holder for split function entry address.
+};
 
 // The saturated distrution factor representing 100% for block probes.
 constexpr static uint64_t PseudoProbeFullDistributionFactor =
@@ -79,6 +86,10 @@ struct PseudoProbe {
   // a factor with the value ranged from 0.0 to 1.0.
   float Factor;
 };
+
+static inline bool isSentinelProbe(uint32_t Flags) {
+  return Flags & (uint32_t)PseudoProbeAttributes::Sentinel;
+}
 
 Optional<PseudoProbe> extractProbe(const Instruction &Inst);
 

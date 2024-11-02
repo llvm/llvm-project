@@ -17,13 +17,11 @@ using namespace clang::interp;
 
 Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
                    llvm::SmallVector<PrimType, 8> &&ParamTypes,
-                   llvm::DenseMap<unsigned, ParamDescriptor> &&Params)
+                   llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
+                   bool HasThisPointer, bool HasRVO)
     : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
-      ParamTypes(std::move(ParamTypes)), Params(std::move(Params)) {}
-
-CodePtr Function::getCodeBegin() const { return Code.data(); }
-
-CodePtr Function::getCodeEnd() const { return Code.data() + Code.size(); }
+      ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
+      HasThisPointer(HasThisPointer), HasRVO(HasRVO) {}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
@@ -32,12 +30,12 @@ Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
 }
 
 SourceInfo Function::getSource(CodePtr PC) const {
+  assert(PC >= getCodeBegin() && "PC does not belong to this function");
+  assert(PC <= getCodeEnd() && "PC Does not belong to this function");
   unsigned Offset = PC - getCodeBegin();
   using Elem = std::pair<unsigned, SourceInfo>;
-  auto It = std::lower_bound(SrcMap.begin(), SrcMap.end(), Elem{Offset, {}},
-                             [](Elem A, Elem B) { return A.first < B.first; });
-  if (It == SrcMap.end() || It->first != Offset)
-    llvm::report_fatal_error("missing source location");
+  auto It = llvm::lower_bound(SrcMap, Elem{Offset, {}}, llvm::less_first());
+  assert(It != SrcMap.end());
   return It->second;
 }
 

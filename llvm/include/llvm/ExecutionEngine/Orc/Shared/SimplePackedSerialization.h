@@ -56,6 +56,7 @@ public:
   SPSOutputBuffer(char *Buffer, size_t Remaining)
       : Buffer(Buffer), Remaining(Remaining) {}
   bool write(const char *Data, size_t Size) {
+    assert(Data && "Data must not be null");
     if (Size > Remaining)
       return false;
     memcpy(Buffer, Data, Size);
@@ -349,6 +350,8 @@ public:
   static bool serialize(SPSOutputBuffer &OB, const ArrayRef<char> &A) {
     if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(A.size())))
       return false;
+    if (A.empty()) // Empty ArrayRef may have null data, so bail out early.
+      return true;
     return OB.write(A.data(), A.size());
   }
 
@@ -358,7 +361,7 @@ public:
       return false;
     if (Size > std::numeric_limits<size_t>::max())
       return false;
-    A = {IB.data(), static_cast<size_t>(Size)};
+    A = {Size ? IB.data() : nullptr, static_cast<size_t>(Size)};
     return IB.skip(Size);
   }
 };
@@ -476,6 +479,8 @@ public:
   static bool serialize(SPSOutputBuffer &OB, StringRef S) {
     if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(S.size())))
       return false;
+    if (S.empty()) // Empty StringRef may have null data, so bail out early.
+      return true;
     return OB.write(S.data(), S.size());
   }
 
@@ -487,7 +492,7 @@ public:
     Data = IB.data();
     if (!IB.skip(Size))
       return false;
-    S = StringRef(Data, Size);
+    S = StringRef(Size ? Data : nullptr, Size);
     return true;
   }
 };

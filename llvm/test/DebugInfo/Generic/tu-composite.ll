@@ -2,14 +2,14 @@
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 ; CHECK: [[TYPE:.*]]: DW_TAG_structure_type
 ; Make sure we correctly handle containing type of a struct being a type identifier.
-; CHECK-NEXT: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]})
+; CHECK-NEXT: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]} "C")
 ; CHECK-NEXT: DW_AT_name {{.*}}"C"
 
 ; Make sure we correctly handle context of a subprogram being a type identifier.
 ; CHECK: [[SP:.*]]: DW_TAG_subprogram
 ; CHECK: DW_AT_name {{.*}}"foo"
 ; Make sure we correctly handle containing type of a subprogram being a type identifier.
-; CHECK: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]})
+; CHECK: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]} "C")
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: NULL
 ; CHECK: NULL

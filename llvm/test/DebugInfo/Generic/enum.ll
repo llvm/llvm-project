@@ -39,8 +39,8 @@ source_filename = "test/DebugInfo/Generic/enum.ll"
 define void @_Z4funcv() #0 !dbg !17 {
 entry:
   %b = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !20, metadata !22), !dbg !23
-  store i32 0, i32* %b, align 4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !20, metadata !22), !dbg !23
+  store i32 0, ptr %b, align 4, !dbg !23
   ret void, !dbg !24
 }
 

@@ -1,6 +1,6 @@
 ; RUN: opt < %s -instcombine -always-inline -S | FileCheck %s
 
-define internal void @foo(i16*) alwaysinline {
+define internal void @foo(ptr) alwaysinline {
   ret void
 }
 
@@ -17,7 +17,7 @@ then:
 
 else:
   ; CHECK-NOT: call
-  call void bitcast (void (i16*)* @foo to void (i8*)*) (i8* null)
+  call void @foo (ptr null)
   ret void
 }
 

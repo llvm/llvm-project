@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu | FileCheck %s --check-prefixes=X64
 
-define i32 @extract3(i15*, i32) nounwind {
+define i32 @extract3(ptr, i32) nounwind {
 ; X86-LABEL: extract3:
 ; X86:       # %bb.0: # %_L1
 ; X86-NEXT:    pushl %ebx
@@ -67,7 +67,7 @@ define i32 @extract3(i15*, i32) nounwind {
 ; X64-NEXT:    andl $7, %eax
 ; X64-NEXT:    retq
 _L1:
-  %2 = load i15, i15* %0
+  %2 = load i15, ptr %0
   %3 = bitcast i15 %2 to <5 x i3>
   %4 = extractelement <5 x i3> %3, i32 %1
   %5 = zext i3 %4 to i32

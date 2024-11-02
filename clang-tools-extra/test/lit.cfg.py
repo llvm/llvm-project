@@ -51,7 +51,16 @@ run_clang_tidy = os.path.join(
 config.substitutions.append(
     ('%run_clang_tidy',
      '%s %s' % (python_exec, run_clang_tidy)) )
+clang_tidy_headers = os.path.join(
+    config.test_source_root, "clang-tidy", "checkers", "Inputs", "Headers")
+config.substitutions.append(
+    ("%clang_tidy_headers", clang_tidy_headers) )
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add('plugins')
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

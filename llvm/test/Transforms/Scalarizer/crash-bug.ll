@@ -22,7 +22,7 @@ bb3:
 }
 
 ; See https://reviews.llvm.org/D83101#2135945
-define void @f1_crash(<2 x i16> %base, i1 %c, <2 x i16>* %ptr) {
+define void @f1_crash(<2 x i16> %base, i1 %c, ptr %ptr) {
 ; CHECK-LABEL: @f1_crash(
 ; CHECK: vector.ph:
 ; CHECK:   %base.i0 = extractelement <2 x i16> %base, i32 0
@@ -31,7 +31,7 @@ define void @f1_crash(<2 x i16> %base, i1 %c, <2 x i16>* %ptr) {
 ; CHECK: vector.body115:                                   ; preds = %vector.body115, %vector.ph
 ; CHECK:   %vector.recur.i0 = phi i16 [ %base.i0, %vector.ph ], [ %wide.load125.i0, %vector.body115 ]
 ; CHECK:   %vector.recur.i1 = phi i16 [ %base.i1, %vector.ph ], [ %wide.load125.i1, %vector.body115 ]
-; CHECK:   %wide.load125 = load <2 x i16>, <2 x i16>* %ptr, align 1
+; CHECK:   %wide.load125 = load <2 x i16>, ptr %ptr, align 1
 ; CHECK:   %wide.load125.i0 = extractelement <2 x i16> %wide.load125, i32 0
 ; CHECK:   %wide.load125.i1 = extractelement <2 x i16> %wide.load125, i32 1
 ; CHECK:   br i1 %c, label %middle.block113, label %vector.body115
@@ -44,7 +44,7 @@ vector.ph:
 
 vector.body115:
   %vector.recur = phi <2 x i16> [ %base, %vector.ph ], [ %wide.load125, %vector.body115 ]
-  %wide.load125 = load <2 x i16>, <2 x i16>* %ptr, align 1
+  %wide.load125 = load <2 x i16>, ptr %ptr, align 1
   br i1 %c, label %middle.block113, label %vector.body115
 
 middle.block113:

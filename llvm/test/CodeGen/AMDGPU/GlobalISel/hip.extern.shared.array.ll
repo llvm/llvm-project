@@ -22,8 +22,6 @@ define amdgpu_kernel void @dynamic_shared_array_0(float addrspace(1)* %out) {
 }
 
 ; CHECK-LABEL: {{^}}dynamic_shared_array_1:
-; CHECK: v_lshlrev_b32_e32 {{v[0-9]+}}, 2, {{v[0-9]+}}
-; CHECK: v_lshlrev_b32_e32 {{v[0-9]+}}, 2, {{v[0-9]+}}
 ; CHECK: v_lshlrev_b32_e32 [[IDX:v[0-9]+]], 2, {{v[0-9]+}}
 ; CHECK: v_add_u32_e32 {{v[0-9]+}}, 0xc00, [[IDX]]
 define amdgpu_kernel void @dynamic_shared_array_1(float addrspace(1)* %out, i32 %cond) {

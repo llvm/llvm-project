@@ -22,7 +22,7 @@ define void @foo() {
 ; CHECK-NEXT:    retq
 BB:
   %A1 = alloca i1, align 1
-  %L1 = load i1, i1* %A1, align 1
+  %L1 = load i1, ptr %A1, align 1
   %Cmp = icmp ugt <4 x i64> zeroinitializer, zeroinitializer
   br label %BB0
 

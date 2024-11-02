@@ -80,12 +80,12 @@ define i64 @f6(i64 %a, i32 %b) {
 
 ; Loads can be done directly into the low half.  The range of L is checked
 ; in the move tests.
-define i64 @f7(i64 %a, i32 *%src) {
+define i64 @f7(i64 %a, ptr %src) {
 ; CHECK-LABEL: f7:
 ; CHECK-NOT: {{%r[23]}}
 ; CHECK: l %r2, 0(%r3)
 ; CHECK: br %r14
-  %b = load i32, i32 *%src
+  %b = load i32, ptr %src
   %low = zext i32 %b to i64
   %high = and i64 %a, -4294967296
   %res = or i64 %high, %low
@@ -93,12 +93,12 @@ define i64 @f7(i64 %a, i32 *%src) {
 }
 
 ; ...likewise extending loads.
-define i64 @f8(i64 %a, i8 *%src) {
+define i64 @f8(i64 %a, ptr %src) {
 ; CHECK-LABEL: f8:
 ; CHECK-NOT: {{%r[23]}}
 ; CHECK: lb %r2, 0(%r3)
 ; CHECK: br %r14
-  %byte = load i8, i8 *%src
+  %byte = load i8, ptr %src
   %b = sext i8 %byte to i32
   %low = zext i32 %b to i64
   %high = and i64 %a, -4294967296
@@ -180,12 +180,12 @@ define i64 @f14(i64 %a, i64 %b) {
 }
 
 ; Check another representation of f8.
-define i64 @f15(i64 %a, i8 *%src) {
+define i64 @f15(i64 %a, ptr %src) {
 ; CHECK-LABEL: f15:
 ; CHECK-NOT: {{%r[23]}}
 ; CHECK: lb %r2, 0(%r3)
 ; CHECK: br %r14
-  %byte = load i8, i8 *%src
+  %byte = load i8, ptr %src
   %b = sext i8 %byte to i64
   %low = and i64 %b, 4294967295
   %high = and i64 %a, -4294967296

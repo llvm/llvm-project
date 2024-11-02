@@ -51,9 +51,9 @@ define void @bork() nounwind {
 ; SLOW_64-NEXT:    movq $0, 8
 ; SLOW_64-NEXT:    movq $0, 0
 ; SLOW_64-NEXT:    retq
-  call void @llvm.memset.p0i8.i64(i8* align 4 null, i8 0, i64 80, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 4 null, i8 0, i64 80, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 

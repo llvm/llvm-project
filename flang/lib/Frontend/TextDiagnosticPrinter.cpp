@@ -46,7 +46,7 @@ void TextDiagnosticPrinter::HandleDiagnostic(
 
   // We only emit diagnostics in contexts that lack valid source locations.
   assert(!info.getLocation().isValid() &&
-      "Diagnostics with valid source location are not supported");
+         "Diagnostics with valid source location are not supported");
 
   Fortran::frontend::TextDiagnostic::printDiagnosticLevel(os, level,
                                                           diagOpts->ShowColors);
@@ -56,5 +56,4 @@ void TextDiagnosticPrinter::HandleDiagnostic(
       diagMessageStream.str(), diagOpts->ShowColors);
 
   os.flush();
-  return;
 }

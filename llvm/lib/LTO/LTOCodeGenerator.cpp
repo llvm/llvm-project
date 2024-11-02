@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/ParallelCG.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
@@ -50,6 +51,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -66,11 +68,7 @@
 using namespace llvm;
 
 const char* LTOCodeGenerator::getVersionString() {
-#ifdef LLVM_VERSION_INFO
-  return PACKAGE_NAME " version " PACKAGE_VERSION ", " LLVM_VERSION_INFO;
-#else
   return PACKAGE_NAME " version " PACKAGE_VERSION;
-#endif
 }
 
 namespace llvm {
@@ -117,6 +115,11 @@ cl::opt<std::string> LTOStatsFile(
     "lto-stats-file",
     cl::desc("Save statistics to the specified file"),
     cl::Hidden);
+
+cl::opt<std::string> AIXSystemAssemblerPath(
+    "lto-aix-system-assembler",
+    cl::desc("Absolute path to the system assembler, picked up on AIX only"),
+    cl::value_desc("path"));
 }
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -240,7 +243,61 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
   return true;
 }
 
+bool LTOCodeGenerator::useAIXSystemAssembler() {
+  const auto &Triple = TargetMach->getTargetTriple();
+  return Triple.isOSAIX();
+}
+
+bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
+  assert(useAIXSystemAssembler() &&
+         "Runing AIX system assembler when integrated assembler is available!");
+
+  // Set the system assembler path.
+  std::string AssemblerPath(llvm::AIXSystemAssemblerPath.empty()
+                                ? "/usr/bin/as"
+                                : llvm::AIXSystemAssemblerPath.c_str());
+
+  // Prepare inputs for the assember.
+  const auto &Triple = TargetMach->getTargetTriple();
+  const char *Arch = Triple.isArch64Bit() ? "-a64" : "-a32";
+  std::string ObjectFileName(AssemblyFile);
+  ObjectFileName[ObjectFileName.size() - 1] = 'o';
+  SmallVector<StringRef, 8> Args = {
+      "/bin/env",     "LDR_CNTRL=MAXDATA32=0x80000000@${LDR_CNTRL}",
+      AssemblerPath,  Arch,
+      "-many",        "-o",
+      ObjectFileName, AssemblyFile};
+
+  // Invoke the assembler.
+  int RC = sys::ExecuteAndWait(Args[0], Args);
+
+  // Handle errors.
+  if (RC < -1) {
+    emitError("LTO assembler exited abnormally");
+    return false;
+  }
+  if (RC < 0) {
+    emitError("Unable to invoke LTO assembler");
+    return false;
+  }
+  if (RC > 0) {
+    emitError("LTO assembler invocation returned non-zero");
+    return false;
+  }
+
+  // Cleanup.
+  remove(AssemblyFile.c_str());
+
+  // Fix the output file name.
+  AssemblyFile = ObjectFileName;
+
+  return true;
+}
+
 bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
+  if (useAIXSystemAssembler())
+    setFileType(CGFT_AssemblyFile);
+
   // make unique temp output file to put generated code
   SmallString<128> Filename;
 
@@ -270,6 +327,10 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
     PrintStatisticsJSON(StatsFile->os());
   else if (AreStatisticsEnabled())
     PrintStatistics();
+
+  if (useAIXSystemAssembler())
+    if (!runAIXSystemAssembler(Filename))
+      return false;
 
   NativeObjectPath = Filename.c_str();
   *Name = NativeObjectPath.c_str();
@@ -347,6 +408,11 @@ bool LTOCodeGenerator::determineTarget() {
              Triple.getArch() == llvm::Triple::aarch64_32)
       Config.CPU = "cyclone";
   }
+
+  // If data-sections is not explicitly set or unset, set data-sections by
+  // default to match the behaviour of lld and gold plugin.
+  if (!codegen::getExplicitDataSections())
+    Config.Options.DataSections = true;
 
   TargetMach = createTargetMachine();
   assert(TargetMach && "Unable to create target machine");
@@ -524,6 +590,8 @@ bool LTOCodeGenerator::optimize() {
   // linker option in the old LTO API, but this call allows it to be specified
   // via the internal option. Must be done before WPD invoked via the optimizer
   // pipeline run below.
+  updatePublicTypeTestCalls(*MergedModule,
+                            /* WholeProgramVisibilityEnabledInLTO */ false);
   updateVCallVisibilityInModule(*MergedModule,
                                 /* WholeProgramVisibilityEnabledInLTO */ false,
                                 // FIXME: This needs linker information via a
@@ -542,6 +610,16 @@ bool LTOCodeGenerator::optimize() {
 
   // Add an appropriate DataLayout instance for this module...
   MergedModule->setDataLayout(TargetMach->createDataLayout());
+
+  if (!SaveIRBeforeOptPath.empty()) {
+    std::error_code EC;
+    raw_fd_ostream OS(SaveIRBeforeOptPath, EC, sys::fs::OF_None);
+    if (EC)
+      report_fatal_error(Twine("Failed to open ") + SaveIRBeforeOptPath +
+                         " to save optimized bitcode\n");
+    WriteBitcodeToFile(*MergedModule, OS,
+                       /* ShouldPreserveUseListOrder */ true);
+  }
 
   ModuleSummaryIndex CombinedIndex(false);
   TargetMach = createTargetMachine();

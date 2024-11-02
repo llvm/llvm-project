@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LINUX,CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=WINDOWS,CHECK
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LINUX,CHECK
+// RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=WINDOWS,CHECK
 
 // LINUX: $foo.resolver = comdat any
 // LINUX: $foo_dupes.resolver = comdat any
@@ -13,19 +13,19 @@
 // WINDOWS: $foo_inline = comdat any
 // WINDOWS: $foo_inline2 = comdat any
 
-// LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
-// LINUX: @foo_dupes.ifunc = weak_odr ifunc void (), void ()* ()* @foo_dupes.resolver
-// LINUX: @unused.ifunc = weak_odr ifunc void (), void ()* ()* @unused.resolver
-// LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
-// LINUX: @foo_inline2.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline2.resolver
-// LINUX: @foo_used_no_defn.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_used_no_defn.resolver
+// LINUX: @foo.ifunc = weak_odr ifunc i32 (), ptr @foo.resolver
+// LINUX: @foo_dupes.ifunc = weak_odr ifunc void (), ptr @foo_dupes.resolver
+// LINUX: @unused.ifunc = weak_odr ifunc void (), ptr @unused.resolver
+// LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), ptr @foo_inline.resolver
+// LINUX: @foo_inline2.ifunc = weak_odr ifunc i32 (), ptr @foo_inline2.resolver
+// LINUX: @foo_used_no_defn.ifunc = weak_odr ifunc i32 (), ptr @foo_used_no_defn.resolver
 
 int __attribute__((target_clones("sse4.2, default"))) foo(void) { return 0; }
 // LINUX: define {{.*}}i32 @foo.sse4.2.0()
 // LINUX: define {{.*}}i32 @foo.default.1()
-// LINUX: define weak_odr i32 ()* @foo.resolver() comdat
-// LINUX: ret i32 ()* @foo.sse4.2.0
-// LINUX: ret i32 ()* @foo.default.1
+// LINUX: define weak_odr ptr @foo.resolver() comdat
+// LINUX: ret ptr @foo.sse4.2.0
+// LINUX: ret ptr @foo.default.1
 
 // WINDOWS: define dso_local i32 @foo.sse4.2.0()
 // WINDOWS: define dso_local i32 @foo.default.1()
@@ -36,9 +36,9 @@ int __attribute__((target_clones("sse4.2, default"))) foo(void) { return 0; }
 __attribute__((target_clones("default,default ,sse4.2"))) void foo_dupes(void) {}
 // LINUX: define {{.*}}void @foo_dupes.default.1()
 // LINUX: define {{.*}}void @foo_dupes.sse4.2.0()
-// LINUX: define weak_odr void ()* @foo_dupes.resolver() comdat
-// LINUX: ret void ()* @foo_dupes.sse4.2.0
-// LINUX: ret void ()* @foo_dupes.default.1
+// LINUX: define weak_odr ptr @foo_dupes.resolver() comdat
+// LINUX: ret ptr @foo_dupes.sse4.2.0
+// LINUX: ret ptr @foo_dupes.default.1
 
 // WINDOWS: define dso_local void @foo_dupes.default.1()
 // WINDOWS: define dso_local void @foo_dupes.sse4.2.0()
@@ -65,9 +65,9 @@ int bar(void) {
 void __attribute__((target_clones("default, arch=ivybridge"))) unused(void) {}
 // LINUX: define {{.*}}void @unused.default.1()
 // LINUX: define {{.*}}void @unused.arch_ivybridge.0()
-// LINUX: define weak_odr void ()* @unused.resolver() comdat
-// LINUX: ret void ()* @unused.arch_ivybridge.0
-// LINUX: ret void ()* @unused.default.1
+// LINUX: define weak_odr ptr @unused.resolver() comdat
+// LINUX: ret ptr @unused.arch_ivybridge.0
+// LINUX: ret ptr @unused.default.1
 
 // WINDOWS: define dso_local void @unused.default.1()
 // WINDOWS: define dso_local void @unused.arch_ivybridge.0()
@@ -91,10 +91,10 @@ int bar3(void) {
   // WINDOWS: call i32 @foo_inline2()
 }
 
-// LINUX: define weak_odr i32 ()* @foo_inline.resolver() comdat
-// LINUX: ret i32 ()* @foo_inline.arch_sandybridge.0
-// LINUX: ret i32 ()* @foo_inline.sse4.2.1
-// LINUX: ret i32 ()* @foo_inline.default.2
+// LINUX: define weak_odr ptr @foo_inline.resolver() comdat
+// LINUX: ret ptr @foo_inline.arch_sandybridge.0
+// LINUX: ret ptr @foo_inline.sse4.2.1
+// LINUX: ret ptr @foo_inline.default.2
 
 // WINDOWS: define weak_odr dso_local i32 @foo_inline() comdat
 // WINDOWS: musttail call i32 @foo_inline.arch_sandybridge.0
@@ -103,10 +103,10 @@ int bar3(void) {
 
 inline int __attribute__((target_clones("arch=sandybridge,default,sse4.2")))
 foo_inline2(void){ return 0; }
-// LINUX: define weak_odr i32 ()* @foo_inline2.resolver() comdat
-// LINUX: ret i32 ()* @foo_inline2.arch_sandybridge.0
-// LINUX: ret i32 ()* @foo_inline2.sse4.2.1
-// LINUX: ret i32 ()* @foo_inline2.default.2
+// LINUX: define weak_odr ptr @foo_inline2.resolver() comdat
+// LINUX: ret ptr @foo_inline2.arch_sandybridge.0
+// LINUX: ret ptr @foo_inline2.sse4.2.1
+// LINUX: ret ptr @foo_inline2.default.2
 
 // WINDOWS: define weak_odr dso_local i32 @foo_inline2() comdat
 // WINDOWS: musttail call i32 @foo_inline2.arch_sandybridge.0
@@ -129,9 +129,9 @@ int test_foo_used_no_defn(void) {
 }
 
 
-// LINUX: define weak_odr i32 ()* @foo_used_no_defn.resolver() comdat
-// LINUX: ret i32 ()* @foo_used_no_defn.sse4.2.0
-// LINUX: ret i32 ()* @foo_used_no_defn.default.1
+// LINUX: define weak_odr ptr @foo_used_no_defn.resolver() comdat
+// LINUX: ret ptr @foo_used_no_defn.sse4.2.0
+// LINUX: ret ptr @foo_used_no_defn.default.1
 
 // WINDOWS: define weak_odr dso_local i32 @foo_used_no_defn() comdat
 // WINDOWS: musttail call i32 @foo_used_no_defn.sse4.2.0

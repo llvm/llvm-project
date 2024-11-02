@@ -528,49 +528,7 @@ public:
   // arguments. For testing purposes only.
   static bool runForTesting(Module &M);
 };
-
-struct LowerTypeTests : public ModulePass {
-  static char ID;
-
-  bool UseCommandLine = false;
-
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
-  bool DropTypeTests;
-
-  LowerTypeTests() : ModulePass(ID), UseCommandLine(true) {
-    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
-  }
-
-  LowerTypeTests(ModuleSummaryIndex *ExportSummary,
-                 const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
-      : ModulePass(ID), ExportSummary(ExportSummary),
-        ImportSummary(ImportSummary),
-        DropTypeTests(DropTypeTests || ClDropTypeTests) {
-    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (UseCommandLine)
-      return LowerTypeTestsModule::runForTesting(M);
-    return LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
-        .lower();
-  }
-};
-
 } // end anonymous namespace
-
-char LowerTypeTests::ID = 0;
-
-INITIALIZE_PASS(LowerTypeTests, "lowertypetests", "Lower type metadata", false,
-                false)
-
-ModulePass *
-llvm::createLowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                               const ModuleSummaryIndex *ImportSummary,
-                               bool DropTypeTests) {
-  return new LowerTypeTests(ExportSummary, ImportSummary, DropTypeTests);
-}
 
 /// Build a bit set for TypeId using the object layouts in
 /// GlobalLayout.
@@ -581,7 +539,7 @@ BitSetInfo LowerTypeTestsModule::buildBitSet(
 
   // Compute the byte offset of each address associated with this type
   // identifier.
-  for (auto &GlobalAndOffset : GlobalLayout) {
+  for (const auto &GlobalAndOffset : GlobalLayout) {
     for (MDNode *Type : GlobalAndOffset.first->types()) {
       if (Type->getOperand(1) != TypeId)
         continue;
@@ -1342,7 +1300,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // (all?) targets. Switch to a runtime initializer.
   SmallSetVector<GlobalVariable *, 8> GlobalVarUsers;
   findGlobalVariableUsersOf(F, GlobalVarUsers);
-  for (auto GV : GlobalVarUsers)
+  for (auto *GV : GlobalVarUsers)
     moveInitializerToModuleConstructor(GV);
 
   // Can not RAUW F with an expression that uses F. Replace with a temporary
@@ -1411,9 +1369,9 @@ void LowerTypeTestsModule::createJumpTable(
 
   Triple::ArchType JumpTableArch = selectJumpTableArmEncoding(Functions, Arch);
 
-  for (unsigned I = 0; I != Functions.size(); ++I)
+  for (GlobalTypeMember *GTM : Functions)
     createJumpTableEntry(AsmOS, ConstraintOS, JumpTableArch, AsmArgs,
-                         cast<Function>(Functions[I]->getGlobal()));
+                         cast<Function>(GTM->getGlobal()));
 
   // Align the whole table by entry size.
   F->setAlignment(Align(getJumpTableEntrySize()));
@@ -1820,35 +1778,48 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
+static void dropTypeTests(Module &M, Function &TypeTestFunc) {
+  for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
+    auto *CI = cast<CallInst>(U.getUser());
+    // Find and erase llvm.assume intrinsics for this llvm.type.test call.
+    for (Use &CIU : llvm::make_early_inc_range(CI->uses()))
+      if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
+        Assume->eraseFromParent();
+    // If the assume was merged with another assume, we might have a use on a
+    // phi (which will feed the assume). Simply replace the use on the phi
+    // with "true" and leave the merged assume.
+    if (!CI->use_empty()) {
+      assert(
+          all_of(CI->users(), [](User *U) -> bool { return isa<PHINode>(U); }));
+      CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
+    }
+    CI->eraseFromParent();
+  }
+}
+
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
 
-  if (DropTypeTests && TypeTestFunc) {
-    for (Use &U : llvm::make_early_inc_range(TypeTestFunc->uses())) {
-      auto *CI = cast<CallInst>(U.getUser());
-      // Find and erase llvm.assume intrinsics for this llvm.type.test call.
-      for (Use &CIU : llvm::make_early_inc_range(CI->uses()))
-        if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
-          Assume->eraseFromParent();
-      // If the assume was merged with another assume, we might have a use on a
-      // phi (which will feed the assume). Simply replace the use on the phi
-      // with "true" and leave the merged assume.
-      if (!CI->use_empty()) {
-        assert(all_of(CI->users(),
-                      [](User *U) -> bool { return isa<PHINode>(U); }));
-        CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
-      }
-      CI->eraseFromParent();
+  if (DropTypeTests) {
+    if (TypeTestFunc)
+      dropTypeTests(M, *TypeTestFunc);
+    // Normally we'd have already removed all @llvm.public.type.test calls,
+    // except for in the case where we originally were performing ThinLTO but
+    // decided not to in the backend.
+    Function *PublicTypeTestFunc =
+        M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+    if (PublicTypeTestFunc)
+      dropTypeTests(M, *PublicTypeTestFunc);
+    if (TypeTestFunc || PublicTypeTestFunc) {
+      // We have deleted the type intrinsics, so we no longer have enough
+      // information to reason about the liveness of virtual function pointers
+      // in GlobalDCE.
+      for (GlobalVariable &GV : M.globals())
+        GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+      return true;
     }
-
-    // We have deleted the type intrinsics, so we no longer have enough
-    // information to reason about the liveness of virtual function pointers
-    // in GlobalDCE.
-    for (GlobalVariable &GV : M.globals())
-      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-
-    return true;
+    return false;
   }
 
   // If only some of the modules were split, we cannot correctly perform
@@ -1892,9 +1863,9 @@ bool LowerTypeTestsModule::lower() {
     std::vector<GlobalAlias *> AliasesToErase;
     {
       ScopedSaveAliaseesAndUsed S(M);
-      for (auto F : Defs)
+      for (auto *F : Defs)
         importFunction(F, /*isJumpTableCanonical*/ true, AliasesToErase);
-      for (auto F : Decls)
+      for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false, AliasesToErase);
     }
     for (GlobalAlias *GA : AliasesToErase)
@@ -1941,12 +1912,12 @@ bool LowerTypeTestsModule::lower() {
     for (auto &I : *ExportSummary)
       for (auto &GVS : I.second.SummaryList)
         if (GVS->isLive())
-          for (auto &Ref : GVS->refs())
+          for (const auto &Ref : GVS->refs())
             AddressTaken.insert(Ref.getGUID());
 
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
-      for (auto FuncMD : CfiFunctionsMD->operands()) {
+      for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
             cast<MDString>(FuncMD->getOperand(0))->getString();
@@ -1967,7 +1938,7 @@ bool LowerTypeTestsModule::lower() {
 
           bool Exported = false;
           if (auto VI = ExportSummary->getValueInfo(GUID))
-            for (auto &GVS : VI.getSummaryList())
+            for (const auto &GVS : VI.getSummaryList())
               if (GVS->isLive() && !GlobalValue::isLocalLinkage(GVS->linkage()))
                 Exported = true;
 
@@ -2200,11 +2171,7 @@ bool LowerTypeTestsModule::lower() {
     }
     Sets.emplace_back(I, MaxUniqueId);
   }
-  llvm::sort(Sets,
-             [](const std::pair<GlobalClassesTy::iterator, unsigned> &S1,
-                const std::pair<GlobalClassesTy::iterator, unsigned> &S2) {
-               return S1.second < S2.second;
-             });
+  llvm::sort(Sets, llvm::less_second());
 
   // For each disjoint set we found...
   for (const auto &S : Sets) {
@@ -2245,7 +2212,7 @@ bool LowerTypeTestsModule::lower() {
   // with an alias to the intended target.
   if (ExportSummary) {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
-      for (auto AliasMD : AliasesMD->operands()) {
+      for (auto *AliasMD : AliasesMD->operands()) {
         assert(AliasMD->getNumOperands() >= 4);
         StringRef AliasName =
             cast<MDString>(AliasMD->getOperand(0))->getString();
@@ -2287,7 +2254,7 @@ bool LowerTypeTestsModule::lower() {
   // Emit .symver directives for exported functions, if they exist.
   if (ExportSummary) {
     if (NamedMDNode *SymversMD = M.getNamedMetadata("symvers")) {
-      for (auto Symver : SymversMD->operands()) {
+      for (auto *Symver : SymversMD->operands()) {
         assert(Symver->getNumOperands() >= 2);
         StringRef SymbolName =
             cast<MDString>(Symver->getOperand(0))->getString();

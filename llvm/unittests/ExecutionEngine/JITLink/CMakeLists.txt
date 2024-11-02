@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(JITLinkTests
+    EHFrameSupportTests.cpp
     LinkGraphTests.cpp
   )
 

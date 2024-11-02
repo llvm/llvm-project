@@ -80,7 +80,7 @@ namespace print_dependent_TemplateSpecializationType {
 template <class T, class U> struct Foo {
   template <unsigned long, class X, class Y> struct Bar;
   template <class Y> struct Bar<0, T, Y> {};
-  // expected-note-re@-1 {{previous declaration {{.*}} 'Bar<0UL, int, type-parameter-0-0>' is here}}
+  // expected-note-re@-1 {{previous declaration {{.*}} 'Bar<0, int, type-parameter-0-0>' is here}}
   template <class Y> struct Bar<0, U, Y> {};
   // expected-error@-1 {{partial specialization 'Bar<0, int, Y>' cannot be redeclared}}
 };

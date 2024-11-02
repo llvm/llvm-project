@@ -10,7 +10,7 @@
 # RUN:         . = 0x30000; .data                : { *(.data) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld %t1.o %t2.o -script %t.script -o %t.exe
-# RUN: llvm-objdump --mcpu=mips32r6 -d -t -s --no-show-raw-insn %t.exe \
+# RUN: llvm-objdump --no-print-imm-hex --mcpu=mips32r6 -d -t -s --no-show-raw-insn %t.exe \
 # RUN:   | FileCheck %s
 
   .text

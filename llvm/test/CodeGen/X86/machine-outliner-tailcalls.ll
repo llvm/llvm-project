@@ -7,7 +7,7 @@ define i32 @foo0(i32) local_unnamed_addr #0 {
 ; CHECK: jmp
 ; CHECK-SAME: OUTLINED_FUNCTION_0
 ; CHECK-NEXT: .cfi_endproc
-  store i32 0, i32* @x, align 4, !tbaa !2
+  store i32 0, ptr @x, align 4, !tbaa !2
   %2 = tail call i32 @ext(i32 1) #2
   ret i32 undef
 }
@@ -19,7 +19,7 @@ define i32 @foo1(i32) local_unnamed_addr #0 {
 ; CHECK: jmp
 ; CHECK-SAME: OUTLINED_FUNCTION_0
 ; CHECK-NEXT: .cfi_endproc
-  store i32 0, i32* @x, align 4, !tbaa !2
+  store i32 0, ptr @x, align 4, !tbaa !2
   %2 = tail call i32 @ext(i32 1) #2
   ret i32 undef
 }

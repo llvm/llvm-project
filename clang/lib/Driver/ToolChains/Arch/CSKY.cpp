@@ -99,7 +99,7 @@ getCSKYFPUFeatures(const Driver &D, const Arg *A, const ArgList &Args,
   auto RemoveTargetFPUFeature =
       [&Features](ArrayRef<const char *> FPUFeatures) {
         for (auto FPUFeature : FPUFeatures) {
-          auto it = std::find(Features.begin(), Features.end(), FPUFeature);
+          auto it = llvm::find(Features, FPUFeature);
           if (it != Features.end())
             Features.erase(it);
         }

@@ -15,9 +15,10 @@ body: |
     liveins: $vgpr0
     ; GCN-LABEL: name: readfirstlane_v
     ; GCN: liveins: $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
-    ; GCN: S_ENDPGM 0, implicit [[V_READFIRSTLANE_B32_]]
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_READFIRSTLANE_B32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1
@@ -34,9 +35,9 @@ body: |
 
     ; GCN-LABEL: name: readfirstlane_v_imm
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY [[V_MOV_B32_e32_]]
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 [[COPY]]
-    ; GCN: S_ENDPGM 0, implicit [[S_MOV_B32_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[V_MOV_B32_e32_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 [[COPY]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:vgpr(s32) = G_CONSTANT i32 123
     %1:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1
@@ -54,9 +55,10 @@ body: |
     liveins: $sgpr0
     ; GCN-LABEL: name: readfirstlane_s
     ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GCN: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
-    ; GCN: S_ENDPGM 0, implicit [[INT]](s32)
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GCN-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[INT]](s32)
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1

@@ -14,12 +14,12 @@ define void @foo() {
 ; CHECK-NEXT:    movq %rax, b(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i64, i64* @a, align 8
-  %1 = load i64, i64* @c, align 8
+  %0 = load i64, ptr @a, align 8
+  %1 = load i64, ptr @c, align 8
   %and = and i64 %1, -16384
   %add = add nsw i64 %and, 4503359447364223024
   %shr = lshr i64 %0, %add
   %conv1 = and i64 %shr, 4294967295
-  store i64 %conv1, i64* @b, align 8
+  store i64 %conv1, ptr @b, align 8
   ret void
 }

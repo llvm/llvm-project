@@ -91,6 +91,16 @@ class LDSDIR_Real<bits<2> op, LDSDIR_Pseudo lds, int subtarget> :
 def LDS_DIRECT_LOAD : LDSDIR_Pseudo<"lds_direct_load", 1>;
 def LDS_PARAM_LOAD : LDSDIR_Pseudo<"lds_param_load", 0>;
 
+def : GCNPat <
+  (f32 (int_amdgcn_lds_direct_load M0)),
+  (LDS_DIRECT_LOAD 0)
+>;
+
+def : GCNPat <
+  (f32 (int_amdgcn_lds_param_load timm:$attrchan, timm:$attr, M0)),
+  (LDS_PARAM_LOAD timm:$attr, timm:$attrchan, 0)
+>;
+
 //===----------------------------------------------------------------------===//
 // GFX11+
 //===----------------------------------------------------------------------===//

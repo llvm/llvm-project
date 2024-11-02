@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; This loop has backedge-taken-count zero. Indvars shouldn't expand any
 ; instructions to compute a trip count.

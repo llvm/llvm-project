@@ -5,7 +5,7 @@ REQUIRES: x86_64-linux
 
 RUN: %clangxx %S/Inputs/retpoline_synthetic.cpp -fno-jump-tables -Wl,-q,-znow \
 RUN:   -O2 -o %t.exe
-RUN: llvm-bolt %t.exe -o %t -insert-retpolines -trap-old-code
+RUN: llvm-bolt %t.exe -o %t --insert-retpolines --trap-old-code
 
 # Check indirect calls in the original binary
 RUN: llvm-objdump -d %t.exe | FileCheck %s -check-prefix=CHECK-CALL-ORIG

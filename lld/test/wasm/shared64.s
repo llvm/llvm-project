@@ -216,7 +216,6 @@ get_local_func_address:
 
 # DIS:      <__wasm_call_ctors>:
 # DIS-EMPTY:
-# DIS-NEXT:                 call    1
 # DIS-NEXT:                 end
 
 # DIS:      <__wasm_apply_data_relocs>:

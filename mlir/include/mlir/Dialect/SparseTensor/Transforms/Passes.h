@@ -11,8 +11,6 @@
 // In general, this file takes the approach of keeping "mechanism" (the
 // actual steps of applying a transformation) completely separate from
 // "policy" (heuristics for when and where to apply transformations).
-// The only exception is in `SparseToSparseConversionStrategy`; for which,
-// see further discussion there.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,11 +19,12 @@
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-
-// Forward.
-class TypeConverter;
+namespace bufferization {
+struct OneShotBufferizationOptions;
+} // namespace bufferization
 
 //===----------------------------------------------------------------------===//
 // The Sparsification pass.
@@ -45,38 +44,16 @@ enum class SparseParallelizationStrategy {
   // TODO: support reduction parallelization too?
 };
 
-/// Converts command-line parallelization flag to the strategy enum.
-SparseParallelizationStrategy sparseParallelizationStrategy(int32_t flag);
-
-/// Defines a vectorization strategy. Any inner loop is a candidate (full SIMD
-/// for parallel loops and horizontal SIMD for reduction loops). A loop is
-/// actually vectorized if (1) allowed by the strategy, and (2) the emitted
-/// code is an actual for-loop (and not a co-iterating while-loop).
-enum class SparseVectorizationStrategy {
-  kNone,
-  kDenseInnerLoop,
-  kAnyStorageInnerLoop
-};
-
-/// Converts command-line vectorization flag to the strategy enum.
-SparseVectorizationStrategy sparseVectorizationStrategy(int32_t flag);
+#define GEN_PASS_DECL
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p,
-                        SparseVectorizationStrategy v, unsigned vl, bool e,
-                        bool vla)
-      : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
-        enableSIMDIndex32(e), enableVLAVectorization(vla) {}
+  SparsificationOptions(SparseParallelizationStrategy p)
+      : parallelizationStrategy(p) {}
   SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              SparseVectorizationStrategy::kNone, 1u, false,
-                              false) {}
+      : SparsificationOptions(SparseParallelizationStrategy::kNone) {}
   SparseParallelizationStrategy parallelizationStrategy;
-  SparseVectorizationStrategy vectorizationStrategy;
-  unsigned vectorLength;
-  bool enableSIMDIndex32;
-  bool enableVLAVectorization;
 };
 
 /// Sets up sparsification rewriting rules with the given options.
@@ -91,6 +68,12 @@ createSparsificationPass(const SparsificationOptions &options);
 //===----------------------------------------------------------------------===//
 // The SparseTensorConversion pass.
 //===----------------------------------------------------------------------===//
+
+/// Sparse tensor type converter into an opaque pointer.
+class SparseTensorTypeToPtrConverter : public TypeConverter {
+public:
+  SparseTensorTypeToPtrConverter();
+};
 
 /// Defines a strategy for implementing sparse-to-sparse conversion.
 /// `kAuto` leaves it up to the compiler to automatically determine
@@ -134,6 +117,48 @@ void populateSparseTensorConversionPatterns(
 std::unique_ptr<Pass> createSparseTensorConversionPass();
 std::unique_ptr<Pass>
 createSparseTensorConversionPass(const SparseTensorConversionOptions &options);
+
+//===----------------------------------------------------------------------===//
+// The SparseTensorCodegen pass.
+//===----------------------------------------------------------------------===//
+
+/// Sparse tensor type converter into an actual buffer.
+class SparseTensorTypeToBufferConverter : public TypeConverter {
+public:
+  SparseTensorTypeToBufferConverter();
+};
+
+/// Sets up sparse tensor conversion rules.
+void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
+                                         RewritePatternSet &patterns,
+                                         bool enableBufferInitialization);
+
+std::unique_ptr<Pass>
+createSparseTensorCodegenPass(bool enableBufferInitialization = false);
+
+//===----------------------------------------------------------------------===//
+// The SparseTensorRewriting pass.
+//===----------------------------------------------------------------------===//
+
+void populateSparseTensorRewriting(RewritePatternSet &patterns, bool enableRT,
+                                   bool enableForeach, bool enableConvert);
+
+std::unique_ptr<Pass> createSparseTensorRewritePass();
+std::unique_ptr<Pass> createSparseTensorRewritePass(bool enableRT,
+                                                    bool enableForeach = true,
+                                                    bool enableConvert = true);
+
+//===----------------------------------------------------------------------===//
+// Other rewriting rules and passes.
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> createDenseBufferizationPass(
+    const bufferization::OneShotBufferizationOptions &options);
+
+void populateSparseBufferRewriting(RewritePatternSet &patterns,
+                                   bool enableBufferInitialization);
+std::unique_ptr<Pass>
+createSparseBufferRewritePass(bool enableBufferInitialization = false);
 
 //===----------------------------------------------------------------------===//
 // Registration.

@@ -26,6 +26,8 @@ TokenStream lex(const std::string &Code, const clang::LangOptions &LangOpts) {
 
   TokenStream Result;
   clang::Token CT;
+  // Index into the token stream of original source code.
+  Token::Index TokenIndex = 0;
   unsigned LastOffset = 0;
   unsigned Line = 0;
   unsigned Indent = 0;
@@ -66,6 +68,7 @@ TokenStream lex(const std::string &Code, const clang::LangOptions &LangOpts) {
     if (CT.needsCleaning() || CT.hasUCN())
       Tok.setFlag(LexFlags::NeedsCleaning);
 
+    Tok.OriginalIndex = TokenIndex++;
     Result.push(Tok);
     LastOffset = Offset;
   }
@@ -77,7 +80,7 @@ TokenStream cook(const TokenStream &Code, const LangOptions &LangOpts) {
   auto CleanedStorage = std::make_shared<llvm::BumpPtrAllocator>();
   clang::IdentifierTable Identifiers(LangOpts);
   TokenStream Result(CleanedStorage);
-
+  Result.addPayload(Code.getPayload());
   for (auto Tok : Code.tokens()) {
     if (Tok.flag(LexFlags::NeedsCleaning)) {
       // Remove escaped newlines and trigraphs.

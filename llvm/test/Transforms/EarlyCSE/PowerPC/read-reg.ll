@@ -1,5 +1,5 @@
-; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
-; RUN: opt -S -basic-aa -early-cse-memssa < %s | FileCheck %s
+; RUN: opt -S -passes=early-cse -earlycse-debug-hash < %s | FileCheck %s
+; RUN: opt -S -passes='early-cse<memssa>' < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -7,7 +7,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 define i64 @f(i64 %x) #0 {
 entry:
   %0 = call i64 @llvm.read_register.i64(metadata !0)
-  call void bitcast (void (...)* @foo to void ()*)()
+  call void @foo()
   %1 = call i64 @llvm.read_register.i64(metadata !0)
   %add = add nsw i64 %0, %1
   ret i64 %add

@@ -44,7 +44,7 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemmove(
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Val,
-    SDValue Size, Align Alignment, bool IsVolatile,
+    SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo) const {
   auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
   if (!ST.hasBulkMemory())

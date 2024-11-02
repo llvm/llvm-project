@@ -81,41 +81,10 @@ bool llvm::nameUnamedGlobals(Module &M) {
   return Changed;
 }
 
-namespace {
-
-// Legacy pass that provides a name to every anon globals.
-class NameAnonGlobalLegacyPass : public ModulePass {
-
-public:
-  /// Pass identification, replacement for typeid
-  static char ID;
-
-  /// Specify pass name for debug output
-  StringRef getPassName() const override { return "Name Anon Globals"; }
-
-  explicit NameAnonGlobalLegacyPass() : ModulePass(ID) {}
-
-  bool runOnModule(Module &M) override { return nameUnamedGlobals(M); }
-};
-char NameAnonGlobalLegacyPass::ID = 0;
-
-} // anonymous namespace
-
 PreservedAnalyses NameAnonGlobalPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
   if (!nameUnamedGlobals(M))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
-}
-
-INITIALIZE_PASS_BEGIN(NameAnonGlobalLegacyPass, "name-anon-globals",
-                      "Provide a name to nameless globals", false, false)
-INITIALIZE_PASS_END(NameAnonGlobalLegacyPass, "name-anon-globals",
-                    "Provide a name to nameless globals", false, false)
-
-namespace llvm {
-ModulePass *createNameAnonGlobalPass() {
-  return new NameAnonGlobalLegacyPass();
-}
 }

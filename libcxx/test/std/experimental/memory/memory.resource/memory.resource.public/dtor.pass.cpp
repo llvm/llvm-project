@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
 // <experimental/memory_resource>
 
 //------------------------------------------------------------------------------
@@ -17,6 +20,8 @@
 //  A) 'memory_resource' is destructible.
 //  B) The destructor is implicitly marked noexcept.
 //  C) The destructor is marked virtual.
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

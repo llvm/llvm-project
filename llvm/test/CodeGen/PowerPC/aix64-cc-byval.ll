@@ -8,10 +8,10 @@
 
 %struct.S5 = type { [5 x i8] }
 
-define zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1 %s) {
+define zeroext i8 @test_byval_5Byte(ptr byval(%struct.S5) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S5, %struct.S5* %s, i32 0, i32 0, i32 4
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S5, ptr %s, i32 0, i32 0, i32 4
+  %0 = load i8, ptr %arrayidx, align 1
   ret i8 %0
 }
 
@@ -33,10 +33,10 @@ entry:
 
 %struct.S6 = type { [6 x i8] }
 
-define zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1 %s) {
+define zeroext i8 @test_byval_6Byte(ptr byval(%struct.S6) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S6, %struct.S6* %s, i32 0, i32 0, i32 5
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S6, ptr %s, i32 0, i32 0, i32 5
+  %0 = load i8, ptr %arrayidx, align 1
   ret i8 %0
 }
 
@@ -58,10 +58,10 @@ entry:
 
 %struct.S7 = type { [7 x i8] }
 
-define zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1 %s) {
+define zeroext i8 @test_byval_7Byte(ptr byval(%struct.S7) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S7, %struct.S7* %s, i32 0, i32 0, i32 6
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S7, ptr %s, i32 0, i32 0, i32 6
+  %0 = load i8, ptr %arrayidx, align 1
   ret i8 %0
 }
 
@@ -83,10 +83,10 @@ entry:
 
 %struct.S8 = type { [8 x i8] }
 
-define zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1 %s) {
+define zeroext i8 @test_byval_8Byte(ptr byval(%struct.S8) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S8, %struct.S8* %s, i32 0, i32 0, i32 7
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S8, ptr %s, i32 0, i32 0, i32 7
+  %0 = load i8, ptr %arrayidx, align 1
   ret i8 %0
 }
 
@@ -115,11 +115,11 @@ entry:
 
 define void @call_test_byval_64Byte() {
 entry:
-  call void @test_byval_64Byte(%struct.S64* byval(%struct.S64) align 1 @gS64)
+  call void @test_byval_64Byte(ptr byval(%struct.S64) align 1 @gS64)
   ret void
 }
 
-declare void @test_byval_64Byte(%struct.S64* byval(%struct.S64) align 1)
+declare void @test_byval_64Byte(ptr byval(%struct.S64) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_64Byte{{.*}}
 

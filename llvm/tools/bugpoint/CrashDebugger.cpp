@@ -791,7 +791,7 @@ bool ReduceCrashingInstructions::TestInsts(
             !Inst.isEHPad() && !Inst.getType()->isTokenTy() &&
             !Inst.isSwiftError()) {
           if (!Inst.getType()->isVoidTy())
-            Inst.replaceAllUsesWith(UndefValue::get(Inst.getType()));
+            Inst.replaceAllUsesWith(PoisonValue::get(Inst.getType()));
           Inst.eraseFromParent();
         }
       }
@@ -1338,7 +1338,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       // contribute to the crash, bisect the operands of the remaining ones
       std::vector<const MDNode *> NamedMDOps;
       for (auto &NamedMD : BD.getProgram().named_metadata())
-        for (auto op : NamedMD.operands())
+        for (auto *op : NamedMD.operands())
           NamedMDOps.push_back(op);
       Expected<bool> Result =
           ReduceCrashingNamedMDOps(BD, TestFn).reduceList(NamedMDOps);

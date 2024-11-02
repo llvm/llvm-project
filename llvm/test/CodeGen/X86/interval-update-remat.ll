@@ -19,10 +19,10 @@ target triple = "i386-unknown-linux-gnu"
 
 define void @fn1() {
 entry:
-  %tmp = load i64, i64* @b, align 8
+  %tmp = load i64, ptr @b, align 8
   %or = or i64 0, 3299921317
   %and = and i64 %or, %tmp
-  %tmp1 = load i32, i32* @d, align 4
+  %tmp1 = load i32, ptr @d, align 4
   br i1 undef, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %entry
@@ -31,7 +31,7 @@ lor.rhs:                                          ; preds = %entry
 
 lor.end:                                          ; preds = %lor.rhs, %entry
   %lor.ext = zext i1 undef to i32
-  %tmp2 = load i64, i64* @e, align 8
+  %tmp2 = load i64, ptr @e, align 8
   br i1 undef, label %lor.rhs5, label %lor.end7
 
 lor.rhs5:                                         ; preds = %lor.end
@@ -42,7 +42,7 @@ lor.end7:                                         ; preds = %lor.rhs5, %lor.end
   %neg13 = xor i64 %tmp, -1
   %conv25 = zext i1 %tmp3 to i32
   %tobool46 = icmp eq i64 %tmp, 0
-  %.pre = load i16, i16* @h, align 2
+  %.pre = load i16, ptr @h, align 2
   %tobool10 = icmp eq i16 %.pre, 0
   %neg.us = xor i32 %tmp1, -1
   %conv12.us = sext i32 %neg.us to i64
@@ -52,7 +52,7 @@ lor.end7:                                         ; preds = %lor.rhs5, %lor.end
 
 LABEL_mSmSDb.loopexit:                            ; preds = %lor.end32.us
   %conv42.us.lcssa = phi i32 [ %conv42.us, %lor.end32.us ]
-  store i64 undef, i64* @g, align 8
+  store i64 undef, ptr @g, align 8
   br label %LABEL_mSmSDb
 
 LABEL_mSmSDb:                                     ; preds = %LABEL_mSmSDb.loopexit, %lor.end7
@@ -61,11 +61,11 @@ LABEL_mSmSDb:                                     ; preds = %LABEL_mSmSDb.loopex
   br i1 %tobool10, label %LABEL_BRBRN.preheader, label %if.then
 
 if.then:                                          ; preds = %LABEL_mSmSDb
-  store i8 undef, i8* @a, align 1
+  store i8 undef, ptr @a, align 1
   br label %LABEL_BRBRN.preheader
 
 LABEL_BRBRN.preheader:                            ; preds = %if.then, %LABEL_mSmSDb
-  %.pre63 = load i64, i64* @g, align 8
+  %.pre63 = load i64, ptr @g, align 8
   br i1 %tobool46, label %LABEL_BRBRN.us, label %LABEL_BRBRN.outer
 
 LABEL_BRBRN.outer:                                ; preds = %if.then47, %LABEL_BRBRN.preheader
@@ -77,7 +77,7 @@ LABEL_BRBRN.outer:                                ; preds = %if.then47, %LABEL_B
   %neg = xor i32 %.ph64, -1
   %conv12 = sext i32 %neg to i64
   %tobool23 = icmp eq i64 %.ph66, %and
-  %tmp6 = load i32, i32* @j, align 4
+  %tmp6 = load i32, ptr @j, align 4
   %shr = lshr i32 %conv25, %tmp6
   %conv39 = sext i32 %.ph64 to i64
   br label %LABEL_BRBRN
@@ -125,7 +125,7 @@ LABEL_BRBRN:                                      ; preds = %lor.end32, %LABEL_B
   br i1 %tobool23, label %lor.rhs24, label %lor.end32
 
 lor.rhs24:                                        ; preds = %LABEL_BRBRN
-  %tmp14 = load volatile i16, i16* @f, align 2
+  %tmp14 = load volatile i16, ptr @f, align 2
   %conv26 = sext i16 %tmp14 to i32
   %and27 = and i32 %conv26, %shr
   %conv28 = sext i32 %and27 to i64
@@ -150,12 +150,12 @@ lor.end32:                                        ; preds = %lor.rhs24, %LABEL_B
   br i1 %tobool43, label %if.then47, label %LABEL_BRBRN
 
 if.then47:                                        ; preds = %lor.end32
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i64 %conv39)
-  %tmp16 = load i64, i64* @g, align 8
+  tail call void (ptr, ...) @printf(ptr @.str, i64 %conv39)
+  %tmp16 = load i64, ptr @g, align 8
   %neg49 = xor i64 %tmp16, 4294967295
   %conv50 = trunc i64 %neg49 to i32
-  %.pre56.pre = load i64, i64* @b, align 8
+  %.pre56.pre = load i64, ptr @b, align 8
   br label %LABEL_BRBRN.outer
 }
 
-declare void @printf(i8* nocapture readonly, ...)
+declare void @printf(ptr nocapture readonly, ...)

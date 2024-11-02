@@ -27,6 +27,7 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   State.MRI = &MF.getRegInfo();
   State.TII = MF.getSubtarget().getInstrInfo();
   State.DL = DebugLoc();
+  State.PCSections = nullptr;
   State.II = MachineBasicBlock::iterator();
   State.Observer = nullptr;
 }
@@ -36,8 +37,7 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
 //------------------------------------------------------------------------------
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
-  MachineInstrBuilder MIB = BuildMI(getMF(), getDL(), getTII().get(Opcode));
-  return MIB;
+  return BuildMI(getMF(), {getDL(), getPCSections()}, getTII().get(Opcode));
 }
 
 MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
@@ -96,13 +96,23 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
   auto MIB = buildInstrNoInsert(TargetOpcode::DBG_VALUE);
-  if (auto *CI = dyn_cast<ConstantInt>(&C)) {
+
+  auto *NumericConstant = [&] () -> const Constant* {
+    if (const auto *CE = dyn_cast<ConstantExpr>(&C))
+      if (CE->getOpcode() == Instruction::IntToPtr)
+        return CE->getOperand(0);
+    return &C;
+  }();
+
+  if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
     else
       MIB.addImm(CI->getZExtValue());
-  } else if (auto *CFP = dyn_cast<ConstantFP>(&C)) {
+  } else if (auto *CFP = dyn_cast<ConstantFP>(NumericConstant)) {
     MIB.addFPImm(CFP);
+  } else if (isa<ConstantPointerNull>(NumericConstant)) {
+    MIB.addImm(0);
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(Register());
@@ -473,6 +483,23 @@ MachineInstrBuilder MachineIRBuilder::buildBoolExt(const DstOp &Res,
   return buildInstr(ExtOp, Res, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildBoolExtInReg(const DstOp &Res,
+                                                        const SrcOp &Op,
+                                                        bool IsVector,
+                                                        bool IsFP) {
+  const auto *TLI = getMF().getSubtarget().getTargetLowering();
+  switch (TLI->getBooleanContents(IsVector, IsFP)) {
+  case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+    return buildSExtInReg(Res, Op, 1);
+  case TargetLoweringBase::ZeroOrOneBooleanContent:
+    return buildZExtInReg(Res, Op, 1);
+  case TargetLoweringBase::UndefinedBooleanContent:
+    return buildCopy(Res, Op);
+  }
+
+  llvm_unreachable("unexpected BooleanContent");
+}
+
 MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
                                                       const DstOp &Res,
                                                       const SrcOp &Op) {
@@ -566,47 +593,6 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(const DstOp &Dst,
   return Extract;
 }
 
-void MachineIRBuilder::buildSequence(Register Res, ArrayRef<Register> Ops,
-                                     ArrayRef<uint64_t> Indices) {
-#ifndef NDEBUG
-  assert(Ops.size() == Indices.size() && "incompatible args");
-  assert(!Ops.empty() && "invalid trivial sequence");
-  assert(llvm::is_sorted(Indices) &&
-         "sequence offsets must be in ascending order");
-
-  assert(getMRI()->getType(Res).isValid() && "invalid operand type");
-  for (auto Op : Ops)
-    assert(getMRI()->getType(Op).isValid() && "invalid operand type");
-#endif
-
-  LLT ResTy = getMRI()->getType(Res);
-  LLT OpTy = getMRI()->getType(Ops[0]);
-  unsigned OpSize = OpTy.getSizeInBits();
-  bool MaybeMerge = true;
-  for (unsigned i = 0; i < Ops.size(); ++i) {
-    if (getMRI()->getType(Ops[i]) != OpTy || Indices[i] != i * OpSize) {
-      MaybeMerge = false;
-      break;
-    }
-  }
-
-  if (MaybeMerge && Ops.size() * OpSize == ResTy.getSizeInBits()) {
-    buildMerge(Res, Ops);
-    return;
-  }
-
-  Register ResIn = getMRI()->createGenericVirtualRegister(ResTy);
-  buildUndef(ResIn);
-
-  for (unsigned i = 0; i < Ops.size(); ++i) {
-    Register ResOut = i + 1 == Ops.size()
-                          ? Res
-                          : getMRI()->createGenericVirtualRegister(ResTy);
-    buildInsert(ResOut, ResIn, Ops[i], Indices[i]);
-    ResIn = ResOut;
-  }
-}
-
 MachineInstrBuilder MachineIRBuilder::buildUndef(const DstOp &Res) {
   return buildInstr(TargetOpcode::G_IMPLICIT_DEF, {Res}, {});
 }
@@ -670,7 +656,7 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   SmallVector<SrcOp> TmpVec;
   TmpVec.reserve(Ops.size());
   LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
-  for (auto &Op : Ops)
+  for (const auto &Op : Ops)
     TmpVec.push_back(buildConstant(EltTy, Op));
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
@@ -975,6 +961,20 @@ MachineInstrBuilder
 MachineIRBuilder::buildAtomicRMWFSub(const DstOp &OldValRes, const SrcOp &Addr, const SrcOp &Val,
                                      MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FSUB, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFMax(const DstOp &OldValRes, const SrcOp &Addr,
+                                     const SrcOp &Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FMAX, OldValRes, Addr, Val,
+                        MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildAtomicRMWFMin(const DstOp &OldValRes, const SrcOp &Addr,
+                                     const SrcOp &Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_FMIN, OldValRes, Addr, Val,
                         MMO);
 }
 

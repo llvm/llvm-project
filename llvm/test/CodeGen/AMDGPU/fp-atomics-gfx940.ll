@@ -28,14 +28,26 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat(float* %ptr) {
 ; GFX940-LABEL: flat_atomic_fadd_f32_noret_pat:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX940-NEXT:    v_mov_b32_e32 v2, 4.0
+; GFX940-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX940-NEXT:    flat_load_dword v1, v[0:1]
+; GFX940-NEXT:  .LBB1_1: ; %atomicrmw.start
+; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_f32_e32 v0, 4.0, v1
+; GFX940-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f32 v[0:1], v2 sc1
+; GFX940-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
+; GFX940-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX940-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX940-NEXT:    v_mov_b32_e32 v1, v0
+; GFX940-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX940-NEXT:    s_cbranch_execnz .LBB1_1
+; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX940-NEXT:    s_endpgm
   %ret = atomicrmw fadd float* %ptr, float 4.0 seq_cst
   ret void
@@ -45,14 +57,26 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(float* %ptr) #0 {
 ; GFX940-LABEL: flat_atomic_fadd_f32_noret_pat_ieee:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX940-NEXT:    v_mov_b32_e32 v2, 4.0
+; GFX940-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX940-NEXT:    flat_load_dword v1, v[0:1]
+; GFX940-NEXT:  .LBB2_1: ; %atomicrmw.start
+; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_f32_e32 v0, 4.0, v1
+; GFX940-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f32 v[0:1], v2 sc1
+; GFX940-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
+; GFX940-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX940-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX940-NEXT:    v_mov_b32_e32 v1, v0
+; GFX940-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX940-NEXT:    s_cbranch_execnz .LBB2_1
+; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX940-NEXT:    s_endpgm
   %ret = atomicrmw fadd float* %ptr, float 4.0 seq_cst
   ret void
@@ -73,12 +97,25 @@ define float @flat_atomic_fadd_f32_rtn_pat(float* %ptr, float %data) {
 ; GFX940-LABEL: flat_atomic_fadd_f32_rtn_pat:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b32_e32 v2, 4.0
+; GFX940-NEXT:    flat_load_dword v2, v[0:1]
+; GFX940-NEXT:    s_mov_b64 s[0:1], 0
+; GFX940-NEXT:  .LBB4_1: ; %atomicrmw.start
+; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_mov_b32_e32 v3, v2
+; GFX940-NEXT:    v_add_f32_e32 v2, 4.0, v3
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 sc0 sc1
+; GFX940-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
+; GFX940-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX940-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX940-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    s_cbranch_execnz .LBB4_1
+; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX940-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw fadd float* %ptr, float 4.0 seq_cst
   ret float %ret
@@ -162,11 +199,10 @@ define <2 x i16> @global_atomic_fadd_v2bf16_rtn(<2 x i16> addrspace(1)* %ptr, <2
 define amdgpu_kernel void @local_atomic_fadd_v2f16_noret(<2 x half> addrspace(3)* %ptr, <2 x half> %data) {
 ; GFX940-LABEL: local_atomic_fadd_v2f16_noret:
 ; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_load_dword s2, s[0:1], 0x24
-; GFX940-NEXT:    s_load_dword s3, s[0:1], 0x28
+; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    v_mov_b32_e32 v1, s3
+; GFX940-NEXT:    v_mov_b32_e32 v0, s0
+; GFX940-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX940-NEXT:    ds_pk_add_f16 v0, v1
 ; GFX940-NEXT:    s_endpgm
   %ret = call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(<2 x half> addrspace(3)* %ptr, <2 x half> %data, i32 0, i32 0, i1 0)
@@ -187,11 +223,10 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(<2 x half> addrspace(3)* %ptr, <2
 define amdgpu_kernel void @local_atomic_fadd_v2bf16_noret(<2 x i16> addrspace(3)* %ptr, <2 x i16> %data) {
 ; GFX940-LABEL: local_atomic_fadd_v2bf16_noret:
 ; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_load_dword s2, s[0:1], 0x24
-; GFX940-NEXT:    s_load_dword s3, s[0:1], 0x28
+; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    v_mov_b32_e32 v1, s3
+; GFX940-NEXT:    v_mov_b32_e32 v0, s0
+; GFX940-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    ds_pk_add_bf16 v0, v1

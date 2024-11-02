@@ -117,9 +117,8 @@ class MacroInfo {
   /// Whether this macro was used as header guard.
   bool UsedForHeaderGuard : 1;
 
-  // Only the Preprocessor gets to create and destroy these.
+  // Only the Preprocessor gets to create these.
   MacroInfo(SourceLocation DefLoc);
-  ~MacroInfo() = default;
 
 public:
   /// Return the location that the macro was defined at.

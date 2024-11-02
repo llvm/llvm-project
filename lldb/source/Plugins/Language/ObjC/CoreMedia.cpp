@@ -65,9 +65,6 @@ bool lldb_private::formatters::CMTimeSummaryProvider(
     return true;
   }
 
-  if (timescale == 0)
-    return false;
-
   switch (timescale) {
   case 0:
     return false;

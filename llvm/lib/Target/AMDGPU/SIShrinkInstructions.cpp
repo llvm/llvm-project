@@ -11,6 +11,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -26,6 +27,7 @@ using namespace llvm;
 namespace {
 
 class SIShrinkInstructions : public MachineFunctionPass {
+  MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
@@ -39,6 +41,7 @@ public:
   }
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
+  bool shouldShrinkTrue16(MachineInstr &MI) const;
   bool isKImmOperand(const MachineOperand &Src) const;
   bool isKUImmOperand(const MachineOperand &Src) const;
   bool isKImmOrKUImmOperand(const MachineOperand &Src, bool &IsUnsigned) const;
@@ -48,6 +51,7 @@ public:
   void shrinkMIMG(MachineInstr &MI) const;
   void shrinkMadFma(MachineInstr &MI) const;
   bool shrinkScalarLogicOp(MachineInstr &MI) const;
+  bool tryReplaceDeadSDST(MachineInstr &MI) const;
   bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
                      Register Reg, unsigned SubReg) const;
   bool instReadsReg(const MachineInstr *MI, unsigned Reg,
@@ -136,6 +140,23 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
   }
 
   return false;
+}
+
+/// Do not shrink the instruction if its registers are not expressible in the
+/// shrunk encoding.
+bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
+  for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isReg()) {
+      Register Reg = MO.getReg();
+      assert(!Reg.isVirtual() && "Prior checks should ensure we only shrink "
+                                 "True16 Instructions post-RA");
+      if (AMDGPU::VGPR_32RegClass.contains(Reg) &&
+          !AMDGPU::VGPR_32_Lo128RegClass.contains(Reg))
+        return false;
+    }
+  }
+  return true;
 }
 
 bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
@@ -237,8 +258,20 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
 // Shrink NSA encoded instructions with contiguous VGPRs to non-NSA encoding.
 void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-  if (!Info || Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
+  if (!Info)
     return;
+
+  uint8_t NewEncoding;
+  switch (Info->MIMGEncoding) {
+  case AMDGPU::MIMGEncGfx10NSA:
+    NewEncoding = AMDGPU::MIMGEncGfx10Default;
+    break;
+  case AMDGPU::MIMGEncGfx11NSA:
+    NewEncoding = AMDGPU::MIMGEncGfx11Default;
+    break;
+  default:
+    return;
+  }
 
   int VAddr0Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
@@ -265,16 +298,23 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   }
 
   unsigned VgprBase = 0;
+  unsigned NextVgpr = 0;
   bool IsUndef = true;
   bool IsKill = NewAddrDwords == Info->VAddrDwords;
-  for (unsigned i = 0; i < Info->VAddrDwords; ++i) {
-    const MachineOperand &Op = MI.getOperand(VAddr0Idx + i);
+  for (unsigned Idx = 0; Idx < Info->VAddrOperands; ++Idx) {
+    const MachineOperand &Op = MI.getOperand(VAddr0Idx + Idx);
     unsigned Vgpr = TRI->getHWRegIndex(Op.getReg());
+    unsigned Dwords = TRI->getRegSizeInBits(Op.getReg(), *MRI) / 32;
+    assert(Dwords > 0 && "Un-implemented for less than 32 bit regs");
 
-    if (i == 0) {
+    if (Idx == 0) {
       VgprBase = Vgpr;
-    } else if (VgprBase + i != Vgpr)
+      NextVgpr = Vgpr + Dwords;
+    } else if (Vgpr == NextVgpr) {
+      NextVgpr = Vgpr + Dwords;
+    } else {
       return;
+    }
 
     if (!Op.isUndef())
       IsUndef = false;
@@ -307,27 +347,33 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
     }
   }
 
-  unsigned NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, AMDGPU::MIMGEncGfx10Default,
-                            Info->VDataDwords, NewAddrDwords);
+  unsigned NewOpcode = AMDGPU::getMIMGOpcode(Info->BaseOpcode, NewEncoding,
+                                             Info->VDataDwords, NewAddrDwords);
   MI.setDesc(TII->get(NewOpcode));
   MI.getOperand(VAddr0Idx).setReg(RC->getRegister(VgprBase));
   MI.getOperand(VAddr0Idx).setIsUndef(IsUndef);
   MI.getOperand(VAddr0Idx).setIsKill(IsKill);
 
-  for (unsigned i = 1; i < Info->VAddrDwords; ++i)
+  for (int i = 1; i < Info->VAddrOperands; ++i)
     MI.removeOperand(VAddr0Idx + 1);
 
   if (ToUntie >= 0) {
     MI.tieOperands(
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata),
-        ToUntie - (Info->VAddrDwords - 1));
+        ToUntie - (Info->VAddrOperands - 1));
   }
 }
 
 // Shrink MAD to MADAK/MADMK and FMA to FMAAK/FMAMK.
 void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
+  // Pre-GFX10 VOP3 instructions like MAD/FMA cannot take a literal operand so
+  // there is no reason to try to shrink them.
   if (!ST->hasVOP3Literal())
+    return;
+
+  // There is no advantage to doing this pre-RA.
+  if (!MF->getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoVRegs))
     return;
 
   if (TII->hasAnyModifiersSet(MI))
@@ -363,7 +409,9 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       NewOpcode = AMDGPU::V_MADAK_F16;
       break;
     case AMDGPU::V_FMA_F16_e64:
-      NewOpcode = AMDGPU::V_FMAAK_F16;
+    case AMDGPU::V_FMA_F16_gfx9_e64:
+      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
+                                          : AMDGPU::V_FMAAK_F16;
       break;
     }
   }
@@ -390,12 +438,17 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       NewOpcode = AMDGPU::V_MADMK_F16;
       break;
     case AMDGPU::V_FMA_F16_e64:
-      NewOpcode = AMDGPU::V_FMAMK_F16;
+    case AMDGPU::V_FMA_F16_gfx9_e64:
+      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
+                                          : AMDGPU::V_FMAMK_F16;
       break;
     }
   }
 
   if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END)
+    return;
+
+  if (AMDGPU::isTrue16Inst(NewOpcode) && !shouldShrinkTrue16(MI))
     return;
 
   if (Swap) {
@@ -689,10 +742,27 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
+// If an instruction has dead sdst replace it with NULL register on gfx1030+
+bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
+  if (!ST->hasGFX10_3Insts())
+    return false;
+
+  MachineOperand *Op = TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+  if (!Op)
+    return false;
+  Register SDstReg = Op->getReg();
+  if (SDstReg.isPhysical() || !MRI->use_nodbg_empty(SDstReg))
+    return false;
+
+  Op->setReg(ST->isWave32() ? AMDGPU::SGPR_NULL : AMDGPU::SGPR_NULL64);
+  return true;
+}
+
 bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
@@ -817,20 +887,27 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       if (MI.getOpcode() == AMDGPU::V_MAD_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
-          MI.getOpcode() == AMDGPU::V_FMA_F16_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64) {
         shrinkMadFma(MI);
         continue;
       }
 
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
+      if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
+        // If there is no chance we will shrink it and use VCC as sdst to get
+        // a 32 bit form try to replace dead sdst with NULL.
+        tryReplaceDeadSDST(MI);
         continue;
+      }
 
       if (!TII->canShrink(MI, *MRI)) {
         // Try commuting the instruction and see if that enables us to shrink
         // it.
         if (!MI.isCommutable() || !TII->commuteInstruction(MI) ||
-            !TII->canShrink(MI, *MRI))
+            !TII->canShrink(MI, *MRI)) {
+          tryReplaceDeadSDST(MI);
           continue;
+        }
       }
 
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
@@ -901,6 +978,19 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         if (Next)
           continue;
       }
+
+      // Pre-GFX10, shrinking VOP3 instructions pre-RA gave us the chance to
+      // fold an immediate into the shrunk instruction as a literal operand. In
+      // GFX10 VOP3 instructions can take a literal operand anyway, so there is
+      // no advantage to doing this.
+      if (ST->hasVOP3Literal() &&
+          !MF.getProperties().hasProperty(
+              MachineFunctionProperties::Property::NoVRegs))
+        continue;
+
+      if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
+          !shouldShrinkTrue16(MI))
+        continue;
 
       // We can shrink this instruction
       LLVM_DEBUG(dbgs() << "Shrinking " << MI);

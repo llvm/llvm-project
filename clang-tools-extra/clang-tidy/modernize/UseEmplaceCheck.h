@@ -23,7 +23,7 @@ namespace modernize {
 /// constructor of temporary object.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-emplace.html
 class UseEmplaceCheck : public ClangTidyCheck {
 public:
   UseEmplaceCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,9 +37,12 @@ public:
 private:
   const bool IgnoreImplicitConstructors;
   const std::vector<StringRef> ContainersWithPushBack;
+  const std::vector<StringRef> ContainersWithPush;
+  const std::vector<StringRef> ContainersWithPushFront;
   const std::vector<StringRef> SmartPointers;
   const std::vector<StringRef> TupleTypes;
   const std::vector<StringRef> TupleMakeFunctions;
+  const std::vector<StringRef> EmplacyFunctions;
 };
 
 } // namespace modernize

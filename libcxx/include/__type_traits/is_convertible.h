@@ -24,12 +24,12 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_feature(is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
+#if __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
     : public integral_constant<bool, __is_convertible_to(_T1, _T2)> {};
 
-#else  // __has_feature(is_convertible_to)
+#else  // __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 namespace __is_convertible_imp
 {
@@ -53,7 +53,7 @@ template <class _Tp> struct __is_array_function_or_void<_Tp, false, false, true>
 }
 
 template <class _Tp,
-    unsigned = __is_convertible_imp::__is_array_function_or_void<typename remove_reference<_Tp>::type>::value>
+    unsigned = __is_convertible_imp::__is_array_function_or_void<__libcpp_remove_reference_t<_Tp> >::value>
 struct __is_convertible_check
 {
     static const size_t __v = 0;
@@ -96,7 +96,7 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
     static const size_t __complete_check2 = __is_convertible_check<_T2>::__v;
 };
 
-#endif // __has_feature(is_convertible_to)
+#endif // __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 #if _LIBCPP_STD_VER > 14
 template <class _From, class _To>

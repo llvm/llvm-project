@@ -447,6 +447,9 @@ class LLLazyJITBuilder
       public LLLazyJITBuilderSetters<LLLazyJIT, LLLazyJITBuilder,
                                      LLLazyJITBuilderState> {};
 
+/// Configure the LLJIT instance to use orc runtime support. 
+Error setUpOrcPlatform(LLJIT& J);
+
 /// Configure the LLJIT instance to scrape modules for llvm.global_ctors and
 /// llvm.global_dtors variables and (if present) build initialization and
 /// deinitialization functions. Platform specific initialization configurations

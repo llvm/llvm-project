@@ -3,7 +3,7 @@
 ; This example was reduced from a test case in which InstCombine ran at least
 ; twice:
 ;   - The first InstCombine run converted dbg.declares to dbg.values using the
-;     LowerDbgDeclare utility. This produced a dbg.value(i32* %2, DW_OP_deref)
+;     LowerDbgDeclare utility. This produced a dbg.value(ptr %2, DW_OP_deref)
 ;     (this happens when the contents of an alloca are passed by-value), and a
 ;     dbg.value(i32 %0) (due to the store of %0 into the alloca).
 ;   - The second InstCombine run deleted the alloca (%2).
@@ -12,14 +12,14 @@
 ;
 ; RUN-ONCE-LABEL: @t1(
 ; RUN-ONCE-NEXT: llvm.dbg.value(metadata i32 %0, metadata [[t1_arg0:![0-9]+]], metadata !DIExpression())
-; RUN-ONCE-NEXT: llvm.dbg.value(metadata i32* undef, metadata [[t1_fake_ptr:![0-9]+]], metadata !DIExpression())
+; RUN-ONCE-NEXT: llvm.dbg.value(metadata ptr undef, metadata [[t1_fake_ptr:![0-9]+]], metadata !DIExpression())
 ; RUN-ONCE-NEXT: ret void
 define void @t1(i32) !dbg !9 {
   %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
+  store i32 %0, ptr %2, align 4
   call void @llvm.dbg.value(metadata i32 %0, metadata !14, metadata !DIExpression()), !dbg !15
-  call void @llvm.dbg.value(metadata i32* %2, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !15
-  call void @llvm.dbg.value(metadata i32* %2, metadata !20, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.value(metadata ptr %2, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !15
+  call void @llvm.dbg.value(metadata ptr %2, metadata !20, metadata !DIExpression()), !dbg !15
   ret void
 }
 
@@ -27,19 +27,19 @@ define void @t1(i32) !dbg !9 {
 ; been produced by a frontend compiling at -O0.
 ;
 ; Here's what happens:
-; 1) We run InstCombine. This puts a dbg.value(i32* %x.addr, DW_OP_deref)
+; 1) We run InstCombine. This puts a dbg.value(ptr %x.addr, DW_OP_deref)
 ;    before the call to @use, and a dbg.value(i32 %x) after the store.
 ; 2) We inline @use.
 ; 3) We run InstCombine again. The alloca %x.addr is erased. We should just get
-;    dbg.value(i32 %x). There should be no leftover dbg.value(metadata i32*
+;    dbg.value(i32 %x). There should be no leftover dbg.value(metadata ptr
 ;    undef).
 ;
-;;; define void @use(i32* %addr) alwaysinline { ret void }
+;;; define void @use(ptr %addr) alwaysinline { ret void }
 ;;; define void @t2(i32 %x) !dbg !17 {
 ;;;   %x.addr = alloca i32, align 4
-;;;   store i32 %x, i32* %x.addr, align 4
-;;;   call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !18, metadata !DIExpression()), !dbg !19
-;;;   call void @use(i32* %x.addr)
+;;;   store i32 %x, ptr %x.addr, align 4
+;;;   call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !18, metadata !DIExpression()), !dbg !19
+;;;   call void @use(ptr %x.addr)
 ;;;   ret void
 ;;; }
 

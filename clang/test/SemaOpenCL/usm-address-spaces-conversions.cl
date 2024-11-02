@@ -7,7 +7,7 @@
  * spaces: global_device and global_host that are a subset of __global address
  * space. As ISO/IEC TR 18037 5.1.3 declares - it's possible to implicitly
  * convert a subset address space to a superset address space, while conversion
- * in a reversed direction could be achived only with an explicit cast */
+ * in a reversed direction could be achieved only with an explicit cast */
 
 #ifdef GENERIC
 #define AS_COMP __generic

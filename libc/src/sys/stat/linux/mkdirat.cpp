@@ -19,7 +19,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, mkdirat, (int dfd, const char *path, mode_t mode)) {
 #ifdef SYS_mkdirat
-  long ret = __llvm_libc::syscall(SYS_mkdirat, dfd, path, mode);
+  long ret = __llvm_libc::syscall_impl(SYS_mkdirat, dfd, path, mode);
 #else
 #error "mkdirat syscalls not available."
 #endif

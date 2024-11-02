@@ -138,9 +138,13 @@ __shared_weak_count::__get_deleter(const type_info&) const noexcept
 
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 
-static constexpr std::size_t __sp_mut_count = 16;
+static constexpr std::size_t __sp_mut_count = 32;
 static constinit __libcpp_mutex_t mut_back[__sp_mut_count] =
 {
+    _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
+    _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
+    _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
+    _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER,
@@ -148,30 +152,21 @@ static constinit __libcpp_mutex_t mut_back[__sp_mut_count] =
 };
 
 _LIBCPP_CONSTEXPR __sp_mut::__sp_mut(void* p) noexcept
-   : __lx(p)
+   : __lx_(p)
 {
 }
 
 void
 __sp_mut::lock() noexcept
 {
-    auto m = static_cast<__libcpp_mutex_t*>(__lx);
-    unsigned count = 0;
-    while (!__libcpp_mutex_trylock(m))
-    {
-        if (++count > 16)
-        {
-            __libcpp_mutex_lock(m);
-            break;
-        }
-        this_thread::yield();
-    }
+    auto m = static_cast<__libcpp_mutex_t*>(__lx_);
+    __libcpp_mutex_lock(m);
 }
 
 void
 __sp_mut::unlock() noexcept
 {
-    __libcpp_mutex_unlock(static_cast<__libcpp_mutex_t*>(__lx));
+    __libcpp_mutex_unlock(static_cast<__libcpp_mutex_t*>(__lx_));
 }
 
 __sp_mut&
@@ -181,7 +176,11 @@ __get_sp_mut(const void* p)
         &mut_back[ 0], &mut_back[ 1], &mut_back[ 2], &mut_back[ 3],
         &mut_back[ 4], &mut_back[ 5], &mut_back[ 6], &mut_back[ 7],
         &mut_back[ 8], &mut_back[ 9], &mut_back[10], &mut_back[11],
-        &mut_back[12], &mut_back[13], &mut_back[14], &mut_back[15]
+        &mut_back[12], &mut_back[13], &mut_back[14], &mut_back[15],
+        &mut_back[16], &mut_back[17], &mut_back[18], &mut_back[19],
+        &mut_back[20], &mut_back[21], &mut_back[22], &mut_back[23],
+        &mut_back[24], &mut_back[25], &mut_back[26], &mut_back[27],
+        &mut_back[28], &mut_back[29], &mut_back[30], &mut_back[31]
     };
     return muts[hash<const void*>()(p) & (__sp_mut_count-1)];
 }
@@ -195,7 +194,7 @@ align(size_t alignment, size_t size, void*& ptr, size_t& space)
     if (size <= space)
     {
         char* p1 = static_cast<char*>(ptr);
-        char* p2 = reinterpret_cast<char*>(reinterpret_cast<size_t>(p1 + (alignment - 1)) & -alignment);
+        char* p2 = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(p1 + (alignment - 1)) & -alignment);
         size_t d = static_cast<size_t>(p2 - p1);
         if (d <= space - size)
         {

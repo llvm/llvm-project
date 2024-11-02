@@ -4,33 +4,33 @@
 @GLOBAL = addrspace(1) externally_initialized global i32 0, align 4, !dbg !0
 @SHARED = addrspace(3) externally_initialized global i32 undef, align 4, !dbg !6
 
-define void @test(float, float*, float*, i32) !dbg !17 {
+define void @test(float, ptr, ptr, i32) !dbg !17 {
   %5 = alloca float, align 4
-  %6 = alloca float*, align 8
-  %7 = alloca float*, align 8
+  %6 = alloca ptr, align 8
+  %7 = alloca ptr, align 8
   %8 = alloca i32, align 4
-  store float %0, float* %5, align 4
-  call void @llvm.dbg.declare(metadata float* %5, metadata !22, metadata !DIExpression()), !dbg !23
-  store float* %1, float** %6, align 8
-  call void @llvm.dbg.declare(metadata float** %6, metadata !24, metadata !DIExpression()), !dbg !25
-  store float* %2, float** %7, align 8
-  call void @llvm.dbg.declare(metadata float** %7, metadata !26, metadata !DIExpression()), !dbg !27
-  store i32 %3, i32* %8, align 4
-  call void @llvm.dbg.declare(metadata i32* %8, metadata !28, metadata !DIExpression()), !dbg !29
-  %9 = load float, float* %5, align 4, !dbg !30
-  %10 = load float*, float** %6, align 8, !dbg !31
-  %11 = load i32, i32* %8, align 4, !dbg !32
+  store float %0, ptr %5, align 4
+  call void @llvm.dbg.declare(metadata ptr %5, metadata !22, metadata !DIExpression()), !dbg !23
+  store ptr %1, ptr %6, align 8
+  call void @llvm.dbg.declare(metadata ptr %6, metadata !24, metadata !DIExpression()), !dbg !25
+  store ptr %2, ptr %7, align 8
+  call void @llvm.dbg.declare(metadata ptr %7, metadata !26, metadata !DIExpression()), !dbg !27
+  store i32 %3, ptr %8, align 4
+  call void @llvm.dbg.declare(metadata ptr %8, metadata !28, metadata !DIExpression()), !dbg !29
+  %9 = load float, ptr %5, align 4, !dbg !30
+  %10 = load ptr, ptr %6, align 8, !dbg !31
+  %11 = load i32, ptr %8, align 4, !dbg !32
   %12 = sext i32 %11 to i64, !dbg !31
-  %13 = getelementptr inbounds float, float* %10, i64 %12, !dbg !31
-  %14 = load float, float* %13, align 4, !dbg !31
+  %13 = getelementptr inbounds float, ptr %10, i64 %12, !dbg !31
+  %14 = load float, ptr %13, align 4, !dbg !31
   %15 = fmul contract float %9, %14, !dbg !33
-  %16 = load float*, float** %7, align 8, !dbg !34
-  %17 = load i32, i32* %8, align 4, !dbg !35
+  %16 = load ptr, ptr %7, align 8, !dbg !34
+  %17 = load i32, ptr %8, align 4, !dbg !35
   %18 = sext i32 %17 to i64, !dbg !34
-  %19 = getelementptr inbounds float, float* %16, i64 %18, !dbg !34
-  store float %15, float* %19, align 4, !dbg !36
-  store i32 0, i32* addrspacecast (i32 addrspace(1)* @GLOBAL to i32*), align 4, !dbg !37
-  store i32 0, i32* addrspacecast (i32 addrspace(3)* @SHARED to i32*), align 4, !dbg !38
+  %19 = getelementptr inbounds float, ptr %16, i64 %18, !dbg !34
+  store float %15, ptr %19, align 4, !dbg !36
+  store i32 0, ptr addrspacecast (ptr addrspace(1) @GLOBAL to ptr), align 4, !dbg !37
+  store i32 0, ptr addrspacecast (ptr addrspace(3) @SHARED to ptr), align 4, !dbg !38
   ret void, !dbg !39
 }
 
@@ -52,7 +52,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !7 = distinct !DIGlobalVariable(name: "SHARED", scope: !2, file: !8, line: 4, type: !9, isLocal: false, isDefinition: true)
 !8 = !DIFile(filename: "test.cu", directory: "/tmp")
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !{void (float, float*, float*, i32)* @test, !"kernel", i32 1}
+!10 = !{ptr @test, !"kernel", i32 1}
 !11 = !{i32 2, !"Dwarf Version", i32 2}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{i32 1, !"wchar_size", i32 4}

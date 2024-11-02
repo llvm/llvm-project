@@ -12,7 +12,7 @@ declare void @print(i32)
 %i8.array = type { [100 x i8] }
 declare void @consume.i8.array(%i8.array*)
 
-define void @a.gep() "coroutine.presplit"="1" {
+define void @a.gep() presplitcoroutine {
 entry:
   %ref.tmp7 = alloca %"struct.lean_future<int>::Awaiter", align 8
   %testval = alloca %i8.array

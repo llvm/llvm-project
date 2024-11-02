@@ -114,7 +114,8 @@ TestAST::TestAST(const TestInputs &In) {
   // Running the FrontendAction creates the other components: SourceManager,
   // Preprocessor, ASTContext, Sema. Preprocessor needs TargetInfo to be set.
   EXPECT_TRUE(Clang->createTarget());
-  Action = std::make_unique<SyntaxOnlyAction>();
+  Action =
+      In.MakeAction ? In.MakeAction() : std::make_unique<SyntaxOnlyAction>();
   const FrontendInputFile &Main = Clang->getFrontendOpts().Inputs.front();
   if (!Action->BeginSourceFile(*Clang, Main)) {
     ADD_FAILURE() << "Failed to BeginSourceFile()";

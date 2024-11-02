@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86-registered-target
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s -o %t
 # RUN: not llvm-readobj %t --cg-profile 2>&1 | FileCheck --check-prefix=ERR %s
 

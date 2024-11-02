@@ -62,9 +62,9 @@ entry:
 define void @bar(...) #1 {
 entry:
   %id83 = alloca <16 x i8>, align 16
-  %0 = load <16 x i32>, <16 x i32>* @id84, align 64
+  %0 = load <16 x i32>, ptr @id84, align 64
   %conv = trunc <16 x i32> %0 to <16 x i8>
-  store <16 x i8> %conv, <16 x i8>* %id83, align 16
+  store <16 x i8> %conv, ptr %id83, align 16
   ret void
 }
 

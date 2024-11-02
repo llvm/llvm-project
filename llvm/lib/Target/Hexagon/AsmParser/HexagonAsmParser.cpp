@@ -573,7 +573,7 @@ bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
   case Match_MnemonicFail:
     return Error(IDLoc, "unrecognized instruction");
   case Match_InvalidOperand:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Match_InvalidTiedOperand:
     SMLoc ErrorLoc = IDLoc;
     if (ErrorInfo != ~0U) {
@@ -681,7 +681,7 @@ bool HexagonAsmParser::ParseDirectiveSubsection(SMLoc L) {
     Subsection = HexagonMCExpr::create(
         MCConstantExpr::create(8192 + Res, getContext()), getContext());
 
-  getStreamer().SubSection(Subsection);
+  getStreamer().subSection(Subsection);
   return false;
 }
 
@@ -1440,7 +1440,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   // Translate a "$Rx =  CONST32(#imm)" to "$Rx = memw(gp+#LABEL) "
   case Hexagon::CONST32:
     is32bit = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   // Translate a "$Rx:y =  CONST64(#imm)" to "$Rx:y = memd(gp+#LABEL) "
   case Hexagon::CONST64:
     // FIXME: need better way to detect AsmStreamer (upstream removed getKind())
@@ -1450,7 +1450,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       MCOperand &MO_0 = Inst.getOperand(0);
 
       // push section onto section stack
-      MES->PushSection();
+      MES->pushSection();
 
       std::string myCharStr;
       MCSectionELF *mySection;
@@ -1485,7 +1485,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       } else
         llvm_unreachable("unexpected type of machine operand!");
 
-      MES->SwitchSection(mySection);
+      MES->switchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
       getStreamer().emitCodeAlignment(byteSize, &getSTI(), byteSize);
 
@@ -1526,7 +1526,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       } else
         llvm_unreachable("unexpected type of machine operand!");
 
-      MES->PopSection();
+      MES->popSection();
 
       if (Sym) {
         MCInst TmpInst;

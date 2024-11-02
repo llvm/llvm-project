@@ -1,8 +1,5 @@
 """Test that lldb functions correctly after the inferior has asserted."""
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbplatformutil
@@ -11,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class AssertingInferiorTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(
         oslist=["windows"],

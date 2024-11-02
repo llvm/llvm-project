@@ -1328,7 +1328,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
   if (AfterFirstStdConv) {
     LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Standard "
                                "Pre-Conversion found!\n");
-    ImplicitSeq.AfterFirstStandard = AfterFirstStdConv.getValue();
+    ImplicitSeq.AfterFirstStandard = *AfterFirstStdConv;
     WorkType = ImplicitSeq.AfterFirstStandard;
   }
 
@@ -1348,7 +1348,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
       if (ConversionOperatorResult) {
         LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
                                    "conversion operator.\n");
-        ImplicitSeq.update(ConversionOperatorResult.getValue());
+        ImplicitSeq.update(*ConversionOperatorResult);
         WorkType = ImplicitSeq.getTypeAfterUserDefinedConversion();
         FoundConversionOperator = true;
       }
@@ -1363,7 +1363,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
       if (ConvCtorResult) {
         LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
                                    "converting constructor.\n");
-        ImplicitSeq.update(ConvCtorResult.getValue());
+        ImplicitSeq.update(*ConvCtorResult);
         WorkType = ImplicitSeq.getTypeAfterUserDefinedConversion();
         FoundConvertingCtor = true;
       }
@@ -1512,12 +1512,10 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
                           << "' is ignored.\n");
 
   if (!Node->getIdentifier())
-    return llvm::find(Check.IgnoredParameterNames, "\"\"") !=
-           Check.IgnoredParameterNames.end();
+    return llvm::is_contained(Check.IgnoredParameterNames, "\"\"");
 
   StringRef NodeName = Node->getName();
-  if (llvm::find(Check.IgnoredParameterNames, NodeName) !=
-      Check.IgnoredParameterNames.end()) {
+  if (llvm::is_contained(Check.IgnoredParameterNames, NodeName)) {
     LLVM_DEBUG(llvm::dbgs() << "\tName ignored.\n");
     return true;
   }
@@ -1584,7 +1582,7 @@ bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
     return false;
 
   for (const auto &E1SetElem : E1Iterator->second)
-    if (llvm::find(E2Iterator->second, E1SetElem) != E2Iterator->second.end())
+    if (llvm::is_contained(E2Iterator->second, E1SetElem))
       return true;
 
   return false;
@@ -1683,7 +1681,7 @@ public:
         if (CalledFn->getParamDecl(Idx) == PassedToParam)
           TargetIdx.emplace(Idx);
 
-      assert(TargetIdx.hasValue() && "Matched, but didn't find index?");
+      assert(TargetIdx && "Matched, but didn't find index?");
       TargetParams[PassedParamOfThisFn].insert(
           {CalledFn->getCanonicalDecl(), *TargetIdx});
     }
@@ -1746,8 +1744,8 @@ public:
   }
 
   bool operator()(const ParmVarDecl *Param1, const ParmVarDecl *Param2) const {
-    return llvm::find(ReturnedParams, Param1) != ReturnedParams.end() &&
-           llvm::find(ReturnedParams, Param2) != ReturnedParams.end();
+    return llvm::is_contained(ReturnedParams, Param1) &&
+           llvm::is_contained(ReturnedParams, Param2);
   }
 };
 

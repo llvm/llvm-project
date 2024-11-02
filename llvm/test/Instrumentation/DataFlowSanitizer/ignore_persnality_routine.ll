@@ -1,5 +1,3 @@
-; RUN: opt < %s -dfsan -S --dfsan-abilist=%S/Inputs/personality-routine-abilist.txt | FileCheck %s
-; RUN: opt < %s -dfsan -S --dfsan-abilist=%S/Inputs/personality-routine-abilist.txt -dfsan-ignore-personality-routine | FileCheck %s --check-prefix=CHECK-IGNORE
 ; RUN: opt < %s -passes=dfsan -S --dfsan-abilist=%S/Inputs/personality-routine-abilist.txt | FileCheck %s
 ; RUN: opt < %s -passes=dfsan -S --dfsan-abilist=%S/Inputs/personality-routine-abilist.txt -dfsan-ignore-personality-routine | FileCheck %s --check-prefix=CHECK-IGNORE
 

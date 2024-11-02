@@ -11,13 +11,13 @@
 
 define protected amdgpu_kernel void @_Z11test_kernelPii(i32 addrspace(1)* nocapture %Ad.coerce, i32 %s) local_unnamed_addr #5 {
 entry:
-  %rem.lhs.trunc = trunc i32 %s to i16
-  %rem4 = urem i16 %rem.lhs.trunc, 12
-  %rem.zext = zext i16 %rem4 to i32
   %cmp = icmp eq i32 %s, 3
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
+  %rem.lhs.trunc = trunc i32 %s to i16
+  %rem4 = urem i16 %rem.lhs.trunc, 12
+  %rem.zext = zext i16 %rem4 to i32
   %idxprom = zext i32 %s to i64
   %arrayidx3 = getelementptr inbounds i32, i32 addrspace(1)* %Ad.coerce, i64 %idxprom
   %div = lshr i32 %rem.zext, 3

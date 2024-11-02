@@ -42,10 +42,16 @@ entry:
   ret i32 %conv
 }
 
-; CHECK:   *(u32 *)(r1 + 0)
-; CHECK:   *(u32 *)(r10 - 20)
-; CHECK:   *(u32 *)(r10 - 12)
-; CHECK:   *(u32 *)(r1 + 8)
+; CHECK-DAG:   *(u32 *)(r1 + 0)
+; CHECK-DAG:   *(u32 *)(r1 + 4)
+; CHECK-DAG:   *(u32 *)(r10 - 16)
+; CHECK-DAG:   *(u32 *)(r10 - 20)
+; CHECK-DAG:   *(u32 *)(r10 - 8)
+; CHECK-DAG:   *(u32 *)(r10 - 12)
+; CHECK-DAG:   *(u32 *)(r1 + 8)
+; CHECK-DAG:   *(u32 *)(r1 + 12)
+; CHECK-DAG:   *(u32 *)(r2 + 16)
+; CHECK-DAG:   *(u32 *)(r10 - 4)
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1

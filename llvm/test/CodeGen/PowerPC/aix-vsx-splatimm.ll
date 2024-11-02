@@ -47,11 +47,13 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    mullw 4, 4, 5
 ; CHECK-NEXT:    vsplth 2, 2, 3
-; CHECK-NEXT:    stvx 2, 0, 3
+; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    neg 4, 4
 ; CHECK-NEXT:    mtvsrd 35, 4
+; CHECK-NEXT:    stxvd2x 0, 0, 3
 ; CHECK-NEXT:    vsplth 3, 3, 3
-; CHECK-NEXT:    stvx 3, 0, 3
+; CHECK-NEXT:    xxswapd 1, 35
+; CHECK-NEXT:    stxvd2x 1, 0, 3
 bb:
   br i1 undef, label %bb22, label %bb3
 
@@ -65,7 +67,7 @@ bb3:                                              ; preds = %bb
   %i9 = mul nsw i32 %i8, %i7
   %i10 = insertelement <8 x i16> %i6, i16 0, i32 2
   %i11 = insertelement <8 x i16> %i10, i16 0, i32 3
-  %i12 = load i32, i32* undef, align 4
+  %i12 = load i32, ptr undef, align 4
   %i13 = ashr i32 %i12, 1
   %i14 = mul i32 %i9, %i13
   %i15 = trunc i32 %i14 to i16
@@ -74,9 +76,9 @@ bb3:                                              ; preds = %bb
   %i18 = insertelement <8 x i16> %i17, i16 0, i32 5
   %i19 = bitcast <8 x i16> %i18 to <16 x i8>
   %i20 = shufflevector <16 x i8> %i19, <16 x i8> undef, <16 x i32> <i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
-  store <16 x i8> %i20, <16 x i8>* null, align 16
+  store <16 x i8> %i20, ptr null, align 16
   %i21 = shufflevector <16 x i8> %i19, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9, i32 8, i32 9>
-  store <16 x i8> %i21, <16 x i8>* undef, align 16
+  store <16 x i8> %i21, ptr undef, align 16
   unreachable
 
 bb22:                                             ; preds = %bb

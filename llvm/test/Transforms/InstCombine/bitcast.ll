@@ -592,14 +592,12 @@ define <2 x i16> @BitcastInsert(i32 %a) {
 }
 
 ; PR17293
-define <2 x i64> @test7(<2 x i8*>* %arg) nounwind {
+define <2 x i64> @test7(ptr %arg) nounwind {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i8*>* [[ARG:%.*]] to <2 x i64>*
-; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i64>, <2 x i64>* [[CAST]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i64>, ptr [[ARG:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x i64> [[LOAD]]
 ;
-  %cast = bitcast <2 x i8*>* %arg to <2 x i64>*
-  %load = load <2 x i64>, <2 x i64>* %cast, align 16
+  %load = load <2 x i64>, ptr %arg, align 16
   ret <2 x i64> %load
 }
 
@@ -615,87 +613,86 @@ define i8 @test8() {
 
 define void @constant_fold_vector_to_double() {
 ; CHECK-LABEL: @constant_fold_vector_to_double(
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0xFFFFFFFFFFFFFFFF, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0x162E000004D2, double* undef, align 8
-; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (i32* @g to i32)> to double), double* undef, align 8
-; CHECK-NEXT:    store volatile double 0x400000003F800000, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
-; CHECK-NEXT:    store volatile double 0.000000e+00, double* undef, align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0xFFFFFFFFFFFFFFFF, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0x162E000004D2, ptr undef, align 8
+; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (ptr @g to i32)> to double), ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0x400000003F800000, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ;
-  store volatile double bitcast (<1 x i64> <i64 4607182418800017408> to double), double* undef
-  store volatile double bitcast (<2 x i32> <i32 0, i32 1072693248> to double), double* undef
-  store volatile double bitcast (<4 x i16> <i16 0, i16 0, i16 0, i16 16368> to double), double* undef
-  store volatile double bitcast (<8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 240, i8 63> to double), double* undef
+  store volatile double bitcast (<1 x i64> <i64 4607182418800017408> to double), ptr undef
+  store volatile double bitcast (<2 x i32> <i32 0, i32 1072693248> to double), ptr undef
+  store volatile double bitcast (<4 x i16> <i16 0, i16 0, i16 0, i16 16368> to double), ptr undef
+  store volatile double bitcast (<8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 240, i8 63> to double), ptr undef
 
-  store volatile double bitcast (<2 x i32> <i32 -1, i32 -1> to double), double* undef
-  store volatile double bitcast (<2 x i32> <i32 1234, i32 5678> to double), double* undef
+  store volatile double bitcast (<2 x i32> <i32 -1, i32 -1> to double), ptr undef
+  store volatile double bitcast (<2 x i32> <i32 1234, i32 5678> to double), ptr undef
 
-  store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (i32* @g to i32)> to double), double* undef
-  store volatile double bitcast (<2 x float> <float 1.0, float 2.0> to double), double* undef
+  store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (ptr @g to i32)> to double), ptr undef
+  store volatile double bitcast (<2 x float> <float 1.0, float 2.0> to double), ptr undef
 
-  store volatile double bitcast (<2 x i32> zeroinitializer to double), double* undef
-  store volatile double bitcast (<4 x i16> zeroinitializer to double), double* undef
-  store volatile double bitcast (<8 x i8> zeroinitializer to double), double* undef
-  store volatile double bitcast (<16 x i4> zeroinitializer to double), double* undef
-  store volatile double bitcast (<32 x i2> zeroinitializer to double), double* undef
-  store volatile double bitcast (<64 x i1> zeroinitializer to double), double* undef
+  store volatile double bitcast (<2 x i32> zeroinitializer to double), ptr undef
+  store volatile double bitcast (<4 x i16> zeroinitializer to double), ptr undef
+  store volatile double bitcast (<8 x i8> zeroinitializer to double), ptr undef
+  store volatile double bitcast (<16 x i4> zeroinitializer to double), ptr undef
+  store volatile double bitcast (<32 x i2> zeroinitializer to double), ptr undef
+  store volatile double bitcast (<64 x i1> zeroinitializer to double), ptr undef
   ret void
 }
 
 define void @constant_fold_vector_to_float() {
 ; CHECK-LABEL: @constant_fold_vector_to_float(
-; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
-; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
-; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
-; CHECK-NEXT:    store volatile float 1.000000e+00, float* undef, align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, ptr undef, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store volatile float bitcast (<1 x i32> <i32 1065353216> to float), float* undef
-  store volatile float bitcast (<2 x i16> <i16 0, i16 16256> to float), float* undef
-  store volatile float bitcast (<4 x i8> <i8 0, i8 0, i8 128, i8 63> to float), float* undef
-  store volatile float bitcast (<32 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0> to float), float* undef
+  store volatile float bitcast (<1 x i32> <i32 1065353216> to float), ptr undef
+  store volatile float bitcast (<2 x i16> <i16 0, i16 16256> to float), ptr undef
+  store volatile float bitcast (<4 x i8> <i8 0, i8 0, i8 128, i8 63> to float), ptr undef
+  store volatile float bitcast (<32 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0> to float), ptr undef
 
   ret void
 }
 
 define void @constant_fold_vector_to_half() {
 ; CHECK-LABEL: @constant_fold_vector_to_half(
-; CHECK-NEXT:    store volatile half 0xH4000, half* undef, align 2
-; CHECK-NEXT:    store volatile half 0xH4000, half* undef, align 2
+; CHECK-NEXT:    store volatile half 0xH4000, ptr undef, align 2
+; CHECK-NEXT:    store volatile half 0xH4000, ptr undef, align 2
 ; CHECK-NEXT:    ret void
 ;
-  store volatile half bitcast (<2 x i8> <i8 0, i8 64> to half), half* undef
-  store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), half* undef
+  store volatile half bitcast (<2 x i8> <i8 0, i8 64> to half), ptr undef
+  store volatile half bitcast (<4 x i4> <i4 0, i4 0, i4 0, i4 4> to half), ptr undef
   ret void
 }
 
 ; Ensure that we do not crash when looking at such a weird bitcast.
-define i8* @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptrvec) {
+define ptr @bitcast_from_single_element_pointer_vector_to_pointer(<1 x ptr> %ptrvec) {
 ; CHECK-LABEL: @bitcast_from_single_element_pointer_vector_to_pointer(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i8*> [[PTRVEC:%.*]], i64 0
-; CHECK-NEXT:    ret i8* [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x ptr> [[PTRVEC:%.*]], i64 0
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
-  %ptr = bitcast <1 x i8*> %ptrvec to i8*
-  ret i8* %ptr
+  %ptr = bitcast <1 x ptr> %ptrvec to ptr
+  ret ptr %ptr
 }
 
 declare void @f1()
 declare void @f2()
-define i8* @select_bitcast_unsized_pointer(i1 %c) {
+define ptr @select_bitcast_unsized_pointer(i1 %c) {
 ; CHECK-LABEL: @select_bitcast_unsized_pointer(
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8* bitcast (void ()* @f1 to i8*), i8* bitcast (void ()* @f2 to i8*)
-; CHECK-NEXT:    ret i8* [[B]]
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], ptr @f1, ptr @f2
+; CHECK-NEXT:    ret ptr [[B]]
 ;
-  %s = select i1 %c, void ()* @f1, void ()* @f2
-  %b = bitcast void ()* %s to i8*
-  ret i8* %b
+  %s = select i1 %c, ptr @f1, ptr @f2
+  ret ptr %s
 }

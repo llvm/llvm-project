@@ -44,6 +44,7 @@ namespace llvm {
 class APFloat;
 class APInt;
 class BasicBlock;
+class BlockAddress;
 class ConstantInt;
 class DataLayout;
 class StringRef;
@@ -125,9 +126,6 @@ public:
   void setAlignment(Align Align) {
     setSubclassData<AlignmentField>(Log2(Align));
   }
-
-  // FIXME: Remove this one transition to Align is over.
-  uint64_t getAlignment() const { return getAlign().value(); }
 
   /// Return true if this alloca is in the entry block of the function and is a
   /// constant size. If so, the code generator will fold it into the
@@ -214,11 +212,6 @@ public:
 
   /// Specify whether this is a volatile load or not.
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
-
-  /// Return the alignment of the access that is being performed.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
-  uint64_t getAlignment() const { return getAlign().value(); }
 
   /// Return the alignment of the access that is being performed.
   Align getAlign() const {
@@ -345,11 +338,6 @@ public:
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  /// Return the alignment of the access that is being performed
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
-  uint64_t getAlignment() const { return getAlign().value(); }
 
   Align getAlign() const {
     return Align(1ULL << (getSubclassData<AlignmentField>()));
@@ -766,8 +754,16 @@ public:
     /// *p = old - v
     FSub,
 
+    /// *p = maxnum(old, v)
+    /// \p maxnum matches the behavior of \p llvm.maxnum.*.
+    FMax,
+
+    /// *p = minnum(old, v)
+    /// \p minnum matches the behavior of \p llvm.minnum.*.
+    FMin,
+
     FIRST_BINOP = Xchg,
-    LAST_BINOP = FSub,
+    LAST_BINOP = FMin,
     BAD_BINOP
   };
 
@@ -810,6 +806,8 @@ public:
     switch (Op) {
     case AtomicRMWInst::FAdd:
     case AtomicRMWInst::FSub:
+    case AtomicRMWInst::FMax:
+    case AtomicRMWInst::FMin:
       return true;
     default:
       return false;
@@ -850,6 +848,8 @@ public:
   void setOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "atomicrmw instructions can only be atomic.");
+    assert(Ordering != AtomicOrdering::Unordered &&
+           "atomicrmw instructions cannot be unordered.");
     setSubclassData<AtomicOrderingField>(Ordering);
   }
 
@@ -2293,6 +2293,26 @@ public:
     return !changesLength() && isTransposeMask(ShuffleMask);
   }
 
+  /// Return true if this shuffle mask is a splice mask, concatenating the two
+  /// inputs together and then extracts an original width vector starting from
+  /// the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  static bool isSpliceMask(ArrayRef<int> Mask, int &Index);
+  static bool isSpliceMask(const Constant *Mask, int &Index) {
+    assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
+    SmallVector<int, 16> MaskAsInts;
+    getShuffleMask(Mask, MaskAsInts);
+    return isSpliceMask(MaskAsInts, Index);
+  }
+
+  /// Return true if this shuffle splices two inputs without changing the length
+  /// of the vectors. This operation concatenates the two inputs together and
+  /// then extracts an original width vector starting from the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  bool isSplice(int &Index) const {
+    return !changesLength() && isSpliceMask(ShuffleMask, Index);
+  }
+
   /// Return true if this shuffle mask is an extract subvector mask.
   /// A valid extract subvector mask returns a smaller vector from a single
   /// source operand. The base extraction index is returned as well.
@@ -2372,6 +2392,21 @@ public:
 
   /// Return true if this shuffle mask is a replication mask.
   bool isReplicationMask(int &ReplicationFactor, int &VF) const;
+
+  /// Return true if this shuffle mask represents "clustered" mask of size VF,
+  /// i.e. each index between [0..VF) is used exactly once in each submask of
+  /// size VF.
+  /// For example, the mask for \p VF=4 is:
+  /// 0, 1, 2, 3, 3, 2, 0, 1 - "clustered", because each submask of size 4
+  /// (0,1,2,3 and 3,2,0,1) uses indices [0..VF) exactly one time.
+  /// 0, 1, 2, 3, 3, 3, 1, 0 - not "clustered", because
+  ///                          element 3 is used twice in the second submask
+  ///                          (3,3,1,0) and index 2 is not used at all.
+  static bool isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF);
+
+  /// Return true if this shuffle mask is a one-use-single-source("clustered")
+  /// mask.
+  bool isOneUseSingleSourceMask(int VF) const;
 
   /// Change values in a shuffle permute mask assuming the two vector operands
   /// of length InVecNumElts have swapped position.
@@ -4007,9 +4042,6 @@ class CallBrInst : public CallBase {
             ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
             ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
 
-  /// Should the Indirect Destinations change, scan + update the Arg list.
-  void updateArgBlockAddresses(unsigned i, BasicBlock *B);
-
   /// Compute the number of operands to allocate.
   static int ComputeNumOperands(int NumArgs, int NumIndirectDests,
                                 int NumBundleInputs = 0) {
@@ -4157,7 +4189,6 @@ public:
     *(&Op<-1>() - getNumIndirectDests() - 1) = reinterpret_cast<Value *>(B);
   }
   void setIndirectDest(unsigned i, BasicBlock *B) {
-    updateArgBlockAddresses(i, B);
     *(&Op<-1>() - getNumIndirectDests() + i) = reinterpret_cast<Value *>(B);
   }
 

@@ -52,7 +52,7 @@ REQUIRES: system-linux,bolt-runtime
 RUN: %clang %cflags %s -o %t.so -Wl,-q -fpie -fPIC -shared -DLIB
 RUN: %clang %cflags %s -o %t.exe -Wl,-q -ldl
 
-RUN: llvm-bolt %t.so -instrument -instrumentation-file=%t.so.fdata \
+RUN: llvm-bolt %t.so --instrument --instrumentation-file=%t.so.fdata \
 RUN:   -o %t.so.instrumented
 
 # Program with instrumented shared library needs to finish returning zero
@@ -60,8 +60,8 @@ RUN: %t.exe %t.so.instrumented 1 2 | FileCheck %s -check-prefix=CHECK-OUTPUT
 RUN: test -f %t.so.fdata
 
 # Test that the instrumented data makes sense
-RUN: llvm-bolt %t.so -o %t.so.bolted -data %t.so.fdata \
-RUN:    -reorder-blocks=ext-tsp -reorder-functions=hfsort+
+RUN: llvm-bolt %t.so -o %t.so.bolted --data %t.so.fdata \
+RUN:    --reorder-blocks=ext-tsp --reorder-functions=hfsort+
 
 RUN: %t.exe %t.so.bolted 1 2 | FileCheck %s -check-prefix=CHECK-OUTPUT
 

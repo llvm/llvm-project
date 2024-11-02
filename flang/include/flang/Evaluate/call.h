@@ -199,6 +199,7 @@ struct ProcedureDesignator {
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   bool IsElemental() const;
+  bool IsPure() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 

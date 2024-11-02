@@ -317,3 +317,31 @@ TEST(Transformational, Unpack) {
   }
   result.Destroy();
 }
+
+#if LDBL_MANT_DIG == 64
+// Make sure the destination descriptor is created by the runtime
+// with proper element size, when REAL*10 maps to 'long double'.
+#define Real10CppType long double
+TEST(Transformational, TransposeReal10) {
+  // ARRAY  1 3 5
+  //        2 4 6
+  auto array{MakeArray<TypeCategory::Real, 10>(std::vector<int>{2, 3},
+      std::vector<Real10CppType>{1.0, 2.0, 3.0, 4.0, 5.0, 6.0},
+      sizeof(Real10CppType))};
+  StaticDescriptor<2, true> statDesc;
+  Descriptor &result{statDesc.descriptor()};
+  RTNAME(Transpose)(result, *array, __FILE__, __LINE__);
+  EXPECT_EQ(result.ElementBytes(), sizeof(Real10CppType));
+  EXPECT_EQ(result.type(), array->type());
+  EXPECT_EQ(result.rank(), 2);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 3);
+  EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(1).Extent(), 2);
+  static Real10CppType expect[6]{1.0, 3.0, 5.0, 2.0, 4.0, 6.0};
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(*result.ZeroBasedIndexedElement<Real10CppType>(j), expect[j]);
+  }
+  result.Destroy();
+}
+#endif

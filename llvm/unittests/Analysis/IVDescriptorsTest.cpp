@@ -203,3 +203,107 @@ TEST(IVDescriptorsTest, LoopWithPtrToInt) {
         EXPECT_TRUE(IsInductionPHI);
       });
 }
+
+// This tests that correct identity value is returned for a RecurrenceDescriptor
+// that describes FMin reduction idiom.
+TEST(IVDescriptorsTest, FMinRednIdentity) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context,
+                                      R"(define float @foo(float* %A, i64 %ub) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %fmin = phi float [ 1.000000e+00, %entry ], [ %fmin.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %A, i64 %i
+  %ld = load float, float* %arrayidx
+  %fmin.cmp = fcmp nnan nsz olt float %fmin, %ld
+  %fmin.next = select nnan nsz i1 %fmin.cmp, float %fmin, float %ld
+  %i.next = add nsw i64 %i, 1
+  %cmp = icmp slt i64 %i.next, %ub
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  %fmin.lcssa = phi float [ %fmin.next, %for.body ]
+  ret float %fmin.lcssa
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        BasicBlock::iterator BBI = Header->begin();
+        assert((&*BBI)->getName() == "i");
+        ++BBI;
+        PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+        assert(Phi->getName() == "fmin");
+        RecurrenceDescriptor Rdx;
+        bool IsRdxPhi = RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
+        EXPECT_TRUE(IsRdxPhi);
+        RecurKind Kind = Rdx.getRecurrenceKind();
+        EXPECT_EQ(Kind, RecurKind::FMin);
+        Type *Ty = Phi->getType();
+        Value *Id = Rdx.getRecurrenceIdentity(Kind, Ty, Rdx.getFastMathFlags());
+        // Identity value for FP min reduction is +Inf.
+        EXPECT_EQ(Id, ConstantFP::getInfinity(Ty, false /*Negative*/));
+      });
+}
+
+// This tests that correct identity value is returned for a RecurrenceDescriptor
+// that describes FMax reduction idiom.
+TEST(IVDescriptorsTest, FMaxRednIdentity) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context,
+                                      R"(define float @foo(float* %A, i64 %ub) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %fmax = phi float [ 1.000000e+00, %entry ], [ %fmax.next, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %A, i64 %i
+  %ld = load float, float* %arrayidx
+  %fmax.cmp = fcmp nnan nsz ogt float %fmax, %ld
+  %fmax.next = select nnan nsz i1 %fmax.cmp, float %fmax, float %ld
+  %i.next = add nsw i64 %i, 1
+  %cmp = icmp slt i64 %i.next, %ub
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  %fmax.lcssa = phi float [ %fmax.next, %for.body ]
+  ret float %fmax.lcssa
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        BasicBlock::iterator BBI = Header->begin();
+        assert((&*BBI)->getName() == "i");
+        ++BBI;
+        PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+        assert(Phi->getName() == "fmax");
+        RecurrenceDescriptor Rdx;
+        bool IsRdxPhi = RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
+        EXPECT_TRUE(IsRdxPhi);
+        RecurKind Kind = Rdx.getRecurrenceKind();
+        EXPECT_EQ(Kind, RecurKind::FMax);
+        Type *Ty = Phi->getType();
+        Value *Id = Rdx.getRecurrenceIdentity(Kind, Ty, Rdx.getFastMathFlags());
+        // Identity value for FP max reduction is -Inf.
+        EXPECT_EQ(Id, ConstantFP::getInfinity(Ty, true /*Negative*/));
+      });
+}

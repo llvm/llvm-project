@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=sccp -disable-output
 ; PR1431
 
-define void @_ada_bench() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @_ada_bench() personality ptr @__gxx_personality_v0 {
 entry:
 	br label %cond_next
 cond_next:		; preds = %cond_next, %entry
@@ -31,9 +31,9 @@ bb149:		; preds = %bb114
 bb177:		; preds = %bb149
 	unreachable
 cleanup:		; preds = %bb149, %bb114, %bb67
-        %val = landingpad { i8*, i32 }
+        %val = landingpad { ptr, i32 }
                  cleanup
-	resume { i8*, i32 } %val
+	resume { ptr, i32 } %val
 }
 
 declare double @sin(double)

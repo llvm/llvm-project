@@ -1,3 +1,5 @@
+.. _clang_tidy_checks:
+
 LLVM libc clang-tidy checks
 ===========================
 These are the clang-tidy checks designed to help enforce implementation

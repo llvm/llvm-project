@@ -47,7 +47,7 @@ public:
   MyObjectA *arr;
   int len;
 };
-#pragma omp declare mapper(MyObjectB obj) map(obj, obj.arr[:obj.len])
+#pragma omp declare mapper(MyObjectB obj) map(obj, obj.arr[ : obj.len])
 
 class MyObjectC {
 public:
@@ -67,7 +67,7 @@ public:
   MyObjectB *arr;
   int len;
 };
-#pragma omp declare mapper(MyObjectC obj) map(obj, obj.arr[:obj.len])
+#pragma omp declare mapper(MyObjectC obj) map(obj, obj.arr[ : obj.len])
 
 int main(void) {
   MyObjectC *outer = new MyObjectC[N];
@@ -77,7 +77,7 @@ int main(void) {
     outer[i].show();
 
   printf("Sending data to device...\n");
-#pragma omp target enter data map(to : outer[:N])
+#pragma omp target enter data map(to : outer[ : N])
 
   printf("Calling foo()...\n");
 #pragma omp target teams distribute parallel for
@@ -87,7 +87,7 @@ int main(void) {
   printf("foo() complete!\n");
 
   printf("Sending data back to host...\n");
-#pragma omp target exit data map(from : outer[:N])
+#pragma omp target exit data map(from : outer[ : N])
 
   printf("Modified Data Hierarchy:\n");
   for (int i = 0; i < N; i++)

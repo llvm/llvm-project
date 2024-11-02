@@ -6,10 +6,8 @@
 
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
-; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
 ; RUN: llvm-lto2 run -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
 ; RUN:   -whole-program-visibility \
-; RUN:   -verify-machineinstrs=0 \
 ; RUN:   -o %t2.index \
 ; RUN:   -r=%t.o,test,px \
 ; RUN:   -r=%t.o,_ZN1A1nEi,p \
@@ -102,7 +100,7 @@ cont2:
   ; CHECK-IR: br i1 {{.*}}, label %trap
 
   ; We still have to call it as virtual.
-  ; CHECK-IR: %call3 = tail call i32 %7
+  ; CHECK-IR: %call3 = tail call i32 {{%[0-9]+}}
   %call3 = tail call i32 %8(%struct.A* nonnull %obj, i32 %call)
   ret i32 %call3
 }

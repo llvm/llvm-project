@@ -85,9 +85,9 @@ define amdgpu_kernel void @ashr_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> ad
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_ashr_i32_e32 v3, v3, v7
-; SI-NEXT:    v_ashr_i32_e32 v2, v2, v6
-; SI-NEXT:    v_ashr_i32_e32 v1, v1, v5
+; SI-NEXT:    v_ashrrev_i32_e32 v3, v7, v3
+; SI-NEXT:    v_ashrrev_i32_e32 v2, v6, v2
+; SI-NEXT:    v_ashrrev_i32_e32 v1, v5, v1
 ; SI-NEXT:    v_ashr_i32_e32 v0, v0, v4
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -159,14 +159,17 @@ define amdgpu_kernel void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> ad
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_bfe_i32 v2, v0, 0, 16
-; SI-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; SI-NEXT:    v_ashrrev_i32_e32 v0, v3, v0
-; SI-NEXT:    v_ashrrev_i32_e32 v1, v1, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    v_readfirstlane_b32 s1, v1
+; SI-NEXT:    s_sext_i32_i16 s2, s0
+; SI-NEXT:    s_ashr_i32 s0, s0, 16
+; SI-NEXT:    s_lshr_b32 s3, s1, 16
+; SI-NEXT:    s_ashr_i32 s0, s0, s3
+; SI-NEXT:    s_ashr_i32 s1, s2, s1
+; SI-NEXT:    s_lshl_b32 s0, s0, 16
+; SI-NEXT:    s_and_b32 s1, s1, 0xffff
+; SI-NEXT:    s_or_b32 s0, s1, s0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -184,9 +187,18 @@ define amdgpu_kernel void @ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> ad
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_ashrrev_i32_sdwa v2, sext(v1), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; VI-NEXT:    v_ashrrev_i32_sdwa v0, sext(v1), sext(v0) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-NEXT:    v_readfirstlane_b32 s1, v1
+; VI-NEXT:    s_ashr_i32 s2, s0, 16
+; VI-NEXT:    s_sext_i32_i16 s0, s0
+; VI-NEXT:    s_ashr_i32 s3, s1, 16
+; VI-NEXT:    s_sext_i32_i16 s1, s1
+; VI-NEXT:    s_ashr_i32 s0, s0, s1
+; VI-NEXT:    s_ashr_i32 s1, s2, s3
+; VI-NEXT:    s_lshl_b32 s1, s1, 16
+; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_or_b32 s0, s0, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -243,22 +255,28 @@ define amdgpu_kernel void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> ad
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_bfe_i32 v4, v0, 0, 16
-; SI-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
-; SI-NEXT:    v_bfe_i32 v5, v1, 0, 16
-; SI-NEXT:    v_ashrrev_i32_e32 v1, 16, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; SI-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; SI-NEXT:    v_ashr_i32_e32 v1, v1, v7
-; SI-NEXT:    v_ashr_i32_e32 v3, v5, v3
-; SI-NEXT:    v_ashr_i32_e32 v0, v0, v6
-; SI-NEXT:    v_ashr_i32_e32 v2, v4, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_or_b32_e32 v1, v3, v1
-; SI-NEXT:    v_or_b32_e32 v0, v2, v0
+; SI-NEXT:    v_readfirstlane_b32 s0, v3
+; SI-NEXT:    v_readfirstlane_b32 s1, v2
+; SI-NEXT:    v_readfirstlane_b32 s2, v1
+; SI-NEXT:    v_readfirstlane_b32 s3, v0
+; SI-NEXT:    s_sext_i32_i16 s8, s3
+; SI-NEXT:    s_ashr_i32 s3, s3, 16
+; SI-NEXT:    s_sext_i32_i16 s9, s2
+; SI-NEXT:    s_ashr_i32 s2, s2, 16
+; SI-NEXT:    s_lshr_b32 s10, s1, 16
+; SI-NEXT:    s_lshr_b32 s11, s0, 16
+; SI-NEXT:    s_ashr_i32 s2, s2, s11
+; SI-NEXT:    s_ashr_i32 s0, s9, s0
+; SI-NEXT:    s_ashr_i32 s3, s3, s10
+; SI-NEXT:    s_ashr_i32 s1, s8, s1
+; SI-NEXT:    s_lshl_b32 s2, s2, 16
+; SI-NEXT:    s_and_b32 s0, s0, 0xffff
+; SI-NEXT:    s_lshl_b32 s3, s3, 16
+; SI-NEXT:    s_and_b32 s1, s1, 0xffff
+; SI-NEXT:    s_or_b32 s0, s0, s2
+; SI-NEXT:    s_or_b32 s1, s1, s3
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -276,12 +294,30 @@ define amdgpu_kernel void @ashr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> ad
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_ashrrev_i32_sdwa v4, sext(v2), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; VI-NEXT:    v_ashrrev_i32_sdwa v0, sext(v2), sext(v0) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_ashrrev_i32_sdwa v2, sext(v3), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; VI-NEXT:    v_ashrrev_i32_sdwa v1, sext(v3), sext(v1) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_readfirstlane_b32 s0, v2
+; VI-NEXT:    v_readfirstlane_b32 s1, v3
+; VI-NEXT:    v_readfirstlane_b32 s2, v0
+; VI-NEXT:    v_readfirstlane_b32 s3, v1
+; VI-NEXT:    s_ashr_i32 s8, s3, 16
+; VI-NEXT:    s_sext_i32_i16 s3, s3
+; VI-NEXT:    s_ashr_i32 s9, s2, 16
+; VI-NEXT:    s_sext_i32_i16 s2, s2
+; VI-NEXT:    s_ashr_i32 s10, s1, 16
+; VI-NEXT:    s_sext_i32_i16 s1, s1
+; VI-NEXT:    s_ashr_i32 s11, s0, 16
+; VI-NEXT:    s_sext_i32_i16 s0, s0
+; VI-NEXT:    s_ashr_i32 s0, s2, s0
+; VI-NEXT:    s_ashr_i32 s2, s9, s11
+; VI-NEXT:    s_ashr_i32 s1, s3, s1
+; VI-NEXT:    s_ashr_i32 s3, s8, s10
+; VI-NEXT:    s_lshl_b32 s3, s3, 16
+; VI-NEXT:    s_and_b32 s1, s1, 0xffff
+; VI-NEXT:    s_lshl_b32 s2, s2, 16
+; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_or_b32 s1, s1, s3
+; VI-NEXT:    s_or_b32 s0, s0, s2
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;

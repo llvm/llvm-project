@@ -29,55 +29,11 @@
 
 //
 // Test with an all-dense-annotated "sparse" matrix as input and
-// a non-annotated dense matrix as output that is not inplacable.
-// This results in an explicit allocation to facilitate output.
+// a non-annotated dense matrix as output.
 //
 // CHECK-LABEL:   func @dense1(
 // CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>,
-// CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32> {linalg.inplaceable = false}) -> tensor<32x16xf32> {
-// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
-// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
-// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xf32>
-// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_1]] : memref<32x16xf32>
-// CHECK-DAG:       %[[VAL_9:.*]] = memref.alloc() : memref<32x16xf32>
-// CHECK:           memref.copy %[[VAL_8]], %[[VAL_9]] : memref<32x16xf32> to memref<32x16xf32>
-// CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
-// CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_11]] : index
-// CHECK:               %[[VAL_14:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_13]]] : memref<?xf32>
-// CHECK:               %[[VAL_15:.*]] = arith.addf %[[VAL_14]], %[[VAL_2]] : f32
-// CHECK:               memref.store %[[VAL_15]], %[[VAL_9]]{{\[}}%[[VAL_10]], %[[VAL_11]]] : memref<32x16xf32>
-// CHECK:             }
-// CHECK:           }
-// CHECK:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_9]] : memref<32x16xf32>
-// CHECK:           return %[[VAL_16]] : tensor<32x16xf32>
-// CHECK:         }
-func.func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
-             %argx: tensor<32x16xf32> {linalg.inplaceable = false})
-	     -> tensor<32x16xf32> {
-  %c = arith.constant 1.0 : f32
-  %0 = linalg.generic #trait_2d
-     ins(%arga: tensor<32x16xf32, #DenseMatrix>)
-    outs(%argx: tensor<32x16xf32>) {
-      ^bb(%a: f32, %x: f32):
-        %1 = arith.addf %a, %c : f32
-        linalg.yield %1 : f32
-  } -> tensor<32x16xf32>
-  return %0 : tensor<32x16xf32>
-}
-
-//
-// Test with an all-dense-annotated "sparse" matrix as input and
-// a non-annotated dense matrix as output that is inplacable.
-// This allows updating the dense output in place.
-//
-// CHECK-LABEL:   func @dense2(
-// CHECK-SAME:                 %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>,
-// CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32> {linalg.inplaceable = true}) -> tensor<32x16xf32> {
+// CHECK-SAME:                 %[[VAL_1:.*]]: tensor<32x16xf32>) -> tensor<32x16xf32> {
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
@@ -97,8 +53,8 @@ func.func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
 // CHECK:           %[[VAL_15:.*]] = bufferization.to_tensor %[[VAL_8]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_15]] : tensor<32x16xf32>
 // CHECK:         }
-func.func @dense2(%arga: tensor<32x16xf32, #DenseMatrix>,
-             %argx: tensor<32x16xf32> {linalg.inplaceable = true})
+func.func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
+                  %argx: tensor<32x16xf32>)
 	     -> tensor<32x16xf32> {
   %c = arith.constant 1.0 : f32
   %0 = linalg.generic #trait_2d
@@ -114,11 +70,10 @@ func.func @dense2(%arga: tensor<32x16xf32, #DenseMatrix>,
 //
 // Test with a non-annotated dense matrix as input and
 // an all-dense annotated "sparse" matrix as output.
-// The rewriting would fail if argx was not in-placeable.
 //
-// CHECK-LABEL:   func @dense3(
+// CHECK-LABEL:   func @dense2(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x16xf32>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {linalg.inplaceable = true}) -> tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>) -> tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
@@ -138,8 +93,8 @@ func.func @dense2(%arga: tensor<32x16xf32, #DenseMatrix>,
 // CHECK:           %[[VAL_15:.*]] = sparse_tensor.load %[[VAL_1]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_15]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func.func @dense3(%arga: tensor<32x16xf32>,
-             %argx: tensor<32x16xf32, #DenseMatrix> {linalg.inplaceable = true})
+func.func @dense2(%arga: tensor<32x16xf32>,
+                  %argx: tensor<32x16xf32, #DenseMatrix>)
 	     -> tensor<32x16xf32, #DenseMatrix> {
   %c = arith.constant 1.0 : f32
   %0 = linalg.generic #trait_2d
@@ -156,13 +111,12 @@ func.func @dense3(%arga: tensor<32x16xf32>,
 //
 // Test with a non-annotated dense matrix as input and
 // an all-dense annotated "sparse" matrix as output.
-// The rewriting would fail if argx was not in-placeable.
 // The missing innermost "k" index (due to a reduction) is accounted
 // for by scalarizing the reduction operation for the output tensor.
 //
-// CHECK-LABEL:   func @dense4(
+// CHECK-LABEL:   func @dense3(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x16x8xf32>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {linalg.inplaceable = true}) -> tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>) -> tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> {
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
@@ -186,8 +140,8 @@ func.func @dense3(%arga: tensor<32x16xf32>,
 // CHECK:           %[[VAL_20:.*]] = sparse_tensor.load %[[VAL_1]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_20]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func.func @dense4(%arga: tensor<32x16x8xf32>,
-             %argx: tensor<32x16xf32, #DenseMatrix> {linalg.inplaceable = true})
+func.func @dense3(%arga: tensor<32x16x8xf32>,
+                  %argx: tensor<32x16xf32, #DenseMatrix>)
 	     -> tensor<32x16xf32, #DenseMatrix> {
   %0 = linalg.generic #trait_3d
      ins(%arga: tensor<32x16x8xf32>)

@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // iterator insert(const_iterator p, initializer_list<charT> il); // constexpr since C++20

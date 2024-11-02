@@ -297,6 +297,13 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S) {
   llvm_unreachable("Invalid state");
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP) {
+  std::lock_guard<std::mutex> Lock(SSP.PoolMutex);
+  for (auto &KV : SSP.Pool)
+    OS << KV.first() << ": " << KV.second << "\n";
+  return OS;
+}
+
 DumpObjects::DumpObjects(std::string DumpDir, std::string IdentifierOverride)
     : DumpDir(std::move(DumpDir)),
       IdentifierOverride(std::move(IdentifierOverride)) {

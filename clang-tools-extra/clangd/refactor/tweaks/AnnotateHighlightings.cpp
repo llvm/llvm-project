@@ -23,7 +23,7 @@ namespace {
 ///   void /* entity.name.function.cpp */ f() { int /* variable.cpp */ abc; }
 class AnnotateHighlightings : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
 
   bool prepare(const Selection &Inputs) override { return true; }
   Expected<Effect> apply(const Selection &Inputs) override;

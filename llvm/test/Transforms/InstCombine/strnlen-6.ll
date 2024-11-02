@@ -5,9 +5,9 @@
 ;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-declare i64 @strnlen(i8*, i64)
+declare i64 @strnlen(ptr, i64)
 
-@ecp = external global i8*, align 8
+@ecp = external global ptr, align 8
 
 
 ; Annotate strnlen(ecp, 3) call with noundef, nonnull, and dereferenceable
@@ -15,12 +15,12 @@ declare i64 @strnlen(i8*, i64)
 
 define i64 @deref_strnlen_ecp_3() {
 ; CHECK-LABEL: @deref_strnlen_ecp_3(
-; CHECK-NEXT:    [[PTR:%.*]] = load i8*, i8** @ecp, align 8
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) [[PTR]], i64 3)
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr @ecp, align 8
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 3)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = load i8*, i8** @ecp
-  %len = call i64 @strnlen(i8* %ptr, i64 3)
+  %ptr = load ptr, ptr @ecp
+  %len = call i64 @strnlen(ptr %ptr, i64 3)
   ret i64 %len
 }
 
@@ -31,13 +31,13 @@ define i64 @deref_strnlen_ecp_3() {
 define i64 @deref_strnlen_ecp_nz(i64 %n) {
 ; CHECK-LABEL: @deref_strnlen_ecp_nz(
 ; CHECK-NEXT:    [[NONZERO:%.*]] = or i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[PTR:%.*]] = load i8*, i8** @ecp, align 8
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) [[PTR]], i64 [[NONZERO]])
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr @ecp, align 8
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 [[NONZERO]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %nonzero = or i64 %n, 1
-  %ptr = load i8*, i8** @ecp
-  %len = call i64 @strnlen(i8* %ptr, i64 %nonzero)
+  %ptr = load ptr, ptr @ecp
+  %len = call i64 @strnlen(ptr %ptr, i64 %nonzero)
   ret i64 %len
 }
 
@@ -50,11 +50,11 @@ define i64 @deref_strnlen_ecp_nz(i64 %n) {
 
 define i64 @noderef_strnlen_ecp_n(i64 %n) {
 ; CHECK-LABEL: @noderef_strnlen_ecp_n(
-; CHECK-NEXT:    [[PTR:%.*]] = load i8*, i8** @ecp, align 8
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr @ecp, align 8
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr [[PTR]], i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = load i8*, i8** @ecp
-  %len = call i64 @strnlen(i8* %ptr, i64 %n)
+  %ptr = load ptr, ptr @ecp
+  %len = call i64 @strnlen(ptr %ptr, i64 %n)
   ret i64 %len
 }

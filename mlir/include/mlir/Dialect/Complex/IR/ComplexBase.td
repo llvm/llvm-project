@@ -19,9 +19,9 @@ def Complex_Dialect : Dialect {
     arithmetic ops.
   }];
 
-  let dependentDialects = ["arith::ArithmeticDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
   let hasConstantMaterializer = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+  let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // COMPLEX_BASE

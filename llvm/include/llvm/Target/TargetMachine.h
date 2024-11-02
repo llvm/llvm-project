@@ -222,7 +222,10 @@ public:
 
   /// Returns the code model. The choices are small, kernel, medium, large, and
   /// target default.
-  CodeModel::Model getCodeModel() const;
+  CodeModel::Model getCodeModel() const { return CMModel; }
+
+  /// Set the code model.
+  void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 
   bool isPositionIndependent() const;
 
@@ -444,13 +447,13 @@ public:
                                      raw_pwrite_stream &, raw_pwrite_stream *,
                                      CodeGenFileType, CGPassBuilderOption,
                                      PassInstrumentationCallbacks *) {
-    return make_error<StringError>("buildCodeGenPipeline is not overriden",
+    return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
   }
 
   virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
     llvm_unreachable(
-        "getPassNameFromLegacyName parseMIRPipeline is not overriden");
+        "getPassNameFromLegacyName parseMIRPipeline is not overridden");
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with

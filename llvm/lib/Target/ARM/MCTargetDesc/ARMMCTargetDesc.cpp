@@ -133,6 +133,7 @@ static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 }
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "ARMGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC

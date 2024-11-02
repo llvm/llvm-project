@@ -2,9 +2,9 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %p/Inputs/arm-plt-reloc.s -o %t1
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t2
 // RUN: ld.lld %t1 %t2 -o %t
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
 // RUN: ld.lld -shared %t1 %t2 -o %t3
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DSO %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DSO %s
 // RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 //
 // Test PLT entry generation
@@ -111,7 +111,7 @@ _start:
 // RUN:       .got.plt 0x1100000 : { *(.got.plt) } \
 // RUN:       }" > %t.script
 // RUN: ld.lld --hash-style=sysv --script %t.script -shared %t1 %t2 -o %t4
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECKHIGH %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECKHIGH %s
 // RUN: llvm-readobj -S -r %t4 | FileCheck --check-prefix=DSORELHIGH %s
 
 // CHECKHIGH: Disassembly of section .text:
@@ -179,7 +179,7 @@ _start:
 // RUN:       .got.plt 0x11111100 : { *(.got.plt) } \
 // RUN:       }" > %t2.script
 // RUN: ld.lld --hash-style=sysv --script %t2.script -shared %t1 %t2 -o %t5
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t5 | FileCheck --check-prefix=CHECKLONG %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t5 | FileCheck --check-prefix=CHECKLONG %s
 // RUN: llvm-readobj -S -r %t5 | FileCheck --check-prefix=DSORELLONG %s
 
 // CHECKLONG: Disassembly of section .text:
@@ -248,7 +248,7 @@ _start:
 // RUN:       .got.plt 0x8002020 : { *(.got.plt) } \
 // RUN:       }" > %t3.script
 // RUN: ld.lld --hash-style=sysv --script %t3.script -shared %t1 %t2 -o %t6
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t6 | FileCheck --check-prefix=CHECKMIX %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t6 | FileCheck --check-prefix=CHECKMIX %s
 // RUN: llvm-readobj -S -r %t6 | FileCheck --check-prefix=DSORELMIX %s
 
 // CHECKMIX: Disassembly of section .text:

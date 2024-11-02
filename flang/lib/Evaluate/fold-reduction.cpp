@@ -11,23 +11,26 @@
 namespace Fortran::evaluate {
 bool CheckReductionDIM(std::optional<int> &dim, FoldingContext &context,
     ActualArguments &arg, std::optional<int> dimIndex, int rank) {
-  if (dimIndex && static_cast<std::size_t>(*dimIndex) < arg.size()) {
-    if (auto *dimConst{
-            Folder<SubscriptInteger>{context}.Folding(arg[*dimIndex])}) {
-      if (auto dimScalar{dimConst->GetScalarValue()}) {
-        auto dimVal{dimScalar->ToInt64()};
-        if (dimVal >= 1 && dimVal <= rank) {
-          dim = dimVal;
-        } else {
-          context.messages().Say(
-              "DIM=%jd is not valid for an array of rank %d"_err_en_US,
-              static_cast<std::intmax_t>(dimVal), rank);
-          return false;
-        }
+  if (!dimIndex || static_cast<std::size_t>(*dimIndex) >= arg.size() ||
+      !arg[*dimIndex]) {
+    dim.reset();
+    return true; // no DIM= argument
+  }
+  if (auto *dimConst{
+          Folder<SubscriptInteger>{context}.Folding(arg[*dimIndex])}) {
+    if (auto dimScalar{dimConst->GetScalarValue()}) {
+      auto dimVal{dimScalar->ToInt64()};
+      if (dimVal >= 1 && dimVal <= rank) {
+        dim = dimVal;
+        return true; // DIM= exists and is a valid constant
+      } else {
+        context.messages().Say(
+            "DIM=%jd is not valid for an array of rank %d"_err_en_US,
+            static_cast<std::intmax_t>(dimVal), rank);
       }
     }
   }
-  return true;
+  return false; // DIM= bad or not scalar constant
 }
 
 Constant<LogicalResult> *GetReductionMASK(

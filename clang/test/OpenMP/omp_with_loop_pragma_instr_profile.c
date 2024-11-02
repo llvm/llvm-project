@@ -17,6 +17,6 @@ void sub(double *restrict a, double *restrict b, int n) {
 // CHECK:       omp.precond.then:
 // CHECK-NEXT:    call void @llvm.instrprof.increment(
 // CHECK:       cond.true:
-// CEHCK-NEXT:    call void @llvm.instrprof.increment(
+// CHECK-NEXT:    call void @llvm.instrprof.increment(
 // CHECK:       omp.inner.for.body:
 // CHECK-NEXT:    call void @llvm.instrprof.increment(

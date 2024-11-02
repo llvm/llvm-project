@@ -87,6 +87,12 @@
 #define KMP_GROUP_AFFINITY 0
 #endif
 
+#if (KMP_OS_LINUX || (KMP_OS_FREEBSD && __FreeBSD_version >= 1301000))
+#define KMP_HAVE_SCHED_GETCPU 1
+#else
+#define KMP_HAVE_SCHED_GETCPU 0
+#endif
+
 /* Check for quad-precision extension. */
 #define KMP_HAVE_QUAD 0
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
@@ -172,7 +178,7 @@ typedef unsigned long long kmp_uint64;
 #if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
-    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64
 #define KMP_SIZE_T_SPEC KMP_UINT64_SPEC
 #else
 #error "Can't determine size_t printf format specifier."
@@ -339,6 +345,9 @@ extern "C" {
 // Use a function like macro to imply that it must be followed by a semicolon
 #if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
 #define KMP_FALLTHROUGH() [[fallthrough]]
+// icc cannot properly tell this attribute is absent so force off
+#elif KMP_COMPILER_ICC
+#define KMP_FALLTHROUGH() ((void)0)
 #elif __has_cpp_attribute(clang::fallthrough)
 #define KMP_FALLTHROUGH() [[clang::fallthrough]]
 #elif __has_attribute(fallthrough) || __GNUC__ >= 7
@@ -447,7 +456,7 @@ enum kmp_mem_fence_type {
 
 // Synchronization primitives
 
-#if KMP_ASM_INTRINS && KMP_OS_WINDOWS
+#if KMP_ASM_INTRINS && KMP_OS_WINDOWS && !(KMP_ARCH_AARCH64 && defined(__GNUC__))
 
 #if KMP_MSVC_COMPAT && !KMP_COMPILER_CLANG
 #pragma intrinsic(InterlockedExchangeAdd)
@@ -1035,7 +1044,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 #endif /* KMP_OS_WINDOWS */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS ||     \
-    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64
 #if KMP_OS_WINDOWS
 #undef KMP_MB
 #define KMP_MB() std::atomic_thread_fence(std::memory_order_seq_cst)
@@ -1049,6 +1058,15 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
+#if KMP_MIC
+// fence-style instructions do not exist, but lock; xaddl $0,(%rsp) can be used.
+// We shouldn't need it, though, since the ABI rules require that
+// * If the compiler generates NGO stores it also generates the fence
+// * If users hand-code NGO stores they should insert the fence
+// therefore no incomplete unordered stores should be visible.
+#define KMP_MFENCE() /* Nothing */
+#define KMP_SFENCE() /* Nothing */
+#else
 #if KMP_COMPILER_ICC || KMP_COMPILER_ICX
 #define KMP_MFENCE_() _mm_mfence()
 #define KMP_SFENCE_() _mm_sfence()
@@ -1067,6 +1085,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
     KMP_MFENCE_();                                                             \
   }
 #define KMP_SFENCE() KMP_SFENCE_()
+#endif
 #else
 #define KMP_MFENCE() KMP_MB()
 #define KMP_SFENCE() KMP_MB()

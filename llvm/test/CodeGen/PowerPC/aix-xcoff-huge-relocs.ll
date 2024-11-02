@@ -6,7 +6,7 @@
 ;; Since overflow section is not supported yet, we will emit an error instead of
 ;; generating an invalid binary for now.
 ; RUN: grep -v RUN: %s | \
-; RUN:   sed >%t.overflow.ll 's/SIZE/65535/;s/MACRO/#/;s/#/################/g;s/#/################/g;s/#/################/g;s/#/################/g;s/#/#_/g;s/_#_\([^#]\)/\1/;s/_/, /g;s/#/i8* @c/g;'
+; RUN:   sed >%t.overflow.ll 's/SIZE/65535/;s/MACRO/#/;s/#/################/g;s/#/################/g;s/#/################/g;s/#/################/g;s/#/#_/g;s/_#_\([^#]\)/\1/;s/_/, /g;s/#/ptr @c/g;'
 ; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:                 -mcpu=pwr4 -mattr=-altivec -filetype=obj -o %t.o %t.overflow.ll 2>&1 | \
 ; RUN:   FileCheck --check-prefix=OVERFLOW %s
@@ -15,7 +15,7 @@
 ;; This test generates 65534 relocation entries, an overflow section should
 ;; not be generated.
 ; RUN: grep -v RUN: %s | \
-; RUN:   sed >%t.ll 's/SIZE/65534/;s/MACRO/#/;s/#/################/g;s/#/################/g;s/#/################/g;s/#/################/g;s/#/#_/g;s/_#_#_\([^#]\)/\1/;s/_/, /g;s/#/i8* @c/g;'
+; RUN:   sed >%t.ll 's/SIZE/65534/;s/MACRO/#/;s/#/################/g;s/#/################/g;s/#/################/g;s/#/################/g;s/#/#_/g;s/_#_#_\([^#]\)/\1/;s/_/, /g;s/#/ptr @c/g;'
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -mcpu=pwr4 -mattr=-altivec -filetype=obj -o %t.o %t.ll
 ; RUN: llvm-readobj --section-headers %t.o | FileCheck --check-prefix=XCOFF32 %s
@@ -26,7 +26,7 @@
 ; RUN: llvm-readobj --section-headers %t64.o | FileCheck --check-prefix=XCOFF64 %s
 
 @c = external global i8, align 1
-@arr = global [SIZE x i8*] [MACRO], align 8
+@arr = global [SIZE x ptr] [MACRO], align 8
 
 ; XCOFF32-NOT:     Name: .ovrflo
 ; XCOFF32-NOT:     Type: STYP_OVRFLO

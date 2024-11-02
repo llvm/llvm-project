@@ -47,7 +47,8 @@ def Tensor_Dialect : Dialect {
 
   let hasConstantMaterializer = 1;
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "AffineDialect",
+    "arith::ArithDialect",
     "complex::ComplexDialect",
   ];
 }

@@ -15,7 +15,9 @@ namespace llvm {
 
 class LPMUpdater;
 class Loop;
+class Function;
 class raw_ostream;
+
 /// Printer pass for the \c LoopAccessInfo results.
 class LoopAccessInfoPrinterPass
     : public PassInfoMixin<LoopAccessInfoPrinterPass> {
@@ -23,8 +25,7 @@ class LoopAccessInfoPrinterPass
 
 public:
   explicit LoopAccessInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // End llvm namespace

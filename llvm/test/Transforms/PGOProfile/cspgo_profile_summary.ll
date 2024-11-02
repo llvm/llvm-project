@@ -15,9 +15,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @goo(i32 %n) {
 entry:
   %i = alloca i32, align 4
-  %i.0..sroa_cast = bitcast i32* %i to i8*
-  store volatile i32 %n, i32* %i, align 4
-  %i.0. = load volatile i32, i32* %i, align 4
+  store volatile i32 %n, ptr %i, align 4
+  %i.0. = load volatile i32, ptr %i, align 4
   ret i32 %i.0.
 }
 
@@ -28,15 +27,15 @@ entry:
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:
-  %0 = load i32, i32* @odd, align 4
+  %0 = load i32, ptr @odd, align 4
   %inc = add i32 %0, 1
-  store i32 %inc, i32* @odd, align 4
+  store i32 %inc, ptr @odd, align 4
   br label %if.end
 
 if.else:
-  %1 = load i32, i32* @even, align 4
+  %1 = load i32, ptr @even, align 4
   %inc1 = add i32 %1, 1
-  store i32 %inc1, i32* @even, align 4
+  store i32 %inc1, ptr @even, align 4
   br label %if.end
 
 if.end:
@@ -54,9 +53,9 @@ for.body:
   br i1 %tobool2, label %for.inc, label %if.then3
 
 if.then3:
-  %2 = load i32, i32* @not_six, align 4
+  %2 = load i32, ptr @not_six, align 4
   %inc4 = add i32 %2, 1
-  store i32 %inc4, i32* @not_six, align 4
+  store i32 %inc4, ptr @not_six, align 4
   br label %for.inc
 
 for.inc:
@@ -67,10 +66,10 @@ for.end:
   ret void
 }
 ; PGOSUMMARY-LABEL: @bar
-; PGOSUMMARY: %even.odd = select i1 %tobool{{[0-9]*}}, i32* @even, i32* @odd
+; PGOSUMMARY: %even.odd = select i1 %tobool{{[0-9]*}}, ptr @even, ptr @odd
 ; PGOSUMMARY-SAME: !prof ![[BW_PGO_BAR:[0-9]+]]
 ; CSPGOSUMMARY-LABEL: @bar
-; CSPGOSUMMARY: %even.odd = select i1 %tobool{{[0-9]*}}, i32* @even, i32* @odd
+; CSPGOSUMMARY: %even.odd = select i1 %tobool{{[0-9]*}}, ptr @even, ptr @odd
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR:[0-9]+]]
 
 define internal fastcc i32 @cond(i32 %i) {
@@ -103,9 +102,9 @@ for.end:
   ret void
 }
 ; CSPGOSUMMARY-LABEL: @foo
-; CSPGOSUMMARY: %even.odd.i = select i1 %tobool.i{{[0-9]*}}, i32* @even, i32* @odd
+; CSPGOSUMMARY: %even.odd.i = select i1 %tobool.i{{[0-9]*}}, ptr @even, ptr @odd
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
-; CSPGOSUMMARY: %even.odd.i2 = select i1 %tobool.i{{[0-9]*}}, i32* @even, i32* @odd
+; CSPGOSUMMARY: %even.odd.i2 = select i1 %tobool.i{{[0-9]*}}, ptr @even, ptr @odd
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
 
 declare dso_local i32 @bar_m(i32)
@@ -113,9 +112,9 @@ declare dso_local i32 @bar_m2(i32)
 
 define internal fastcc void @barbar() {
 entry:
-  %0 = load i32, i32* @odd, align 4
+  %0 = load i32, ptr @odd, align 4
   %inc = add i32 %0, 1
-  store i32 %inc, i32* @odd, align 4
+  store i32 %inc, ptr @odd, align 4
   ret void
 }
 

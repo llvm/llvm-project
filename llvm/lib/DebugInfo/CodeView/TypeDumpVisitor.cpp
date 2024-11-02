@@ -27,7 +27,7 @@ static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
 };
 
 #define ENUM_ENTRY(enum_class, enum)                                           \
-  { #enum, std::underlying_type < enum_class > ::type(enum_class::enum) }
+  { #enum, std::underlying_type_t<enum_class>(enum_class::enum) }
 
 static const EnumEntry<uint16_t> ClassOptionNames[] = {
     ENUM_ENTRY(ClassOptions, Packed),
@@ -335,7 +335,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, MemberFunctionRecord &MF) {
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                         MethodOverloadListRecord &MethodList) {
-  for (auto &M : MethodList.getMethods()) {
+  for (const auto &M : MethodList.getMethods()) {
     ListScope S(*W, "Method");
     printMemberAttributes(M.getAccess(), M.getMethodKind(), M.getOptions());
     printTypeIndex("Type", M.getType());

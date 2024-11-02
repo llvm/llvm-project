@@ -1,0 +1,493 @@
+#! /usr/bin/env bash
+#===-- tools/f18/flang-to-external-fc.sh --------------------------*- sh -*-===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===------------------------------------------------------------------------===#
+# A wrapper script for Flang's compiler driver that was developed for testing and
+# experimenting. You should be able to use it as a regular compiler driver. It
+# will:
+#   * run Flang's compiler driver to unparse the input source files
+#   * use the external compiler (defined via FLANG_FC environment variable) to
+#   compile the unparsed source files
+#
+# Tested with Bash 4.4. This script will exit immediately if you use an
+# older version of Bash.
+#===------------------------------------------------------------------------===#
+set -euo pipefail
+
+# Global variables to make the parsing of input arguments a bit easier
+INPUT_FILES=()
+OPTIONS=()
+OUTPUT_FILE=""
+MODULE_DIR=""
+INTRINSICS_MOD_DIR=""
+COMPILE_ONLY="False"
+PREPROCESS_ONLY="False"
+PRINT_VERSION="False"
+
+# === check_bash_version ======================================================
+#
+# Checks the Bash version that's used to run this script. Exits immediately
+# with a non-zero return code if it's lower than 4.4. Otherwise returns 0
+# (success).
+# =============================================================================
+check_bash_version() {
+  message="Error: Your Bash is too old. Please use Bash >= 4.4"
+  # Major version
+  [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]] && echo $message && exit 1
+
+  # Minor version
+  if [[ "${BASH_VERSINFO[0]}" == 4 ]]; then
+    [[ "${BASH_VERSINFO[1]:-0}" -lt 4 ]] && echo $message && exit 1
+  fi
+
+  return 0
+}
+
+# === parse_args ==============================================================
+#
+# Parse the input arguments passed to this script. Sets the global variables
+# declared at the top.
+#
+# INPUTS:
+#   $1 - all input arguments
+# OUTPUTS:
+#  Saved in the global variables for this script
+# =============================================================================
+parse_args()
+{
+  while [ "${1:-}" != "" ]; do
+      # CASE 1: Compiler option
+      if [[ "${1:0:1}" == "-" ]] ; then
+        # Output file - extract it into a global variable
+        if [[ "$1" == "-o" ]] ; then
+          shift
+          OUTPUT_FILE="$1"
+          shift
+          continue
+        fi
+
+        # Module directory - extract it into a global variable
+        if [[ "$1" == "-module-dir" ]]; then
+          shift
+          MODULE_DIR="$1"
+          shift
+          continue
+        fi
+
+        # Intrinsics module dir - extract it into a global var
+        if [[ "$1" == "-intrinsics-module-directory" ]]; then shift
+          INTRINSICS_MOD_DIR=$1
+          shift
+          continue
+        fi
+
+        # Module suffix cannot be modified - this script defines it before
+        # calling the driver.
+        if [[ "$1" == "-module-suffix" ]]; then
+          echo "ERROR: \'-module-suffix\' is not available when using the \'flang\' script"
+          exit 1
+        fi
+
+        # Special treatment for `J <dir>` and `-I <dir>`. We translate these
+        # into `J<dir>` and `-I<dir>` respectively.
+        if [[ "$1" == "-J" ]] || [[ "$1" == "-I" ]]; then
+          opt=$1
+          shift
+          OPTIONS+=("$opt$1")
+          shift
+          continue
+        fi
+
+        # This is a regular option - just add it to the list.
+        OPTIONS+=($1)
+        if [[ $1 == "-c" ]]; then
+          COMPILE_ONLY="True"
+        fi
+
+        if [[ $1 == "-E" ]]; then
+          PREPROCESS_ONLY="True"
+        fi
+
+        if [[ $1 == "-v" || $1 == "--version" ]]; then
+          PRINT_VERSION="True"
+        fi
+
+        shift
+        continue
+
+      # CASE 2: A regular file (either source or a library file)
+      elif [[ -f "$1" ]]; then
+        INPUT_FILES+=($1)
+        shift
+        continue
+
+      else
+        # CASE 3: Unsupported
+        echo "ERROR: unrecognised option format: \`$1\`. Perhaps non-existent file?"
+        exit 1
+      fi
+  done
+}
+
+# === categorise_files ========================================================
+#
+# Categorises input files into:
+#   * Fortran source files (to be compiled)
+#   * library files (to be linked into the final executable)
+#
+# INPUTS:
+#   $1 - all input files to be categorised (array, name reference)
+# OUTPUTS:
+#   $2 - Fortran source files extracted from $1 (array, name reference)
+#   $3 - other source files extracted from $1 (array, name reference)
+#   $4 - object files extracted from $1 (array, name reference)
+#   $5 - lib files extracted from $1 (array, name reference)
+# =============================================================================
+categorise_files()
+{
+  local -n -r all_files=$1
+  local -n fortran_sources=$2
+  local -n other_sources=$3
+  local -n objects=$4
+  local -n libs=$5
+
+  for current_file in "${all_files[@]}"; do
+    file_ext=${current_file##*.}
+    if [[ $file_ext == "f" ]] || [[ $file_ext == "f90" ]] ||
+       [[ $file_ext == "f" ]] || [[ $file_ext == "F" ]] || [[ $file_ext == "ff" ]] ||
+       [[ $file_ext == "f90" ]] || [[ $file_ext == "F90" ]] || [[ $file_ext == "ff90" ]] ||
+       [[ $file_ext == "f95" ]] || [[ $file_ext == "F95" ]] || [[ $file_ext == "ff95" ]] ||
+       [[ $file_ext == "cuf" ]] || [[ $file_ext == "CUF" ]] || [[ $file_ext == "f18" ]] ||
+       [[ $file_ext == "F18" ]] || [[ $file_ext == "ff18" ]]; then
+      fortran_sources+=($current_file)
+    elif [[ $file_ext == "a" ]] || [[ $file_ext == "so" ]]; then
+      libs+=($current_file)
+    elif [[ $file_ext == "o" ]]; then
+      objects+=($current_file)
+    else
+      other_sources+=($current_file)
+    fi
+  done
+}
+
+# === categorise_opts ==========================================================
+#
+# Categorises compiler options into options for:
+#   * the Flang driver (either new or the "throwaway" driver)
+#   * the external Fortran driver that will generate the code
+# Most options accepted by Flang will be claimed by it. The only exceptions are
+# `-I` and `-J`.
+#
+# INPUTS:
+#   $1 - all compiler options (array, name reference)
+# OUTPUTS:
+#   $2 - compiler options for the Flang driver (array, name reference)
+#   $3 - compiler options for the external driver (array, name reference)
+# =============================================================================
+categorise_opts()
+{
+  local -n all_opts=$1
+  local -n flang_opts=$2
+  local -n fc_opts=$3
+
+  for opt in "${all_opts[@]}"; do
+    # These options are claimed by Flang, but should've been dealt with in parse_args.
+    if  [[ $opt == "-module-dir" ]] ||
+      [[ $opt == "-o" ]] ||
+      [[ $opt == "-fintrinsic-modules-path" ]] ; then
+      echo "ERROR: $opt should've been fully processed by \`parse_args\`"
+      exit 1
+    fi
+
+    if
+      # The options claimed by Flang. This list needs to be compatible with
+      # what's supported by Flang's compiler driver (i.e. `flang-new`).
+      [[ $opt == "-cpp" ]] ||
+      [[ $opt =~ ^-D.* ]] ||
+      [[ $opt == "-E" ]] ||
+      [[ $opt == "-falternative-parameter-statement" ]] ||
+      [[ $opt == "-fbackslash" ]] ||
+      [[ $opt == "-fcolor-diagnostics" ]] ||
+      [[ $opt == "-fdefault-double-8" ]] ||
+      [[ $opt == "-fdefault-integer-8" ]] ||
+      [[ $opt == "-fdefault-real-8" ]] ||
+      [[ $opt == "-ffixed-form" ]] ||
+      [[ $opt =~ ^-ffixed-line-length=.* ]] ||
+      [[ $opt == "-ffree-form" ]] ||
+      [[ $opt == "-fimplicit-none" ]] ||
+      [[ $opt =~ ^-finput-charset=.* ]] ||
+      [[ $opt == "-flarge-sizes" ]] ||
+      [[ $opt == "-flogical-abbreviations" ]] ||
+      [[ $opt == "-fno-color-diagnostics" ]] ||
+      [[ $opt == "-fxor-operator" ]] ||
+      [[ $opt == "-help" ]] ||
+      [[ $opt == "-nocpp" ]] ||
+      [[ $opt == "-pedantic" ]] ||
+      [[ $opt =~ ^-std=.* ]] ||
+      [[ $opt =~ ^-U.* ]] ||
+      [[ $opt == "-Werror" ]]; then
+      flang_opts+=($opt)
+    elif
+      # We translate the following into equivalents understood by `flang-new`
+      [[ $opt == "-Mfixed" ]] || [[ $opt == "-Mfree" ]]; then
+        case $opt in
+          -Mfixed)
+            flang_opts+=("-ffixed-form")
+          ;;
+
+          -Mfree)
+            flang_opts+=("-ffree-form")
+          ;;
+
+        *)
+          echo "ERROR: $opt has no equivalent in 'flang-new'"
+          exit 1
+          ;;
+      esac
+    elif
+      # Options that are needed for both Flang and the external driver.
+      [[ $opt =~ -I.* ]] ||
+      [[ $opt =~ -J.* ]] ||
+      [[ $opt == "-fopenmp" ]] ||
+      [[ $opt == "-fopenacc" ]]; then
+      flang_opts+=($opt)
+      fc_opts+=($opt)
+    else
+      # All other options are claimed for the external driver.
+      fc_opts+=($opt)
+    fi
+  done
+}
+
+# === get_external_fc_name ====================================================
+#
+# Returns the name of external Fortran compiler based on values of
+# environment variables.
+# =============================================================================
+get_external_fc_name() {
+  if [[ -v FLANG_FC ]]; then
+    echo ${FLANG_FC}
+  elif [[ -v F18_FC ]]; then
+    # We support F18_FC for backwards compatibility.
+    echo ${F18_FC}
+  else
+    echo gfortran
+  fi
+}
+
+# === preprocess ==============================================================
+#
+# Runs the preprocessing. Fortran files are preprocessed using Flang. Other
+# files are preprocessed using the external Fortran compiler.
+#
+# INPUTS:
+#   $1 - Fortran source files (array, name reference)
+#   $2 - other source files (array, name reference)
+#   $3 - compiler flags (array, name reference)
+# =============================================================================
+preprocess() {
+  local -n fortran_srcs=$1
+  local -n other_srcs=$2
+  local -n opts=$3
+
+  local ext_fc="$(get_external_fc_name)"
+
+  local -r wd=$(cd "$(dirname "$0")/.." && pwd)
+
+  # Use the provided output file name.
+  if [[ ! -z ${OUTPUT_FILE:+x} ]]; then
+    output_definition="-o $OUTPUT_FILE"
+  fi
+
+  # Preprocess fortran sources using Flang
+  for idx in "${!fortran_srcs[@]}"; do
+    if ! "$wd/bin/flang-new" -E "${opts[@]}" "${fortran_srcs[$idx]}" ${output_definition:+$output_definition}
+    then status=$?
+         echo flang: in "$PWD", flang-new failed with exit status $status: "$wd/bin/flang-new" "${opts[@]}" "$@" >&2
+         exit $status
+    fi
+  done
+
+  # Preprocess other sources using Flang
+  for idx in "${!other_srcs[@]}"; do
+    if ! $ext_fc -E "${opts[@]}" "${other_srcs[$idx]}" ${output_definition:+$output_definition}
+    then status=$?
+         echo flang: in "$PWD", flang-new failed with exit status $status: "$wd/bin/flang-new" "${opts[@]}" "$@" >&2
+         exit $status
+    fi
+  done
+}
+
+# === get_relocatable_name ======================================================
+# This method generates the name of the output file for the compilation phase
+# (triggered with `-c`). If the user of this script is only interested in
+# compilation (`flang -c`), use $OUTPUT_FILE provided that it was defined.
+# Otherwise, use the usual heuristics:
+#   * file.f --> file.o
+#   * file.c --> file.o
+#
+# INPUTS:
+#   $1 - input source file for which to generate the output name
+# =============================================================================
+get_relocatable_name() {
+  local -r src_file=$1
+
+  if [[ $COMPILE_ONLY == "True" ]] && [[ ! -z ${OUTPUT_FILE:+x} ]]; then
+    out_file="$OUTPUT_FILE"
+  else
+    current_ext=${src_file##*.}
+    new_ext="o"
+
+    out_file=$(basename "${src_file}" "$current_ext")${new_ext}
+  fi
+
+  echo "$out_file"
+}
+
+# === main ====================================================================
+# Main entry point for this script
+# =============================================================================
+main() {
+  check_bash_version
+  parse_args "$@"
+
+  if [[ $PRINT_VERSION == "True" ]]; then
+    echo "flang version @FLANG_VERSION@"
+    exit 0
+  fi
+
+  # Source, object and library files provided by the user
+  local fortran_source_files=()
+  local other_source_files=()
+  local object_files=()
+  local lib_files=()
+  categorise_files INPUT_FILES fortran_source_files other_source_files object_files lib_files
+
+  if [[ $PREPROCESS_ONLY == "True" ]]; then
+    preprocess fortran_source_files other_source_files OPTIONS
+    exit 0
+  fi
+
+  # Options for the Flang driver.
+  # NOTE: We need `-fc1` to make sure that the frontend driver rather than
+  # compiler driver is used. We also need to make sure that that's the first
+  # flag that the driver will see (otherwise it assumes compiler/toolchain
+  # driver mode).
+  local flang_options=("-fc1")
+  # Options for the external Fortran Compiler
+  local ext_fc_options=()
+  categorise_opts OPTIONS flang_options ext_fc_options
+
+  local -r wd=$(cd "$(dirname "$0")/.." && pwd)
+
+  # uuidgen is common but not installed by default on some distros
+  if ! command -v uuidgen &> /dev/null
+  then
+    echo "uuidgen is required for generating unparsed file names."
+    exit 1
+  fi
+
+  # STEP 1: Unparse
+  # Base-name for the unparsed files. These are just temporary files that are
+  # first generated and then deleted by this script.
+  # NOTE: We need to make sure that the base-name is unique to every
+  # invocation. Otherwise we can't use this script in parallel.
+  local -r unique_id=$(uuidgen | cut -b25-36)
+  local -r unparsed_file_base="flang_unparsed_file_$unique_id"
+
+  flang_options+=("-module-suffix")
+  flang_options+=(".f18.mod")
+  flang_options+=("-fdebug-unparse")
+  flang_options+=("-fno-analyzed-objects-for-unparse")
+
+  [[ ! -z ${MODULE_DIR} ]] && flang_options+=("-module-dir ${MODULE_DIR}")
+  [[ ! -z ${INTRINSICS_MOD_DIR} ]] && flang_options+=("-intrinsics-module-directory ${INTRINSICS_MOD_DIR}")
+  for idx in "${!fortran_source_files[@]}"; do
+    set +e
+    "$wd/bin/flang-new" "${flang_options[@]}" "${fortran_source_files[$idx]}" -o "${unparsed_file_base}_${idx}.f90"
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+         echo flang: in "$PWD", flang-new failed with exit status "$ret_status": "$wd/bin/flang-new" "${flang_options[@]}" "$@" >&2
+         exit "$ret_status"
+    fi
+  done
+
+  # STEP 2: Compile Fortran Source Files
+  local ext_fc="$(get_external_fc_name)"
+  # Temporary object files generated by this script. To be deleted at the end.
+  local temp_object_files=()
+  for idx in "${!fortran_source_files[@]}"; do
+    # We always have to specify the output name with `-o <out_obj_file>`. This
+    # is because we are using the unparsed rather than the original source file
+    # below. As a result, we cannot rely on the compiler-generated output name.
+    out_obj_file=$(get_relocatable_name "${fortran_source_files[$idx]}")
+
+    set +e
+    $ext_fc "-c" "${ext_fc_options[@]}" "${unparsed_file_base}_${idx}.f90" "-o" "${out_obj_file}"
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+      echo flang: in "$PWD", "$ext_fc" failed with exit status "$ret_status": "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
+         exit "$ret_status"
+    fi
+    temp_object_files+=(${out_obj_file})
+  done
+
+  # Delete the unparsed files
+  for idx in "${!fortran_source_files[@]}"; do
+    rm "${unparsed_file_base}_${idx}.f90"
+  done
+
+  # STEP 3: Compile Other Source Files
+  for idx in "${!other_source_files[@]}"; do
+    # We always specify the output name with `-o <out_obj_file>`. The user
+    # might have used `-o`, but we never add it to $OPTIONS (or
+    # $ext_fc_options). Hence we need to use `get_relocatable_name`.
+    out_obj_file=$(get_relocatable_name "${other_source_files[$idx]}")
+
+    set +e
+    $ext_fc "-c" "${ext_fc_options[@]}" "${other_source_files[${idx}]}" "-o" "${out_obj_file}"
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+      echo flang: in "$PWD", "$ext_fc" failed with exit status "$ret_status": "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
+         exit "$ret_status"
+    fi
+    temp_object_files+=(${out_obj_file})
+  done
+
+  # STEP 4: Link
+  if [[ $COMPILE_ONLY == "True" ]]; then
+    exit 0;
+  fi
+
+  if [[ ${#temp_object_files[@]} -ge 1 ]] || [[ ${#object_files[@]} -ge 1 ]] ; then
+    # If $OUTPUT_FILE was specified, use it for the output name.
+    if [[ ! -z ${OUTPUT_FILE:+x} ]]; then
+      output_definition="-o $OUTPUT_FILE"
+    else
+      output_definition=""
+    fi
+
+    set +e
+    $ext_fc "${ext_fc_options[@]}" "${object_files[@]}" "${temp_object_files[@]}" "${lib_files[@]}" ${output_definition:+$output_definition}
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+         echo flang: in "$PWD", "$ext_fc" failed with exit status "$ret_status": "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
+         exit "$ret_status"
+    fi
+  fi
+
+  # Delete intermediate object files
+  for idx in "${!fortran_source_files[@]}"; do
+    rm "${temp_object_files[$idx]}"
+  done
+}
+
+main "${@}"

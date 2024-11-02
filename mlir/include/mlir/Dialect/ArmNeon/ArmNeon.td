@@ -64,7 +64,7 @@ class ArmNeon_OverloadedOperandsWithOneResultIntrOp<string mnemonic,
   : ArmNeon_IntrOp<mnemonic, [0], overloadedOperands, 1, traits>;
 
 def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
-       NoSideEffect,
+       Pure,
        AllTypesMatch<["a", "b"]>,
        TypesMatchWith<
          "res has same vector shape and element bitwidth scaled by 2 as a",
@@ -93,7 +93,7 @@ def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
 }
 
 def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
-      NoSideEffect,
+      Pure,
       AllTypesMatch<["b", "c"]>,
       AllTypesMatch<["a", "res"]>,
       TypesMatchWith<"res has the same number of elements as operand b",
@@ -126,24 +126,24 @@ class ArmNeon_2dOp<string mnemonic, list<Trait> traits = []>
          /*traits=*/traits>;
 
 def Sdot2dOp : ArmNeon_2dOp<"sdot", [
-      NoSideEffect,
+      Pure,
       AllTypesMatch<["b", "c"]>,
       AllTypesMatch<["a", "res"]>,
       PredOpTrait<
         "operand `a` should be 1-dimensional",
-        CPred<"a().getType().cast<VectorType>().getShape().size() == 1">
+        CPred<"getA().getType().cast<VectorType>().getShape().size() == 1">
       >,
       PredOpTrait<
         "operand `b` should be 2-dimensional",
-        CPred<"b().getType().cast<VectorType>().getShape().size() == 2">
+        CPred<"getB().getType().cast<VectorType>().getShape().size() == 2">
       >,
       PredOpTrait<
         "operand `b` should have 4 columns",
-        CPred<"b().getType().cast<VectorType>().getShape()[1] == 4">
+        CPred<"getB().getType().cast<VectorType>().getShape()[1] == 4">
       >,
       PredOpTrait<
         "operand `b` should have as many rows as the size of operand `a`",
-        CPred<"b().getType().cast<VectorType>().getShape()[0] == a().getType().cast<VectorType>().getShape()[0]">
+        CPred<"getB().getType().cast<VectorType>().getShape()[0] == getA().getType().cast<VectorType>().getShape()[0]">
       >,
       ]
   > {

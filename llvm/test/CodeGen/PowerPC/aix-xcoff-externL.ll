@@ -17,8 +17,8 @@ declare i32 @Lb(...)
 
 define void @foo() {
 entry:
-  store i32 1, i32* @La, align 4
-  call i32 bitcast (i32 (...)* @Lb to i32 ()*)()
+  store i32 1, ptr @La, align 4
+  call i32 @Lb()
   ret void
 }
 

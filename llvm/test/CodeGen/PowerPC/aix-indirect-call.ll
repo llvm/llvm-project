@@ -19,7 +19,7 @@
 ; RUN: llvm-objdump -d %t | FileCheck \
 ; RUN: --check-prefixes=CHECKOBJ,ASMOBJ32,OBJ32 %s
 
-define signext i32 @callThroughPtr(i32 ()* nocapture) {
+define signext i32 @callThroughPtr(ptr nocapture) {
   %2 = tail call signext i32 %0()
   ret i32 %2
 }
@@ -79,7 +79,7 @@ define signext i32 @callThroughPtr(i32 ()* nocapture) {
 ; OBJ32-NEXT:    80 41 00 14  lwz 2, 20(1)
 ; OBJ32-NEXT:                 addi 1, 1, 64
 
-define void @callThroughPtrWithArgs(void (i32, i16, i64)* nocapture) {
+define void @callThroughPtrWithArgs(ptr nocapture) {
   tail call void %0(i32 signext 1, i16 zeroext 2, i64 3)
   ret void
 }

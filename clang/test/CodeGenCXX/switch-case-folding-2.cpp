@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 extern int printf(const char*, ...);
 
@@ -8,7 +8,7 @@ int test(int val){
  case 4:
    do {
      switch (6) {
-       // CHECK: call noundef i32 (i8*, ...) @_Z6printfPKcz
+       // CHECK: call noundef i32 (ptr, ...) @_Z6printfPKcz
        case 6: do { case 5: printf("bad\n"); } while (0);
      };
    } while (0);
@@ -94,8 +94,8 @@ int hidden_var() {
   switch (1) {
   // CHECK: %[[N:.*]] = alloca i32
   case 0: int n;
-  // CHECK: store i32 0, i32* %[[N]]
-  // CHECK: load i32, i32* %[[N]]
+  // CHECK: store i32 0, ptr %[[N]]
+  // CHECK: load i32, ptr %[[N]]
   // CHECK: ret
   default: n = 0; return n;
   }

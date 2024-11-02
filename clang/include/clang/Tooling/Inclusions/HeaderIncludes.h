@@ -79,6 +79,9 @@ public:
   /// exactly the same spelling.
   tooling::Replacements remove(llvm::StringRef Header, bool IsAngled) const;
 
+  // Matches a whole #include directive.
+  static const llvm::Regex IncludeRegex;
+
 private:
   struct Include {
     Include(StringRef Name, tooling::Range R) : Name(Name), R(R) {}
@@ -124,9 +127,6 @@ private:
 
   // All possible priorities.
   std::set<int> Priorities;
-
-  // Matches a whole #include directive.
-  llvm::Regex IncludeRegex;
 };
 
 } // namespace tooling

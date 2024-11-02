@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 @skipIfWindows  # signals do not exist on Windows
 class RaiseTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfNetBSD  # Hangs on NetBSD
@@ -43,7 +41,7 @@ class RaiseTestCase(TestBase):
         process = target.LaunchSimple(
             [signal], None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -82,7 +80,7 @@ class RaiseTestCase(TestBase):
         # Make sure we stop at the signal
         lldbutil.set_actions_for_signal(self, signal, "false", "true", "true")
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
         self.assertTrue(
             thread.IsValid(),
@@ -95,7 +93,7 @@ class RaiseTestCase(TestBase):
 
         # Continue until we exit.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         process = self.launch(target, signal)
@@ -108,7 +106,7 @@ class RaiseTestCase(TestBase):
             substrs=[
                 "stopped and restarted",
                 signal])
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         # launch again
@@ -121,7 +119,7 @@ class RaiseTestCase(TestBase):
             "process continue",
             substrs=["stopped and restarted"],
             matching=False)
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
         if not test_passing:
@@ -135,7 +133,7 @@ class RaiseTestCase(TestBase):
         # Make sure we stop at the signal
         lldbutil.set_actions_for_signal(self, signal, "true", "true", "true")
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
         self.assertTrue(
             thread.IsValid(),
@@ -151,7 +149,7 @@ class RaiseTestCase(TestBase):
 
         # Continue until we exit. The process should receive the signal.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), signo)
 
         # launch again
@@ -165,7 +163,7 @@ class RaiseTestCase(TestBase):
             substrs=[
                 "stopped and restarted",
                 signal])
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), signo)
 
         # launch again
@@ -178,7 +176,7 @@ class RaiseTestCase(TestBase):
             "process continue",
             substrs=["stopped and restarted"],
             matching=False)
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), signo)
 
         # reset signal handling to default

@@ -15,8 +15,7 @@
 // void swap(unordered_map& x, unordered_map& y);
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: libcxx-no-debug-mode, c++03
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+// UNSUPPORTED: !libcpp-has-debug-mode, c++03
 
 #include <unordered_map>
 

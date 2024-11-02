@@ -56,19 +56,19 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
   set(LIBS
     ${conversion_libs}
     MLIRAnalysis
-    MLIRArithmetic
+    MLIRArithDialect
     MLIRExecutionEngine
-    MLIRFunc
+    MLIRFuncDialect
     MLIRGPUOps
     MLIRIR
     MLIRJitRunner
-    MLIRLLVMIR
+    MLIRLLVMDialect
     MLIRLLVMCommonConversion
     MLIRLLVMToLLVMIRTranslation
-    MLIRMemRef
+    MLIRMemRefDialect
     MLIRMemRefToLLVM
     MLIRParser
-    MLIRSPIRV
+    MLIRSPIRVDialect
     MLIRSPIRVTransforms
     MLIRSupport
     MLIRTargetLLVMIRExport
@@ -88,7 +88,7 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
     LIST(APPEND targets_to_link "LLVM${t}")
   ENDFOREACH(t)
 
-  add_llvm_tool(mlir-vulkan-runner
+  add_mlir_tool(mlir-vulkan-runner
     mlir-vulkan-runner.cpp
 
     DEPENDS

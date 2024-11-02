@@ -14,6 +14,8 @@
 // memory_resource::do_deallocate(void*, size_t, size_t); /* private */
 // memory_resource::do_is_equal(memory_resource const&);  /* private */
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 
 namespace ex = std::experimental::pmr;

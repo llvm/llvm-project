@@ -43,12 +43,12 @@ entry:
   call void @llvm.dbg.value(metadata i64 9, metadata !17, metadata !DIExpression()), !dbg !28
   call void @llvm.dbg.value(metadata i64 13, metadata !18, metadata !DIExpression()), !dbg !29
   call void @llvm.dbg.value(metadata i64 0, metadata !19, metadata !DIExpression()), !dbg !30
-  %0 = load i64, i64* @end, align 8, !dbg !31
+  %0 = load i64, ptr @end, align 8, !dbg !31
   %cmp20 = icmp sgt i64 %0, 0, !dbg !37
   br i1 %cmp20, label %for.body.lr.ph, label %for.cond.cleanup, !dbg !38
 
 for.body.lr.ph:                                   ; preds = %entry
-  %1 = load i64, i64* @end, align 8
+  %1 = load i64, ptr @end, align 8
   br label %for.body, !dbg !38
 
 for.cond.cleanup.loopexit:                        ; preds = %for.body
@@ -58,7 +58,6 @@ for.cond.cleanup.loopexit:                        ; preds = %for.body
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   %x.0.lcssa.off0 = phi i32 [ 9, %entry ], [ %extract.t, %for.cond.cleanup.loopexit ]
   call void @llvm.dbg.value(metadata i64 undef, metadata !17, metadata !DIExpression()), !dbg !28
-  %2 = bitcast [80 x i64]* %arr to i8*, !dbg !39
   call void @llvm.dbg.value(metadata i64 0, metadata !26, metadata !DIExpression()), !dbg !41
   br label %for.body4, !dbg !42
 
@@ -111,8 +110,8 @@ for.body4:                                        ; preds = %for.cond.cleanup, %
   call void @llvm.dbg.value(metadata i64 %q.019, metadata !26, metadata !DIExpression()), !dbg !41
   %add5 = add nuw nsw i64 %q.019, 3, !dbg !51
   %idxprom = trunc i64 %q.019 to i32, !dbg !54
-  %arrayidx = getelementptr inbounds [80 x i64], [80 x i64]* %arr, i32 0, i32 %idxprom, !dbg !54
-  store volatile i64 %add5, i64* %arrayidx, align 8, !dbg !55
+  %arrayidx = getelementptr inbounds [80 x i64], ptr %arr, i32 0, i32 %idxprom, !dbg !54
+  store volatile i64 %add5, ptr %arrayidx, align 8, !dbg !55
   %inc7 = add nuw nsw i64 %q.019, 1, !dbg !56
   call void @llvm.dbg.value(metadata i64 %inc7, metadata !26, metadata !DIExpression()), !dbg !41
   %cmp2 = icmp ult i64 %inc7, 64, !dbg !57

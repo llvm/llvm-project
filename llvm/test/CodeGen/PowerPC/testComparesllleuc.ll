@@ -76,7 +76,7 @@ define dso_local void @test_llleuc_store(i8 zeroext %a, i8 zeroext %b) {
 entry:
   %cmp = icmp ule i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @glob
+  store i8 %conv3, ptr @glob
   ret void
 }
 
@@ -93,7 +93,7 @@ define dso_local void @test_llleuc_sext_store(i8 zeroext %a, i8 zeroext %b) {
 entry:
   %cmp = icmp ule i8 %a, %b
   %conv3 = sext i1 %cmp to i8
-  store i8 %conv3, i8* @glob
+  store i8 %conv3, ptr @glob
   ret void
 }
 
@@ -109,7 +109,7 @@ define dso_local void @test_llleuc_z_store(i8 zeroext %a) {
 entry:
   %cmp = icmp ule i8 %a, 0
   %conv2 = zext i1 %cmp to i8
-  store i8 %conv2, i8* @glob
+  store i8 %conv2, ptr @glob
   ret void
 }
 
@@ -126,6 +126,6 @@ define dso_local void @test_llleuc_sext_z_store(i8 zeroext %a) {
 entry:
   %cmp = icmp ule i8 %a, 0
   %conv2 = sext i1 %cmp to i8
-  store i8 %conv2, i8* @glob
+  store i8 %conv2, ptr @glob
   ret void
 }

@@ -3,20 +3,20 @@
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=45 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix=OMP50 --check-prefix=CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -DOMP5 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix=OMP50 --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -DOMP5 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -DOMP5 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp -DOMP5 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 
 // RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=45 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd  -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd  -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd  -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp-simd  -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -DOMP5 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -DOMP5 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -DOMP5 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp-simd -DOMP5 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // expected-no-diagnostics
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifndef HEADER
@@ -788,7 +788,15 @@ for (int i = 0; i < 10; ++i);
 // OMP45: [[T1_END]]:
 // OMP45: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 %{{.+}})
 // OMP45: ret void
-//
+
+// OMP50-LABEL: parallel_simd_atomic
+// OMP50: call i32 @__kmpc_global_thread_num
+// OMP50: call void @__kmpc_push_num_threads
+// OMP50: call void {{.*}} @__kmpc_fork_call
+// OMP50-LABEL: define internal void @.omp_outlined..14
+// OMP50: call void @__kmpc_for_static_init_4
+// OMP50: omp.inner.for.body:
+// OMP50: %{{[0-9]+}} = atomicrmw add i32* %{{[0-9]+}}, i32 1 monotonic, align 4, !llvm.access.group !47
 
 // OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
 // OMP45-DAG: ![[VECT]] = distinct !{![[VECT]], ![[PA:.+]], ![[VM:.+]]}
@@ -819,5 +827,16 @@ void parallel_simd(float *a) {
 }
 // TERM_DEBUG: !{{[0-9]+}} = !DILocation(line: [[@LINE-11]],
 // TERM_DEBUG-NOT: line: 0,
+
+#ifdef OMP5
+void parallel_simd_atomic(int a) {
+#pragma omp parallel for simd shared(a) num_threads(10)
+  for (int i = 0; i < 100; i++) {
+  #pragma omp atomic update
+    a += 1;
+  }
+}
+#endif // OMP5
+
 #endif // HEADER
 

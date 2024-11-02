@@ -10,6 +10,7 @@
 #define LLVM_MC_MCTARGETOPTIONS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compression.h"
 #include <string>
 #include <vector>
 
@@ -25,10 +26,10 @@ enum class ExceptionHandling {
   AIX,      ///< AIX Exception Handling
 };
 
-enum class DebugCompressionType {
-  None, ///< No compression
-  GNU,  ///< zlib-gnu style compression
-  Z,    ///< zlib style complession
+enum class EmitDwarfUnwindType {
+  Always,          // Always emit dwarf unwind
+  NoCompactUnwind, // Only emit if compact unwind isn't available
+  Default,         // Default behavior is based on the target
 };
 
 class StringRef;
@@ -56,6 +57,9 @@ public:
   bool PreserveAsmComments : 1;
 
   bool Dwarf64 : 1;
+
+  EmitDwarfUnwindType EmitDwarfUnwind;
+
   int DwarfVersion = 0;
 
   enum DwarfDirectory {
@@ -72,6 +76,7 @@ public:
   std::string ABIName;
   std::string AssemblyLanguage;
   std::string SplitDwarfFile;
+  std::string AsSecureLogFile;
 
   const char *Argv0 = nullptr;
   ArrayRef<std::string> CommandLineArgs;

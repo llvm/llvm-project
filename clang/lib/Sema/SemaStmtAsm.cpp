@@ -254,7 +254,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
 
   // The parser verifies that there is a string literal here.
-  assert(AsmString->isAscii());
+  assert(AsmString->isOrdinary());
 
   FunctionDecl *FD = dyn_cast<FunctionDecl>(getCurLexicalContext());
   llvm::StringMap<bool> FeatureMap;
@@ -262,7 +262,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   for (unsigned i = 0; i != NumOutputs; i++) {
     StringLiteral *Literal = Constraints[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef OutputName;
     if (Names[i])
@@ -330,7 +330,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       if (RequireCompleteType(OutputExpr->getBeginLoc(), Exprs[i]->getType(),
                               diag::err_dereference_incomplete_type))
         return StmtError();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       return StmtError(Diag(OutputExpr->getBeginLoc(),
                             diag::err_asm_invalid_lvalue_in_output)
@@ -353,7 +353,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   for (unsigned i = NumOutputs, e = NumOutputs + NumInputs; i != e; i++) {
     StringLiteral *Literal = Constraints[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef InputName;
     if (Names[i])
@@ -459,7 +459,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   // Check that the clobbers are valid.
   for (unsigned i = 0; i != NumClobbers; i++) {
     StringLiteral *Literal = Clobbers[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef Clobber = Literal->getString();
 
@@ -716,10 +716,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       NamedOperandList.emplace_back(
           std::make_pair(Names[i]->getName(), Exprs[i]));
   // Sort NamedOperandList.
-  std::stable_sort(NamedOperandList.begin(), NamedOperandList.end(),
-              [](const NamedOperand &LHS, const NamedOperand &RHS) {
-                return LHS.first < RHS.first;
-              });
+  llvm::stable_sort(NamedOperandList, llvm::less_first());
   // Find adjacent duplicate operand.
   SmallVector<NamedOperand, 4>::iterator Found =
       std::adjacent_find(begin(NamedOperandList), end(NamedOperandList),
@@ -736,6 +733,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   }
   if (NS->isAsmGoto())
     setFunctionHasBranchIntoScope();
+
+  CleanupVarDeclMarking();
+  DiscardCleanupsInEvaluationContext();
   return NS;
 }
 
@@ -932,13 +932,24 @@ StmtResult Sema::ActOnMSAsmStmt(SourceLocation AsmLoc, SourceLocation LBraceLoc,
   bool IsSimple = (NumOutputs != 0 || NumInputs != 0);
   setFunctionHasBranchProtectedScope();
 
+  bool InvalidOperand = false;
   for (uint64_t I = 0; I < NumOutputs + NumInputs; ++I) {
-    if (Exprs[I]->getType()->isBitIntType())
-      return StmtError(
-          Diag(Exprs[I]->getBeginLoc(), diag::err_asm_invalid_type)
-          << Exprs[I]->getType() << (I < NumOutputs)
-          << Exprs[I]->getSourceRange());
+    Expr *E = Exprs[I];
+    if (E->getType()->isBitIntType()) {
+      InvalidOperand = true;
+      Diag(E->getBeginLoc(), diag::err_asm_invalid_type)
+          << E->getType() << (I < NumOutputs)
+          << E->getSourceRange();
+    } else if (E->refersToBitField()) {
+      InvalidOperand = true;
+      FieldDecl *BitField = E->getSourceBitField();
+      Diag(E->getBeginLoc(), diag::err_ms_asm_bitfield_unsupported)
+          << E->getSourceRange();
+      Diag(BitField->getLocation(), diag::note_bitfield_decl);
+    }
   }
+  if (InvalidOperand)
+    return StmtError();
 
   MSAsmStmt *NS =
     new (Context) MSAsmStmt(Context, AsmLoc, LBraceLoc, IsSimple,

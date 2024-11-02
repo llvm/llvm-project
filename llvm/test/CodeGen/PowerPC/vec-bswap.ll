@@ -8,7 +8,7 @@
 ; RUN:   -verify-machineinstrs  -vec-extabi | \
 ; RUN:   FileCheck %s --check-prefixes=AIX,AIX32
 
-define dso_local void @test(i32* %Arr, i32 signext %Len) {
+define dso_local void @test(ptr %Arr, i32 signext %Len) {
 ; CHECK-LABEL: test:
 ; CHECK:         lxv [[REG:vs[0-9]+]], 0(r{{[0-9]+}})
 ; CHECK-NOT:     [[REG]]
@@ -40,19 +40,15 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %0 = add i32 %index, 0
   %1 = sext i32 %0 to i64
-  %2 = getelementptr inbounds i32, i32* %Arr, i64 %1
-  %3 = getelementptr inbounds i32, i32* %2, i32 0
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %wide.load)
-  %6 = sext i32 %0 to i64
-  %7 = getelementptr inbounds i32, i32* %Arr, i64 %6
-  %8 = getelementptr inbounds i32, i32* %7, i32 0
-  %9 = bitcast i32* %8 to <4 x i32>*
-  store <4 x i32> %5, <4 x i32>* %9, align 4
+  %2 = getelementptr inbounds i32, ptr %Arr, i64 %1
+  %wide.load = load <4 x i32>, ptr %2, align 4
+  %3 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %wide.load)
+  %4 = sext i32 %0 to i64
+  %5 = getelementptr inbounds i32, ptr %Arr, i64 %4
+  store <4 x i32> %3, ptr %5, align 4
   %index.next = add i32 %index, 4
-  %10 = icmp eq i32 %index.next, %n.vec
-  br i1 %10, label %middle.block, label %vector.body
+  %6 = icmp eq i32 %index.next, %n.vec
+  br i1 %6, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
   %cmp.n = icmp eq i32 %Len, %n.vec
@@ -71,12 +67,12 @@ for.cond.cleanup:                                 ; preds = %for.cond.for.cond.c
 for.body:                                         ; preds = %for.inc, %scalar.ph
   %i.02 = phi i32 [ %bc.resume.val, %scalar.ph ], [ %inc, %for.inc ]
   %idxprom = sext i32 %i.02 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %Arr, i64 %idxprom
-  %11 = load i32, i32* %arrayidx, align 4
-  %12 = call i32 @llvm.bswap.i32(i32 %11)
+  %arrayidx = getelementptr inbounds i32, ptr %Arr, i64 %idxprom
+  %7 = load i32, ptr %arrayidx, align 4
+  %8 = call i32 @llvm.bswap.i32(i32 %7)
   %idxprom1 = sext i32 %i.02 to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %Arr, i64 %idxprom1
-  store i32 %12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %Arr, i64 %idxprom1
+  store i32 %8, ptr %arrayidx2, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

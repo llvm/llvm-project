@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(scf-parallel-loop-fusion)' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(scf-parallel-loop-fusion))' -split-input-file | FileCheck %s
 
 func.func @fuse_empty_loops() {
   %c2 = arith.constant 2 : index
@@ -298,8 +298,8 @@ func.func @do_not_fuse_loops_with_memref_defined_in_loop_bodies() {
   }
   scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %A = memref.subview %buffer[%c0, %c0][%c2, %c2][%c1, %c1]
-      : memref<2x2xf32> to memref<?x?xf32, offset: ?, strides:[?, ?]>
-    %A_elem = memref.load %A[%i, %j] : memref<?x?xf32, offset: ?, strides:[?, ?]>
+      : memref<2x2xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    %A_elem = memref.load %A[%i, %j] : memref<?x?xf32, strided<[?, ?], offset: ?>>
     scf.yield
   }
   return

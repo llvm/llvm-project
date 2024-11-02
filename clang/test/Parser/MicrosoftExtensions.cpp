@@ -57,6 +57,14 @@ struct __declspec(uuid("000000A0-0000-0000-C000-000000000046"))
 struct_with_uuid { };
 struct struct_without_uuid { };
 
+struct base {
+  int a;
+};
+struct derived : base {
+  // Can't apply a UUID to a using declaration.
+  [uuid("000000A0-0000-0000-C000-00000000004A")] using base::a; // expected-error {{expected member name}}
+};
+
 struct __declspec(uuid("000000A0-0000-0000-C000-000000000049"))
 struct_with_uuid2;
 

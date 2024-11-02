@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx803 -nogpulib \
 // RUN:   -x hip-cpp-output %s 2>&1 | FileCheck %s
 
@@ -11,7 +11,7 @@
 // CHECK: {{".*clang.*"}} {{.*}}"-triple" "x86_64-unknown-linux-gnu"{{.*}} "-fcuda-include-gpubinary" "[[FATBIN]]" {{.*}}"-o" "[[HOST_O:.*o]]" {{.*}}"[[HOST_PP]]"
 // CHECK: {{".*ld.*"}} {{.*}}"[[HOST_O]]"
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx803 -nogpulib -fgpu-rdc \
 // RUN:   -x hip-cpp-output %s 2>&1 | FileCheck -check-prefix=RDC %s
 

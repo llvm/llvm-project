@@ -12,9 +12,7 @@
 define i1 @dont_hit_assert(i24 signext %d) {
 ; CHECK-LABEL: dont_hit_assert:
 ; CHECK:       # %bb.0: # %for.cond
-; CHECK-NEXT:    movb $-1, %al
-; CHECK-NEXT:    negb %al
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 for.cond:
   %t0 = insertelement <8 x i24> zeroinitializer, i24 1, i32 0

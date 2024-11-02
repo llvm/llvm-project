@@ -1,4 +1,4 @@
-//===- SymbolStringPool.h - Multi-threaded pool for JIT symbols -*- C++ -*-===//
+//===-- SymbolStringPool.h -- Thread-safe pool for JIT symbols --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains a multi-threaded string pool suitable for use with ORC.
+// Contains a thread-safe string pool suitable for use with ORC.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +19,9 @@
 #include <mutex>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace orc {
 
 class SymbolStringPtr;
@@ -26,6 +29,10 @@ class SymbolStringPtr;
 /// String pool for symbol names used by the JIT.
 class SymbolStringPool {
   friend class SymbolStringPtr;
+
+  // Implemented in DebugUtils.h.
+  friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+
 public:
   /// Destroy a SymbolStringPool.
   ~SymbolStringPool();

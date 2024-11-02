@@ -1,20 +1,21 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
-// spv.ControlBarrier
+// spirv.ControlBarrier
 //===----------------------------------------------------------------------===//
 
 func.func @control_barrier_0() -> () {
-  // CHECK:  spv.ControlBarrier Workgroup, Device, "Acquire|UniformMemory"
-  spv.ControlBarrier Workgroup, Device, "Acquire|UniformMemory"
+  // CHECK: spirv.ControlBarrier <Workgroup>, <Device>, <Acquire|UniformMemory>
+  spirv.ControlBarrier <Workgroup>, <Device>, <Acquire|UniformMemory>
   return
 }
 
 // -----
 
 func.func @control_barrier_1() -> () {
-  // expected-error @+1 {{expected string or keyword containing one of the following enum values}}
-  spv.ControlBarrier Something, Device, "Acquire|UniformMemory"
+  // expected-error @+2 {{to be one of}}
+  // expected-error @+1 {{failed to parse SPIRV_ScopeAttr}}
+  spirv.ControlBarrier <Something>, <Device>, <Acquire|UniformMemory>
   return
 }
 
@@ -22,20 +23,20 @@ func.func @control_barrier_1() -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.MemoryBarrier
+// spirv.MemoryBarrier
 //===----------------------------------------------------------------------===//
 
 func.func @memory_barrier_0() -> () {
-  // CHECK: spv.MemoryBarrier Device, "Acquire|UniformMemory"
-  spv.MemoryBarrier Device, "Acquire|UniformMemory"
+  // CHECK: spirv.MemoryBarrier <Device>, <Acquire|UniformMemory>
+  spirv.MemoryBarrier <Device>, <Acquire|UniformMemory>
   return
 }
 
 // -----
 
 func.func @memory_barrier_1() -> () {
-  // CHECK: spv.MemoryBarrier Workgroup, Acquire
-  spv.MemoryBarrier Workgroup, Acquire
+  // CHECK: spirv.MemoryBarrier <Workgroup>, <Acquire>
+  spirv.MemoryBarrier <Workgroup>, <Acquire>
   return
 }
 
@@ -43,7 +44,7 @@ func.func @memory_barrier_1() -> () {
 
 func.func @memory_barrier_2() -> () {
  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
-  spv.MemoryBarrier Device, "Acquire|Release"
+  spirv.MemoryBarrier <Device>, <Acquire|Release>
   return
 }
 

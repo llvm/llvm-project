@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr void iter_swap(iterator const& x, iterator const& y)
 //  noexcept(noexcept(ranges::iter_swap(x.current_, y.current_)))

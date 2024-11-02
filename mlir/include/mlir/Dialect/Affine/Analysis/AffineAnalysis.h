@@ -15,7 +15,7 @@
 #ifndef MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 #define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -65,7 +65,7 @@ bool isLoopMemoryParallel(AffineForOp forOp);
 void getReachableAffineApplyOps(ArrayRef<Value> operands,
                                 SmallVectorImpl<Operation *> &affineApplyOps);
 
-/// Builds a system of constraints with dimensional identifiers corresponding to
+/// Builds a system of constraints with dimensional variables corresponding to
 /// the loop IVs of the forOps and AffineIfOp's operands appearing in
 /// that order. Bounds of the loop are used to add appropriate inequalities.
 /// Constraints from the index sets of AffineIfOp are also added. Any symbols
@@ -175,6 +175,12 @@ DependenceResult checkMemrefAccessDependence(
 /// corresponds to a dependence result.
 inline bool hasDependence(DependenceResult result) {
   return result.value == DependenceResult::HasDependence;
+}
+
+/// Returns true if the provided DependenceResult corresponds to the absence of
+/// a dependence.
+inline bool noDependence(DependenceResult result) {
+  return result.value == DependenceResult::NoDependence;
 }
 
 /// Returns in 'depCompsVec', dependence components for dependences between all

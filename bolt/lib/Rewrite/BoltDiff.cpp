@@ -28,76 +28,58 @@ extern cl::OptionCategory BoltDiffCategory;
 extern cl::opt<bool> NeverPrint;
 extern cl::opt<bool> ICF;
 
-static cl::opt<bool>
-IgnoreLTOSuffix("ignore-lto-suffix",
-  cl::desc("ignore lto_priv or const suffixes when matching functions"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> IgnoreLTOSuffix(
+    "ignore-lto-suffix",
+    cl::desc("ignore lto_priv or const suffixes when matching functions"),
+    cl::init(true), cl::cat(BoltDiffCategory));
+
+static cl::opt<bool> PrintUnmapped(
+    "print-unmapped",
+    cl::desc("print functions of binary 2 that were not matched to any "
+             "function in binary 1"),
+    cl::cat(BoltDiffCategory));
+
+static cl::opt<bool> PrintProfiledUnmapped(
+    "print-profiled-unmapped",
+    cl::desc("print functions that have profile in binary 1 but do not "
+             "in binary 2"),
+    cl::cat(BoltDiffCategory));
+
+static cl::opt<bool> PrintDiffCFG(
+    "print-diff-cfg",
+    cl::desc("print the CFG of important functions that changed in "
+             "binary 2"),
+    cl::cat(BoltDiffCategory));
 
 static cl::opt<bool>
-PrintUnmapped("print-unmapped",
-  cl::desc("print functions of binary 2 that were not matched to any "
-           "function in binary 1"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+    PrintDiffBBs("print-diff-bbs",
+                 cl::desc("print the basic blocks showed in top differences"),
+                 cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-PrintProfiledUnmapped("print-profiled-unmapped",
-  cl::desc("print functions that have profile in binary 1 but do not "
-           "in binary 2"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> MatchByHash(
+    "match-by-hash",
+    cl::desc("match functions in binary 2 to binary 1 if they have the same "
+             "hash of a function in binary 1"),
+    cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-PrintDiffCFG("print-diff-cfg",
-  cl::desc("print the CFG of important functions that changed in "
-           "binary 2"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> IgnoreUnchanged(
+    "ignore-unchanged",
+    cl::desc("do not diff functions whose contents have not been changed from "
+             "one binary to another"),
+    cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-PrintDiffBBs("print-diff-bbs",
-  cl::desc("print the basic blocks showed in top differences"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<unsigned> DisplayCount(
+    "display-count",
+    cl::desc("number of functions to display when printing the top largest "
+             "differences in function activity"),
+    cl::init(10), cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-MatchByHash("match-by-hash",
-  cl::desc("match functions in binary 2 to binary 1 if they have the same "
-           "hash of a function in binary 1"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
-
-static cl::opt<bool>
-IgnoreUnchanged("ignore-unchanged",
-  cl::desc("do not diff functions whose contents have not been changed from "
-           "one binary to another"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
-
-static cl::opt<unsigned>
-DisplayCount("display-count",
-  cl::desc("number of functions to display when printing the top largest "
-           "differences in function activity"),
-  cl::init(10),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
-
-static cl::opt<bool>
-NormalizeByBin1("normalize-by-bin1",
-  cl::desc("show execution count of functions in binary 2 as a ratio of the "
-           "total samples in binary 1 - make sure both profiles have equal "
-           "collection time and sampling rate for this to make sense"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> NormalizeByBin1(
+    "normalize-by-bin1",
+    cl::desc("show execution count of functions in binary 2 as a ratio of the "
+             "total samples in binary 1 - make sure both profiles have equal "
+             "collection time and sampling rate for this to make sense"),
+    cl::cat(BoltDiffCategory));
 
 } // end namespace opts
 
@@ -201,7 +183,7 @@ class RewriteInstanceDiff {
            RI1.getTotalScore();
   }
 
-  double getNormalizedScore(BinaryBasicBlock::branch_info_iterator BIIter,
+  double getNormalizedScore(BinaryBasicBlock::const_branch_info_iterator BIIter,
                             const RewriteInstance &Ctx) {
     double Score =
         BIIter->Count == BinaryBasicBlock::COUNT_NO_PROFILE ? 0 : BIIter->Count;
@@ -320,10 +302,10 @@ class RewriteInstanceDiff {
           continue;
         Unmapped.emplace_back(&Function);
       }
-      std::sort(Unmapped.begin(), Unmapped.end(),
-                [&](const BinaryFunction *A, const BinaryFunction *B) {
-                  return A->getFunctionScore() > B->getFunctionScore();
-                });
+      llvm::sort(Unmapped,
+                 [&](const BinaryFunction *A, const BinaryFunction *B) {
+                   return A->getFunctionScore() > B->getFunctionScore();
+                 });
       for (const BinaryFunction *Function : Unmapped) {
         outs() << Function->getPrintName() << " : ";
         outs() << Function->getFunctionScore() << "\n";
@@ -362,14 +344,14 @@ class RewriteInstanceDiff {
       const BinaryFunction *const &Func1 = MapEntry.second;
       const BinaryFunction *const &Func2 = MapEntry.first;
 
-      auto Iter1 = Func1->layout_begin();
-      auto Iter2 = Func2->layout_begin();
+      auto Iter1 = Func1->getLayout().block_begin();
+      auto Iter2 = Func2->getLayout().block_begin();
 
       bool Match = true;
       std::map<const BinaryBasicBlock *, const BinaryBasicBlock *> Map;
       std::map<double, std::pair<EdgeTy, EdgeTy>> EMap;
-      while (Iter1 != Func1->layout_end()) {
-        if (Iter2 == Func2->layout_end()) {
+      while (Iter1 != Func1->getLayout().block_end()) {
+        if (Iter2 == Func2->getLayout().block_end()) {
           Match = false;
           break;
         }
@@ -411,7 +393,7 @@ class RewriteInstanceDiff {
         ++Iter1;
         ++Iter2;
       }
-      if (!Match || Iter2 != Func2->layout_end())
+      if (!Match || Iter2 != Func2->getLayout().block_end())
         continue;
 
       BBMap.insert(Map.begin(), Map.end());

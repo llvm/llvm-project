@@ -116,8 +116,18 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
         }
       }
       ats_pos->second = section;
-    } else
+    } else {
+      // Remove the old address->section entry, if
+      // there is one.
+      for (const auto &entry : m_addr_to_sect) {
+        if (entry.second == section) {
+          const auto &it_pos = m_addr_to_sect.find(entry.first);
+          m_addr_to_sect.erase(it_pos);
+          break;
+        }
+      }
       m_addr_to_sect[load_addr] = section;
+    }
     return true; // Changed
 
   } else {

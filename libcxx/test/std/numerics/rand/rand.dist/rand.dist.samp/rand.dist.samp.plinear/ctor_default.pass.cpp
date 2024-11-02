@@ -16,7 +16,9 @@
 // piecewise_linear_distribution(initializer_list<double> wl);
 
 #include <random>
+
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 

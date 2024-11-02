@@ -12,6 +12,7 @@ struct A {
   struct AA;
   enum E : int;
   static int x;
+  static constexpr int z = 16;
 
   template <typename> requires true
   void Mfoo();
@@ -24,6 +25,8 @@ struct A {
 
   template <typename TT> requires true
   using MQ = M<TT>;
+
+  constexpr int bazz() requires (z == 16);
 };
 
 template <typename T> requires (!0)
@@ -55,6 +58,9 @@ int x = 0;
 
 template <typename T> requires true
 using Q = A<T>;
+
+template<typename T> requires (!0)
+constexpr int A<T>::bazz() requires (z == 16) { return z; }
 
 struct C {
   template <typename> requires true

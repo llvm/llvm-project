@@ -24,9 +24,12 @@ struct CompletionList;
 struct DocumentLink;
 struct DocumentSymbol;
 struct Hover;
+struct InlayHint;
 struct Location;
 struct Position;
+struct Range;
 struct SignatureHelp;
+struct TextDocumentContentChangeEvent;
 class URIForFile;
 
 /// This class implements all of the PDLL related functionality necessary for a
@@ -50,12 +53,16 @@ public:
   PDLLServer(const Options &options);
   ~PDLLServer();
 
-  /// Add or update the document, with the provided `version`, at the given URI.
-  /// Any diagnostics emitted for this document should be added to
-  /// `diagnostics`.
-  void addOrUpdateDocument(const URIForFile &uri, StringRef contents,
-                           int64_t version,
-                           std::vector<Diagnostic> &diagnostics);
+  /// Add the document, with the provided `version`, at the given URI. Any
+  /// diagnostics emitted for this document should be added to `diagnostics`.
+  void addDocument(const URIForFile &uri, StringRef contents, int64_t version,
+                   std::vector<Diagnostic> &diagnostics);
+
+  /// Update the document, with the provided `version`, at the given URI. Any
+  /// diagnostics emitted for this document should be added to `diagnostics`.
+  void updateDocument(const URIForFile &uri,
+                      ArrayRef<TextDocumentContentChangeEvent> changes,
+                      int64_t version, std::vector<Diagnostic> &diagnostics);
 
   /// Remove the document with the given uri. Returns the version of the removed
   /// document, or None if the uri did not have a corresponding document within
@@ -89,6 +96,10 @@ public:
   /// Get the signature help for the position within the given file.
   SignatureHelp getSignatureHelp(const URIForFile &uri,
                                  const Position &helpPos);
+
+  /// Get the inlay hints for the range within the given file.
+  void getInlayHints(const URIForFile &uri, const Range &range,
+                     std::vector<InlayHint> &inlayHints);
 
   /// Get the output of the given PDLL file, or None if there is no valid
   /// output.

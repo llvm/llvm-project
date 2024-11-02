@@ -91,7 +91,7 @@
 ; CHECK:  1: 4
 ; CHECK:  2: 3
 ; CHECK:  3: 1
-; CEHCK:  5: 4 fb:4
+; CHECK:  5: 4 fb:4
 ; CHECK:  6: 1 fa:1
 ; CHECK !CFGChecksum: 563022570642068
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa]:6:2

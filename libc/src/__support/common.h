@@ -11,9 +11,15 @@
 
 #define LIBC_INLINE_ASM __asm__ __volatile__
 
+#ifndef likely
 #define likely(x) __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
 #define unlikely(x) __builtin_expect(x, 0)
+#endif
+#ifndef UNUSED
 #define UNUSED __attribute__((unused))
+#endif
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR

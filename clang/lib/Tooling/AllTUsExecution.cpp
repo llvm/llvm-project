@@ -121,7 +121,7 @@ llvm::Error AllTUsToolExecutor::execute(
           [&](std::string Path) {
             Log("[" + std::to_string(Count()) + "/" + TotalNumStr +
                 "] Processing file " + Path);
-            // Each thread gets an indepent copy of a VFS to allow different
+            // Each thread gets an independent copy of a VFS to allow different
             // concurrent working directories.
             IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
                 llvm::vfs::createPhysicalFileSystem();

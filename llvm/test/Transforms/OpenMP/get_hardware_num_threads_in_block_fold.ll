@@ -19,12 +19,19 @@ define weak void @kernel0() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false, i1 false)
+; CHECK-NEXT:    [[THREAD_ID_IN_BLOCK:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[THREAD_IS_MAIN:%.*]] = icmp ne i32 [[THREAD_ID_IN_BLOCK]], 0
+; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN]], label [[EXIT_THREADS:%.*]], label [[MAIN_THREAD_USER_CODE:%.*]]
+; CHECK:       exit.threads:
+; CHECK-NEXT:    ret void
+; CHECK:       main.thread.user_code:
 ; CHECK-NEXT:    call void @helper0() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2, i1 false)
 ; CHECK-NEXT:    ret void
 ;
+
   %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 1, i1 false, i1 false)
   call void @helper0()
   call void @helper1()
@@ -39,10 +46,17 @@ define weak void @kernel1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 2, i1 false, i1 false)
+; CHECK-NEXT:    [[THREAD_ID_IN_BLOCK:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[THREAD_IS_MAIN:%.*]] = icmp ne i32 [[THREAD_ID_IN_BLOCK]], 0
+; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN]], label [[EXIT_THREADS:%.*]], label [[MAIN_THREAD_USER_CODE:%.*]]
+; CHECK:       exit.threads:
+; CHECK-NEXT:    ret void
+; CHECK:       main.thread.user_code:
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i8 2, i1 false)
 ; CHECK-NEXT:    ret void
 ;
+
   %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i8 1, i1 false, i1 false)
   call void @helper1()
   call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1, i1 false)

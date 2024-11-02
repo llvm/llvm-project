@@ -27,8 +27,8 @@ namespace llvm {
 HANDLE
 llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *), void *Arg,
                             llvm::Optional<unsigned> StackSizeInBytes) {
-  HANDLE hThread = (HANDLE)::_beginthreadex(
-      NULL, StackSizeInBytes.getValueOr(0), ThreadFunc, Arg, 0, NULL);
+  HANDLE hThread = (HANDLE)::_beginthreadex(NULL, StackSizeInBytes.value_or(0),
+                                            ThreadFunc, Arg, 0, NULL);
 
   if (!hThread) {
     ReportLastErrorFatal("_beginthreadex failed");

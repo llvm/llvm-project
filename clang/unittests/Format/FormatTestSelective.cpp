@@ -609,6 +609,14 @@ TEST_F(FormatTestSelective, DontAssert) {
                      "  return a == 8 ? 32 : 16;\n"
                      "}\n";
   EXPECT_EQ(Code, format(Code, 40, 0));
+
+  // https://llvm.org/PR56352
+  Style.CompactNamespaces = true;
+  Style.NamespaceIndentation = FormatStyle::NI_All;
+  Code = "\n"
+         "namespace ns1 { namespace ns2 {\n"
+         "}}";
+  EXPECT_EQ(Code, format(Code, 0, 0));
 }
 
 } // end namespace

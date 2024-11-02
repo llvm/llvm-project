@@ -98,6 +98,7 @@ enum MachineTypes : unsigned {
   IMAGE_FILE_MACHINE_ARM = 0x1C0,
   IMAGE_FILE_MACHINE_ARMNT = 0x1C4,
   IMAGE_FILE_MACHINE_ARM64 = 0xAA64,
+  IMAGE_FILE_MACHINE_ARM64EC = 0xA641,
   IMAGE_FILE_MACHINE_EBC = 0xEBC,
   IMAGE_FILE_MACHINE_I386 = 0x14C,
   IMAGE_FILE_MACHINE_IA64 = 0x200,
@@ -704,6 +705,51 @@ enum ImportNameType : unsigned {
   IMPORT_NAME_UNDECORATE = 3
 };
 
+enum class GuardFlags : uint32_t {
+  /// Module performs control flow integrity checks using system-supplied
+  /// support.
+  CF_INSTRUMENTED = 0x100,
+  /// Module performs control flow and write integrity checks.
+  CFW_INSTRUMENTED = 0x200,
+  /// Module contains valid control flow target metadata.
+  CF_FUNCTION_TABLE_PRESENT = 0x400,
+  /// Module does not make use of the /GS security cookie.
+  SECURITY_COOKIE_UNUSED = 0x800,
+  /// Module supports read only delay load IAT.
+  PROTECT_DELAYLOAD_IAT = 0x1000,
+  /// Delayload import table in its own .didat section (with nothing else in it)
+  /// that can be freely reprotected.
+  DELAYLOAD_IAT_IN_ITS_OWN_SECTION = 0x2000,
+  /// Module contains suppressed export information. This also infers that the
+  /// address taken IAT table is also present in the load config.
+  CF_EXPORT_SUPPRESSION_INFO_PRESENT = 0x4000,
+  /// Module enables suppression of exports.
+  CF_ENABLE_EXPORT_SUPPRESSION = 0x8000,
+  /// Module contains longjmp target information.
+  CF_LONGJUMP_TABLE_PRESENT = 0x10000,
+  /// Module contains EH continuation target information.
+  EH_CONTINUATION_TABLE_PRESENT = 0x400000,
+  /// Mask for the subfield that contains the stride of Control Flow Guard
+  /// function table entries (that is, the additional count of bytes per table
+  /// entry).
+  CF_FUNCTION_TABLE_SIZE_MASK = 0xF0000000,
+  CF_FUNCTION_TABLE_SIZE_5BYTES = 0x10000000,
+  CF_FUNCTION_TABLE_SIZE_6BYTES = 0x20000000,
+  CF_FUNCTION_TABLE_SIZE_7BYTES = 0x30000000,
+  CF_FUNCTION_TABLE_SIZE_8BYTES = 0x40000000,
+  CF_FUNCTION_TABLE_SIZE_9BYTES = 0x50000000,
+  CF_FUNCTION_TABLE_SIZE_10BYTES = 0x60000000,
+  CF_FUNCTION_TABLE_SIZE_11BYTES = 0x70000000,
+  CF_FUNCTION_TABLE_SIZE_12BYTES = 0x80000000,
+  CF_FUNCTION_TABLE_SIZE_13BYTES = 0x90000000,
+  CF_FUNCTION_TABLE_SIZE_14BYTES = 0xA0000000,
+  CF_FUNCTION_TABLE_SIZE_15BYTES = 0xB0000000,
+  CF_FUNCTION_TABLE_SIZE_16BYTES = 0xC0000000,
+  CF_FUNCTION_TABLE_SIZE_17BYTES = 0xD0000000,
+  CF_FUNCTION_TABLE_SIZE_18BYTES = 0xE0000000,
+  CF_FUNCTION_TABLE_SIZE_19BYTES = 0xF0000000,
+};
+
 struct ImportHeader {
   uint16_t Sig1; ///< Must be IMAGE_FILE_MACHINE_UNKNOWN (0).
   uint16_t Sig2; ///< Must be 0xFFFF.
@@ -724,6 +770,23 @@ struct ImportHeader {
 enum CodeViewIdentifiers {
   DEBUG_SECTION_MAGIC = 0x4,
   DEBUG_HASHES_SECTION_MAGIC = 0x133C9C5
+};
+
+// These flags show up in the @feat.00 symbol. They appear to be some kind of
+// compiler features bitfield read by link.exe.
+enum Feat00Flags : uint32_t {
+  // Object is compatible with /safeseh.
+  SafeSEH = 0x1,
+  // Object was compiled with /GS.
+  GuardStack = 0x100,
+  // Object was compiled with /sdl.
+  SDL = 0x200,
+  // Object was compiled with /guard:cf.
+  GuardCF = 0x800,
+  // Object was compiled with /guard:ehcont.
+  GuardEHCont = 0x4000,
+  // Object was compiled with /kernel.
+  Kernel = 0x40000000,
 };
 
 inline bool isReservedSectionNumber(int32_t SectionNumber) {

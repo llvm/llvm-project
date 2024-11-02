@@ -16,6 +16,7 @@
 
 #include <set>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "MoveOnly.h"

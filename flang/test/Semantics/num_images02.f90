@@ -21,12 +21,8 @@ program num_images_with_team_type
   n = num_images(standard_initial_value)
   n = num_images(coindexed[1])
 
-  !___ standard-conforming statements with team_type argument present (not yet supported) ___
-
-  !ERROR: too many actual arguments for intrinsic 'num_images'
+  !___ standard-conforming statements with team_type argument present ___
   n = num_images(home)
-
-  !ERROR: unknown keyword argument to intrinsic 'num_images'
   n = num_images(team=home)
 
   !___ non-conforming statements ___

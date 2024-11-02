@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 //       reverse_iterator rbegin(); // constexpr since C++20

@@ -13,7 +13,7 @@ def Test_Dialect : Dialect {
   }];
   let cppNamespace = "NS";
 }
-def AOp : Op<Test_Dialect, "a", [NoSideEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+def AOp : Op<Test_Dialect, "a", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
 
 def TestAttr : DialectAttr<Test_Dialect, CPred<"true">> {
   let summary = "attribute summary";
@@ -29,6 +29,11 @@ def TestType : DialectType<Test_Dialect, CPred<"true">> {
 // CHECK: TOC added by tool.
 // CHECK: [TOC]
 
+// CHECK-NOT: [TOC]
+// CHECK: Traits: SingleBlockImplicitTerminator<YieldOp>
+// CHECK: Interfaces: NoMemoryEffect (MemoryEffectOpInterface)
+// CHECK: Effects: MemoryEffects::Effect{}
+
 // CHECK: ## Attribute constraint definition
 // CHECK: ### attribute summary
 // CHECK: attribute description
@@ -37,10 +42,6 @@ def TestType : DialectType<Test_Dialect, CPred<"true">> {
 // CHECK: ### type summary
 // CHECK: type description
 
-// CHECK-NOT: [TOC]
-// CHECK: Traits: SingleBlockImplicitTerminator<YieldOp>
-// CHECK: Interfaces: NoSideEffect (MemoryEffectOpInterface)
-// CHECK: Effects: MemoryEffects::Effect{}
 
 def Toc_Dialect : Dialect {
   let name = "test_toc";

@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; When a pointer is addrspacecasted to a another addr space, we cannot assume
 ; anything about the new bits.

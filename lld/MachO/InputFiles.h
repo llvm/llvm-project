@@ -12,6 +12,7 @@
 #include "MachOStructs.h"
 #include "Target.h"
 
+#include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -21,6 +22,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
 #include <vector>
@@ -42,6 +44,7 @@ struct PlatformInfo;
 class ConcatInputSection;
 class Symbol;
 class Defined;
+class AliasSymbol;
 struct Reloc;
 enum class RefState : uint8_t;
 
@@ -60,7 +63,8 @@ struct Subsection {
 using Subsections = std::vector<Subsection>;
 class InputFile;
 
-struct Section {
+class Section {
+public:
   InputFile *file;
   StringRef segname;
   StringRef name;
@@ -76,6 +80,13 @@ struct Section {
   Section &operator=(const Section &) = delete;
   Section(Section &&) = delete;
   Section &operator=(Section &&) = delete;
+
+private:
+  // Whether we have already split this section into individual subsections.
+  // For sections that cannot be split (e.g. literal sections), this is always
+  // false.
+  bool doneSplitting = false;
+  friend class ObjFile;
 };
 
 // Represents a call graph profile edge.
@@ -110,6 +121,7 @@ public:
 
   std::vector<Symbol *> symbols;
   std::vector<Section *> sections;
+  ArrayRef<uint8_t> objCImageInfo;
 
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.
@@ -135,23 +147,40 @@ private:
   static int idCount;
 };
 
+struct FDE {
+  uint32_t funcLength;
+  Symbol *personality;
+  InputSection *lsda;
+};
+
 // .o file
 class ObjFile final : public InputFile {
 public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-          bool lazy = false);
+          bool lazy = false, bool forceHidden = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
+  ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
+  std::string sourceFile() const;
+  // Parses line table information for diagnostics. compileUnit should be used
+  // for other purposes.
+  lld::DWARFCache *getDwarf();
+
   llvm::DWARFUnit *compileUnit = nullptr;
+  std::unique_ptr<lld::DWARFCache> dwarfCache;
+  Section *addrSigSection = nullptr;
   const uint32_t modTime;
+  bool forceHidden;
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
-  Section *addrSigSection = nullptr;
+  llvm::DenseMap<ConcatInputSection *, FDE> fdes;
+  std::vector<AliasSymbol *> aliases;
 
 private:
+  llvm::once_flag initDwarf;
   template <class LP> void parseLazy();
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
@@ -159,12 +188,14 @@ private:
                     ArrayRef<typename LP::nlist> nList, const char *strtab,
                     bool subsectionsViaSymbols);
   template <class NList>
-  Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
+  Symbol *parseNonSectionSymbol(const NList &sym, const char *strtab);
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
   void parseDebugInfo();
+  void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
+  void registerEhFrames(Section &ehFrameSection);
 };
 
 // command-line -sectcreate file
@@ -189,10 +220,13 @@ public:
   explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
                      DylibFile *umbrella, bool isBundleLoader,
                      bool explicitlyLinked);
+  explicit DylibFile(DylibFile *umbrella);
 
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
   bool isReferenced() const { return numReferencedSymbols > 0; }
+  bool isExplicitlyLinked() const;
+  void setExplicitlyLinked() { explicitlyLinked = true; }
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
@@ -209,19 +243,32 @@ public:
   bool forceNeeded = false;
   bool forceWeakImport = false;
   bool deadStrippable = false;
-  bool explicitlyLinked = false;
+
+private:
+  bool explicitlyLinked = false; // Access via isExplicitlyLinked().
+
+public:
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
   // implemented in the bundle. When used like this, it is very similar
   // to a dylib, so we've used the same class to represent it.
   bool isBundleLoader;
 
+  // Synthetic Dylib objects created by $ld$previous symbols in this dylib.
+  // Usually empty. These synthetic dylibs won't have synthetic dylibs
+  // themselves.
+  SmallVector<DylibFile *, 2> extraDylibs;
+
 private:
+  DylibFile *getSyntheticDylib(StringRef installName, uint32_t currentVersion,
+                               uint32_t compatVersion);
+
   bool handleLDSymbol(StringRef originalName);
   void handleLDPreviousSymbol(StringRef name, StringRef originalName);
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
   void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
+  void parseExportedSymbols(uint32_t offset, uint32_t size);
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
@@ -229,7 +276,8 @@ private:
 // .a file
 class ArchiveFile final : public InputFile {
 public:
-  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file);
+  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file,
+                       bool forceHidden);
   void addLazySymbols();
   void fetch(const llvm::object::Archive::Symbol &);
   // LLD normally doesn't use Error for error-handling, but the underlying
@@ -243,16 +291,20 @@ private:
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
   llvm::DenseSet<uint64_t> seen;
+  // Load all symbols with hidden visibility (-load_hidden).
+  bool forceHidden;
 };
 
 class BitcodeFile final : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                       uint64_t offsetInArchive, bool lazy = false);
+                       uint64_t offsetInArchive, bool lazy = false,
+                       bool forceHidden = false);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
 
   std::unique_ptr<llvm::lto::InputFile> obj;
+  bool forceHidden;
 
 private:
   void parseLazy();

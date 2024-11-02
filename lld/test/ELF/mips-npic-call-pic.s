@@ -17,7 +17,7 @@
 # RUN:   %s -o %t-npic-r2.o
 # RUN: ld.lld %t-npic-r2.o %t-pic-r2.o %t-sto-pic-r2.o \
 # RUN:        -script %t.script -o %t-r2.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t-r2.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t-r2.exe \
 # RUN:   | FileCheck --check-prefixes=CHECK,R2 %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -mcpu=mips32r6 \
@@ -31,7 +31,7 @@
 # RUN:   %s -o %t-npic-r6.o
 # RUN: ld.lld %t-npic-r6.o %t-pic-r6.o %t-sto-pic-r6.o \
 # RUN:        -script %t.script -o %t-r6.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t-r6.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t-r6.exe \
 # RUN:   | FileCheck --check-prefixes=CHECK,R6 %s
 
 # CHECK:     Disassembly of section .text:

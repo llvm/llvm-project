@@ -9,4 +9,4 @@ int global_array[100] = {-1};
 int main(void) { return global_array[103]; }
 
 // CHECK: AddressSanitizer: global-buffer-overflow on address
-// CHECK: is located 12 bytes to the right of global variable 'global_array'
+// CHECK: is located 12 bytes after global variable 'global_array'

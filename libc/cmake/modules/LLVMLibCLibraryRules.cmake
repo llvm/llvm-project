@@ -207,7 +207,8 @@ function(expand_flags_for_header_library target_name flags)
     return()
   endif()
 
-  list(POP_FRONT flags flag)
+  list(GET flags 0 flag)
+  list(REMOVE_AT flags 0)
   extract_flag_modifier(${flag} real_flag modifier)
 
   if(NOT "${modifier}" STREQUAL "NO")
@@ -230,7 +231,7 @@ function(expand_flags_for_header_library target_name flags)
 
   # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
   # `flag__ONLY` do not.
-  if(NOT "${modifier}")
+  if("${modifier}" STREQUAL "")
     set(TARGET_NAME "${target_name}.__NO_${flag}")
   else()
     set(TARGET_NAME "${target_name}")

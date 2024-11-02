@@ -29,28 +29,28 @@ define float @make_const2() {
 
 @glb = constant i32 0
 
-define i32* @make_const_glb() {
+define ptr @make_const_glb() {
 ; CHECK-LABEL: @make_const_glb(
-; CHECK-NEXT:    ret i32* @glb
+; CHECK-NEXT:    ret ptr @glb
 ;
-  %k = freeze i32* @glb
-  ret i32* %k
+  %k = freeze ptr @glb
+  ret ptr %k
 }
 
-define i32()* @make_const_fn() {
+define ptr @make_const_fn() {
 ; CHECK-LABEL: @make_const_fn(
-; CHECK-NEXT:    ret i32 ()* @make_const
+; CHECK-NEXT:    ret ptr @make_const
 ;
-  %k = freeze i32()* @make_const
-  ret i32()* %k
+  %k = freeze ptr @make_const
+  ret ptr %k
 }
 
-define i32* @make_const_null() {
+define ptr @make_const_null() {
 ; CHECK-LABEL: @make_const_null(
-; CHECK-NEXT:    ret i32* null
+; CHECK-NEXT:    ret ptr null
 ;
-  %k = freeze i32* null
-  ret i32* %k
+  %k = freeze ptr null
+  ret ptr %k
 }
 
 define <2 x i32> @constvector() {
@@ -115,34 +115,34 @@ define <2 x float> @constvector_FP_noopt() {
 
 define float @constant_expr() {
 ; CHECK-LABEL: @constant_expr(
-; CHECK-NEXT:    ret float bitcast (i32 ptrtoint (i16* @g to i32) to float)
+; CHECK-NEXT:    ret float bitcast (i32 ptrtoint (ptr @g to i32) to float)
 ;
-  %r = freeze float bitcast (i32 ptrtoint (i16* @g to i32) to float)
+  %r = freeze float bitcast (i32 ptrtoint (ptr @g to i32) to float)
   ret float %r
 }
 
-define i8* @constant_expr2() {
+define ptr @constant_expr2() {
 ; CHECK-LABEL: @constant_expr2(
-; CHECK-NEXT:    ret i8* bitcast (i16* @g to i8*)
+; CHECK-NEXT:    ret ptr @g
 ;
-  %r = freeze i8* bitcast (i16* @g to i8*)
-  ret i8* %r
+  %r = freeze ptr @g
+  ret ptr %r
 }
 
-define i32* @constant_expr3() {
+define ptr @constant_expr3() {
 ; CHECK-LABEL: @constant_expr3(
-; CHECK-NEXT:    ret i32* getelementptr (i32, i32* @glb, i64 3)
+; CHECK-NEXT:    ret ptr getelementptr (i32, ptr @glb, i64 3)
 ;
-  %r = freeze i32* getelementptr (i32, i32* @glb, i64 3)
-  ret i32* %r
+  %r = freeze ptr getelementptr (i32, ptr @glb, i64 3)
+  ret ptr %r
 }
 
 define i64 @ptrdiff() {
 ; CHECK-LABEL: @ptrdiff(
-; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (i16* @g to i64), i64 ptrtoint (i16* @g2 to i64))
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (ptr @g to i64), i64 ptrtoint (ptr @g2 to i64))
 ;
-  %i = ptrtoint i16* @g to i64
-  %i2 = ptrtoint i16* @g2 to i64
+  %i = ptrtoint ptr @g to i64
+  %i2 = ptrtoint ptr @g2 to i64
   %diff = sub i64 %i, %i2
   %r = freeze i64 %diff
   ret i64 %r
@@ -152,162 +152,158 @@ define i64 @ptrdiff() {
 
 define <2 x i31> @vector_element_constant_expr() {
 ; CHECK-LABEL: @vector_element_constant_expr(
-; CHECK-NEXT:    [[R:%.*]] = freeze <2 x i31> <i31 34, i31 ptrtoint (i16* @g to i31)>
+; CHECK-NEXT:    [[R:%.*]] = freeze <2 x i31> <i31 34, i31 ptrtoint (ptr @g to i31)>
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
-  %r = freeze <2 x i31> <i31 34, i31 ptrtoint (i16* @g to i31)>
+  %r = freeze <2 x i31> <i31 34, i31 ptrtoint (ptr @g to i31)>
   ret <2 x i31> %r
 }
 
 define void @alloca() {
 ; CHECK-LABEL: @alloca(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @f3(i8* [[P]])
+; CHECK-NEXT:    call void @f3(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   %p = alloca i8
-  %y = freeze i8* %p
-  call void @f3(i8* %y)
+  %y = freeze ptr %p
+  call void @f3(ptr %y)
   ret void
 }
 
-define i8* @gep() {
+define ptr @gep() {
 ; CHECK-LABEL: @gep(
 ; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], [4 x i8]* [[P]], i32 0, i32 6
-; CHECK-NEXT:    ret i8* [[Q]]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], ptr [[P]], i32 0, i32 6
+; CHECK-NEXT:    ret ptr [[Q]]
 ;
   %p = alloca [4 x i8]
-  %q = getelementptr [4 x i8], [4 x i8]* %p, i32 0, i32 6
-  %q2 = freeze i8* %q
-  ret i8* %q2
+  %q = getelementptr [4 x i8], ptr %p, i32 0, i32 6
+  %q2 = freeze ptr %q
+  ret ptr %q2
 }
 
-define i8* @gep_noopt(i32 %arg) {
+define ptr @gep_noopt(i32 %arg) {
 ; CHECK-LABEL: @gep_noopt(
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], [4 x i8]* null, i32 0, i32 [[ARG:%.*]]
-; CHECK-NEXT:    [[Q2:%.*]] = freeze i8* [[Q]]
-; CHECK-NEXT:    ret i8* [[Q2]]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], ptr null, i32 0, i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[Q2:%.*]] = freeze ptr [[Q]]
+; CHECK-NEXT:    ret ptr [[Q2]]
 ;
-  %q = getelementptr [4 x i8], [4 x i8]* null, i32 0, i32 %arg
-  %q2 = freeze i8* %q
-  ret i8* %q2
+  %q = getelementptr [4 x i8], ptr null, i32 0, i32 %arg
+  %q2 = freeze ptr %q
+  ret ptr %q2
 }
 
-define i8* @gep_inbounds() {
+define ptr @gep_inbounds() {
 ; CHECK-LABEL: @gep_inbounds(
 ; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[P]], i32 0, i32 0
-; CHECK-NEXT:    ret i8* [[Q]]
+; CHECK-NEXT:    ret ptr [[P]]
 ;
   %p = alloca [4 x i8]
-  %q = getelementptr inbounds [4 x i8], [4 x i8]* %p, i32 0, i32 0
-  %q2 = freeze i8* %q
-  ret i8* %q2
+  %q2 = freeze ptr %p
+  ret ptr %q2
 }
 
-define i8* @gep_inbounds_noopt(i32 %arg) {
+define ptr @gep_inbounds_noopt(i32 %arg) {
 ; CHECK-LABEL: @gep_inbounds_noopt(
 ; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[P]], i32 0, i32 [[ARG:%.*]]
-; CHECK-NEXT:    [[Q2:%.*]] = freeze i8* [[Q]]
-; CHECK-NEXT:    ret i8* [[Q2]]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i32 0, i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[Q2:%.*]] = freeze ptr [[Q]]
+; CHECK-NEXT:    ret ptr [[Q2]]
 ;
   %p = alloca [4 x i8]
-  %q = getelementptr inbounds [4 x i8], [4 x i8]* %p, i32 0, i32 %arg
-  %q2 = freeze i8* %q
-  ret i8* %q2
+  %q = getelementptr inbounds [4 x i8], ptr %p, i32 0, i32 %arg
+  %q2 = freeze ptr %q
+  ret ptr %q2
 }
 
-define i32* @gep_inbounds_null() {
+define ptr @gep_inbounds_null() {
 ; CHECK-LABEL: @gep_inbounds_null(
-; CHECK-NEXT:    ret i32* null
+; CHECK-NEXT:    ret ptr null
 ;
-  %p = getelementptr inbounds i32, i32* null, i32 0
-  %k = freeze i32* %p
-  ret i32* %k
+  %k = freeze ptr null
+  ret ptr %k
 }
 
-define i32* @gep_inbounds_null_noopt(i32* %p) {
+define ptr @gep_inbounds_null_noopt(ptr %p) {
 ; CHECK-LABEL: @gep_inbounds_null_noopt(
-; CHECK-NEXT:    [[K:%.*]] = freeze i32* [[P:%.*]]
-; CHECK-NEXT:    ret i32* [[K]]
+; CHECK-NEXT:    [[K:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    ret ptr [[K]]
 ;
-  %q = getelementptr inbounds i32, i32* %p, i32 0
-  %k = freeze i32* %q
-  ret i32* %k
+  %k = freeze ptr %p
+  ret ptr %k
 }
 
-define i8* @load_ptr(i8* %ptr) {
+define ptr @load_ptr(ptr %ptr) {
 ; CHECK-LABEL: @load_ptr(
-; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    call void @f4(i8 [[V]])
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %v = load i8, i8* %ptr
-  %q = freeze i8* %ptr
+  %v = load i8, ptr %ptr
+  %q = freeze ptr %ptr
   call void @f4(i8 %v) ; prevents %v from being DCEd
-  ret i8* %q
+  ret ptr %q
 }
 
-define i8* @store_ptr(i8* %ptr) {
+define ptr @store_ptr(ptr %ptr) {
 ; CHECK-LABEL: @store_ptr(
-; CHECK-NEXT:    store i8 0, i8* [[PTR:%.*]], align 1
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  store i8 0, i8* %ptr
-  %q = freeze i8* %ptr
-  ret i8* %q
+  store i8 0, ptr %ptr
+  %q = freeze ptr %ptr
+  ret ptr %q
 }
 
-define i8* @call_noundef_ptr(i8* %ptr) {
+define ptr @call_noundef_ptr(ptr %ptr) {
 ; CHECK-LABEL: @call_noundef_ptr(
-; CHECK-NEXT:    call void @f3(i8* noundef [[PTR:%.*]])
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    call void @f3(ptr noundef [[PTR:%.*]])
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  call void @f3(i8* noundef %ptr)
-  %q = freeze i8* %ptr
-  ret i8* %q
+  call void @f3(ptr noundef %ptr)
+  %q = freeze ptr %ptr
+  ret ptr %q
 }
 
-define i8* @invoke_noundef_ptr(i8* %ptr) personality i8 1 {
+define ptr @invoke_noundef_ptr(ptr %ptr) personality i8 1 {
 ; CHECK-LABEL: @invoke_noundef_ptr(
-; CHECK-NEXT:    invoke void @f3(i8* noundef [[PTR:%.*]])
+; CHECK-NEXT:    invoke void @f3(ptr noundef [[PTR:%.*]])
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       normal:
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ; CHECK:       unwind:
-; CHECK-NEXT:    [[TMP1:%.*]] = landingpad i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad ptr
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    resume i8* [[PTR]]
+; CHECK-NEXT:    resume ptr [[PTR]]
 ;
-  %q = freeze i8* %ptr
-  invoke void @f3(i8* noundef %ptr) to label %normal unwind label %unwind
+  %q = freeze ptr %ptr
+  invoke void @f3(ptr noundef %ptr) to label %normal unwind label %unwind
 normal:
-  ret i8* %q
+  ret ptr %q
 unwind:
-  landingpad i8* cleanup
-  resume i8* %q
+  landingpad ptr cleanup
+  resume ptr %q
 }
 
-define i8* @cmpxchg_ptr(i8* %ptr) {
+define ptr @cmpxchg_ptr(ptr %ptr) {
 ; CHECK-LABEL: @cmpxchg_ptr(
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[PTR:%.*]], i8 1, i8 2 acq_rel monotonic, align 1
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[PTR:%.*]], i8 1, i8 2 acq_rel monotonic, align 1
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  cmpxchg i8* %ptr, i8 1, i8 2 acq_rel monotonic
-  %q = freeze i8* %ptr
-  ret i8* %q
+  cmpxchg ptr %ptr, i8 1, i8 2 acq_rel monotonic
+  %q = freeze ptr %ptr
+  ret ptr %q
 }
 
-define i8* @atomicrmw_ptr(i8* %ptr) {
+define ptr @atomicrmw_ptr(ptr %ptr) {
 ; CHECK-LABEL: @atomicrmw_ptr(
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add i8* [[PTR:%.*]], i8 1 acquire, align 1
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[PTR:%.*]], i8 1 acquire, align 1
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  atomicrmw add i8* %ptr, i8 1 acquire
-  %q = freeze i8* %ptr
-  ret i8* %q
+  atomicrmw add ptr %ptr, i8 1 acquire
+  %q = freeze ptr %ptr
+  ret ptr %q
 }
 
 define i1 @icmp(i32 %a, i32 %b) {
@@ -502,5 +498,5 @@ B:
 }
 declare void @f1(i1)
 declare void @f2()
-declare void @f3(i8*)
+declare void @f3(ptr)
 declare void @f4(i8)

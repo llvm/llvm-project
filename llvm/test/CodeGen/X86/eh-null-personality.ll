@@ -4,17 +4,17 @@
 ; is usually Itanium.
 
 declare void @g()
-declare void @terminate(i8*)
+declare void @terminate(ptr)
 
-define void @f() personality i8* null {
+define void @f() personality ptr null {
   invoke void @g()
     to label %ret unwind label %lpad
 ret:
   ret void
 lpad:
-  %vals = landingpad { i8*, i32 } catch i8* null
-  %ptr = extractvalue { i8*, i32 } %vals, 0
-  call void @terminate(i8* %ptr)
+  %vals = landingpad { ptr, i32 } catch ptr null
+  %ptr = extractvalue { ptr, i32 } %vals, 0
+  call void @terminate(ptr %ptr)
   unreachable
 }
 

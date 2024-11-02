@@ -24,7 +24,7 @@ class SCEV;
 
 /// A simple alias analysis implementation that uses ScalarEvolution to answer
 /// queries.
-class SCEVAAResult : public AAResultBase<SCEVAAResult> {
+class SCEVAAResult : public AAResultBase {
   ScalarEvolution &SE;
 
 public:

@@ -37,7 +37,7 @@ sure you don't forget anything:
 - Did you mark all functions and type declarations with the :ref:`proper visibility macro <visibility-macros>`?
 - If you added a header:
 
-  - Did you add it to ``include/module.modulemap``?
+  - Did you add it to ``include/module.modulemap.in``?
   - Did you add it to ``include/CMakeLists.txt``?
   - If it's a public header, did you add a test under ``test/libcxx`` that the new header defines ``_LIBCPP_VERSION``? See ``test/libcxx/algorithms/version.pass.cpp`` for an example. NOTE: This should be automated.
   - If it's a public header, did you update ``utils/generate_header_inclusion_tests.py``?
@@ -84,99 +84,136 @@ updated list from the failed build at
 Look for the failed build and select the ``artifacts`` tab. There, download the
 abilist for the platform, e.g.:
 
-* C++20 for the Linux platform.
-* MacOS C++20 for the Apple platform.
+* C++<version>.
+* MacOS X86_64 and MacOS arm64 for the Apple platform.
 
-Working on large features
-=========================
 
-Libc++ makes no guarantees about the implementation status or the ABI stability
-of features that have not yet been ratified in the C++ Standard. After the C++
-Standard is ratified libc++ promises a conforming and ABI-stable
-implementation. When working on a large new feature in the ratified version of
-the C++ Standard that can't be finished before the next release branch is
-created, we can't honor this promise. Another reason for not being able to
-promise ABI stability happens when the C++ Standard committee retroactively
-accepts ABI breaking papers as defect reports against the ratified C++
-Standard.
+Pre-commit CI
+=============
 
-When working on these features it should be possible for libc++ vendors to
-disable these incomplete features, so they can promise ABI stability to their
-customers. This is done by the CMake option
-``LIBCXX_ENABLE_INCOMPLETE_FEATURES``. When start working on a large feature
-the following steps are required to guard the new library with the CMake
-option.
+Introduction
+------------
 
-* ``libcxx/CMakeLists.txt``: Add
+Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. This
+CI is hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__ and
+the build results are visible in the review on Phabricator. Please make sure
+the CI is green before committing a patch.
 
-  .. code-block:: cmake
+The CI tests libc++ for all :ref:`supported platforms <SupportedPlatforms>`.
+The build is started for every diff uploaded to Phabricator. A complete CI run
+takes approximately one hour. To reduce the load:
 
-    config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FOO)
+* The build is cancelled when a new diff for the same revision is uploaded.
+* The build is done in several stages and cancelled when a stage fails.
 
-* ``libcxx/include/__config_site.in``: Add
+Typically, the libc++ jobs use a Ubuntu Docker image. This image contains
+recent `nightly builds <https://apt.llvm.org>`__ of all supported versions of
+Clang and the current version of the ``main`` branch. These versions of Clang
+are used to build libc++ and execute its tests.
 
-  .. code-block:: c++
+Unless specified otherwise, the configurations:
 
-    #cmakedefine _LIBCPP_HAS_NO_INCOMPLETE_FOO
+* use a nightly build of the ``main`` branch of Clang,
+* execute the tests using the language C++<latest>. This is the version
+  "developed" by the C++ committee.
 
-* ``libcxx/include/foo``: The contents of the file should be guarded in an
-  ``ifdef`` and always include ``<version>``
+.. note:: Updating the Clang nightly builds in the Docker image is a manual
+   process and is done at an irregular interval on purpose. When you need to
+   have the latest nightly build to test recent Clang changes, ask in the
+   ``#libcxx`` channel on `LLVM's Discord server
+   <https://discord.gg/jzUbyP26tQ>`__.
 
-  .. code-block:: c++
+.. [#] There's `LLVM Dev Meeting talk <https://www.youtube.com/watch?v=B7gB6van7Bw>`__
+   explaining the benefits of libc++'s pre-commit CI.
 
-    #ifndef _LIBCPP_FOO
-    #define _LIBCPP_FOO
+Builds
+------
 
-    // Make sure all feature-test macros are available.
-    #include <version>
-    // Enable the contents of the header only when libc++ was built with LIBCXX_ENABLE_INCOMPLETE_FEATURES.
-    #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FOO)
+Below is a short description of the most interesting CI builds [#]_:
 
-    ...
+* ``Format`` runs ``clang-format`` and uploads its output as an artifact. At the
+  moment this build is a soft error and doesn't fail the build.
+* ``Generated output`` runs the ``libcxx-generate-files`` build target and
+  tests for non-ASCII characters in libcxx. Some files are excluded since they
+  use Unicode, mainly tests. The output of these commands are uploaded as
+  artifact.
+* ``Documentation`` builds the documentation. (This is done early in the build
+  process since it is cheap to run.)
+* ``C++<version>`` these build steps test the various C++ versions, making sure all
+  C++ language versions work with the changes made.
+* ``Clang <version>`` these build steps test whether the changes work with all
+  supported Clang versions.
+* ``Booststrapping build`` builds Clang using the revision of the patch and
+  uses that Clang version to build and test libc++. This validates the current
+  Clang and lib++ are compatible.
 
-    #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_FO0)
-    #endif // _LIBCPP_FOO
+  When a crash occurs in this build, the crash reproducer is available as an
+  artifact.
 
-* ``libcxx/src/CMakeLists.txt``: When the library has a file ``foo.cpp`` it
-  should only be added when ``LIBCXX_ENABLE_INCOMPLETE_FEATURES`` is enabled
+* ``Modular build`` tests libc++ using Clang modules [#]_.
+* ``GCC <version>`` tests libc++ with the latest stable GCC version. Only C++11
+  and the latest C++ version are tested.
+* ``Santitizers`` tests libc++ using the Clang sanitizers.
+* ``Parts disabled`` tests libc++ with certain libc++ features disabled.
+* ``Windows`` tests libc++ using MinGW and clang-cl.
+* ``Apple`` tests libc++ on MacOS.
+* ``ARM`` tests libc++ on various Linux ARM platforms.
+* ``AIX`` tests libc++ on AIX.
 
-  .. code-block:: cmake
+.. [#] Not all all steps are listed: steps are added and removed when the need
+   arises.
+.. [#] Clang modules are not the same as C++20's modules.
 
-    if(LIBCXX_ENABLE_INCOMPLETE_FEATURES)
-      list(APPEND LIBCXX_SOURCES
-        foo.cpp
-      )
-    endif()
+Infrastructure
+--------------
 
-* ``libcxx/utils/generate_feature_test_macro_components.py``: Add to
-  ``lit_markup``
+All files of the CI infrastructure are in the directory ``libcxx/utils/ci``.
+Note that quite a bit of this infrastructure is heavily Linux focused. This is
+the platform used by most of libc++'s Buildkite runners and developers.
 
-  .. code-block:: python
+Dockerfile
+~~~~~~~~~~
 
-    "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
+Contains the Docker image for the Ubuntu CI. Because the same Docker image is
+used for the ``main`` and ``release`` branch, it should contain no hard-coded
+versions.  It contains the used versions of Clang, various clang-tools,
+GCC, and CMake.
 
-* ``libcxx/utils/generate_header_inclusion_tests.py``: Add to ``lit_markup``
+.. note:: This image is pulled from Docker hub and not rebuild when changing
+   the Dockerfile.
 
-  .. code-block:: python
+run-buildbot-container
+~~~~~~~~~~~~~~~~~~~~~~
 
-    "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
+Helper script that pulls and runs the Docker image. This image mounts the LLVM
+monorepo at ``/llvm``. This can be used to test with compilers not available on
+your system.
 
-* ``libcxx/utils/generate_header_tests.py``: Add to ``header_markup``
+run-buildbot
+~~~~~~~~~~~~
 
-  .. code-block:: python
+Contains the buld script executed on Buildkite. This script can be executed
+locally or inside ``run-buildbot-container``. The script must be called with
+the target to test. For example, ``run-buildbot generic-cxx20`` will build
+libc++ and test it using C++20.
 
-    "foo": ["ifndef _LIBCPP_HAS_NO_INCOMPLETE_FOO"],
+.. warning:: This script will overwrite the directory ``<llvm-root>/build/XX``
+  where ``XX`` is the target of ``run-buildbot``.
 
-* ``libcxx/utils/libcxx/test/features.py``: Add to ``macros``
+This script contains as little version information as possible. This makes it
+easy to use the script with a different compiler. This allows testing a
+combination not in the libc++ CI. It can be used to add a new (temporary)
+job to the CI. For example, testing the C++17 build with Clang-14 can be done
+like:
 
-  .. code-block:: python
+.. code-block:: bash
 
-    '_LIBCPP_HAS_NO_INCOMPLETE_FOO': 'libcpp-has-no-incomplete-foo',
+  CC=clang-14 CXX=clang++-14 run-buildbot generic-cxx17
 
-* All tests that include ``<foo>`` should contain
+buildkite-pipeline.yml
+~~~~~~~~~~~~~~~~~~~~~~
 
-  .. code-block:: c++
-
-    // UNSUPPORTED: libcpp-has-no-incomplete-foo
-
-Once the library is complete these changes and guards should be removed.
+Contains the jobs executed in the CI. This file contains the version
+information of the jobs being executed. Since this script differs between the
+``main`` and ``release`` branch, both branches can use different compiler
+versions.

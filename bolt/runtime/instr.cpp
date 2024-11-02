@@ -224,7 +224,7 @@ BumpPtrAllocator GlobalAlloc;
 void *operator new(size_t Sz, BumpPtrAllocator &A) { return A.allocate(Sz); }
 void *operator new(size_t Sz, BumpPtrAllocator &A, char C) {
   auto *Ptr = reinterpret_cast<char *>(A.allocate(Sz));
-  memSet(Ptr, C, Sz);
+  memset(Ptr, C, Sz);
   return Ptr;
 }
 void *operator new[](size_t Sz, BumpPtrAllocator &A) {
@@ -232,7 +232,7 @@ void *operator new[](size_t Sz, BumpPtrAllocator &A) {
 }
 void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
   auto *Ptr = reinterpret_cast<char *>(A.allocate(Sz));
-  memSet(Ptr, C, Sz);
+  memset(Ptr, C, Sz);
   return Ptr;
 }
 // Only called during exception unwinding (useless). We must manually dealloc.
@@ -289,6 +289,7 @@ public:
   /// Traverses all elements in the table
   template <typename... Args>
   void forEachElement(void (*Callback)(MapEntry &, Args...), Args... args) {
+    Lock L(M);
     if (!TableRoot)
       return;
     return forEachElement(Callback, InitialSize, TableRoot, args...);
@@ -378,7 +379,6 @@ template <typename T> void resetIndCallCounter(T &Entry) {
 
 template <typename T, uint32_t X, uint32_t Y>
 void SimpleHashTable<T, X, Y>::resetCounters() {
-  Lock L(M);
   forEachElement(resetIndCallCounter);
 }
 
@@ -1438,7 +1438,7 @@ int openProfile() {
 /// Where 0xdeadbeef is this function address and PROCESSNAME your binary file
 /// name.
 extern "C" void __bolt_instr_clear_counters() {
-  memSet(reinterpret_cast<char *>(__bolt_instr_locations), 0,
+  memset(reinterpret_cast<char *>(__bolt_instr_locations), 0,
          __bolt_num_counters * 8);
   for (int I = 0; I < __bolt_instr_num_ind_calls; ++I)
     GlobalIndCallCounters[I].resetCounters();

@@ -22,11 +22,11 @@ int main(int argc, char **argv) {
   char *volatile x = (char *)malloc(size);
   memset(x + read_offset, 0, 26);
   // CHECK5: Invalid access starting at offset 5
-  // CHECK5: is located 5 bytes inside 10-byte region
+  // CHECK5: is located 5 bytes inside a 10-byte region
   // CHECK7: Invalid access starting at offset 3
-  // CHECK7: is located 7 bytes inside 10-byte region
+  // CHECK7: is located 7 bytes inside a 10-byte region
   // CHECK8: Invalid access starting at offset 12
-  // CHECK8: is located 8 bytes inside 20-byte region
-  // CHECK32: is located 12 bytes to the right of 20-byte region
+  // CHECK8: is located 8 bytes inside a 20-byte region
+  // CHECK32: is located 12 bytes after a 20-byte region
   free(x);
 }

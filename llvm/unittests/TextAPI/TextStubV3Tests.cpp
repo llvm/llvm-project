@@ -111,7 +111,7 @@ TEST(TBDv3, ReadFile) {
         ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
                        Sym->isWeakDefined(), Sym->isThreadLocalValue()});
   }
-  llvm::sort(Exports.begin(), Exports.end());
+  llvm::sort(Exports);
 
   EXPECT_EQ(sizeof(TBDv3Symbols) / sizeof(ExportedSymbol), Exports.size());
   EXPECT_TRUE(
@@ -203,7 +203,7 @@ TEST(TBDv3, ReadMultipleDocuments) {
                                         Sym->isWeakDefined(),
                                         Sym->isThreadLocalValue()});
   }
-  llvm::sort(Exports.begin(), Exports.end());
+  llvm::sort(Exports);
 
   EXPECT_EQ(sizeof(TBDv3Symbols) / sizeof(ExportedSymbol), Exports.size());
   EXPECT_TRUE(
@@ -228,7 +228,7 @@ TEST(TBDv3, ReadMultipleDocuments) {
                                         Sym->isWeakDefined(),
                                         Sym->isThreadLocalValue()});
   }
-  llvm::sort(Exports.begin(), Exports.end());
+  llvm::sort(Exports);
 
   ExportedSymbolSeq DocumentSymbols{
       {SymbolKind::GlobalSymbol, "_sym5", false, false},

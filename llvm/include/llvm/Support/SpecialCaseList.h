@@ -19,9 +19,9 @@
 //   prefix:wildcard_expression[=category]
 // If category is not specified, it is assumed to be empty string.
 // Definitions of "prefix" and "category" are sanitizer-specific. For example,
-// sanitizer exclusion support prefixes "src", "fun" and "global".
-// Wildcard expressions define, respectively, source files, functions or
-// globals which shouldn't be instrumented.
+// sanitizer exclusion support prefixes "src", "mainfile", "fun" and "global".
+// Wildcard expressions define, respectively, source files, main files,
+// functions or globals which shouldn't be instrumented.
 // Examples of categories:
 //   "functional": used in DFSan to list functions with pure functional
 //                 semantics.
@@ -37,6 +37,7 @@
 // type:*Namespace::ClassName*=init
 // src:file_with_tricky_code.cc
 // src:ignore-global-initializers-issues.cc=init
+// mainfile:main_file.cc
 //
 // [dataflow]
 // # Functions with pure functional semantics:

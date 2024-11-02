@@ -251,8 +251,8 @@ namespace {
     void writeOut() {
       write(0);
       writeString(Filename);
-      for (int i = 0, e = Lines.size(); i != e; ++i)
-        write(Lines[i]);
+      for (uint32_t L : Lines)
+        write(L);
     }
 
     GCOVLines(GCOVProfiler *P, StringRef F)
@@ -595,8 +595,8 @@ static bool functionHasLines(const Function &F, unsigned &EndLine) {
   // Check whether this function actually has any source lines. Not only
   // do these waste space, they also can crash gcov.
   EndLine = 0;
-  for (auto &BB : F) {
-    for (auto &I : BB) {
+  for (const auto &BB : F) {
+    for (const auto &I : BB) {
       // Debug intrinsic locations correspond to the location of the
       // declaration, not necessarily any statements or expressions.
       if (isa<DbgInfoIntrinsic>(&I)) continue;
@@ -648,7 +648,7 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
     }
   }
 
-  for (auto F : Forks) {
+  for (auto *F : Forks) {
     IRBuilder<> Builder(F);
     BasicBlock *Parent = F->getParent();
     auto NextInst = ++F->getIterator();
@@ -673,7 +673,7 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
     Parent->back().setDebugLoc(Loc);
   }
 
-  for (auto E : Execs) {
+  for (auto *E : Execs) {
     IRBuilder<> Builder(E);
     BasicBlock *Parent = E->getParent();
     auto NextInst = ++E->getIterator();
@@ -797,6 +797,8 @@ bool GCOVProfiler::emitProfileNotes(
       if (isUsingScopeBasedEH(F)) continue;
       if (F.hasFnAttribute(llvm::Attribute::NoProfile))
         continue;
+      if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
+        continue;
 
       // Add the function line number to the lines of the entry block
       // to have a counter for the function definition.
@@ -877,7 +879,7 @@ bool GCOVProfiler::emitProfileNotes(
           while ((Idx >>= 8) > 0);
         }
 
-        for (auto &I : BB) {
+        for (const auto &I : BB) {
           // Debug intrinsic locations correspond to the location of the
           // declaration, not necessarily any statements or expressions.
           if (isa<DbgInfoIntrinsic>(&I)) continue;

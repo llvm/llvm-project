@@ -1745,7 +1745,7 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   if (leaf.isAttrMatcher()) {
     Optional<StringRef> constraint =
         staticVerifierEmitter.getAttrConstraintFn(leaf.getAsConstraint());
-    assert(constraint.hasValue() && "attribute constraint was not uniqued");
+    assert(constraint && "attribute constraint was not uniqued");
     return *constraint;
   }
   assert(leaf.isOperandMatcher());

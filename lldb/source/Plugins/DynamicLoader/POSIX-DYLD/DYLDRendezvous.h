@@ -267,6 +267,8 @@ protected:
 
   bool FindMetadata(const char *name, PThreadField field, uint32_t &value);
 
+  bool IsCoreFile() const;
+
   enum RendezvousAction {
     eNoAction,
     eTakeSnapshot,

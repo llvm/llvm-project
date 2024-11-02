@@ -37,45 +37,30 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-cl::opt<unsigned>
-ITLBPageSize("itlb-page-size",
-  cl::desc("The size of i-tlb cache page"),
-  cl::init(4096),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> ITLBPageSize("itlb-page-size",
+                               cl::desc("The size of i-tlb cache page"),
+                               cl::init(4096), cl::ReallyHidden,
+                               cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-ITLBEntries("itlb-entries",
-  cl::desc("The number of entries in i-tlb cache"),
-  cl::init(16),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> ITLBEntries("itlb-entries",
+                              cl::desc("The number of entries in i-tlb cache"),
+                              cl::init(16), cl::ReallyHidden,
+                              cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-ITLBDensity("itlb-density",
-  cl::desc("The density of i-tlb cache"),
-  cl::init(4096),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> ITLBDensity("itlb-density",
+                                     cl::desc("The density of i-tlb cache"),
+                                     cl::init(4096), cl::ReallyHidden,
+                                     cl::cat(BoltOptCategory));
 
-static cl::opt<double>
-MergeProbability("merge-probability",
-  cl::desc("The minimum probability of a call for merging two clusters"),
-  cl::init(0.9),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<double> MergeProbability(
+    "merge-probability",
+    cl::desc("The minimum probability of a call for merging two clusters"),
+    cl::init(0.9), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<double>
-ArcThreshold("arc-threshold",
-  cl::desc("The threshold for ignoring arcs with a small relative weight"),
-  cl::init(0.00000001),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<double> ArcThreshold(
+    "arc-threshold",
+    cl::desc("The threshold for ignoring arcs with a small relative weight"),
+    cl::init(0.00000001), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -260,7 +245,7 @@ public:
       // Making sure the comparison is deterministic
       return L->Id < R->Id;
     };
-    std::stable_sort(HotChains.begin(), HotChains.end(), DensityComparator);
+    llvm::stable_sort(HotChains, DensityComparator);
 
     // Return the set of clusters that are left, which are the ones that
     // didn't get merged (so their first func is its original func)
@@ -468,9 +453,9 @@ private:
     }
 
     // Sort the pairs by the weight in reverse order
-    std::sort(
-        ArcsToMerge.begin(), ArcsToMerge.end(),
-        [](const Arc *L, const Arc *R) { return L->weight() > R->weight(); });
+    llvm::sort(ArcsToMerge, [](const Arc *L, const Arc *R) {
+      return L->weight() > R->weight();
+    });
 
     // Merge the pairs of chains
     for (const Arc *Arc : ArcsToMerge) {
@@ -582,8 +567,7 @@ private:
     Into->Score = score(Into);
 
     // Remove chain From From the list of active chains
-    auto it = std::remove(HotChains.begin(), HotChains.end(), From);
-    HotChains.erase(it, HotChains.end());
+    llvm::erase_value(HotChains, From);
   }
 
 private:

@@ -105,5 +105,7 @@ module m
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
     !CHECK: SCALE intrinsic folding overflow
     real, parameter :: bad1 = scale(1.0, 99999)
+    !CHECK: complex ABS intrinsic folding overflow
+    real, parameter :: bad2 = abs(cmplx(huge(0.),huge(0.)))
   end subroutine
 end module

@@ -1639,11 +1639,11 @@ bool CSKYAsmParser::parseDirectiveAttribute() {
     StringRef Name = Parser.getTok().getIdentifier();
     Optional<unsigned> Ret =
         ELFAttrs::attrTypeFromString(Name, CSKYAttrs::getCSKYAttributeTags());
-    if (!Ret.hasValue()) {
+    if (!Ret) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
     }
-    Tag = Ret.getValue();
+    Tag = *Ret;
     Parser.Lex();
   } else {
     const MCExpr *AttrExpr;
@@ -1686,8 +1686,7 @@ bool CSKYAsmParser::parseDirectiveAttribute() {
     Parser.Lex();
   }
 
-  if (Parser.parseToken(AsmToken::EndOfStatement,
-                        "unexpected token in '.csky_attribute' directive"))
+  if (Parser.parseEOL())
     return true;
 
   if (IsIntegerValue)

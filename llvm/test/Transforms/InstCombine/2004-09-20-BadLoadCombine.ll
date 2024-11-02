@@ -6,13 +6,13 @@
 ; so could produce incorrect results!
 
 define i32 @test(i1 %C) {
-        %X = alloca i32         ; <i32*> [#uses=3]
-        %X2 = alloca i32                ; <i32*> [#uses=2]
-        store i32 1, i32* %X
-        store i32 2, i32* %X2
-        %Y = select i1 %C, i32* %X, i32* %X2            ; <i32*> [#uses=1]
-        store i32 3, i32* %X
-        %Z = load i32, i32* %Y               ; <i32> [#uses=1]
+        %X = alloca i32         ; <ptr> [#uses=3]
+        %X2 = alloca i32                ; <ptr> [#uses=2]
+        store i32 1, ptr %X
+        store i32 2, ptr %X2
+        %Y = select i1 %C, ptr %X, ptr %X2            ; <ptr> [#uses=1]
+        store i32 3, ptr %X
+        %Z = load i32, ptr %Y               ; <i32> [#uses=1]
         ret i32 %Z
 }
 

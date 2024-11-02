@@ -1140,20 +1140,33 @@ for.end:
   ret void
 }
 
-; Invoke is not a conditional branch that we can optimize,
-; so this shouldn't be peeled at all.  This is a reproducer
-; for a bug where evaluating the loop would fail an assertion.
 define void @test17() personality i8* undef{
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  body:
+; CHECK-NEXT:    br label [[LOOP_PEEL_BEGIN:%.*]]
+; CHECK:       loop.peel.begin:
+; CHECK-NEXT:    br label [[LOOP_PEEL:%.*]]
+; CHECK:       loop.peel:
+; CHECK-NEXT:    invoke void @f1()
+; CHECK-NEXT:    to label [[LOOP_PEEL_NEXT:%.*]] unwind label [[EH_UNW_LOOPEXIT_LOOPEXIT_SPLIT_LP:%.*]]
+; CHECK:       loop.peel.next:
+; CHECK-NEXT:    br label [[LOOP_PEEL_NEXT1:%.*]]
+; CHECK:       loop.peel.next1:
+; CHECK-NEXT:    br label [[BODY_PEEL_NEWPH:%.*]]
+; CHECK:       body.peel.newph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CONST:%.*]] = phi i64 [ -33, [[LOOP]] ], [ -20, [[BODY:%.*]] ]
 ; CHECK-NEXT:    invoke void @f1()
-; CHECK-NEXT:    to label [[LOOP]] unwind label [[EH_UNW_LOOPEXIT:%.*]]
-; CHECK:       eh.Unw.loopexit:
-; CHECK-NEXT:    [[LPAD_LOOPEXIT:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    to label [[LOOP]] unwind label [[EH_UNW_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       eh.Unw.loopexit.loopexit:
+; CHECK-NEXT:    [[LPAD_LOOPEXIT2:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    catch i8* null
+; CHECK-NEXT:    br label [[EH_UNW_LOOPEXIT:%.*]]
+; CHECK:       eh.Unw.loopexit.loopexit.split-lp:
+; CHECK-NEXT:    [[LPAD_LOOPEXIT_SPLIT_LP:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    catch i8* null
+; CHECK-NEXT:    br label [[EH_UNW_LOOPEXIT]]
+; CHECK:       eh.Unw.loopexit:
 ; CHECK-NEXT:    ret void
 ;
 body:
@@ -1170,20 +1183,35 @@ eh.Unw.loopexit:
   ret void
 }
 
-; Testcase reduced from PR48812.  We expect no peeling
-; because the latch terminator is a switch.
+; Testcase reduced from PR48812.
 define void @test18(i32* %p) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:  init:
+; CHECK-NEXT:    br label [[LOOP_PEEL_BEGIN:%.*]]
+; CHECK:       loop.peel.begin:
+; CHECK-NEXT:    br label [[LOOP_PEEL:%.*]]
+; CHECK:       loop.peel:
+; CHECK-NEXT:    br label [[LATCH_PEEL:%.*]]
+; CHECK:       latch.peel:
+; CHECK-NEXT:    [[CONTROL_PEEL:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    switch i32 [[CONTROL_PEEL]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    i32 2, label [[LOOP_PEEL_NEXT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       loop.peel.next:
+; CHECK-NEXT:    br label [[LOOP_PEEL_NEXT1:%.*]]
+; CHECK:       loop.peel.next1:
+; CHECK-NEXT:    br label [[INIT_PEEL_NEWPH:%.*]]
+; CHECK:       init.peel.newph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CONST:%.*]] = phi i32 [ 40, [[INIT:%.*]] ], [ 0, [[LATCH:%.*]] ]
-; CHECK-NEXT:    br label [[LATCH]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[CONTROL:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    switch i32 [[CONTROL]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    [[CONTROL:%.*]] = load volatile i32, i32* [[P]], align 4
+; CHECK-NEXT:    switch i32 [[CONTROL]], label [[EXIT_LOOPEXIT:%.*]] [
 ; CHECK-NEXT:    i32 2, label [[LOOP]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

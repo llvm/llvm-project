@@ -112,6 +112,8 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_VERSION_BLOCK_ID, "VersionBlock"},
           {BI_NAMESPACE_BLOCK_ID, "NamespaceBlock"},
           {BI_ENUM_BLOCK_ID, "EnumBlock"},
+          {BI_ENUM_VALUE_BLOCK_ID, "EnumValueBlock"},
+          {BI_TYPEDEF_BLOCK_ID, "TypedefBlock"},
           {BI_TYPE_BLOCK_ID, "TypeBlock"},
           {BI_FIELD_TYPE_BLOCK_ID, "FieldTypeBlock"},
           {BI_MEMBER_TYPE_BLOCK_ID, "MemberTypeBlock"},
@@ -148,6 +150,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {COMMENT_ATTRVAL, {"AttrVal", &StringAbbrev}},
           {COMMENT_ARG, {"Arg", &StringAbbrev}},
           {FIELD_TYPE_NAME, {"Name", &StringAbbrev}},
+          {FIELD_DEFAULT_VALUE, {"DefaultValue", &StringAbbrev}},
           {MEMBER_TYPE_NAME, {"Name", &StringAbbrev}},
           {MEMBER_TYPE_ACCESS, {"Access", &IntAbbrev}},
           {NAMESPACE_USR, {"USR", &SymbolIDAbbrev}},
@@ -157,8 +160,10 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {ENUM_NAME, {"Name", &StringAbbrev}},
           {ENUM_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {ENUM_LOCATION, {"Location", &LocationAbbrev}},
-          {ENUM_MEMBER, {"Member", &StringAbbrev}},
           {ENUM_SCOPED, {"Scoped", &BoolAbbrev}},
+          {ENUM_VALUE_NAME, {"Name", &StringAbbrev}},
+          {ENUM_VALUE_VALUE, {"Value", &StringAbbrev}},
+          {ENUM_VALUE_EXPR, {"Expr", &StringAbbrev}},
           {RECORD_USR, {"USR", &SymbolIDAbbrev}},
           {RECORD_NAME, {"Name", &StringAbbrev}},
           {RECORD_PATH, {"Path", &StringAbbrev}},
@@ -183,9 +188,11 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {REFERENCE_NAME, {"Name", &StringAbbrev}},
           {REFERENCE_TYPE, {"RefType", &IntAbbrev}},
           {REFERENCE_PATH, {"Path", &StringAbbrev}},
-          {REFERENCE_IS_IN_GLOBAL_NAMESPACE,
-           {"IsInGlobalNamespace", &BoolAbbrev}},
-          {REFERENCE_FIELD, {"Field", &IntAbbrev}}};
+          {REFERENCE_FIELD, {"Field", &IntAbbrev}},
+          {TYPEDEF_USR, {"USR", &SymbolIDAbbrev}},
+          {TYPEDEF_NAME, {"Name", &StringAbbrev}},
+          {TYPEDEF_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
+          {TYPEDEF_IS_USING, {"IsUsing", &BoolAbbrev}}};
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
         RecordIdNameMap[Init.first] = Init.second;
@@ -207,13 +214,18 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Type Block
         {BI_TYPE_BLOCK_ID, {}},
         // FieldType Block
-        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME}},
+        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
         // MemberType Block
         {BI_MEMBER_TYPE_BLOCK_ID, {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
-         {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_MEMBER,
-          ENUM_SCOPED}},
+         {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_SCOPED}},
+        // Enum Value Block
+        {BI_ENUM_VALUE_BLOCK_ID,
+         {ENUM_VALUE_NAME, ENUM_VALUE_VALUE, ENUM_VALUE_EXPR}},
+        // Typedef Block
+        {BI_TYPEDEF_BLOCK_ID,
+         {TYPEDEF_USR, TYPEDEF_NAME, TYPEDEF_DEFLOCATION, TYPEDEF_IS_USING}},
         // Namespace Block
         {BI_NAMESPACE_BLOCK_ID,
          {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_PATH}},
@@ -233,7 +245,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
          {REFERENCE_USR, REFERENCE_NAME, REFERENCE_TYPE, REFERENCE_PATH,
-          REFERENCE_IS_IN_GLOBAL_NAMESPACE, REFERENCE_FIELD}}};
+          REFERENCE_FIELD}}};
 
 // AbbreviationMap
 
@@ -406,7 +418,6 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   emitRecord(R.Name, REFERENCE_NAME);
   emitRecord((unsigned)R.RefType, REFERENCE_TYPE);
   emitRecord(R.Path, REFERENCE_PATH);
-  emitRecord(R.IsInGlobalNamespace, REFERENCE_IS_IN_GLOBAL_NAMESPACE);
   emitRecord((unsigned)Field, REFERENCE_FIELD);
 }
 
@@ -415,10 +426,25 @@ void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
 }
 
+void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
+  StreamSubBlockGuard Block(Stream, BI_TYPEDEF_BLOCK_ID);
+  emitRecord(T.USR, TYPEDEF_USR);
+  emitRecord(T.Name, TYPEDEF_NAME);
+  for (const auto &N : T.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : T.Description)
+    emitBlock(CI);
+  if (T.DefLoc)
+    emitRecord(*T.DefLoc, TYPEDEF_DEFLOCATION);
+  emitRecord(T.IsUsing, TYPEDEF_IS_USING);
+  emitBlock(T.Underlying);
+}
+
 void ClangDocBitcodeWriter::emitBlock(const FieldTypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_FIELD_TYPE_BLOCK_ID);
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, FIELD_TYPE_NAME);
+  emitRecord(T.DefaultValue, FIELD_DEFAULT_VALUE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
@@ -426,6 +452,8 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
+  for (const auto &CI : T.Description)
+    emitBlock(CI);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
@@ -459,13 +487,15 @@ void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
     emitBlock(CI);
-  for (const auto &C : I.ChildNamespaces)
+  for (const auto &C : I.Children.Namespaces)
     emitBlock(C, FieldId::F_child_namespace);
-  for (const auto &C : I.ChildRecords)
+  for (const auto &C : I.Children.Records)
     emitBlock(C, FieldId::F_child_record);
-  for (const auto &C : I.ChildFunctions)
+  for (const auto &C : I.Children.Functions)
     emitBlock(C);
-  for (const auto &C : I.ChildEnums)
+  for (const auto &C : I.Children.Enums)
+    emitBlock(C);
+  for (const auto &C : I.Children.Typedefs)
     emitBlock(C);
 }
 
@@ -478,12 +508,21 @@ void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
   for (const auto &CI : I.Description)
     emitBlock(CI);
   if (I.DefLoc)
-    emitRecord(I.DefLoc.getValue(), ENUM_DEFLOCATION);
+    emitRecord(*I.DefLoc, ENUM_DEFLOCATION);
   for (const auto &L : I.Loc)
     emitRecord(L, ENUM_LOCATION);
   emitRecord(I.Scoped, ENUM_SCOPED);
+  if (I.BaseType)
+    emitBlock(*I.BaseType);
   for (const auto &N : I.Members)
-    emitRecord(N, ENUM_MEMBER);
+    emitBlock(N);
+}
+
+void ClangDocBitcodeWriter::emitBlock(const EnumValueInfo &I) {
+  StreamSubBlockGuard Block(Stream, BI_ENUM_VALUE_BLOCK_ID);
+  emitRecord(I.Name, ENUM_VALUE_NAME);
+  emitRecord(I.Value, ENUM_VALUE_VALUE);
+  emitRecord(I.ValueExpr, ENUM_VALUE_EXPR);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
@@ -496,7 +535,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   for (const auto &CI : I.Description)
     emitBlock(CI);
   if (I.DefLoc)
-    emitRecord(I.DefLoc.getValue(), RECORD_DEFLOCATION);
+    emitRecord(*I.DefLoc, RECORD_DEFLOCATION);
   for (const auto &L : I.Loc)
     emitRecord(L, RECORD_LOCATION);
   emitRecord(I.TagType, RECORD_TAG_TYPE);
@@ -509,11 +548,13 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
     emitBlock(P, FieldId::F_vparent);
   for (const auto &PB : I.Bases)
     emitBlock(PB);
-  for (const auto &C : I.ChildRecords)
+  for (const auto &C : I.Children.Records)
     emitBlock(C, FieldId::F_child_record);
-  for (const auto &C : I.ChildFunctions)
+  for (const auto &C : I.Children.Functions)
     emitBlock(C);
-  for (const auto &C : I.ChildEnums)
+  for (const auto &C : I.Children.Enums)
+    emitBlock(C);
+  for (const auto &C : I.Children.Typedefs)
     emitBlock(C);
 }
 
@@ -528,7 +569,7 @@ void ClangDocBitcodeWriter::emitBlock(const BaseRecordInfo &I) {
   emitRecord(I.IsParent, BASE_RECORD_IS_PARENT);
   for (const auto &M : I.Members)
     emitBlock(M);
-  for (const auto &C : I.ChildFunctions)
+  for (const auto &C : I.Children.Functions)
     emitBlock(C);
 }
 
@@ -543,7 +584,7 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
   emitRecord(I.Access, FUNCTION_ACCESS);
   emitRecord(I.IsMethod, FUNCTION_IS_METHOD);
   if (I.DefLoc)
-    emitRecord(I.DefLoc.getValue(), FUNCTION_DEFLOCATION);
+    emitRecord(*I.DefLoc, FUNCTION_DEFLOCATION);
   for (const auto &L : I.Loc)
     emitRecord(L, FUNCTION_LOCATION);
   emitBlock(I.Parent, FieldId::F_parent);
@@ -565,6 +606,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     break;
   case InfoType::IT_function:
     emitBlock(*static_cast<clang::doc::FunctionInfo *>(I));
+    break;
+  case InfoType::IT_typedef:
+    emitBlock(*static_cast<clang::doc::TypedefInfo *>(I));
     break;
   default:
     llvm::errs() << "Unexpected info, unable to write.\n";

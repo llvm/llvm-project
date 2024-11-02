@@ -470,6 +470,8 @@ private:
       return "ConstraintSubstitution";
     case CodeSynthesisContext::ConstraintNormalization:
       return "ConstraintNormalization";
+    case CodeSynthesisContext::RequirementParameterInstantiation:
+      return "RequirementParameterInstantiation";
     case CodeSynthesisContext::ParameterMappingSubstitution:
       return "ParameterMappingSubstitution";
     case CodeSynthesisContext::RequirementInstantiation:
@@ -854,8 +856,9 @@ void DumpModuleInfoAction::ExecuteAction() {
     std::error_code EC;
     OutFile.reset(new llvm::raw_fd_ostream(OutputFileName.str(), EC,
                                            llvm::sys::fs::OF_TextWithCRLF));
+    OutputStream = OutFile.get();
   }
-  llvm::raw_ostream &Out = OutFile.get()? *OutFile.get() : llvm::outs();
+  llvm::raw_ostream &Out = OutputStream ? *OutputStream : llvm::outs();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
   auto &FileMgr = getCompilerInstance().getFileManager();
@@ -919,12 +922,12 @@ void DumpModuleInfoAction::ExecuteAction() {
     if (Primary) {
       if (!Primary->submodules().empty())
         Out << "   Sub Modules:\n";
-      for (auto MI : Primary->submodules()) {
+      for (auto *MI : Primary->submodules()) {
         PrintSubMapEntry(MI->Name, MI->Kind);
       }
       if (!Primary->Imports.empty())
         Out << "   Imports:\n";
-      for (auto IMP : Primary->Imports) {
+      for (auto *IMP : Primary->Imports) {
         PrintSubMapEntry(IMP->Name, IMP->Kind);
       }
       if (!Primary->Exports.empty())

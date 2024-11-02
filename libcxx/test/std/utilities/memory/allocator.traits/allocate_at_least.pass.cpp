@@ -15,6 +15,8 @@
 //   allocate_at_least(Allocator& a, size_t n);
 
 #include <cassert>
+#include <concepts>
+#include <cstddef>
 #include <memory>
 
 // check that std::allocation_result exists and isn't restricted to pointers

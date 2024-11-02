@@ -24,7 +24,7 @@
 int main(int, char**)
 {
   int x = 0;
-  auto comp = [&]() { x += 1; };
+  auto comp = [&]() noexcept { x += 1; };
   std::barrier<decltype(comp)> b(2, comp);
 
   std::thread t = support::make_test_thread([&](){

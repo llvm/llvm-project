@@ -87,6 +87,7 @@ InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   // Handle -fatal_warnings early since it converts missing argument warnings
   // to errors.
   errorHandler().fatalWarnings = args.hasArg(OPT_fatal_warnings);
+  errorHandler().suppressWarnings = args.hasArg(OPT_w);
 
   if (missingCount)
     error(Twine(args.getArgString(missingIndex)) + ": missing argument");
@@ -149,6 +150,7 @@ std::string macho::createResponseFile(const InputArgList &args) {
       break;
     case OPT_force_load:
     case OPT_weak_library:
+    case OPT_load_hidden:
       os << arg->getSpelling() << " "
          << quote(rewriteInputPath(arg->getValue())) << "\n";
       break;
@@ -209,7 +211,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   DylibFile *&file = loadedDylibs[path];
   if (file) {
     if (explicitlyLinked)
-      file->explicitlyLinked = explicitlyLinked;
+      file->setExplicitlyLinked();
     return file;
   }
 

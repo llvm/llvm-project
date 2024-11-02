@@ -2,7 +2,7 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; Most basic case, fully identical PHI nodes
-define void @test0(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
+define void @test0(i32 %v0, i32 %v1, i1 %c, ptr %d0, ptr %d1) {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -12,8 +12,8 @@ define void @test0(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D1:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D1:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -28,13 +28,13 @@ b1:
 end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
   ret void
 }
 
 ; Fully identical PHI nodes, but order of operands differs
-define void @test1(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
+define void @test1(i32 %v0, i32 %v1, i1 %c, ptr %d0, ptr %d1) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -44,8 +44,8 @@ define void @test1(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I0]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I0]], i32* [[D1:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I0]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I0]], ptr [[D1:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -60,13 +60,13 @@ b1:
 end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v1, %b1 ], [ %v0, %b0 ]
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
   ret void
 }
 
 ; Different incoming values in second PHI
-define void @negative_test2(i32 %v0, i32 %v1, i32 %v2, i1 %c, i32* %d0, i32* %d1) {
+define void @negative_test2(i32 %v0, i32 %v1, i32 %v2, i1 %c, ptr %d0, ptr %d1) {
 ; CHECK-LABEL: @negative_test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -77,8 +77,8 @@ define void @negative_test2(i32 %v0, i32 %v1, i32 %v2, i1 %c, i32* %d0, i32* %d1
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[V0]], [[B0]] ], [ [[V2:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I0]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D1:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I0]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D1:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -93,11 +93,11 @@ b1:
 end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v0, %b0 ], [ %v2, %b1 ] ; from %b0 takes %v2 instead of %v1
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
   ret void
 }
-define void @negative_test3(i32 %v0, i32 %v1, i32 %v2, i1 %c, i32* %d0, i32* %d1) {
+define void @negative_test3(i32 %v0, i32 %v1, i32 %v2, i1 %c, ptr %d0, ptr %d1) {
 ; CHECK-LABEL: @negative_test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -108,8 +108,8 @@ define void @negative_test3(i32 %v0, i32 %v1, i32 %v2, i1 %c, i32* %d0, i32* %d1
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[V0]], [[B0]] ], [ [[V2:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I0]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D1:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I0]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D1:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -124,11 +124,11 @@ b1:
 end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v2, %b1 ], [ %v0, %b0 ] ; from %b0 takes %v2 instead of %v1
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
   ret void
 }
-define void @negative_test4(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
+define void @negative_test4(i32 %v0, i32 %v1, i1 %c, ptr %d0, ptr %d1) {
 ; CHECK-LABEL: @negative_test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -138,8 +138,8 @@ define void @negative_test4(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I0]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I0]], i32* [[D1:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I0]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I0]], ptr [[D1:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -154,13 +154,13 @@ b1:
 end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v1, %b1 ], [ %v0, %b0 ] ; incoming values are swapped
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
   ret void
 }
 
 ; Both PHI's are identical, but the first one has no uses, so ignore it.
-define void @test5(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
+define void @test5(i32 %v0, i32 %v1, i1 %c, ptr %d0, ptr %d1) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -170,7 +170,7 @@ define void @test5(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D1:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D1:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -185,11 +185,11 @@ b1:
 end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ] ; unused
   %i1 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
-  store i32 %i1, i32* %d1
+  store i32 %i1, ptr %d1
   ret void
 }
 ; Second PHI has no uses
-define void @test6(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
+define void @test6(i32 %v0, i32 %v1, i1 %c, ptr %d0, ptr %d1) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -199,7 +199,7 @@ define void @test6(i32 %v0, i32 %v1, i1 %c, i32* %d0, i32* %d1) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I0]], i32* [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I0]], ptr [[D0:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -214,12 +214,12 @@ b1:
 end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ] ; unused
-  store i32 %i0, i32* %d0
+  store i32 %i0, ptr %d0
   ret void
 }
 
 ; Non-matching PHI node should be ignored without terminating CSE.
-define void @test7(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, i32* %d0, i32* %d1, i16* %d2) {
+define void @test7(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, ptr %d0, ptr %d1, ptr %d2) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -230,9 +230,9 @@ define void @test7(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, i32* %d0, i32* %d1
 ; CHECK:       end:
 ; CHECK-NEXT:    [[IBAD:%.*]] = phi i16 [ [[V2:%.*]], [[B0]] ], [ [[V3:%.*]], [[B1]] ]
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D1:%.*]], align 4
-; CHECK-NEXT:    store i16 [[IBAD]], i16* [[D2:%.*]], align 2
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D1:%.*]], align 4
+; CHECK-NEXT:    store i16 [[IBAD]], ptr [[D2:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -248,12 +248,12 @@ end:
   %iBAD = phi i16 [ %v2, %b0 ], [ %v3, %b1 ]
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
-  store i16 %iBAD, i16* %d2
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
+  store i16 %iBAD, ptr %d2
   ret void
 }
-define void @test8(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, i32* %d0, i32* %d1, i16* %d2) {
+define void @test8(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, ptr %d0, ptr %d1, ptr %d2) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -264,9 +264,9 @@ define void @test8(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, i32* %d0, i32* %d1
 ; CHECK:       end:
 ; CHECK-NEXT:    [[IBAD:%.*]] = phi i16 [ [[V2:%.*]], [[B0]] ], [ [[V3:%.*]], [[B1]] ]
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D1:%.*]], align 4
-; CHECK-NEXT:    store i16 [[IBAD]], i16* [[D2:%.*]], align 2
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D1:%.*]], align 4
+; CHECK-NEXT:    store i16 [[IBAD]], ptr [[D2:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -282,12 +282,12 @@ end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %iBAD = phi i16 [ %v2, %b0 ], [ %v3, %b1 ]
   %i1 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
-  store i16 %iBAD, i16* %d2
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
+  store i16 %iBAD, ptr %d2
   ret void
 }
-define void @test9(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, i32* %d0, i32* %d1, i16* %d2) {
+define void @test9(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, ptr %d0, ptr %d1, ptr %d2) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[B0:%.*]], label [[B1:%.*]]
@@ -298,9 +298,9 @@ define void @test9(i32 %v0, i32 %v1, i16 %v2, i16 %v3, i1 %c, i32* %d0, i32* %d1
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[V0:%.*]], [[B0]] ], [ [[V1:%.*]], [[B1]] ]
 ; CHECK-NEXT:    [[IBAD:%.*]] = phi i16 [ [[V2:%.*]], [[B0]] ], [ [[V3:%.*]], [[B1]] ]
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D0:%.*]], align 4
-; CHECK-NEXT:    store i32 [[I1]], i32* [[D1:%.*]], align 4
-; CHECK-NEXT:    store i16 [[IBAD]], i16* [[D2:%.*]], align 2
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I1]], ptr [[D1:%.*]], align 4
+; CHECK-NEXT:    store i16 [[IBAD]], ptr [[D2:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -316,8 +316,8 @@ end:
   %i0 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %i1 = phi i32 [ %v0, %b0 ], [ %v1, %b1 ]
   %iBAD = phi i16 [ %v2, %b0 ], [ %v3, %b1 ]
-  store i32 %i0, i32* %d0
-  store i32 %i1, i32* %d1
-  store i16 %iBAD, i16* %d2
+  store i32 %i0, ptr %d0
+  store i32 %i1, ptr %d1
+  store i16 %iBAD, ptr %d2
   ret void
 }

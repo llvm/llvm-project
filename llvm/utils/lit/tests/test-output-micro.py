@@ -39,7 +39,7 @@
 # CHECK-NEXT:   },
 # CHECK-NEXT:   {
 # CHECK-NEXT:     "code": "PASS",
-# CHECK-NEXT:     "elapsed": {{[0-9.]+}},
+# CHECK-NEXT:     "elapsed": {{[-+0-9.eE]+}},
 # CHECK-NEXT:     "metrics": {
 # CHECK-NEXT:       "value0": 1,
 # CHECK-NEXT:       "value1": 2.3456

@@ -27,7 +27,7 @@ define %kv2 @fn2() {
 ; CHECK: %1 = tail call %kv1 @fn1()
 ; CHECK: %2 = extractvalue %kv1 %1, 0
 ; CHECK: %3 = bitcast i32* %2 to i8*
-; CHECK: %4 = insertvalue %kv2 undef, i8* %3, 0
+; CHECK: %4 = insertvalue %kv2 poison, i8* %3, 0
   %tmp = alloca %kv2
   %v1 = getelementptr %kv2, %kv2* %tmp, i32 0, i32 0
   store i8* null, i8** %v1

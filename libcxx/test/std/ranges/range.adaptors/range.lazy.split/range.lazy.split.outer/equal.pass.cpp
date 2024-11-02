@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr bool operator==(const outer-iterator& x, const outer-iterator& y)
 //   requires forward_range<Base>;

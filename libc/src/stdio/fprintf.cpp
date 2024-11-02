@@ -8,14 +8,11 @@
 
 #include "src/stdio/fprintf.h"
 
+#include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
-#include "src/stdio/ferror.h"
-#include "src/stdio/printf_core/file_writer.h"
-#include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include <stdarg.h>
-#include <stdio.h>
 
 namespace __llvm_libc {
 
@@ -28,12 +25,7 @@ LLVM_LIBC_FUNCTION(int, fprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  printf_core::Writer writer(reinterpret_cast<void *>(stream),
-                             printf_core::write_to_file);
-
-  int ret_val = printf_core::printf_main(&writer, format, args);
-  if (__llvm_libc::ferror(stream))
-    return -1;
+  int ret_val = printf_core::vfprintf_internal(stream, format, args);
   return ret_val;
 }
 

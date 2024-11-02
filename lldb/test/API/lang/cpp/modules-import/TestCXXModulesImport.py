@@ -1,7 +1,6 @@
 """Test that importing modules in C++ works as expected."""
 
 
-import unittest2
 import lldb
 import shutil
 
@@ -11,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class CXXModulesImportTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def build(self):
         include = self.getBuildArtifact('include')

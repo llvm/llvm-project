@@ -21,6 +21,10 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+static cl::opt<bool> EnableAddPhiTranslation(
+    "gvn-add-phi-translation", cl::init(false), cl::Hidden,
+    cl::desc("Enable phi-translation of add instructions"));
+
 static bool CanPHITrans(Instruction *Inst) {
   if (isa<PHINode>(Inst) ||
       isa<GetElementPtrInst>(Inst))
@@ -34,9 +38,6 @@ static bool CanPHITrans(Instruction *Inst) {
       isa<ConstantInt>(Inst->getOperand(1)))
     return true;
 
-  //   cerr << "MEMDEP: Could not PHI translate: " << *Pointer;
-  //   if (isa<BitCastInst>(PtrInst) || isa<GetElementPtrInst>(PtrInst))
-  //     cerr << "OP:\t\t\t\t" << *PtrInst->getOperand(0);
   return false;
 }
 
@@ -225,7 +226,7 @@ Value *PHITransAddr::PHITranslateSubExpr(Value *V, BasicBlock *CurBB,
       return GEP;
 
     // Simplify the GEP to handle 'gep x, 0' -> x etc.
-    if (Value *V = SimplifyGEPInst(GEP->getSourceElementType(), GEPOps[0],
+    if (Value *V = simplifyGEPInst(GEP->getSourceElementType(), GEPOps[0],
                                    ArrayRef<Value *>(GEPOps).slice(1),
                                    GEP->isInBounds(), {DL, TLI, DT, AC})) {
       for (unsigned i = 0, e = GEPOps.size(); i != e; ++i)
@@ -277,7 +278,7 @@ Value *PHITransAddr::PHITranslateSubExpr(Value *V, BasicBlock *CurBB,
         }
 
     // See if the add simplifies away.
-    if (Value *Res = SimplifyAddInst(LHS, RHS, isNSW, isNUW, {DL, TLI, DT, AC})) {
+    if (Value *Res = simplifyAddInst(LHS, RHS, isNSW, isNUW, {DL, TLI, DT, AC})) {
       // If we simplified the operands, the LHS is no longer an input, but Res
       // is.
       RemoveInstInputs(LHS, InstInputs);
@@ -316,8 +317,7 @@ bool PHITransAddr::PHITranslateValue(BasicBlock *CurBB, BasicBlock *PredBB,
   assert(DT || !MustDominate);
   assert(Verify() && "Invalid PHITransAddr!");
   if (DT && DT->isReachableFromEntry(PredBB))
-    Addr =
-        PHITranslateSubExpr(Addr, CurBB, PredBB, MustDominate ? DT : nullptr);
+    Addr = PHITranslateSubExpr(Addr, CurBB, PredBB, DT);
   else
     Addr = nullptr;
   assert(Verify() && "Invalid PHITransAddr!");
@@ -413,18 +413,19 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
     return Result;
   }
 
-#if 0
-  // FIXME: This code works, but it is unclear that we actually want to insert
-  // a big chain of computation in order to make a value available in a block.
-  // This needs to be evaluated carefully to consider its cost trade offs.
-
   // Handle add with a constant RHS.
-  if (Inst->getOpcode() == Instruction::Add &&
+  if (EnableAddPhiTranslation && Inst->getOpcode() == Instruction::Add &&
       isa<ConstantInt>(Inst->getOperand(1))) {
+
+    // FIXME: This code works, but it is unclear that we actually want to insert
+    // a big chain of computation in order to make a value available in a block.
+    // This needs to be evaluated carefully to consider its cost trade offs.
+
     // PHI translate the LHS.
     Value *OpVal = InsertPHITranslatedSubExpr(Inst->getOperand(0),
                                               CurBB, PredBB, DT, NewInsts);
-    if (OpVal == 0) return 0;
+    if (OpVal == nullptr)
+      return nullptr;
 
     BinaryOperator *Res = BinaryOperator::CreateAdd(OpVal, Inst->getOperand(1),
                                            InVal->getName()+".phi.trans.insert",
@@ -434,7 +435,6 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
     NewInsts.push_back(Res);
     return Res;
   }
-#endif
 
   return nullptr;
 }

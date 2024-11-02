@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-C
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
+// RUN: %clang_cc1 -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-C
+// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,16 +7,16 @@ extern "C" {
 
 // CHECK-LABEL: define{{.*}} void @fixed_len_array
 void fixed_len_array(int k) {
-  // CHECK: getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* [[ARR:%.*]], i64 0, i64 [[IDXPROM:%.*]]
+  // CHECK: getelementptr inbounds [10 x [10 x i32]], ptr [[ARR:%.*]], i64 0, i64 [[IDXPROM:%.*]]
   // CHECK-NEXT: [[SMUL:%.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 40, i64 [[IDXPROM]]), !nosanitize
   // CHECK-NEXT: [[SMULOFLOW:%.*]] = extractvalue { i64, i1 } [[SMUL]], 1, !nosanitize
   // CHECK-NEXT: [[OR:%.+]] = or i1 [[SMULOFLOW]], false, !nosanitize
   // CHECK-NEXT: [[SMULVAL:%.*]] = extractvalue { i64, i1 } [[SMUL]], 0, !nosanitize
-  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint [10 x [10 x i32]]* [[ARR]] to i64, !nosanitize
+  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint ptr [[ARR]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], [[SMULVAL]], !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}, i64 [[BASE]], i64 [[COMPGEP]]){{.*}}, !nosanitize
 
-  // CHECK: getelementptr inbounds [10 x i32], [10 x i32]* {{.*}}, i64 0, i64 [[IDXPROM1:%.*]]
+  // CHECK: getelementptr inbounds [10 x i32], ptr {{.*}}, i64 0, i64 [[IDXPROM1:%.*]]
   // CHECK-NEXT: @llvm.smul.with.overflow.i64(i64 4, i64 [[IDXPROM1]]), !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
 
@@ -26,11 +26,11 @@ void fixed_len_array(int k) {
 
 // CHECK-LABEL: define{{.*}} void @variable_len_array
 void variable_len_array(int n, int k) {
-  // CHECK: getelementptr inbounds i32, i32* {{.*}}, i64 [[IDXPROM:%.*]]
+  // CHECK: getelementptr inbounds i32, ptr {{.*}}, i64 [[IDXPROM:%.*]]
   // CHECK-NEXT: @llvm.smul.with.overflow.i64(i64 4, i64 [[IDXPROM]]), !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
 
-  // CHECK: getelementptr inbounds i32, i32* {{.*}}, i64 [[IDXPROM1:%.*]]
+  // CHECK: getelementptr inbounds i32, ptr {{.*}}, i64 [[IDXPROM1:%.*]]
   // CHECK-NEXT: @llvm.smul.with.overflow.i64(i64 4, i64 [[IDXPROM1]]), !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
 
@@ -83,8 +83,8 @@ struct S1 {
 //
 // CHECK-LABEL: define{{.*}} void @struct_index
 void struct_index(struct S1 *p) {
-  // CHECK: getelementptr inbounds %struct.S1, %struct.S1* [[P:%.*]], i64 10
-  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint %struct.S1* [[P]] to i64, !nosanitize
+  // CHECK: getelementptr inbounds %struct.S1, ptr [[P:%.*]], i64 10
+  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint ptr [[P]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], 240, !nosanitize
   // CHECK: select
   // CHECK: @__ubsan_handle_pointer_overflow{{.*}} i64 [[BASE]], i64 [[COMPGEP]]) {{.*}}, !nosanitize

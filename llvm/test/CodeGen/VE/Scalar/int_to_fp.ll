@@ -84,16 +84,15 @@ entry:
 define float @ul2f(i64 %a) {
 ; CHECK-LABEL: ul2f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmps.l %s2, %s0, (0)1
 ; CHECK-NEXT:    cvt.d.l %s1, %s0
 ; CHECK-NEXT:    cvt.s.d %s1, %s1
-; CHECK-NEXT:    srl %s3, %s0, 1
-; CHECK-NEXT:    and %s0, 1, %s0
-; CHECK-NEXT:    or %s0, %s0, %s3
-; CHECK-NEXT:    cvt.d.l %s0, %s0
-; CHECK-NEXT:    cvt.s.d %s0, %s0
-; CHECK-NEXT:    fadd.s %s0, %s0, %s0
-; CHECK-NEXT:    cmov.l.lt %s1, %s0, %s2
+; CHECK-NEXT:    srl %s2, %s0, 1
+; CHECK-NEXT:    and %s3, 1, %s0
+; CHECK-NEXT:    or %s2, %s3, %s2
+; CHECK-NEXT:    cvt.d.l %s2, %s2
+; CHECK-NEXT:    cvt.s.d %s2, %s2
+; CHECK-NEXT:    fadd.s %s2, %s2, %s2
+; CHECK-NEXT:    cmov.l.lt %s1, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
 entry:

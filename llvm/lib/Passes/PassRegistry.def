@@ -26,7 +26,6 @@ MODULE_ANALYSIS("profile-summary", ProfileSummaryAnalysis())
 MODULE_ANALYSIS("stack-safety", StackSafetyGlobalAnalysis())
 MODULE_ANALYSIS("verify", VerifierAnalysis())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
-MODULE_ANALYSIS("asan-globals-md", ASanGlobalsMetadataAnalysis())
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
 MODULE_ANALYSIS("ir-similarity", IRSimilarityAnalysis())
 
@@ -67,6 +66,7 @@ MODULE_PASS("globalsplit", GlobalSplitPass())
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
+MODULE_PASS("inliner-ml-advisor-release", ModuleInlinerWrapperPass(getInlineParams(), true, {}, InliningAdvisorMode::Release, 0))
 MODULE_PASS("print<inline-advisor>", InlineAdvisorAnalysisPrinterPass(dbgs()))
 MODULE_PASS("inliner-wrapper-no-mandatory-first", ModuleInlinerWrapperPass(
   getInlineParams(),
@@ -92,6 +92,7 @@ MODULE_PASS("pgo-instr-gen", PGOInstrumentationGen())
 MODULE_PASS("pgo-instr-use", PGOInstrumentationUse())
 MODULE_PASS("print-profile-summary", ProfileSummaryPrinterPass(dbgs()))
 MODULE_PASS("print-callgraph", CallGraphPrinterPass(dbgs()))
+MODULE_PASS("print-callgraph-sccs", CallGraphSCCsPrinterPass(dbgs()))
 MODULE_PASS("print", PrintModulePass(dbgs()))
 MODULE_PASS("print-lcg", LazyCallGraphPrinterPass(dbgs()))
 MODULE_PASS("print-lcg-dot", LazyCallGraphDOTPrinterPass(dbgs()))
@@ -119,10 +120,10 @@ MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("view-callgraph", CallGraphViewerPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
-MODULE_PASS("msan-module", ModuleMemorySanitizerPass({}))
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
-MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
+MODULE_PASS("sancov-module", SanitizerCoveragePass())
+MODULE_PASS("sanmd-module", SanitizerBinaryMetadataPass())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
 MODULE_PASS("pseudo-probe-update", PseudoProbeUpdatePass())
@@ -147,13 +148,20 @@ MODULE_PASS_WITH_PARAMS("hwasan",
                         },
                         parseHWASanPassOptions,
                         "kernel;recover")
-MODULE_PASS_WITH_PARAMS("asan-module",
-                        "ModuleAddressSanitizerPass",
+MODULE_PASS_WITH_PARAMS("asan",
+                        "AddressSanitizerPass",
                         [](AddressSanitizerOptions Opts) {
-                          return ModuleAddressSanitizerPass(Opts);
+                          return AddressSanitizerPass(Opts);
                         },
                         parseASanPassOptions,
                         "kernel")
+MODULE_PASS_WITH_PARAMS("msan",
+                        "MemorySanitizerPass",
+                        [](MemorySanitizerOptions Opts) {
+                          return MemorySanitizerPass(Opts);
+                        },
+                        parseMSanPassOptions,
+                        "recover;kernel;eager-checks;track-origins=N")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -208,6 +216,7 @@ FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
 FUNCTION_ANALYSIS("domfrontier", DominanceFrontierAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
 FUNCTION_ANALYSIS("loops", LoopAnalysis())
+FUNCTION_ANALYSIS("access-info", LoopAccessAnalysis())
 FUNCTION_ANALYSIS("lazy-value-info", LazyValueAnalysis())
 FUNCTION_ANALYSIS("da", DependenceAnalysis())
 FUNCTION_ANALYSIS("inliner-size-estimator", InlineSizeEstimatorAnalysis())
@@ -322,6 +331,7 @@ FUNCTION_PASS("loop-versioning", LoopVersioningPass())
 FUNCTION_PASS("objc-arc", ObjCARCOptPass())
 FUNCTION_PASS("objc-arc-contract", ObjCARCContractPass())
 FUNCTION_PASS("objc-arc-expand", ObjCARCExpandPass())
+FUNCTION_PASS("pa-eval", PAEvalPass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
 FUNCTION_PASS("print", PrintFunctionPass(dbgs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
@@ -347,8 +357,10 @@ FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(dbgs()))
 FUNCTION_PASS("print<regions>", RegionInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<scalar-evolution>", ScalarEvolutionPrinterPass(dbgs()))
 FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(dbgs()))
+FUNCTION_PASS("print<access-info>", LoopAccessInfoPrinterPass(dbgs()))
 // TODO: rename to print<foo> after NPM switch
 FUNCTION_PASS("print-alias-sets", AliasSetsPrinterPass(dbgs()))
+FUNCTION_PASS("print-cfg-sccs", CFGSCCPrinterPass(dbgs()))
 FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print-mustexecute", MustExecutePrinterPass(dbgs()))
 FUNCTION_PASS("print-memderefs", MemDerefPrinterPass(dbgs()))
@@ -382,6 +394,7 @@ FUNCTION_PASS("tlshoist", TLSVariableHoistPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
+FUNCTION_PASS("declare-to-assign", llvm::AssignmentTrackingPass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
@@ -420,13 +433,6 @@ FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                           "no-profile-peeling;profile-peeling;"
                           "no-runtime;runtime;"
                           "no-upperbound;upperbound")
-FUNCTION_PASS_WITH_PARAMS("msan",
-                          "MemorySanitizerPass",
-                           [](MemorySanitizerOptions Opts) {
-                             return MemorySanitizerPass(Opts);
-                           },
-                          parseMSanPassOptions,
-                          "recover;kernel;eager-checks;track-origins=N")
 FUNCTION_PASS_WITH_PARAMS("simplifycfg",
                           "SimplifyCFGPass",
                            [](SimplifyCFGOptions Opts) {
@@ -473,6 +479,13 @@ FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
                            },
                           parseStackLifetimeOptions,
                           "may;must")
+FUNCTION_PASS_WITH_PARAMS("print<da>",
+                          "DependenceAnalysisPrinterPass",
+                           [](bool NormalizeResults) {
+                             return DependenceAnalysisPrinterPass(dbgs(), NormalizeResults);
+                           },
+                          parseDependenceAnalysisPrinterOptions,
+                          "normalized-results")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
@@ -488,7 +501,6 @@ LOOPNEST_PASS("no-op-loopnest", NoOpLoopNestPass())
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)
 #endif
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
-LOOP_ANALYSIS("access-info", LoopAccessAnalysis())
 LOOP_ANALYSIS("ddg", DDGAnalysis())
 LOOP_ANALYSIS("iv-users", IVUsersAnalysis())
 LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
@@ -510,7 +522,6 @@ LOOP_PASS("loop-simplifycfg", LoopSimplifyCFGPass())
 LOOP_PASS("loop-reduce", LoopStrengthReducePass())
 LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("loop-unroll-full", LoopFullUnrollPass())
-LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
 LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(dbgs()))
 LOOP_PASS("print<iv-users>", IVUsersPrinterPass(dbgs()))
 LOOP_PASS("print<loopnest>", LoopNestPrinterPass(dbgs()))

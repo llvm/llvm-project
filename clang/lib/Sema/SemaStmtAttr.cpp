@@ -311,7 +311,7 @@ CheckForIncompatibleAttributes(Sema &S,
   // come in two variants: a state form and a numeric form.  The state form
   // selectively defaults/enables/disables the transformation for the loop
   // (for unroll, default indicates full unrolling rather than enabling the
-  // transformation). The numeric form form provides an integer hint (for
+  // transformation). The numeric form provides an integer hint (for
   // example, unroll count) to the transformer. The following array accumulates
   // the hints encountered while iterating through the attributes to check for
   // compatibility.

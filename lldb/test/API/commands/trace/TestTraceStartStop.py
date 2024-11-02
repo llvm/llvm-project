@@ -6,8 +6,6 @@ from lldbsuite.test.decorators import *
 
 class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def expectGenericHelpMessageForStartCommand(self):
         self.expect("help thread trace start",
             substrs=["Syntax: thread trace start [<trace-options>]"])
@@ -35,18 +33,74 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("r")
 
         self.traceStartThread(
-            error=True, traceBufferSize=2000,
-            substrs=["The trace buffer size must be a power of 2", "It was 2000"])
+            error=True, iptTraceSize=2000,
+            substrs=["The intel pt trace size must be a power of 2", "It was 2000"])
 
         self.traceStartThread(
-            error=True, traceBufferSize=5000,
-            substrs=["The trace buffer size must be a power of 2", "It was 5000"])
+            error=True, iptTraceSize=5000,
+            substrs=["The intel pt trace size must be a power of 2", "It was 5000"])
 
         self.traceStartThread(
-            error=True, traceBufferSize=0,
-            substrs=["The trace buffer size must be a power of 2", "It was 0"])
+            error=True, iptTraceSize=0,
+            substrs=["The intel pt trace size must be a power of 2", "It was 0"])
 
-        self.traceStartThread(traceBufferSize=1048576)
+        self.traceStartThread(iptTraceSize=1048576)
+
+    @testSBAPIAndCommands
+    def testStartSessionWithSizeDeclarationInUnits(self):
+        self.expect("file " + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
+        self.expect("b main")
+        self.expect("r")
+
+        self.traceStartThread(
+            error=True, iptTraceSize="abc",
+            substrs=["invalid bytes expression for 'abc'"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="123.12",
+            substrs=["invalid bytes expression for '123.12'"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="\"\"",
+            substrs=["invalid bytes expression for ''"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="2000B",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 2000"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3MB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3MiB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3mib",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3M",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3145728"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3KB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3072"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3KiB",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3072"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3K",
+            substrs=["The intel pt trace size must be a power of 2 greater than or equal to 4096 (2^12) bytes. It was 3072"])
+
+        self.traceStartThread(
+            error=True, iptTraceSize="3MS",
+            substrs=["invalid bytes expression for '3MS'"])
+
+        self.traceStartThread(iptTraceSize="1048576")
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testSBAPIHelp(self):
@@ -55,7 +109,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("r")
 
         help = self.getTraceOrCreate().GetStartConfigurationHelp()
-        self.assertIn("traceBufferSize", help)
+        self.assertIn("iptTraceSize", help)
         self.assertIn("processBufferSizeLimit", help)
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -70,7 +124,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         # process stopping should stop the thread
         self.expect("process trace stop")
         self.expect("n")
-        self.expect("thread trace dump instructions", substrs=["not traced"])
+        self.expect("thread trace dump instructions", substrs=["not traced"], error=True)
 
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -114,29 +168,29 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
-    0: {ADDRESS_REGEX}    movl'''])
+    2: {ADDRESS_REGEX}    movl'''])
 
         # We can reconstruct the instructions up to the second line
         self.expect("n")
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
-    0: {ADDRESS_REGEX}    movl .*
+    2: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 11 at main.cpp:4
-    1: {ADDRESS_REGEX}    movl .*
-    2: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    3: {ADDRESS_REGEX}    cmpl .*
-    4: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
+    4: {ADDRESS_REGEX}    movl .*
+    6: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    8: {ADDRESS_REGEX}    cmpl .*
+    10: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
 
         self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 32 at main.cpp:4
-    4: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
-    3: {ADDRESS_REGEX}    cmpl .*
-    2: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    1: {ADDRESS_REGEX}    movl .*
+    10: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
+    8: {ADDRESS_REGEX}    cmpl .*
+    6: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    4: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 4 at main.cpp:2
-    0: {ADDRESS_REGEX}    movl .* '''])
+    2: {ADDRESS_REGEX}    movl .* '''])
 
         # We stop tracing
         self.expect("thread trace stop")
@@ -152,12 +206,12 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
-    0: {ADDRESS_REGEX}    xorl'''])
+    2: {ADDRESS_REGEX}    xorl'''])
 
         self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
-    0: {ADDRESS_REGEX}    xorl'''])
+    2: {ADDRESS_REGEX}    xorl'''])
 
         self.expect("c")
         # Now the process has finished, so the commands should fail

@@ -9,9 +9,10 @@
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/StatementContext.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
+#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
@@ -261,35 +262,51 @@ void Fortran::lower::genRandomNumber(fir::FirOpBuilder &builder,
 }
 
 void Fortran::lower::genRandomSeed(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, int argIndex,
-                                   mlir::Value argBox) {
+                                   mlir::Location loc, mlir::Value size,
+                                   mlir::Value put, mlir::Value get) {
+  bool sizeIsPresent =
+      !mlir::isa_and_nonnull<fir::AbsentOp>(size.getDefiningOp());
+  bool putIsPresent =
+      !mlir::isa_and_nonnull<fir::AbsentOp>(put.getDefiningOp());
+  bool getIsPresent =
+      !mlir::isa_and_nonnull<fir::AbsentOp>(get.getDefiningOp());
   mlir::func::FuncOp func;
-  // argIndex is the nth (0-origin) argument in declaration order,
-  // or -1 if no argument is present.
-  switch (argIndex) {
-  case -1:
+  int staticArgCount = sizeIsPresent + putIsPresent + getIsPresent;
+  if (staticArgCount == 0) {
     func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedDefaultPut)>(loc,
                                                                        builder);
     builder.create<fir::CallOp>(loc, func);
     return;
-  case 0:
-    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedSize)>(loc, builder);
-    break;
-  case 1:
-    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedPut)>(loc, builder);
-    break;
-  case 2:
-    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedGet)>(loc, builder);
-    break;
-  default:
-    llvm::report_fatal_error("invalid RANDOM_SEED argument index");
   }
-  mlir::FunctionType funcTy = func.getFunctionType();
+  mlir::FunctionType funcTy;
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-      builder, loc, funcTy, argBox, sourceFile, sourceLine);
+  mlir::Value sourceLine;
+  mlir::Value argBox;
+  llvm::SmallVector<mlir::Value> args;
+  if (staticArgCount > 1) {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeed)>(loc, builder);
+    funcTy = func.getFunctionType();
+    sourceLine =
+        fir::factory::locationToLineNo(builder, loc, funcTy.getInput(4));
+    args = fir::runtime::createArguments(builder, loc, funcTy, size, put, get,
+                                         sourceFile, sourceLine);
+    builder.create<fir::CallOp>(loc, func, args);
+    return;
+  }
+  if (sizeIsPresent) {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedSize)>(loc, builder);
+    argBox = size;
+  } else if (putIsPresent) {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedPut)>(loc, builder);
+    argBox = put;
+  } else {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedGet)>(loc, builder);
+    argBox = get;
+  }
+  funcTy = func.getFunctionType();
+  sourceLine = fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
+  args = fir::runtime::createArguments(builder, loc, funcTy, argBox, sourceFile,
+                                       sourceLine);
   builder.create<fir::CallOp>(loc, func, args);
 }
 
@@ -332,18 +349,35 @@ void Fortran::lower::genSystemClock(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value count,
                                     mlir::Value rate, mlir::Value max) {
   auto makeCall = [&](mlir::func::FuncOp func, mlir::Value arg) {
+    mlir::Type type = arg.getType();
+    fir::IfOp ifOp{};
+    const bool isOptionalArg =
+        fir::valueHasFirAttribute(arg, fir::getOptionalAttrName());
+    if (type.dyn_cast<fir::PointerType>() || type.dyn_cast<fir::HeapType>()) {
+      // Check for a disassociated pointer or an unallocated allocatable.
+      assert(!isOptionalArg && "invalid optional argument");
+      ifOp = builder.create<fir::IfOp>(loc, builder.genIsNotNullAddr(loc, arg),
+                                       /*withElseRegion=*/false);
+    } else if (isOptionalArg) {
+      ifOp = builder.create<fir::IfOp>(
+          loc, builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), arg),
+          /*withElseRegion=*/false);
+    }
+    if (ifOp)
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Type kindTy = func.getFunctionType().getInput(0);
     int integerKind = 8;
-    if (auto intType =
-            fir::unwrapRefType(arg.getType()).dyn_cast<mlir::IntegerType>())
+    if (auto intType = fir::unwrapRefType(type).dyn_cast<mlir::IntegerType>())
       integerKind = intType.getWidth() / 8;
     mlir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
     mlir::Value res =
         builder.create<fir::CallOp>(loc, func, mlir::ValueRange{kind})
             .getResult(0);
     mlir::Value castRes =
-        builder.createConvert(loc, fir::dyn_cast_ptrEleTy(arg.getType()), res);
+        builder.createConvert(loc, fir::dyn_cast_ptrEleTy(type), res);
     builder.create<fir::StoreOp>(loc, castRes, arg);
+    if (ifOp)
+      builder.setInsertionPointAfter(ifOp);
   };
   using fir::runtime::getRuntimeFunc;
   if (count)

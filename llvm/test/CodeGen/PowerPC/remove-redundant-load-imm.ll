@@ -4,10 +4,10 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-@global.6 = external global i32*
+@global.6 = external global ptr
 
-declare void @barney.88(i1, i32*)
-declare void @barney.94(i8*, i32)
+declare void @barney.88(i1, ptr)
+declare void @barney.94(ptr, i32)
 
 define void @redundancy_on_ppc_only(i1 %arg7) nounwind {
 ; PPC64LE-LABEL: redundancy_on_ppc_only:
@@ -29,7 +29,7 @@ bb:
   br label %bb10
 
 bb10:                                             ; preds = %bb
-  call void @barney.88(i1 %arg7, i32* null)
+  call void @barney.88(i1 %arg7, ptr null)
   ret void
 }
 
@@ -45,7 +45,7 @@ define void @redundancy_on_ppc_and_other_targets() nounwind {
 ; PPC64LE-NEXT:    std 4, 0(3)
 ; PPC64LE-NEXT:    bl barney.94
 ; PPC64LE-NEXT:    nop
-  store i32* null, i32** @global.6
-  call void @barney.94(i8* undef, i32 0)
+  store ptr null, ptr @global.6
+  call void @barney.94(ptr undef, i32 0)
   unreachable
 }

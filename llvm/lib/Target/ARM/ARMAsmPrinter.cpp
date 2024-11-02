@@ -21,7 +21,6 @@
 #include "MCTargetDesc/ARMInstPrinter.h"
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -82,8 +81,7 @@ void ARMAsmPrinter::emitFunctionEntryLabel() {
     OutStreamer->emitSymbolAttribute(S, MCSA_ELF_TypeFunction);
     OutStreamer->emitLabel(S);
   }
-
-  OutStreamer->emitLabel(CurrentFnSym);
+  AsmPrinter::emitFunctionEntryLabel();
 }
 
 void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
@@ -125,7 +123,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Collect all globals that had their storage promoted to a constant pool.
   // Functions are emitted before variables, so this accumulates promoted
   // globals from all functions in PromotedGlobals.
-  for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
+  for (const auto *GV : AFI->getGlobalsPromotedToConstantPool())
     PromotedGlobals.insert(GV);
 
   // Calculate this function's optimization goal.
@@ -161,10 +159,10 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                                             : COFF::IMAGE_SYM_CLASS_EXTERNAL;
     int Type = COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
-    OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
+    OutStreamer->beginCOFFSymbolDef(CurrentFnSym);
     OutStreamer->emitCOFFSymbolStorageClass(Scl);
     OutStreamer->emitCOFFSymbolType(Type);
-    OutStreamer->EndCOFFSymbolDef();
+    OutStreamer->endCOFFSymbolDef();
   }
 
   // Emit the rest of the function body.
@@ -535,27 +533,27 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
 
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
-      OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
+      OutStreamer->switchSection(TLOFMacho.getNonLazySymbolPointerSection());
       emitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
 
       Stubs.clear();
-      OutStreamer->AddBlankLine();
+      OutStreamer->addBlankLine();
     }
 
     Stubs = MMIMacho.GetThreadLocalGVStubList();
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
-      OutStreamer->SwitchSection(TLOFMacho.getThreadLocalPointerSection());
+      OutStreamer->switchSection(TLOFMacho.getThreadLocalPointerSection());
       emitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
 
       Stubs.clear();
-      OutStreamer->AddBlankLine();
+      OutStreamer->addBlankLine();
     }
 
     // Funny Darwin hack: This flag tells the linker that no global symbols
@@ -892,7 +890,7 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
 
     return MCSym;
   } else if (Subtarget->isTargetELF()) {
-    return getSymbol(GV);
+    return getSymbolPreferLocal(*GV);
   }
   llvm_unreachable("unexpected target");
 }
@@ -1071,7 +1069,7 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
   OutStreamer->emitDataRegion(OffsetWidth == 1 ? MCDR_DataRegionJT8
                                                : MCDR_DataRegionJT16);
 
-  for (auto MBB : JTBBs) {
+  for (auto *MBB : JTBBs) {
     const MCExpr *MBBSymbolExpr = MCSymbolRefExpr::create(MBB->getSymbol(),
                                                           OutContext);
     // Otherwise it's an offset from the dispatch instruction. Construct an
@@ -1165,7 +1163,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     case ARM::tPUSH:
       // Special case here: no src & dst reg, but two extra imp ops.
       StartOp = 2; NumOffset = 2;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ARM::STMDB_UPD:
     case ARM::t2STMDB_UPD:
     case ARM::VSTMDDB_UPD:
@@ -1337,6 +1335,10 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 #include "ARMGenMCPseudoLowering.inc"
 
 void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  // TODOD FIXME: Enable feature predicate checks once all the test pass.
+  // ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
+  //                                   getSubtargetInfo().getFeatureBits());
+
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
@@ -2274,6 +2276,47 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInstSB);
     return;
   }
+
+  case ARM::SEH_StackAlloc:
+    ATS.emitARMWinCFIAllocStack(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case ARM::SEH_SaveRegs:
+  case ARM::SEH_SaveRegs_Ret:
+    ATS.emitARMWinCFISaveRegMask(MI->getOperand(0).getImm(),
+                                 MI->getOperand(1).getImm());
+    return;
+
+  case ARM::SEH_SaveSP:
+    ATS.emitARMWinCFISaveSP(MI->getOperand(0).getImm());
+    return;
+
+  case ARM::SEH_SaveFRegs:
+    ATS.emitARMWinCFISaveFRegs(MI->getOperand(0).getImm(),
+                               MI->getOperand(1).getImm());
+    return;
+
+  case ARM::SEH_SaveLR:
+    ATS.emitARMWinCFISaveLR(MI->getOperand(0).getImm());
+    return;
+
+  case ARM::SEH_Nop:
+  case ARM::SEH_Nop_Ret:
+    ATS.emitARMWinCFINop(MI->getOperand(0).getImm());
+    return;
+
+  case ARM::SEH_PrologEnd:
+    ATS.emitARMWinCFIPrologEnd(/*Fragment=*/false);
+    return;
+
+  case ARM::SEH_EpilogStart:
+    ATS.emitARMWinCFIEpilogStart(ARMCC::AL);
+    return;
+
+  case ARM::SEH_EpilogEnd:
+    ATS.emitARMWinCFIEpilogEnd();
+    return;
   }
 
   MCInst TmpInst;

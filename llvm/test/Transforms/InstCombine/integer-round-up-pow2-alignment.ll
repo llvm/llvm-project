@@ -247,8 +247,8 @@ define i8 @n9_wrong_x0(i8 %x.0, i8 %x.1) {
 ; CHECK-LABEL: @n9_wrong_x0(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X_0:%.*]], 15
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 0
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X_0]], 16
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X_0]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 16
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X_1:%.*]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
@@ -263,8 +263,8 @@ define i8 @n9_wrong_x1(i8 %x.0, i8 %x.1) {
 ; CHECK-LABEL: @n9_wrong_x1(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X_0:%.*]], 15
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 0
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X_1:%.*]], 16
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X_1:%.*]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 16
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X_0]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
@@ -279,8 +279,8 @@ define i8 @n9_wrong_x2(i8 %x.0, i8 %x.1) {
 ; CHECK-LABEL: @n9_wrong_x2(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X_1:%.*]], 15
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 0
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X_0:%.*]], 16
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X_0:%.*]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 16
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X_0]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
@@ -297,8 +297,8 @@ define i8 @n10_wrong_low_bit_mask(i8 %x) {
 ; CHECK-LABEL: @n10_wrong_low_bit_mask(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X:%.*]], 31
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 0
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X]], 16
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 16
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
@@ -333,8 +333,8 @@ define i8 @n12_wrong_bias(i8 %x) {
 ; CHECK-LABEL: @n12_wrong_bias(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 0
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X]], 32
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 32
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
@@ -369,8 +369,8 @@ define i8 @n14_wrong_comparison_constant(i8 %x) {
 ; CHECK-LABEL: @n14_wrong_comparison_constant(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 1
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X]], 16
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 16
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
@@ -387,8 +387,8 @@ define i8 @n15_wrong_comparison_predicate_and_constant(i8 %x) {
 ; CHECK-LABEL: @n15_wrong_comparison_predicate_and_constant(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X:%.*]], 14
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 0
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X]], 16
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 16
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
@@ -405,8 +405,8 @@ define i8 @n16_oneuse(i8 %x) {
 ; CHECK-LABEL: @n16_oneuse(
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq i8 [[X_LOWBITS]], 0
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X]], 16
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and i8 [[X_BIASED]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -16
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = add i8 [[TMP1]], 16
 ; CHECK-NEXT:    call void @use.i8(i8 [[X_BIASED_HIGHBITS]])
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select i1 [[X_LOWBITS_ARE_ZERO]], i8 [[X]], i8 [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]

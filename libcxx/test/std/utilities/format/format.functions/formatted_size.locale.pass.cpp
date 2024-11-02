@@ -8,8 +8,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-11 status
-// UNSUPPORTED: gcc-11
+// TODO FMT Evaluate gcc-12 status
+// UNSUPPORTED: gcc-12
 // TODO FMT Investigate AppleClang ICE
 // UNSUPPORTED: apple-clang-13
 
@@ -17,10 +17,10 @@
 
 // template<class... Args>
 //   size_t formatted_size(const locale& loc,
-//                         string_view fmt, const Args&... args);
+//                         format-string<Args...> fmt, const Args&... args);
 // template<class... Args>
 //   size_t formatted_size(const locale& loc,
-//                         wstring_view fmt, const Args&... args);
+//                         wformat-string<Args...> fmt, const Args&... args);
 
 #include <format>
 #include <cassert>
@@ -29,29 +29,20 @@
 #include "test_macros.h"
 #include "format_tests.h"
 #include "string_literal.h"
+#include "test_format_string.h"
 
-auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string_view<CharT> expected,
-                                                               const Args&... args) constexpr {
-  size_t size = std::formatted_size(std::locale(), fmt.template sv<CharT>(), args...);
-  assert(size == expected.size());
-};
+auto test =
+    []<class CharT, class... Args>(
+        std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
+      size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
+      assert(size == expected.size());
+    };
 
-auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
-                                                     const Args&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  try {
-    std::formatted_size(std::locale(), fmt, args...);
-    assert(false);
-  } catch (const std::format_error& e) {
-    LIBCPP_ASSERT(e.what() == what);
-    return;
-  }
-  assert(false);
-#else
-  (void)what;
-  (void)fmt;
-  (void)sizeof...(args);
-#endif
+auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {
+  // After P2216 most exceptions thrown by std::formatted_siz3 become ill-formed.
+  // Therefore this tests does nothing.
+  // A basic ill-formed test is done in formatted_size.locale.verify.cpp
+  // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
 int main(int, char**) {

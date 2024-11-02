@@ -18,16 +18,16 @@ llvm.func @test_stand_alone_directives() {
   llvm.return
 }
 
-// CHECK-LABEL: define void @test_flush_construct(i32 %0)
-llvm.func @test_flush_construct(%arg0: i32) {
+// CHECK-LABEL: define void @test_flush_construct(ptr %{{[0-9]+}})
+llvm.func @test_flush_construct(%arg0: !llvm.ptr<i32>) {
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush
 
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
-  omp.flush (%arg0 : i32)
+  omp.flush (%arg0 : !llvm.ptr<i32>)
 
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
-  omp.flush (%arg0, %arg0 : i32, i32)
+  omp.flush (%arg0, %arg0 : !llvm.ptr<i32>, !llvm.ptr<i32>)
 
   %0 = llvm.mlir.constant(1 : i64) : i64
   //  CHECK: alloca {{.*}} align 4
@@ -356,11 +356,8 @@ llvm.func @test_omp_master() -> () {
 // -----
 
 // CHECK: %struct.ident_t = type
-// CHECK: @[[$parallel_loc:.*]] = private unnamed_addr constant {{.*}} c";LLVMDialectModule;wsloop_simple;{{[0-9]+}};{{[0-9]+}};;\00"
-// CHECK: @[[$parallel_loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$parallel_loc]] {{.*}}
-
-// CHECK: @[[$wsloop_loc:.*]] = private unnamed_addr constant {{.*}} c";LLVMDialectModule;wsloop_simple;{{[0-9]+}};{{[0-9]+}};;\00"
-// CHECK: @[[$wsloop_loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$wsloop_loc]] {{.*}}
+// CHECK: @[[$loc:.*]] = private unnamed_addr constant {{.*}} c";unknown;unknown;{{[0-9]+}};{{[0-9]+}};;\00"
+// CHECK: @[[$loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
 
 // CHECK-LABEL: @wsloop_simple
 llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
@@ -373,13 +370,13 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right functions are called.
       // CHECK: call i32 @__kmpc_global_thread_num
-      // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$wsloop_loc_struct]],
+      // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct]],
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
-      // CHECK: call void @__kmpc_for_static_fini(ptr @[[$wsloop_loc_struct]],
-    }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>} : (i64, i64, i64) -> ()
+      // CHECK: call void @__kmpc_for_static_fini(ptr @[[$loc_struct]],
+    }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
     omp.terminator
   }
   llvm.return
@@ -399,7 +396,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>} : (i64, i64, i64) -> ()
+  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -417,7 +414,7 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0]> : vector<7xi32>} : (i64, i64, i64) -> ()
+  }) {inclusive, operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -697,8 +694,8 @@ llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr<f
       %4 = llvm.getelementptr %arg0[%iv] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1]> : vector<3xi32>} :
-    (i64, i64, i64) -> () 
+  }) {operand_segment_sizes = array<i32: 1,1,1,0,0>} :
+    (i64, i64, i64) -> ()
 
   llvm.return
 }
@@ -709,7 +706,43 @@ llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr<f
 
 // CHECK-LABEL: @simdloop_simple_multiple
 llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
-  omp.simdloop (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+  omp.simdloop for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    // The form of the emitted IR is controlled by OpenMPIRBuilder and
+    // tested there. Just check that the right metadata is added and collapsed
+    // loop bound is generated (Collapse clause is represented as a loop with
+    // list of indices, bounds and steps where the size of the list is equal
+    // to the collapse value.)
+    // CHECK: icmp slt i64
+    // CHECK-COUNT-3: select
+    // CHECK: %[[TRIPCOUNT0:.*]] = select
+    // CHECK: br label %[[PREHEADER:.*]]
+    // CHECK: [[PREHEADER]]:
+    // CHECK: icmp slt i64
+    // CHECK-COUNT-3: select
+    // CHECK: %[[TRIPCOUNT1:.*]] = select
+    // CHECK: mul nuw i64 %[[TRIPCOUNT0]], %[[TRIPCOUNT1]]
+    // CHECK: br label %[[COLLAPSED_PREHEADER:.*]]
+    // CHECK: [[COLLAPSED_PREHEADER]]:
+    // CHECK: br label %[[COLLAPSED_HEADER:.*]]
+    // CHECK: llvm.access.group
+    // CHECK-NEXT: llvm.access.group
+    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    llvm.store %3, %4 : !llvm.ptr<f32>
+    llvm.store %3, %5 : !llvm.ptr<f32>
+    omp.yield
+  }
+  llvm.return
+}
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+
+// -----
+
+// CHECK-LABEL: @simdloop_simple_multiple_simdlen
+llvm.func @simdloop_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
+  omp.simdloop simdlen(2) for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     // The form of the emitted IR is controlled by OpenMPIRBuilder and
     // tested there. Just check that the right metadata is added.
@@ -720,11 +753,74 @@ llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 :
     llvm.store %3, %4 : !llvm.ptr<f32>
     llvm.store %3, %5 : !llvm.ptr<f32>
     omp.yield
-  } 
+  }
   llvm.return
 }
 // CHECK: llvm.loop.parallel_accesses
 // CHECK-NEXT: llvm.loop.vectorize.enable
+// CHECK-NEXT: llvm.loop.vectorize.width{{.*}}i64 2
+
+// -----
+
+// CHECK-LABEL: @simdloop_simple_multiple_safelen
+llvm.func @simdloop_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
+  omp.simdloop safelen(2) for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    llvm.store %3, %4 : !llvm.ptr<f32>
+    llvm.store %3, %5 : !llvm.ptr<f32>
+    omp.yield
+  }
+  llvm.return
+}
+// CHECK: llvm.loop.vectorize.enable
+// CHECK-NEXT: llvm.loop.vectorize.width{{.*}}i64 2
+
+// -----
+
+// CHECK-LABEL: @simdloop_simple_multiple_simdlen_safelen
+llvm.func @simdloop_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>) {
+  omp.simdloop simdlen(1) safelen(2) for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    llvm.store %3, %4 : !llvm.ptr<f32>
+    llvm.store %3, %5 : !llvm.ptr<f32>
+    omp.yield
+  }
+  llvm.return
+}
+// CHECK: llvm.loop.vectorize.enable
+// CHECK-NEXT: llvm.loop.vectorize.width{{.*}}i64 1
+
+// -----
+
+// CHECK-LABEL: @simdloop_if
+llvm.func @simdloop_if(%arg0: !llvm.ptr<i32> {fir.bindc_name = "n"}, %arg1: !llvm.ptr<i32> {fir.bindc_name = "threshold"}) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>} : (i64) -> !llvm.ptr<i32>
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFtest_simdEi"} : (i64) -> !llvm.ptr<i32>
+  %4 = llvm.mlir.constant(0 : i32) : i32
+  %5 = llvm.load %arg0 : !llvm.ptr<i32>
+  %6 = llvm.mlir.constant(1 : i32) : i32
+  %7 = llvm.load %arg0 : !llvm.ptr<i32>
+  %8 = llvm.load %arg1 : !llvm.ptr<i32>
+  %9 = llvm.icmp "sge" %7, %8 : i32
+  omp.simdloop   if(%9) for  (%arg2) : i32 = (%4) to (%5) inclusive step (%6) {
+    // The form of the emitted IR is controlled by OpenMPIRBuilder and
+    // tested there. Just check that the right metadata is added.
+    // CHECK: llvm.access.group
+    llvm.store %arg2, %1 : !llvm.ptr<i32>
+    omp.yield
+  }
+  llvm.return
+}
+// Be sure that llvm.loop.vectorize.enable metadata appears twice
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+// CHECK: llvm.loop.vectorize.enable
 
 // -----
 
@@ -1052,7 +1148,7 @@ llvm.func @collapse_wsloop(
     // CHECK: %[[TOTAL_SUB_1:.*]] = sub i32 %[[TOTAL]], 1
     // CHECK: store i32 %[[TOTAL_SUB_1]], ptr
     // CHECK: call void @__kmpc_for_static_init_4u
-    omp.wsloop collapse(3)
+    omp.wsloop
     for (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
       %31 = llvm.load %20 : !llvm.ptr<i32>
       %32 = llvm.add %31, %arg0 : i32
@@ -1113,7 +1209,7 @@ llvm.func @collapse_wsloop_dynamic(
     // CHECK: store i32 1, ptr
     // CHECK: store i32 %[[TOTAL]], ptr
     // CHECK: call void @__kmpc_dispatch_init_4u
-    omp.wsloop collapse(3) schedule(dynamic)
+    omp.wsloop schedule(dynamic)
     for (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
       %31 = llvm.load %20 : !llvm.ptr<i32>
       %32 = llvm.add %31, %arg0 : i32
@@ -2170,3 +2266,186 @@ llvm.func @omp_threadprivate() {
 }
 
 llvm.mlir.global internal @_QFsubEx() : i32
+
+// -----
+
+// CHECK-LABEL: define void @omp_task
+// CHECK-SAME: (i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
+llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
+  // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
+  // CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
+  // CHECK-SAME: (ptr @{{.+}}, i32 %[[omp_global_thread_num]], i32 1, i64 0,
+  // CHECK-SAME:  i64 0, ptr @[[wrapper_fn:.+]])
+  // CHECK: call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]])
+  omp.task {
+    %n = llvm.mlir.constant(1 : i64) : i64
+    %valaddr = llvm.alloca %n x i32 : (i64) -> !llvm.ptr<i32>
+    %val = llvm.load %valaddr : !llvm.ptr<i32>
+    %double = llvm.add %val, %val : i32
+    llvm.store %double, %valaddr : !llvm.ptr<i32>
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK: define internal void @[[outlined_fn:.+]]()
+// CHECK: task.alloca{{.*}}:
+// CHECK:   br label %[[task_body:[^, ]+]]
+// CHECK: [[task_body]]:
+// CHECK:   br label %[[task_region:[^, ]+]]
+// CHECK: [[task_region]]:
+// CHECK:   %[[alloca:.+]] = alloca i32, i64 1
+// CHECK:   %[[val:.+]] = load i32, ptr %[[alloca]]
+// CHECK:   %[[newval:.+]] = add i32 %[[val]], %[[val]]
+// CHECK:   store i32 %[[newval]], ptr %{{[^, ]+}}
+// CHECK:   br label %[[exit_stub:[^, ]+]]
+// CHECK: [[exit_stub]]:
+// CHECK:   ret void
+
+
+// CHECK: define i32 @[[wrapper_fn]](i32 %{{.+}}) {
+// CHECK:   call void @[[outlined_fn]]()
+// CHECK:   ret i32 0
+// CHECK: }
+
+// -----
+
+// CHECK-LABEL: define void @omp_task
+// CHECK-SAME: (i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
+module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
+    // CHECK: %[[diff:.+]] = sub i32 %[[x]], %[[y]]
+    %diff = llvm.sub %x, %y : i32
+    // CHECK: store i32 %[[diff]], ptr %2
+    llvm.store %diff, %zaddr : !llvm.ptr<i32>
+    // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
+    // CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
+    // CHECK-SAME: (ptr @{{.+}}, i32 %[[omp_global_thread_num]], i32 1, i64 16, i64 0,
+    // CHECK-SAME: ptr @[[wrapper_fn:.+]])
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.+}} %[[task_data]], ptr {{.+}}, i64 16, i1 false)
+    // CHECK: call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]])
+    omp.task {
+      %z = llvm.add %x, %y : i32
+      llvm.store %z, %zaddr : !llvm.ptr<i32>
+      omp.terminator
+    }
+    // CHECK: %[[prod:.+]] = mul i32 %[[x]], %[[y]]
+    %b = llvm.mul %x, %y : i32
+    // CHECK: store i32 %[[prod]], ptr %[[zaddr]]
+    llvm.store %b, %zaddr : !llvm.ptr<i32>
+    llvm.return
+  }
+}
+
+// CHECK: define internal void @[[outlined_fn:.+]](ptr %[[task_data:.+]])
+// CHECK: task.alloca{{.*}}:
+// CHECK:   br label %[[task_body:[^, ]+]]
+// CHECK: [[task_body]]:
+// CHECK:   br label %[[task_region:[^, ]+]]
+// CHECK: [[task_region]]:
+// CHECK:   %[[sum:.+]] = add i32 %{{.+}}, %{{.+}}
+// CHECK:   store i32 %[[sum]], ptr %{{.+}}
+// CHECK:   br label %[[exit_stub:[^, ]+]]
+// CHECK: [[exit_stub]]:
+// CHECK:   ret void
+
+
+// CHECK: define i32 @[[wrapper_fn]](i32 %{{.+}}, ptr %[[task_data:.+]]) {
+// CHECK:   call void @[[outlined_fn]](ptr %[[task_data]])
+// CHECK:   ret i32 0
+// CHECK: }
+
+// -----
+
+llvm.func @foo() -> ()
+
+llvm.func @omp_taskgroup(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
+  omp.taskgroup {
+    llvm.call @foo() : () -> ()
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_taskgroup(
+// CHECK-SAME:                             i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]]) 
+// CHECK:         br label %[[entry:[^,]+]]
+// CHECK:       [[entry]]:
+// CHECK:         %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
+// CHECK:         call void @__kmpc_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
+// CHECK:         br label %[[omp_taskgroup_region:[^,]+]]
+// CHECK:       [[omp_taskgroup_region]]:
+// CHECK:         call void @foo()
+// CHECK:         br label %[[omp_region_cont:[^,]+]]
+// CHECK:       [[omp_region_cont]]:
+// CHECK:         br label %[[taskgroup_exit:[^,]+]]
+// CHECK:       [[taskgroup_exit]]:
+// CHECK:         call void @__kmpc_end_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
+// CHECK:         ret void
+
+// -----
+
+llvm.func @foo() -> ()
+llvm.func @bar(i32, i32, !llvm.ptr<i32>) -> ()
+
+llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
+  omp.taskgroup {
+    %c1 = llvm.mlir.constant(1) : i32
+    %ptr1 = llvm.alloca %c1 x i8 : (i32) -> !llvm.ptr<i8>
+    omp.task {
+      llvm.call @foo() : () -> ()
+      omp.terminator
+    }
+    omp.task {
+      llvm.call @bar(%x, %y, %zaddr) : (i32, i32, !llvm.ptr<i32>) -> ()
+      omp.terminator
+    }
+    llvm.br ^bb1
+  ^bb1:
+    llvm.call @foo() : () -> ()
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_taskgroup_task(
+// CHECK-SAME:                                  i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]]) 
+// CHECK:         %[[structArg:.+]] = alloca { i32, i32, ptr }, align 8
+// CHECK:         br label %[[entry:[^,]+]]
+// CHECK:       [[entry]]:                                            ; preds = %3
+// CHECK:         %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
+// CHECK:         call void @__kmpc_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
+// CHECK:         br label %[[omp_taskgroup_region:[^,]+]]
+// CHECK:       [[omp_taskgroup_region1:.+]]:
+// CHECK:         call void @foo()
+// CHECK:         br label %[[omp_region_cont:[^,]+]]
+// CHECK:       [[omp_taskgroup_region]]:
+// CHECK:         %{{.+}} = alloca i8, align 1
+// CHECK:         br label %[[codeRepl:[^,]+]]
+// CHECK:       [[codeRepl]]:
+// CHECK:         %[[omp_global_thread_num_t1:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
+// CHECK:         %[[t1_alloc:.+]] = call ptr @__kmpc_omp_task_alloc(ptr @{{.+}}, i32 %[[omp_global_thread_num_t1]], i32 1, i64 0, i64 0, ptr @omp_taskgroup_task..omp_par.wrapper)
+// CHECK:         %{{.+}} = call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %[[omp_global_thread_num_t1]], ptr %[[t1_alloc]])
+// CHECK:         br label %[[task_exit:[^,]+]]
+// CHECK:       [[task_exit]]:
+// CHECK:         br label %[[codeRepl9:[^,]+]]
+// CHECK:       [[codeRepl9]]:
+// CHECK:         %[[gep1:.+]] = getelementptr { i32, i32, ptr }, ptr %[[structArg]], i32 0, i32 0
+// CHECK:         store i32 %[[x]], ptr %[[gep1]], align 4
+// CHECK:         %[[gep2:.+]] = getelementptr { i32, i32, ptr }, ptr %[[structArg]], i32 0, i32 1
+// CHECK:         store i32 %[[y]], ptr %[[gep2]], align 4
+// CHECK:         %[[gep3:.+]] = getelementptr { i32, i32, ptr }, ptr %[[structArg]], i32 0, i32 2
+// CHECK:         store ptr %[[zaddr]], ptr %[[gep3]], align 8
+// CHECK:         %[[omp_global_thread_num_t2:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
+// CHECK:         %[[t2_alloc:.+]] = call ptr @__kmpc_omp_task_alloc(ptr @{{.+}}, i32 %[[omp_global_thread_num_t2]], i32 1, i64 16, i64 0, ptr @omp_taskgroup_task..omp_par.1.wrapper)
+// CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[t2_alloc]], ptr align 8 %[[structArg]], i64 16, i1 false)
+// CHECK:         %{{.+}} = call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %[[omp_global_thread_num_t2]], ptr %[[t2_alloc]])
+// CHECK:         br label %[[task_exit3:[^,]+]]
+// CHECK:       [[task_exit3]]:
+// CHECK:         br label %[[omp_taskgroup_region1]]
+// CHECK:       [[omp_region_cont]]:
+// CHECK:         br label %[[taskgroup_exit:[^,]+]]
+// CHECK:       [[taskgroup_exit]]:
+// CHECK:         call void @__kmpc_end_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
+// CHECK:         ret void
+// CHECK:       }

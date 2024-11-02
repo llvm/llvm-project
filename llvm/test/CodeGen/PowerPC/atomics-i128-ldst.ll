@@ -18,7 +18,7 @@
 ; RUN:   -ppc-quadword-atomics -ppc-asm-full-reg-names -ppc-track-subreg-liveness < %s \
 ; RUN: | FileCheck --check-prefix=PPC-PWR8 %s
 
-define dso_local i128 @lq_unordered(i128* %src) {
+define dso_local i128 @lq_unordered(ptr %src) {
 ; P8-LABEL: lq_unordered:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lq r4, 0(r3)
@@ -81,11 +81,11 @@ define dso_local i128 @lq_unordered(i128* %src) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = load atomic i128, i128* %src unordered, align 16
+  %0 = load atomic i128, ptr %src unordered, align 16
   ret i128 %0
 }
 
-define dso_local i128 @lqx_unordered(i128* %src, i64 %idx) {
+define dso_local i128 @lqx_unordered(ptr %src, i64 %idx) {
 ; P8-LABEL: lqx_unordered:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    sldi r4, r4, 4
@@ -159,12 +159,12 @@ define dso_local i128 @lqx_unordered(i128* %src, i64 %idx) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = getelementptr i128, i128* %src, i64 %idx
-  %1 = load atomic i128, i128* %0 unordered, align 16
+  %0 = getelementptr i128, ptr %src, i64 %idx
+  %1 = load atomic i128, ptr %0 unordered, align 16
   ret i128 %1
 }
 
-define dso_local i128 @lq_big_offset_unordered(i128* %src) {
+define dso_local i128 @lq_big_offset_unordered(ptr %src) {
 ; P8-LABEL: lq_big_offset_unordered:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lis r4, 32
@@ -235,12 +235,12 @@ define dso_local i128 @lq_big_offset_unordered(i128* %src) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = getelementptr i128, i128* %src, i64 131072
-  %1 = load atomic i128, i128* %0 unordered, align 16
+  %0 = getelementptr i128, ptr %src, i64 131072
+  %1 = load atomic i128, ptr %0 unordered, align 16
   ret i128 %1
 }
 
-define dso_local i128 @lq_monotonic(i128* %src) {
+define dso_local i128 @lq_monotonic(ptr %src) {
 ; P8-LABEL: lq_monotonic:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lq r4, 0(r3)
@@ -303,11 +303,11 @@ define dso_local i128 @lq_monotonic(i128* %src) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = load atomic i128, i128* %src monotonic, align 16
+  %0 = load atomic i128, ptr %src monotonic, align 16
   ret i128 %0
 }
 
-define dso_local i128 @lq_acquire(i128* %src) {
+define dso_local i128 @lq_acquire(ptr %src) {
 ; P8-LABEL: lq_acquire:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lq r4, 0(r3)
@@ -376,11 +376,11 @@ define dso_local i128 @lq_acquire(i128* %src) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = load atomic i128, i128* %src acquire, align 16
+  %0 = load atomic i128, ptr %src acquire, align 16
   ret i128 %0
 }
 
-define dso_local i128 @lq_seqcst(i128* %src) {
+define dso_local i128 @lq_seqcst(ptr %src) {
 ; P8-LABEL: lq_seqcst:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    sync
@@ -451,11 +451,11 @@ define dso_local i128 @lq_seqcst(i128* %src) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = load atomic i128, i128* %src seq_cst, align 16
+  %0 = load atomic i128, ptr %src seq_cst, align 16
   ret i128 %0
 }
 
-define dso_local void @stq_unordered(i128 %val, i128* %dst) {
+define dso_local void @stq_unordered(i128 %val, ptr %dst) {
 ; P8-LABEL: stq_unordered:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mr r7, r4
@@ -527,11 +527,11 @@ define dso_local void @stq_unordered(i128 %val, i128* %dst) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  store atomic i128 %val, i128* %dst unordered, align 16
+  store atomic i128 %val, ptr %dst unordered, align 16
   ret void
 }
 
-define dso_local void @stqx_unordered(i128 %val, i128* %dst, i64 %idx) {
+define dso_local void @stqx_unordered(i128 %val, ptr %dst, i64 %idx) {
 ; P8-LABEL: stqx_unordered:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    sldi r6, r6, 4
@@ -611,12 +611,12 @@ define dso_local void @stqx_unordered(i128 %val, i128* %dst, i64 %idx) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = getelementptr i128, i128* %dst, i64 %idx
-  store atomic i128 %val, i128* %0 unordered, align 16
+  %0 = getelementptr i128, ptr %dst, i64 %idx
+  store atomic i128 %val, ptr %0 unordered, align 16
   ret void
 }
 
-define dso_local void @stq_big_offset_unordered(i128 %val, i128* %dst) {
+define dso_local void @stq_big_offset_unordered(i128 %val, ptr %dst) {
 ; P8-LABEL: stq_big_offset_unordered:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lis r6, 32
@@ -693,12 +693,12 @@ define dso_local void @stq_big_offset_unordered(i128 %val, i128* %dst) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = getelementptr i128, i128* %dst, i64 131072
-  store atomic i128 %val, i128* %0 unordered, align 16
+  %0 = getelementptr i128, ptr %dst, i64 131072
+  store atomic i128 %val, ptr %0 unordered, align 16
   ret void
 }
 
-define dso_local void @stq_monotonic(i128 %val, i128* %dst) {
+define dso_local void @stq_monotonic(i128 %val, ptr %dst) {
 ; P8-LABEL: stq_monotonic:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mr r7, r4
@@ -770,11 +770,11 @@ define dso_local void @stq_monotonic(i128 %val, i128* %dst) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  store atomic i128 %val, i128* %dst monotonic, align 16
+  store atomic i128 %val, ptr %dst monotonic, align 16
   ret void
 }
 
-define dso_local void @stq_release(i128 %val, i128* %dst) {
+define dso_local void @stq_release(i128 %val, ptr %dst) {
 ; P8-LABEL: stq_release:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    lwsync
@@ -848,11 +848,11 @@ define dso_local void @stq_release(i128 %val, i128* %dst) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  store atomic i128 %val, i128* %dst release, align 16
+  store atomic i128 %val, ptr %dst release, align 16
   ret void
 }
 
-define dso_local void @stq_seqcst(i128 %val, i128* %dst) {
+define dso_local void @stq_seqcst(i128 %val, ptr %dst) {
 ; P8-LABEL: stq_seqcst:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    sync
@@ -926,6 +926,6 @@ define dso_local void @stq_seqcst(i128 %val, i128* %dst) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  store atomic i128 %val, i128* %dst seq_cst, align 16
+  store atomic i128 %val, ptr %dst seq_cst, align 16
   ret void
 }

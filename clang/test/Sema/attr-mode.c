@@ -37,11 +37,16 @@ int **__attribute((mode(QI)))* i32;  // expected-error{{mode attribute}}
 __attribute__((mode(QI))) int invalid_func(void) { return 1; } // expected-error{{'mode' attribute only applies to variables, enums, typedefs, and non-static data members}}
 enum invalid_enum { A1 __attribute__((mode(QI))) }; // expected-error{{'mode' attribute only applies to}}
 
+typedef _Complex float c16a __attribute((mode(HC)));
+int c16a_test[sizeof(c16a) == 4 ? 1 : -1];
+typedef _Complex double c16b __attribute((mode(HC)));
+int c16b_test[sizeof(c16b) == 4 ? 1 : -1];
+
 typedef _Complex double c32 __attribute((mode(SC)));
 int c32_test[sizeof(c32) == 8 ? 1 : -1];
 typedef _Complex float c64 __attribute((mode(DC)));
 
-#if !defined(__ppc__) && !defined(__mips__) // Note, 'XC' mode is illegal for PPC64 and MIPS machines.
+#if !defined(__powerpc__) && !defined(__mips__) // Note, 'XC' mode is illegal for PPC64 and MIPS machines.
 typedef _Complex float c80 __attribute((mode(XC)));
 #endif
 

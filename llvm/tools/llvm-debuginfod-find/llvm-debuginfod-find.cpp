@@ -15,7 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/Symbolize/DIFetcher.h"
+#include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/CommandLine.h"
@@ -67,7 +67,7 @@ static cl::list<std::string> DebugFileDirectory(
 
 ExitOnError ExitOnErr;
 
-static std::string fetchDebugInfo(ArrayRef<uint8_t> BuildID);
+static std::string fetchDebugInfo(object::BuildIDRef BuildID);
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     errs() << "Build ID " << InputBuildID << " is not a hex string.\n";
     exit(1);
   }
-  BuildID ID(IDString.begin(), IDString.end());
+  object::BuildID ID(IDString.begin(), IDString.end());
 
   std::string Path;
   if (FetchSource != "")
@@ -116,12 +116,12 @@ int main(int argc, char **argv) {
     outs() << Path << "\n";
 }
 
-// Find a debug binary in local build ID directories and via debuginfod.
-std::string fetchDebugInfo(ArrayRef<uint8_t> BuildID) {
-  if (!DebugFileDirectory.empty()) {
-    symbolize::LocalDIFetcher Fetcher(DebugFileDirectory);
-    if (Optional<std::string> LocalPath = Fetcher.fetchBuildID(BuildID))
-      return *LocalPath;
-  }
-  return ExitOnErr(getCachedOrDownloadDebuginfo(BuildID));
+// Find a debug file in local build ID directories and via debuginfod.
+std::string fetchDebugInfo(object::BuildIDRef BuildID) {
+  if (Optional<std::string> Path =
+          DebuginfodFetcher(DebugFileDirectory).fetch(BuildID))
+    return *Path;
+  errs() << "Build ID " << llvm::toHex(BuildID, /*Lowercase=*/true)
+         << " could not be found.";
+  exit(1);
 }

@@ -3,20 +3,19 @@
 ; Test that the EXRL target instruction is emitted successfully (before text
 ; section is closed).
 
-@a = dso_local global i32* null, align 8, !dbg !0
+@a = dso_local global ptr null, align 8, !dbg !0
 @j = dso_local global i32 0, align 4, !dbg !5
 
 define void @fun() !dbg !14 {
 entry:
-  %0 = load i32*, i32** @a, align 8, !dbg !18
-  %1 = bitcast i32* %0 to i8*, !dbg !19
-  %2 = load i32, i32* @j, align 4, !dbg !20
-  %conv = sext i32 %2 to i64, !dbg !20
-  call void @llvm.memset.p0i8.i64(i8* align 4 %1, i8 0, i64 %conv, i1 false), !dbg !19
+  %0 = load ptr, ptr @a, align 8, !dbg !18
+  %1 = load i32, ptr @j, align 4, !dbg !20
+  %conv = sext i32 %1 to i64, !dbg !20
+  call void @llvm.memset.p0.i64(ptr align 4 %0, i8 0, i64 %conv, i1 false), !dbg !19
   ret void, !dbg !21
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!9, !10, !11, !12}

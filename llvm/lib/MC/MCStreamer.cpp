@@ -108,7 +108,7 @@ void MCStreamer::reset() {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
-raw_ostream &MCStreamer::GetCommentOS() {
+raw_ostream &MCStreamer::getCommentOS() {
   // By default, discard comments.
   return nulls();
 }
@@ -250,6 +250,13 @@ void MCStreamer::emitCFIBKeyFrame() {
   if (!CurFrame)
     return;
   CurFrame->IsBKeyFrame = true;
+}
+
+void MCStreamer::emitCFIMTETaggedFrame() {
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->IsMTETaggedFrame = true;
 }
 
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
@@ -401,10 +408,10 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 }
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
-  SwitchSection(getContext().getObjectFileInfo()->getTextSection());
+  switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
-void MCStreamer::AssignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
+void MCStreamer::assignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
   assert(Fragment);
   Symbol->setFragment(Fragment);
 
@@ -732,7 +739,7 @@ void MCStreamer::emitWinCFIEndProc(SMLoc Loc) {
   for (size_t I = CurrentProcWinFrameInfoStartIndex, E = WinFrameInfos.size();
        I != E; ++I)
     emitWindowsUnwindTables(WinFrameInfos[I].get());
-  SwitchSection(CurFrame->TextSection);
+  switchSection(CurFrame->TextSection);
 }
 
 void MCStreamer::emitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
@@ -992,7 +999,7 @@ void MCStreamer::emitWindowsUnwindTables() {}
 
 void MCStreamer::emitWindowsUnwindTables(WinEH::FrameInfo *Frame) {}
 
-void MCStreamer::Finish(SMLoc EndLoc) {
+void MCStreamer::finish(SMLoc EndLoc) {
   if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
       (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
     getContext().reportError(EndLoc, "Unfinished frame!");
@@ -1095,7 +1102,8 @@ void MCStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &) {
 
 void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
                                  uint64_t Attr,
-                                 const MCPseudoProbeInlineStack &InlineStack) {
+                                 const MCPseudoProbeInlineStack &InlineStack,
+                                 MCSymbol *FnSym) {
   auto &Context = getContext();
 
   // Create a symbol at in the current section for use in the probe.
@@ -1109,7 +1117,7 @@ void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
 
   // Add the probe entry to this section's entries.
   Context.getMCPseudoProbeTable().getProbeSections().addPseudoProbe(
-      getCurrentSectionOnly(), Probe, InlineStack);
+      FnSym, Probe, InlineStack);
 }
 
 void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
@@ -1144,10 +1152,10 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 void MCStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {}
 void MCStreamer::emitThumbFunc(MCSymbol *Func) {}
 void MCStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
-void MCStreamer::BeginCOFFSymbolDef(const MCSymbol *Symbol) {
+void MCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
   llvm_unreachable("this directive only supported on COFF targets");
 }
-void MCStreamer::EndCOFFSymbolDef() {
+void MCStreamer::endCOFFSymbolDef() {
   llvm_unreachable("this directive only supported on COFF targets");
 }
 void MCStreamer::emitFileDirective(StringRef Filename) {}
@@ -1183,6 +1191,15 @@ void MCStreamer::emitXCOFFRefDirective(StringRef Name) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
 }
 
+void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
+                                          MCSymbol *Trap, unsigned Lang,
+                                          unsigned Reason,
+                                          unsigned FunctionSize,
+                                          bool hasDebug) {
+  report_fatal_error("emitXCOFFExceptDirective is only supported on "
+                     "XCOFF targets");
+}
+
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
@@ -1215,7 +1232,7 @@ void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
 void MCStreamer::emitBundleUnlock() {}
 
-void MCStreamer::SwitchSection(MCSection *Section, const MCExpr *Subsection) {
+void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
   MCSectionSubPair curSection = SectionStack.back().first;
   SectionStack.back().second = curSection;
@@ -1236,7 +1253,7 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   if (Sym->isInSection())
     return Sym;
 
-  SwitchSection(Section);
+  switchSection(Section);
   emitLabel(Sym);
   return Sym;
 }
@@ -1279,7 +1296,7 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
     // Mac Catalyst always uses the build version load command.
     if (Target.isMacCatalystEnvironment())
       return VersionTuple();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Triple::TvOS:
     return VersionTuple(12);
   case Triple::WatchOS:
@@ -1364,15 +1381,14 @@ void MCStreamer::emitVersionForTarget(
       emitDarwinTargetVariantBuildVersion(
           getMachoBuildVersionPlatformType(Target),
           LinkedTargetVersion.getMajor(),
-          LinkedTargetVersion.getMinor().getValueOr(0),
-          LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
+          LinkedTargetVersion.getMinor().value_or(0),
+          LinkedTargetVersion.getSubminor().value_or(0), SDKVersion);
       return;
     }
     emitBuildVersion(getMachoBuildVersionPlatformType(Target),
                      LinkedTargetVersion.getMajor(),
-                     LinkedTargetVersion.getMinor().getValueOr(0),
-                     LinkedTargetVersion.getSubminor().getValueOr(0),
-                     SDKVersion);
+                     LinkedTargetVersion.getMinor().value_or(0),
+                     LinkedTargetVersion.getSubminor().value_or(0), SDKVersion);
     ShouldEmitBuildVersion = true;
   }
 
@@ -1383,8 +1399,8 @@ void MCStreamer::emitVersionForTarget(
       emitDarwinTargetVariantBuildVersion(
           getMachoBuildVersionPlatformType(*TVT),
           TVLinkedTargetVersion.getMajor(),
-          TVLinkedTargetVersion.getMinor().getValueOr(0),
-          TVLinkedTargetVersion.getSubminor().getValueOr(0),
+          TVLinkedTargetVersion.getMinor().value_or(0),
+          TVLinkedTargetVersion.getSubminor().value_or(0),
           DarwinTargetVariantSDKVersion);
     }
   }
@@ -1394,6 +1410,6 @@ void MCStreamer::emitVersionForTarget(
 
   emitVersionMin(getMachoVersionMinLoadCommandType(Target),
                  LinkedTargetVersion.getMajor(),
-                 LinkedTargetVersion.getMinor().getValueOr(0),
-                 LinkedTargetVersion.getSubminor().getValueOr(0), SDKVersion);
+                 LinkedTargetVersion.getMinor().value_or(0),
+                 LinkedTargetVersion.getSubminor().value_or(0), SDKVersion);
 }

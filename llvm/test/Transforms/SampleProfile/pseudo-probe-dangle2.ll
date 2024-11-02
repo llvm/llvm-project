@@ -7,17 +7,17 @@
 ; CHECK-NOT: call void @llvm.pseudoprobe(i64 -4224472938262609671, i64 5
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @foo(i32* nocapture %marker, i32* nocapture %move_ordering, i32* nocapture %moves, i32 %num_moves) local_unnamed_addr #0 !dbg !10 {
+define dso_local i32 @foo(ptr nocapture %marker, ptr nocapture %move_ordering, ptr nocapture %moves, i32 %num_moves) local_unnamed_addr #0 !dbg !10 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %marker, metadata !19, metadata !DIExpression()), !dbg !28
-  call void @llvm.dbg.value(metadata i32* %move_ordering, metadata !20, metadata !DIExpression()), !dbg !28
-  call void @llvm.dbg.value(metadata i32* %moves, metadata !21, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.value(metadata ptr %marker, metadata !19, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.value(metadata ptr %move_ordering, metadata !20, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.value(metadata ptr %moves, metadata !21, metadata !DIExpression()), !dbg !28
   call void @llvm.dbg.value(metadata i32 %num_moves, metadata !22, metadata !DIExpression()), !dbg !28
   call void @llvm.pseudoprobe(i64 -4224472938262609671, i64 1, i32 0, i64 -1), !dbg !29
   call void @llvm.dbg.value(metadata i32 -1000000, metadata !25, metadata !DIExpression()), !dbg !28
-  %0 = load i32, i32* %marker, align 4, !dbg !30, !tbaa !31
+  %0 = load i32, ptr %marker, align 4, !dbg !30, !tbaa !31
   %inc = add nsw i32 %0, 1, !dbg !30
-  store i32 %inc, i32* %marker, align 4, !dbg !30, !tbaa !31
+  store i32 %inc, ptr %marker, align 4, !dbg !30, !tbaa !31
   call void @llvm.dbg.value(metadata i32 %inc, metadata !27, metadata !DIExpression()), !dbg !28
   %cmp = icmp slt i32 %0, 9, !dbg !35
   br i1 %cmp, label %for.cond, label %if.else, !dbg !37
@@ -37,8 +37,8 @@ for.cond:                                         ; preds = %entry, %for.inc
 for.body:                                         ; preds = %for.cond
   call void @llvm.pseudoprobe(i64 -4224472938262609671, i64 4, i32 0, i64 -1), !dbg !46
   %idxprom = sext i32 %i.0 to i64, !dbg !46
-  %arrayidx = getelementptr inbounds i32, i32* %move_ordering, i64 %idxprom, !dbg !46
-  %1 = load i32, i32* %arrayidx, align 4, !dbg !46, !tbaa !31
+  %arrayidx = getelementptr inbounds i32, ptr %move_ordering, i64 %idxprom, !dbg !46
+  %1 = load i32, ptr %arrayidx, align 4, !dbg !46, !tbaa !31
   %cmp2 = icmp sgt i32 %1, %best.0, !dbg !49
   br i1 %cmp2, label %if.then3, label %for.inc, !dbg !50
 

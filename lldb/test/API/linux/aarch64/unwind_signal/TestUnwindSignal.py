@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class UnwindSignalTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessArch("aarch64")
@@ -29,7 +27,7 @@ class UnwindSignalTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         signo = process.GetUnixSignals().GetSignalNumberFromName("SIGILL")
 
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
@@ -75,5 +73,5 @@ class UnwindSignalTestCase(TestBase):
 
         # Continue until we exit.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)

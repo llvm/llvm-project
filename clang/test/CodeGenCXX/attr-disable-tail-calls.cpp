@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
 
 class B {
 public:
@@ -23,12 +23,12 @@ int foo1() {
   return t;
 }
 
-// CHECK: define linkonce_odr noundef i32 @_ZN1B2m3Ev(%class.B* {{[^,]*}} %this) [[ATTRFALSE:#[0-9]+]]
-// CHECK: declare noundef i32 @_ZN1B2m4Ev(%class.B* {{[^,]*}}) [[ATTRTRUE0:#[0-9]+]]
-// CHECK: define linkonce_odr noundef i32 @_ZN1B2m1Ev(%class.B* {{[^,]*}} %this) unnamed_addr [[ATTRTRUE1:#[0-9]+]]
-// CHECK: define linkonce_odr noundef i32 @_ZN1B2m2Ev(%class.B* {{[^,]*}} %this) unnamed_addr [[ATTRFALSE:#[0-9]+]]
-// CHECK: define linkonce_odr noundef i32 @_ZN1D2m1Ev(%class.D* {{[^,]*}} %this) unnamed_addr [[ATTRFALSE:#[0-9]+]]
-// CHECK: define linkonce_odr noundef i32 @_ZN1D2m2Ev(%class.D* {{[^,]*}} %this) unnamed_addr [[ATTRTRUE1:#[0-9]+]]
+// CHECK: define linkonce_odr noundef i32 @_ZN1B2m3Ev(ptr {{[^,]*}} %this) [[ATTRFALSE:#[0-9]+]]
+// CHECK: declare noundef i32 @_ZN1B2m4Ev(ptr {{[^,]*}}) [[ATTRTRUE0:#[0-9]+]]
+// CHECK: define linkonce_odr noundef i32 @_ZN1B2m1Ev(ptr {{[^,]*}} %this) unnamed_addr [[ATTRTRUE1:#[0-9]+]]
+// CHECK: define linkonce_odr noundef i32 @_ZN1B2m2Ev(ptr {{[^,]*}} %this) unnamed_addr [[ATTRFALSE:#[0-9]+]]
+// CHECK: define linkonce_odr noundef i32 @_ZN1D2m1Ev(ptr {{[^,]*}} %this) unnamed_addr [[ATTRFALSE:#[0-9]+]]
+// CHECK: define linkonce_odr noundef i32 @_ZN1D2m2Ev(ptr {{[^,]*}} %this) unnamed_addr [[ATTRTRUE1:#[0-9]+]]
 
 // CHECK-NOT: attributes [[ATTRFALSE]] = { {{.*}}"disable-tail-calls"="false"{{.*}} }
 // CHECK: attributes [[ATTRTRUE0]] = { {{.*}}"disable-tail-calls"="true"{{.*}} }

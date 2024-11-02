@@ -38,10 +38,6 @@ add_integration_test(
     main_without_args.cpp
 )
 
-if(NOT (${LIBC_TARGET_ARCHITECTURE} STREQUAL "x86_64"))
-  return()
-endif()
-
 add_integration_test(
   loader_tls_test
   SUITE libc-loader-tests
@@ -54,4 +50,13 @@ add_integration_test(
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
+)
+
+add_integration_test(
+  init_fini_array_test
+  SUITE libc-loader-tests
+  LOADER
+    libc.loader.linux.crt1
+  SRCS
+    init_fini_array_test.cpp
 )

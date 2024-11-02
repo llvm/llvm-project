@@ -350,7 +350,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
     case Hexagon::A4_combineri:
       ImmX++;
       // Fall through into A4_combineir.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Hexagon::A4_combineir: {
       ImmX++;
       const MachineOperand &OpX = MI->getOperand(ImmX);
@@ -360,7 +360,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
           return 10;
       }
       // Fall through into A2_combinew.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case Hexagon::A2_combinew:
       return 2;
@@ -1150,7 +1150,7 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
   }
 
   MISet Erase;
-  for (auto MI : SplitIns) {
+  for (auto *MI : SplitIns) {
     if (isFixedInstr(MI)) {
       collapseRegPairs(MI, PairMap);
     } else {
@@ -1169,11 +1169,11 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
     for (auto U = MRI->use_nodbg_begin(DR), W = MRI->use_nodbg_end();
          U != W; ++U)
       Uses.insert(U->getParent());
-    for (auto M : Uses)
+    for (auto *M : Uses)
       replaceSubregUses(M, PairMap);
   }
 
-  for (auto MI : Erase) {
+  for (auto *MI : Erase) {
     MachineBasicBlock *B = MI->getParent();
     B->erase(MI);
   }

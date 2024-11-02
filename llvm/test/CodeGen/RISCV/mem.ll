@@ -199,6 +199,41 @@ define dso_local i32 @lw_sw_constant(i32 %a) nounwind {
   ret i32 %2
 }
 
+define i32 @lw_near_local(i32* %a)  {
+; RV32I-LABEL: lw_near_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    lw a0, 5(a0)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i64 513
+  %2 = load volatile i32, i32* %1
+  ret i32 %2
+}
+
+define void @st_near_local(i32* %a, i32 %b)  {
+; RV32I-LABEL: st_near_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    sw a1, 5(a0)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i64 513
+  store i32 %b, i32* %1
+  ret void
+}
+
+define i32 @lw_sw_near_local(i32* %a, i32 %b)  {
+; RV32I-LABEL: lw_sw_near_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, a0, 2047
+; RV32I-NEXT:    lw a0, 5(a2)
+; RV32I-NEXT:    sw a1, 5(a2)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i64 513
+  %2 = load volatile i32, i32* %1
+  store i32 %b, i32* %1
+  ret i32 %2
+}
+
 define i32 @lw_far_local(i32* %a)  {
 ; RV32I-LABEL: lw_far_local:
 ; RV32I:       # %bb.0:
@@ -227,10 +262,9 @@ define i32 @lw_sw_far_local(i32* %a, i32 %b)  {
 ; RV32I-LABEL: lw_sw_far_local:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 4
-; RV32I-NEXT:    addi a2, a2, -4
 ; RV32I-NEXT:    add a2, a0, a2
-; RV32I-NEXT:    lw a0, 0(a2)
-; RV32I-NEXT:    sw a1, 0(a2)
+; RV32I-NEXT:    lw a0, -4(a2)
+; RV32I-NEXT:    sw a1, -4(a2)
 ; RV32I-NEXT:    ret
   %1 = getelementptr inbounds i32, i32* %a, i64 4095
   %2 = load volatile i32, i32* %1
@@ -266,10 +300,9 @@ define i32 @lw_sw_really_far_local(i32* %a, i32 %b)  {
 ; RV32I-LABEL: lw_sw_really_far_local:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    addi a2, a2, -2048
 ; RV32I-NEXT:    add a2, a0, a2
-; RV32I-NEXT:    lw a0, 0(a2)
-; RV32I-NEXT:    sw a1, 0(a2)
+; RV32I-NEXT:    lw a0, -2048(a2)
+; RV32I-NEXT:    sw a1, -2048(a2)
 ; RV32I-NEXT:    ret
   %1 = getelementptr inbounds i32, i32* %a, i32 536870400
   %2 = load volatile i32, i32* %1

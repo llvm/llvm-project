@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
 
 ; ELF: Section {
 ; ELF: Name: .text

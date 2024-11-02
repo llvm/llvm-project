@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(canonicalize)' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file | FileCheck %s
 
 // Check the simple case of single operation blocks with a return.
 
@@ -257,7 +257,7 @@ func.func @nomerge(%arg0: i32, %i: i32) {
 func.func @mismatch_dominance() -> i32 {
   // CHECK: %[[RES:.*]] = "test.producing_br"()
   %0 = "test.producing_br"()[^bb1, ^bb2] {
-        operand_segment_sizes = dense<0> : vector<2 x i32>
+        operand_segment_sizes = array<i32: 0, 0>
 	} : () -> i32
 
 ^bb1:

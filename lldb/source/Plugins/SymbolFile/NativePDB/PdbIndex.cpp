@@ -60,24 +60,16 @@ PdbIndex::create(llvm::pdb::PDBFile *file) {
 
 lldb::addr_t PdbIndex::MakeVirtualAddress(uint16_t segment,
                                           uint32_t offset) const {
-  // Segment indices are 1-based.
-  lldbassert(segment > 0);
-
   uint32_t max_section = dbi().getSectionHeaders().size();
-  lldbassert(segment <= max_section + 1);
-
+  // Segment indices are 1-based.
   // If this is an absolute symbol, it's indicated by the magic section index
   // |max_section+1|.  In this case, the offset is meaningless, so just return.
-  if (segment == max_section + 1)
+  if (segment == 0 || segment > max_section)
     return LLDB_INVALID_ADDRESS;
 
   const llvm::object::coff_section &cs = dbi().getSectionHeaders()[segment - 1];
   return m_load_address + static_cast<lldb::addr_t>(cs.VirtualAddress) +
          static_cast<lldb::addr_t>(offset);
-}
-
-lldb::addr_t PdbIndex::MakeVirtualAddress(const SegmentOffset &so) const {
-  return MakeVirtualAddress(so.segment, so.offset);
 }
 
 llvm::Optional<uint16_t>
@@ -107,6 +99,8 @@ void PdbIndex::ParseSectionContribs() {
         return;
 
       uint64_t va = m_ctx.MakeVirtualAddress(C.ISect, C.Off);
+      if (va == LLDB_INVALID_ADDRESS)
+        return;
       uint64_t end = va + C.Size;
       // IntervalMap's start and end represent a closed range, not a half-open
       // range, so we have to subtract 1.
@@ -128,7 +122,9 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
       continue;
 
     SegmentOffset so = GetSegmentAndOffset(*iter);
-    lldb::addr_t va = MakeVirtualAddress(so);
+    lldb::addr_t va = MakeVirtualAddress(so.segment, so.offset);
+    if (va == LLDB_INVALID_ADDRESS)
+      continue;
 
     PdbCompilandSymId cu_sym_id(modi, iter.offset());
 
@@ -175,7 +171,10 @@ std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
     else
       sol.so = GetSegmentAndOffset(sym);
 
-    lldb::addr_t start = MakeVirtualAddress(sol.so);
+    lldb::addr_t start = MakeVirtualAddress(sol.so.segment, sol.so.offset);
+    if (start == LLDB_INVALID_ADDRESS)
+      continue;
+
     lldb::addr_t end = start + sol.length;
     if (va >= start && va < end)
       result.push_back({std::move(sym), iter->second});

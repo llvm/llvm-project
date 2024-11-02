@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump --section-headers -d %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --section-headers -d %t | FileCheck %s
 
 ## We have R_386_GOT32 relocation here.
 .globl foo

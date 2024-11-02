@@ -9,5 +9,5 @@ target triple = "x86_64-apple-macosx10.11.0"
 %struct.matrix_float3x3 = type { [3 x <3 x float>] }
 
 @matrix_identity_float3x3 = external global %struct.matrix_float3x3, align 16
-@bbb = global float* getelementptr inbounds (%struct.matrix_float3x3, %struct.matrix_float3x3* @matrix_identity_float3x3, i64 0, i32 0, i64 1, i64 3)
-; CHECK: @bbb = global float* getelementptr inbounds (%struct.matrix_float3x3, %struct.matrix_float3x3* @matrix_identity_float3x3, i64 0, i32 0, i64 1, i64 3)
+@bbb = global ptr getelementptr inbounds (%struct.matrix_float3x3, ptr @matrix_identity_float3x3, i64 0, i32 0, i64 1, i64 3)
+; CHECK: @bbb = global ptr getelementptr inbounds (%struct.matrix_float3x3, ptr @matrix_identity_float3x3, i64 0, i32 0, i64 1, i64 3)

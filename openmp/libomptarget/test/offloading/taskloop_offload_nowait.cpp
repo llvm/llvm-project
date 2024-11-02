@@ -1,7 +1,7 @@
 // RUN: %libomptarget-compilexx-and-run-generic
 
 // UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
+// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 #include <cmath>
 #include <cstdlib>

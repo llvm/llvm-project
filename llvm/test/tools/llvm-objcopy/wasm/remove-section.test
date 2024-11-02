@@ -8,6 +8,12 @@
 ## Requests to remove nonexistent sections are silently ignored.
 # RUN: llvm-objcopy --remove-section=nonexistent=%t.sec %t 2>&1 | count 0
 
+## Remove the type section.
+# RUN: llvm-objcopy -R TYPE %t %t3
+# RUN: obj2yaml %t3 | FileCheck --check-prefix=REMOVETYPE --implicit-check-not=TYPE %s
+## Check that the producers section is still there.
+# REMOVETYPE: producers
+
 --- !WASM
 FileHeader:
   Version: 0x00000001

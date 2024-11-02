@@ -15,6 +15,9 @@ class LLVMTypeConverter;
 class Pass;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTCOMPLEXTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 class ComplexStructBuilder : public StructBuilder {
 public:
   /// Construct a helper for the given complex number value.

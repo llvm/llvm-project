@@ -76,7 +76,7 @@ public:
   virtual void HandleTagDeclRequiredDefinition(const TagDecl *D) {}
 
   /// Invoked when a function is implicitly instantiated.
-  /// Note that at this point point it does not have a body, its body is
+  /// Note that at this point it does not have a body, its body is
   /// instantiated at the end of the translation unit and passed to
   /// HandleTopLevelDecl.
   virtual void HandleCXXImplicitFunctionInstantiation(FunctionDecl *D) {}

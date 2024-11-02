@@ -7,7 +7,7 @@
 ; RUN:     -mtriple=powerpc64-ibm-aix-xcoff | \
 ; RUN:   FileCheck %s -check-prefixes=AIX64
 
-declare void @clobber(i32*)
+declare void @clobber(ptr)
 
 define dso_local float @frameptr_only(i32 %n, float %f) {
 ; AIX32-LABEL: frameptr_only:
@@ -64,7 +64,7 @@ define dso_local float @frameptr_only(i32 %n, float %f) {
 ; AIX64-NEXT:    blr
 entry:
   %0 = alloca i32, i32 %n
-  call void @clobber(i32* %0)
+  call void @clobber(ptr %0)
   ret float %f
 }
 
@@ -128,6 +128,6 @@ define dso_local void @frameptr_realigned(i32 %n) {
 ; AIX64-NEXT:    ld 30, -16(1)
 ; AIX64-NEXT:    blr
   %ptr = alloca i32, i32 %n, align 64
-  call void @clobber(i32* %ptr)
+  call void @clobber(ptr %ptr)
   ret void
 }

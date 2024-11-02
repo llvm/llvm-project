@@ -81,7 +81,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
   case eVarSetOperationAssign:
     m_current_value.Clear();
     // Fall through to append case
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case eVarSetOperationAppend:
     if (argc > 0) {
       m_value_was_set = true;
@@ -137,7 +137,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
         size_t num_remove_indexes = remove_indexes.size();
         if (num_remove_indexes) {
           // Sort and then erase in reverse so indexes are always valid
-          llvm::sort(remove_indexes.begin(), remove_indexes.end());
+          llvm::sort(remove_indexes);
           for (size_t j = num_remove_indexes - 1; j < num_remove_indexes; ++j) {
             m_current_value.Remove(j);
           }

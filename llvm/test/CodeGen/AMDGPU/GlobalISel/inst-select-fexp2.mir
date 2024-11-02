@@ -13,9 +13,10 @@ body: |
 
     ; CHECK-LABEL: name: fexp2_s32_vs
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %1:vgpr_32 = nofpexcept V_EXP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_EXP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %1
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_FEXP2 %0
     S_ENDPGM 0, implicit %1
@@ -33,9 +34,10 @@ body: |
 
     ; CHECK-LABEL: name: fexp2_s32_vv
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %1:vgpr_32 = nofpexcept V_EXP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_EXP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %1
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FEXP2 %0
     S_ENDPGM 0, implicit %1

@@ -288,7 +288,7 @@ public:
   ArrayRef<Value *> getValues() const { return Values; }
 
   bool areAllIncomingValuesSame() const {
-    return llvm::all_of(Values, [&](Value *V) { return V == Values[0]; });
+    return llvm::all_equal(Values);
   }
 
   bool areAllIncomingValuesSameType() const {
@@ -634,7 +634,7 @@ private:
       if (PN->getIncomingValue(0) != PN)
         PN->replaceAllUsesWith(PN->getIncomingValue(0));
       else
-        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
       PN->eraseFromParent();
     }
   }
@@ -658,12 +658,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
     VNums[N]++;
   }
   unsigned VNumToSink =
-      std::max_element(VNums.begin(), VNums.end(),
-                       [](const std::pair<uint32_t, unsigned> &I,
-                          const std::pair<uint32_t, unsigned> &J) {
-                         return I.second < J.second;
-                       })
-          ->first;
+      std::max_element(VNums.begin(), VNums.end(), llvm::less_second())->first;
 
   if (VNums[VNumToSink] == 1)
     // Can't sink anything!

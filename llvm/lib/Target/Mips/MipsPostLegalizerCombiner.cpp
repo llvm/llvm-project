@@ -61,7 +61,7 @@ bool MipsPostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                             MachineInstr &MI,
                                             MachineIRBuilder &B) const {
 
-  CombinerHelper Helper(Observer, B, KB,
+  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false, KB,
                         /*DominatorTree*/ nullptr, LInfo);
   MipsGenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
   return Generated.tryCombineAll(Observer, MI, B, Helper);

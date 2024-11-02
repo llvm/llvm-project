@@ -1,5 +1,5 @@
 ; Compiler should not be broken with a dead user.
-; RUN: opt -sink -S < %s | FileCheck %s
+; RUN: opt -passes=sink -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @test(
 ; CHECK:       bb.0:

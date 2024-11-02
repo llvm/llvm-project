@@ -1,4 +1,4 @@
-; RUN: opt < %s -dfsan -dfsan-track-origins=1  -S | FileCheck %s
+; RUN: opt < %s -passes=dfsan -dfsan-track-origins=1  -S | FileCheck %s
 ;
 ; %15 and %17 have the same key in shadow cache. They should not reuse the same
 ; shadow because their blocks do not dominate each other. Origin tracking

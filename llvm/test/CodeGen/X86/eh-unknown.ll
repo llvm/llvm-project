@@ -8,7 +8,7 @@ declare void @throwit()
 declare void @__unknown_ehpersonality(...)
 
 define void @use_unknown_ehpersonality()
-    personality void (...)* @__unknown_ehpersonality {
+    personality ptr @__unknown_ehpersonality {
 entry:
   call void @throwit()
   unreachable

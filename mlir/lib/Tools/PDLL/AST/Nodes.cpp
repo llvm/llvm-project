@@ -57,8 +57,8 @@ public:
 
             // Expressions.
             const AttributeExpr, const CallExpr, const DeclRefExpr,
-            const MemberAccessExpr, const OperationExpr, const TupleExpr,
-            const TypeExpr,
+            const MemberAccessExpr, const OperationExpr, const RangeExpr,
+            const TupleExpr, const TypeExpr,
 
             // Core Constraint Decls.
             const AttrConstraintDecl, const OpConstraintDecl,
@@ -107,6 +107,10 @@ private:
     for (const Node *child : expr->getResultTypes())
       visit(child);
     for (const Node *child : expr->getAttributes())
+      visit(child);
+  }
+  void visitImpl(const RangeExpr *expr) {
+    for (const Node *child : expr->getElements())
       visit(child);
   }
   void visitImpl(const TupleExpr *expr) {
@@ -199,8 +203,7 @@ CompoundStmt *CompoundStmt::create(Context &ctx, SMRange loc,
 // LetStmt
 //===----------------------------------------------------------------------===//
 
-LetStmt *LetStmt::create(Context &ctx, SMRange loc,
-                         VariableDecl *varDecl) {
+LetStmt *LetStmt::create(Context &ctx, SMRange loc, VariableDecl *varDecl) {
   return new (ctx.getAllocator().Allocate<LetStmt>()) LetStmt(loc, varDecl);
 }
 
@@ -327,6 +330,21 @@ Optional<StringRef> OperationExpr::getName() const {
 }
 
 //===----------------------------------------------------------------------===//
+// RangeExpr
+//===----------------------------------------------------------------------===//
+
+RangeExpr *RangeExpr::create(Context &ctx, SMRange loc,
+                             ArrayRef<Expr *> elements, RangeType type) {
+  unsigned allocSize = RangeExpr::totalSizeToAlloc<Expr *>(elements.size());
+  void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(TupleExpr));
+
+  RangeExpr *expr = new (rawData) RangeExpr(loc, type, elements.size());
+  std::uninitialized_copy(elements.begin(), elements.end(),
+                          expr->getElements().begin());
+  return expr;
+}
+
+//===----------------------------------------------------------------------===//
 // TupleExpr
 //===----------------------------------------------------------------------===//
 
@@ -353,6 +371,14 @@ TupleExpr *TupleExpr::create(Context &ctx, SMRange loc,
 TypeExpr *TypeExpr::create(Context &ctx, SMRange loc, StringRef value) {
   return new (ctx.getAllocator().Allocate<TypeExpr>())
       TypeExpr(ctx, loc, copyStringWithNull(ctx, value));
+}
+
+//===----------------------------------------------------------------------===//
+// Decl
+//===----------------------------------------------------------------------===//
+
+void Decl::setDocComment(Context &ctx, StringRef comment) {
+  docComment = comment.copy(ctx.getAllocator());
 }
 
 //===----------------------------------------------------------------------===//
@@ -386,8 +412,7 @@ Optional<StringRef> OpConstraintDecl::getName() const {
 // TypeConstraintDecl
 //===----------------------------------------------------------------------===//
 
-TypeConstraintDecl *TypeConstraintDecl::create(Context &ctx,
-                                               SMRange loc) {
+TypeConstraintDecl *TypeConstraintDecl::create(Context &ctx, SMRange loc) {
   return new (ctx.getAllocator().Allocate<TypeConstraintDecl>())
       TypeConstraintDecl(loc);
 }
@@ -406,8 +431,8 @@ TypeRangeConstraintDecl *TypeRangeConstraintDecl::create(Context &ctx,
 // ValueConstraintDecl
 //===----------------------------------------------------------------------===//
 
-ValueConstraintDecl *
-ValueConstraintDecl::create(Context &ctx, SMRange loc, Expr *typeExpr) {
+ValueConstraintDecl *ValueConstraintDecl::create(Context &ctx, SMRange loc,
+                                                 Expr *typeExpr) {
   return new (ctx.getAllocator().Allocate<ValueConstraintDecl>())
       ValueConstraintDecl(loc, typeExpr);
 }
@@ -416,9 +441,8 @@ ValueConstraintDecl::create(Context &ctx, SMRange loc, Expr *typeExpr) {
 // ValueRangeConstraintDecl
 //===----------------------------------------------------------------------===//
 
-ValueRangeConstraintDecl *ValueRangeConstraintDecl::create(Context &ctx,
-                                                           SMRange loc,
-                                                           Expr *typeExpr) {
+ValueRangeConstraintDecl *
+ValueRangeConstraintDecl::create(Context &ctx, SMRange loc, Expr *typeExpr) {
   return new (ctx.getAllocator().Allocate<ValueRangeConstraintDecl>())
       ValueRangeConstraintDecl(loc, typeExpr);
 }
@@ -490,8 +514,8 @@ OpNameDecl *OpNameDecl::create(Context &ctx, SMRange loc) {
 // PatternDecl
 //===----------------------------------------------------------------------===//
 
-PatternDecl *PatternDecl::create(Context &ctx, SMRange loc,
-                                 const Name *name, Optional<uint16_t> benefit,
+PatternDecl *PatternDecl::create(Context &ctx, SMRange loc, const Name *name,
+                                 Optional<uint16_t> benefit,
                                  bool hasBoundedRecursion,
                                  const CompoundStmt *body) {
   return new (ctx.getAllocator().Allocate<PatternDecl>())
@@ -546,8 +570,7 @@ VariableDecl *VariableDecl::create(Context &ctx, const Name &name, Type type,
 // Module
 //===----------------------------------------------------------------------===//
 
-Module *Module::create(Context &ctx, SMLoc loc,
-                       ArrayRef<Decl *> children) {
+Module *Module::create(Context &ctx, SMLoc loc, ArrayRef<Decl *> children) {
   unsigned allocSize = Module::totalSizeToAlloc<Decl *>(children.size());
   void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(Module));
 

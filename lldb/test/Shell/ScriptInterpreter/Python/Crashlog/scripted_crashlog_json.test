@@ -1,60 +1,43 @@
 # REQUIRES: python, native && target-aarch64 && system-darwin
 
-# rdar://93655633
-# UNSUPPORTED: arm64
-
-# RUN: %clangxx_host -std=c++17 -g %S/Inputs/multithread-test.cc -o %t.out
-
-# RUN: cp %S/Inputs/scripted_crashlog.ips %t.crash
-# RUN: %python %S/patch-crashlog.py --binary %t.out --crashlog %t.crash --offsets '{"main":160, "bar":20, "foo":24}' --json
-# RUN: %lldb %t.out -o 'command script import lldb.macosx.crashlog' -o 'crashlog -a -i %t.crash' 2>&1 -o "thread list" -o "bt all" | FileCheck %s
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/interactive_crashlog/multithread-test.yaml > %t.dir/multithread-test
+# RUN: %lldb -o 'command script import lldb.macosx.crashlog' \
+# RUN: -o 'crashlog -a -i -t %t.dir/multithread-test %S/Inputs/interactive_crashlog/multithread-test.ips' \
+# RUN: -o "thread list" -o "bt all" 2>&1 | FileCheck %s
 
 # CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
 
 # CHECK: (lldb) process status
-# CHECK-NEXT: Process 24991 stopped
-# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS
-# CHECK-NEXT:     frame #0: 0x00000001047f5970 scripted_crashlog_json.test.tmp.out`bar
+# CHECK-NEXT: Process 22511 stopped
+# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:     frame #0: 0x0000000100ec58f4 multithread-test`bar
 
 # CHECK: (lldb) thread backtrace
-# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS
-# CHECK-NEXT:   * frame #0: 0x00000001047f5970 scripted_crashlog_json.test.tmp.out`bar
-# CHECK-NEXT:     frame #1: 0x00000001047f5998 scripted_crashlog_json.test.tmp.out`foo
-# CHECK-NEXT:     frame #2: 0x00000001047f5b04 scripted_crashlog_json.test.tmp.out`compute_pow
-# CHECK-NEXT:     frame #3: 0x00000001047f7690 scripted_crashlog_json.test.tmp.out`decltype
-# CHECK-NEXT:     frame #4: 0x00000001047f7614 scripted_crashlog_json.test.tmp.out`void std::__1::__thread_execute
-# CHECK-NEXT:     frame #5: 0x00000001047f6d58 scripted_crashlog_json.test.tmp.out`void* std::__1::__thread_proxy
-# CHECK-NEXT:     frame #6: 0x000000018bf5326c libsystem_pthread.dylib`_pthread_start
-# CHECK-NEXT:     frame #7: 0x000000018bf4e08c libsystem_pthread.dylib`thread_start
+# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:   * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
+# CHECK-NEXT:     frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
+# CHECK-NEXT:     frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
 
 # CHECK: (lldb) thread list
-# CHECK-NEXT: Process 24991 stopped
-# CHECK-NEXT:  thread #1: tid = 0x4ea840, 0x000000018bf17854 libsystem_kernel.dylib`__ulock_wait{{.*}}, queue = 'com.apple.main-thread'
-# CHECK-NEXT:  thread #2: tid = 0x4ea850, 0x00000001047f59e8 scripted_crashlog_json.test.tmp.out`call_and_wait
-# CHECK-NEXT: * thread #3: tid = 0x4ea851, 0x00000001047f5970 scripted_crashlog_json.test.tmp.out`bar{{.*}}, stop reason = EXC_BAD_ACCESS
-
+# CHECK-NEXT: Process 22511 stopped
+# CHECK-NEXT:   thread #1: tid = 0x23c7fe, 0x000000019cc40b84{{.*}}, queue = 'com.apple.main-thread'
+# CHECK-NEXT:   thread #2: tid = 0x23c800, 0x000000019cc42c9c{{.*}}
+# CHECK-NEXT: * thread #3: tid = 0x23c801, 0x0000000100ec58f4 multithread-test`bar{{.*}}, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
 
 # CHECK: (lldb) bt all
-# CHECK-NEXT:   thread #1
-# CHECK-NEXT:     frame #0: 0x000000018bf17854 libsystem_kernel.dylib`__ulock_wait
-# CHECK-NEXT:     frame #1: 0x000000018bf555a0 libsystem_pthread.dylib`_pthread_join
-# CHECK-NEXT:     frame #2: 0x000000018beae9c0 libc++.1.dylib`std::__1::thread::join
-# CHECK-NEXT:     frame #3: 0x00000001047f5bb8 scripted_crashlog_json.test.tmp.out`main
-# CHECK-NEXT:     frame #4: 0x0000000104ae5088 dyld`start
-# CHECK-NEXT:   thread #2
-# CHECK-NEXT:     frame #0: 0x00000001047f59e8 scripted_crashlog_json.test.tmp.out`call_and_wait
-# CHECK-NEXT:     frame #1: 0x00000001047f59d4 scripted_crashlog_json.test.tmp.out`call_and_wait
-# CHECK-NEXT:     frame #2: 0x00000001047f7690 scripted_crashlog_json.test.tmp.out`decltype
-# CHECK-NEXT:     frame #3: 0x00000001047f7614 scripted_crashlog_json.test.tmp.out`void std::__1::__thread_execute
-# CHECK-NEXT:     frame #4: 0x00000001047f6d58 scripted_crashlog_json.test.tmp.out`void* std::__1::__thread_proxy
-# CHECK-NEXT:     frame #5: 0x000000018bf5326c libsystem_pthread.dylib`_pthread_start
-# CHECK-NEXT:     frame #6: 0x000000018bf4e08c libsystem_pthread.dylib`thread_start
-# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS
-# CHECK-NEXT:   * frame #0: 0x00000001047f5970 scripted_crashlog_json.test.tmp.out`bar
-# CHECK-NEXT:     frame #1: 0x00000001047f5998 scripted_crashlog_json.test.tmp.out`foo
-# CHECK-NEXT:     frame #2: 0x00000001047f5b04 scripted_crashlog_json.test.tmp.out`compute_pow
-# CHECK-NEXT:     frame #3: 0x00000001047f7690 scripted_crashlog_json.test.tmp.out`decltype
-# CHECK-NEXT:     frame #4: 0x00000001047f7614 scripted_crashlog_json.test.tmp.out`void std::__1::__thread_execute
-# CHECK-NEXT:     frame #5: 0x00000001047f6d58 scripted_crashlog_json.test.tmp.out`void* std::__1::__thread_proxy
-# CHECK-NEXT:     frame #6: 0x000000018bf5326c libsystem_pthread.dylib`_pthread_start
-# CHECK-NEXT:     frame #7: 0x000000018bf4e08c libsystem_pthread.dylib`thread_start
+# CHECK:  thread #1, queue = 'com.apple.main-thread'
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc40b84{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5b3b multithread-test`main{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x00000002230f8da7{{.*}} [artificial]
+# CHECK-NEXT:  thread #2
+# CHECK-NEXT:    frame #0: 0x000000019cc42c9c{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5957 multithread-test`call_and_wait{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]
+# CHECK-NEXT:* thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:  * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
+# CHECK-NEXT:    frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
+# CHECK-NEXT:    frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]

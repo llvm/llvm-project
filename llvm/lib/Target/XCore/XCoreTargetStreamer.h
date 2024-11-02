@@ -16,10 +16,10 @@ class XCoreTargetStreamer : public MCTargetStreamer {
 public:
   XCoreTargetStreamer(MCStreamer &S);
   ~XCoreTargetStreamer() override;
-  virtual void emitCCTopData(StringRef Name) = 0;
-  virtual void emitCCTopFunction(StringRef Name) = 0;
-  virtual void emitCCBottomData(StringRef Name) = 0;
-  virtual void emitCCBottomFunction(StringRef Name) = 0;
+  virtual void emitCCTopData(StringRef Name){};
+  virtual void emitCCTopFunction(StringRef Name){};
+  virtual void emitCCBottomData(StringRef Name){};
+  virtual void emitCCBottomFunction(StringRef Name){};
 };
 }
 

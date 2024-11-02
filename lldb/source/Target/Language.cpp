@@ -144,7 +144,7 @@ Language::GetHardcodedSynthetics() {
   return {};
 }
 
-std::vector<ConstString>
+std::vector<FormattersMatchCandidate>
 Language::GetPossibleFormattersMatches(ValueObject &valobj,
                                        lldb::DynamicValueType use_dynamic) {
   return {};

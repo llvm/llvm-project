@@ -32,7 +32,7 @@ $"??_C@_0BC@CABPINND@Exception?5caught?$AA?$AA@" = comdat any
 @"?msg@@3PADA" = dso_local global [200 x i8] zeroinitializer, align 16
 @"??_C@_0BC@CABPINND@Exception?5caught?$AA?$AA@" = linkonce_odr dso_local unnamed_addr constant [18 x i8] c"0123456789012345\00\00", comdat, align 1
 
-define dso_local void @"?run@@YAXH@Z"(i32 %count) personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @"?run@@YAXH@Z"(i32 %count) personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @"?may_throw@@YAXH@Z"(i32 %count)
           to label %try.cont unwind label %catch.dispatch
@@ -41,14 +41,14 @@ catch.dispatch:                                   ; preds = %entry
   %tmp = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %tmp1 = catchpad within %tmp [i8* null, i32 64, i8* null]
-  %tmp2 = load i32, i32* @"?len@@3IA", align 4
+  %tmp1 = catchpad within %tmp [ptr null, i32 64, ptr null]
+  %tmp2 = load i32, ptr @"?len@@3IA", align 4
   %conv = zext i32 %tmp2 to i64
-  call void @llvm.memcpy.p0i8.p0i8.i64(
-    i8* getelementptr inbounds ([200 x i8], [200 x i8]* @"?msg@@3PADA", i64 0, i64 0),
-    i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@CABPINND@Exception?5caught?$AA?$AA@", i64 0, i64 0),
+  call void @llvm.memcpy.p0.p0.i64(
+    ptr @"?msg@@3PADA",
+    ptr @"??_C@_0BC@CABPINND@Exception?5caught?$AA?$AA@",
     i64 %conv, i1 false)
-  call void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #3 [ "funclet"(token %tmp1) ]
+  call void @_CxxThrowException(ptr null, ptr null) #3 [ "funclet"(token %tmp1) ]
   unreachable
 
 try.cont:                                         ; preds = %entry
@@ -66,5 +66,5 @@ try.cont:                                         ; preds = %entry
 declare dso_local void @"?may_throw@@YAXH@Z"(i32)
 declare dso_local i32 @__CxxFrameHandler3(...)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
-declare dso_local void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+declare dso_local void @_CxxThrowException(ptr, ptr)

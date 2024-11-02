@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
   assert(src_ptr && "src_ptr is NULL");
   assert(dst_ptr && "dst_ptr is NULL");
 
-#pragma omp target teams distribute parallel for device(src_device) \
-                   is_device_ptr(src_ptr)
+#pragma omp target teams distribute parallel for device(src_device)            \
+    is_device_ptr(src_ptr)
   for (int i = 0; i < N; ++i) {
     src_ptr[i] = magic_num;
   }
@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
 
   assert(buffer && "failed to allocate host buffer");
 
-#pragma omp target teams distribute parallel for device(dst_device) \
-                   map(from: buffer[0:N]) is_device_ptr(dst_ptr)
+#pragma omp target teams distribute parallel for device(dst_device)            \
+    map(from : buffer[0 : N]) is_device_ptr(dst_ptr)
   for (int i = 0; i < N; ++i) {
     buffer[i] = dst_ptr[i] + magic_num;
   }

@@ -55,45 +55,140 @@ getTokensCovering(llvm::ArrayRef<syntax::Token> Toks, SourceRange R,
   return {Begin, End};
 }
 
-// Finds the smallest expansion range that contains expanded tokens First and
-// Last, e.g.:
+// Finds the range within FID corresponding to expanded tokens [First, Last].
+// Prev precedes First and Next follows Last, these must *not* be included.
+// If no range satisfies the criteria, returns an invalid range.
+//
 // #define ID(x) x
 // ID(ID(ID(a1) a2))
 //          ~~       -> a1
 //              ~~   -> a2
 //       ~~~~~~~~~   -> a1 a2
-SourceRange findCommonRangeForMacroArgs(const syntax::Token &First,
-                                        const syntax::Token &Last,
-                                        const SourceManager &SM) {
-  SourceRange Res;
-  auto FirstLoc = First.location(), LastLoc = Last.location();
-  // Keep traversing up the spelling chain as longs as tokens are part of the
-  // same expansion.
-  while (!FirstLoc.isFileID() && !LastLoc.isFileID()) {
-    auto ExpInfoFirst = SM.getSLocEntry(SM.getFileID(FirstLoc)).getExpansion();
-    auto ExpInfoLast = SM.getSLocEntry(SM.getFileID(LastLoc)).getExpansion();
-    // Stop if expansions have diverged.
-    if (ExpInfoFirst.getExpansionLocStart() !=
-        ExpInfoLast.getExpansionLocStart())
+SourceRange spelledForExpandedSlow(SourceLocation First, SourceLocation Last,
+                                   SourceLocation Prev, SourceLocation Next,
+                                   FileID TargetFile,
+                                   const SourceManager &SM) {
+  // There are two main parts to this algorithm:
+  //  - identifying which spelled range covers the expanded tokens
+  //  - validating that this range doesn't cover any extra tokens (First/Last)
+  //
+  // We do these in order. However as we transform the expanded range into the
+  // spelled one, we adjust First/Last so the validation remains simple.
+
+  assert(SM.getSLocEntry(TargetFile).isFile());
+  // In most cases, to select First and Last we must return their expansion
+  // range, i.e. the whole of any macros they are included in.
+  //
+  // When First and Last are part of the *same macro arg* of a macro written
+  // in TargetFile, we that slice of the arg, i.e. their spelling range.
+  //
+  // Unwrap such macro calls. If the target file has A(B(C)), the
+  // SourceLocation stack of a token inside C shows us the expansion of A first,
+  // then B, then any macros inside C's body, then C itself.
+  // (This is the reverse of the order the PP applies the expansions in).
+  while (First.isMacroID() && Last.isMacroID()) {
+    auto DecFirst = SM.getDecomposedLoc(First);
+    auto DecLast = SM.getDecomposedLoc(Last);
+    auto &ExpFirst = SM.getSLocEntry(DecFirst.first).getExpansion();
+    auto &ExpLast = SM.getSLocEntry(DecLast.first).getExpansion();
+
+    if (!ExpFirst.isMacroArgExpansion() || !ExpLast.isMacroArgExpansion())
       break;
-    // Do not continue into macro bodies.
-    if (!ExpInfoFirst.isMacroArgExpansion() ||
-        !ExpInfoLast.isMacroArgExpansion())
+    // Locations are in the same macro arg if they expand to the same place.
+    // (They may still have different FileIDs - an arg can have >1 chunks!)
+    if (ExpFirst.getExpansionLocStart() != ExpLast.getExpansionLocStart())
       break;
-    FirstLoc = SM.getImmediateSpellingLoc(FirstLoc);
-    LastLoc = SM.getImmediateSpellingLoc(LastLoc);
-    // Update the result afterwards, as we want the tokens that triggered the
-    // expansion.
-    Res = {FirstLoc, LastLoc};
+    // Careful, given:
+    //   #define HIDE ID(ID(a))
+    //   ID(ID(HIDE))
+    // The token `a` is wrapped in 4 arg-expansions, we only want to unwrap 2.
+    // We distinguish them by whether the macro expands into the target file.
+    // Fortunately, the target file ones will always appear first.
+    auto &ExpMacro =
+        SM.getSLocEntry(SM.getFileID(ExpFirst.getExpansionLocStart()))
+            .getExpansion();
+    if (ExpMacro.getExpansionLocStart().isMacroID())
+      break;
+    // Replace each endpoint with its spelling inside the macro arg.
+    // (This is getImmediateSpellingLoc without repeating lookups).
+    First = ExpFirst.getSpellingLoc().getLocWithOffset(DecFirst.second);
+    Last = ExpLast.getSpellingLoc().getLocWithOffset(DecLast.second);
+
+    // Now: how do we adjust the previous/next bounds? Three cases:
+    // A) If they are also part of the same macro arg, we translate them too.
+    //   This will ensure that we don't select any macros nested within the
+    //   macro arg that cover extra tokens. Critical case:
+    //      #define ID(X) X
+    //      ID(prev target) // selecting 'target' succeeds
+    //      #define LARGE ID(prev target)
+    //      LARGE // selecting 'target' fails.
+    // B) They are not in the macro at all, then their expansion range is a
+    //    sibling to it, and we can safely substitute that.
+    //      #define PREV prev
+    //      #define ID(X) X
+    //      PREV ID(target) // selecting 'target' succeeds.
+    //      #define LARGE PREV ID(target)
+    //      LARGE // selecting 'target' fails.
+    // C) They are in a different arg of this macro, or the macro body.
+    //    Now selecting the whole macro arg is fine, but the whole macro is not.
+    //    Model this by setting using the edge of the macro call as the bound.
+    //      #define ID2(X, Y) X Y
+    //      ID2(prev, target) // selecting 'target' succeeds
+    //      #define LARGE ID2(prev, target)
+    //      LARGE // selecting 'target' fails
+    auto AdjustBound = [&](SourceLocation &Bound) {
+      if (Bound.isInvalid() || !Bound.isMacroID()) // Non-macro must be case B.
+        return;
+      auto DecBound = SM.getDecomposedLoc(Bound);
+      auto &ExpBound = SM.getSLocEntry(DecBound.first).getExpansion();
+      if (ExpBound.isMacroArgExpansion() &&
+          ExpBound.getExpansionLocStart() == ExpFirst.getExpansionLocStart()) {
+        // Case A: translate to (spelling) loc within the macro arg.
+        Bound = ExpBound.getSpellingLoc().getLocWithOffset(DecBound.second);
+        return;
+      }
+      while (Bound.isMacroID()) {
+        SourceRange Exp = SM.getImmediateExpansionRange(Bound).getAsRange();
+        if (Exp.getBegin() == ExpMacro.getExpansionLocStart()) {
+          // Case B: bounds become the macro call itself.
+          Bound = (&Bound == &Prev) ? Exp.getBegin() : Exp.getEnd();
+          return;
+        }
+        // Either case C, or expansion location will later find case B.
+        // We choose the upper bound for Prev and the lower one for Next:
+        //   ID(prev) target ID(next)
+        //          ^        ^
+        //      new-prev  new-next
+        Bound = (&Bound == &Prev) ? Exp.getEnd() : Exp.getBegin();
+      }
+    };
+    AdjustBound(Prev);
+    AdjustBound(Next);
   }
-  // Normally mapping back to expansion location here only changes FileID, as
-  // we've already found some tokens expanded from the same macro argument, and
-  // they should map to a consecutive subset of spelled tokens. Unfortunately
-  // SourceManager::isBeforeInTranslationUnit discriminates sourcelocations
-  // based on their FileID in addition to offsets. So even though we are
-  // referring to same tokens, SourceManager might tell us that one is before
-  // the other if they've got different FileIDs.
-  return SM.getExpansionRange(CharSourceRange(Res, true)).getAsRange();
+
+  // In all remaining cases we need the full containing macros.
+  // If this overlaps Prev or Next, then no range is possible.
+  SourceRange Candidate =
+      SM.getExpansionRange(SourceRange(First, Last)).getAsRange();
+  auto DecFirst = SM.getDecomposedExpansionLoc(Candidate.getBegin());
+  auto DecLast = SM.getDecomposedLoc(Candidate.getEnd());
+  // Can end up in the wrong file due to bad input or token-pasting shenanigans.
+  if (Candidate.isInvalid() || DecFirst.first != TargetFile || DecLast.first != TargetFile)
+    return SourceRange();
+  // Check bounds, which may still be inside macros.
+  if (Prev.isValid()) {
+    auto Dec = SM.getDecomposedLoc(SM.getExpansionRange(Prev).getBegin());
+    if (Dec.first != DecFirst.first || Dec.second >= DecFirst.second)
+      return SourceRange();
+  }
+  if (Next.isValid()) {
+    auto Dec = SM.getDecomposedLoc(SM.getExpansionRange(Next).getEnd());
+    if (Dec.first != DecLast.first || Dec.second <= DecLast.second)
+      return SourceRange();
+  }
+  // Now we know that Candidate is a file range that covers [First, Last]
+  // without encroaching on {Prev, Next}. Ship it!
+  return Candidate;
 }
 
 } // namespace
@@ -363,51 +458,48 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
   // of the range, bail out in that case.
   if (Expanded.empty())
     return llvm::None;
+  const syntax::Token *First = &Expanded.front();
+  const syntax::Token *Last = &Expanded.back();
+  auto [FirstSpelled, FirstMapping] = spelledForExpandedToken(First);
+  auto [LastSpelled, LastMapping] = spelledForExpandedToken(Last);
 
-  const syntax::Token *BeginSpelled;
-  const Mapping *BeginMapping;
-  std::tie(BeginSpelled, BeginMapping) =
-      spelledForExpandedToken(&Expanded.front());
-
-  const syntax::Token *LastSpelled;
-  const Mapping *LastMapping;
-  std::tie(LastSpelled, LastMapping) =
-      spelledForExpandedToken(&Expanded.back());
-
-  FileID FID = SourceMgr->getFileID(BeginSpelled->location());
+  FileID FID = SourceMgr->getFileID(FirstSpelled->location());
   // FIXME: Handle multi-file changes by trying to map onto a common root.
   if (FID != SourceMgr->getFileID(LastSpelled->location()))
     return llvm::None;
 
   const MarkedFile &File = Files.find(FID)->second;
 
-  // If both tokens are coming from a macro argument expansion, try and map to
-  // smallest part of the macro argument. BeginMapping && LastMapping check is
-  // only for performance, they are a prerequisite for Expanded.front() and
-  // Expanded.back() being part of a macro arg expansion.
-  if (BeginMapping && LastMapping &&
-      SourceMgr->isMacroArgExpansion(Expanded.front().location()) &&
-      SourceMgr->isMacroArgExpansion(Expanded.back().location())) {
-    auto CommonRange = findCommonRangeForMacroArgs(Expanded.front(),
-                                                   Expanded.back(), *SourceMgr);
-    // It might be the case that tokens are arguments of different macro calls,
-    // in that case we should continue with the logic below instead of returning
-    // an empty range.
-    if (CommonRange.isValid())
-      return getTokensCovering(File.SpelledTokens, CommonRange, *SourceMgr);
+  // If the range is within one macro argument, the result may be only part of a
+  // Mapping. We must use the general (SourceManager-based) algorithm.
+  if (FirstMapping && FirstMapping == LastMapping &&
+      SourceMgr->isMacroArgExpansion(First->location()) &&
+      SourceMgr->isMacroArgExpansion(Last->location())) {
+    // We use excluded Prev/Next token for bounds checking.
+    SourceLocation Prev = (First == &ExpandedTokens.front())
+                              ? SourceLocation()
+                              : (First - 1)->location();
+    SourceLocation Next = (Last == &ExpandedTokens.back())
+                              ? SourceLocation()
+                              : (Last + 1)->location();
+    SourceRange Range = spelledForExpandedSlow(
+        First->location(), Last->location(), Prev, Next, FID, *SourceMgr);
+    if (Range.isInvalid())
+      return llvm::None;
+    return getTokensCovering(File.SpelledTokens, Range, *SourceMgr);
   }
 
+  // Otherwise, use the fast version based on Mappings.
   // Do not allow changes that doesn't cover full expansion.
-  unsigned BeginExpanded = Expanded.begin() - ExpandedTokens.data();
-  unsigned EndExpanded = Expanded.end() - ExpandedTokens.data();
-  if (BeginMapping && BeginExpanded != BeginMapping->BeginExpanded)
+  unsigned FirstExpanded = Expanded.begin() - ExpandedTokens.data();
+  unsigned LastExpanded = Expanded.end() - ExpandedTokens.data();
+  if (FirstMapping && FirstExpanded != FirstMapping->BeginExpanded)
     return llvm::None;
-  if (LastMapping && LastMapping->EndExpanded != EndExpanded)
+  if (LastMapping && LastMapping->EndExpanded != LastExpanded)
     return llvm::None;
-  // All is good, return the result.
   return llvm::makeArrayRef(
-      BeginMapping ? File.SpelledTokens.data() + BeginMapping->BeginSpelled
-                   : BeginSpelled,
+      FirstMapping ? File.SpelledTokens.data() + FirstMapping->BeginSpelled
+                   : FirstSpelled,
       LastMapping ? File.SpelledTokens.data() + LastMapping->EndSpelled
                   : LastSpelled + 1);
 }
@@ -751,7 +843,7 @@ private:
                SpelledTokens[NextSpelled].location() <= KnownEnd)
           ++NextSpelled;
         FlushMapping(); // Emits [NextSpelled, KnownEnd]
-        // Now the loop contitues and will emit (KnownEnd, Target).
+        // Now the loop continues and will emit (KnownEnd, Target).
       } else {
         ++NextSpelled;
       }

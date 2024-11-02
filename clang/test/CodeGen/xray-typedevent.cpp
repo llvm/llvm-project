@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fxray-instrument -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: @_Z16alwaysInstrumentv
 [[clang::xray_always_instrument]] void alwaysInstrument() {
@@ -7,7 +7,7 @@
   auto EventType = 1;
   static constexpr char kPhase[] = "instrument";
   __xray_typedevent(EventType, kPhase, 10);
-  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 10)
+  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, ptr{{.*}}, i32 10)
 }
 
 // CHECK-LABEL: @_Z15neverInstrumentv
@@ -15,7 +15,7 @@
   auto EventType = 2;
   static constexpr char kPhase[] = "never";
   __xray_typedevent(EventType, kPhase, 5);
-  // CHECK-NOT: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 5)
+  // CHECK-NOT: call void @llvm.xray.typedevent(i16 {{.*}}, ptr{{.*}}, i32 5)
 }
 
 // CHECK-LABEL: @_Z21conditionalInstrumenti
@@ -29,6 +29,6 @@
   else
     __xray_typedevent(UntrueEventType, kUntrue, 6);
 
-  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 4)
-  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 6)
+  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, ptr{{.*}}, i32 4)
+  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, ptr{{.*}}, i32 6)
 }

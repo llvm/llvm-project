@@ -8,7 +8,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_and_operand_to_bitset0
     ; CHECK: renamable $sgpr4 = S_BITSET0_B32 31, undef $sgpr4, implicit-def dead $scc
-    ; CHECK: S_ENDPGM 0, implicit $sgpr4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $sgpr4
     renamable $sgpr4 = S_AND_B32 undef renamable $sgpr4, 2147483647, implicit-def dead $scc
     S_ENDPGM 0, implicit $sgpr4
 
@@ -21,7 +21,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_or_operand_to_orn2
     ; CHECK: renamable $sgpr4 = S_ORN2_B32 undef renamable $sgpr4, 16, implicit-def dead $scc
-    ; CHECK: S_ENDPGM 0, implicit $sgpr4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $sgpr4
     renamable $sgpr4 = S_OR_B32 undef renamable $sgpr4, -17, implicit-def dead $scc
     S_ENDPGM 0, implicit $sgpr4
 
@@ -34,7 +34,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_xor_operand_to_orn2
     ; CHECK: renamable $sgpr4 = S_XNOR_B32 undef renamable $sgpr4, 16, implicit-def dead $scc
-    ; CHECK: S_ENDPGM 0, implicit $sgpr4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $sgpr4
     renamable $sgpr4 = S_XOR_B32 undef renamable $sgpr4, -17, implicit-def dead $scc
     S_ENDPGM 0, implicit $sgpr4
 
@@ -48,8 +48,9 @@ body:             |
     liveins: $sgpr4
     ; CHECK-LABEL: name: kill_and_operand_to_bitset0
     ; CHECK: liveins: $sgpr4
-    ; CHECK: renamable $sgpr4 = S_BITSET0_B32 31, killed $sgpr4, implicit-def dead $scc
-    ; CHECK: S_ENDPGM 0, implicit $sgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $sgpr4 = S_BITSET0_B32 31, killed $sgpr4, implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $sgpr4
     renamable $sgpr4 = S_AND_B32 killed renamable $sgpr4, 2147483647, implicit-def dead $scc
     S_ENDPGM 0, implicit $sgpr4
 

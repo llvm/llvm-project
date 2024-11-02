@@ -11,12 +11,20 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestLinux64ExecViaDynamicLoader(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
+
+    @skipIfXmlSupportMissing
+    @skipIf(oslist=no_match(['linux']))
+    def test_with_svr4(self):
+        self.runCmd("settings set plugin.process.gdb-remote.use-libraries-svr4 true")
+        self._test()
 
     @skipIf(oslist=no_match(['linux']))
-    @no_debug_info_test
-    @skipIf(oslist=["linux"], archs=["arm"])
-    def test(self):
+    def test_without_svr4(self):
+        self.runCmd("settings set plugin.process.gdb-remote.use-libraries-svr4 false")
+        self._test()
+
+    def _test(self):
         self.build()
 
         # Extracts path of the interpreter.
@@ -56,6 +64,6 @@ class TestLinux64ExecViaDynamicLoader(TestBase):
         process.Continue();
 
         # Stopped on main here.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = process.GetSelectedThread()
         self.assertIn("main", thread.GetFrameAtIndex(0).GetDisplayFunctionName())

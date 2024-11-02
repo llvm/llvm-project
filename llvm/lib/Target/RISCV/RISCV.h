@@ -30,6 +30,9 @@ class MachineInstr;
 class MachineOperand;
 class PassRegistry;
 
+FunctionPass *createRISCVCodeGenPreparePass();
+void initializeRISCVCodeGenPreparePass(PassRegistry &);
+
 bool lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
 bool lowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
@@ -52,6 +55,9 @@ void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
 FunctionPass *createRISCVExpandPseudoPass();
 void initializeRISCVExpandPseudoPass(PassRegistry &);
+
+FunctionPass *createRISCVPreRAExpandPseudoPass();
+void initializeRISCVPreRAExpandPseudoPass(PassRegistry &);
 
 FunctionPass *createRISCVExpandAtomicPseudoPass();
 void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);

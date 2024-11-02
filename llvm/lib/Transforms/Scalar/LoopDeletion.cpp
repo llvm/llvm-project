@@ -89,16 +89,15 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
       if (!AllOutgoingValuesSame)
         break;
 
-      if (Instruction *I = dyn_cast<Instruction>(incoming))
-        if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator())) {
+      if (Instruction *I = dyn_cast<Instruction>(incoming)) {
+        if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator(),
+                                  /*MSSAU=*/nullptr, &SE)) {
           AllEntriesInvariant = false;
           break;
         }
+      }
     }
   }
-
-  if (Changed)
-    SE.forgetLoopDispositions(L);
 
   if (!AllEntriesInvariant || !AllOutgoingValuesSame)
     return false;
@@ -106,7 +105,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // Make sure that no instructions in the block have potential side-effects.
   // This includes instructions that could write to memory, and loads that are
   // marked volatile.
-  for (auto &I : L->blocks())
+  for (const auto &I : L->blocks())
     if (any_of(*I, [](Instruction &I) {
           return I.mayHaveSideEffects() && !I.isDroppable();
         }))
@@ -192,13 +191,13 @@ getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
         getValueOnFirstIteration(BO->getOperand(0), FirstIterValue, SQ);
     Value *RHS =
         getValueOnFirstIteration(BO->getOperand(1), FirstIterValue, SQ);
-    FirstIterV = SimplifyBinOp(BO->getOpcode(), LHS, RHS, SQ);
+    FirstIterV = simplifyBinOp(BO->getOpcode(), LHS, RHS, SQ);
   } else if (auto *Cmp = dyn_cast<ICmpInst>(V)) {
     Value *LHS =
         getValueOnFirstIteration(Cmp->getOperand(0), FirstIterValue, SQ);
     Value *RHS =
         getValueOnFirstIteration(Cmp->getOperand(1), FirstIterValue, SQ);
-    FirstIterV = SimplifyICmpInst(Cmp->getPredicate(), LHS, RHS, SQ);
+    FirstIterV = simplifyICmpInst(Cmp->getPredicate(), LHS, RHS, SQ);
   } else if (auto *Select = dyn_cast<SelectInst>(V)) {
     Value *Cond =
         getValueOnFirstIteration(Select->getCondition(), FirstIterValue, SQ);
@@ -458,13 +457,13 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   if (ExitBlock && isLoopNeverExecuted(L)) {
     LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!");
     // We need to forget the loop before setting the incoming values of the exit
-    // phis to undef, so we properly invalidate the SCEV expressions for those
+    // phis to poison, so we properly invalidate the SCEV expressions for those
     // phis.
     SE.forgetLoop(L);
-    // Set incoming value to undef for phi nodes in the exit block.
+    // Set incoming value to poison for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
       std::fill(P.incoming_values().begin(), P.incoming_values().end(),
-                UndefValue::get(P.getType()));
+                PoisonValue::get(P.getType()));
     }
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),

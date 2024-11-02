@@ -12,9 +12,11 @@
 /* main entry into PROGRAM */
 void _QQmain(void);
 
+extern const struct EnvironmentDefaultList *_QQEnvironmentDefaults;
+
 /* C main stub */
 int main(int argc, const char *argv[], const char *envp[]) {
-  RTNAME(ProgramStart)(argc, argv, envp);
+  RTNAME(ProgramStart)(argc, argv, envp, _QQEnvironmentDefaults);
   _QQmain();
   RTNAME(ProgramEndStatement)();
   return 0;

@@ -6,10 +6,9 @@ define void @vselect_vv_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x 
 ; CHECK-LABEL: vselect_vv_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <8 x i32>, <8 x i32>* %a
@@ -23,7 +22,7 @@ define void @vselect_vv_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x 
 define void @vselect_vx_v8i32(i32 %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 ; CHECK-LABEL: vselect_vx_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a2)
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
@@ -41,7 +40,7 @@ define void @vselect_vx_v8i32(i32 %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %
 define void @vselect_vi_v8i32(<8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 ; CHECK-LABEL: vselect_vi_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
@@ -60,10 +59,9 @@ define void @vselect_vv_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i1>* %cc, <
 ; CHECK-LABEL: vselect_vv_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <8 x float>, <8 x float>* %a
@@ -77,7 +75,7 @@ define void @vselect_vv_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i1>* %cc, <
 define void @vselect_vx_v8f32(float %a, <8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
 ; CHECK-LABEL: vselect_vx_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
@@ -95,7 +93,7 @@ define void @vselect_vx_v8f32(float %a, <8 x float>* %b, <8 x i1>* %cc, <8 x flo
 define void @vselect_vfpzero_v8f32(<8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
 ; CHECK-LABEL: vselect_vfpzero_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
@@ -114,10 +112,9 @@ define void @vselect_vv_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %cc, <
 ; CHECK-LABEL: vselect_vv_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <16 x i16>, <16 x i16>* %a
@@ -131,7 +128,7 @@ define void @vselect_vv_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %cc, <
 define void @vselect_vx_v16i16(i16 signext %a, <16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
 ; CHECK-LABEL: vselect_vx_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a2)
 ; CHECK-NEXT:    vle16.v v8, (a1)
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
@@ -149,7 +146,7 @@ define void @vselect_vx_v16i16(i16 signext %a, <16 x i16>* %b, <16 x i1>* %cc, <
 define void @vselect_vi_v16i16(<16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
 ; CHECK-LABEL: vselect_vi_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 4, v0
@@ -169,10 +166,9 @@ define void @vselect_vv_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i1>* %cc,
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    vsetvli zero, a4, e16, m4, ta, mu
-; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle16.v v12, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <32 x half>, <32 x half>* %a
@@ -187,7 +183,7 @@ define void @vselect_vx_v32f16(half %a, <32 x half>* %b, <32 x i1>* %cc, <32 x h
 ; CHECK-LABEL: vselect_vx_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 32
-; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
@@ -206,7 +202,7 @@ define void @vselect_vfpzero_v32f16(<32 x half>* %b, <32 x i1>* %cc, <32 x half>
 ; CHECK-LABEL: vselect_vfpzero_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 32
-; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
@@ -224,7 +220,7 @@ define void @vselect_vfpzero_v32f16(<32 x half>* %b, <32 x i1>* %cc, <32 x half>
 define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 ; CHECK-LABEL: vselect_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -236,7 +232,7 @@ define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 ; CHECK-LABEL: vselect_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -248,7 +244,7 @@ define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 ; CHECK-LABEL: vselect_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -260,7 +256,7 @@ define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 define <16 x i1> @vselect_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %cc) {
 ; CHECK-LABEL: vselect_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -273,7 +269,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; CHECK-LABEL: vselect_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
@@ -286,7 +282,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; CHECK-LABEL: vselect_v64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v8, v9
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
 ; CHECK-NEXT:    vmor.mm v0, v9, v8

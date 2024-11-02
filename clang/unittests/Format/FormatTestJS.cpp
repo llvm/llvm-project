@@ -2145,6 +2145,9 @@ TEST_F(FormatTestJS, NestedTemplateStrings) {
 
   // Crashed at some point.
   verifyFormat("}");
+  verifyFormat("`");
+  // FIXME: still crashing?
+  // verifyFormat("`\\");
 }
 
 TEST_F(FormatTestJS, TaggedTemplateStrings) {

@@ -11,7 +11,7 @@ define void @store_nxv3i8(<vscale x 3 x i8> %val, <vscale x 3 x i8>* %ptr) {
 ; CHECK-NEXT:    srli a1, a1, 3
 ; CHECK-NEXT:    slli a2, a1, 1
 ; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <vscale x 3 x i8> %val, <vscale x 3 x i8>* %ptr
@@ -24,7 +24,7 @@ define void @store_nxv7f64(<vscale x 7 x double> %val, <vscale x 7 x double>* %p
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a1, a1, a2
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <vscale x 7 x double> %val, <vscale x 7 x double>* %ptr

@@ -28,7 +28,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 namespace ranges::views {
 
@@ -39,6 +39,7 @@ namespace __all {
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Tp>(__t))))
+      -> decltype(_LIBCPP_AUTO_CAST(std::forward<_Tp>(__t)))
     {
       return _LIBCPP_AUTO_CAST(std::forward<_Tp>(__t));
     }
@@ -75,7 +76,7 @@ using all_t = decltype(views::all(declval<_Range>()));
 
 } // namespace ranges::views
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

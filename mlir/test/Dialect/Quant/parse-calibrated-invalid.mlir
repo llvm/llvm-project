@@ -8,8 +8,8 @@
 
 // -----
 // Unrecognized token: missing closing angle bracket
-// expected-error@+1 {{expected '>'}}
-!qalias = !quant<"calibrated<f32<-0.998:1.232>">
+// expected-error@+1 {{unbalanced '<' character in pretty dialect name}}
+!qalias = !quant.calibrated<f32<-0.998:1.232>
 
 // -----
 // Unrecognized expressed type: integer type

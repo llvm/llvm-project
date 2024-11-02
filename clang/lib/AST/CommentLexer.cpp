@@ -701,7 +701,7 @@ void Lexer::lexHTMLStartTag(Token &T) {
 
   C = *BufferPtr;
   if (!isHTMLIdentifierStartingCharacter(C) &&
-      C != '=' && C != '\"' && C != '\'' && C != '>') {
+      C != '=' && C != '\"' && C != '\'' && C != '>' && C != '/') {
     State = LS_Normal;
     return;
   }

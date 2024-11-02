@@ -411,6 +411,10 @@ N: Francois Pichet
 E: pichet2000@gmail.com
 D: MSVC support
 
+N: Simon Pilgrim
+E: llvm-dev@redking.me.uk
+D: X86 backend, Selection DAG, Scheduler Models and Cost Tables.
+
 N: Adrian Prantl
 E: aprantl@apple.com
 D: Debug Information
@@ -519,6 +523,10 @@ N: Lauro Ramos Venancio
 E: lauro.venancio@indt.org.br
 D: ARM backend improvements
 D: Thread Local Storage implementation
+
+N: Phoebe Wang
+E: phoebe.wang@intel.com
+D: X86 bug fixes and new instruction support.
 
 N: Bill Wendling
 I: wendling

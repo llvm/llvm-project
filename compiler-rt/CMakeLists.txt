@@ -31,6 +31,7 @@ endif()
 include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
+include(CMakeDependentOption)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
@@ -56,6 +57,13 @@ option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
 mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
 option(COMPILER_RT_ENABLE_CET "Build Compiler RT with CET enabled" OFF)
 
+option(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH "Set custom sysroot for building SCUDO standalone" OFF)
+mark_as_advanced(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH)
+option(COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED "Build SCUDO standalone for shared libraries" ON)
+mark_as_advanced(COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED)
+option(COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC "Build SCUDO standalone with LLVM's libc headers" OFF)
+mark_as_advanced(COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC)
+
 if(FUCHSIA)
   set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS_DEFAULT OFF)
 else()
@@ -67,6 +75,10 @@ set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOL
   "Build for a bare-metal target.")
 
 if (COMPILER_RT_STANDALONE_BUILD)
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+  set(CMAKE_CXX_EXTENSIONS NO)
+
   load_llvm_config()
   if (TARGET intrinsics_gen)
     # Loading the llvm config causes this target to be imported so place it
@@ -110,6 +122,20 @@ if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
     CHECK_SYMBOL_EXISTS (__thumb__ "" COMPILER_RT_ARM_THUMB)
   endif()
 endif()
+if (${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "^mips")
+  CHECK_SYMBOL_EXISTS (_MIPS_ARCH_MIPS32R6 "" COMPILER_RT_MIPS32R6)
+  CHECK_SYMBOL_EXISTS (_MIPS_ARCH_MIPS64R6 "" COMPILER_RT_MIPS64R6)
+  CHECK_SYMBOL_EXISTS (__mips64 "" COMPILER_RT_MIPS_64)
+  CHECK_SYMBOL_EXISTS (__MIPSEL__ "" COMPILER_RT_MIPS_EL)
+  if ("${COMPILER_RT_MIPS_64}")
+    set(COMPILER_RT_DEFAULT_TARGET_ARCH "mips64")
+  else()
+    set(COMPILER_RT_DEFAULT_TARGET_ARCH "mips")
+  endif()
+  if ("${COMPILER_RT_MIPS_EL}")
+    set(COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}el")
+  endif()
+endif()
 if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*android.*")
   set(ANDROID 1)
   string(REGEX MATCH "-target(=| +)[^ ]+android[a-z]*([0-9]+)" ANDROID_API_LEVEL "${CMAKE_C_FLAGS}")
@@ -122,11 +148,11 @@ set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 pythonize_bool(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
 
-# We support running instrumented tests when we're not cross compiling
+# We support running instrumented tests when we're not cross-compiling
 # and target a UNIX-like system or Windows.
 # We can run tests on Android even when we are cross-compiling.
-if(("${CMAKE_HOST_SYSTEM}" STREQUAL "${CMAKE_SYSTEM}" AND (UNIX OR WIN32)) OR ANDROID
-   OR COMPILER_RT_EMULATOR)
+if(("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "${CMAKE_SYSTEM_NAME}" AND (UNIX OR WIN32))
+   OR ANDROID OR COMPILER_RT_EMULATOR)
   option(COMPILER_RT_CAN_EXECUTE_TESTS "Can we execute instrumented tests" ON)
 else()
   option(COMPILER_RT_CAN_EXECUTE_TESTS "Can we execute instrumented tests" OFF)
@@ -198,6 +224,7 @@ endmacro()
 
 # This is either directly the C++ ABI library or the full C++ library
 # which pulls in the ABI transitively.
+# TODO: Mark this as internal flag, most users should use COMPILER_RT_CXX_LIBRARY.
 set(SANITIZER_CXX_ABI "default" CACHE STRING
     "Specify C++ ABI library to use.")
 set(CXXABIS none default libstdc++ libc++ libcxxabi)
@@ -205,11 +232,17 @@ set_property(CACHE SANITIZER_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 handle_default_cxx_lib(SANITIZER_CXX_ABI)
 
 # This needs to be a full C++ library for linking gtest and unit tests.
+# TODO: Mark this as internal flag, most users should use COMPILER_RT_CXX_LIBRARY.
 set(SANITIZER_TEST_CXX "default" CACHE STRING
     "Specify C++ library to use for tests.")
 set(CXXLIBS none default libstdc++ libc++)
 set_property(CACHE SANITIZER_TEST_CXX PROPERTY STRINGS ;${CXXLIBS})
 handle_default_cxx_lib(SANITIZER_TEST_CXX)
+
+option(COMPILER_RT_USE_LLVM_UNWINDER "Use the LLVM unwinder." OFF)
+cmake_dependent_option(COMPILER_RT_ENABLE_STATIC_UNWINDER
+  "Statically link the LLVM unwinder." OFF
+  "COMPILER_RT_USE_LLVM_UNWINDER" OFF)
 
 set(DEFAULT_SANITIZER_USE_STATIC_LLVM_UNWINDER OFF)
 if (FUCHSIA)
@@ -239,6 +272,15 @@ endif()
 option(SANITIZER_USE_STATIC_TEST_CXX
   "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
 pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
+
+set(COMPILER_RT_SUPPORTED_CXX_LIBRARIES none default libcxx)
+set(COMPILER_RT_CXX_LIBRARY "default" CACHE STRING "Specify C++ library to use. Supported values are ${COMPILER_RT_SUPPORTED_CXX_LIBRARIES}.")
+if (NOT "${COMPILER_RT_CXX_LIBRARY}" IN_LIST COMPILER_RT_SUPPORTED_CXX_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C++ library: '${COMPILER_RT_CXX_LIBRARY}'. Supported values are ${COMPILER_RT_SUPPORTED_CXX_LIBRARIES}.")
+endif()
+cmake_dependent_option(COMPILER_RT_STATIC_CXX_LIBRARY
+  "Statically link the C++ library." OFF
+  "COMPILER_RT_CXX_LIBRARY" OFF)
 
 set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY OFF)
 if (FUCHSIA)
@@ -278,8 +320,6 @@ if(COMPILER_RT_ENABLE_WERROR)
   append_string_if(COMPILER_RT_HAS_WERROR_FLAG -Werror CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append_string_if(COMPILER_RT_HAS_WX_FLAG /WX CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
-
-append_string_if(COMPILER_RT_HAS_STD_CXX14_FLAG -std=c++14 CMAKE_CXX_FLAGS)
 
 # Emulate C99 and C++11's __func__ for MSVC prior to 2013 CTP.
 if(NOT COMPILER_RT_HAS_FUNC_SYMBOL)
@@ -457,8 +497,16 @@ append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
 
 # Set common link flags.
+# TODO: We should consider using the same model as libc++, that is use either
+# -nostdlib++ and --unwindlib=none if supported, or -nodefaultlibs otherwise.
 append_list_if(C_SUPPORTS_NODEFAULTLIBS_FLAG -nodefaultlibs SANITIZER_COMMON_LINK_FLAGS)
 append_list_if(COMPILER_RT_HAS_Z_TEXT -Wl,-z,text SANITIZER_COMMON_LINK_FLAGS)
+
+# Only necessary for 32-bit SPARC.  Solaris 11.2+ ld uses -z ignore/-z record
+# natively, but supports --as-needed/--no-as-needed for GNU ld compatibility.
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
+  list(APPEND SANITIZER_COMMON_LINK_LIBS -Wl,--as-needed atomic -Wl,--no-as-needed)
+endif()
 
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
@@ -504,47 +552,6 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
 
-macro(append_libcxx_libs var)
-  if (${var}_INTREE)
-    if (SANITIZER_USE_STATIC_LLVM_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
-      list(APPEND ${var}_LIBRARIES unwind_static)
-    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
-      list(APPEND ${var}_LIBRARIES unwind_shared)
-    endif()
-
-    if (SANITIZER_USE_STATIC_CXX_ABI AND (TARGET cxxabi_static OR HAVE_LIBCXXABI))
-      list(APPEND ${var}_LIBRARIES cxxabi_static)
-    elseif (TARGET cxxabi_shared OR HAVE_LIBCXXABI)
-      list(APPEND ${var}_LIBRARIES cxxabi_shared)
-    endif()
-  else()
-    append_list_if(COMPILER_RT_HAS_LIBCXX c++ ${var}_LIBRARIES)
-  endif()
-endmacro()
-
-if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libc++")
-  append_libcxx_libs(SANITIZER_CXX_ABI)
-elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libcxxabi")
-  list(APPEND SANITIZER_CXX_ABI_LIBRARIES "c++abi")
-elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
-  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_CXX_ABI_LIBRARIES)
-endif()
-
-if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
-  if (SANITIZER_TEST_CXX_INTREE)
-    if (SANITIZER_USE_STATIC_TEST_CXX)
-      set(cxx_target cxx_static)
-    else()
-      set(cxx_target cxx_shared)
-    endif()
-    list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<$<BOOL:$<TARGET_NAME_IF_EXISTS:${cxx_target}>>:$<TARGET_LINKER_FILE:${cxx_target}>>")
-  else()
-    append_list_if(COMPILER_RT_HAS_LIBCXX -lc++ SANITIZER_TEST_CXX_LIBRARIES)
-  endif()
-elseif (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libstdc++")
-  append_list_if(COMPILER_RT_HAS_LIBSTDCXX -lstdc++ SANITIZER_TEST_CXX_LIBRARIES)
-endif()
-
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
 # move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
 
@@ -556,8 +563,89 @@ string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
 string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
 set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
 
+if(COMPILER_RT_USE_LLVM_UNWINDER)
+  # We're linking directly against the libunwind that we're building so don't
+  # try to link in the toolchain's default libunwind which may be missing.
+  append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none COMPILER_RT_COMMON_LINK_FLAGS)
+  append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none COMPILER_RT_UNITTEST_LINK_FLAGS)
+  if (COMPILER_RT_ENABLE_STATIC_UNWINDER)
+    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:unwind_static>")
+  else()
+    list(APPEND COMPILER_RT_UNWINDER_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:unwind_shared>,unwind_shared,unwind_static>>")
+  endif()
+endif()
+
+if (COMPILER_RT_CXX_LIBRARY STREQUAL "libcxx")
+  # We are using the in-tree libc++ so avoid including the default one.
+  append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ COMPILER_RT_COMMON_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ COMPILER_RT_COMMON_LINK_FLAGS)
+  # Use the in-tree libc++ through explicit include and library paths.
+  set(COMPILER_RT_CXX_CFLAGS "$<$<TARGET_EXISTS:cxx-headers>:$<IF:$<BOOL:${MSVC}>,/imsvc,-isystem>$<JOIN:$<TARGET_PROPERTY:cxx-headers,INTERFACE_INCLUDE_DIRECTORIES>,$<SEMICOLON>$<IF:$<BOOL:${MSVC}>,/imsvc,-isystem>>>")
+  if (COMPILER_RT_STATIC_CXX_LIBRARY)
+    set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:cxx_static>")
+  else()
+    set(COMPILER_RT_CXX_LINK_LIBS "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:cxx_shared>,cxx_shared,cxx_static>>")
+  endif()
+elseif (COMPILER_RT_CXX_LIBRARY STREQUAL "none")
+  # We aren't using any C++ standard library so avoid including the default one.
+  append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ COMPILER_RT_COMMON_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ COMPILER_RT_COMMON_LINK_FLAGS)
+else()
+  # Nothing to be done for `default`.
+endif()
+
+if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libc++")
+  if (SANITIZER_CXX_ABI_INTREE)
+    # TODO: We don't need to add --unwindlib=none to SANITIZER_COMMON_LINK_FLAGS
+    # because we added -nodefaultlibs there earlier, and adding would result in
+    # a warning, but if we switch to -nostdlib++, we would need to add it here.
+    # append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none SANITIZER_COMMON_LINK_FLAGS)
+    if(SANITIZER_USE_STATIC_CXX_ABI)
+      if(TARGET libcxx-abi-static)
+        set(SANITIZER_CXX_ABI_LIBRARIES libcxx-abi-static)
+      endif()
+    else()
+      if(TARGET libcxx-abi-shared)
+        set(SANITIZER_CXX_ABI_LIBRARIES libcxx-abi-shared)
+      elseif(TARGET libcxx-abi-static)
+        set(SANITIZER_CXX_ABI_LIBRARIES libcxx-abi-static)
+      endif()
+    endif()
+  else()
+    append_list_if(COMPILER_RT_HAS_LIBCXX c++ SANITIZER_CXX_ABI_LIBRARIES)
+  endif()
+elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libcxxabi")
+  list(APPEND SANITIZER_CXX_ABI_LIBRARIES "c++abi")
+elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
+  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_CXX_ABI_LIBRARIES)
+endif()
+
+if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
+  if (SANITIZER_TEST_CXX_INTREE)
+    list(APPEND SANITIZER_TEST_CXX_CFLAGS "$<$<TARGET_EXISTS:cxx-headers>:$<IF:$<BOOL:${MSVC}>,/imsvc,-isystem>$<JOIN:$<TARGET_PROPERTY:cxx-headers,INTERFACE_INCLUDE_DIRECTORIES>,$<SEMICOLON>$<IF:$<BOOL:${MSVC}>,/imsvc,-isystem>>>")
+    if (SANITIZER_USE_STATIC_TEST_CXX)
+      list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:cxx_static>")
+    else()
+      list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:cxx_shared>,cxx_shared,cxx_static>>")
+    endif()
+    # We are using the in tree libc++ so avoid including the default one.
+    append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ COMPILER_RT_UNITTEST_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ COMPILER_RT_UNITTEST_LINK_FLAGS)
+  else()
+    append_list_if(COMPILER_RT_HAS_LIBCXX -lc++ SANITIZER_TEST_CXX_LIBRARIES)
+  endif()
+elseif (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libstdc++")
+  append_list_if(COMPILER_RT_HAS_LIBSTDCXX -lstdc++ SANITIZER_TEST_CXX_LIBRARIES)
+endif()
+
 # Unittests support.
-set(COMPILER_RT_GTEST_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest)
+# FIXME: When compiler-rt is build using -DLLVM_BUILD_EXTERNAL_COMPILER_RT=ON, then
+# The LLVM_THIRD_PARTY_DIR variable is not set.
+if (NOT LLVM_THIRD_PARTY_DIR)
+  set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
+endif()
+
+set(COMPILER_RT_GTEST_PATH ${LLVM_THIRD_PARTY_DIR}/unittest/googletest)
 set(COMPILER_RT_GTEST_SOURCE ${COMPILER_RT_GTEST_PATH}/src/gtest-all.cc)
 set(COMPILER_RT_GTEST_CFLAGS
   -DGTEST_NO_LLVM_SUPPORT=1
@@ -567,7 +655,7 @@ set(COMPILER_RT_GTEST_CFLAGS
 )
 
 # Mocking support.
-set(COMPILER_RT_GMOCK_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock)
+set(COMPILER_RT_GMOCK_PATH ${LLVM_THIRD_PARTY_DIR}/unittest/googlemock)
 set(COMPILER_RT_GMOCK_SOURCE ${COMPILER_RT_GMOCK_PATH}/src/gmock-all.cc)
 set(COMPILER_RT_GMOCK_CFLAGS
   -DGTEST_NO_LLVM_SUPPORT=1

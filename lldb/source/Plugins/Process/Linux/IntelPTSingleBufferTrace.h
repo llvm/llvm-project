@@ -10,27 +10,15 @@
 #define liblldb_IntelPTSingleBufferTrace_H_
 
 #include "Perf.h"
-
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-
 #include "llvm/Support/Error.h"
-
 #include <memory>
 
 namespace lldb_private {
 namespace process_linux {
 
 llvm::Expected<uint32_t> GetIntelPTOSEventType();
-
-class IntelPTSingleBufferTrace;
-
-using IntelPTSingleBufferTraceUP = std::unique_ptr<IntelPTSingleBufferTrace>;
-
-enum class TraceCollectionState {
-  Running,
-  Paused,
-};
 
 /// This class wraps a single perf event collecting intel pt data in a single
 /// buffer.
@@ -45,20 +33,27 @@ public:
   ///     The tid of the thread to be traced. If \b None, then this traces all
   ///     threads of all processes.
   ///
-  /// \param[in] core_id
+  /// \param[in] cpu_id
   ///     The CPU core id where to trace. If \b None, then this traces all CPUs.
   ///
-  /// \param[in] initial_state
-  ///     The initial trace collection state.
+  /// \param[in] disabled
+  ///     If \b true, then no data is collected until \a Resume is invoked.
+  ///     Similarly, if \b false, data is collected right away until \a Pause is
+  ///     invoked.
+  ///
+  ///  \param[in] cgroup_fd
+  ///   A file descriptor in /sys/fs associated with the cgroup of the process
+  ///   to trace. If not \a llvm::None, then the trace sesion will use cgroup
+  ///   filtering.
   ///
   /// \return
   ///   A \a IntelPTSingleBufferTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
-  static llvm::Expected<IntelPTSingleBufferTraceUP>
+  static llvm::Expected<IntelPTSingleBufferTrace>
   Start(const TraceIntelPTStartRequest &request,
         llvm::Optional<lldb::tid_t> tid,
-        llvm::Optional<lldb::core_id_t> core_id,
-        TraceCollectionState initial_state);
+        llvm::Optional<lldb::cpu_id_t> cpu_id = llvm::None,
+        bool disabled = false, llvm::Optional<int> cgroup_fd = llvm::None);
 
   /// \return
   ///    The bytes requested by a jLLDBTraceGetBinaryData packet that was routed
@@ -66,39 +61,37 @@ public:
   llvm::Expected<std::vector<uint8_t>>
   GetBinaryData(const TraceGetBinaryDataRequest &request) const;
 
-  /// Read the trace buffer managed by this trace instance. To ensure that the
-  /// data is up-to-date and is not corrupted by read-write race conditions, the
-  /// underlying perf_event is paused during read, and later it's returned to
-  /// its initial state.
-  ///
-  /// \param[in] offset
-  ///     Offset of the data to read.
-  ///
-  /// \param[in] size
-  ///     Number of bytes to read.
+  /// Read the intel pt trace buffer managed by this trace instance. To ensure
+  /// that the data is up-to-date and is not corrupted by read-write race
+  /// conditions, the underlying perf_event is paused during read, and later
+  /// it's returned to its initial state.
   ///
   /// \return
-  ///     A vector with the requested binary data. The vector will have the
-  ///     size of the requested \a size. Non-available positions will be
-  ///     filled with zeroes.
-  llvm::Expected<std::vector<uint8_t>> GetTraceBuffer(size_t offset,
-                                                      size_t size);
+  ///     A vector with the requested binary data.
+  llvm::Expected<std::vector<uint8_t>> GetIptTrace();
 
   /// \return
-  ///     The total the size in bytes used by the trace buffer managed by this
-  ///     trace instance.
-  size_t GetTraceBufferSize() const;
+  ///     The total the size in bytes used by the intel pt trace buffer managed
+  ///     by this trace instance.
+  size_t GetIptTraceSize() const;
 
-  /// Change the collection state for this trace.
-  ///
-  /// This is a no-op if \p state is the same as the current state.
-  ///
-  /// \param[in] state
-  ///     The new state.
+  /// Resume the collection of this trace.
   ///
   /// \return
-  ///     An error if the state couldn't be changed.
-  llvm::Error ChangeCollectionState(TraceCollectionState state);
+  ///     An error if the trace couldn't be resumed. If the trace is already
+  ///     running, this returns \a Error::success().
+  llvm::Error Resume();
+
+  /// Pause the collection of this trace.
+  ///
+  /// \return
+  ///     An error if the trace couldn't be paused. If the trace is already
+  ///     paused, this returns \a Error::success().
+  llvm::Error Pause();
+
+  /// \return
+  ///     The underlying PerfEvent for this trace.
+  const PerfEvent &GetPerfEvent() const;
 
 private:
   /// Construct new \a IntelPTSingleBufferThreadTrace. Users are supposed to
@@ -110,17 +103,11 @@ private:
   ///
   /// \param[in] collection_state
   ///   The initial collection state for the provided perf_event.
-  IntelPTSingleBufferTrace(PerfEvent &&perf_event,
-                           TraceCollectionState collection_state)
-      : m_perf_event(std::move(perf_event)),
-        m_collection_state(collection_state) {}
+  IntelPTSingleBufferTrace(PerfEvent &&perf_event)
+      : m_perf_event(std::move(perf_event)) {}
 
   /// perf event configured for IntelPT.
   PerfEvent m_perf_event;
-
-  /// The initial state is stopped because tracing can only start when the
-  /// process is paused.
-  TraceCollectionState m_collection_state;
 };
 
 } // namespace process_linux

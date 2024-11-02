@@ -175,7 +175,7 @@ public:
   virtual HardcodedFormatters::HardcodedSyntheticFinder
   GetHardcodedSynthetics();
 
-  virtual std::vector<ConstString>
+  virtual std::vector<FormattersMatchCandidate>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic);
 

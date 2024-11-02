@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++1y -triple=x86_64-pc-linux -emit-llvm -o - | FileCheck --check-prefix=ELF --check-prefix=ALL %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++1y -triple=x86_64-apple-darwin -emit-llvm -o - | FileCheck --check-prefix=MACHO --check-prefix=ALL %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++1y -triple=x86_64-pc-linux -emit-llvm -fdeclspec -DSELECTANY -o - | FileCheck --check-prefix=ELF-SELECTANY %s
+// RUN: %clang_cc1 %s -std=c++1y -triple=x86_64-pc-linux -emit-llvm -o - | FileCheck --check-prefix=ELF --check-prefix=ALL %s
+// RUN: %clang_cc1 %s -std=c++1y -triple=x86_64-apple-darwin -emit-llvm -o - | FileCheck --check-prefix=MACHO --check-prefix=ALL %s
+// RUN: %clang_cc1 %s -std=c++1y -triple=x86_64-pc-linux -emit-llvm -fdeclspec -DSELECTANY -o - | FileCheck --check-prefix=ELF-SELECTANY %s
 
 #ifdef SELECTANY
 struct S {
@@ -10,8 +10,8 @@ struct S {
 
 int f();
 
-// ELF-SELECTANY: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @__cxx_global_var_init, i8* bitcast (i32* @selectany to i8*) }]
-// ELF-SELECTANY: @llvm.used = appending global [1 x i8*] [i8* bitcast (i32* @selectany to i8*)]
+// ELF-SELECTANY: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @selectany }]
+// ELF-SELECTANY: @llvm.used = appending global [1 x ptr] [ptr @selectany]
 int __declspec(selectany) selectany = f();
 
 #else
@@ -29,32 +29,32 @@ template<> int A<char>::a;
 // ALL: @_ZN1AIbE1aE ={{.*}} global i32 10
 template<> int A<bool>::a = 10;
 
-// ALL: @llvm.global_ctors = appending global [8 x { i32, void ()*, i8* }]
+// ALL: @llvm.global_ctors = appending global [8 x { i32, ptr, ptr }]
 
-// ELF: [{ i32, void ()*, i8* } { i32 65535, void ()* @[[unordered1:[^,]*]], i8* bitcast (i32* @_ZN1AIsE1aE to i8*) },
-// MACHO: [{ i32, void ()*, i8* } { i32 65535, void ()* @[[unordered1:[^,]*]], i8* null },
+// ELF: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered1:[^,]*]], ptr @_ZN1AIsE1aE },
+// MACHO: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered1:[^,]*]], ptr null },
 
-// ELF:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered2:[^,]*]], i8* bitcast (i16* @_Z1xIsE to i8*) },
-// MACHO:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered2:[^,]*]], i8* null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered2:[^,]*]], ptr @_Z1xIsE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered2:[^,]*]], ptr null },
 
-// ELF:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered3:[^,]*]], i8* bitcast (i32* @_ZN2ns1aIiE1iE to i8*) },
-// MACHO:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered3:[^,]*]], i8* null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered3:[^,]*]], ptr @_ZN2ns1aIiE1iE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered3:[^,]*]], ptr null },
 
-// ELF:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered4:[^,]*]], i8* bitcast (i32* @_ZN2ns1b1iIiEE to i8*) },
-// MACHO:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered4:[^,]*]], i8* null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered4:[^,]*]], ptr @_ZN2ns1b1iIiEE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered4:[^,]*]], ptr null },
 
-// ELF:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered5:[^,]*]], i8* bitcast (i32* @_ZN1AIvE1aE to i8*) },
-// MACHO:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered5:[^,]*]], i8* null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered5:[^,]*]], ptr @_ZN1AIvE1aE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered5:[^,]*]], ptr null },
 
-// ELF:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered6:[^,]*]], i8* @_Z1xIcE },
-// MACHO:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered6:[^,]*]], i8* null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered6:[^,]*]], ptr @_Z1xIcE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered6:[^,]*]], ptr null },
 
-// ALL:  { i32, void ()*, i8* } { i32 65535, void ()* @[[unordered7:[^,]*]], i8* null },
+// ALL:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered7:[^,]*]], ptr null },
 
-// ALL:  { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_static_member_variable_explicit_specialization.cpp, i8* null }]
+// ALL:  { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_static_member_variable_explicit_specialization.cpp, ptr null }]
 
 /// llvm.used ensures SHT_INIT_ARRAY in a section group cannot be GCed.
-// ELF: @llvm.used = appending global [6 x i8*] [i8* bitcast (i32* @_ZN1AIsE1aE to i8*), i8* bitcast (i16* @_Z1xIsE to i8*), i8* bitcast (i32* @_ZN2ns1aIiE1iE to i8*), i8* bitcast (i32* @_ZN2ns1b1iIiEE to i8*), i8* bitcast (i32* @_ZN1AIvE1aE to i8*), i8* @_Z1xIcE]
+// ELF: @llvm.used = appending global [6 x ptr] [ptr @_ZN1AIsE1aE, ptr @_Z1xIsE, ptr @_ZN2ns1aIiE1iE, ptr @_ZN2ns1b1iIiEE, ptr @_ZN1AIvE1aE, ptr @_Z1xIcE]
 
 template int A<short>::a;  // Unordered
 int b = foo();

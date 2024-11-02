@@ -424,6 +424,38 @@ struct __sanitizer__ttyent {
   char *ty_group;
 };
 
+// procctl reaper data for PROCCTL_REAPER flags
+struct __sanitizer_procctl_reaper_status {
+  unsigned int rs_flags;
+  unsigned int rs_children;
+  unsigned int rs_descendants;
+  pid_t rs_reaper;
+  pid_t rs_pid;
+  unsigned int rs_pad0[15];
+};
+
+struct __sanitizer_procctl_reaper_pidinfo {
+  pid_t pi_pid;
+  pid_t pi_subtree;
+  unsigned int pi_flags;
+  unsigned int pi_pad0[15];
+};
+
+struct __sanitizer_procctl_reaper_pids {
+  unsigned int rp_count;
+  unsigned int rp_pad0[15];
+  struct __sanitize_procctl_reapper_pidinfo *rp_pids;
+};
+
+struct __sanitizer_procctl_reaper_kill {
+  int rk_sig;
+  unsigned int rk_flags;
+  pid_t rk_subtree;
+  unsigned int rk_killed;
+  pid_t rk_fpid;
+  unsigned int rk_pad[15];
+};
+
 #  define IOC_NRBITS 8
 #  define IOC_TYPEBITS 8
 #  if defined(__powerpc__) || defined(__powerpc64__) || defined(__mips__)
@@ -479,6 +511,11 @@ extern unsigned struct_audio_buf_info_sz;
 extern unsigned struct_ppp_stats_sz;
 extern unsigned struct_sioc_sg_req_sz;
 extern unsigned struct_sioc_vif_req_sz;
+
+extern unsigned struct_procctl_reaper_status_sz;
+extern unsigned struct_procctl_reaper_pidinfo_sz;
+extern unsigned struct_procctl_reaper_pids_sz;
+extern unsigned struct_procctl_reaper_kill_sz;
 
 // ioctl request identifiers
 

@@ -250,3 +250,28 @@ bb2:
 exit:
   ret i32 20
 }
+
+define i1 @sge_sgt(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @sge_sgt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp sge i32 [[X]], 0
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp sge i32 [[X]], 0
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %c.1 = icmp sgt i32 %x, -1
+  br i1 %c.1, label %then, label %else
+
+then:
+  %t.1 = icmp sge i32 %x, 0
+  ret i1 %t.1
+
+else:
+  %f.1 = icmp sge i32 %x, 0
+  ret i1 %f.1
+}

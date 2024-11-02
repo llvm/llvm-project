@@ -4,7 +4,6 @@
 
 // REQUIRES: unified_shared_memory
 
-
 #include <stdio.h>
 
 // The runtime considers unified shared memory to be always present.
@@ -14,15 +13,15 @@ int main() {
   int i;
 
   // CHECK-NOT: Libomptarget
-#pragma omp target data map(alloc: i)
-#pragma omp target map(present, alloc: i)
+#pragma omp target data map(alloc : i)
+#pragma omp target map(present, alloc : i)
   ;
 
   // CHECK: i is present
   fprintf(stderr, "i is present\n");
 
   // CHECK-NOT: Libomptarget
-#pragma omp target map(present, alloc: i)
+#pragma omp target map(present, alloc : i)
   ;
 
   // CHECK: is present

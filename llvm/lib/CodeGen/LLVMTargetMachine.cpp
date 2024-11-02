@@ -33,9 +33,9 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-static cl::opt<bool> EnableTrapUnreachable("trap-unreachable",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable generating trap for unreachable"));
+static cl::opt<bool>
+    EnableTrapUnreachable("trap-unreachable", cl::Hidden,
+                          cl::desc("Enable generating trap for unreachable"));
 
 void LLVMTargetMachine::initAsmInfo() {
   MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
@@ -264,6 +264,9 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
          "Cannot emit MC with limited codegen pipeline");
 
   Ctx = &MMIWP->getMMI().getContext();
+  // libunwind is unable to load compact unwind dynamically, so we must generate
+  // DWARF unwind info for the JIT.
+  Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
   if (Options.MCOptions.MCSaveTempLabels)
     Ctx->setAllowTemporaryLabels(false);
 

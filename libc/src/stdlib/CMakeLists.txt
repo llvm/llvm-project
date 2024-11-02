@@ -201,6 +201,36 @@ add_entrypoint_object(
     libc.include.stdlib
 )
 
+add_object_library(
+  rand_util
+  SRCS
+    rand_util.cpp
+  HDRS
+    rand_util.h
+)
+
+add_entrypoint_object(
+  rand
+  SRCS
+    rand.cpp
+  HDRS
+    rand.h
+  DEPENDS
+    .rand_util
+    libc.include.stdlib
+)
+
+add_entrypoint_object(
+  srand
+  SRCS
+    srand.cpp
+  HDRS
+    srand.h
+  DEPENDS
+    .rand_util
+    libc.include.stdlib
+)
+
 if(LLVM_LIBC_INCLUDE_SCUDO)
   set(SCUDO_DEPS "")
 
@@ -286,7 +316,8 @@ add_entrypoint_object(
   CXX_STANDARD
     20 # For constinit of the atexit callback list.
   DEPENDS
-    libc.src.__support.CPP.blockstore
+    libc.src.__support.fixedvector
+    libc.src.__support.blockstore
     libc.src.__support.threads.mutex
 )
 
@@ -301,9 +332,9 @@ add_entrypoint_object(
     .atexit
 )
 
-# add_entrypoint_object(
-#   abort
-#   ALIAS
-#   DEPENDS
-#     .${LIBC_TARGET_OS}.abort
-# )
+add_entrypoint_object(
+  abort
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.abort
+)

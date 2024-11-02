@@ -5,9 +5,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
 
 ; Function Attrs: ssp uwtable
-define void @_Z3foov() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !8 {
+define void @_Z3foov() #0 personality ptr @__gxx_personality_v0 !dbg !8 {
 entry:
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   ; CHECK: call void @_Z12bar_noexceptv({{.*}} !dbg ![[CALL1:[0-9]+]]
   call void @_Z12bar_noexceptv() #4, !dbg !11
@@ -21,27 +21,27 @@ invoke.cont:                                      ; preds = %entry
   br label %try.cont, !dbg !15
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* null, !dbg !16
-  %1 = extractvalue { i8*, i32 } %0, 0, !dbg !16
-  store i8* %1, i8** %exn.slot, align 8, !dbg !16
-  %2 = extractvalue { i8*, i32 } %0, 1, !dbg !16
-  store i32 %2, i32* %ehselector.slot, align 4, !dbg !16
+  %0 = landingpad { ptr, i32 }
+          catch ptr null, !dbg !16
+  %1 = extractvalue { ptr, i32 } %0, 0, !dbg !16
+  store ptr %1, ptr %exn.slot, align 8, !dbg !16
+  %2 = extractvalue { ptr, i32 } %0, 1, !dbg !16
+  store i32 %2, ptr %ehselector.slot, align 4, !dbg !16
   br label %catch, !dbg !16
 
 catch:                                            ; preds = %lpad
-  %exn = load i8*, i8** %exn.slot, align 8, !dbg !15
-  %3 = call i8* @__cxa_begin_catch(i8* %exn) #4, !dbg !15
+  %exn = load ptr, ptr %exn.slot, align 8, !dbg !15
+  %3 = call ptr @__cxa_begin_catch(ptr %exn) #4, !dbg !15
   invoke void @__cxa_rethrow() #5
           to label %unreachable unwind label %lpad1, !dbg !17
 
 lpad1:                                            ; preds = %catch
-  %4 = landingpad { i8*, i32 }
+  %4 = landingpad { ptr, i32 }
           cleanup, !dbg !19
-  %5 = extractvalue { i8*, i32 } %4, 0, !dbg !19
-  store i8* %5, i8** %exn.slot, align 8, !dbg !19
-  %6 = extractvalue { i8*, i32 } %4, 1, !dbg !19
-  store i32 %6, i32* %ehselector.slot, align 4, !dbg !19
+  %5 = extractvalue { ptr, i32 } %4, 0, !dbg !19
+  store ptr %5, ptr %exn.slot, align 8, !dbg !19
+  %6 = extractvalue { ptr, i32 } %4, 1, !dbg !19
+  store i32 %6, ptr %ehselector.slot, align 4, !dbg !19
   invoke void @__cxa_end_catch()
           to label %invoke.cont2 unwind label %terminate.lpad, !dbg !20
 
@@ -52,17 +52,17 @@ try.cont:                                         ; preds = %invoke.cont
   ret void, !dbg !21
 
 eh.resume:                                        ; preds = %invoke.cont2
-  %exn3 = load i8*, i8** %exn.slot, align 8, !dbg !20
-  %sel = load i32, i32* %ehselector.slot, align 4, !dbg !20
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn3, 0, !dbg !20
-  %lpad.val4 = insertvalue { i8*, i32 } %lpad.val, i32 %sel, 1, !dbg !20
-  resume { i8*, i32 } %lpad.val4, !dbg !20
+  %exn3 = load ptr, ptr %exn.slot, align 8, !dbg !20
+  %sel = load i32, ptr %ehselector.slot, align 4, !dbg !20
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn3, 0, !dbg !20
+  %lpad.val4 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1, !dbg !20
+  resume { ptr, i32 } %lpad.val4, !dbg !20
 
 terminate.lpad:                                   ; preds = %lpad1
-  %7 = landingpad { i8*, i32 }
-          catch i8* null, !dbg !20
-  %8 = extractvalue { i8*, i32 } %7, 0, !dbg !20
-  call void @__clang_call_terminate(i8* %8) #6, !dbg !20
+  %7 = landingpad { ptr, i32 }
+          catch ptr null, !dbg !20
+  %8 = extractvalue { ptr, i32 } %7, 0, !dbg !20
+  call void @__clang_call_terminate(ptr %8) #6, !dbg !20
   unreachable, !dbg !20
 
 unreachable:                                      ; preds = %catch
@@ -76,15 +76,15 @@ declare void @_Z3barv() #2
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_rethrow()
 
 declare void @__cxa_end_catch()
 
 ; Function Attrs: noinline noreturn nounwind
-define linkonce_odr hidden void @__clang_call_terminate(i8*) #3 {
-  %2 = call i8* @__cxa_begin_catch(i8* %0) #4
+define linkonce_odr hidden void @__clang_call_terminate(ptr) #3 {
+  %2 = call ptr @__cxa_begin_catch(ptr %0) #4
   call void @_ZSt9terminatev() #6
   unreachable
 }

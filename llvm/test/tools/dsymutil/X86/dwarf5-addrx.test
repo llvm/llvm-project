@@ -1,0 +1,89 @@
+## Test that DWARF5 DW_FORM_addrx is correctly recognized
+## and converted into the DW_FORM_addr
+
+## $ cat dwarf5-addrx.c
+## __attribute__ ((optnone)) int foo1 ( ) {
+##   volatile int a = 0x1; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo2 ( ) {
+##   volatile int a = 0x2; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo3 ( ) {
+##   volatile int a = 0x3; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo4 ( ) {
+##   volatile int a = 0x4; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo5 ( ) {
+##   volatile int a = 0x5; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo6 ( ) {
+##   volatile int a = 0x6; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo7 ( ) {
+##   volatile int a = 0x7; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo8 ( ) {
+##   volatile int a = 0x8; return a;
+## }
+##
+## int main ( void ) {
+##   return foo1()+foo2()+foo3()+foo4()+foo5()+foo6()+foo7()+foo8();
+## }
+##
+## $ clang -gdwarf-5 dwarf5-addrx.c -c -o dwarf5-addrx.o
+## $ clang dwarf5-addrx.o -o dwarf5-addrx.out
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+CHECK-NOT: error:
+
+RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix DWARF
+DWARF: DW_TAG_compile_unit
+DWARF:   DW_AT_name [DW_FORM_strp]  {{.*}}     "dwarf5-addrx.c"
+DWARF:   DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000eb0)
+DWARF:   DW_AT_high_pc [DW_FORM_data4]   (0x00000103)
+DWARF:   DW_AT_addr_base [DW_FORM_sec_offset]   (0x00000008)
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000eb0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo1"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ec0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo2"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ed0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo3"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000ee0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo4"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ef0)
+DWARF:     DW_AT_high_pc  [DW_FORM_data4]  (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo5"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f00)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo6"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f10)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo7"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f20)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo8"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f30)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000083)
+DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "main"

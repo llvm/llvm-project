@@ -2,9 +2,6 @@
 Test that step over will let other threads run when necessary
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class StepOverDoesntDeadlockTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_step_over(self):
         """Test that when step over steps over a function it lets other threads run."""
@@ -27,4 +22,4 @@ class StepOverDoesntDeadlockTestCase(TestBase):
         
         thread.StepOver()
         state = process.GetState()
-        self.assertEqual(state, lldb.eStateStopped)
+        self.assertState(state, lldb.eStateStopped)

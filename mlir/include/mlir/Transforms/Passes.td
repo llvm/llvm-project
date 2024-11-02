@@ -145,6 +145,10 @@ def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
 def PrintOpStats : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";
+  let options = [
+    Option<"printAsJSON", "json", "bool", /*default=*/"false",
+           "print the stats as JSON">
+  ];
 }
 
 def SCCP : Pass<"sccp"> {

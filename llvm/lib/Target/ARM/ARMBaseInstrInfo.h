@@ -480,8 +480,7 @@ private:
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                         AAResults *AA) const override;
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.
@@ -755,6 +754,26 @@ static inline bool isValidCoprocessorNumber(unsigned Num,
     return false;
 
   return true;
+}
+
+static inline bool isSEHInstruction(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case ARM::SEH_StackAlloc:
+  case ARM::SEH_SaveRegs:
+  case ARM::SEH_SaveRegs_Ret:
+  case ARM::SEH_SaveSP:
+  case ARM::SEH_SaveFRegs:
+  case ARM::SEH_SaveLR:
+  case ARM::SEH_Nop:
+  case ARM::SEH_Nop_Ret:
+  case ARM::SEH_PrologEnd:
+  case ARM::SEH_EpilogStart:
+  case ARM::SEH_EpilogEnd:
+    return true;
+  default:
+    return false;
+  }
 }
 
 /// getInstrPredicate - If instruction is predicated, returns its predicate

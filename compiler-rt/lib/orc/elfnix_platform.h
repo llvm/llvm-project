@@ -47,7 +47,7 @@ struct ELFNixJITDylibInitializers {
   std::string Name;
   ExecutorAddr DSOHandleAddress;
 
-  std::unordered_map<std::string, SectionList> InitSections;
+  std::vector<std::pair<std::string, SectionList>> InitSections;
 };
 
 class ELFNixJITDylibDeinitializers {};

@@ -13,9 +13,16 @@
 # DYLIB-NEXT:  segment  section            address     type
 # DYLIB-EMPTY:
 
+# RUN: %lld -dylib -install_name @executable_path/libtlv.dylib \
+# RUN:   -lSystem -fixup_chains -o %t/libtlv.dylib %t/libtlv.o
+## Make sure we don't emit fixups in __thread_vars.
+# RUN: llvm-objdump --macho --chained-fixups %t/libtlv.dylib | \
+# RUN:   FileCheck %s --check-prefix=CHAINED
+# CHAINED-NOT: __thread_vars
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: %lld -lSystem -L%t -ltlv %t/test.o -o %t/test
-# RUN: llvm-objdump --bind -d --no-show-raw-insn %t/test | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --bind -d --no-show-raw-insn %t/test | FileCheck %s
 
 # CHECK:      movq [[#]](%rip), %rax ## 0x[[#%x, FOO:]]
 # CHECK-NEXT: movq [[#]](%rip), %rax ## 0x[[#%x, BAR:]]
@@ -43,7 +50,7 @@
 # FLAGS-NEXT:      addr
 # FLAGS-NEXT:      size 0x0000000000000030
 # FLAGS-NEXT:    offset
-# FLAGS-NEXT:     align
+# FLAGS-NEXT:     align 2^3 (8)
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_THREAD_LOCAL_VARIABLES

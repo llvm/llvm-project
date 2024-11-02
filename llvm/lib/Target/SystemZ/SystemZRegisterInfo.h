@@ -81,25 +81,22 @@ public:
 /// Particular to z/OS when in 64 bit mode
 class SystemZXPLINK64Registers : public SystemZCallingConventionRegisters {
 public:
-  int getReturnFunctionAddressRegister() override final {
-    return SystemZ::R7D;
-  };
+  int getReturnFunctionAddressRegister() final { return SystemZ::R7D; };
 
-  int getStackPointerRegister() override final { return SystemZ::R4D; };
+  int getStackPointerRegister() final { return SystemZ::R4D; };
 
-  int getFramePointerRegister() override final { return SystemZ::R8D; };
+  int getFramePointerRegister() final { return SystemZ::R8D; };
 
   int getAddressOfCalleeRegister() { return SystemZ::R6D; };
 
-  const MCPhysReg *
-  getCalleeSavedRegs(const MachineFunction *MF) const override final;
+  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const final;
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
-                                       CallingConv::ID CC) const override final;
+                                       CallingConv::ID CC) const final;
 
-  int getCallFrameSize() override final { return 128; }
+  int getCallFrameSize() final { return 128; }
 
-  int getStackPointerBias() override final { return 2048; }
+  int getStackPointerBias() final { return 2048; }
 
   /// Destroys the object. Bogus destructor overriding base class destructor
   ~SystemZXPLINK64Registers() = default;
@@ -109,23 +106,20 @@ public:
 /// Particular when on zLinux in 64 bit mode
 class SystemZELFRegisters : public SystemZCallingConventionRegisters {
 public:
-  int getReturnFunctionAddressRegister() override final {
-    return SystemZ::R14D;
-  };
+  int getReturnFunctionAddressRegister() final { return SystemZ::R14D; };
 
-  int getStackPointerRegister() override final { return SystemZ::R15D; };
+  int getStackPointerRegister() final { return SystemZ::R15D; };
 
-  int getFramePointerRegister() override final { return SystemZ::R11D; };
+  int getFramePointerRegister() final { return SystemZ::R11D; };
 
-  const MCPhysReg *
-  getCalleeSavedRegs(const MachineFunction *MF) const override final;
+  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const final;
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
-                                       CallingConv::ID CC) const override final;
+                                       CallingConv::ID CC) const final;
 
-  int getCallFrameSize() override final { return SystemZMC::ELFCallFrameSize; }
+  int getCallFrameSize() final { return SystemZMC::ELFCallFrameSize; }
 
-  int getStackPointerBias() override final { return 0; }
+  int getStackPointerBias() final { return 0; }
 
   /// Destroys the object. Bogus destructor overriding base class destructor
   ~SystemZELFRegisters() = default;

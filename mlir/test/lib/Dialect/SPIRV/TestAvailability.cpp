@@ -37,10 +37,10 @@ void PrintOpAvailability::runOnOperation() {
   auto f = getOperation();
   llvm::outs() << f.getName() << "\n";
 
-  Dialect *spvDialect = getContext().getLoadedDialect("spv");
+  Dialect *spirvDialect = getContext().getLoadedDialect("spirv");
 
   f->walk([&](Operation *op) {
-    if (op->getDialect() != spvDialect)
+    if (op->getDialect() != spirvDialect)
       return WalkResult::advance();
 
     auto opName = op->getName();
@@ -155,7 +155,7 @@ void ConvertToTargetEnv::runOnOperation() {
                        ->getAttr(spirv::getTargetEnvAttrName())
                        .cast<spirv::TargetEnvAttr>();
   if (!targetEnv) {
-    fn.emitError("missing 'spv.target_env' attribute");
+    fn.emitError("missing 'spirv.target_env' attribute");
     return signalPassFailure();
   }
 
@@ -172,7 +172,7 @@ void ConvertToTargetEnv::runOnOperation() {
 
 ConvertToAtomCmpExchangeWeak::ConvertToAtomCmpExchangeWeak(MLIRContext *context)
     : RewritePattern("test.convert_to_atomic_compare_exchange_weak_op", 1,
-                     context, {"spv.AtomicCompareExchangeWeak"}) {}
+                     context, {"spirv.AtomicCompareExchangeWeak"}) {}
 
 LogicalResult
 ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
@@ -181,8 +181,8 @@ ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
   Value value = op->getOperand(1);
   Value comparator = op->getOperand(2);
 
-  // Create a spv.AtomicCompareExchangeWeak op with AtomicCounterMemory bits in
-  // memory semantics to additionally require AtomicStorage capability.
+  // Create a spirv.AtomicCompareExchangeWeak op with AtomicCounterMemory bits
+  // in memory semantics to additionally require AtomicStorage capability.
   rewriter.replaceOpWithNewOp<spirv::AtomicCompareExchangeWeakOp>(
       op, value.getType(), ptr, spirv::Scope::Workgroup,
       spirv::MemorySemantics::AcquireRelease |
@@ -193,7 +193,7 @@ ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
 
 ConvertToBitReverse::ConvertToBitReverse(MLIRContext *context)
     : RewritePattern("test.convert_to_bit_reverse_op", 1, context,
-                     {"spv.BitReverse"}) {}
+                     {"spirv.BitReverse"}) {}
 
 LogicalResult
 ConvertToBitReverse::matchAndRewrite(Operation *op,
@@ -208,7 +208,7 @@ ConvertToBitReverse::matchAndRewrite(Operation *op,
 ConvertToGroupNonUniformBallot::ConvertToGroupNonUniformBallot(
     MLIRContext *context)
     : RewritePattern("test.convert_to_group_non_uniform_ballot_op", 1, context,
-                     {"spv.GroupNonUniformBallot"}) {}
+                     {"spirv.GroupNonUniformBallot"}) {}
 
 LogicalResult ConvertToGroupNonUniformBallot::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
@@ -220,7 +220,8 @@ LogicalResult ConvertToGroupNonUniformBallot::matchAndRewrite(
 }
 
 ConvertToModule::ConvertToModule(MLIRContext *context)
-    : RewritePattern("test.convert_to_module_op", 1, context, {"spv.module"}) {}
+    : RewritePattern("test.convert_to_module_op", 1, context,
+                     {"spirv.module"}) {}
 
 LogicalResult
 ConvertToModule::matchAndRewrite(Operation *op,
@@ -233,14 +234,14 @@ ConvertToModule::matchAndRewrite(Operation *op,
 
 ConvertToSubgroupBallot::ConvertToSubgroupBallot(MLIRContext *context)
     : RewritePattern("test.convert_to_subgroup_ballot_op", 1, context,
-                     {"spv.SubgroupBallotKHR"}) {}
+                     {"spirv.KHR.SubgroupBallot"}) {}
 
 LogicalResult
 ConvertToSubgroupBallot::matchAndRewrite(Operation *op,
                                          PatternRewriter &rewriter) const {
   Value predicate = op->getOperand(0);
 
-  rewriter.replaceOpWithNewOp<spirv::SubgroupBallotKHROp>(
+  rewriter.replaceOpWithNewOp<spirv::KHRSubgroupBallotOp>(
       op, op->getResult(0).getType(), predicate);
   return success();
 }

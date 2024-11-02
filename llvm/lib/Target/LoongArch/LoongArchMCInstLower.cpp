@@ -13,6 +13,8 @@
 
 #include "LoongArch.h"
 #include "LoongArchSubtarget.h"
+#include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -21,6 +23,68 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
+                                    const AsmPrinter &AP) {
+  MCContext &Ctx = AP.OutContext;
+  LoongArchMCExpr::VariantKind Kind;
+
+  switch (MO.getTargetFlags()) {
+  default:
+    llvm_unreachable("Unknown target flag on GV operand");
+  case LoongArchII::MO_None:
+    Kind = LoongArchMCExpr::VK_LoongArch_None;
+    break;
+  case LoongArchII::MO_CALL:
+    Kind = LoongArchMCExpr::VK_LoongArch_CALL;
+    break;
+  case LoongArchII::MO_CALL_PLT:
+    Kind = LoongArchMCExpr::VK_LoongArch_CALL_PLT;
+    break;
+  case LoongArchII::MO_PCREL_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_PCALA_HI20;
+    break;
+  case LoongArchII::MO_PCREL_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_PCALA_LO12;
+    break;
+  case LoongArchII::MO_GOT_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20;
+    break;
+  case LoongArchII::MO_GOT_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12;
+    break;
+  case LoongArchII::MO_LE_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20;
+    break;
+  case LoongArchII::MO_LE_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12;
+    break;
+  case LoongArchII::MO_IE_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20;
+    break;
+  case LoongArchII::MO_IE_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12;
+    break;
+  case LoongArchII::MO_LD_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20;
+    break;
+  case LoongArchII::MO_GD_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20;
+    break;
+    // TODO: Handle more target-flags.
+  }
+
+  const MCExpr *ME =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
+    ME = MCBinaryExpr::createAdd(
+        ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+
+  if (Kind != LoongArchMCExpr::VK_LoongArch_None)
+    ME = LoongArchMCExpr::create(ME, Kind, Ctx);
+  return MCOperand::createExpr(ME);
+}
 
 bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
                                                    MCOperand &MCOp,
@@ -41,13 +105,25 @@ bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
   case MachineOperand::MO_Immediate:
     MCOp = MCOperand::createImm(MO.getImm());
     break;
-  // TODO: lower special operands
-  case MachineOperand::MO_MachineBasicBlock:
-  case MachineOperand::MO_GlobalAddress:
-  case MachineOperand::MO_BlockAddress:
-  case MachineOperand::MO_ExternalSymbol:
   case MachineOperand::MO_ConstantPoolIndex:
+    MCOp = lowerSymbolOperand(MO, AP.GetCPISymbol(MO.getIndex()), AP);
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    MCOp = lowerSymbolOperand(MO, AP.getSymbolPreferLocal(*MO.getGlobal()), AP);
+    break;
+  case MachineOperand::MO_MachineBasicBlock:
+    MCOp = lowerSymbolOperand(MO, MO.getMBB()->getSymbol(), AP);
+    break;
+  case MachineOperand::MO_ExternalSymbol:
+    MCOp = lowerSymbolOperand(
+        MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()), AP);
+    break;
+  case MachineOperand::MO_BlockAddress:
+    MCOp = lowerSymbolOperand(
+        MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP);
+    break;
   case MachineOperand::MO_JumpTableIndex:
+    MCOp = lowerSymbolOperand(MO, AP.GetJTISymbol(MO.getIndex()), AP);
     break;
   }
   return true;

@@ -96,5 +96,5 @@
 # WARN-REF: ignoring '/incremental' because REF is enabled; use '/opt:noref' to disable
 # WARN-ORDER: ignoring '/incremental' due to '/order' specification
 # WARN-PROFILE: ignoring '/incremental' due to '/profile' specification
-# KEEP: {{Feb 1 1980|1980-02-01}}
-# NOKEEP-NOT: {{Feb 1 1980|1980-02-01}}
+# KEEP: {{Feb 1 1980|Feb 01 1980|1980-02-01}}
+# NOKEEP-NOT: {{Feb 1 1980|Feb 01 1980|1980-02-01}}

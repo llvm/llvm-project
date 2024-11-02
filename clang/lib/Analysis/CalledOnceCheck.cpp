@@ -319,7 +319,7 @@ public:
       // We care about logical not only if we care about comparisons.
       if (!ShouldRetrieveFromComparisons)
         return nullptr;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     // Function pointer/references can be dereferenced before a call.
     // That doesn't make it, however, any different from a regular call.
     // For this reason, dereference operation is a "no-op".
@@ -1065,7 +1065,7 @@ private:
     // 'swift_async' goes first and overrides anything else.
     if (auto ConventionalAsync =
             isConventionalSwiftAsync(Function, ParamIndex)) {
-      return ConventionalAsync.getValue();
+      return *ConventionalAsync;
     }
 
     return shouldBeCalledOnce(Function->getParamDecl(ParamIndex)) ||
@@ -1082,7 +1082,7 @@ private:
 
     // 'swift_async' goes first and overrides anything else.
     if (auto ConventionalAsync = isConventionalSwiftAsync(Method, ParamIndex)) {
-      return ConventionalAsync.getValue();
+      return *ConventionalAsync;
     }
 
     const ParmVarDecl *Parameter = Method->getParamDecl(ParamIndex);

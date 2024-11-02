@@ -900,10 +900,10 @@ define i32 @test_mul_by_28(i32 %x) {
 define i32 @test_mul_by_29(i32 %x) {
 ; X86-LABEL: test_mul_by_29:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,8), %eax
-; X86-NEXT:    leal (%eax,%eax,2), %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,8), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
+; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -1179,6 +1179,7 @@ define i32 @test_mul_by_66(i32 %x) {
 ;
 ; X64-SLM-LABEL: test_mul_by_66:
 ; X64-SLM:       # %bb.0:
+; X64-SLM-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-SLM-NEXT:    movl %edi, %eax
 ; X64-SLM-NEXT:    shll $6, %eax
 ; X64-SLM-NEXT:    addl %edi, %eax

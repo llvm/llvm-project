@@ -29,7 +29,7 @@ define <16 x float> @fmulcph(<16 x float> %a0, <16 x float> %a1) {
   ret <16 x float> %2
 }
 
-define <16 x float> @fmulcph_mem(<16 x float> %a0, <16 x float>* %p1) {
+define <16 x float> @fmulcph_mem(<16 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fmulcph_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -53,12 +53,12 @@ define <16 x float> @fmulcph_mem(<16 x float> %a0, <16 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <16 x float>, <16 x float>* %p1, align 64
+  %a1 = load <16 x float>, ptr %p1, align 64
   %2 = call <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float> %a0, <16 x float> %a1, <16 x float> undef, i16 -1, i32 4)
   ret <16 x float> %2
 }
 
-define <16 x float> @fmulcph_broadcast(<16 x float> %a0, float* %p1) {
+define <16 x float> @fmulcph_broadcast(<16 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fmulcph_broadcast:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -82,14 +82,14 @@ define <16 x float> @fmulcph_broadcast(<16 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vmovaps %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <16 x float> undef, float %v1, i64 0
   %a1 = shufflevector <16 x float> %t0, <16 x float> undef, <16 x i32> zeroinitializer
   %2 = call <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float> %a0, <16 x float> %a1, <16 x float> undef, i16 -1, i32 4)
   ret <16 x float> %2
 }
 
-define <16 x float> @fmulcph_maskz(<16 x float> %a0, <16 x float> %a1, i16* %mask) {
+define <16 x float> @fmulcph_maskz(<16 x float> %a0, <16 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fmulcph_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -114,7 +114,7 @@ define <16 x float> @fmulcph_maskz(<16 x float> %a0, <16 x float> %a1, i16* %mas
 ; DISABLE-NEXT:    vmovaps %zmm2, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i16, i16* %mask
+  %2 = load i16, ptr %mask
   %3 = call <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float> %a0, <16 x float> %a1, <16 x float> zeroinitializer, i16 %2, i32 4)
   ret <16 x float> %3
 }
@@ -146,7 +146,7 @@ define <16 x float> @fcmulcph(<16 x float> %a0, <16 x float> %a1) {
   ret <16 x float> %2
 }
 
-define <16 x float> @fcmulcph_mem(<16 x float> %a0, <16 x float>* %p1) {
+define <16 x float> @fcmulcph_mem(<16 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fcmulcph_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -170,12 +170,12 @@ define <16 x float> @fcmulcph_mem(<16 x float> %a0, <16 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <16 x float>, <16 x float>* %p1, align 64
+  %a1 = load <16 x float>, ptr %p1, align 64
   %2 = call <16 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.512(<16 x float> %a0, <16 x float> %a1, <16 x float> undef, i16 -1, i32 4)
   ret <16 x float> %2
 }
 
-define <16 x float> @fcmulcph_broadcast(<16 x float> %a0, float* %p1) {
+define <16 x float> @fcmulcph_broadcast(<16 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fcmulcph_broadcast:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -199,14 +199,14 @@ define <16 x float> @fcmulcph_broadcast(<16 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vmovaps %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <16 x float> undef, float %v1, i64 0
   %a1 = shufflevector <16 x float> %t0, <16 x float> undef, <16 x i32> zeroinitializer
   %2 = call <16 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.512(<16 x float> %a0, <16 x float> %a1, <16 x float> undef, i16 -1, i32 4)
   ret <16 x float> %2
 }
 
-define <16 x float> @fcmulcph_maskz(<16 x float> %a0, <16 x float> %a1, i16* %mask) {
+define <16 x float> @fcmulcph_maskz(<16 x float> %a0, <16 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fcmulcph_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -231,7 +231,7 @@ define <16 x float> @fcmulcph_maskz(<16 x float> %a0, <16 x float> %a1, i16* %ma
 ; DISABLE-NEXT:    vmovaps %zmm2, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i16, i16* %mask
+  %2 = load i16, ptr %mask
   %3 = call <16 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.512(<16 x float> %a0, <16 x float> %a1, <16 x float> zeroinitializer, i16 %2, i32 4)
   ret <16 x float> %3
 }
@@ -263,7 +263,7 @@ define <4 x float> @fmulc(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %2
 }
 
-define <4 x float> @fmulc_mem(<4 x float> %a0, <4 x float>* %p1) {
+define <4 x float> @fmulc_mem(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fmulc_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -287,12 +287,12 @@ define <4 x float> @fmulc_mem(<4 x float> %a0, <4 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x float>, <4 x float>* %p1, align 64
+  %a1 = load <4 x float>, ptr %p1, align 64
   %2 = call <4 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.128(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1)
   ret <4 x float> %2
 }
 
-define <4 x float> @fmulc_broadcast(<4 x float> %a0, float* %p1) {
+define <4 x float> @fmulc_broadcast(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fmulc_broadcast:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -316,14 +316,14 @@ define <4 x float> @fmulc_broadcast(<4 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vmovaps %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <4 x float> undef, float %v1, i64 0
   %a1 = shufflevector <4 x float> %t0, <4 x float> undef, <4 x i32> zeroinitializer
   %2 = call <4 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.128(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1)
   ret <4 x float> %2
 }
 
-define <4 x float> @fmulc_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
+define <4 x float> @fmulc_maskz(<4 x float> %a0, <4 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fmulc_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -349,7 +349,7 @@ define <4 x float> @fmulc_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
 ; DISABLE-NEXT:    retq
 
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <4 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.128(<4 x float> %a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %2)
   ret <4 x float> %3
 }
@@ -381,7 +381,7 @@ define <4 x float> @fcmulc(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %2
 }
 
-define <4 x float> @fcmulc_mem(<4 x float> %a0, <4 x float>* %p1) {
+define <4 x float> @fcmulc_mem(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fcmulc_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -405,12 +405,12 @@ define <4 x float> @fcmulc_mem(<4 x float> %a0, <4 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x float>, <4 x float>* %p1, align 64
+  %a1 = load <4 x float>, ptr %p1, align 64
   %2 = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.128(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1)
   ret <4 x float> %2
 }
 
-define <4 x float> @fcmulc_broadcast(<4 x float> %a0, float* %p1) {
+define <4 x float> @fcmulc_broadcast(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fcmulc_broadcast:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -434,14 +434,14 @@ define <4 x float> @fcmulc_broadcast(<4 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vmovaps %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <4 x float> undef, float %v1, i64 0
   %a1 = shufflevector <4 x float> %t0, <4 x float> undef, <4 x i32> zeroinitializer
   %2 = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.128(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1)
   ret <4 x float> %2
 }
 
-define <4 x float> @fcmulc_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
+define <4 x float> @fcmulc_maskz(<4 x float> %a0, <4 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fcmulc_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -466,7 +466,7 @@ define <4 x float> @fcmulc_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
 ; DISABLE-NEXT:    vmovaps %xmm2, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.128(<4 x float> %a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %2)
   ret <4 x float> %3
 }
@@ -498,7 +498,7 @@ define <8 x float> @fmulc_ymm(<8 x float> %a0, <8 x float> %a1) {
   ret <8 x float> %2
 }
 
-define <8 x float> @fmulc_ymm_mem(<8 x float> %a0, <8 x float>* %p1) {
+define <8 x float> @fmulc_ymm_mem(<8 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fmulc_ymm_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -518,12 +518,12 @@ define <8 x float> @fmulc_ymm_mem(<8 x float> %a0, <8 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <8 x float>, <8 x float>* %p1, align 64
+  %a1 = load <8 x float>, ptr %p1, align 64
   %2 = call <8 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.256(<8 x float> %a0, <8 x float> %a1, <8 x float> undef, i8 -1)
   ret <8 x float> %2
 }
 
-define <8 x float> @fmulc_ymm_broadcast(<8 x float> %a0, float* %p1) {
+define <8 x float> @fmulc_ymm_broadcast(<8 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fmulc_ymm_broadcast:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -543,14 +543,14 @@ define <8 x float> @fmulc_ymm_broadcast(<8 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vmovaps %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <8 x float> undef, float %v1, i64 0
   %a1 = shufflevector <8 x float> %t0, <8 x float> undef, <8 x i32> zeroinitializer
   %2 = call <8 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.256(<8 x float> %a0, <8 x float> %a1, <8 x float> undef, i8 -1)
   ret <8 x float> %2
 }
 
-define <8 x float> @fmulc_maskz_ymm(<8 x float> %a0, <8 x float> %a1, i8* %mask) {
+define <8 x float> @fmulc_maskz_ymm(<8 x float> %a0, <8 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fmulc_maskz_ymm:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -575,7 +575,7 @@ define <8 x float> @fmulc_maskz_ymm(<8 x float> %a0, <8 x float> %a1, i8* %mask)
 ; DISABLE-NEXT:    vmovaps %ymm2, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <8 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.256(<8 x float> %a0, <8 x float> %a1, <8 x float> zeroinitializer, i8 %2)
   ret <8 x float> %3
 }
@@ -607,7 +607,7 @@ define <8 x float> @fcmulc_ymm(<8 x float> %a0, <8 x float> %a1) {
   ret <8 x float> %2
 }
 
-define <8 x float> @fcmulc_ymm_mem(<8 x float> %a0, <8 x float>* %p1) {
+define <8 x float> @fcmulc_ymm_mem(<8 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fcmulc_ymm_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -627,12 +627,12 @@ define <8 x float> @fcmulc_ymm_mem(<8 x float> %a0, <8 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <8 x float>, <8 x float>* %p1, align 64
+  %a1 = load <8 x float>, ptr %p1, align 64
   %2 = call <8 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.256(<8 x float> %a0, <8 x float> %a1, <8 x float> undef, i8 -1)
   ret <8 x float> %2
 }
 
-define <8 x float> @fcmulc_ymm_broadcast(<8 x float> %a0, float* %p1) {
+define <8 x float> @fcmulc_ymm_broadcast(<8 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fcmulc_ymm_broadcast:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -652,14 +652,14 @@ define <8 x float> @fcmulc_ymm_broadcast(<8 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vmovaps %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <8 x float> undef, float %v1, i64 0
   %a1 = shufflevector <8 x float> %t0, <8 x float> undef, <8 x i32> zeroinitializer
   %2 = call <8 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.256(<8 x float> %a0, <8 x float> %a1, <8 x float> undef, i8 -1)
   ret <8 x float> %2
 }
 
-define <8 x float> @fcmulc_maskz_ymm(<8 x float> %a0, <8 x float> %a1, i8* %mask) {
+define <8 x float> @fcmulc_maskz_ymm(<8 x float> %a0, <8 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fcmulc_maskz_ymm:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -684,7 +684,7 @@ define <8 x float> @fcmulc_maskz_ymm(<8 x float> %a0, <8 x float> %a1, i8* %mask
 ; DISABLE-NEXT:    vmovaps %ymm2, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <8 x float> @llvm.x86.avx512fp16.mask.vfcmul.cph.256(<8 x float> %a0, <8 x float> %a1, <8 x float> zeroinitializer, i8 %2)
   ret <8 x float> %3
 }
@@ -716,7 +716,7 @@ define <4 x float> @fmulcsh(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %2
 }
 
-define <4 x float> @fmulcsh_mem(<4 x float> %a0, <4 x float>* %p1) {
+define <4 x float> @fmulcsh_mem(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fmulcsh_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -740,12 +740,12 @@ define <4 x float> @fmulcsh_mem(<4 x float> %a0, <4 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x float>, <4 x float>* %p1, align 64
+  %a1 = load <4 x float>, ptr %p1, align 64
   %2 = call <4 x float> @llvm.x86.avx512fp16.mask.vfmul.csh(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4)
   ret <4 x float> %2
 }
 
-define <4 x float> @fmulcsh_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
+define <4 x float> @fmulcsh_maskz(<4 x float> %a0, <4 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fmulcsh_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -770,7 +770,7 @@ define <4 x float> @fmulcsh_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
 ; DISABLE-NEXT:    vmovaps %xmm2, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <4 x float> @llvm.x86.avx512fp16.mask.vfmul.csh(<4 x float> %a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %2, i32 4)
   ret <4 x float> %3
 }
@@ -802,7 +802,7 @@ define <4 x float> @fcmulcsh(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %2
 }
 
-define <4 x float> @fcmulcsh_mem(<4 x float> %a0, <4 x float>* %p1) {
+define <4 x float> @fcmulcsh_mem(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: fcmulcsh_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -826,12 +826,12 @@ define <4 x float> @fcmulcsh_mem(<4 x float> %a0, <4 x float>* %p1) {
 ; DISABLE-NEXT:    vmovaps %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x float>, <4 x float>* %p1, align 64
+  %a1 = load <4 x float>, ptr %p1, align 64
   %2 = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.csh(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4)
   ret <4 x float> %2
 }
 
-define <4 x float> @fcmulcsh_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
+define <4 x float> @fcmulcsh_maskz(<4 x float> %a0, <4 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: fcmulcsh_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -856,7 +856,7 @@ define <4 x float> @fcmulcsh_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) 
 ; DISABLE-NEXT:    vmovaps %xmm2, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <4 x float> @llvm.x86.avx512fp16.mask.vfcmul.csh(<4 x float> %a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 %2, i32 4)
   ret <4 x float> %3
 }

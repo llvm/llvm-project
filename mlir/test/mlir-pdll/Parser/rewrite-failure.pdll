@@ -88,13 +88,6 @@ Rewrite Foo(arg: Value<type>){}
 
 // -----
 
-Constraint ValueConstraint(value: Value);
-
-// CHECK: arguments and results are only permitted to use core constraints, such as `Attr`, `Op`, `Type`, `TypeRange`, `Value`, `ValueRange`
-Rewrite Foo(arg: ValueConstraint);
-
-// -----
-
 // CHECK: expected `)` to end argument list
 Rewrite Foo(arg: Value{}
 
@@ -136,13 +129,6 @@ Rewrite Foo() -> (Op{};
 
 // CHECK: inline `Attr`, `Value`, and `ValueRange` type constraints are not permitted on arguments or results
 Rewrite Foo() -> Value<type>){}
-
-// -----
-
-Constraint ValueConstraint(value: Value);
-
-// CHECK: results are only permitted to use core constraints, such as `Attr`, `Op`, `Type`, `TypeRange`, `Value`, `ValueRange`
-Rewrite Foo() -> ValueConstraint;
 
 // -----
 

@@ -19,7 +19,8 @@
 #include "llvm/ADT/GraphTraits.h"
 
 namespace llvm {
-template <> struct GraphTraits<mlir::Block *> {
+template <>
+struct GraphTraits<mlir::Block *> {
   using ChildIteratorType = mlir::Block::succ_iterator;
   using Node = mlir::Block;
   using NodeRef = Node *;
@@ -32,7 +33,8 @@ template <> struct GraphTraits<mlir::Block *> {
   static ChildIteratorType child_end(NodeRef node) { return node->succ_end(); }
 };
 
-template <> struct GraphTraits<Inverse<mlir::Block *>> {
+template <>
+struct GraphTraits<Inverse<mlir::Block *>> {
   using ChildIteratorType = mlir::Block::pred_iterator;
   using Node = mlir::Block;
   using NodeRef = Node *;

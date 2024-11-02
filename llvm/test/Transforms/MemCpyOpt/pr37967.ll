@@ -5,29 +5,25 @@
 
 %struct.Foo = type { i64, i64, i64 }
 
-@a = dso_local global %struct.Foo* null, align 8
+@a = dso_local global ptr null, align 8
 
-define dso_local void @_Z3bar3Foo(%struct.Foo* byval(%struct.Foo) align 8 %0) {
+define dso_local void @_Z3bar3Foo(ptr byval(%struct.Foo) align 8 %0) {
 ; CHECK-LABEL: @_Z3bar3Foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8, [[DBG13:!dbg !.*]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata %struct.Foo* [[AGG_TMP]], [[META9:metadata !.*]], metadata !DIExpression()), [[DBG13]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** bitcast (%struct.Foo** @a to i8**), align 8, [[DBG14:!dbg !.*]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[TMP1]], [[META11:metadata !.*]], metadata !DIExpression()), [[DBG14]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %struct.Foo* [[AGG_TMP]] to i8*, [[DBG15:!dbg !.*]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[TMP2]], [[META12:metadata !.*]], metadata !DIExpression()), [[DBG15]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(24) [[TMP2]], i8* nonnull align 8 dereferenceable(24) [[TMP1]], i64 24, i1 false), [[DBG16:!dbg !.*]]
-; CHECK-NEXT:    [[TMPCAST:%.*]] = bitcast i8* [[TMP1]] to %struct.Foo*, [[DBG16]]
-; CHECK-NEXT:    call void @_Z3bar3Foo(%struct.Foo* nonnull byval(%struct.Foo) align 8 [[TMPCAST]]), [[DBG17:!dbg !.*]]
-; CHECK-NEXT:    ret void, [[DBG18:!dbg !.*]]
+; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8, !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[AGG_TMP]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @a, align 8, !dbg [[DBG13:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[TMP1]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG13]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(24) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(24) [[TMP1]], i64 24, i1 false), !dbg [[DBG14:![0-9]+]]
+; CHECK-NEXT:    call void @_Z3bar3Foo(ptr nonnull byval([[STRUCT_FOO]]) align 8 [[TMP1]]), !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG16:![0-9]+]]
 ;
 entry:
   %agg.tmp = alloca %struct.Foo, align 8
-  %1 = load i8*, i8** bitcast (%struct.Foo** @a to i8**), align 8
-  %2 = bitcast %struct.Foo* %agg.tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(24) %2, i8* nonnull align 8 dereferenceable(24) %1, i64 24, i1 false)
-  call void @_Z3bar3Foo(%struct.Foo* nonnull byval(%struct.Foo) align 8 %agg.tmp)
+  %1 = load ptr, ptr @a, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(24) %agg.tmp, ptr nonnull align 8 dereferenceable(24) %1, i64 24, i1 false)
+  call void @_Z3bar3Foo(ptr nonnull byval(%struct.Foo) align 8 %agg.tmp)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #0
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #0

@@ -6,7 +6,7 @@
 %2 = type { %3 }
 %3 = type { %4 }
 %4 = type { %5 }
-%5 = type { i64, i64, i8* }
+%5 = type { i64, i64, ptr }
 %6 = type { %7, [23 x i8] }
 %7 = type { i8 }
 
@@ -14,7 +14,7 @@
 @.str.17 = external dso_local unnamed_addr constant [12 x i8], align 1
 @.str.18 = external dso_local unnamed_addr constant [15 x i8], align 1
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #0
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #0
 
 define void @pr38743(i32 %a0) #1 align 2 {
 ; CHECK-LABEL: pr38743:
@@ -40,11 +40,11 @@ define void @pr38743(i32 %a0) #1 align 2 {
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, (%rax)
-; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %edx
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %dil
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edi
 ; CHECK-NEXT:    movb %al, (%rax)
 ; CHECK-NEXT:    movq %rcx, 1(%rax)
 ; CHECK-NEXT:    movw %dx, 9(%rax)
@@ -53,7 +53,6 @@ define void @pr38743(i32 %a0) #1 align 2 {
 ; CHECK-NEXT:    retq
 bb:
   %tmp = alloca %0, align 16
-  %tmp1 = bitcast %0* %tmp to i8*
   switch i32 %a0, label %bb11 [
     i32 1, label %bb2
     i32 4, label %bb5
@@ -62,28 +61,25 @@ bb:
   ]
 
 bb2:                                              ; preds = %bb
-  %tmp3 = bitcast %0* %tmp to %6*
-  %tmp4 = getelementptr inbounds %6, %6* %tmp3, i64 0, i32 1, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %tmp4, i8* align 1 getelementptr inbounds ([16 x i8], [16 x i8]* @.str.16, i64 0, i64 0), i64 15, i1 false)
+  %tmp4 = getelementptr inbounds %6, ptr %tmp, i64 0, i32 1, i64 0
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %tmp4, ptr align 1 @.str.16, i64 15, i1 false)
   br label %bb12
 
 bb5:                                              ; preds = %bb, %bb
-  %tmp6 = bitcast %0* %tmp to %6*
-  %tmp7 = getelementptr inbounds %6, %6* %tmp6, i64 0, i32 1, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %tmp7, i8* align 1 getelementptr inbounds ([12 x i8], [12 x i8]* @.str.17, i64 0, i64 0), i64 10, i1 false)
+  %tmp7 = getelementptr inbounds %6, ptr %tmp, i64 0, i32 1, i64 0
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %tmp7, ptr align 1 @.str.17, i64 10, i1 false)
   br label %bb12
 
 bb8:                                              ; preds = %bb
-  %tmp9 = bitcast %0* %tmp to %6*
-  %tmp10 = getelementptr inbounds %6, %6* %tmp9, i64 0, i32 1, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %tmp10, i8* align 1 getelementptr inbounds ([15 x i8], [15 x i8]* @.str.18, i64 0, i64 0), i64 14, i1 false)
+  %tmp10 = getelementptr inbounds %6, ptr %tmp, i64 0, i32 1, i64 0
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %tmp10, ptr align 1 @.str.18, i64 14, i1 false)
   br label %bb12
 
 bb11:                                             ; preds = %bb
   unreachable
 
 bb12:                                             ; preds = %bb8, %bb5, %bb2
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 undef, i8* nonnull align 16 %tmp1, i64 24, i1 false) #2
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 undef, ptr nonnull align 16 %tmp, i64 24, i1 false) #2
   ret void
 }
 

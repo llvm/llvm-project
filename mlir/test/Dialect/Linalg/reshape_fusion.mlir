@@ -142,7 +142,7 @@ func.func @reshape_as_consumer_permutation
 func.func @generic_op_reshape_consumer_static(%arg0: tensor<264x4xf32>)
                                             -> tensor<8x33x4xf32> {
   %cst = arith.constant dense<2.000000e+00> : tensor<264x4xf32>
-  %0 = linalg.init_tensor [264, 4] : tensor<264x4xf32>
+  %0 = tensor.empty() : tensor<264x4xf32>
   %1 = linalg.generic {
      indexing_maps = [#map0, #map0, #map0],
      iterator_types = ["parallel", "parallel"]}
@@ -162,7 +162,7 @@ func.func @generic_op_reshape_consumer_static(%arg0: tensor<264x4xf32>)
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<264x4xf32>
 //  CHECK-DAG:   %[[CST:.+]] = arith.constant
 // CHECK-SAME:     : tensor<8x33x4xf32>
-//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [264, 4]
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
 //      CHECK:   %[[T0:.+]] = tensor.expand_shape %[[ARG0]]
 // CHECK-SAME:     [0, 1], [2]
 // CHECK-SAME:     tensor<264x4xf32> into tensor<8x33x4xf32>
@@ -212,8 +212,8 @@ func.func @indexed_consumer_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xi32>,
 //       CHECK: func @indexed_consumer_reshape_producer_fusion
 //       CHECK:   linalg.generic
 //       CHECK:   ^{{.*}}(
-//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: i32, %[[ARG4:[a-zA-Z0-9]+]]: i32,
-//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32)
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: i32, %[[ARG4:[a-zA-Z0-9_]+]]: i32,
+//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9_]+]]: i32)
 //   CHECK-DAG:     %[[IDX0:.+]] = linalg.index 0 : index
 //   CHECK-DAG:     %[[IDX1:.+]] = linalg.index 1 : index
 //   CHECK-DAG:     %[[IDX2:.+]] = linalg.index 2 : index
@@ -261,8 +261,8 @@ func.func @indexed_producer_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
 //       CHECK: func @indexed_producer_reshape_consumer_fusion
 //       CHECK:   linalg.generic
 //       CHECK:   ^{{.*}}(
-//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: i32, %[[ARG4:[a-zA-Z0-9]+]]: i32,
-//  CHECK-SAME:     %[[ARG5:[a-zA-Z0-9]+]]: i32)
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: i32, %[[ARG4:[a-zA-Z0-9_]+]]: i32,
+//  CHECK-SAME:     %[[ARG5:[a-zA-Z0-9_]+]]: i32)
 //   CHECK-DAG:     %[[IDX0:.+]] = linalg.index 0 : index
 //   CHECK-DAG:     %[[IDX1:.+]] = linalg.index 1 : index
 //   CHECK-DAG:     %[[IDX2:.+]] = linalg.index 2 : index
@@ -281,7 +281,7 @@ func.func @indexed_producer_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
 func.func @reshape_as_consumer_permutation
   (%a : tensor<210x6x4xi32>, %b : tensor<210x4xi32>)
     -> tensor<2x3x4x5x6x7xi32> {
-  %shape = linalg.init_tensor [6, 4, 210] : tensor<6x4x210xi32>
+  %shape = tensor.empty() : tensor<6x4x210xi32>
   %c = linalg.generic {
          indexing_maps = [affine_map<(d0, d1, d2) -> (d1, d0, d2)>,
                           affine_map<(d0, d1, d2) -> (d1, d2)>,
@@ -318,7 +318,7 @@ func.func @reshape_as_consumer_permutation
 //       CHECK: func @reshape_as_consumer_permutation
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<210x6x4xi32>
 //  CHECK-SAME:   %[[ARG1:.+]]: tensor<210x4xi32>
-//   CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [6, 4, 210]
+//   CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
 //   CHECK-DAG:   %[[T1:.+]] = tensor.expand_shape %[[ARG0]]
 //  CHECK-SAME:     [0, 1, 2], [3, 4], [5]
 //   CHECK-DAG:   %[[T2:.+]] = tensor.expand_shape %[[ARG1]]
@@ -331,8 +331,8 @@ func.func @reshape_as_consumer_permutation
 //  CHECK-SAME:     ins(%[[T1]], %[[T2]] : tensor<5x6x7x2x3x4xi32>, tensor<5x6x7x4xi32>)
 //  CHECK-SAME:     outs(%[[T3]] : tensor<2x3x4x5x6x7xi32>)
 //       CHECK:   ^{{.+}}(
-//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32, %[[ARG9:[a-zA-Z0-9]+]]: i32,
-//  CHECK-SAME:     %[[ARG10:[a-zA-Z0-9]+]]: i32)
+//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9_]+]]: i32, %[[ARG9:[a-zA-Z0-9_]+]]: i32,
+//  CHECK-SAME:     %[[ARG10:[a-zA-Z0-9_]+]]: i32)
 //   CHECK-DAG:       %[[IDX0:.+]] = linalg.index 0 : index
 //   CHECK-DAG:       %[[IDX1:.+]] = linalg.index 1 : index
 //   CHECK-DAG:       %[[IDX2:.+]] = linalg.index 2 : index
@@ -455,7 +455,7 @@ func.func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
   %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<?x?xf32> into tensor<?xf32>
   %1 = tensor.dim %0, %c0 : tensor<?xf32>
-  %2 = linalg.init_tensor [%1] : tensor<?xf32>
+  %2 = tensor.empty(%1) : tensor<?xf32>
   %3 = linalg.generic {
     indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
     iterator_types = ["parallel"]}
@@ -477,7 +477,7 @@ func.func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
 
 func.func @no_fuse_mismatched_dynamism(%arg0: tensor<2x1xi64>, %arg1: tensor<?xi64>) -> tensor<2xi64> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<2x1xi64> into tensor<2xi64>
-  %1 = linalg.init_tensor [2] : tensor<2xi64>
+  %1 = tensor.empty() : tensor<2xi64>
   %2 = linalg.generic
     {indexing_maps = [affine_map<(d0) -> (d0)>,
                       affine_map<(d0) -> (d0)>,
@@ -499,3 +499,77 @@ func.func @no_fuse_mismatched_dynamism(%arg0: tensor<2x1xi64>, %arg1: tensor<?xi
 //      CHECK:   %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:       ins(%[[RESHAPE]], %[[ARG1]] : tensor<2xi64>, tensor<?xi64>)
 //      CHECK:   return %[[GENERIC]]
+
+// -----
+
+func.func @reshape_as_consumer_permutation_with_multiple_results
+  (%a : tensor<?x?x?xf32>, %b : tensor<?x?xf32>)
+    -> (tensor<?x2x?x3x4x?xf32>, tensor<?x?x2x3x4x?xf32>) {
+  %c:2 = linalg.generic {
+         indexing_maps = [affine_map<(d0, d1, d2) -> (d1, d0, d2)>,
+                          affine_map<(d0, d1, d2) -> (d1, d2)>,
+                          affine_map<(d0, d1, d2) -> (d0, d2, d1)>,
+                          affine_map<(d0, d1, d2) -> (d2, d0, d1)>],
+         iterator_types = ["parallel", "parallel", "parallel"]}
+          ins(%a, %b : tensor<?x?x?xf32>, tensor<?x?xf32>)
+         outs(%a, %a : tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
+       ^bb0(%arg0 : f32, %arg1: f32, %s: f32, %t : f32):
+         %1 = arith.addf %arg0, %arg1 : f32
+         linalg.yield %1, %1 : f32, f32
+       } -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+  %d = tensor.expand_shape %c#0 [[0, 1], [2], [3, 4, 5]]
+       : tensor<?x?x?xf32> into tensor<?x2x?x3x4x?xf32>
+  %e = tensor.expand_shape %c#1 [[0], [1, 2], [3, 4, 5]]
+       : tensor<?x?x?xf32> into tensor<?x?x2x3x4x?xf32>
+  return %d, %e : tensor<?x2x?x3x4x?xf32>, tensor<?x?x2x3x4x?xf32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d3, d4, d0, d1, d5)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d3, d4, d5)>
+//  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d5, d2, d3, d4)>
+//  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d5, d0, d1, d2, d3, d4)>
+//      CHECK: func @reshape_as_consumer_permutation_with_multiple_results
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-DAG:  %[[RESHAPE0:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1, 2], [3, 4], [5]{{\]}}
+//  CHECK-DAG:  %[[RESHAPE1:.+]] = tensor.expand_shape %[[ARG1]] {{\[}}[0, 1, 2], [3]{{\]}}
+//  CHECK-DAG:  %[[RESHAPE2:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1], [2], [3, 4, 5]{{\]}}
+//  CHECK-DAG:  %[[RESHAPE3:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0], [1, 2], [3, 4, 5]{{\]}}
+//      CHECK:  %[[GENERIC:.+]]:2 = linalg.generic
+// CHECK-SAME:      indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]]]
+// CHECK-SAME:      ins(%[[RESHAPE0]], %[[RESHAPE1]] :
+// CHECK-SAME:      outs(%[[RESHAPE2]], %[[RESHAPE3]] :
+//      CHECK:  return %[[GENERIC]]#0, %[[GENERIC]]#1
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d1)>
+#map1 = affine_map<(d0, d1) -> (d0, d1)>
+module {
+  func.func @multi_result_op_expansion(%arg0: tensor<512xf32>, %arg1: tensor<512xf32>,
+      %arg2: tensor<512xf32>, %arg3: tensor<200x512xf32>) -> tensor<25x8x1x512xf32> {
+    %0:2 = linalg.generic {
+        indexing_maps = [#map0, #map0, #map0, #map1],
+        iterator_types = ["parallel", "parallel"]}
+        ins(%arg0, %arg1 : tensor<512xf32>, tensor<512xf32>)
+        outs(%arg2, %arg3 : tensor<512xf32>, tensor<200x512xf32>) {
+      ^bb0(%arg4: f32, %arg5: f32, %arg6: f32, %arg7: f32):
+        %2 = arith.addf %arg4, %arg5 : f32
+        linalg.yield %2, %2 : f32, f32
+      } -> (tensor<512xf32>, tensor<200x512xf32>)
+    %1 = tensor.expand_shape %0#1 [[0, 1, 2], [3]] : tensor<200x512xf32> into tensor<25x8x1x512xf32>
+    return %1 : tensor<25x8x1x512xf32>
+  }
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+//      CHECK: func.func @multi_result_op_expansion(
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<512xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<512xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<512xf32>
+// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: tensor<200x512xf32>
+//      CHECK:   %[[OUTS:.+]] = tensor.expand_shape %[[ARG3]] {{\[}}[0, 1, 2], [3]{{\]}}
+//      CHECK:   %[[GENERIC:.+]]:2 = linalg.generic
+// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP0]], #[[MAP0]], #[[MAP1]]]
+// CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
+// CHECK-SAME:       outs(%[[ARG2]], %[[OUTS]] :
+//      CHECK:   return %[[GENERIC]]#1

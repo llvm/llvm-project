@@ -559,7 +559,7 @@ public:
   // x == 0 is not undefined behavior) into a branch that checks whether x is 0
   // and avoids calling ctlz in that case.  We have a dedicated ctlz
   // instruction, so we say that ctlz is cheap to speculate.
-  bool isCheapToSpeculateCtlz() const override { return true; }
+  bool isCheapToSpeculateCtlz(Type *Ty) const override { return true; }
 
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override {
     return AtomicExpansionKind::None;

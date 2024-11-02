@@ -2,15 +2,15 @@
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
 
 @i1 = external constant i32 #0
-@i2 = constant i32* @i1 #0
+@i2 = constant ptr @i1 #0
 
 define i32 @read() {
-  %1  = load i32, i32* @i1, align 4
+  %1  = load i32, ptr @i1, align 4
   ret i32 %1
 }
 
-define i32** @retptr() {
-  ret i32** @i2
+define ptr @retptr() {
+  ret ptr @i2
 }
 
 ; CHECK:       .read:

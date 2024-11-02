@@ -12,7 +12,6 @@
 void func(void) {
   _Atomic int i = ATOMIC_VAR_INIT(12); // expected-warning {{macro 'ATOMIC_VAR_INIT' has been marked as deprecated}} \
                                        // expected-note@stdatomic.h:* {{macro marked 'deprecated' here}}
-  #if defined(ATOMIC_FLAG_INIT) // cxx-warning {{macro 'ATOMIC_FLAG_INIT' has been marked as deprecated}} \
-                                // cxx-note@stdatomic.h:* {{macro marked 'deprecated' here}}
+  #if defined(ATOMIC_FLAG_INIT) // Ok, deprecated in C++20, undeprecated in C++23 via LWG4659.
   #endif
 }

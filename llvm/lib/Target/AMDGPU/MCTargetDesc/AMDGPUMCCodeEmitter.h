@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include <cstdint>
 
 namespace llvm {
 
@@ -23,7 +23,6 @@ class MCInst;
 class MCInstrInfo;
 class MCOperand;
 class MCSubtargetInfo;
-class FeatureBitset;
 
 class AMDGPUMCCodeEmitter : public MCCodeEmitter {
   virtual void anchor();
@@ -34,52 +33,34 @@ protected:
   AMDGPUMCCodeEmitter(const MCInstrInfo &mcii) : MCII(mcii) {}
 
 public:
+  void getBinaryCodeForInstr(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
+                             APInt &Inst, APInt &Scratch,
+                             const MCSubtargetInfo &STI) const;
 
-  uint64_t getBinaryCodeForInstr(const MCInst &MI,
+  virtual void getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+                                 APInt &Op, SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const = 0;
+
+  virtual void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                                  SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
+                                 const MCSubtargetInfo &STI) const = 0;
 
-  virtual uint64_t getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+  virtual void getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                                      SmallVectorImpl<MCFixup> &Fixups,
-                                     const MCSubtargetInfo &STI) const {
-    return 0;
-  }
+                                     const MCSubtargetInfo &STI) const = 0;
 
-  virtual unsigned getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
-                                     SmallVectorImpl<MCFixup> &Fixups,
-                                     const MCSubtargetInfo &STI) const {
-    return 0;
-  }
+  virtual void getSDWASrcEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const = 0;
 
-  virtual unsigned getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo,
-                                         SmallVectorImpl<MCFixup> &Fixups,
-                                         const MCSubtargetInfo &STI) const {
-    return 0;
-  }
-
-  virtual unsigned getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
+  virtual void getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
+                                      APInt &Op,
                                       SmallVectorImpl<MCFixup> &Fixups,
-                                      const MCSubtargetInfo &STI) const {
-    return 0;
-  }
+                                      const MCSubtargetInfo &STI) const = 0;
 
-  virtual unsigned getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
-                                          SmallVectorImpl<MCFixup> &Fixups,
-                                          const MCSubtargetInfo &STI) const {
-    return 0;
-  }
-
-  virtual unsigned getAVOperandEncoding(const MCInst &MI, unsigned OpNo,
-                                        SmallVectorImpl<MCFixup> &Fixups,
-                                        const MCSubtargetInfo &STI) const {
-    return 0;
-  }
-
-protected:
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
+  virtual void getAVOperandEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                    SmallVectorImpl<MCFixup> &Fixups,
+                                    const MCSubtargetInfo &STI) const = 0;
 };
 
 } // End namespace llvm

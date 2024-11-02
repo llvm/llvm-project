@@ -98,26 +98,31 @@ namespace non_template
   static_assert(is_same_v<decltype(bar<int>()), void>); // expected-error {{call to 'bar' is ambiguous}}
 
   template<typename T>
-  constexpr int goo(int a) requires AtLeast2<int> && true {
+  constexpr int goo(int a) requires AtLeast2<int> && true { // expected-note {{candidate function}}
     return 1;
   }
 
   template<typename T>
-  constexpr int goo(const int b) requires AtLeast2<int> {
+  constexpr int goo(const int b) requires AtLeast2<int> { // expected-note {{candidate function}}
     return 2;
   }
 
-  // Only trailing requires clauses of redeclarations are compared for overload resolution.
+  // [temp.func.order] p5
+  //   Since, in a call context, such type deduction considers only parameters
+  //   for which there are explicit call arguments, some parameters are ignored
+  //   (namely, function parameter packs, parameters with default arguments, and
+  //   ellipsis parameters).
   template<typename T>
-  constexpr int doo(int a, ...) requires AtLeast2<int> && true { // expected-note {{candidate function}}
+  constexpr int doo(int a, ...) requires AtLeast2<int> && true {
     return 1;
   }
 
   template<typename T>
-  constexpr int doo(int b) requires AtLeast2<int> { // expected-note {{candidate function}}
+  constexpr int doo(int b) requires AtLeast2<int> {
     return 2;
   }
 
-  static_assert(goo<int>(1) == 1);
-  static_assert(doo<int>(2) == 1); // expected-error {{call to 'doo' is ambiguous}}
+  // By temp.func.order-6.2.2, this is ambiguous because parameter a and b have different types.
+  static_assert(goo<int>(1) == 1); // expected-error {{call to 'goo' is ambiguous}}
+  static_assert(doo<int>(2) == 1);
 }

@@ -527,7 +527,7 @@ public:
             CFStack.pushBranch(R600::CF_PUSH_EG);
           } else
             CFStack.pushBranch(R600::CF_ALU_PUSH_BEFORE);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case R600::CF_ALU:
           I = MI;
           AluClauses.push_back(MakeALUClause(MBB, I));

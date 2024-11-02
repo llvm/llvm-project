@@ -32,7 +32,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoll("", &idx);
+            (void)std::stoll("", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -41,7 +41,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoll("  - 8", &idx);
+            (void)std::stoll("  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -50,7 +50,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoll("a1", &idx);
+            (void)std::stoll("a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -60,7 +60,7 @@ int main(int, char**)
         size_t idx = 0;
         try {
             // LWG#2009 and PR14919
-            std::stoll("99999999999999999999999999", &idx);
+            (void)std::stoll("99999999999999999999999999", &idx);
             assert(false);
         } catch (const std::out_of_range&) {
             assert(idx == 0);
@@ -82,7 +82,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoll(L"", &idx);
+            (void)std::stoll(L"", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -91,7 +91,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoll(L"  - 8", &idx);
+            (void)std::stoll(L"  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -100,7 +100,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoll(L"a1", &idx);
+            (void)std::stoll(L"a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -110,7 +110,7 @@ int main(int, char**)
         size_t idx = 0;
         try {
             // LWG#2009 and PR14919
-            std::stoll(L"99999999999999999999999999", &idx);
+            (void)std::stoll(L"99999999999999999999999999", &idx);
             assert(false);
         } catch (const std::out_of_range&) {
             assert(idx == 0);

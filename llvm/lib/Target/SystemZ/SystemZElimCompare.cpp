@@ -735,7 +735,7 @@ bool SystemZElimCompare::runOnMachineFunction(MachineFunction &F) {
   if (skipFunction(F.getFunction()))
     return false;
 
-  TII = static_cast<const SystemZInstrInfo *>(F.getSubtarget().getInstrInfo());
+  TII = F.getSubtarget<SystemZSubtarget>().getInstrInfo();
   TRI = &TII->getRegisterInfo();
 
   bool Changed = false;

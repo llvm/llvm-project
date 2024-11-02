@@ -135,6 +135,11 @@ application needs additional files, you can transfer them using the platform
 commands: get-file, put-file, mkdir, etc. The environment can be prepared
 further using the platform shell command.
 
+When using the "remote-android" platform, the client LLDB forwards two ports, one
+for connecting to the platform, and another for connecting to the gdbserver.
+The client ports are configurable through the environment variables
+ANDROID_PLATFORM_LOCAL_PORT and ANDROID_PLATFORM_LOCAL_GDB_PORT, respectively.
+
 Launching a locally built process on the remote machine
 -------------------------------------------------------
 

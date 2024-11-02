@@ -13,7 +13,7 @@ declare i1 @llvm.coro.end(i8*, i1)
 declare i8* @llvm.coro.free(token, i8* nocapture readonly)
 declare token @llvm.coro.save(i8*)
 
-define void @foo() "coroutine.presplit"="1" {
+define void @foo() presplitcoroutine {
 entry:
   %a0 = alloca [0 x i8]
   %a1 = alloca i32

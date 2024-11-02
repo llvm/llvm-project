@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/initexec -o %t/initexec.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/defs -o %t/defs.o
 # RUN: ld.lld %t/initexec.o %t/defs.o -o %t/out
-# RUN: llvm-objdump -d --mcpu=pwr10 --no-show-raw-insn %t/out | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t/out | FileCheck %s
 
 # CHECK-LABEL: <GetAddrT>:
 # CHECK:         mflr 0

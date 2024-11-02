@@ -25,7 +25,7 @@ namespace misc {
 ///   * The operator must always return ``*this``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-unconventional-assign-operator.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/unconventional-assign-operator.html
 class UnconventionalAssignOperatorCheck : public ClangTidyCheck {
 public:
   UnconventionalAssignOperatorCheck(StringRef Name, ClangTidyContext *Context)

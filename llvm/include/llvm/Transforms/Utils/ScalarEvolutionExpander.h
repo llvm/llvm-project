@@ -28,19 +28,6 @@
 namespace llvm {
 extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 
-/// Return true if the given expression is safe to expand in the sense that
-/// all materialized values are safe to speculate anywhere their operands are
-/// defined, and the expander is capable of expanding the expression.
-/// CanonicalMode indicates whether the expander will be used in canonical mode.
-bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE,
-                    bool CanonicalMode = true);
-
-/// Return true if the given expression is safe to expand in the sense that
-/// all materialized values are defined and safe to speculate at the specified
-/// location and their operands are defined at this location.
-bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
-                      ScalarEvolution &SE);
-
 /// struct for holding enough information to help calculate the cost of the
 /// given SCEV when expanded into IR.
 struct SCEVOperand {
@@ -211,14 +198,14 @@ public:
   /// Return a vector containing all instructions inserted during expansion.
   SmallVector<Instruction *, 32> getAllInsertedInstructions() const {
     SmallVector<Instruction *, 32> Result;
-    for (auto &VH : InsertedValues) {
+    for (const auto &VH : InsertedValues) {
       Value *V = VH;
       if (ReusedValues.contains(V))
         continue;
       if (auto *Inst = dyn_cast<Instruction>(V))
         Result.push_back(Inst);
     }
-    for (auto &VH : InsertedPostIncValues) {
+    for (const auto &VH : InsertedPostIncValues) {
       Value *V = VH;
       if (ReusedValues.contains(V))
         continue;
@@ -261,8 +248,14 @@ public:
   Instruction *getIVIncOperand(Instruction *IncV, Instruction *InsertPos,
                                bool allowScale);
 
-  /// Utility for hoisting an IV increment.
-  bool hoistIVInc(Instruction *IncV, Instruction *InsertPos);
+  /// Utility for hoisting \p IncV (with all subexpressions requried for its
+  /// computation) before \p InsertPos. If \p RecomputePoisonFlags is set, drops
+  /// all poison-generating flags from instructions being hoisted and tries to
+  /// re-infer them in the new location. It should be used when we are going to
+  /// introduce a new use in the new position that didn't exist before, and may
+  /// trigger new UB in case of poison.
+  bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
+                  bool RecomputePoisonFlags = false);
 
   /// replace congruent phis with their most canonical representative. Return
   /// the number of phis eliminated.
@@ -270,10 +263,20 @@ public:
                                SmallVectorImpl<WeakTrackingVH> &DeadInsts,
                                const TargetTransformInfo *TTI = nullptr);
 
+  /// Return true if the given expression is safe to expand in the sense that
+  /// all materialized values are safe to speculate anywhere their operands are
+  /// defined, and the expander is capable of expanding the expression.
+  bool isSafeToExpand(const SCEV *S) const;
+
+  /// Return true if the given expression is safe to expand in the sense that
+  /// all materialized values are defined and safe to speculate at the specified
+  /// location and their operands are defined at this location.
+  bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint) const;
+
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
   Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I) {
-    return expandCodeForImpl(SH, Ty, I, true);
+    return expandCodeForImpl(SH, Ty, I);
   }
 
   /// Insert code to directly compute the specified SCEV expression into the
@@ -281,7 +284,7 @@ public:
   /// insertion point. If a type is specified, the result will be expanded to
   /// have that type, with a cast if necessary.
   Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr) {
-    return expandCodeForImpl(SH, Ty, true);
+    return expandCodeForImpl(SH, Ty);
   }
 
   /// Generates a code sequence that evaluates this predicate.  The inserted
@@ -399,13 +402,13 @@ private:
   /// have that type, with a cast if necessary. If \p Root is true, this
   /// indicates that \p SH is the top-level expression to expand passed from
   /// an external client call.
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root);
+  Value *expandCodeForImpl(const SCEV *SH, Type *Ty);
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program. The code is inserted into the specified block. If \p
   /// Root is true, this indicates that \p SH is the top-level expression to
   /// expand passed from an external client call.
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, Instruction *I, bool Root);
+  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, Instruction *I);
 
   /// Recursive helper function for isHighCostExpansion.
   bool isHighCostExpansionHelper(const SCEVOperand &WorkItem, Loop *L,
@@ -496,10 +499,9 @@ private:
 
   void fixupInsertPoints(Instruction *I);
 
-  /// If required, create LCSSA PHIs for \p Users' operand \p OpIdx. If new
-  /// LCSSA PHIs have been created, return the LCSSA PHI available at \p User.
-  /// If no PHIs have been created, return the unchanged operand \p OpIdx.
-  Value *fixupLCSSAFormFor(Instruction *User, unsigned OpIdx);
+  /// Create LCSSA PHIs for \p V, if it is required for uses at the Builder's
+  /// current insertion point.
+  Value *fixupLCSSAFormFor(Value *V);
 };
 
 /// Helper to remove instructions inserted during SCEV expansion, unless they

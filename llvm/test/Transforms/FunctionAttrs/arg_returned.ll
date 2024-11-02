@@ -145,84 +145,84 @@ return:                                           ; preds = %cond.end, %if.then3
 
 ; TEST SCC test returning a pointer value argument
 ;
-; FNATTR: define double* @ptr_sink_r0(double* readnone returned %r)
-; FNATTR: define double* @ptr_scc_r1(double* %a, double* readnone %r, double* nocapture readnone %b)
-; FNATTR: define double* @ptr_scc_r2(double* readnone %a, double* readnone %b, double* readnone %r)
+; FNATTR: define ptr @ptr_sink_r0(ptr readnone returned %r)
+; FNATTR: define ptr @ptr_scc_r1(ptr %a, ptr readnone %r, ptr nocapture readnone %b)
+; FNATTR: define ptr @ptr_scc_r2(ptr readnone %a, ptr readnone %b, ptr readnone %r)
 ;
 ;
-; double* ptr_scc_r1(double* a, double* b, double* r);
-; double* ptr_scc_r2(double* a, double* b, double* r);
+; ptr ptr_scc_r1(ptr a, ptr b, ptr r);
+; ptr ptr_scc_r2(ptr a, ptr b, ptr r);
 ;
-; __attribute__((noinline)) double* ptr_sink_r0(double* r) {
+; __attribute__((noinline)) ptr ptr_sink_r0(ptr r) {
 ;   return r;
 ; }
 ;
-; __attribute__((noinline)) double* ptr_scc_r1(double* a, double* r, double* b) {
+; __attribute__((noinline)) ptr ptr_scc_r1(ptr a, ptr r, ptr b) {
 ;   return ptr_scc_r2(r, a, ptr_sink_r0(r));
 ; }
 ;
-; __attribute__((noinline)) double* ptr_scc_r2(double* a, double* b, double* r) {
+; __attribute__((noinline)) ptr ptr_scc_r2(ptr a, ptr b, ptr r) {
 ;   if (a > b)
 ;     return ptr_scc_r2(b, a, ptr_sink_r0(r));
 ;   if (a < b)
 ;     return ptr_scc_r1(ptr_sink_r0(b), ptr_scc_r2(ptr_scc_r1(a, b, r), ptr_scc_r1(a, ptr_scc_r2(r, r, r), r), ptr_scc_r2(a, b, r)), ptr_scc_r1(a, b, r));
 ;   return a == b ? r : ptr_scc_r2(a, b, r);
 ; }
-define double* @ptr_sink_r0(double* %r) #0 {
+define ptr @ptr_sink_r0(ptr %r) #0 {
 entry:
-  ret double* %r
+  ret ptr %r
 }
 
-define double* @ptr_scc_r1(double* %a, double* %r, double* %b) #0 {
+define ptr @ptr_scc_r1(ptr %a, ptr %r, ptr %b) #0 {
 entry:
-  %call = call double* @ptr_sink_r0(double* %r)
-  %call1 = call double* @ptr_scc_r2(double* %r, double* %a, double* %call)
-  ret double* %call1
+  %call = call ptr @ptr_sink_r0(ptr %r)
+  %call1 = call ptr @ptr_scc_r2(ptr %r, ptr %a, ptr %call)
+  ret ptr %call1
 }
 
-define double* @ptr_scc_r2(double* %a, double* %b, double* %r) #0 {
+define ptr @ptr_scc_r2(ptr %a, ptr %b, ptr %r) #0 {
 entry:
-  %cmp = icmp ugt double* %a, %b
+  %cmp = icmp ugt ptr %a, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %call = call double* @ptr_sink_r0(double* %r)
-  %call1 = call double* @ptr_scc_r2(double* %b, double* %a, double* %call)
+  %call = call ptr @ptr_sink_r0(ptr %r)
+  %call1 = call ptr @ptr_scc_r2(ptr %b, ptr %a, ptr %call)
   br label %return
 
 if.end:                                           ; preds = %entry
-  %cmp2 = icmp ult double* %a, %b
+  %cmp2 = icmp ult ptr %a, %b
   br i1 %cmp2, label %if.then3, label %if.end12
 
 if.then3:                                         ; preds = %if.end
-  %call4 = call double* @ptr_sink_r0(double* %b)
-  %call5 = call double* @ptr_scc_r1(double* %a, double* %b, double* %r)
-  %call6 = call double* @ptr_scc_r2(double* %r, double* %r, double* %r)
-  %call7 = call double* @ptr_scc_r1(double* %a, double* %call6, double* %r)
-  %call8 = call double* @ptr_scc_r2(double* %a, double* %b, double* %r)
-  %call9 = call double* @ptr_scc_r2(double* %call5, double* %call7, double* %call8)
-  %call10 = call double* @ptr_scc_r1(double* %a, double* %b, double* %r)
-  %call11 = call double* @ptr_scc_r1(double* %call4, double* %call9, double* %call10)
+  %call4 = call ptr @ptr_sink_r0(ptr %b)
+  %call5 = call ptr @ptr_scc_r1(ptr %a, ptr %b, ptr %r)
+  %call6 = call ptr @ptr_scc_r2(ptr %r, ptr %r, ptr %r)
+  %call7 = call ptr @ptr_scc_r1(ptr %a, ptr %call6, ptr %r)
+  %call8 = call ptr @ptr_scc_r2(ptr %a, ptr %b, ptr %r)
+  %call9 = call ptr @ptr_scc_r2(ptr %call5, ptr %call7, ptr %call8)
+  %call10 = call ptr @ptr_scc_r1(ptr %a, ptr %b, ptr %r)
+  %call11 = call ptr @ptr_scc_r1(ptr %call4, ptr %call9, ptr %call10)
   br label %return
 
 if.end12:                                         ; preds = %if.end
-  %cmp13 = icmp eq double* %a, %b
+  %cmp13 = icmp eq ptr %a, %b
   br i1 %cmp13, label %cond.true, label %cond.false
 
 cond.true:                                        ; preds = %if.end12
   br label %cond.end
 
 cond.false:                                       ; preds = %if.end12
-  %call14 = call double* @ptr_scc_r2(double* %a, double* %b, double* %r)
+  %call14 = call ptr @ptr_scc_r2(ptr %a, ptr %b, ptr %r)
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %cond.true
-  %cond = phi double* [ %r, %cond.true ], [ %call14, %cond.false ]
+  %cond = phi ptr [ %r, %cond.true ], [ %call14, %cond.false ]
   br label %return
 
 return:                                           ; preds = %cond.end, %if.then3, %if.then
-  %retval.0 = phi double* [ %call1, %if.then ], [ %call11, %if.then3 ], [ %cond, %cond.end ]
-  ret double* %retval.0
+  %retval.0 = phi ptr [ %call1, %if.then ], [ %call11, %if.then3 ], [ %cond, %cond.end ]
+  ret ptr %retval.0
 }
 
 
@@ -232,14 +232,14 @@ return:                                           ; preds = %cond.end, %if.then3
 ;   return *a ? a : rt0(a);
 ; }
 ;
-; FNATTR:  define i32* @rt0(i32* readonly %a)
-define i32* @rt0(i32* %a) #0 {
+; FNATTR:  define ptr @rt0(ptr readonly %a)
+define ptr @rt0(ptr %a) #0 {
 entry:
-  %v = load i32, i32* %a, align 4
+  %v = load i32, ptr %a, align 4
   %tobool = icmp ne i32 %v, 0
-  %call = call i32* @rt0(i32* %a)
-  %sel = select i1 %tobool, i32* %a, i32* %call
-  ret i32* %sel
+  %call = call ptr @rt0(ptr %a)
+  %sel = select i1 %tobool, ptr %a, ptr %call
+  ret ptr %sel
 }
 
 ; TEST a no-return singleton SCC
@@ -248,67 +248,67 @@ entry:
 ;   return *a ? undef : rt1(a);
 ; }
 ;
-; FNATTR:  define noalias i32* @rt1(i32* nocapture readonly %a)
-define i32* @rt1(i32* %a) #0 {
+; FNATTR:  define noalias ptr @rt1(ptr nocapture readonly %a)
+define ptr @rt1(ptr %a) #0 {
 entry:
-  %v = load i32, i32* %a, align 4
+  %v = load i32, ptr %a, align 4
   %tobool = icmp ne i32 %v, 0
-  %call = call i32* @rt1(i32* %a)
-  %sel = select i1 %tobool, i32* undef, i32* %call
-  ret i32* %sel
+  %call = call ptr @rt1(ptr %a)
+  %sel = select i1 %tobool, ptr undef, ptr %call
+  ret ptr %sel
 }
 
 ; TEST another SCC test
 ;
-; FNATTR:  define i32* @rt2_helper(i32* %a)
-; FNATTR:  define i32* @rt2(i32* readnone %a, i32* readnone %b)
-define i32* @rt2_helper(i32* %a) #0 {
+; FNATTR:  define ptr @rt2_helper(ptr %a)
+; FNATTR:  define ptr @rt2(ptr readnone %a, ptr readnone %b)
+define ptr @rt2_helper(ptr %a) #0 {
 entry:
-  %call = call i32* @rt2(i32* %a, i32* %a)
-  ret i32* %call
+  %call = call ptr @rt2(ptr %a, ptr %a)
+  ret ptr %call
 }
 
-define i32* @rt2(i32* %a, i32 *%b) #0 {
+define ptr @rt2(ptr %a, ptr %b) #0 {
 entry:
-  %cmp = icmp eq i32* %a, null
+  %cmp = icmp eq ptr %a, null
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  %call = call i32* @rt2_helper(i32* %a)
+  %call = call ptr @rt2_helper(ptr %a)
   br label %if.end
 
 if.end:
-  %sel = phi i32* [ %b, %entry], [%call, %if.then]
-  ret i32* %sel
+  %sel = phi ptr [ %b, %entry], [%call, %if.then]
+  ret ptr %sel
 }
 
 ; TEST another SCC test
 ;
-; FNATTR:  define i32* @rt3_helper(i32* %a, i32* %b)
-; FNATTR:  define i32* @rt3(i32* readnone %a, i32* readnone %b)
-define i32* @rt3_helper(i32* %a, i32* %b) #0 {
+; FNATTR:  define ptr @rt3_helper(ptr %a, ptr %b)
+; FNATTR:  define ptr @rt3(ptr readnone %a, ptr readnone %b)
+define ptr @rt3_helper(ptr %a, ptr %b) #0 {
 entry:
-  %call = call i32* @rt3(i32* %a, i32* %b)
-  ret i32* %call
+  %call = call ptr @rt3(ptr %a, ptr %b)
+  ret ptr %call
 }
 
-define i32* @rt3(i32* %a, i32 *%b) #0 {
+define ptr @rt3(ptr %a, ptr %b) #0 {
 entry:
-  %cmp = icmp eq i32* %a, null
+  %cmp = icmp eq ptr %a, null
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  %call = call i32* @rt3_helper(i32* %a, i32* %b)
+  %call = call ptr @rt3_helper(ptr %a, ptr %b)
   br label %if.end
 
 if.end:
-  %sel = phi i32* [ %b, %entry], [%call, %if.then]
-  ret i32* %sel
+  %sel = phi ptr [ %b, %entry], [%call, %if.then]
+  ret ptr %sel
 }
 
 ; TEST address taken function with call to an external functions
 ;
-;  void unknown_fn(void *);
+;  void unknown_fn(ptr);
 ;
 ;  int* calls_unknown_fn(int *r) {
 ;    unknown_fn(&calls_unknown_fn);
@@ -316,12 +316,12 @@ if.end:
 ;  }
 ;
 ;
-; FNATTR:     define i32* @calls_unknown_fn(i32* readnone returned %r)
-declare void @unknown_fn(i32* (i32*)*) #0
+; FNATTR:     define ptr @calls_unknown_fn(ptr readnone returned %r)
+declare void @unknown_fn(ptr) #0
 
-define i32* @calls_unknown_fn(i32* %r) #0 {
-  tail call void @unknown_fn(i32* (i32*)* nonnull @calls_unknown_fn)
-  ret i32* %r
+define ptr @calls_unknown_fn(ptr %r) #0 {
+  tail call void @unknown_fn(ptr nonnull @calls_unknown_fn)
+  ret ptr %r
 }
 
 
@@ -338,16 +338,16 @@ define i32* @calls_unknown_fn(i32* %r) #0 {
 ; Verify the maybe-redefined function is not annotated:
 ;
 ;
-; FNATTR:     define i32* @calls_maybe_redefined_fn2(i32* %r)
-define linkonce_odr i32* @maybe_redefined_fn2(i32* %r) #0 {
+; FNATTR:     define ptr @calls_maybe_redefined_fn2(ptr %r)
+define linkonce_odr ptr @maybe_redefined_fn2(ptr %r) #0 {
 entry:
-  ret i32* %r
+  ret ptr %r
 }
 
-define i32* @calls_maybe_redefined_fn2(i32* %r) #0 {
+define ptr @calls_maybe_redefined_fn2(ptr %r) #0 {
 entry:
-  %call = call i32* @maybe_redefined_fn2(i32* %r)
-  ret i32* %call
+  %call = call ptr @maybe_redefined_fn2(ptr %r)
+  ret ptr %call
 }
 
 
@@ -410,150 +410,139 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; TEST returned argument goes through bitcasts
 ;
-; double* bitcast(int* b) {
-;   return (double*)b;
+; ptr bitcast(int* b) {
+;   return (ptr)b;
 ; }
 ;
 ;
-; FNATTR:     define double* @bitcast(i32* readnone %b)
+; FNATTR:     define ptr @bitcast(ptr readnone returned %b)
 ;
-define double* @bitcast(i32* %b) #0 {
+define ptr @bitcast(ptr %b) #0 {
 entry:
-  %bc0 = bitcast i32* %b to double*
-  ret double* %bc0
+  ret ptr %b
 }
 
 
 ; TEST returned argument goes through select and phi interleaved with bitcasts
 ;
-; double* bitcasts_select_and_phi(int* b) {
-;   double* x = b;
+; ptr bitcasts_select_and_phi(int* b) {
+;   ptr x = b;
 ;   if (b == 0)
 ;     x = b;
 ;   return b != 0 ? b : x;
 ; }
 ;
 ;
-; FNATTR:     define double* @bitcasts_select_and_phi(i32* readnone %b)
+; FNATTR:     define ptr @bitcasts_select_and_phi(ptr readnone %b)
 ;
-define double* @bitcasts_select_and_phi(i32* %b) #0 {
+define ptr @bitcasts_select_and_phi(ptr %b) #0 {
 entry:
-  %bc0 = bitcast i32* %b to double*
-  %cmp = icmp eq double* %bc0, null
+  %cmp = icmp eq ptr %b, null
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %bc1 = bitcast i32* %b to double*
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %phi = phi double* [ %bc1, %if.then ], [ %bc0, %entry ]
-  %bc2 = bitcast double* %phi to i8*
-  %bc3 = bitcast i32* %b to i8*
-  %cmp2 = icmp ne double* %bc0, null
-  %sel = select i1 %cmp2, i8* %bc2, i8* %bc3
-  %bc4 = bitcast i8* %sel to double*
-  ret double* %bc4
+  %phi = phi ptr [ %b, %if.then ], [ %b, %entry ]
+  %cmp2 = icmp ne ptr %b, null
+  %sel = select i1 %cmp2, ptr %phi, ptr %b
+  ret ptr %sel
 }
 
 
 ; TEST return argument or argument or undef
 ;
-; double* ret_arg_arg_undef(int* b) {
+; ptr ret_arg_arg_undef(int* b) {
 ;   if (b == 0)
-;     return (double*)b;
+;     return (ptr)b;
 ;   if (b == 0)
-;     return (double*)b;
+;     return (ptr)b;
 ;   /* return undef */
 ; }
 ;
 ;
-; FNATTR:     define double* @ret_arg_arg_undef(i32* readnone %b)
+; FNATTR:     define ptr @ret_arg_arg_undef(ptr readnone %b)
 ;
-define double* @ret_arg_arg_undef(i32* %b) #0 {
+define ptr @ret_arg_arg_undef(ptr %b) #0 {
 entry:
-  %bc0 = bitcast i32* %b to double*
-  %cmp = icmp eq double* %bc0, null
+  %cmp = icmp eq ptr %b, null
   br i1 %cmp, label %ret_arg0, label %if.end
 
 ret_arg0:
-  %bc1 = bitcast i32* %b to double*
-  ret double* %bc1
+  ret ptr %b
 
 if.end:
   br i1 %cmp, label %ret_arg1, label %ret_undef
 
 ret_arg1:
-  ret double* %bc0
+  ret ptr %b
 
 ret_undef:
-  ret double *undef
+  ret ptr undef
 }
 
 
 ; TEST return undef or argument or argument
 ;
-; double* ret_undef_arg_arg(int* b) {
+; ptr ret_undef_arg_arg(int* b) {
 ;   if (b == 0)
-;     return (double*)b;
+;     return (ptr)b;
 ;   if (b == 0)
-;     return (double*)b;
+;     return (ptr)b;
 ;   /* return undef */
 ; }
 ;
 ;
-; FNATTR:     define double* @ret_undef_arg_arg(i32* readnone %b)
+; FNATTR:     define ptr @ret_undef_arg_arg(ptr readnone %b)
 ;
-define double* @ret_undef_arg_arg(i32* %b) #0 {
+define ptr @ret_undef_arg_arg(ptr %b) #0 {
 entry:
-  %bc0 = bitcast i32* %b to double*
-  %cmp = icmp eq double* %bc0, null
+  %cmp = icmp eq ptr %b, null
   br i1 %cmp, label %ret_undef, label %if.end
 
 ret_undef:
-  ret double *undef
+  ret ptr undef
 
 if.end:
   br i1 %cmp, label %ret_arg0, label %ret_arg1
 
 ret_arg0:
-  ret double* %bc0
+  ret ptr %b
 
 ret_arg1:
-  %bc1 = bitcast i32* %b to double*
-  ret double* %bc1
+  ret ptr %b
 }
 
 
 ; TEST return undef or argument or undef
 ;
-; double* ret_undef_arg_undef(int* b) {
+; ptr ret_undef_arg_undef(int* b) {
 ;   if (b == 0)
 ;     /* return undef */
 ;   if (b == 0)
-;     return (double*)b;
+;     return (ptr)b;
 ;   /* return undef */
 ; }
 ;
 ;
-; FNATTR:     define double* @ret_undef_arg_undef(i32* readnone %b)
-define double* @ret_undef_arg_undef(i32* %b) #0 {
+; FNATTR:     define ptr @ret_undef_arg_undef(ptr readnone %b)
+define ptr @ret_undef_arg_undef(ptr %b) #0 {
 entry:
-  %bc0 = bitcast i32* %b to double*
-  %cmp = icmp eq double* %bc0, null
+  %cmp = icmp eq ptr %b, null
   br i1 %cmp, label %ret_undef0, label %if.end
 
 ret_undef0:
-  ret double *undef
+  ret ptr undef
 
 if.end:
   br i1 %cmp, label %ret_arg, label %ret_undef1
 
 ret_arg:
-  ret double* %bc0
+  ret ptr %b
 
 ret_undef1:
-  ret double *undef
+  ret ptr undef
 }
 
 ; TEST return argument or unknown call result
@@ -566,38 +555,38 @@ ret_undef1:
 ;
 ; Verify we do not assume b is returned
 ;
-; FNATTR:     define i32* @ret_arg_or_unknown(i32* %b)
-; FNATTR:     define i32* @ret_arg_or_unknown_through_phi(i32* %b)
-declare i32* @unknown(i32*)
+; FNATTR:     define ptr @ret_arg_or_unknown(ptr %b)
+; FNATTR:     define ptr @ret_arg_or_unknown_through_phi(ptr %b)
+declare ptr @unknown(ptr)
 
-define i32* @ret_arg_or_unknown(i32* %b) #0 {
+define ptr @ret_arg_or_unknown(ptr %b) #0 {
 entry:
-  %cmp = icmp eq i32* %b, null
+  %cmp = icmp eq ptr %b, null
   br i1 %cmp, label %ret_arg, label %ret_unknown
 
 ret_arg:
-  ret i32* %b
+  ret ptr %b
 
 ret_unknown:
-  %call = call i32* @unknown(i32* %b)
-  ret i32* %call
+  %call = call ptr @unknown(ptr %b)
+  ret ptr %call
 }
 
-define i32* @ret_arg_or_unknown_through_phi(i32* %b) #0 {
+define ptr @ret_arg_or_unknown_through_phi(ptr %b) #0 {
 entry:
-  %cmp = icmp eq i32* %b, null
+  %cmp = icmp eq ptr %b, null
   br i1 %cmp, label %ret_arg, label %ret_unknown
 
 ret_arg:
   br label %r
 
 ret_unknown:
-  %call = call i32* @unknown(i32* %b)
+  %call = call ptr @unknown(ptr %b)
   br label %r
 
 r:
-  %phi = phi i32* [ %b, %ret_arg ], [ %call, %ret_unknown ]
-  ret i32* %phi
+  %phi = phi ptr [ %b, %ret_arg ], [ %call, %ret_unknown ]
+  ret ptr %phi
 }
 
 ; TEST inconsistent IR in dead code.

@@ -15,6 +15,24 @@ declare i8 @llvm.umin.i8(i8, i8)
 declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
 declare void @llvm.assume(i1)
 
+@g = external dso_local global [9 x i32], align 4
+
+define i8 @constexpr_maxvalue() {
+; CHECK-LABEL: @constexpr_maxvalue(
+; CHECK-NEXT:    ret i8 ptrtoint (ptr @g to i8)
+;
+  %umin = call i8 @llvm.umin.i8(i8 255, i8 ptrtoint (ptr @g to i8))
+  ret i8 %umin
+}
+
+define i8 @constexpr_maxvalue_commute() {
+; CHECK-LABEL: @constexpr_maxvalue_commute(
+; CHECK-NEXT:    ret i8 ptrtoint (ptr @g to i8)
+;
+  %umin = call i8 @llvm.umin.i8(i8 ptrtoint (ptr @g to i8), i8 255)
+  ret i8 %umin
+}
+
 define i81 @smax_sameval(i81 %x) {
 ; CHECK-LABEL: @smax_sameval(
 ; CHECK-NEXT:    ret i81 [[X:%.*]]
@@ -2137,13 +2155,13 @@ define i8 @umax_add_nuw_2(i8 %x) {
   ret i8 %max
 }
 
-define i8 @umax_range_metadata(i8* %p1, i8* %p2) {
+define i8 @umax_range_metadata(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @umax_range_metadata(
-; CHECK-NEXT:    [[Y:%.*]] = load i8, i8* [[P2:%.*]], align 1, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[P2:%.*]], align 1, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[Y]]
 ;
-  %x = load i8, i8* %p1, !range !{i8 0, i8 10}
-  %y = load i8, i8* %p2, !range !{i8 20, i8 30}
+  %x = load i8, ptr %p1, !range !{i8 0, i8 10}
+  %y = load i8, ptr %p2, !range !{i8 20, i8 30}
   %max = call i8 @llvm.umax.i8(i8 %x, i8 %y)
   ret i8 %max
 }

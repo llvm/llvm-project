@@ -26,7 +26,7 @@ namespace lldb_private {
 ///
 /// Designed to handle mangled names. The demangled version of any names will
 /// be computed when the demangled name is accessed through the Demangled()
-/// acccessor. This class can also tokenize the demangled version of the name
+/// accessor. This class can also tokenize the demangled version of the name
 /// for powerful searches. Functions and symbols could make instances of this
 /// class for their mangled names. Uniqued string pools are used for the
 /// mangled, demangled, and token string values to allow for faster

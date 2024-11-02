@@ -165,6 +165,12 @@ size_t getSizeForTypeAArch64(uint64_t Type) {
   }
 }
 
+bool skipRelocationTypeX86(uint64_t Type) { return Type == ELF::R_X86_64_NONE; }
+
+bool skipRelocationTypeAArch64(uint64_t Type) {
+  return Type == ELF::R_AARCH64_NONE || Type == ELF::R_AARCH64_LD_PREL_LO19;
+}
+
 bool skipRelocationProcessX86(uint64_t Type, uint64_t Contents) {
   return false;
 }
@@ -536,6 +542,12 @@ size_t Relocation::getSizeForType(uint64_t Type) {
   return getSizeForTypeX86(Type);
 }
 
+bool Relocation::skipRelocationType(uint64_t Type) {
+  if (Arch == Triple::aarch64)
+    return skipRelocationTypeAArch64(Type);
+  return skipRelocationTypeX86(Type);
+}
+
 bool Relocation::skipRelocationProcess(uint64_t Type, uint64_t Contents) {
   if (Arch == Triple::aarch64)
     return skipRelocationProcessAArch64(Type, Contents);
@@ -560,6 +572,12 @@ bool Relocation::isGOT(uint64_t Type) {
   if (Arch == Triple::aarch64)
     return isGOTAArch64(Type);
   return isGOTX86(Type);
+}
+
+bool Relocation::isX86GOTPCRELX(uint64_t Type) {
+  if (Arch != Triple::x86_64)
+    return false;
+  return Type == ELF::R_X86_64_GOTPCRELX || Type == ELF::R_X86_64_REX_GOTPCRELX;
 }
 
 bool Relocation::isNone(uint64_t Type) { return Type == getNone(); }

@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
 // RUN: ld.lld -static %t.o -o %tout
-// RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-readobj -r --symbols --sections %tout | FileCheck %s
 
 // CHECK:      Sections [

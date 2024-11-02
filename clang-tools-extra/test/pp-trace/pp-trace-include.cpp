@@ -13,7 +13,7 @@
 // CHECK-NEXT:   Loc: "<built-in>:1:1"
 // CHECK-NEXT:   Reason: EnterFile
 // CHECK-NEXT:   FileType: C_User
-// CHECK-NEXT:   PrevFID: (invalid)
+// CHECK-NEXT:   PrevFID: "{{.*}}{{[/\\]}}pp-trace-include.cpp"
 // CHECK-NEXT: - Callback: FileChanged
 // CHECK-NEXT:   Loc: "<built-in>:1:1"
 // CHECK-NEXT:   Reason: RenameFile
@@ -51,6 +51,7 @@
 // CHECK-NEXT:   FileType: C_User
 // CHECK-NEXT:   PrevFID: (getFileEntryForID failed)
 // CHECK-NEXT: - Callback: InclusionDirective
+// CHECK-NEXT:   HashLoc: "{{.*}}{{[/\\]}}pp-trace-include.cpp:3:1"
 // CHECK-NEXT:   IncludeTok: include
 // CHECK-NEXT:   FileName: "Inputs/Level1A.h"
 // CHECK-NEXT:   IsAngled: false
@@ -63,8 +64,9 @@
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}Inputs/Level1A.h:1:1"
 // CHECK-NEXT:   Reason: EnterFile
 // CHECK-NEXT:   FileType: C_User
-// CHECK-NEXT:   PrevFID: (invalid)
+// CHECK-NEXT:   PrevFID: "{{.*}}{{[/\\]}}pp-trace-include.cpp"
 // CHECK-NEXT: - Callback: InclusionDirective
+// CHECK-NEXT:   HashLoc: "{{.*}}{{[/\\]}}Inputs/Level1A.h:1:1"
 // CHECK-NEXT:   IncludeTok: include
 // CHECK-NEXT:   FileName: "Level2A.h"
 // CHECK-NEXT:   IsAngled: false
@@ -77,7 +79,7 @@
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}Inputs/Level2A.h:1:1"
 // CHECK-NEXT:   Reason: EnterFile
 // CHECK-NEXT:   FileType: C_User
-// CHECK-NEXT:   PrevFID: (invalid)
+// CHECK-NEXT:   PrevFID: "{{.*}}{{[/\\]}}Inputs/Level1A.h"
 // CHECK-NEXT: - Callback: MacroDefined
 // CHECK-NEXT:   MacroNameTok: MACRO_2A
 // CHECK-NEXT:   MacroDirective: MD_Define
@@ -95,6 +97,7 @@
 // CHECK-NEXT:   FileType: C_User
 // CHECK-NEXT:   PrevFID: "{{.*}}{{[/\\]}}Inputs/Level1A.h"
 // CHECK-NEXT: - Callback: InclusionDirective
+// CHECK-NEXT:   HashLoc: "{{.*}}{{[/\\]}}pp-trace-include.cpp:4:1"
 // CHECK-NEXT:   IncludeTok: include
 // CHECK-NEXT:   FileName: "Inputs/Level1B.h"
 // CHECK-NEXT:   IsAngled: false
@@ -107,8 +110,9 @@
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}Inputs/Level1B.h:1:1"
 // CHECK-NEXT:   Reason: EnterFile
 // CHECK-NEXT:   FileType: C_User
-// CHECK-NEXT:   PrevFID: (invalid)
+// CHECK-NEXT:   PrevFID: "{{.*}}{{[/\\]}}pp-trace-include.cpp"
 // CHECK-NEXT: - Callback: InclusionDirective
+// CHECK-NEXT:   HashLoc: "{{.*}}{{[/\\]}}Inputs/Level1B.h:1:1"
 // CHECK-NEXT:   IncludeTok: include
 // CHECK-NEXT:   FileName: "Level2B.h"
 // CHECK-NEXT:   IsAngled: false
@@ -121,7 +125,7 @@
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}Inputs/Level2B.h:1:1"
 // CHECK-NEXT:   Reason: EnterFile
 // CHECK-NEXT:   FileType: C_User
-// CHECK-NEXT:   PrevFID: (invalid)
+// CHECK-NEXT:   PrevFID: "{{.*}}{{[/\\]}}Inputs/Level1B.h"
 // CHECK-NEXT: - Callback: MacroDefined
 // CHECK-NEXT:   MacroNameTok: MACRO_2B
 // CHECK-NEXT:   MacroDirective: MD_Define

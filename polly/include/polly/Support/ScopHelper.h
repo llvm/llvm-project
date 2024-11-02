@@ -252,21 +252,6 @@ public:
       return nullptr;
     llvm_unreachable("Operation not supported on nullptr");
   }
-
-  unsigned getAlignment() const {
-    if (isLoad())
-      return asLoad()->getAlignment();
-    if (isStore())
-      return asStore()->getAlignment();
-    if (isMemTransferInst())
-      return std::min(asMemTransferInst()->getDestAlignment(),
-                      asMemTransferInst()->getSourceAlignment());
-    if (isMemIntrinsic())
-      return asMemIntrinsic()->getDestAlignment();
-    if (isCallInst())
-      return 0;
-    llvm_unreachable("Operation not supported on nullptr");
-  }
   bool isVolatile() const {
     if (isLoad())
       return asLoad()->isVolatile();
@@ -318,7 +303,6 @@ public:
 
   llvm::Instruction *asInstruction() const { return I; }
 
-private:
   bool isLoad() const { return I && llvm::isa<llvm::LoadInst>(I); }
   bool isStore() const { return I && llvm::isa<llvm::StoreInst>(I); }
   bool isCallInst() const { return I && llvm::isa<llvm::CallInst>(I); }

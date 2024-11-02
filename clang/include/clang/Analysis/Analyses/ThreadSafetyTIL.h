@@ -75,7 +75,7 @@ namespace til {
 class BasicBlock;
 
 /// Enum for the different distinct classes of SExpr
-enum TIL_Opcode {
+enum TIL_Opcode : unsigned char {
 #define TIL_OPCODE_DEF(X) COP_##X,
 #include "ThreadSafetyOps.def"
 #undef TIL_OPCODE_DEF
@@ -278,7 +278,7 @@ class SExpr {
 public:
   SExpr() = delete;
 
-  TIL_Opcode opcode() const { return static_cast<TIL_Opcode>(Opcode); }
+  TIL_Opcode opcode() const { return Opcode; }
 
   // Subclasses of SExpr must define the following:
   //
@@ -321,7 +321,7 @@ protected:
   SExpr(TIL_Opcode Op) : Opcode(Op) {}
   SExpr(const SExpr &E) : Opcode(E.Opcode), Flags(E.Flags) {}
 
-  const unsigned char Opcode;
+  const TIL_Opcode Opcode;
   unsigned char Reserved = 0;
   unsigned short Flags = 0;
   unsigned SExprID = 0;
@@ -332,7 +332,7 @@ protected:
 namespace ThreadSafetyTIL {
 
 inline bool isTrivial(const SExpr *E) {
-  unsigned Op = E->opcode();
+  TIL_Opcode Op = E->opcode();
   return Op == COP_Variable || Op == COP_Literal || Op == COP_LiteralPtr;
 }
 
@@ -634,15 +634,14 @@ typename V::R_SExpr Literal::traverse(V &Vs, typename V::R_Ctx Ctx) {
 /// At compile time, pointer literals are represented by symbolic names.
 class LiteralPtr : public SExpr {
 public:
-  LiteralPtr(const ValueDecl *D) : SExpr(COP_LiteralPtr), Cvdecl(D) {
-    assert(D && "ValueDecl must not be null");
-  }
+  LiteralPtr(const ValueDecl *D) : SExpr(COP_LiteralPtr), Cvdecl(D) {}
   LiteralPtr(const LiteralPtr &) = default;
 
   static bool classof(const SExpr *E) { return E->opcode() == COP_LiteralPtr; }
 
   // The clang declaration for the value that this pointer points to.
   const ValueDecl *clangDecl() const { return Cvdecl; }
+  void setClangDecl(const ValueDecl *VD) { Cvdecl = VD; }
 
   template <class V>
   typename V::R_SExpr traverse(V &Vs, typename V::R_Ctx Ctx) {
@@ -651,6 +650,8 @@ public:
 
   template <class C>
   typename C::CType compare(const LiteralPtr* E, C& Cmp) const {
+    if (!Cvdecl || !E->Cvdecl)
+      return Cmp.comparePointers(this, E);
     return Cmp.comparePointers(Cvdecl, E->Cvdecl);
   }
 

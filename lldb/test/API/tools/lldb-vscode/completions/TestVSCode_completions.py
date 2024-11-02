@@ -4,7 +4,6 @@ Test lldb-vscode completions request
 
 
 import lldbvscode_testcase
-import unittest2
 import vscode
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
@@ -12,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def verify_completions(self, actual_list, expected_list, not_expected_list=[]):
         for expected_item in expected_list:

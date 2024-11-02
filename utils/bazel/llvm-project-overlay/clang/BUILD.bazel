@@ -2,14 +2,16 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 exports_files([
     "tools/clang-format/clang-format.el",
@@ -234,6 +236,19 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_riscv_vector_builtin_sema_gen",
+    tbl_outs = [(
+        "-gen-riscv-vector-builtin-sema",
+        "include/clang/Basic/riscv_vector_builtin_sema.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/riscv_vector.td",
+    td_srcs = [
+        "include/clang/Basic/riscv_vector.td",
+    ],
+)
+
+gentbl(
     name = "basic_arm_cde_gen",
     tbl_outs = [(
         "-gen-arm-cde-builtin-def",
@@ -344,11 +359,12 @@ genrule(
     name = "basic_version_gen",
     outs = ["include/clang/Basic/Version.inc"],
     cmd = (
-        "echo '#define CLANG_VERSION 15.0.0' >> $@\n" +
-        "echo '#define CLANG_VERSION_MAJOR 15' >> $@\n" +
+        "echo '#define CLANG_VERSION 16.0.0' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR 16' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR_STRING \"16\"' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL 0' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"15.0.0\"' >> $@\n"
+        "echo '#define CLANG_VERSION_STRING \"16.0.0\"' >> $@\n"
     ),
 )
 
@@ -865,14 +881,17 @@ cc_library(
         ":basic_arm_cde_sema_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
+        ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
         ":lex",
         ":libsema_openclbuiltins_inc_gen",
         ":sema_attr_gen",
+        ":support",
         ":type_nodes_gen",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:MC",
         "//llvm:MCParser",
@@ -991,7 +1010,7 @@ cc_library(
         ":basic",
         ":frontend",
         "//llvm:Support",
-        "//llvm:gtest",
+        "//third-party/unittest:gtest",
     ],
 )
 
@@ -1454,14 +1473,28 @@ gentbl(
 # We generate the set of builtin headers under a special subdirectory in the
 # 'bin' section of the bazel output so that they can be used as data
 # dependencies. It requires listing explicitly all the generated inputs here.
-builtin_headers = glob(["lib/Headers/**/*.h"]) + [
+builtin_headers = glob(
+    ["lib/Headers/**/*.h"],
+    exclude = [
+        # FIXME: They are not handled in CMake side.
+        "lib/Headers/openmp_wrappers/time.h",
+        "lib/Headers/ppc_wrappers/nmmintrin.h",
+    ],
+) + [
     "lib/Headers/arm_cde.h",
     "lib/Headers/arm_fp16.h",
     "lib/Headers/arm_mve.h",
     "lib/Headers/arm_neon.h",
     "lib/Headers/arm_sve.h",
     "lib/Headers/arm_bf16.h",
+    "lib/Headers/module.modulemap",
     "lib/Headers/riscv_vector.h",
+    "lib/Headers/cuda_wrappers/algorithm",
+    "lib/Headers/cuda_wrappers/complex",
+    "lib/Headers/cuda_wrappers/new",
+    "lib/Headers/openmp_wrappers/cmath",
+    "lib/Headers/openmp_wrappers/complex",
+    "lib/Headers/openmp_wrappers/new",
 ]
 
 genrule(
@@ -1606,6 +1639,7 @@ cc_library(
         "//llvm:Coverage",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:IPO",
         "//llvm:IRReader",
@@ -1925,12 +1959,21 @@ cc_binary(
     ],
 )
 
+expand_template(
+    name = "clang_main",
+    out = "clang-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "clang",
+    },
+    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_library(
     name = "clang-driver",
     srcs = glob([
         "tools/driver/*.cpp",
         "tools/driver/*.h",
-    ]),
+    ]) + ["clang-driver.cpp"],
     copts = [
         # Disable stack frame size checks in the driver because
         # clang::ensureStackAddressSpace allocates a large array on the stack.
@@ -2075,19 +2118,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "clang-offload-wrapper",
-    srcs = glob(["tools/clang-offload-wrapper/*.cpp"]),
-    stamp = 0,
-    deps = [
-        ":basic",
-        "//llvm:BitWriter",
-        "//llvm:Support",
-        "//llvm:TransformUtils",
-        "//llvm:ir_headers",
-    ],
-)
-
-cc_binary(
     name = "clang-refactor",
     srcs = glob([
         "tools/clang-refactor/*.cpp",
@@ -2157,6 +2187,7 @@ cc_binary(
     srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     stamp = 0,
     deps = [
+        ":driver",
         ":frontend",
         ":tooling",
         ":tooling_dependency_scanning",

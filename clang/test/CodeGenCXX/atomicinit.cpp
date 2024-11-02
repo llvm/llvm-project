@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fno-inline-functions %s -emit-llvm -O1 -o - -triple=i686-apple-darwin9 -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -fno-inline-functions %s -emit-llvm -O1 -o - -triple=i686-apple-darwin9 -std=c++11 | FileCheck %s
 
 // CHECK-DAG: @PR22043 ={{.*}} local_unnamed_addr global i32 0, align 4
 typedef _Atomic(int) AtomicInt;
@@ -65,15 +65,15 @@ namespace PR18097 {
     };
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* noundef {{[^,]*}} @_ZN7PR180977dynamic1aE, i32 noundef 1)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noundef {{[^,]*}} @_ZN7PR180977dynamic1aE, i32 noundef 1)
     _Atomic(X) a = X(1);
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* noundef {{[^,]*}} @_ZN7PR180977dynamic1bE, i32 noundef 2)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noundef {{[^,]*}} @_ZN7PR180977dynamic1bE, i32 noundef 2)
     _Atomic(X) b(X(2));
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* noundef {{[^,]*}} @_ZN7PR180977dynamic1cE, i32 noundef 3)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noundef {{[^,]*}} @_ZN7PR180977dynamic1cE, i32 noundef 3)
     _Atomic(X) c{X(3)};
 
     struct Y {
@@ -81,8 +81,8 @@ namespace PR18097 {
       _Atomic(int) b;
     };
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei({{.*}}* {{[^,]*}} getelementptr inbounds ({{.*}}, {{.*}}* @_ZN7PR180977dynamic1yE, i32 0, i32 0), i32 noundef 4)
-    // CHECK: store i32 5, i32* getelementptr inbounds ({{.*}}, {{.*}}* @_ZN7PR180977dynamic1yE, i32 0, i32 1)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr {{[^,]*}} @_ZN7PR180977dynamic1yE, i32 noundef 4)
+    // CHECK: store i32 5, ptr getelementptr inbounds ({{.*}}, ptr @_ZN7PR180977dynamic1yE, i32 0, i32 1)
     Y y = { X(4), 5 };
   }
 

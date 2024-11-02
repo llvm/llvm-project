@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class CommandLineCompletionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @classmethod
@@ -43,7 +41,7 @@ class CommandLineCompletionTestCase(TestBase):
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                           '// Break here', self.main_source_spec)
-        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
 
         # Since CommandInterpreter has been corrected to update the current execution
         # context at the beginning of HandleCompletion, we're here explicitly testing
@@ -293,6 +291,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('help watchpoint s', 'help watchpoint set ')
 
     @expectedFailureNetBSD
+    @add_test_categories(["watchpoint"])
     def test_common_complete_watchpoint_ids(self):
         subcommands = ['enable', 'disable', 'delete', 'modify', 'ignore']
 
@@ -405,6 +404,11 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('settings set target.process.thread.',
                               ['target.process.thread.step-avoid-regexp',
                                'target.process.thread.trace-thread'])
+
+    def test_settings_set_can_complete_setting_enum_values(self):
+        """Checks that we can complete the values of an enum setting."""
+        self.complete_from_to('settings set stop-disassembly-display ',
+                              ['never', 'always', 'no-debuginfo', 'no-source'])
 
     def test_thread_plan_discard(self):
         self.build()
@@ -677,7 +681,7 @@ class CommandLineCompletionTestCase(TestBase):
 
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.runCmd('target stop-hook add test DONE')
+        self.runCmd('target stop-hook add -o test')
 
         for subcommand in subcommands:
             self.complete_from_to('target stop-hook ' + subcommand + ' ',

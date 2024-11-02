@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 # lldb test suite imports
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
@@ -10,8 +8,6 @@ from gdbremote_testcase import GdbRemoteTestCaseBase
 
 
 class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     KNOWN_HOST_INFO_KEYS = set([
         "addressing_bits",

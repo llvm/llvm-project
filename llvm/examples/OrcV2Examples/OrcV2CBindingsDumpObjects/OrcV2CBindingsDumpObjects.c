@@ -31,7 +31,7 @@ int handleError(LLVMErrorRef Err) {
   return 1;
 }
 
-LLVMOrcThreadSafeModuleRef createDemoModule() {
+LLVMOrcThreadSafeModuleRef createDemoModule(void) {
   LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
   LLVMContextRef Ctx = LLVMOrcThreadSafeContextGetContext(TSCtx);
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext("demo", Ctx);

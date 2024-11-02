@@ -37,6 +37,9 @@ let Definition = "target" in {
   def SourceMap: Property<"source-map", "PathMap">,
     DefaultStringValue<"">,
     Desc<"Source path remappings apply substitutions to the paths of source files, typically needed to debug from a different host than the one that built the target.  The source-map property consists of an array of pairs, the first element is a path prefix, and the second is its replacement.  The syntax is `prefix1 replacement1 prefix2 replacement2...`.  The pairs are checked in order, the first prefix that matches is used, and that prefix is substituted with the replacement.  A common pattern is to use source-map in conjunction with the clang -fdebug-prefix-map flag.  In the build, use `-fdebug-prefix-map=/path/to/build_dir=.` to rewrite the host specific build directory to `.`.  Then for debugging, use `settings set target.source-map . /path/to/local_dir` to convert `.` to a valid local path.">;
+  def AutoSourceMapRelative: Property<"auto-source-map-relative", "Boolean">,
+    DefaultTrue,
+    Desc<"Automatically deduce source path mappings based on source file breakpoint resolution. It only deduces source mapping if source file breakpoint request is using full path and if the debug info contains relative paths.">;
   def ExecutableSearchPaths: Property<"exec-search-paths", "FileSpecList">,
     DefaultStringValue<"">,
     Desc<"Executable search paths to use when locating executable files whose paths don't match the local file system.">;
@@ -54,6 +57,10 @@ let Definition = "target" in {
     EnumValues<"OptionEnumValues(g_import_std_module_value_types)">,
     Desc<"Import the 'std' C++ module to improve expression parsing involving "
          " C++ standard library types.">;
+  def DynamicClassInfoHelper: Property<"objc-dynamic-class-extractor", "Enum">,
+    DefaultEnumValue<"eDynamicClassInfoHelperAuto">,
+    EnumValues<"OptionEnumValues(g_dynamic_class_info_helper_value_types)">,
+    Desc<"Configure how LLDB parses dynamic Objective-C class metadata. By default LLDB will choose the most appropriate method for the target OS.">;
   def AutoApplyFixIts: Property<"auto-apply-fixits", "Boolean">,
     DefaultTrue,
     Desc<"Automatically apply fix-it hints to expressions.">;
@@ -226,7 +233,7 @@ let Definition = "process" in {
   def StopOnExec: Property<"stop-on-exec", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"If true, stop when a shared library is loaded or unloaded.">;
+    Desc<"If true, stop when the inferior exec's.">;
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
     DefaultUnsignedValue<15>,
     Desc<"The time in seconds to wait for LLDB-internal utility expressions.">;

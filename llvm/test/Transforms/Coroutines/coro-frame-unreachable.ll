@@ -1,7 +1,7 @@
 ; Check that coro-split doesn't choke on intrinsics in unreachable blocks
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S
 
-define i8* @f(i1 %arg) "coroutine.presplit"="1" personality i32 0 {
+define i8* @f(i1 %arg) presplitcoroutine personality i32 0 {
 entry:
   %arg.addr = alloca i1
   store i1 %arg, i1* %arg.addr

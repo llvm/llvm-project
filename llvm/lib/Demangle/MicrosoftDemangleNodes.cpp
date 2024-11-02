@@ -119,7 +119,6 @@ static void outputCallingConvention(OutputBuffer &OB, CallingConv CC) {
 
 std::string Node::toString(OutputFlags Flags) const {
   OutputBuffer OB;
-  initializeOutputBuffer(nullptr, nullptr, OB, 1024);
   this->output(OB, Flags);
   StringView SV = OB;
   std::string Owned(SV.begin(), SV.end());

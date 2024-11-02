@@ -12,12 +12,12 @@ define <4 x i64> @vpaddq256_test(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
   ret <4 x i64> %x
 }
 
-define <4 x i64> @vpaddq256_fold_test(<4 x i64> %i, <4 x i64>* %j) nounwind {
+define <4 x i64> @vpaddq256_fold_test(<4 x i64> %i, ptr %j) nounwind {
 ; CHECK-LABEL: vpaddq256_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddq (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd4,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %tmp = load <4 x i64>, <4 x i64>* %j, align 4
+  %tmp = load <4 x i64>, ptr %j, align 4
   %x = add <4 x i64> %i, %tmp
   ret <4 x i64> %x
 }
@@ -32,12 +32,12 @@ define <4 x i64> @vpaddq256_broadcast_test(<4 x i64> %i) nounwind {
   ret <4 x i64> %x
 }
 
-define <4 x i64> @vpaddq256_broadcast2_test(<4 x i64> %i, i64* %j.ptr) nounwind {
+define <4 x i64> @vpaddq256_broadcast2_test(<4 x i64> %i, ptr %j.ptr) nounwind {
 ; CHECK-LABEL: vpaddq256_broadcast2_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddq (%rdi){1to4}, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x38,0xd4,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %j = load i64, i64* %j.ptr
+  %j = load i64, ptr %j.ptr
   %j.0 = insertelement <4 x i64> undef, i64 %j, i32 0
   %j.v = shufflevector <4 x i64> %j.0, <4 x i64> undef, <4 x i32> zeroinitializer
   %x = add <4 x i64> %i, %j.v
@@ -53,12 +53,12 @@ define <8 x i32> @vpaddd256_test(<8 x i32> %i, <8 x i32> %j) nounwind readnone {
   ret <8 x i32> %x
 }
 
-define <8 x i32> @vpaddd256_fold_test(<8 x i32> %i, <8 x i32>* %j) nounwind {
+define <8 x i32> @vpaddd256_fold_test(<8 x i32> %i, ptr %j) nounwind {
 ; CHECK-LABEL: vpaddd256_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfe,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %tmp = load <8 x i32>, <8 x i32>* %j, align 4
+  %tmp = load <8 x i32>, ptr %j, align 4
   %x = add <8 x i32> %i, %tmp
   ret <8 x i32> %x
 }
@@ -97,14 +97,14 @@ define <8 x i32> @vpaddd256_maskz_test(<8 x i32> %i, <8 x i32> %j, <8 x i32> %ma
   ret <8 x i32> %r
 }
 
-define <8 x i32> @vpaddd256_mask_fold_test(<8 x i32> %i, <8 x i32>* %j.ptr, <8 x i32> %mask1) nounwind readnone {
+define <8 x i32> @vpaddd256_mask_fold_test(<8 x i32> %i, ptr %j.ptr, <8 x i32> %mask1) nounwind readnone {
 ; CHECK-LABEL: vpaddd256_mask_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %ymm1, %ymm1, %k1 ## encoding: [0x62,0xf2,0x75,0x28,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0xfe,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
-  %j = load <8 x i32>, <8 x i32>* %j.ptr
+  %j = load <8 x i32>, ptr %j.ptr
   %x = add <8 x i32> %i, %j
   %r = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %i
   ret <8 x i32> %r
@@ -123,14 +123,14 @@ define <8 x i32> @vpaddd256_mask_broadcast_test(<8 x i32> %i, <8 x i32> %mask1) 
   ret <8 x i32> %r
 }
 
-define <8 x i32> @vpaddd256_maskz_fold_test(<8 x i32> %i, <8 x i32>* %j.ptr, <8 x i32> %mask1) nounwind readnone {
+define <8 x i32> @vpaddd256_maskz_fold_test(<8 x i32> %i, ptr %j.ptr, <8 x i32> %mask1) nounwind readnone {
 ; CHECK-LABEL: vpaddd256_maskz_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %ymm1, %ymm1, %k1 ## encoding: [0x62,0xf2,0x75,0x28,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xfe,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
-  %j = load <8 x i32>, <8 x i32>* %j.ptr
+  %j = load <8 x i32>, ptr %j.ptr
   %x = add <8 x i32> %i, %j
   %r = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> zeroinitializer
   ret <8 x i32> %r
@@ -367,45 +367,45 @@ define <4 x double> @test_maskz_vaddpd_256(<4 x double> %i, <4 x double> %j, <4 
   ret <4 x double> %r
 }
 
-define <4 x double> @test_mask_fold_vaddpd_256(<4 x double> %dst, <4 x double> %i, <4 x double>* %j,  <4 x i64> %mask1) nounwind {
+define <4 x double> @test_mask_fold_vaddpd_256(<4 x double> %dst, <4 x double> %i, ptr %j,  <4 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_mask_fold_vaddpd_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq %ymm2, %ymm2, %k1 ## encoding: [0x62,0xf2,0xed,0x28,0x27,0xca]
 ; CHECK-NEXT:    vaddpd (%rdi), %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf1,0xf5,0x29,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i64> %mask1, zeroinitializer
-  %tmp = load <4 x double>, <4 x double>* %j
+  %tmp = load <4 x double>, ptr %j
   %x = fadd <4 x double> %i, %tmp
   %r = select <4 x i1> %mask, <4 x double> %x, <4 x double> %dst
   ret <4 x double> %r
 }
 
-define <4 x double> @test_maskz_fold_vaddpd_256(<4 x double> %i, <4 x double>* %j, <4 x i64> %mask1) nounwind {
+define <4 x double> @test_maskz_fold_vaddpd_256(<4 x double> %i, ptr %j, <4 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_maskz_fold_vaddpd_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq %ymm1, %ymm1, %k1 ## encoding: [0x62,0xf2,0xf5,0x28,0x27,0xc9]
 ; CHECK-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xa9,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i64> %mask1, zeroinitializer
-  %tmp = load <4 x double>, <4 x double>* %j
+  %tmp = load <4 x double>, ptr %j
   %x = fadd <4 x double> %i, %tmp
   %r = select <4 x i1> %mask, <4 x double> %x, <4 x double> zeroinitializer
   ret <4 x double> %r
 }
 
-define <4 x double> @test_broadcast2_vaddpd_256(<4 x double> %i, double* %j) nounwind {
+define <4 x double> @test_broadcast2_vaddpd_256(<4 x double> %i, ptr %j) nounwind {
 ; CHECK-LABEL: test_broadcast2_vaddpd_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vaddpd (%rdi){1to4}, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x38,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %tmp = load double, double* %j
+  %tmp = load double, ptr %j
   %b = insertelement <4 x double> undef, double %tmp, i32 0
   %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
   %x = fadd <4 x double> %c, %i
   ret <4 x double> %x
 }
 
-define <4 x double> @test_mask_broadcast_vaddpd_256(<4 x double> %dst, <4 x double> %i, double* %j, <4 x i64> %mask1) nounwind {
+define <4 x double> @test_mask_broadcast_vaddpd_256(<4 x double> %dst, <4 x double> %i, ptr %j, <4 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_mask_broadcast_vaddpd_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x28,0xc1]
@@ -413,7 +413,7 @@ define <4 x double> @test_mask_broadcast_vaddpd_256(<4 x double> %dst, <4 x doub
 ; CHECK-NEXT:    vaddpd (%rdi){1to4}, %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf1,0xf5,0x39,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i64> %mask1, zeroinitializer
-  %tmp = load double, double* %j
+  %tmp = load double, ptr %j
   %b = insertelement <4 x double> undef, double %tmp, i32 0
   %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
   %x = fadd <4 x double> %c, %i
@@ -421,14 +421,14 @@ define <4 x double> @test_mask_broadcast_vaddpd_256(<4 x double> %dst, <4 x doub
   ret <4 x double> %r
 }
 
-define <4 x double> @test_maskz_broadcast_vaddpd_256(<4 x double> %i, double* %j, <4 x i64> %mask1) nounwind {
+define <4 x double> @test_maskz_broadcast_vaddpd_256(<4 x double> %i, ptr %j, <4 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_maskz_broadcast_vaddpd_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq %ymm1, %ymm1, %k1 ## encoding: [0x62,0xf2,0xf5,0x28,0x27,0xc9]
 ; CHECK-NEXT:    vaddpd (%rdi){1to4}, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xb9,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i64> %mask1, zeroinitializer
-  %tmp = load double, double* %j
+  %tmp = load double, ptr %j
   %b = insertelement <4 x double> undef, double %tmp, i32 0
   %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
   %x = fadd <4 x double> %c, %i
@@ -447,22 +447,22 @@ define <2 x i64> @vpaddq128_test(<2 x i64> %i, <2 x i64> %j) nounwind readnone {
   ret <2 x i64> %x
 }
 
-define <2 x i64> @vpaddq128_fold_test(<2 x i64> %i, <2 x i64>* %j) nounwind {
+define <2 x i64> @vpaddq128_fold_test(<2 x i64> %i, ptr %j) nounwind {
 ; CHECK-LABEL: vpaddq128_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddq (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd4,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %tmp = load <2 x i64>, <2 x i64>* %j, align 4
+  %tmp = load <2 x i64>, ptr %j, align 4
   %x = add <2 x i64> %i, %tmp
   ret <2 x i64> %x
 }
 
-define <2 x i64> @vpaddq128_broadcast2_test(<2 x i64> %i, i64* %j) nounwind {
+define <2 x i64> @vpaddq128_broadcast2_test(<2 x i64> %i, ptr %j) nounwind {
 ; CHECK-LABEL: vpaddq128_broadcast2_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddq (%rdi){1to2}, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x18,0xd4,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %tmp = load i64, i64* %j
+  %tmp = load i64, ptr %j
   %j.0 = insertelement <2 x i64> undef, i64 %tmp, i32 0
   %j.1 = insertelement <2 x i64> %j.0, i64 %tmp, i32 1
   %x = add <2 x i64> %i, %j.1
@@ -478,12 +478,12 @@ define <4 x i32> @vpaddd128_test(<4 x i32> %i, <4 x i32> %j) nounwind readnone {
   ret <4 x i32> %x
 }
 
-define <4 x i32> @vpaddd128_fold_test(<4 x i32> %i, <4 x i32>* %j) nounwind {
+define <4 x i32> @vpaddd128_fold_test(<4 x i32> %i, ptr %j) nounwind {
 ; CHECK-LABEL: vpaddd128_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddd (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xfe,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %tmp = load <4 x i32>, <4 x i32>* %j, align 4
+  %tmp = load <4 x i32>, ptr %j, align 4
   %x = add <4 x i32> %i, %tmp
   ret <4 x i32> %x
 }
@@ -522,14 +522,14 @@ define <4 x i32> @vpaddd128_maskz_test(<4 x i32> %i, <4 x i32> %j, <4 x i32> %ma
   ret <4 x i32> %r
 }
 
-define <4 x i32> @vpaddd128_mask_fold_test(<4 x i32> %i, <4 x i32>* %j.ptr, <4 x i32> %mask1) nounwind readnone {
+define <4 x i32> @vpaddd128_mask_fold_test(<4 x i32> %i, ptr %j.ptr, <4 x i32> %mask1) nounwind readnone {
 ; CHECK-LABEL: vpaddd128_mask_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %xmm1, %xmm1, %k1 ## encoding: [0x62,0xf2,0x75,0x08,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd (%rdi), %xmm0, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0xfe,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i32> %mask1, zeroinitializer
-  %j = load <4 x i32>, <4 x i32>* %j.ptr
+  %j = load <4 x i32>, ptr %j.ptr
   %x = add <4 x i32> %i, %j
   %r = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %i
   ret <4 x i32> %r
@@ -548,14 +548,14 @@ define <4 x i32> @vpaddd128_mask_broadcast_test(<4 x i32> %i, <4 x i32> %mask1) 
   ret <4 x i32> %r
 }
 
-define <4 x i32> @vpaddd128_maskz_fold_test(<4 x i32> %i, <4 x i32>* %j.ptr, <4 x i32> %mask1) nounwind readnone {
+define <4 x i32> @vpaddd128_maskz_fold_test(<4 x i32> %i, ptr %j.ptr, <4 x i32> %mask1) nounwind readnone {
 ; CHECK-LABEL: vpaddd128_maskz_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmd %xmm1, %xmm1, %k1 ## encoding: [0x62,0xf2,0x75,0x08,0x27,0xc9]
 ; CHECK-NEXT:    vpaddd (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xfe,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i32> %mask1, zeroinitializer
-  %j = load <4 x i32>, <4 x i32>* %j.ptr
+  %j = load <4 x i32>, ptr %j.ptr
   %x = add <4 x i32> %i, %j
   %r = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> zeroinitializer
   ret <4 x i32> %r
@@ -794,45 +794,45 @@ define <2 x double> @test_maskz_vaddpd_128(<2 x double> %i, <2 x double> %j,
   ret <2 x double> %r
 }
 
-define <2 x double> @test_mask_fold_vaddpd_128(<2 x double> %dst, <2 x double> %i, <2 x double>* %j,  <2 x i64> %mask1) nounwind {
+define <2 x double> @test_mask_fold_vaddpd_128(<2 x double> %dst, <2 x double> %i, ptr %j,  <2 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_mask_fold_vaddpd_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq %xmm2, %xmm2, %k1 ## encoding: [0x62,0xf2,0xed,0x08,0x27,0xca]
 ; CHECK-NEXT:    vaddpd (%rdi), %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf5,0x09,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <2 x i64> %mask1, zeroinitializer
-  %tmp = load <2 x double>, <2 x double>* %j
+  %tmp = load <2 x double>, ptr %j
   %x = fadd <2 x double> %i, %tmp
   %r = select <2 x i1> %mask, <2 x double> %x, <2 x double> %dst
   ret <2 x double> %r
 }
 
-define <2 x double> @test_maskz_fold_vaddpd_128(<2 x double> %i, <2 x double>* %j, <2 x i64> %mask1) nounwind {
+define <2 x double> @test_maskz_fold_vaddpd_128(<2 x double> %i, ptr %j, <2 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_maskz_fold_vaddpd_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq %xmm1, %xmm1, %k1 ## encoding: [0x62,0xf2,0xf5,0x08,0x27,0xc9]
 ; CHECK-NEXT:    vaddpd (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0x89,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <2 x i64> %mask1, zeroinitializer
-  %tmp = load <2 x double>, <2 x double>* %j
+  %tmp = load <2 x double>, ptr %j
   %x = fadd <2 x double> %i, %tmp
   %r = select <2 x i1> %mask, <2 x double> %x, <2 x double> zeroinitializer
   ret <2 x double> %r
 }
 
-define <2 x double> @test_broadcast2_vaddpd_128(<2 x double> %i, double* %j) nounwind {
+define <2 x double> @test_broadcast2_vaddpd_128(<2 x double> %i, ptr %j) nounwind {
 ; CHECK-LABEL: test_broadcast2_vaddpd_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x18,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %tmp = load double, double* %j
+  %tmp = load double, ptr %j
   %j.0 = insertelement <2 x double> undef, double %tmp, i64 0
   %j.1 = insertelement <2 x double> %j.0, double %tmp, i64 1
   %x = fadd <2 x double> %j.1, %i
   ret <2 x double> %x
 }
 
-define <2 x double> @test_mask_broadcast_vaddpd_128(<2 x double> %dst, <2 x double> %i, double* %j, <2 x i64> %mask1) nounwind {
+define <2 x double> @test_mask_broadcast_vaddpd_128(<2 x double> %dst, <2 x double> %i, ptr %j, <2 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_mask_broadcast_vaddpd_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc1]
@@ -840,7 +840,7 @@ define <2 x double> @test_mask_broadcast_vaddpd_128(<2 x double> %dst, <2 x doub
 ; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf5,0x19,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <2 x i64> %mask1, zeroinitializer
-  %tmp = load double, double* %j
+  %tmp = load double, ptr %j
   %j.0 = insertelement <2 x double> undef, double %tmp, i64 0
   %j.1 = insertelement <2 x double> %j.0, double %tmp, i64 1
   %x = fadd <2 x double> %j.1, %i
@@ -848,14 +848,14 @@ define <2 x double> @test_mask_broadcast_vaddpd_128(<2 x double> %dst, <2 x doub
   ret <2 x double> %r
 }
 
-define <2 x double> @test_maskz_broadcast_vaddpd_128(<2 x double> %i, double* %j, <2 x i64> %mask1) nounwind {
+define <2 x double> @test_maskz_broadcast_vaddpd_128(<2 x double> %i, ptr %j, <2 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_maskz_broadcast_vaddpd_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq %xmm1, %xmm1, %k1 ## encoding: [0x62,0xf2,0xf5,0x08,0x27,0xc9]
 ; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0x99,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <2 x i64> %mask1, zeroinitializer
-  %tmp = load double, double* %j
+  %tmp = load double, ptr %j
   %j.0 = insertelement <2 x double> undef, double %tmp, i64 0
   %j.1 = insertelement <2 x double> %j.0, double %tmp, i64 1
   %x = fadd <2 x double> %j.1, %i

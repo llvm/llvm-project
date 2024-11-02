@@ -22,6 +22,12 @@ void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::CallOp>(loc, exitFunc, args);
 }
 
+void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
+  mlir::func::FuncOp abortFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(Abort)>(loc, builder);
+  builder.create<fir::CallOp>(loc, abortFunc, llvm::None);
+}
+
 void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            llvm::StringRef message) {

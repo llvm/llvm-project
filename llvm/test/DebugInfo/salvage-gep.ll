@@ -8,28 +8,28 @@
 %zero = type [0 x [10 x i32]]
 
 ;; The constant and variable offsets should be applied correctly.
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(%struct.S* %ptr, i64 %offset),
+; CHECK: call void @llvm.dbg.value(metadata !DIArgList(ptr %ptr, i64 %offset),
 ; CHECK-SAME: ![[VAR_OFFSET_PTR:[0-9]+]],
 ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 8, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst, 4, DW_OP_stack_value))
 
 ;; The variable offset should be ignored, as it applies to a type of width 0,
 ;; leaving only the constant offset.
-; CHECK: call void @llvm.dbg.value(metadata [0 x [10 x i32]]* %zptr,
+; CHECK: call void @llvm.dbg.value(metadata ptr %zptr,
 ; CHECK-SAME: ![[VAR_ZERO_PTR:[0-9]+]],
 ; CHECK-SAME: !DIExpression(DW_OP_plus_uconst, 44, DW_OP_stack_value))
 
 ; CHECK: ![[VAR_OFFSET_PTR]] = !DILocalVariable(name: "offset_ptr"
 ; CHECK: ![[VAR_ZERO_PTR]] = !DILocalVariable(name: "zero_ptr"
 
-define void @"?foo@@YAXPEAUS@@_J@Z"(%struct.S* %ptr, %zero* %zptr, i64 %offset) !dbg !8 {
+define void @"?foo@@YAXPEAUS@@_J@Z"(ptr %ptr, ptr %zptr, i64 %offset) !dbg !8 {
 entry:
   call void @llvm.dbg.value(metadata i64 %offset, metadata !20, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.value(metadata %struct.S* %ptr, metadata !21, metadata !DIExpression()), !dbg !24
-  %arrayidx = getelementptr inbounds %struct.S, %struct.S* %ptr, i64 %offset, !dbg !25
-  %b = getelementptr inbounds %struct.S, %struct.S* %arrayidx, i32 0, i32 1, !dbg !25
-  %c = getelementptr inbounds %zero, %zero* %zptr, i64 %offset, i32 1, i32 1, !dbg !25
-  call void @llvm.dbg.value(metadata i32* %b, metadata !22, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.value(metadata i32* %c, metadata !27, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata ptr %ptr, metadata !21, metadata !DIExpression()), !dbg !24
+  %arrayidx = getelementptr inbounds %struct.S, ptr %ptr, i64 %offset, !dbg !25
+  %b = getelementptr inbounds %struct.S, ptr %arrayidx, i32 0, i32 1, !dbg !25
+  %c = getelementptr inbounds %zero, ptr %zptr, i64 %offset, i32 1, i32 1, !dbg !25
+  call void @llvm.dbg.value(metadata ptr %b, metadata !22, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata ptr %c, metadata !27, metadata !DIExpression()), !dbg !24
   ret void, !dbg !26
 }
 

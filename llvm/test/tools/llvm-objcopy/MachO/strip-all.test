@@ -3,6 +3,7 @@
 # RUN: yaml2obj %p/Inputs/strip-all.yaml -o %t.exec
 # RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml -o %t.dwarf
 # RUN: yaml2obj %p/Inputs/strip-chained-fixups.yaml -o %t.fixups
+# RUN: yaml2obj %p/Inputs/strip-all-with-codesignature.yaml -o %t.codesignature
 
 ## Check that the symbol list satisfies the order: local / defined external /
 ## undefined external, otherwise llvm-objcopy will fail.
@@ -41,6 +42,25 @@
 # RUN: llvm-strip --strip-all %t.fixups -o %t8
 # RUN: cmp %t7 %t.fixups.stripped
 # RUN: cmp %t8 %t.fixups.stripped
+
+# RUN: llvm-objcopy --strip-all %t.codesignature %t9
+# RUN: llvm-otool -l %t9 | FileCheck --check-prefix=CODESIGNATURE %s
+# RUN: llvm-strip %t.codesignature -o %t10
+# RUN: llvm-otool -l %t10 | FileCheck --check-prefix=CODESIGNATURE %s
+# RUN: llvm-strip --strip-all %t.codesignature -o %t11
+# RUN: llvm-otool -l %t11 | FileCheck --check-prefix=CODESIGNATURE %s
+
+## Make sure that code signatures are preserved
+
+# CODESIGNATURE:      cmd LC_DYLIB_CODE_SIGN_DRS
+# CODESIGNATURE-NEXT: cmdsize 16
+# CODESIGNATURE-NEXT: dataoff 8408
+# CODESIGNATURE-NEXT: datasize 64
+# CODESIGNATURE-NEXT: Load command
+# CODESIGNATURE-NEXT: cmd LC_CODE_SIGNATURE
+# CODESIGNATURE-NEXT: cmdsize 16
+# CODESIGNATURE-NEXT: dataoff 8480
+# CODESIGNATURE-NEXT: datasize 240
 
 ## Make sure that debug sections are removed.
 # DWARF:       Sections [

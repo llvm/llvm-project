@@ -66,7 +66,7 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
                                NextStartColumn, LastStartColumn);
   if (!Env)
     return {};
-  llvm::Optional<std::string> CurrentCode = None;
+  llvm::Optional<std::string> CurrentCode;
   tooling::Replacements Fixes;
   for (size_t I = 0, E = Passes.size(); I < E; ++I) {
     std::pair<tooling::Replacements, unsigned> PassFixes = Passes[I](*Env);

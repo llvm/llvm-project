@@ -59,8 +59,8 @@ void up()
   //(void)dynamic_cast<A&>(*((D*)0));
 
   // Ambiguous
-  (void)dynamic_cast<A*>((F*)0); // expected-error {{ambiguous conversion from derived class 'F' to base class 'A':\n    struct F -> struct B -> struct A\n    struct F -> struct E -> struct A}}
-  (void)dynamic_cast<A&>(*((F*)0)); // expected-error {{ambiguous conversion from derived class 'F' to base class 'A':\n    struct F -> struct B -> struct A\n    struct F -> struct E -> struct A}}
+  (void)dynamic_cast<A*>((F*)0); // expected-error {{ambiguous conversion from derived class 'F' to base class 'A':\n    struct F -> B -> A\n    struct F -> E -> A}}
+  (void)dynamic_cast<A&>(*((F*)0)); // expected-error {{ambiguous conversion from derived class 'F' to base class 'A':\n    struct F -> B -> A\n    struct F -> E -> A}}
 }
 
 void poly()

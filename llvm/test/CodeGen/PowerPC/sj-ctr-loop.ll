@@ -30,7 +30,7 @@ for.cond:                                         ; preds = %for.body
 
 for.body:                                         ; preds = %for.cond, %for.body.lr.ph
   %i.032 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.cond ]
-  %0 = call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag.1.15.17.21.25.49.53.55]* @env_sigill to i8*))
+  %0 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
   %inc = add nsw i32 %i.032, 1
   br i1 false, label %if.else, label %for.cond
 
@@ -45,6 +45,6 @@ return:                                           ; preds = %for.end.thread, %en
 }
 
 ; Function Attrs: nounwind
-declare i32 @llvm.eh.sjlj.setjmp(i8*) #0
+declare i32 @llvm.eh.sjlj.setjmp(ptr) #0
 
 attributes #0 = { nounwind }

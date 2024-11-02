@@ -55,7 +55,6 @@ option(LIBCXX_ENABLE_ASSERTIONS
    by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
-option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
 set(ENABLE_FILESYSTEM_DEFAULT ON)
 if (WIN32 AND NOT MINGW)
   # Filesystem is buildable for windows, but it requires __int128 helper
@@ -68,11 +67,11 @@ option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ lib
     ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 option(LIBCXX_ENABLE_PARALLEL_ALGORITHMS "Enable the parallel algorithms library. This requires the PSTL to be available." OFF)
-option(LIBCXX_ENABLE_DEBUG_MODE_SUPPORT
-  "Whether to include support for libc++'s debugging mode in the library.
-   By default, this is turned on. If you turn it off and try to enable the
-   debug mode when compiling a program against libc++, it will fail to link
-   since the required support isn't provided in the library." ON)
+option(LIBCXX_ENABLE_DEBUG_MODE
+  "Whether to build libc++ with the debug mode enabled.
+   By default, this is turned off. Turning it on results in a different ABI (additional
+   symbols but also potentially different layouts of types), and one should not mix code
+   built against a dylib that has debug mode and code built against a regular dylib." OFF)
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -102,11 +101,6 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
-option(LIBCXX_ENABLE_INCOMPLETE_FEATURES
-    "Whether to enable support for incomplete library features. Incomplete features
-    are new library features under development. These features don't guarantee
-    ABI stability nor the quality of completed library features. Vendors
-    shipping the library may want to disable this option." ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -167,9 +161,6 @@ cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBCXX_INSTALL_SHARED_LIBRARY
   "Install the shared libc++ library." ON
   "LIBCXX_ENABLE_SHARED;LIBCXX_INSTALL_LIBRARY" OFF)
-cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
-        "Install libc++experimental.a" ON
-        "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
 
 option(LIBCXX_ABI_UNSTABLE "Use the unstable ABI of libc++. This is equivalent to specifying LIBCXX_ABI_VERSION=n, where n is the not-yet-stable version." OFF)
 if (LIBCXX_ABI_UNSTABLE)
@@ -187,7 +178,7 @@ set(LIBCXX_LIBRARY_VERSION "${LIBCXX_ABI_VERSION}.0" CACHE STRING
    this also controls the linker's 'current_version' property.")
 set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
-  message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")
+  message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, got '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
@@ -205,10 +196,16 @@ if (NOT ("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" IN_LIST TYPEINFO_COMPARI
                        LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION")
 endif()
 
-option(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT "Enable per TU ABI insulation by default. To be used by vendors." OFF)
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 option(LIBCXX_EXTRA_SITE_DEFINES "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
+
+option(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS
+  "Whether to include the old Debug mode symbols in the compiled library. This
+   is provided for backwards compatibility since the compiled library used to
+   always contain those symbols, regardless of whether the library was built
+   with the debug mode enabled. This is OFF by default, please contact the libc++
+   developers if you need to turn this on, as this will be removed in LLVM 16." OFF)
 
 # ABI Library options ---------------------------------------------------------
 if (LIBCXX_TARGETING_MSVC)
@@ -229,19 +226,19 @@ option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY
   "Use a static copy of the ABI library when linking libc++.
    This option cannot be used with LIBCXX_ENABLE_ABI_LINKER_SCRIPT." OFF)
 
-cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
-  "Statically link the ABI library to static library" ON
-  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY" OFF)
+option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
+  "Statically link the ABI library to static library"
+  ${LIBCXX_ENABLE_STATIC_ABI_LIBRARY})
 
-cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
-  "Statically link the ABI library to shared library" ON
-  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY" OFF)
+option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
+  "Statically link the ABI library to shared library"
+  ${LIBCXX_ENABLE_STATIC_ABI_LIBRARY})
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless 'LIBCXX_ENABLE_STATIC_ABI_LIBRARY'
-# is on. This option is also disabled when the ABI library is not specified
-# or is specified to be "none".
+# on UNIX platforms other than Apple unless
+# 'LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY' is on. This option is also
+# disabled when the ABI library is not specified or is specified to be "none".
 set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
       AND NOT LIBCXX_CXX_ABI STREQUAL "none"
@@ -379,14 +376,6 @@ if (LLVM_USE_SANITIZER AND LIBCXX_GENERATE_COVERAGE)
   message(FATAL_ERROR "LLVM_USE_SANITIZER cannot be used with LIBCXX_GENERATE_COVERAGE")
 endif()
 
-# Warn users that LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option.
-if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
-  message(WARNING "LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option")
-  if (LIBCXX_ENABLE_STATIC AND NOT Python3_EXECUTABLE)
-    message(FATAL_ERROR "LIBCXX_ENABLE_STATIC_ABI_LIBRARY requires python but it was not found.")
-  endif()
-endif()
-
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     if (APPLE)
       message(FATAL_ERROR "LIBCXX_ENABLE_ABI_LINKER_SCRIPT cannot be used on APPLE targets")
@@ -398,7 +387,7 @@ endif()
 
 if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     message(FATAL_ERROR "Conflicting options given.
-        LIBCXX_ENABLE_STATIC_ABI_LIBRARY cannot be specified with
+        LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY cannot be specified with
         LIBCXX_ENABLE_ABI_LINKER_SCRIPT")
 endif()
 
@@ -417,6 +406,9 @@ set(LIBCXX_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH
     "Path where target-agnostic libc++ headers should be installed.")
 set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path where built libc++ runtime libraries should be installed.")
+
+set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
+set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -460,6 +452,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
+set(LIBCXX_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
+    "Additional Compile only flags which can be provided in cache")
+set(LIBCXX_ADDITIONAL_LIBRARIES "" CACHE STRING
+    "Additional libraries libc++ is linked to which can be provided in cache")
 
 # Include macros for adding and removing libc++ flags.
 include(HandleLibcxxFlags)
@@ -468,8 +464,10 @@ include(HandleLibcxxFlags)
 # These flags get added to CMAKE_CXX_FLAGS and CMAKE_C_FLAGS so that
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
-if(ZOS)
-  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
+  set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
 
 # Configure compiler.
@@ -522,7 +520,7 @@ function(cxx_add_basic_build_flags target)
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
-  # because they are provided by the dylib itself with the excepton of z/OS.
+  # because they are provided by the dylib itself with the exception of z/OS.
   if (ZOS)
     target_add_compile_flags_if_supported(${target} PRIVATE -fno-aligned-allocation)
   else()
@@ -569,6 +567,7 @@ function(cxx_add_basic_build_flags target)
       target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_RT_LIB)
     endif()
   endif()
+  target_compile_options(${target} PUBLIC "${LIBCXX_ADDITIONAL_COMPILE_FLAGS}")
 endfunction()
 
 # Warning flags ===============================================================
@@ -697,6 +696,8 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
     endif()
     if (USE_SANITIZER STREQUAL "Address")
       append_flags(SANITIZER_FLAGS "-fsanitize=address")
+    elseif (USE_SANITIZER STREQUAL "HWAddress")
+      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
     elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
       append_flags(SANITIZER_FLAGS -fsanitize=memory)
       if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
@@ -803,6 +804,7 @@ function(cxx_link_system_libraries target)
   if (ANDROID AND ANDROID_PLATFORM_LEVEL LESS 21)
     target_link_libraries(${target} PUBLIC android_support)
   endif()
+  target_link_libraries(${target} PUBLIC "${LIBCXX_ADDITIONAL_LIBRARIES}")
 endfunction()
 
 # Windows-related flags =======================================================
@@ -827,6 +829,14 @@ function(cxx_add_windows_flags target)
                                  # Use the ISO conforming behaviour for conversion
                                  # in printf, scanf.
                                  _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+    # Clang-cl shared builds don't support the experimental library.
+    # To avoid linker errors the format_error destructor is inlined for the
+    # dylib. Users can never use format in this mode.
+    # TODO FMT Remove when format becomes mainline.
+    if (LIBCXX_ENABLE_SHARED)
+      target_compile_definitions(${target} PRIVATE
+                                 _LIBCPP_INLINE_FORMAT_ERROR_DTOR)
+    endif()
   endif()
 endfunction()
 
@@ -835,7 +845,6 @@ config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
 config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
 config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
 config_define_if(LIBCXX_ABI_FORCE_MICROSOFT _LIBCPP_ABI_FORCE_MICROSOFT)
-config_define_if(LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT)
 config_define_if_not(LIBCXX_ENABLE_THREADS _LIBCPP_HAS_NO_THREADS)
 config_define_if_not(LIBCXX_ENABLE_MONOTONIC_CLOCK _LIBCPP_HAS_NO_MONOTONIC_CLOCK)
 if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "default")
@@ -854,15 +863,12 @@ config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+config_define_if(LIBCXX_ENABLE_DEBUG_MODE _LIBCPP_ENABLE_DEBUG_MODE)
 if (LIBCXX_ENABLE_ASSERTIONS)
   config_define(1 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
 else()
   config_define(0 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
 endif()
-# Incomplete features get their own specific disabling flags. This makes it
-# easier to grep for target specific flags once the feature is complete.
-config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
-config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 if (LIBCXX_ABI_DEFINES)
   set(abi_defines)
@@ -919,11 +925,7 @@ add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 
-set(LIBCXX_TEST_DEPS "")
-
-if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-  list(APPEND LIBCXX_TEST_DEPS cxx_experimental)
-endif()
+set(LIBCXX_TEST_DEPS "cxx_experimental")
 
 if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)

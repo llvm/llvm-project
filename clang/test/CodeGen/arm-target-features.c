@@ -30,7 +30,7 @@
 
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V82
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m5 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V82
-// CHECK-BASIC-V82: "target-features"="+aes,+armv8.2-a,+crc,+d32,+dotprod,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+fullfp16,+hwdiv,+hwdiv-arm,+neon,+ras,+sha2,+thumb-mode,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
+// CHECK-BASIC-V82: "target-features"="+aes,+armv8.2-a,+crc,+d32,+dotprod,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+fullfp16,+hwdiv,+hwdiv-arm,+neon,+ras,+sha2,+thumb-mode,+v8.1a,+v8.2a,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp"
 
 // RUN: %clang_cc1 -triple armv8-linux-gnueabi -target-cpu cortex-a53 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8-ARM
 // CHECK-BASIC-V8-ARM: "target-features"="+aes,+armv8-a,+crc,+d32,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+sha2,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp,-thumb-mode"
@@ -109,5 +109,11 @@
 
 // RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m55 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV81M-MAIN-LINUX
 // CHECK-ARMV81M-MAIN-LINUX: "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp"
+
+// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m85 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV81M-CORTEX-M85-LINUX
+// CHECK-ARMV81M-CORTEX-M85-LINUX: "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+pacbti,+ras,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp"
+
+// RUN: %clang_cc1 -triple thumbv9.3a-linux-gnueabihf -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARCH93
+// CHECK-ARCH93: "target-features"="+armv9.3-a,+thumb-mode,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8.7a,+v8.8a,+v9.1a,+v9.2a,+v9.3a,+v9a"
 
 void foo() {}

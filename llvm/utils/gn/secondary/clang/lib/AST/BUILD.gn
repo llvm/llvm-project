@@ -119,6 +119,7 @@ static_library("AST") {
     "MicrosoftMangle.cpp",
     "NSAPI.cpp",
     "NestedNameSpecifier.cpp",
+    "ODRDiagsEmitter.cpp",
     "ODRHash.cpp",
     "OSLog.cpp",
     "OpenMPClause.cpp",

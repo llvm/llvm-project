@@ -17,17 +17,6 @@
 namespace llvm {
 
 class CallGraph;
-class CallGraphSCC;
-class PassRegistry;
-
-// CoroEarly pass marks every function that has coro.begin with a string
-// attribute "coroutine.presplit". CoroSplit pass would processes the 
-// function marked as "coroutine.presplit" only.
-//
-// FIXME: Refactor these attributes as LLVM attributes instead of string
-// attributes since these attributes are already used outside LLVM's
-// coroutine module.
-#define CORO_PRESPLIT_ATTR "coroutine.presplit"
 
 namespace coro {
 
@@ -123,6 +112,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     unsigned IndexAlign;
     unsigned IndexOffset;
     bool HasFinalSuspend;
+    bool HasUnwindCoroEnd;
   };
 
   struct RetconLoweringStorage {

@@ -65,9 +65,10 @@ bb7:                                              ; preds = %bb2
 
 declare signext i32 @bar(i32 signext)
 
-; The load here will be an anyext load in isel and sext.w will be emitted for
-; the ret. Make sure we can look through logic ops to prove the sext.w is
-; unnecessary.
+; The load here was previously an aext load, but this has since been changed
+; to a signext load allowing us to remove a sext.w before isel. Thus we get
+; the same result with or without the sext.w removal pass.
+; Test has been left for coverage purposes.
 define signext i32 @test2(i32* %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test2:
 ; RV64I:       # %bb.0:
@@ -92,7 +93,6 @@ define signext i32 @test2(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    li a2, -2
 ; NOREMOVAL-NEXT:    rolw a1, a2, a1
 ; NOREMOVAL-NEXT:    and a0, a1, a0
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b
@@ -125,7 +125,6 @@ define signext i32 @test3(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    li a2, -2
 ; NOREMOVAL-NEXT:    rolw a1, a2, a1
 ; NOREMOVAL-NEXT:    or a0, a1, a0
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b
@@ -158,7 +157,6 @@ define signext i32 @test4(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    li a2, 1
 ; NOREMOVAL-NEXT:    sllw a1, a2, a1
 ; NOREMOVAL-NEXT:    xnor a0, a1, a0
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b
@@ -192,7 +190,7 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    and a0, a0, s0
-; RV64I-NEXT:    subw a0, a1, a0
+; RV64I-NEXT:    sub a0, a1, a0
 ; RV64I-NEXT:    and a2, a0, s1
 ; RV64I-NEXT:    srli a0, a0, 2
 ; RV64I-NEXT:    and a0, a0, s1
@@ -707,4 +705,317 @@ bb2:                                              ; preds = %bb2, %entry
 bb7:                                              ; preds = %bb2
   %i8 = trunc i64 %i5 to i32
   ret i32 %i8
+}
+
+
+; int test14(int a, int n) {
+;   for (int i = 1; i < n; ++i) {
+;     if (a > 1000)
+;       return -1;
+;     a += i;
+;   }
+;
+;   return a;
+; }
+;
+; There should be no sext.w in the loop.
+define signext i32 @test14(i32 signext %0, i32 signext %1) {
+; CHECK-LABEL: test14:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 2
+; CHECK-NEXT:    blt a1, a2, .LBB13_4
+; CHECK-NEXT:  # %bb.1: # %.preheader
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    li a3, 1000
+; CHECK-NEXT:  .LBB13_2: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    blt a3, a0, .LBB13_5
+; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB13_2 Depth=1
+; CHECK-NEXT:    addw a0, a2, a0
+; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    blt a2, a1, .LBB13_2
+; CHECK-NEXT:  .LBB13_4:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB13_5:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test14:
+; NOREMOVAL:       # %bb.0:
+; NOREMOVAL-NEXT:    li a2, 2
+; NOREMOVAL-NEXT:    blt a1, a2, .LBB13_4
+; NOREMOVAL-NEXT:  # %bb.1: # %.preheader
+; NOREMOVAL-NEXT:    li a2, 1
+; NOREMOVAL-NEXT:    li a3, 1000
+; NOREMOVAL-NEXT:  .LBB13_2: # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    sext.w a4, a0
+; NOREMOVAL-NEXT:    blt a3, a4, .LBB13_5
+; NOREMOVAL-NEXT:  # %bb.3: # in Loop: Header=BB13_2 Depth=1
+; NOREMOVAL-NEXT:    addw a0, a2, a0
+; NOREMOVAL-NEXT:    addiw a2, a2, 1
+; NOREMOVAL-NEXT:    blt a2, a1, .LBB13_2
+; NOREMOVAL-NEXT:  .LBB13_4:
+; NOREMOVAL-NEXT:    ret
+; NOREMOVAL-NEXT:  .LBB13_5:
+; NOREMOVAL-NEXT:    li a0, -1
+; NOREMOVAL-NEXT:    ret
+  %3 = icmp sgt i32 %1, 1
+  br i1 %3, label %4, label %12
+
+4:                                                ; preds = %2, %8
+  %5 = phi i32 [ %10, %8 ], [ 1, %2 ]
+  %6 = phi i32 [ %9, %8 ], [ %0, %2 ]
+  %7 = icmp sgt i32 %6, 1000
+  br i1 %7, label %12, label %8
+
+8:                                                ; preds = %4
+  %9 = add nsw i32 %5, %6
+  %10 = add nuw nsw i32 %5, 1
+  %11 = icmp slt i32 %10, %1
+  br i1 %11, label %4, label %12
+
+12:                                               ; preds = %8, %4, %2
+  %13 = phi i32 [ %0, %2 ], [ -1, %4 ], [ %9, %8 ]
+  ret i32 %13
+}
+
+; Same as test14 but the signext attribute is missing from the argument so we
+; can't optimize out the sext.w.
+define signext i32 @test14b(i32 %0, i32 signext %1) {
+; CHECK-LABEL: test14b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 2
+; CHECK-NEXT:    blt a1, a2, .LBB14_4
+; CHECK-NEXT:  # %bb.1: # %.preheader
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    li a3, 1000
+; CHECK-NEXT:  .LBB14_2: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    sext.w a4, a0
+; CHECK-NEXT:    blt a3, a4, .LBB14_5
+; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
+; CHECK-NEXT:    addw a0, a2, a0
+; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    blt a2, a1, .LBB14_2
+; CHECK-NEXT:  .LBB14_4:
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB14_5:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test14b:
+; NOREMOVAL:       # %bb.0:
+; NOREMOVAL-NEXT:    li a2, 2
+; NOREMOVAL-NEXT:    blt a1, a2, .LBB14_4
+; NOREMOVAL-NEXT:  # %bb.1: # %.preheader
+; NOREMOVAL-NEXT:    li a2, 1
+; NOREMOVAL-NEXT:    li a3, 1000
+; NOREMOVAL-NEXT:  .LBB14_2: # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    sext.w a4, a0
+; NOREMOVAL-NEXT:    blt a3, a4, .LBB14_5
+; NOREMOVAL-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
+; NOREMOVAL-NEXT:    addw a0, a2, a0
+; NOREMOVAL-NEXT:    addiw a2, a2, 1
+; NOREMOVAL-NEXT:    blt a2, a1, .LBB14_2
+; NOREMOVAL-NEXT:  .LBB14_4:
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+; NOREMOVAL-NEXT:  .LBB14_5:
+; NOREMOVAL-NEXT:    li a0, -1
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+  %3 = icmp sgt i32 %1, 1
+  br i1 %3, label %4, label %12
+
+4:                                                ; preds = %2, %8
+  %5 = phi i32 [ %10, %8 ], [ 1, %2 ]
+  %6 = phi i32 [ %9, %8 ], [ %0, %2 ]
+  %7 = icmp sgt i32 %6, 1000
+  br i1 %7, label %12, label %8
+
+8:                                                ; preds = %4
+  %9 = add nsw i32 %5, %6
+  %10 = add nuw nsw i32 %5, 1
+  %11 = icmp slt i32 %10, %1
+  br i1 %11, label %4, label %12
+
+12:                                               ; preds = %8, %4, %2
+  %13 = phi i32 [ %0, %2 ], [ -1, %4 ], [ %9, %8 ]
+  ret i32 %13
+}
+
+; Same as test14, but the argument is zero extended instead of sign extended so
+; we can't optimize it.
+define signext i32 @test14c(i32 zeroext %0, i32 signext %1) {
+; CHECK-LABEL: test14c:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 2
+; CHECK-NEXT:    blt a1, a2, .LBB15_4
+; CHECK-NEXT:  # %bb.1: # %.preheader
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    li a3, 1000
+; CHECK-NEXT:  .LBB15_2: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    sext.w a4, a0
+; CHECK-NEXT:    blt a3, a4, .LBB15_5
+; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
+; CHECK-NEXT:    addw a0, a2, a0
+; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    blt a2, a1, .LBB15_2
+; CHECK-NEXT:  .LBB15_4:
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB15_5:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test14c:
+; NOREMOVAL:       # %bb.0:
+; NOREMOVAL-NEXT:    li a2, 2
+; NOREMOVAL-NEXT:    blt a1, a2, .LBB15_4
+; NOREMOVAL-NEXT:  # %bb.1: # %.preheader
+; NOREMOVAL-NEXT:    li a2, 1
+; NOREMOVAL-NEXT:    li a3, 1000
+; NOREMOVAL-NEXT:  .LBB15_2: # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    sext.w a4, a0
+; NOREMOVAL-NEXT:    blt a3, a4, .LBB15_5
+; NOREMOVAL-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
+; NOREMOVAL-NEXT:    addw a0, a2, a0
+; NOREMOVAL-NEXT:    addiw a2, a2, 1
+; NOREMOVAL-NEXT:    blt a2, a1, .LBB15_2
+; NOREMOVAL-NEXT:  .LBB15_4:
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+; NOREMOVAL-NEXT:  .LBB15_5:
+; NOREMOVAL-NEXT:    li a0, -1
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+  %3 = icmp sgt i32 %1, 1
+  br i1 %3, label %4, label %12
+
+4:                                                ; preds = %2, %8
+  %5 = phi i32 [ %10, %8 ], [ 1, %2 ]
+  %6 = phi i32 [ %9, %8 ], [ %0, %2 ]
+  %7 = icmp sgt i32 %6, 1000
+  br i1 %7, label %12, label %8
+
+8:                                                ; preds = %4
+  %9 = add nsw i32 %5, %6
+  %10 = add nuw nsw i32 %5, 1
+  %11 = icmp slt i32 %10, %1
+  br i1 %11, label %4, label %12
+
+12:                                               ; preds = %8, %4, %2
+  %13 = phi i32 [ %0, %2 ], [ -1, %4 ], [ %9, %8 ]
+  ret i32 %13
+}
+
+; Same as test14 but the argument is zero extended from i31. Since bits 63:31
+; are zero, this counts as an i32 sign extend so we can optimize it.
+define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
+; CHECK-LABEL: test14d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 2
+; CHECK-NEXT:    blt a1, a2, .LBB16_4
+; CHECK-NEXT:  # %bb.1: # %.preheader
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    li a3, 1000
+; CHECK-NEXT:  .LBB16_2: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    blt a3, a0, .LBB16_5
+; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB16_2 Depth=1
+; CHECK-NEXT:    addw a0, a2, a0
+; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    blt a2, a1, .LBB16_2
+; CHECK-NEXT:  .LBB16_4:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB16_5:
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test14d:
+; NOREMOVAL:       # %bb.0:
+; NOREMOVAL-NEXT:    li a2, 2
+; NOREMOVAL-NEXT:    blt a1, a2, .LBB16_4
+; NOREMOVAL-NEXT:  # %bb.1: # %.preheader
+; NOREMOVAL-NEXT:    li a2, 1
+; NOREMOVAL-NEXT:    li a3, 1000
+; NOREMOVAL-NEXT:  .LBB16_2: # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    sext.w a4, a0
+; NOREMOVAL-NEXT:    blt a3, a4, .LBB16_5
+; NOREMOVAL-NEXT:  # %bb.3: # in Loop: Header=BB16_2 Depth=1
+; NOREMOVAL-NEXT:    addw a0, a2, a0
+; NOREMOVAL-NEXT:    addiw a2, a2, 1
+; NOREMOVAL-NEXT:    blt a2, a1, .LBB16_2
+; NOREMOVAL-NEXT:  .LBB16_4:
+; NOREMOVAL-NEXT:    ret
+; NOREMOVAL-NEXT:  .LBB16_5:
+; NOREMOVAL-NEXT:    li a0, -1
+; NOREMOVAL-NEXT:    ret
+  %zext = zext i31 %0 to i32
+  %3 = icmp sgt i32 %1, 1
+  br i1 %3, label %4, label %12
+
+4:                                                ; preds = %2, %8
+  %5 = phi i32 [ %10, %8 ], [ 1, %2 ]
+  %6 = phi i32 [ %9, %8 ], [ %zext, %2 ]
+  %7 = icmp sgt i32 %6, 1000
+  br i1 %7, label %12, label %8
+
+8:                                                ; preds = %4
+  %9 = add nsw i32 %5, %6
+  %10 = add nuw nsw i32 %5, 1
+  %11 = icmp slt i32 %10, %1
+  br i1 %11, label %4, label %12
+
+12:                                               ; preds = %8, %4, %2
+  %13 = phi i32 [ %zext, %2 ], [ -1, %4 ], [ %9, %8 ]
+  ret i32 %13
+}
+
+define signext i32 @test15(i64 %arg1, i64 %arg2, i64 %arg3, i32* %arg4)  {
+; CHECK-LABEL: test15:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    li a4, 256
+; CHECK-NEXT:  .LBB17_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    andi a0, a0, 1234
+; CHECK-NEXT:    addw a0, a0, a1
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    sw a0, 0(a3)
+; CHECK-NEXT:    bltu a2, a4, .LBB17_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test15:
+; NOREMOVAL:       # %bb.0: # %entry
+; NOREMOVAL-NEXT:    addi a2, a2, -1
+; NOREMOVAL-NEXT:    li a4, 256
+; NOREMOVAL-NEXT:  .LBB17_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    andi a0, a0, 1234
+; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    sw a0, 0(a3)
+; NOREMOVAL-NEXT:    bltu a2, a4, .LBB17_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i5, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = and i64 %i1, 1234
+  %i5 = add i64 %i4, %arg2
+  %i8 = trunc i64 %i5 to i32
+  store i32 %i8, i32* %arg4
+  %i6 = icmp ugt i64 %i2, 255
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %i7 = trunc i64 %i5 to i32
+  ret i32 %i7
 }

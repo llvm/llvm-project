@@ -10,7 +10,7 @@ target triple = "powerpc-unknown-freebsd9.0"
 define i32 @testing(i32 %x, float %a, ...) nounwind {
   %1 = alloca i32, align 4
   %2 = alloca float, align 4
-  store i32 %x, i32* %1, align 4
-  store float %a, float* %2, align 4
+  store i32 %x, ptr %1, align 4
+  store float %a, ptr %2, align 4
   ret i32 0
 }

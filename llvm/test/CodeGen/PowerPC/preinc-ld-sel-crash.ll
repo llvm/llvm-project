@@ -2,9 +2,9 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
-%t1 = type { %t2*, %t3* }
-%t2 = type <{ %t3*, i32, [4 x i8] }>
-%t3 = type { %t3* }
+%t1 = type { ptr, ptr }
+%t2 = type <{ ptr, i32, [4 x i8] }>
+%t3 = type { ptr }
 
 @_ZN4Foam10SLListBase13endConstIter_E = external global %t1
 
@@ -36,12 +36,12 @@ if.then.i181:                                     ; preds = %if.end75
 
 if.then17.i:                                      ; preds = %if.end75
   %tobool.i.i.i = icmp eq i32 undef, 0
-  %0 = load i64*, i64** undef, align 8
-  %agg.tmp.sroa.3.0.copyload33.in.i = select i1 %tobool.i.i.i, i64* bitcast (%t3** getelementptr inbounds (%t1, %t1* @_ZN4Foam10SLListBase13endConstIter_E, i64 0, i32 1) to i64*), i64* %0
-  %agg.tmp.sroa.3.0.copyload33.i = load i64, i64* %agg.tmp.sroa.3.0.copyload33.in.i, align 8
-  %1 = inttoptr i64 %agg.tmp.sroa.3.0.copyload33.i to %t3*
-  %2 = load %t3*, %t3** getelementptr inbounds (%t1, %t1* @_ZN4Foam10SLListBase13endConstIter_E, i64 0, i32 1), align 8
-  %cmp.i37.i = icmp eq %t3* %1, %2
+  %0 = load ptr, ptr undef, align 8
+  %agg.tmp.sroa.3.0.copyload33.in.i = select i1 %tobool.i.i.i, ptr getelementptr inbounds (%t1, ptr @_ZN4Foam10SLListBase13endConstIter_E, i64 0, i32 1), ptr %0
+  %agg.tmp.sroa.3.0.copyload33.i = load i64, ptr %agg.tmp.sroa.3.0.copyload33.in.i, align 8
+  %1 = inttoptr i64 %agg.tmp.sroa.3.0.copyload33.i to ptr
+  %2 = load ptr, ptr getelementptr inbounds (%t1, ptr @_ZN4Foam10SLListBase13endConstIter_E, i64 0, i32 1), align 8
+  %cmp.i37.i = icmp eq ptr %1, %2
   br i1 %cmp.i37.i, label %invoke.cont79, label %for.body.lr.ph.i
 
 ; CHECK-LABEL: @_ZN4FoamrsIbEERNS_7IstreamES2_RNS_4ListIT_EE

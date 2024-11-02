@@ -119,7 +119,8 @@ while_end:
 }
 
 ; GEPs have been manually split so the base GEP does not get used by any memory
-; instructions. Make sure we use a small offset in each of the stores.
+; instructions. Make sure we use an offset and common base for each of the
+; stores.
 define void @test3([65536 x i32]* %t) {
 ; RV32I-LABEL: test3:
 ; RV32I:       # %bb.0: # %entry

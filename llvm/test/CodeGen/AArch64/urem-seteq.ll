@@ -82,8 +82,8 @@ define i16 @test_urem_even(i16 %X) nounwind {
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    and w9, w8, #0xfffc
 ; CHECK-NEXT:    lsr w9, w9, #1
-; CHECK-NEXT:    bfi w9, w8, #15, #17
-; CHECK-NEXT:    ubfx w8, w9, #1, #15
+; CHECK-NEXT:    orr w8, w9, w8, lsl #15
+; CHECK-NEXT:    ubfx w8, w8, #1, #15
 ; CHECK-NEXT:    cmp w8, #2340
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret

@@ -216,11 +216,11 @@ define double @fmul_f64(double %x, double %y) {
   ret double %r
 }
 
-; FIXME: divsd is 1 instruction.
+; divsd is 1 instruction.
 
 define double @fdiv_f64(double %x, double %y) {
 ; CHECK-LABEL: 'fdiv_f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r = fdiv double %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = fdiv double %x, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret double %r
 ;
   %r = fdiv double %x, %y

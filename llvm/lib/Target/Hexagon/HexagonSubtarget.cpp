@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -39,45 +40,41 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "HexagonGenSubtargetInfo.inc"
 
-static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+static cl::opt<bool> EnableBSBSched("enable-bsb-sched", cl::Hidden,
+                                    cl::init(true));
 
-static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false));
+static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched", cl::Hidden,
+                                          cl::init(false));
 
-static cl::opt<bool> EnableDotCurSched("enable-cur-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable the scheduler to generate .cur"));
+static cl::opt<bool>
+    EnableDotCurSched("enable-cur-sched", cl::Hidden, cl::init(true),
+                      cl::desc("Enable the scheduler to generate .cur"));
 
-static cl::opt<bool> DisableHexagonMISched("disable-hexagon-misched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon MI Scheduling"));
+static cl::opt<bool>
+    DisableHexagonMISched("disable-hexagon-misched", cl::Hidden,
+                          cl::desc("Disable Hexagon MI Scheduling"));
 
-static cl::opt<bool> EnableSubregLiveness("hexagon-subreg-liveness",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable subregister liveness tracking for Hexagon"));
+static cl::opt<bool> EnableSubregLiveness(
+    "hexagon-subreg-liveness", cl::Hidden, cl::init(true),
+    cl::desc("Enable subregister liveness tracking for Hexagon"));
 
-static cl::opt<bool> OverrideLongCalls("hexagon-long-calls",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("If present, forces/disables the use of long calls"));
+static cl::opt<bool> OverrideLongCalls(
+    "hexagon-long-calls", cl::Hidden,
+    cl::desc("If present, forces/disables the use of long calls"));
 
-static cl::opt<bool> EnablePredicatedCalls("hexagon-pred-calls",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Consider calls to be predicable"));
+static cl::opt<bool>
+    EnablePredicatedCalls("hexagon-pred-calls", cl::Hidden,
+                          cl::desc("Consider calls to be predicable"));
 
-static cl::opt<bool> SchedPredsCloser("sched-preds-closer",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+static cl::opt<bool> SchedPredsCloser("sched-preds-closer", cl::Hidden,
+                                      cl::init(true));
 
 static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+                                             cl::Hidden, cl::init(true));
 
-static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable checking for cache bank conflicts"));
-
-static cl::opt<bool> EnableV68FloatCodeGen(
-    "force-hvx-float", cl::Hidden, cl::ZeroOrMore, cl::init(false),
-    cl::desc("Enable the code-generation for vector float instructions on v68."));
+static cl::opt<bool> EnableCheckBankConflict(
+    "hexagon-check-bank-conflict", cl::Hidden, cl::init(true),
+    cl::desc("Enable checking for cache bank conflicts"));
 
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
@@ -148,19 +145,8 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   std::string FeatureString = Features.getString();
   ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FeatureString);
 
-  // Enable float code generation only if the flag(s) are set and
-  // the feature is enabled. v68 is guarded by additional flags.
-  bool GreaterThanV68 = false;
-  if (useHVXV69Ops())
-    GreaterThanV68 = true;
-
-  // Support for deprecated qfloat/ieee codegen flags
-  if (!GreaterThanV68) {
-    if (EnableV68FloatCodeGen)
-      UseHVXFloatingPoint = true;
-  } else {
-    UseHVXFloatingPoint = true;
-  }
+  if (useHVXV68Ops())
+    UseHVXFloatingPoint = UseHVXIEEEFPOps || UseHVXQFloatOps;
 
   if (UseHVXQFloatOps && UseHVXIEEEFPOps && UseHVXFloatingPoint)
     LLVM_DEBUG(
@@ -197,10 +183,12 @@ bool HexagonSubtarget::isHVXElementType(MVT Ty, bool IncludeBool) const {
   return llvm::is_contained(ElemTypes, Ty);
 }
 
-bool HexagonSubtarget::isHVXVectorType(MVT VecTy, bool IncludeBool) const {
+bool HexagonSubtarget::isHVXVectorType(EVT VecTy, bool IncludeBool) const {
+  if (!VecTy.isSimple())
+    return false;
   if (!VecTy.isVector() || !useHVXOps() || VecTy.isScalableVector())
     return false;
-  MVT ElemTy = VecTy.getVectorElementType();
+  MVT ElemTy = VecTy.getSimpleVT().getVectorElementType();
   if (!IncludeBool && ElemTy == MVT::i1)
     return false;
 
@@ -234,7 +222,7 @@ bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   // The given type may be something like <17 x i32>, which is not MVT,
   // but can be represented as (non-simple) EVT.
   EVT Ty = EVT::getEVT(VecTy, /*HandleUnknown*/false);
-  if (Ty.getSizeInBits() <= 64 || !Ty.getVectorElementType().isSimple())
+  if (!Ty.getVectorElementType().isSimple())
     return false;
 
   auto isHvxTy = [this, IncludeBool](MVT SimpleTy) {
@@ -248,7 +236,7 @@ bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   // qualifies for HVX, dividing it in half after each step.
   MVT ElemTy = Ty.getVectorElementType().getSimpleVT();
   unsigned VecLen = PowerOf2Ceil(Ty.getVectorNumElements());
-  while (ElemTy.getSizeInBits() * VecLen > 64) {
+  while (VecLen > 1) {
     MVT SimpleTy = MVT::getVectorVT(ElemTy, VecLen);
     if (SimpleTy.isValid() && isHvxTy(SimpleTy))
       return true;
@@ -738,4 +726,53 @@ unsigned HexagonSubtarget::getL1PrefetchDistance() const {
 
 bool HexagonSubtarget::enableSubRegLiveness() const {
   return EnableSubregLiveness;
+}
+
+Intrinsic::ID HexagonSubtarget::getIntrinsicId(unsigned Opc) const {
+  struct Scalar {
+    unsigned Opcode;
+    Intrinsic::ID IntId;
+  };
+  struct Hvx {
+    unsigned Opcode;
+    Intrinsic::ID Int64Id, Int128Id;
+  };
+
+  static Scalar ScalarInts[] = {
+#define GET_SCALAR_INTRINSICS
+#include "HexagonDepInstrIntrinsics.inc"
+#undef GET_SCALAR_INTRINSICS
+  };
+
+  static Hvx HvxInts[] = {
+#define GET_HVX_INTRINSICS
+#include "HexagonDepInstrIntrinsics.inc"
+#undef GET_HVX_INTRINSICS
+  };
+
+  const auto CmpOpcode = [](auto A, auto B) { return A.Opcode < B.Opcode; };
+  [[maybe_unused]] static bool SortedScalar =
+      (llvm::sort(ScalarInts, CmpOpcode), true);
+  [[maybe_unused]] static bool SortedHvx =
+      (llvm::sort(HvxInts, CmpOpcode), true);
+
+  auto [BS, ES] = std::make_pair(std::begin(ScalarInts), std::end(ScalarInts));
+  auto [BH, EH] = std::make_pair(std::begin(HvxInts), std::end(HvxInts));
+
+  auto FoundScalar = std::lower_bound(BS, ES, Scalar{Opc, 0}, CmpOpcode);
+  if (FoundScalar != ES && FoundScalar->Opcode == Opc)
+    return FoundScalar->IntId;
+
+  auto FoundHvx = std::lower_bound(BH, EH, Hvx{Opc, 0, 0}, CmpOpcode);
+  if (FoundHvx != EH && FoundHvx->Opcode == Opc) {
+    unsigned HwLen = getVectorLength();
+    if (HwLen == 64)
+      return FoundHvx->Int64Id;
+    if (HwLen == 128)
+      return FoundHvx->Int128Id;
+  }
+
+  std::string error = "Invalid opcode (" + std::to_string(Opc) + ")";
+  llvm_unreachable(error.c_str());
+  return 0;
 }

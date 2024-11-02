@@ -234,7 +234,7 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
 
   // Wait for the child process to trap on its call to execve.
-  int wstatus;
+  int wstatus = 0;
   ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
   assert(wpid == pid);
   (void)wpid;
@@ -246,25 +246,20 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
-  ProcessInstanceInfo Info;
-  if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
-  }
-
-  // Set the architecture to the exe architecture.
-  LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
-           Info.GetArchitecture().GetArchitectureName());
-
   status = SetDefaultPtraceOpts(pid);
   if (status.Fail()) {
     LLDB_LOG(log, "failed to set default ptrace options: {0}", status);
     return status.ToError();
   }
 
+  llvm::Expected<ArchSpec> arch_or =
+      NativeRegisterContextLinux::DetermineArchitecture(pid);
+  if (!arch_or)
+    return arch_or.takeError();
+
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), mainloop, {pid}));
+      *arch_or, mainloop, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -274,19 +269,17 @@ NativeProcessLinux::Factory::Attach(
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
-  // Retrieve the architecture for the running process.
-  ProcessInstanceInfo Info;
-  if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
-  }
-
   auto tids_or = NativeProcessLinux::Attach(pid);
   if (!tids_or)
     return tids_or.takeError();
+  ArrayRef<::pid_t> tids = *tids_or;
+  llvm::Expected<ArchSpec> arch_or =
+      NativeRegisterContextLinux::DetermineArchitecture(tids[0]);
+  if (!arch_or)
+    return arch_or.takeError();
 
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
-      pid, -1, native_delegate, Info.GetArchitecture(), mainloop, *tids_or));
+      pid, -1, native_delegate, *arch_or, mainloop, tids));
 }
 
 NativeProcessLinux::Extension
@@ -849,7 +842,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
     auto tgid_ret = getPIDForTID(child_pid);
     if (tgid_ret != child_pid) {
       // A new thread should have PGID matching our process' PID.
-      assert(!tgid_ret || tgid_ret.getValue() == GetID());
+      assert(!tgid_ret || *tgid_ret == GetID());
 
       NativeThreadLinux &child_thread = AddThread(child_pid, /*resume*/ true);
       ThreadWasCreated(child_thread);
@@ -859,7 +852,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
       break;
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PTRACE_EVENT_FORK:
   case PTRACE_EVENT_VFORK: {
     bool is_vfork = event == PTRACE_EVENT_VFORK;
@@ -889,7 +882,8 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
 }
 
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
-  if (m_arch.GetMachine() == llvm::Triple::arm || m_arch.IsMIPS())
+  if (m_arch.IsMIPS() || m_arch.GetMachine() == llvm::Triple::arm ||
+      m_arch.GetTriple().isRISCV())
     return false;
   return true;
 }
@@ -897,6 +891,8 @@ bool NativeProcessLinux::SupportHardwareSingleStepping() const {
 Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid {0}", GetID());
+
+  NotifyTracersProcessWillResume();
 
   bool software_single_step = !SupportHardwareSingleStepping();
 
@@ -938,14 +934,20 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
     case eStateStepping: {
       // Run the thread, possibly feeding it the signal.
       const int signo = action->signal;
-      ResumeThread(static_cast<NativeThreadLinux &>(*thread), action->state,
-                   signo);
+      Status error = ResumeThread(static_cast<NativeThreadLinux &>(*thread),
+                                  action->state, signo);
+      if (error.Fail())
+        return Status("NativeProcessLinux::%s: failed to resume thread "
+                      "for pid %" PRIu64 ", tid %" PRIu64 ", error = %s",
+                      __FUNCTION__, GetID(), thread->GetID(),
+                      error.AsCString());
+
       break;
     }
 
     case eStateSuspended:
     case eStateStopped:
-      llvm_unreachable("Unexpected state");
+      break;
 
     default:
       return Status("NativeProcessLinux::%s (): unexpected state %s specified "
@@ -1225,7 +1227,8 @@ llvm::Expected<uint64_t>
 NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   PopulateMemoryRegionCache();
   auto region_it = llvm::find_if(m_mem_region_cache, [](const auto &pair) {
-    return pair.first.GetExecutable() == MemoryRegionInfo::eYes;
+    return pair.first.GetExecutable() == MemoryRegionInfo::eYes &&
+        pair.first.GetShared() != MemoryRegionInfo::eYes;
   });
   if (region_it == m_mem_region_cache.end())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1665,9 +1668,12 @@ void NativeProcessLinux::StopTrackingThread(NativeThreadLinux &thread) {
   SignalIfAllThreadsStopped();
 }
 
-void NativeProcessLinux::NotifyTracersProcessStateChanged(
-    lldb::StateType state) {
-  m_intel_pt_collector.OnProcessStateChanged(state);
+void NativeProcessLinux::NotifyTracersProcessDidStop() {
+  m_intel_pt_collector.ProcessDidStop();
+}
+
+void NativeProcessLinux::NotifyTracersProcessWillResume() {
+  m_intel_pt_collector.ProcessWillResume();
 }
 
 Status NativeProcessLinux::NotifyTracersOfNewThread(lldb::tid_t tid) {

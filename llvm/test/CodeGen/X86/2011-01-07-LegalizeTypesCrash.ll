@@ -14,6 +14,6 @@ define void @test() nounwind {
  %cond8 = extractelement <4 x i1> %i17, i32 2
  %_comp9 = select i1 %cond8, i8 0, i8 undef
  %m387 = insertelement <4 x i8> %merge5, i8 %_comp9, i32 2
- store <4 x i8> %m387, <4 x i8>* undef
+ store <4 x i8> %m387, ptr undef
  ret void
 }

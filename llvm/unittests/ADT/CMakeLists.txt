@@ -11,6 +11,7 @@ add_llvm_unittest(ADTTests
   ArrayRefTest.cpp
   BitFieldsTest.cpp
   BitmaskEnumTest.cpp
+  BitTest.cpp
   BitVectorTest.cpp
   BreadthFirstIteratorTest.cpp
   BumpPtrListTest.cpp
@@ -22,6 +23,7 @@ add_llvm_unittest(ADTTests
   DenseSetTest.cpp
   DepthFirstIteratorTest.cpp
   DirectedGraphTest.cpp
+  EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
   FallibleIteratorTest.cpp
@@ -41,6 +43,7 @@ add_llvm_unittest(ADTTests
   ImmutableSetTest.cpp
   IntEqClassesTest.cpp
   IntervalMapTest.cpp
+  IntervalTreeTest.cpp
   IntrusiveRefCntPtrTest.cpp
   IteratorTest.cpp
   MappedIteratorTest.cpp

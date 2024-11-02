@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Demangle/Demangle.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -2287,17 +2289,15 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   }
 
   // Delete symbols which should not be printed from SymolList.
-  SymbolList.erase(
-      llvm::remove_if(SymbolList,
-                      [](const NMSymbol &s) { return !s.shouldPrint(); }),
-      SymbolList.end());
+  llvm::erase_if(SymbolList,
+                 [](const NMSymbol &s) { return !s.shouldPrint(); });
   sortSymbolList(SymbolList);
   SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
                    SymbolList.end());
   printExportSymbolList(SymbolList);
 }
 
-int main(int argc, char **argv) {
+int llvm_nm_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -2373,17 +2373,32 @@ int main(int argc, char **argv) {
   UndefinedOnly = Args.hasArg(OPT_undefined_only);
   WithoutAliases = Args.hasArg(OPT_without_aliases);
 
-  StringRef Mode = Args.getLastArgValue(OPT_X, "any");
-  if (Mode == "32")
-    BitMode = BitModeTy::Bit32;
-  else if (Mode == "64")
-    BitMode = BitModeTy::Bit64;
-  else if (Mode == "32_64")
-    BitMode = BitModeTy::Bit32_64;
-  else if (Mode == "any")
+  // Get BitMode from enviornment variable "OBJECT_MODE" for AIX OS, if
+  // specified.
+  Triple HostTriple(sys::getProcessTriple());
+  if (HostTriple.isOSAIX()) {
+    BitMode = StringSwitch<BitModeTy>(getenv("OBJECT_MODE"))
+                  .Case("32", BitModeTy::Bit32)
+                  .Case("64", BitModeTy::Bit64)
+                  .Case("32_64", BitModeTy::Bit32_64)
+                  .Case("any", BitModeTy::Any)
+                  .Default(BitModeTy::Bit32);
+  } else
     BitMode = BitModeTy::Any;
-  else
-    error("-X value should be one of: 32, 64, 32_64, (default) any");
+
+  if (Arg *A = Args.getLastArg(OPT_X)) {
+    StringRef Mode = A->getValue();
+    if (Mode == "32")
+      BitMode = BitModeTy::Bit32;
+    else if (Mode == "64")
+      BitMode = BitModeTy::Bit64;
+    else if (Mode == "32_64")
+      BitMode = BitModeTy::Bit32_64;
+    else if (Mode == "any")
+      BitMode = BitModeTy::Any;
+    else
+      error("-X value should be one of: 32, 64, 32_64, (default) any");
+  }
 
   // Mach-O specific options.
   FormatMachOasHex = Args.hasArg(OPT_x);
@@ -2459,4 +2474,5 @@ int main(int argc, char **argv) {
 
   if (HadError)
     return 1;
+  return 0;
 }

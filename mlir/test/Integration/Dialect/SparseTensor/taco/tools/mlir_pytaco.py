@@ -39,6 +39,7 @@ from mlir.dialects import builtin
 from mlir.dialects import func
 from mlir.dialects import linalg
 from mlir.dialects import sparse_tensor
+from mlir.dialects import tensor
 from mlir.dialects.linalg.opdsl import lang
 
 from . import mlir_pytaco_utils as utils
@@ -72,19 +73,23 @@ class Type(enum.Enum):
   INT16 = np.int16
   INT32 = np.int32
   INT64 = np.int64
-  # numpy _ctype_from_dtype_scalar can't handle np.float16 yet.
+  FLOAT16 = np.float16
   FLOAT32 = np.float32
   FLOAT64 = np.float64
+  COMPLEX64 = np.complex64
+  COMPLEX128 = np.complex128
 
 
 # All floating point type enums.
-_FLOAT_TYPES = (Type.FLOAT32, Type.FLOAT64)
+_FLOAT_TYPES = (Type.FLOAT16, Type.FLOAT32, Type.FLOAT64)
 # All integral type enums.
 _INT_TYPES = (Type.INT8, Type.INT16, Type.INT32, Type.INT64)
+# All complex type enums.
+_COMPLEX_TYPES = (Type.COMPLEX64, Type.COMPLEX128)
 # Type alias for any numpy type used to implement the runtime support for the
 # enum data types.
-_AnyRuntimeType = Union[np.int8, np.int16, np.int32, np.int64, np.float32,
-                        np.float64]
+_AnyRuntimeType = Union[np.int8, np.int16, np.int32, np.int64, np.float16,
+                        np.float32, np.float64, np.complex64, np.complex128]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -111,6 +116,10 @@ class DType:
     """Returns whether the data type represents an integral value."""
     return self.kind in _INT_TYPES
 
+  def is_complex(self) -> bool:
+    """Returns whether the data type represents a complex value."""
+    return self.kind in _COMPLEX_TYPES
+
   @property
   def value(self) -> _AnyRuntimeType:
     """Returns the numpy dtype for the data type."""
@@ -124,8 +133,11 @@ def _dtype_to_mlir_str(dtype: DType) -> str:
       Type.INT16: "i16",
       Type.INT32: "i32",
       Type.INT64: "i64",
+      Type.FLOAT16: "f16",
       Type.FLOAT32: "f32",
-      Type.FLOAT64: "f64"
+      Type.FLOAT64: "f64",
+      Type.COMPLEX64: "complex<f32>",
+      Type.COMPLEX128: "complex<f64>"
   }
   return dtype_to_str[dtype.kind]
 
@@ -137,8 +149,11 @@ def _nptype_to_taco_type(ty: np.dtype) -> DType:
       np.int16: Type.INT16,
       np.int32: Type.INT32,
       np.int64: Type.INT64,
+      np.float16: Type.FLOAT16,
       np.float32: Type.FLOAT32,
-      np.float64: Type.FLOAT64
+      np.float64: Type.FLOAT64,
+      np.complex64: Type.COMPLEX64,
+      np.complex128: Type.COMPLEX128
   }
   return DType(nptype_to_dtype[ty])
 
@@ -150,8 +165,11 @@ def _mlir_type_from_taco_type(dtype: DType) -> ir.Type:
       Type.INT16: ir.IntegerType.get_signless(16),
       Type.INT32: ir.IntegerType.get_signless(32),
       Type.INT64: ir.IntegerType.get_signless(64),
+      Type.FLOAT16: ir.F16Type.get(),
       Type.FLOAT32: ir.F32Type.get(),
-      Type.FLOAT64: ir.F64Type.get()
+      Type.FLOAT64: ir.F64Type.get(),
+      Type.COMPLEX64: ir.ComplexType.get(ir.F32Type.get()),
+      Type.COMPLEX128: ir.ComplexType.get(ir.F64Type.get())
   }
   return dtype_to_irtype[dtype.kind]
 
@@ -336,7 +354,7 @@ class Format:
   def get_permutation_and_sparsity(self) -> Tuple[np.ndarray, np.ndarray]:
     """Constructs the numpy arrays for the permutation and sparsity."""
     perm = np.array(self.ordering.ordering, dtype=np.ulonglong)
-    a = [0 if s == ModeFormat.DENSE else 1 for s in self.format_pack.formats]
+    a = [f.value for f in self.format_pack.formats]
     sparse = np.array(a, dtype=np.uint8)
     return (perm, sparse)
 
@@ -348,7 +366,8 @@ class Format:
     mlir_storage_format = [f.value for f in self.format_pack.formats]
     return sparse_tensor.EncodingAttr.get(mlir_storage_format,
                                           ir.AffineMap.get_permutation(order),
-                                          _POINTER_BIT_WIDTH, _INDEX_BIT_WIDTH)
+                                          None, _POINTER_BIT_WIDTH,
+                                          _INDEX_BIT_WIDTH)
 
 
 def _make_format(formats: List[ModeFormat],
@@ -882,15 +901,15 @@ class _StructOpInfo:
     if self.dst_format is None or self.dst_format.rank() == 0:
       # Initialize the dense tensor.
       ir_type = _mlir_type_from_taco_type(self.dst_dtype)
-      tensor = linalg.InitTensorOp(self.dst_dims, ir_type).result
+      empty = tensor.EmptyOp(self.dst_dims, ir_type).result
       zero = arith.ConstantOp(ir_type, 0.0)
-      return linalg.fill(zero, outs=[tensor])
+      return linalg.fill(zero, outs=[empty])
 
     # Initialize the sparse tensor.
     mlir_type = _mlir_tensor_type(self.dst_dtype, self.dst_dims,
                                   self.dst_format.mlir_tensor_attr())
     index_type = ir.IndexType.get()
-    return bufferization.AllocTensorOp(mlir_type, [])
+    return bufferization.AllocTensorOp(mlir_type, [], None, None, None)
 
 
 class _Stats:
@@ -1004,8 +1023,8 @@ class Tensor:
       raise ValueError(f"Invalid format argument: {fmt}.")
 
   def __init__(self,
-               value_or_shape: Optional[Union[List[int], Tuple[int, ...], float,
-                                              int]] = None,
+               value_or_shape: Optional[Union[List[int], Tuple[int, ...],
+                                              complex, float, int]] = None,
                fmt: Optional[Union[ModeFormat, List[ModeFormat],
                                    Format]] = None,
                dtype: Optional[DType] = None,
@@ -1059,7 +1078,7 @@ class Tensor:
     self._values = []
     self._stats = _Stats()
     if value_or_shape is None or isinstance(value_or_shape, int) or isinstance(
-        value_or_shape, float):
+        value_or_shape, float) or isinstance(value_or_shape, complex):
       # Create a scalar tensor and ignore the fmt parameter.
       self._shape = []
       self._format = _make_format([], [])
@@ -1108,7 +1127,7 @@ class Tensor:
     return (f"Tensor(_name={repr(self._name)} "
             f"_dtype={repr(self._dtype)} : ") + value_str
 
-  def insert(self, coords: List[int], val: Union[float, int]) -> None:
+  def insert(self, coords: List[int], val: Union[complex, float, int]) -> None:
     """Inserts a value to the given coordinate.
 
     Args:
@@ -1134,7 +1153,8 @@ class Tensor:
       raise ValueError("Invalid coordinate for rank: "
                        f"{self.order}, {coords}.")
 
-    if not isinstance(val, int) and not isinstance(val, float):
+    if not isinstance(val, int) and not isinstance(
+        val, float) and not isinstance(val, complex):
       raise ValueError(f"Value is neither int nor float: {val}.")
 
     self._coords.append(tuple(coords))
@@ -1176,12 +1196,12 @@ class Tensor:
     """
     if array.dtype != np.float32 and array.dtype != np.float64:
       raise ValueError(f"Expected floating point value type: {array.dtype}.")
-    tensor = Tensor(
+    t = Tensor(
         array.shape,
         dtype=_nptype_to_taco_type(array.dtype.type),
         is_dense=True)
-    tensor._dense_storage = np.copy(array)
-    return tensor
+    t._dense_storage = np.copy(array)
+    return t
 
   @staticmethod
   def from_coo(
@@ -1216,9 +1236,9 @@ class Tensor:
     # The size of each dimension is one more that such a maximum coordinate
     # value.
     shape = [c + 1 for c in max_coordinate]
-    tensor = Tensor(shape, fmt, dtype=dtype)
-    tensor._coords = coordinates
-    tensor._values = values
+    t = Tensor(shape, fmt, dtype=dtype)
+    t._coords = coordinates
+    t._values = values
 
     return tensor
 
@@ -1243,10 +1263,10 @@ class Tensor:
     sparse_tensor, shape = utils.create_sparse_tensor(filename,
                                                       fmt.format_pack.formats,
                                                       _dtype_to_mlir_str(dtype))
-    tensor = Tensor(shape.tolist(), fmt, dtype=dtype)
-    tensor._set_packed_sparse_tensor(sparse_tensor)
+    t = Tensor(shape.tolist(), fmt, dtype=dtype)
+    t._set_packed_sparse_tensor(sparse_tensor)
 
-    return tensor
+    return t
 
   def to_file(self, filename: str) -> None:
     """Output the tensor value to a file.

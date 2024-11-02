@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=xcore -mcpu=xs1b-generic | FileCheck %s
+; RUN: llc -march=xcore -mcpu=xs1b-generic -filetype=null %s
 
 define i32 *@addr_G1() {
 entry:

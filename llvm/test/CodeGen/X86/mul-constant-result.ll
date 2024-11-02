@@ -898,21 +898,21 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    movl $5, %edi
 ; X64-HSW-NEXT:    movl $2, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %r14d
-; X64-HSW-NEXT:    xorl $5, %r14d
+; X64-HSW-NEXT:    movl %eax, %ebp
+; X64-HSW-NEXT:    xorl $5, %ebp
 ; X64-HSW-NEXT:    movl $6, %edi
 ; X64-HSW-NEXT:    movl $3, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebp
-; X64-HSW-NEXT:    xorl $6, %ebp
-; X64-HSW-NEXT:    orl %r14d, %ebp
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $6, %r14d
+; X64-HSW-NEXT:    orl %ebp, %r14d
 ; X64-HSW-NEXT:    movl $7, %edi
 ; X64-HSW-NEXT:    movl $3, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %r14d
-; X64-HSW-NEXT:    xorl $7, %r14d
-; X64-HSW-NEXT:    orl %ebp, %r14d
-; X64-HSW-NEXT:    orl %ebx, %r14d
+; X64-HSW-NEXT:    movl %eax, %ebp
+; X64-HSW-NEXT:    xorl $7, %ebp
+; X64-HSW-NEXT:    orl %r14d, %ebp
+; X64-HSW-NEXT:    orl %ebx, %ebp
 ; X64-HSW-NEXT:    movl $8, %edi
 ; X64-HSW-NEXT:    movl $4, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
@@ -921,88 +921,88 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    movl $9, %edi
 ; X64-HSW-NEXT:    movl $4, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebp
-; X64-HSW-NEXT:    xorl $9, %ebp
-; X64-HSW-NEXT:    orl %ebx, %ebp
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $9, %r14d
+; X64-HSW-NEXT:    orl %ebx, %r14d
 ; X64-HSW-NEXT:    movl $10, %edi
 ; X64-HSW-NEXT:    movl $5, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $10, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %r15d
+; X64-HSW-NEXT:    xorl $10, %r15d
+; X64-HSW-NEXT:    orl %r14d, %r15d
 ; X64-HSW-NEXT:    movl $11, %edi
 ; X64-HSW-NEXT:    movl $5, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %r15d
-; X64-HSW-NEXT:    xorl $11, %r15d
-; X64-HSW-NEXT:    orl %ebx, %r15d
-; X64-HSW-NEXT:    orl %r14d, %r15d
+; X64-HSW-NEXT:    movl %eax, %ebx
+; X64-HSW-NEXT:    xorl $11, %ebx
+; X64-HSW-NEXT:    orl %r15d, %ebx
+; X64-HSW-NEXT:    orl %ebp, %ebx
 ; X64-HSW-NEXT:    movl $12, %edi
 ; X64-HSW-NEXT:    movl $6, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $12, %ebx
+; X64-HSW-NEXT:    movl %eax, %ebp
+; X64-HSW-NEXT:    xorl $12, %ebp
 ; X64-HSW-NEXT:    movl $13, %edi
 ; X64-HSW-NEXT:    movl $6, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebp
-; X64-HSW-NEXT:    xorl $13, %ebp
-; X64-HSW-NEXT:    orl %ebx, %ebp
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $13, %r14d
+; X64-HSW-NEXT:    orl %ebp, %r14d
 ; X64-HSW-NEXT:    movl $14, %edi
 ; X64-HSW-NEXT:    movl $7, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $14, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %ebp
+; X64-HSW-NEXT:    xorl $14, %ebp
+; X64-HSW-NEXT:    orl %r14d, %ebp
 ; X64-HSW-NEXT:    movl $15, %edi
 ; X64-HSW-NEXT:    movl $7, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebp
-; X64-HSW-NEXT:    xorl $15, %ebp
-; X64-HSW-NEXT:    orl %ebx, %ebp
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $15, %r14d
+; X64-HSW-NEXT:    orl %ebp, %r14d
 ; X64-HSW-NEXT:    movl $16, %edi
 ; X64-HSW-NEXT:    movl $8, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %r14d
-; X64-HSW-NEXT:    xorl $16, %r14d
-; X64-HSW-NEXT:    orl %ebp, %r14d
-; X64-HSW-NEXT:    orl %r15d, %r14d
+; X64-HSW-NEXT:    movl %eax, %ebp
+; X64-HSW-NEXT:    xorl $16, %ebp
+; X64-HSW-NEXT:    orl %r14d, %ebp
+; X64-HSW-NEXT:    orl %ebx, %ebp
 ; X64-HSW-NEXT:    movl $17, %edi
 ; X64-HSW-NEXT:    movl $8, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebp
-; X64-HSW-NEXT:    xorl $17, %ebp
+; X64-HSW-NEXT:    movl %eax, %ebx
+; X64-HSW-NEXT:    xorl $17, %ebx
 ; X64-HSW-NEXT:    movl $18, %edi
 ; X64-HSW-NEXT:    movl $9, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $18, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $18, %r14d
+; X64-HSW-NEXT:    orl %ebx, %r14d
 ; X64-HSW-NEXT:    movl $19, %edi
 ; X64-HSW-NEXT:    movl $9, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebp
-; X64-HSW-NEXT:    xorl $19, %ebp
-; X64-HSW-NEXT:    orl %ebx, %ebp
+; X64-HSW-NEXT:    movl %eax, %ebx
+; X64-HSW-NEXT:    xorl $19, %ebx
+; X64-HSW-NEXT:    orl %r14d, %ebx
 ; X64-HSW-NEXT:    movl $20, %edi
 ; X64-HSW-NEXT:    movl $10, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $20, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $20, %r14d
+; X64-HSW-NEXT:    orl %ebx, %r14d
 ; X64-HSW-NEXT:    movl $21, %edi
 ; X64-HSW-NEXT:    movl $10, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebp
-; X64-HSW-NEXT:    xorl $21, %ebp
-; X64-HSW-NEXT:    orl %ebx, %ebp
+; X64-HSW-NEXT:    movl %eax, %r15d
+; X64-HSW-NEXT:    xorl $21, %r15d
+; X64-HSW-NEXT:    orl %r14d, %r15d
 ; X64-HSW-NEXT:    movl $22, %edi
 ; X64-HSW-NEXT:    movl $11, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %r15d
-; X64-HSW-NEXT:    xorl $22, %r15d
-; X64-HSW-NEXT:    orl %ebp, %r15d
-; X64-HSW-NEXT:    orl %r14d, %r15d
+; X64-HSW-NEXT:    movl %eax, %ebx
+; X64-HSW-NEXT:    xorl $22, %ebx
+; X64-HSW-NEXT:    orl %r15d, %ebx
+; X64-HSW-NEXT:    orl %ebp, %ebx
 ; X64-HSW-NEXT:    movl $23, %edi
 ; X64-HSW-NEXT:    movl $11, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
@@ -1011,58 +1011,58 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    movl $24, %edi
 ; X64-HSW-NEXT:    movl $12, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $24, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $24, %r14d
+; X64-HSW-NEXT:    orl %ebp, %r14d
 ; X64-HSW-NEXT:    movl $25, %edi
 ; X64-HSW-NEXT:    movl $12, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
 ; X64-HSW-NEXT:    movl %eax, %ebp
 ; X64-HSW-NEXT:    xorl $25, %ebp
-; X64-HSW-NEXT:    orl %ebx, %ebp
+; X64-HSW-NEXT:    orl %r14d, %ebp
 ; X64-HSW-NEXT:    movl $26, %edi
 ; X64-HSW-NEXT:    movl $13, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $26, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $26, %r14d
+; X64-HSW-NEXT:    orl %ebp, %r14d
 ; X64-HSW-NEXT:    movl $27, %edi
 ; X64-HSW-NEXT:    movl $13, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
 ; X64-HSW-NEXT:    movl %eax, %ebp
 ; X64-HSW-NEXT:    xorl $27, %ebp
-; X64-HSW-NEXT:    orl %ebx, %ebp
+; X64-HSW-NEXT:    orl %r14d, %ebp
 ; X64-HSW-NEXT:    movl $28, %edi
 ; X64-HSW-NEXT:    movl $14, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $28, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $28, %r14d
+; X64-HSW-NEXT:    orl %ebp, %r14d
 ; X64-HSW-NEXT:    movl $29, %edi
 ; X64-HSW-NEXT:    movl $14, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
 ; X64-HSW-NEXT:    movl %eax, %ebp
 ; X64-HSW-NEXT:    xorl $29, %ebp
+; X64-HSW-NEXT:    orl %r14d, %ebp
 ; X64-HSW-NEXT:    orl %ebx, %ebp
-; X64-HSW-NEXT:    orl %r15d, %ebp
 ; X64-HSW-NEXT:    movl $30, %edi
 ; X64-HSW-NEXT:    movl $15, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %r14d
-; X64-HSW-NEXT:    xorl $30, %r14d
+; X64-HSW-NEXT:    movl %eax, %ebx
+; X64-HSW-NEXT:    xorl $30, %ebx
 ; X64-HSW-NEXT:    movl $31, %edi
 ; X64-HSW-NEXT:    movl $15, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
-; X64-HSW-NEXT:    movl %eax, %ebx
-; X64-HSW-NEXT:    xorl $31, %ebx
-; X64-HSW-NEXT:    orl %r14d, %ebx
-; X64-HSW-NEXT:    orl %ebp, %ebx
+; X64-HSW-NEXT:    movl %eax, %r14d
+; X64-HSW-NEXT:    xorl $31, %r14d
+; X64-HSW-NEXT:    orl %ebx, %r14d
+; X64-HSW-NEXT:    orl %ebp, %r14d
 ; X64-HSW-NEXT:    movl $32, %edi
 ; X64-HSW-NEXT:    movl $16, %esi
 ; X64-HSW-NEXT:    callq mult@PLT
 ; X64-HSW-NEXT:    xorl $32, %eax
 ; X64-HSW-NEXT:    xorl %ecx, %ecx
-; X64-HSW-NEXT:    orl %ebx, %eax
+; X64-HSW-NEXT:    orl %r14d, %eax
 ; X64-HSW-NEXT:    setne %cl
 ; X64-HSW-NEXT:    negl %ecx
 ; X64-HSW-NEXT:    movl %ecx, %eax

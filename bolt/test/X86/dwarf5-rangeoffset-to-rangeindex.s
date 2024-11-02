@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
 # RUN: %clang %cflags -dwarf-5 %t1.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
@@ -21,6 +21,11 @@
 # POSTCHECK-SAME: (indexed (0x0) rangelist = 0x00000018
 # POSTCHECK-NEXT: [0x[[#ADDR]], 0x[[#ADDR + 11]]
 # POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 11]]
+# POSTCHECK-NEXT:  DW_AT_low_pc [DW_FORM_addr]
+# POSTCHECK-NEXT:  DW_AT_stmt_list [DW_FORM_sec_offset]
+# POSTCHECK-NEXT:  DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
+# POSTCHECK-NEXT:  DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
+
 
 # int foo() {
 #   return 3;

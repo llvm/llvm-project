@@ -16,3 +16,8 @@ else:
 config.environment[shlibpath_var] = os.path.pathsep.join((
     "@SHLIBDIR@", "@LLVM_LIBS_DIR@",
     config.environment.get(shlibpath_var,'')))
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

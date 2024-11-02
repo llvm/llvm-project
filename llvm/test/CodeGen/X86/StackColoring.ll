@@ -11,18 +11,16 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 define i32 @myCall_w2(i32 %in) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b)
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b2)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -36,26 +34,24 @@ entry:
 
 define i32 @myCall2_no_merge(i32 %in, i1 %d) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b)
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
   ret i32 %t7
 bb3:
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
   ret i32 0
 }
 
@@ -65,20 +61,18 @@ bb3:
 
 define i32 @myCall2_w2(i32 %in, i1 %d) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b)
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -88,35 +82,31 @@ bb3:
 }
 
 ;CHECK-LABEL: myCall_w4:
-;YESCOLOR: subq  $120, %rsp
-;NOFIRSTUSE: subq  $200, %rsp
-;NOCOLOR: subq  $408, %rsp
+;YESCOLOR: subq  $112, %rsp
+;NOFIRSTUSE: subq  $208, %rsp
+;NOCOLOR: subq  $400, %rsp
 
 define i32 @myCall_w4(i32 %in) {
 entry:
-  %a1 = alloca [14 x i8*], align 8
-  %a2 = alloca [13 x i8*], align 8
-  %a3 = alloca [12 x i8*], align 8
-  %a4 = alloca [11 x i8*], align 8
-  %b1 = bitcast [14 x i8*]* %a1 to i8*
-  %b2 = bitcast [13 x i8*]* %a2 to i8*
-  %b3 = bitcast [12 x i8*]* %a3 to i8*
-  %b4 = bitcast [11 x i8*]* %a4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b4)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b1)
-  %t1 = call i32 @foo(i32 %in, i8* %b1)
-  %t2 = call i32 @foo(i32 %in, i8* %b1)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b1)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t9 = call i32 @foo(i32 %in, i8* %b2)
-  %t8 = call i32 @foo(i32 %in, i8* %b2)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b2)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b3)
-  %t3 = call i32 @foo(i32 %in, i8* %b3)
-  %t4 = call i32 @foo(i32 %in, i8* %b3)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b3)
-  %t11 = call i32 @foo(i32 %in, i8* %b4)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b4)
+  %a1 = alloca [14 x ptr], align 8
+  %a2 = alloca [13 x ptr], align 8
+  %a3 = alloca [12 x ptr], align 8
+  %a4 = alloca [11 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a4)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a1)
+  %t1 = call i32 @foo(i32 %in, ptr %a1)
+  %t2 = call i32 @foo(i32 %in, ptr %a1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t9 = call i32 @foo(i32 %in, ptr %a2)
+  %t8 = call i32 @foo(i32 %in, ptr %a2)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a3)
+  %t3 = call i32 @foo(i32 %in, ptr %a3)
+  %t4 = call i32 @foo(i32 %in, ptr %a3)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a3)
+  %t11 = call i32 @foo(i32 %in, ptr %a4)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a4)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -129,31 +119,27 @@ entry:
 
 define i32 @myCall2_w4(i32 %in) {
 entry:
-  %a1 = alloca [14 x i8*], align 8
-  %a2 = alloca [13 x i8*], align 8
-  %a3 = alloca [12 x i8*], align 8
-  %a4 = alloca [11 x i8*], align 8
-  %b1 = bitcast [14 x i8*]* %a1 to i8*
-  %b2 = bitcast [13 x i8*]* %a2 to i8*
-  %b3 = bitcast [12 x i8*]* %a3 to i8*
-  %b4 = bitcast [11 x i8*]* %a4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b1)
-  %t1 = call i32 @foo(i32 %in, i8* %b1)
-  %t2 = call i32 @foo(i32 %in, i8* %b1)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b1)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t9 = call i32 @foo(i32 %in, i8* %b2)
-  %t8 = call i32 @foo(i32 %in, i8* %b2)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b2)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b3)
-  %t3 = call i32 @foo(i32 %in, i8* %b3)
-  %t4 = call i32 @foo(i32 %in, i8* %b3)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b3)
+  %a1 = alloca [14 x ptr], align 8
+  %a2 = alloca [13 x ptr], align 8
+  %a3 = alloca [12 x ptr], align 8
+  %a4 = alloca [11 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a1)
+  %t1 = call i32 @foo(i32 %in, ptr %a1)
+  %t2 = call i32 @foo(i32 %in, ptr %a1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t9 = call i32 @foo(i32 %in, ptr %a2)
+  %t8 = call i32 @foo(i32 %in, ptr %a2)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a3)
+  %t3 = call i32 @foo(i32 %in, ptr %a3)
+  %t4 = call i32 @foo(i32 %in, ptr %a3)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a3)
   br i1 undef, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b4)
-  %t11 = call i32 @foo(i32 %in, i8* %b4)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b4)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a4)
+  %t11 = call i32 @foo(i32 %in, ptr %a4)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a4)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -170,19 +156,17 @@ bb3:
 
 define i32 @myCall2_noend(i32 %in, i1 %d) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b)
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -196,19 +180,17 @@ bb3:
 ;NOCOLOR: subq  $272, %rsp
 define i32 @myCall2_noend2(i32 %in, i1 %d) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b)
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -223,18 +205,16 @@ bb3:
 ;NOCOLOR: subq  $272, %rsp
 define i32 @myCall2_nostart(i32 %in, i1 %d) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -253,20 +233,16 @@ entry:
   %B.i2 = alloca [100 x i32], align 4
   %A.i = alloca [100 x i32], align 4
   %B.i = alloca [100 x i32], align 4
-  %0 = bitcast [100 x i32]* %A.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %0) nounwind
-  %1 = bitcast [100 x i32]* %B.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1) nounwind
-  call void @bar([100 x i32]* %A.i, [100 x i32]* %B.i) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %1) nounwind
-  %2 = bitcast [100 x i32]* %A.i1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2) nounwind
-  %3 = bitcast [100 x i32]* %B.i2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3) nounwind
-  call void @bar([100 x i32]* %A.i1, [100 x i32]* %B.i2) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %2) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i) nounwind
+  call void @bar(ptr %A.i, ptr %B.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i1) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i2) nounwind
+  call void @bar(ptr %A.i1, ptr %B.i2) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i1) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i2) nounwind
   ret void
 }
 
@@ -275,32 +251,28 @@ entry:
 ;NOCOLOR: subq  $272, %rsp
 define i32 @func_phi_lifetime(i32 %in, i1 %d) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
   br i1 %d, label %bb0, label %bb1
 
 bb0:
-  %I1 = bitcast [17 x i8*]* %a to i8*
   br label %bb2
 
 bb1:
-  %I2 = bitcast [16 x i8*]* %a2 to i8*
   br label %bb2
 
 bb2:
-  %split = phi i8* [ %I1, %bb0 ], [ %I2, %bb1 ]
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %split)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
+  %split = phi ptr [ %a, %bb0 ], [ %a2, %bb1 ]
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %split)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %split)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %split)
   ret i32 %t7
 bb3:
   ret i32 0
@@ -317,40 +289,34 @@ entry:
   %B.i2 = alloca [100 x i32], align 4
   %A.i = alloca [100 x i32], align 4
   %B.i = alloca [100 x i32], align 4
-  %0 = bitcast [100 x i32]* %A.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %0) nounwind ; <---- start #1
-  %1 = bitcast [100 x i32]* %B.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1) nounwind
-  call void @bar([100 x i32]* %A.i, [100 x i32]* %B.i) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %1) nounwind
-  %2 = bitcast [100 x i32]* %A.i1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2) nounwind
-  %3 = bitcast [100 x i32]* %B.i2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3) nounwind
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %0) nounwind  ; <---- start #2
-  call void @bar([100 x i32]* %A.i1, [100 x i32]* %B.i2) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %2) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i) nounwind ; <---- start #1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i) nounwind
+  call void @bar(ptr %A.i, ptr %B.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i1) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i2) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i) nounwind  ; <---- start #2
+  call void @bar(ptr %A.i1, ptr %B.i2) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i1) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i2) nounwind
   ret void
 }
 
 define i32 @myCall_end_before_begin(i32 %in, i1 %d) {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
@@ -369,13 +335,13 @@ define void @myCall_pr15707() {
   %buf1 = alloca i8, i32 100000, align 16
   %buf2 = alloca i8, i32 100000, align 16
 
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %buf1)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %buf1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %buf1)
 
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %buf1)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %buf2)
-  %result1 = call i32 @foo(i32 0, i8* %buf1)
-  %result2 = call i32 @foo(i32 0, i8* %buf2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf2)
+  %result1 = call i32 @foo(i32 0, ptr %buf1)
+  %result2 = call i32 @foo(i32 0, ptr %buf2)
   ret void
 }
 
@@ -389,18 +355,16 @@ entry:
   %B.i2 = alloca [100 x i32], align 4
   %A.i = alloca [100 x i32], align 4
   %B.i = alloca [100 x i32], align 4
-  %0 = bitcast [100 x i32]* %A.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %0) nounwind
-  %1 = bitcast [100 x i32]* %B.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1) nounwind
-  call void @bar([100 x i32]* %A.i, [100 x i32]* %B.i) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0) nounwind
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %1) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i) nounwind
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i) nounwind
+  call void @bar(ptr %A.i, ptr %B.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i) nounwind
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i) nounwind
   br label %block2
 
 block2:
   ; I am used outside the marked lifetime.
-  call void @bar([100 x i32]* %A.i, [100 x i32]* %B.i) nounwind
+  call void @bar(ptr %A.i, ptr %B.i) nounwind
   ret void
 }
 
@@ -411,20 +375,17 @@ block2:
 
 %struct.Klass = type { i32, i32 }
 
-define i32 @shady_range(i32 %argc, i8** nocapture %argv) uwtable {
+define i32 @shady_range(i32 %argc, ptr nocapture %argv) uwtable {
   %a.i = alloca [4 x %struct.Klass], align 16
   %b.i = alloca [4 x %struct.Klass], align 16
-  %a8 = bitcast [4 x %struct.Klass]* %a.i to i8*
-  %b8 = bitcast [4 x %struct.Klass]* %b.i to i8*
   ; I am used outside the lifetime zone below:
-  %z2 = getelementptr inbounds [4 x %struct.Klass], [4 x %struct.Klass]* %a.i, i64 0, i64 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %a8)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b8)
-  %z3 = load i32, i32* %z2, align 16
-  %r = call i32 @foo(i32 %z3, i8* %a8)
-  %r2 = call i32 @foo(i32 %z3, i8* %b8)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %a8)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %b8)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %a.i)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %b.i)
+  %z3 = load i32, ptr %a.i, align 16
+  %r = call i32 @foo(i32 %z3, ptr %a.i)
+  %r2 = call i32 @foo(i32 %z3, ptr %b.i)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %a.i)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %b.i)
   ret i32 9
 }
 
@@ -445,39 +406,29 @@ entry:
   %b3 = alloca [128 x i32], align 16
   %b4 = alloca [128 x i32], align 16
   %b5 = alloca [128 x i32], align 16
-  %tmp = bitcast [128 x i32]* %b1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp)
-  %tmp1 = bitcast [128 x i32]* %b2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp1)
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b1)
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b2)
   %and = and i32 %x, 1
   %tobool = icmp eq i32 %and, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %tmp2 = bitcast [128 x i32]* %b3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp2)
-  %a1 = getelementptr inbounds [128 x i32], [128 x i32]* %b1, i64 0, i64 0
-  %a2 = getelementptr inbounds [128 x i32], [128 x i32]* %b3, i64 0, i64 0
-  call void @initb(i32* %a1, i32* %a2, i32* null)
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp2)
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b3)
+  call void @initb(ptr %b1, ptr %b3, ptr null)
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b3)
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %tmp3 = bitcast [128 x i32]* %b4 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp3)
-  %tmp4 = bitcast [128 x i32]* %b5 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp4)
-  %a3 = getelementptr inbounds [128 x i32], [128 x i32]* %b2, i64 0, i64 0
-  %a4 = getelementptr inbounds [128 x i32], [128 x i32]* %b4, i64 0, i64 0
-  %a5 = getelementptr inbounds [128 x i32], [128 x i32]* %b5, i64 0, i64 0
-  call void @initb(i32* %a3, i32* %a4, i32* %a5) #3
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp4)
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp3)
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b4)
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b5)
+  call void @initb(ptr %b2, ptr %b4, ptr %b5) #3
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b5)
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b4)
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp1)
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp)
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b2)
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b1)
   ret i32 0
 
 }
@@ -498,37 +449,31 @@ entry:
   %b1 = alloca [128 x i32], align 16
   %b2 = alloca [128 x i32], align 16
   %b3 = alloca [128 x i32], align 16
-  %tmp = bitcast [128 x i32]* %b1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp) #3
-  %tmp1 = bitcast [128 x i32]* %b2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp1) #3
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b1) #3
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b2) #3
   %and = and i32 %x, 1
   %tobool = icmp eq i32 %and, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %arraydecay = getelementptr inbounds [128 x i32], [128 x i32]* %b2, i64 0, i64 0
-  call void @inita(i32* %arraydecay) #3
+  call void @inita(ptr %b2) #3
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %arraydecay1 = getelementptr inbounds [128 x i32], [128 x i32]* %b1, i64 0, i64 0
-  call void @inita(i32* %arraydecay1) #3
-  %arraydecay3 = getelementptr inbounds [128 x i32], [128 x i32]* %b3, i64 0, i64 0
-  call void @inita(i32* %arraydecay3) #3
+  call void @inita(ptr %b1) #3
+  call void @inita(ptr %b3) #3
   %tobool25 = icmp eq i32 %x, 0
   br i1 %tobool25, label %if.end, label %while.body.lr.ph
 
 while.body.lr.ph:                                 ; preds = %if.else
-  %tmp2 = bitcast [128 x i32]* %b3 to i8*
   br label %while.body
 
 while.body:                                       ; preds = %while.body.lr.ph, %while.body
   %x.addr.06 = phi i32 [ %x, %while.body.lr.ph ], [ %dec, %while.body ]
   %dec = add nsw i32 %x.addr.06, -1
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %tmp2) #3
-  call void @inita(i32* %arraydecay3) #3
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp2) #3
+  call void @llvm.lifetime.start.p0(i64 512, ptr %b3) #3
+  call void @inita(ptr %b3) #3
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b3) #3
   %tobool2 = icmp eq i32 %dec, 0
   br i1 %tobool2, label %if.end.loopexit, label %while.body
 
@@ -536,8 +481,8 @@ if.end.loopexit:                                  ; preds = %while.body
   br label %if.end
 
 if.end:                                           ; preds = %if.end.loopexit, %if.else, %if.then
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp1) #3
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %tmp) #3
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b2) #3
+  call void @llvm.lifetime.end.p0(i64 512, ptr %b1) #3
   ret i32 0
 }
 
@@ -555,26 +500,24 @@ define i32 @twobod_b27903(i32 %y, i32 %x) {
 entry:
   %buffer.i = alloca [12 x i32], align 16
   %abc = alloca [12 x i32], align 16
-  %tmp = bitcast [12 x i32]* %buffer.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 48, i8* %tmp)
+  call void @llvm.lifetime.start.p0(i64 48, ptr %buffer.i)
   %idxprom.i = sext i32 %y to i64
-  %arrayidx.i = getelementptr inbounds [12 x i32], [12 x i32]* %buffer.i, i64 0, i64 %idxprom.i
-  call void @inita(i32* %arrayidx.i)
+  %arrayidx.i = getelementptr inbounds [12 x i32], ptr %buffer.i, i64 0, i64 %idxprom.i
+  call void @inita(ptr %arrayidx.i)
   %add.i = add nsw i32 %x, %y
-  call void @llvm.lifetime.end.p0i8(i64 48, i8* %tmp)
+  call void @llvm.lifetime.end.p0(i64 48, ptr %buffer.i)
   %tobool = icmp eq i32 %y, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %tmp1 = bitcast [12 x i32]* %abc to i8*
-  call void @llvm.lifetime.start.p0i8(i64 48, i8* %tmp1)
-  %arrayidx = getelementptr inbounds [12 x i32], [12 x i32]* %abc, i64 0, i64 %idxprom.i
-  call void @inita(i32* %arrayidx)
-  call void @llvm.lifetime.start.p0i8(i64 48, i8* %tmp)
-  call void @inita(i32* %arrayidx.i)
+  call void @llvm.lifetime.start.p0(i64 48, ptr %abc)
+  %arrayidx = getelementptr inbounds [12 x i32], ptr %abc, i64 0, i64 %idxprom.i
+  call void @inita(ptr %arrayidx)
+  call void @llvm.lifetime.start.p0(i64 48, ptr %buffer.i)
+  call void @inita(ptr %arrayidx.i)
   %add.i9 = add nsw i32 %add.i, %y
-  call void @llvm.lifetime.end.p0i8(i64 48, i8* %tmp)
-  call void @llvm.lifetime.end.p0i8(i64 48, i8* %tmp1)
+  call void @llvm.lifetime.end.p0(i64 48, ptr %buffer.i)
+  call void @llvm.lifetime.end.p0(i64 48, ptr %abc)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -591,17 +534,15 @@ define i1 @multi_segment(i1, i1)
 entry-block:
   %foo = alloca [32 x i64]
   %bar = alloca [32 x i64]
-  %foo_i8 = bitcast [32 x i64]* %foo to i8*
-  %bar_i8 = bitcast [32 x i64]* %bar to i8*
-  call void @llvm.lifetime.start.p0i8(i64 256, i8* %bar_i8)
-  call void @baz([32 x i64]* %bar, i32 1)
-  call void @llvm.lifetime.end.p0i8(i64 256, i8* %bar_i8)
-  call void @llvm.lifetime.start.p0i8(i64 256, i8* %foo_i8)
-  call void @baz([32 x i64]* %foo, i32 1)
-  call void @llvm.lifetime.end.p0i8(i64 256, i8* %foo_i8)
-  call void @llvm.lifetime.start.p0i8(i64 256, i8* %bar_i8)
-  call void @baz([32 x i64]* %bar, i32 1)
-  call void @llvm.lifetime.end.p0i8(i64 256, i8* %bar_i8)
+  call void @llvm.lifetime.start.p0(i64 256, ptr %bar)
+  call void @baz(ptr %bar, i32 1)
+  call void @llvm.lifetime.end.p0(i64 256, ptr %bar)
+  call void @llvm.lifetime.start.p0(i64 256, ptr %foo)
+  call void @baz(ptr %foo, i32 1)
+  call void @llvm.lifetime.end.p0(i64 256, ptr %foo)
+  call void @llvm.lifetime.start.p0(i64 256, ptr %bar)
+  call void @baz(ptr %bar, i32 1)
+  call void @llvm.lifetime.end.p0(i64 256, ptr %bar)
   ret i1 true
 }
 
@@ -614,28 +555,26 @@ define i1 @pr32488(i1, i1)
 entry-block:
   %foo = alloca [32 x i64]
   %bar = alloca [32 x i64]
-  %foo_i8 = bitcast [32 x i64]* %foo to i8*
-  %bar_i8 = bitcast [32 x i64]* %bar to i8*
   br i1 %0, label %if_false, label %if_true
 if_false:
-  call void @llvm.lifetime.start.p0i8(i64 256, i8* %bar_i8)
-  call void @baz([32 x i64]* %bar, i32 0)
+  call void @llvm.lifetime.start.p0(i64 256, ptr %bar)
+  call void @baz(ptr %bar, i32 0)
   br i1 %1, label %if_false.1, label %onerr
 if_false.1:
-  call void @llvm.lifetime.end.p0i8(i64 256, i8* %bar_i8)
+  call void @llvm.lifetime.end.p0(i64 256, ptr %bar)
   br label %merge
 if_true:
-  call void @llvm.lifetime.start.p0i8(i64 256, i8* %foo_i8)
-  call void @baz([32 x i64]* %foo, i32 1)
+  call void @llvm.lifetime.start.p0(i64 256, ptr %foo)
+  call void @baz(ptr %foo, i32 1)
   br i1 %1, label %if_true.1, label %onerr
 if_true.1:
-  call void @llvm.lifetime.end.p0i8(i64 256, i8* %foo_i8)
+  call void @llvm.lifetime.end.p0(i64 256, ptr %foo)
   br label %merge
 merge:
   ret i1 false
 onerr:
-  call void @llvm.lifetime.end.p0i8(i64 256, i8* %foo_i8)
-  call void @llvm.lifetime.end.p0i8(i64 256, i8* %bar_i8)
+  call void @llvm.lifetime.end.p0(i64 256, ptr %foo)
+  call void @llvm.lifetime.end.p0(i64 256, ptr %bar)
   call void @destructor()
   ret i1 true
 }
@@ -644,16 +583,16 @@ onerr:
 
 declare void @destructor()
 
-declare void @inita(i32*)
+declare void @inita(ptr)
 
-declare void @initb(i32*,i32*,i32*)
+declare void @initb(ptr,ptr,ptr)
 
-declare void @bar([100 x i32]* , [100 x i32]*) nounwind
+declare void @bar(ptr , ptr) nounwind
 
-declare void @baz([32 x i64]*, i32)
+declare void @baz(ptr, i32)
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
-declare i32 @foo(i32, i8*)
+declare i32 @foo(i32, ptr)

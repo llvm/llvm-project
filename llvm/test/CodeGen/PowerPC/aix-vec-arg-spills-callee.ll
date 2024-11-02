@@ -16,11 +16,10 @@
 
 %struct.Test = type { double, double, double, double }
 
-define double @test(i32 signext %r3, i32 signext %r4, double %fpr1, double %fpr2, <2 x double> %v2, <2 x double> %v3, <2 x double> %v4, <2 x double> %v5, <2 x double> %v6, <2 x double> %v7, <2 x double> %v8, <2 x double> %v9, <2 x double> %v10, <2 x double> %v11, <2 x double> %v12, <2 x double> %v13, <2 x double> %vSpill, double %fpr3, double %fpr4, double %fpr5, double %fpr6, double %fpr7, double %fpr8, double %fpr9, double %fpr10, double %fpr11, double %fpr12, double %fpr13, i32 signext %gprSpill, %struct.Test* nocapture readonly byval(%struct.Test) align 4 %t) {
+define double @test(i32 signext %r3, i32 signext %r4, double %fpr1, double %fpr2, <2 x double> %v2, <2 x double> %v3, <2 x double> %v4, <2 x double> %v5, <2 x double> %v6, <2 x double> %v7, <2 x double> %v8, <2 x double> %v9, <2 x double> %v10, <2 x double> %v11, <2 x double> %v12, <2 x double> %v13, <2 x double> %vSpill, double %fpr3, double %fpr4, double %fpr5, double %fpr6, double %fpr7, double %fpr8, double %fpr9, double %fpr10, double %fpr11, double %fpr12, double %fpr13, i32 signext %gprSpill, ptr nocapture readonly byval(%struct.Test) align 4 %t) {
 entry:
   %vecext = extractelement <2 x double> %vSpill, i32 0
-  %x = getelementptr inbounds %struct.Test, %struct.Test* %t, i32 0, i32 0
-  %0 = load double, double* %x, align 4
+  %0 = load double, ptr %t, align 4
   %add = fadd double %vecext, %0
   ret double %add
 }

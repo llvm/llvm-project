@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tensor-to-linalg-pattern"

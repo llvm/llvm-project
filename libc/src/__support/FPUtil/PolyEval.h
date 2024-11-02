@@ -21,10 +21,10 @@
 namespace __llvm_libc {
 namespace fputil {
 
-template <typename T> static inline T polyeval(T x, T a0) { return a0; }
+template <typename T> static inline T polyeval(T, T a0) { return a0; }
 
 template <typename T, typename... Ts>
-INLINE_FMA static inline T polyeval(T x, T a0, Ts... a) {
+static inline T polyeval(T x, T a0, Ts... a) {
   return multiply_add(x, polyeval(x, a...), a0);
 }
 

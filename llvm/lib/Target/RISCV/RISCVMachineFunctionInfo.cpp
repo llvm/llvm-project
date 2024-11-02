@@ -19,6 +19,13 @@ yaml::RISCVMachineFunctionInfo::RISCVMachineFunctionInfo(
     : VarArgsFrameIndex(MFI.getVarArgsFrameIndex()),
       VarArgsSaveSize(MFI.getVarArgsSaveSize()) {}
 
+MachineFunctionInfo *RISCVMachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<RISCVMachineFunctionInfo>(*this);
+}
+
 void yaml::RISCVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<RISCVMachineFunctionInfo>::mapping(YamlIO, *this);
 }
@@ -27,4 +34,12 @@ void RISCVMachineFunctionInfo::initializeBaseYamlFields(
     const yaml::RISCVMachineFunctionInfo &YamlMFI) {
   VarArgsFrameIndex = YamlMFI.VarArgsFrameIndex;
   VarArgsSaveSize = YamlMFI.VarArgsSaveSize;
+}
+
+void RISCVMachineFunctionInfo::addSExt32Register(Register Reg) {
+  SExt32Registers.push_back(Reg);
+}
+
+bool RISCVMachineFunctionInfo::isSExt32Register(Register Reg) const {
+  return is_contained(SExt32Registers, Reg);
 }

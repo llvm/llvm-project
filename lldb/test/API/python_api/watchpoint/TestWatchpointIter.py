@@ -2,10 +2,6 @@
 Use lldb Python SBTarget API to iterate on the watchpoint(s) for the target.
 """
 
-from __future__ import print_function
-
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class WatchpointIteratorTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # hardware watchpoints are not reported with a hardware index # on armv7 on ios devices
@@ -51,8 +45,8 @@ class WatchpointIteratorTestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)

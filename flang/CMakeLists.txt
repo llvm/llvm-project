@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
+
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 # Flang requires C++17.
@@ -133,7 +139,6 @@ if (FLANG_STANDALONE_BUILD)
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
     ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 
-  set(BACKEND_PACKAGE_STRING "LLVM ${LLVM_PACKAGE_VERSION}")
   set(LLVM_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/llvm-lit" CACHE STRING "Command used to spawn lit")
 
   option(FLANG_INCLUDE_TESTS
@@ -165,7 +170,7 @@ if (FLANG_STANDALONE_BUILD)
          find_package(Threads)
          target_link_libraries(llvm_gtest PUBLIC Threads::Threads)
         add_library(llvm_gtest_main ${UNITTEST_DIR}/UnitTestMain/TestMain.cpp)
-        target_link_libraries(gtest_main PUBLIC llvm_gtest)
+        target_link_libraries(llvm_gtest_main PUBLIC llvm_gtest)
       endif()
       set(FLANG_GTEST_AVAIL 1)
     else()
@@ -195,14 +200,17 @@ else()
     set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
-  set(BACKEND_PACKAGE_STRING "${PACKAGE_STRING}")
-  set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include ) # --src-root
-  set(MLIR_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include ) # --includedir
+  set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir ) # --src-root
+  set(MLIR_INCLUDE_DIR ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
   set(MLIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/mlir/include)
-  set(MLIR_TABLEGEN_EXE $<TARGET_FILE:mlir-tblgen>)
   include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
+
+set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+    "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
+mark_as_advanced(FLANG_TOOLS_INSTALL_DIR)
+
 set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_BINARY_DIR}/include/flang)
 set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
 
@@ -230,10 +238,6 @@ set(LLVM_BUILD_TOOLS ON)
 include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include)
-
-if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
-  set(LLVM_COMMON_CMAKE_UTILS ${FLANG_SOURCE_DIR}/../cmake)
-endif()
 
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0
@@ -351,6 +355,10 @@ check_compiler_flag("-Wstring-conversion" CXX_SUPPORTS_NO_STRING_CONVERSION_FLAG
 if (CXX_SUPPORTS_NO_STRING_CONVERSION_FLAG)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-string-conversion")
 endif()
+check_compiler_flag("-Wno-ctad-maybe-unsupported" CXX_SUPPORTS_NO_CTAD_MAYBE_UNSUPPORTED_FLAG)
+if (CXX_SUPPORTS_NO_CTAD_MAYBE_UNSUPPORTED_FLAG)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ctad-maybe-unsupported")
+endif()
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
@@ -403,6 +411,9 @@ endif()
 include(CMakeParseArguments)
 include(AddFlang)
 
+if (FLANG_INCLUDE_TESTS)
+  add_compile_definitions(FLANG_INCLUDE_TESTS=1)
+endif()
 
 add_subdirectory(include)
 add_subdirectory(lib)

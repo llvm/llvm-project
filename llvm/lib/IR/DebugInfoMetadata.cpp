@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 
@@ -27,12 +28,17 @@ using namespace llvm;
 namespace llvm {
 // Use FS-AFDO discriminator.
 cl::opt<bool> EnableFSDiscriminator(
-    "enable-fs-discriminator", cl::Hidden, cl::init(false), cl::ZeroOrMore,
+    "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
 
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
+
+DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
+    : Variable(DII->getVariable()),
+      Fragment(DII->getExpression()->getFragmentInfo()),
+      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, ArrayRef<Metadata *> MDs,
@@ -106,38 +112,64 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   if (LocA == LocB)
     return LocA;
 
-  SmallPtrSet<DILocation *, 5> InlinedLocationsA;
-  for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
-    InlinedLocationsA.insert(L);
-  SmallSet<std::pair<DIScope *, DILocation *>, 5> Locations;
+  LLVMContext &C = LocA->getContext();
+  SmallDenseMap<std::pair<DILocalScope *, DILocation *>,
+                std::pair<unsigned, unsigned>, 4>
+      Locations;
+
   DIScope *S = LocA->getScope();
   DILocation *L = LocA->getInlinedAt();
-  while (S) {
-    Locations.insert(std::make_pair(S, L));
+  unsigned Line = LocA->getLine();
+  unsigned Col = LocA->getColumn();
+
+  // Walk from the current source locaiton until the file scope;
+  // then, do the same for the inlined-at locations.
+  auto AdvanceToParentLoc = [&S, &L, &Line, &Col]() {
     S = S->getScope();
     if (!S && L) {
+      Line = L->getLine();
+      Col = L->getColumn();
       S = L->getScope();
       L = L->getInlinedAt();
     }
-  }
-  const DILocation *Result = LocB;
-  S = LocB->getScope();
-  L = LocB->getInlinedAt();
+  };
+
   while (S) {
-    if (Locations.count(std::make_pair(S, L)))
-      break;
-    S = S->getScope();
-    if (!S && L) {
-      S = L->getScope();
-      L = L->getInlinedAt();
-    }
+    if (auto *LS = dyn_cast<DILocalScope>(S))
+      Locations.try_emplace(std::make_pair(LS, L), std::make_pair(Line, Col));
+    AdvanceToParentLoc();
   }
 
-  // If the two locations are irreconsilable, just pick one. This is misleading,
-  // but on the other hand, it's a "line 0" location.
-  if (!S || !isa<DILocalScope>(S))
+  // Walk the source locations of LocB until a match with LocA is found.
+  S = LocB->getScope();
+  L = LocB->getInlinedAt();
+  Line = LocB->getLine();
+  Col = LocB->getColumn();
+  while (S) {
+    if (auto *LS = dyn_cast<DILocalScope>(S)) {
+      auto MatchLoc = Locations.find(std::make_pair(LS, L));
+      if (MatchLoc != Locations.end()) {
+        // If the lines match, keep the line, but set the column to '0'
+        // If the lines don't match, pick a "line 0" location but keep
+        // the current scope and inlined-at.
+        bool SameLine = Line == MatchLoc->second.first;
+        bool SameCol = Col == MatchLoc->second.second;
+        Line = SameLine ? Line : 0;
+        Col = SameLine && SameCol ? Col : 0;
+        break;
+      }
+    }
+    AdvanceToParentLoc();
+  }
+
+  if (!S) {
+    // If the two locations are irreconsilable, pick any scope,
+    // and return a "line 0" location.
+    Line = Col = 0;
     S = LocA->getScope();
-  return DILocation::get(Result->getContext(), 0, 0, S, L);
+  }
+
+  return DILocation::get(C, Line, Col, S, L);
 }
 
 Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,
@@ -329,7 +361,7 @@ void GenericDINode::recalculateHash() {
     }                                                                          \
   } while (false)
 #define DEFINE_GETIMPL_STORE(CLASS, ARGS, OPS)                                 \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
+  return storeImpl(new (std::size(OPS), Storage)                               \
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_OPS(CLASS, ARGS)                               \
@@ -337,8 +369,7 @@ void GenericDINode::recalculateHash() {
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS)),             \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(CLASS, OPS)                   \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
-                       CLASS(Context, Storage, OPS),                           \
+  return storeImpl(new (std::size(OPS), Storage) CLASS(Context, Storage, OPS), \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_N(CLASS, ARGS, OPS, NUM_OPS)                      \
   return storeImpl(new (NUM_OPS, Storage)                                      \
@@ -807,7 +838,7 @@ DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
   assert((!Source || isCanonical(*Source)) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIFile, (Filename, Directory, CS, Source));
   Metadata *Ops[] = {Filename, Directory, CS ? CS->Value : nullptr,
-                     Source.getValueOr(nullptr)};
+                     Source.value_or(nullptr)};
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
 }
 DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
@@ -850,7 +881,7 @@ DICompileUnit *DICompileUnit::getImpl(
                      Macros,
                      SysRoot,
                      SDK};
-  return storeImpl(new (array_lengthof(Ops), Storage) DICompileUnit(
+  return storeImpl(new (std::size(Ops), Storage) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
                        DebugInfoForProfiling, NameTableKind, RangesBaseAddress,
@@ -1222,6 +1253,13 @@ bool DIExpression::startsWithDeref() const {
   return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
 }
 
+DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
+                                bool ShouldCreate) {
+  // Uniqued DIAssignID are not supported as the instance address *is* the ID.
+  assert(Storage != StorageType::Uniqued && "uniqued DIAssignID unsupported");
+  return storeImpl(new (0u, Storage) DIAssignID(Context, Storage), Storage);
+}
+
 unsigned DIExpression::ExprOperand::getSize() const {
   uint64_t Op = getOp();
 
@@ -1387,7 +1425,10 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
     Ops.push_back(Offset);
   } else if (Offset < 0) {
     Ops.push_back(dwarf::DW_OP_constu);
-    Ops.push_back(-Offset);
+    // Avoid UB when encountering LLONG_MIN, because in 2's complement
+    // abs(LLONG_MIN) is LLONG_MAX+1.
+    uint64_t AbsMinusOne = -(Offset+1);
+    Ops.push_back(AbsMinusOne + 1);
     Ops.push_back(dwarf::DW_OP_minus);
   }
 }
@@ -1582,7 +1623,7 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   //
   // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
   Optional<FragmentInfo> FI = Expr->getFragmentInfo();
-  unsigned DropUntilStackValue = FI.hasValue() ? 3 : 0;
+  unsigned DropUntilStackValue = FI ? 3 : 0;
   ArrayRef<uint64_t> ExprOpsBeforeFragment =
       Expr->getElements().drop_back(DropUntilStackValue);
   bool NeedsDeref = (Expr->getNumElements() > DropUntilStackValue) &&
@@ -1603,6 +1644,9 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
 Optional<DIExpression *> DIExpression::createFragmentExpression(
     const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
   SmallVector<uint64_t, 8> Ops;
+  // Track whether it's safe to split the value at the top of the DWARF stack,
+  // assuming that it'll be used as an implicit location value.
+  bool CanSplitValue = true;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
@@ -1620,7 +1664,23 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
         //
         // FIXME: We *could* preserve the lowest fragment of a constant offset
         // operation if the offset fits into SizeInBits.
-        return None;
+        CanSplitValue = false;
+        break;
+      case dwarf::DW_OP_deref:
+      case dwarf::DW_OP_deref_size:
+      case dwarf::DW_OP_deref_type:
+      case dwarf::DW_OP_xderef:
+      case dwarf::DW_OP_xderef_size:
+      case dwarf::DW_OP_xderef_type:
+        // Preceeding arithmetic operations have been applied to compute an
+        // address. It's okay to split the value loaded from that address.
+        CanSplitValue = true;
+        break;
+      case dwarf::DW_OP_stack_value:
+        // Bail if this expression computes a value that cannot be split.
+        if (!CanSplitValue)
+          return None;
+        break;
       case dwarf::DW_OP_LLVM_fragment: {
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
@@ -1635,6 +1695,7 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
       Op.appendToVector(Ops);
     }
   }
+  assert((!Expr->isImplicit() || CanSplitValue) && "Expr can't be split");
   assert(Expr && "Unknown DIExpression");
   Ops.push_back(dwarf::DW_OP_LLVM_fragment);
   Ops.push_back(OffsetInBits);

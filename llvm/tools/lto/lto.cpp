@@ -34,12 +34,10 @@ static codegen::RegisterCodeGenFlags CGF;
 
 // extra command-line flags needed for LTOCodeGenerator
 static cl::opt<char>
-OptLevel("O",
-         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                  "(default = '-O2')"),
-         cl::Prefix,
-         cl::ZeroOrMore,
-         cl::init('2'));
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init('2'));
 
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding", cl::init(false),
@@ -292,6 +290,8 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
       codegen::InitTargetOptionsFromCodeGenFlags(Triple());
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromBuffer(
       unwrap(cg)->getContext(), mem, length, Options, StringRef(path));
+  if (!M)
+    return nullptr;
   return wrap(M->release());
 }
 

@@ -42,12 +42,12 @@ int StringRef::compare_insensitive(StringRef RHS) const {
   return Length < RHS.Length ? -1 : 1;
 }
 
-bool StringRef::startswith_insensitive(StringRef Prefix) const {
+bool StringRef::starts_with_insensitive(StringRef Prefix) const {
   return Length >= Prefix.Length &&
       ascii_strncasecmp(Data, Prefix.Data, Prefix.Length) == 0;
 }
 
-bool StringRef::endswith_insensitive(StringRef Suffix) const {
+bool StringRef::ends_with_insensitive(StringRef Suffix) const {
   return Length >= Suffix.Length &&
       ascii_strncasecmp(end() - Suffix.Length, Suffix.Data, Suffix.Length) == 0;
 }
@@ -98,6 +98,13 @@ unsigned StringRef::edit_distance(llvm::StringRef Other,
       AllowReplacements, MaxEditDistance);
 }
 
+unsigned llvm::StringRef::edit_distance_insensitive(
+    StringRef Other, bool AllowReplacements, unsigned MaxEditDistance) const {
+  return llvm::ComputeMappedEditDistance(
+      makeArrayRef(data(), size()), makeArrayRef(Other.data(), Other.size()),
+      llvm::toLower, AllowReplacements, MaxEditDistance);
+}
+
 //===----------------------------------------------------------------------===//
 // String Operations
 //===----------------------------------------------------------------------===//
@@ -140,6 +147,18 @@ size_t StringRef::find(StringRef Str, size_t From) const {
   }
 
   const char *Stop = Start + (Size - N + 1);
+
+  if (N == 2) {
+    // Provide a fast path for newline finding (CRLF case) in InclusionRewriter.
+    // Not the most optimized strategy, but getting memcmp inlined should be
+    // good enough.
+    do {
+      if (std::memcmp(Start, Needle, 2) == 0)
+        return Start - Data;
+      ++Start;
+    } while (Start < Stop);
+    return npos;
+  }
 
   // For short haystacks or unsupported needles fall back to the naive algorithm
   if (Size < 16 || N > 255) {
@@ -363,16 +382,16 @@ void StringRef::split(SmallVectorImpl<StringRef> &A, char Separator,
 /// the string.
 size_t StringRef::count(StringRef Str) const {
   size_t Count = 0;
+  size_t Pos = 0;
   size_t N = Str.size();
-  if (!N || N > Length)
+  // TODO: For an empty `Str` we return 0 for legacy reasons. Consider changing
+  //       this to `Length + 1` which is more in-line with the function
+  //       description.
+  if (!N)
     return 0;
-  for (size_t i = 0, e = Length - N + 1; i < e;) {
-    if (substr(i, N).equals(Str)) {
-      ++Count;
-      i += N;
-    }
-    else
-      ++i;
+  while ((Pos = find(Str, Pos)) != npos) {
+    ++Count;
+    Pos += N;
   }
   return Count;
 }

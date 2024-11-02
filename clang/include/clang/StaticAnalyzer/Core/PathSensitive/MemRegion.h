@@ -788,6 +788,18 @@ public:
   /// It might return null.
   SymbolRef getSymbol() const { return sym; }
 
+  /// Gets the type of the wrapped symbol.
+  /// This type might not be accurate at all times - it's just our best guess.
+  /// Consider these cases:
+  ///   void foo(void *data, char *str, base *obj) {...}
+  /// The type of the pointee of `data` is of course not `void`, yet that's our
+  /// best guess. `str` might point to any object and `obj` might point to some
+  /// derived instance. `TypedRegions` other hand are representing the cases
+  /// when we actually know their types.
+  QualType getPointeeStaticType() const {
+    return sym->getType()->getPointeeType();
+  }
+
   bool isBoundable() const override { return true; }
 
   void Profile(llvm::FoldingSetNodeID& ID) const override;
@@ -1183,7 +1195,7 @@ class ElementRegion : public TypedValueRegion {
   ElementRegion(QualType elementType, NonLoc Idx, const SubRegion *sReg)
       : TypedValueRegion(sReg, ElementRegionKind), ElementType(elementType),
         Index(Idx) {
-    assert((!Idx.getAs<nonloc::ConcreteInt>() ||
+    assert((!isa<nonloc::ConcreteInt>(Idx) ||
             Idx.castAs<nonloc::ConcreteInt>().getValue().isSigned()) &&
            "The index must be signed");
     assert(!elementType.isNull() && !elementType->isVoidType() &&
@@ -1364,6 +1376,7 @@ public:
   ~MemRegionManager();
 
   ASTContext &getContext() { return Ctx; }
+  const ASTContext &getContext() const { return Ctx; }
 
   llvm::BumpPtrAllocator &getAllocator() { return A; }
 

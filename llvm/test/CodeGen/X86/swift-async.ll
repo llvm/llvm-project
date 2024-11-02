@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=i686-apple-darwin %s -o - | FileCheck %s --check-prefix=CHECK-32
 
 
-define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
+define void @simple(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: simple:
 ; CHECK: btsq    $60, %rbp
 ; CHECK: pushq   %rbp
@@ -23,7 +23,7 @@ define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
   ret void
 }
 
-define void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
+define void @more_csrs(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: more_csrs:
 ; CHECK: btsq    $60, %rbp
 ; CHECK: pushq   %rbp
@@ -45,7 +45,7 @@ define void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
   ret void
 }
 
-define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
+define void @locals(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: locals:
 ; CHECK: btsq    $60, %rbp
 ; CHECK: pushq   %rbp
@@ -66,46 +66,46 @@ define void @locals(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: retq
 
   %var = alloca i32, i32 10
-  call void @bar(i32* %var)
+  call void @bar(ptr %var)
   ret void
 }
 
-define void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="all" {
+define void @use_input_context(ptr swiftasync %ctx, ptr %ptr) "frame-pointer"="all" {
 ; CHECK-LABEL: use_input_context:
 ; CHECK: movq    %r14, (%rdi)
 
-  store i8* %ctx, i8** %ptr
+  store ptr %ctx, ptr %ptr
   ret void
 }
 
-define i8** @context_in_func() "frame-pointer"="non-leaf" {
+define ptr @context_in_func() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: context_in_func:
 ; CHECK: leaq    -8(%rbp), %rax
 
 ; CHECK-32-LABEL: context_in_func
 ; CHECK-32: movl %esp, %eax
 
-  %ptr = call i8** @llvm.swift.async.context.addr()
-  ret i8** %ptr
+  %ptr = call ptr @llvm.swift.async.context.addr()
+  ret ptr %ptr
 }
 
-define void @write_frame_context(i8* swiftasync %ctx, i8* %newctx) "frame-pointer"="non-leaf" {
+define void @write_frame_context(ptr swiftasync %ctx, ptr %newctx) "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: write_frame_context:
 ; CHECK: movq    %rbp, [[TMP:%.*]]
 ; CHECK: subq    $8, [[TMP]]
 ; CHECK: movq    %rdi, ([[TMP]])
 
-  %ptr = call i8** @llvm.swift.async.context.addr()
-  store i8* %newctx, i8** %ptr
+  %ptr = call ptr @llvm.swift.async.context.addr()
+  store ptr %newctx, ptr %ptr
   ret void
 }
 
-define void @simple_fp_elim(i8* swiftasync %ctx) "frame-pointer"="non-leaf" {
+define void @simple_fp_elim(ptr swiftasync %ctx) "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: simple_fp_elim:
 ; CHECK-NOT: btsq
 
   ret void
 }
 
-declare void @bar(i32*)
-declare i8** @llvm.swift.async.context.addr()
+declare void @bar(ptr)
+declare ptr @llvm.swift.async.context.addr()

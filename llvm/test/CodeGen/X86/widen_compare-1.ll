@@ -4,7 +4,7 @@
 
 ; compare v2i16
 
-define <2 x i16> @compare_v2i64_to_v2i16_unary(<2 x i16>* %src) nounwind {
+define <2 x i16> @compare_v2i64_to_v2i16_unary(ptr %src) nounwind {
 ; X86-LABEL: compare_v2i64_to_v2i16_unary:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -14,13 +14,13 @@ define <2 x i16> @compare_v2i64_to_v2i16_unary(<2 x i16>* %src) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pcmpeqd %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %val = load <2 x i16>, <2 x i16>* %src, align 4
+  %val = load <2 x i16>, ptr %src, align 4
   %cmp = icmp uge <2 x i16> %val, %val
   %sel = select <2 x i1> %cmp, <2 x i16> <i16 -1, i16 -1>, <2 x i16> zeroinitializer
   ret <2 x i16> %sel
 }
 
-define <2 x i16> @compare_v2i64_to_v2i16_binary(<2 x i16>* %src0, <2 x i16>* %src1) nounwind {
+define <2 x i16> @compare_v2i64_to_v2i16_binary(ptr %src0, ptr %src1) nounwind {
 ; X86-LABEL: compare_v2i64_to_v2i16_binary:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -38,8 +38,8 @@ define <2 x i16> @compare_v2i64_to_v2i16_binary(<2 x i16>* %src0, <2 x i16>* %sr
 ; X64-NEXT:    pmaxuw %xmm1, %xmm0
 ; X64-NEXT:    pcmpeqw %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %val0 = load <2 x i16>, <2 x i16>* %src0, align 4
-  %val1 = load <2 x i16>, <2 x i16>* %src1, align 4
+  %val0 = load <2 x i16>, ptr %src0, align 4
+  %val1 = load <2 x i16>, ptr %src1, align 4
   %cmp = icmp uge <2 x i16> %val0, %val1
   %sel = select <2 x i1> %cmp, <2 x i16> <i16 -1, i16 -1>, <2 x i16> zeroinitializer
   ret <2 x i16> %sel

@@ -2,12 +2,12 @@
 // RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=32,256 test-fastest-varying=1,0" | FileCheck %s
 
 // Permutation maps used in vectorization.
-// CHECK-DAG: #[[$map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: #[[$map_proj_d0d1_zerod1:map[0-9]+]] = affine_map<(d0, d1) -> (0, d1)>
-// CHECK-DAG: #[[$map_proj_d0d1_d0zero:map[0-9]+]] = affine_map<(d0, d1) -> (d0, 0)>
-// VECT-DAG: #[[$map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
-// VECT-DAG: #[[$map_proj_d0d1_zerod1:map[0-9]+]] = affine_map<(d0, d1) -> (0, d1)>
-// VECT-DAG: #[[$map_proj_d0d1_d0zero:map[0-9]+]] = affine_map<(d0, d1) -> (d0, 0)>
+// CHECK-DAG: #[[$map_id1:map[0-9]*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_proj_d0d1_zerod1:map[0-9]*]] = affine_map<(d0, d1) -> (0, d1)>
+// CHECK-DAG: #[[$map_proj_d0d1_d0zero:map[0-9]*]] = affine_map<(d0, d1) -> (d0, 0)>
+// VECT-DAG: #[[$map_id1:map[0-9]*]] = affine_map<(d0) -> (d0)>
+// VECT-DAG: #[[$map_proj_d0d1_zerod1:map[0-9]*]] = affine_map<(d0, d1) -> (0, d1)>
+// VECT-DAG: #[[$map_proj_d0d1_d0zero:map[0-9]*]] = affine_map<(d0, d1) -> (d0, 0)>
 
 func.func @vec2d(%A : memref<?x?x?xf32>) {
    %c0 = arith.constant 0 : index

@@ -35,9 +35,9 @@ define i8 @f0() #0 nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 64
-  %b = getelementptr inbounds i8, i8* %a, i64 63
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 63
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 
@@ -93,9 +93,9 @@ define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 4096
-  %b = getelementptr inbounds i8, i8* %a, i64 63
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 63
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 
@@ -157,9 +157,9 @@ define i8 @f2() #0 nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 65536
-  %b = getelementptr inbounds i8, i8* %a, i64 63
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 63
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 
@@ -206,9 +206,9 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 65536
-  %b = getelementptr inbounds i8, i8* %a, i64 63
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 63
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 
@@ -252,9 +252,9 @@ define i8 @f4() nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 65536
-  %b = getelementptr inbounds i8, i8* %a, i64 63
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 63
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 
@@ -322,9 +322,9 @@ define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 1048576
-  %b = getelementptr inbounds i8, i8* %a, i64 63
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 63
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 
@@ -389,9 +389,9 @@ define i8 @f6() #0 nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 1073741824
-  %b = getelementptr inbounds i8, i8* %a, i64 63
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 63
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 
@@ -465,9 +465,9 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; CHECK-32-NEXT:    blr
 entry:
   %a = alloca i8, i64 1000000007
-  %b = getelementptr inbounds i8, i8* %a, i64 101
-  store volatile i8 3, i8* %a
-  %c = load volatile i8, i8* %a
+  %b = getelementptr inbounds i8, ptr %a, i64 101
+  store volatile i8 3, ptr %a
+  %c = load volatile i8, ptr %a
   ret i8 %c
 }
 

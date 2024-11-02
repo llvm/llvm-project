@@ -4,9 +4,9 @@
 
 ; CHECK-DAG: @llvm.global_ctors = {{.*}}@asan.module_ctor
 
-define i32 @test_load(i32* %a) sanitize_address {
+define i32 @test_load(ptr %a) sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 

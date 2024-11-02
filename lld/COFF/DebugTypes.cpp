@@ -647,7 +647,7 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
                                        TypeIndex beginIndex) {
   // Re-sort the list of unique types by index.
   if (kind == PDB)
-    assert(std::is_sorted(uniqueTypes.begin(), uniqueTypes.end()));
+    assert(llvm::is_sorted(uniqueTypes));
   else
     llvm::sort(uniqueTypes);
 
@@ -823,10 +823,9 @@ void UsePrecompSource::loadGHashes() {
   if (!pchSrc)
     return;
 
-  // To compute ghashes of a /Yu object file, we need to build on the the
-  // ghashes of the /Yc PCH object. After we are done hashing, discard the
-  // ghashes from the PCH source so we don't unnecessarily try to deduplicate
-  // them.
+  // To compute ghashes of a /Yu object file, we need to build on the ghashes of
+  // the /Yc PCH object. After we are done hashing, discard the ghashes from the
+  // PCH source so we don't unnecessarily try to deduplicate them.
   std::vector<GloballyHashedType> hashVec =
       pchSrc->ghashes.take_front(precompDependency.getTypesCount());
   forEachTypeChecked(file->debugTypes, [&](const CVType &ty) {
@@ -953,15 +952,13 @@ public:
 };
 } // namespace
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 /// This type is just a wrapper around GHashTable with external linkage so it
 /// can be used from a header.
 struct GHashState {
   GHashTable table;
 };
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 GHashTable::~GHashTable() { delete[] table; }
 
@@ -1056,7 +1053,7 @@ void TypeMerger::mergeTypesWithGHash() {
   // position. Because the table does not rehash, the position will not change
   // under insertion. After insertion is done, the value of the cell can be read
   // to retrieve the final PDB type index.
-  parallelForEachN(0, ctx.tpiSourceList.size(), [&](size_t tpiSrcIdx) {
+  parallelFor(0, ctx.tpiSourceList.size(), [&](size_t tpiSrcIdx) {
     TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
     source->indexMapStorage.resize(source->ghashes.size());
     for (uint32_t i = 0, e = source->ghashes.size(); i < e; i++) {
@@ -1096,8 +1093,7 @@ void TypeMerger::mergeTypesWithGHash() {
               entries.size(), tableSize));
 
   // Find out how many type and item indices there are.
-  auto mid =
-      std::lower_bound(entries.begin(), entries.end(), GHashCell(true, 0, 0));
+  auto mid = llvm::lower_bound(entries, GHashCell(true, 0, 0));
   assert((mid == entries.end() || mid->isItem()) &&
          (mid == entries.begin() || !std::prev(mid)->isItem()) &&
          "midpoint is not midpoint");
@@ -1126,9 +1122,8 @@ void TypeMerger::mergeTypesWithGHash() {
   }
 
   // In parallel, remap all types.
-  for_each(dependencySources, [&](TpiSource *source) {
+  for (TpiSource *source : dependencySources)
     source->remapTpiWithGHashes(&ghashState);
-  });
   parallelForEach(objectSources, [&](TpiSource *source) {
     source->remapTpiWithGHashes(&ghashState);
   });

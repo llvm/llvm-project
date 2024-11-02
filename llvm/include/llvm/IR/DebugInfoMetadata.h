@@ -64,6 +64,8 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
+class DbgVariableIntrinsic;
+
 extern cl::opt<bool> EnableFSDiscriminator;
 
 class DITypeRefArray {
@@ -213,6 +215,7 @@ public:
     case DIImportedEntityKind:
     case DIModuleKind:
     case DIGenericSubrangeKind:
+    case DIAssignIDKind:
       return true;
     }
   }
@@ -290,6 +293,41 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == GenericDINodeKind;
+  }
+};
+
+/// Assignment ID.
+/// Used to link stores (as an attachment) and dbg.assigns (as an operand).
+/// DIAssignID metadata is never uniqued as we compare instances using
+/// referential equality (the instance/address is the ID).
+class DIAssignID : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DIAssignID(LLVMContext &C, StorageType Storage)
+      : MDNode(C, DIAssignIDKind, Storage, None) {}
+
+  ~DIAssignID() { dropAllReferences(); }
+
+  static DIAssignID *getImpl(LLVMContext &Context, StorageType Storage,
+                             bool ShouldCreate = true);
+
+  TempDIAssignID cloneImpl() const { return getTemporary(getContext()); }
+
+public:
+  // This node has no operands to replace.
+  void replaceOperandWith(unsigned I, Metadata *New) = delete;
+
+  static DIAssignID *getDistinct(LLVMContext &Context) {
+    return getImpl(Context, Distinct);
+  }
+  static TempDIAssignID getTemporary(LLVMContext &Context) {
+    return TempDIAssignID(getImpl(Context, Temporary));
+  }
+  // NOTE: Do not define get(LLVMContext&) - see class comment.
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIAssignIDKind;
   }
 };
 
@@ -1298,6 +1336,12 @@ public:
                     (Flags, CC, TypeArray))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
+  // Returns a new temporary DISubroutineType with updated CC
+  TempDISubroutineType cloneWithCC(uint8_t CC) const {
+    auto NewTy = clone();
+    NewTy->CC = CC;
+    return NewTy;
+  }
 
   uint8_t getCC() const { return CC; }
 
@@ -1702,18 +1746,18 @@ public:
 
   /// When two instructions are combined into a single instruction we also
   /// need to combine the original locations into a single location.
+  /// When the locations are the same we can use either location.
+  /// When they differ, we need a third location which is distinct from either.
+  /// If they share a common scope, use this scope and compare the line/column
+  /// pair of the locations with the common scope:
+  /// * if both match, keep the line and column;
+  /// * if only the line number matches, keep the line and set the column as 0;
+  /// * otherwise set line and column as 0.
+  /// If they do not share a common scope the location is ambiguous and can't be
+  /// represented in a line entry. In this case, set line and column as 0 and
+  /// use the scope of any location.
   ///
-  /// When the locations are the same we can use either location. When they
-  /// differ, we need a third location which is distinct from either. If they
-  /// have the same file/line but have a different discriminator we could
-  /// create a location with a new discriminator. If they are from different
-  /// files/lines the location is ambiguous and can't be represented in a line
-  /// entry. In this case, if \p GenerateLocation is true, we will set the
-  /// merged debug location as line 0 of the nearest common scope where the two
-  /// locations are inlined from.
-  ///
-  /// \p GenerateLocation: Whether the merged location can be generated when
-  /// \p LocA and \p LocB differ.
+  /// \p LocA \p LocB: The locations to be merged.
   static const DILocation *getMergedLocation(const DILocation *LocA,
                                              const DILocation *LocB);
 
@@ -1995,6 +2039,10 @@ public:
   }
   DIType *getContainingType() const {
     return cast_or_null<DIType>(getRawContainingType());
+  }
+  void replaceType(DISubroutineType *Ty) {
+    assert(isDistinct() && "Only distinct nodes can mutate");
+    replaceOperandWith(4, Ty);
   }
 
   DICompileUnit *getUnit() const {
@@ -2722,7 +2770,7 @@ public:
   }
 
   /// Return whether this is a piece of an aggregate variable.
-  bool isFragment() const { return getFragmentInfo().hasValue(); }
+  bool isFragment() const { return getFragmentInfo().has_value(); }
 
   /// Return whether this is an implicit location description.
   bool isImplicit() const;
@@ -3619,6 +3667,8 @@ class DebugVariable {
   static const FragmentInfo DefaultFragment;
 
 public:
+  DebugVariable(const DbgVariableIntrinsic *DII);
+
   DebugVariable(const DILocalVariable *Var, Optional<FragmentInfo> FragmentInfo,
                 const DILocation *InlinedAt)
       : Variable(Var), Fragment(FragmentInfo), InlinedAt(InlinedAt) {}
@@ -3634,7 +3684,7 @@ public:
   const DILocation *getInlinedAt() const { return InlinedAt; }
 
   FragmentInfo getFragmentOrDefault() const {
-    return Fragment.getValueOr(DefaultFragment);
+    return Fragment.value_or(DefaultFragment);
   }
 
   static bool isDefaultFragment(const FragmentInfo F) {

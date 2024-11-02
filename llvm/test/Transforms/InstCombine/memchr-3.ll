@@ -4,7 +4,7 @@
 ; Verify that the special case of memchr calls with the size of 1 are
 ; folded as expected.
 
-declare i8* @memchr(i8*, i32, i64)
+declare ptr @memchr(ptr, i32, i64)
 
 @ax = external global [0 x i8]
 @a12345 = constant [5 x i8] c"\01\02\03\04\05"
@@ -12,59 +12,55 @@ declare i8* @memchr(i8*, i32, i64)
 
 ; Fold memchr(a12345, 1, 1) to a12345.
 
-define i8* @fold_memchr_a12345_1_1() {
+define ptr @fold_memchr_a12345_1_1() {
 ; CHECK-LABEL: @fold_memchr_a12345_1_1(
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0)
+; CHECK-NEXT:    ret ptr @a12345
 ;
 
-  %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
-  %res = call i8* @memchr(i8* %ptr, i32 1, i64 1)
-  ret i8* %res
+  %res = call ptr @memchr(ptr @a12345, i32 1, i64 1)
+  ret ptr %res
 }
 
 
 ; Fold memchr(a12345, 2, 1) to null.
 
-define i8* @fold_memchr_a12345_2_1() {
+define ptr @fold_memchr_a12345_2_1() {
 ; CHECK-LABEL: @fold_memchr_a12345_2_1(
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret ptr null
 ;
 
-  %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
-  %res = call i8* @memchr(i8* %ptr, i32 2, i64 1)
-  ret i8* %res
+  %res = call ptr @memchr(ptr @a12345, i32 2, i64 1)
+  ret ptr %res
 }
 
 
 ; Fold memchr(ax, 257, 1) to (unsigned char)*ax == 1 ? ax : null
 ; to verify the constant 257 is converted to unsigned char (yielding 1).
 
-define i8* @fold_memchr_ax_257_1(i32 %chr, i64 %n) {
+define ptr @fold_memchr_ax_257_1(i32 %chr, i64 %n) {
 ; CHECK-LABEL: @fold_memchr_ax_257_1(
-; CHECK-NEXT:    [[MEMCHR_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[MEMCHR_CHAR0:%.*]] = load i8, ptr @ax, align 1
 ; CHECK-NEXT:    [[MEMCHR_CHAR0CMP:%.*]] = icmp eq i8 [[MEMCHR_CHAR0]], 1
-; CHECK-NEXT:    [[MEMCHR_SEL:%.*]] = select i1 [[MEMCHR_CHAR0CMP]], i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i8* null
-; CHECK-NEXT:    ret i8* [[MEMCHR_SEL]]
+; CHECK-NEXT:    [[MEMCHR_SEL:%.*]] = select i1 [[MEMCHR_CHAR0CMP]], ptr @ax, ptr null
+; CHECK-NEXT:    ret ptr [[MEMCHR_SEL]]
 ;
 
-  %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
-  %res = call i8* @memchr(i8* %ptr, i32 257, i64 1)
-  ret i8* %res
+  %res = call ptr @memchr(ptr @ax, i32 257, i64 1)
+  ret ptr %res
 }
 
 
 ; Fold memchr(ax, c, 1) to (unsigned char)*ax == (unsigned char)c ? ax : null.
 
-define i8* @fold_memchr_ax_c_1(i32 %chr, i64 %n) {
+define ptr @fold_memchr_ax_c_1(i32 %chr, i64 %n) {
 ; CHECK-LABEL: @fold_memchr_ax_c_1(
-; CHECK-NEXT:    [[MEMCHR_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[MEMCHR_CHAR0:%.*]] = load i8, ptr @ax, align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[CHR:%.*]] to i8
 ; CHECK-NEXT:    [[MEMCHR_CHAR0CMP:%.*]] = icmp eq i8 [[MEMCHR_CHAR0]], [[TMP1]]
-; CHECK-NEXT:    [[MEMCHR_SEL:%.*]] = select i1 [[MEMCHR_CHAR0CMP]], i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i8* null
-; CHECK-NEXT:    ret i8* [[MEMCHR_SEL]]
+; CHECK-NEXT:    [[MEMCHR_SEL:%.*]] = select i1 [[MEMCHR_CHAR0CMP]], ptr @ax, ptr null
+; CHECK-NEXT:    ret ptr [[MEMCHR_SEL]]
 ;
 
-  %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
-  %res = call i8* @memchr(i8* %ptr, i32 %chr, i64 1)
-  ret i8* %res
+  %res = call ptr @memchr(ptr @ax, i32 %chr, i64 1)
+  ret ptr %res
 }

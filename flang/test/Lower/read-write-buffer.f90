@@ -10,11 +10,12 @@ subroutine test_array_format
   character(10) :: array(2)
   array(1) ="(15HThis i"
   array(2) ="s a test.)"
-  ! CHECK-DAG: %[[fmtLen:.*]] = arith.muli %[[c10]], %[[c2]] : index
-  ! CHECK-DAG: %[[scalarFmt:.*]] = fir.convert %[[mem]] : (!fir.ref<!fir.array<2x!fir.char<1,10>>>) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK-DAG: %[[fmtArg:.*]] = fir.convert %[[scalarFmt]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  ! CHECK-DAG: %[[fmtLenArg:.*]] = fir.convert %[[fmtLen]] : (index) -> i64 
-  ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], {{.*}}) 
+  ! CHECK: %[[shape:.*]] = fir.shape %c2{{.*}} (index) -> !fir.shape<1>
+  ! CHECK: %[[fmtBox:.*]] = fir.embox %[[mem]](%[[shape]]) : (!fir.ref<!fir.array<2x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,10>>>
+  ! CHECK: %[[fmtArg:.*]] = fir.zero_bits !fir.ref<i8>
+  ! CHECK: %[[fmtLenArg:.*]] = fir.zero_bits i64
+  ! CHECK: %[[fmtDesc:.*]] = fir.convert %[[fmtBox]] : (!fir.box<!fir.array<2x!fir.char<1,10>>>) -> !fir.box<none>
+  ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], %[[fmtDesc]], {{.*}}) 
   write(*, array) 
 end subroutine
 

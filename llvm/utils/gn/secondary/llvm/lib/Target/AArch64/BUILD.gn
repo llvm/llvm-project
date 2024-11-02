@@ -126,6 +126,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64ISelDAGToDAG.cpp",
     "AArch64ISelLowering.cpp",
     "AArch64InstrInfo.cpp",
+    "AArch64KCFI.cpp",
     "AArch64LoadStoreOptimizer.cpp",
     "AArch64LowerHomogeneousPrologEpilog.cpp",
     "AArch64MCInstLower.cpp",
@@ -158,6 +159,7 @@ static_library("LLVMAArch64CodeGen") {
     "GISel/AArch64PostSelectOptimize.cpp",
     "GISel/AArch64PreLegalizerCombiner.cpp",
     "GISel/AArch64RegisterBankInfo.cpp",
+    "SMEABIPass.cpp",
     "SVEIntrinsicOpts.cpp",
   ]
 }

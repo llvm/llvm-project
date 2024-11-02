@@ -77,9 +77,9 @@ cl::opt<bool> ScheduleInlineAsm("hexagon-sched-inline-asm", cl::Hidden,
 static cl::opt<bool> EnableBranchPrediction("hexagon-enable-branch-prediction",
   cl::Hidden, cl::init(true), cl::desc("Enable branch prediction"));
 
-static cl::opt<bool> DisableNVSchedule("disable-hexagon-nv-schedule",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable schedule adjustment for new value stores."));
+static cl::opt<bool> DisableNVSchedule(
+    "disable-hexagon-nv-schedule", cl::Hidden,
+    cl::desc("Disable schedule adjustment for new value stores."));
 
 static cl::opt<bool> EnableTimingClassLatency(
   "enable-timing-class-latency", cl::Hidden, cl::init(false),
@@ -94,11 +94,12 @@ static cl::opt<bool> EnableACCForwarding(
   cl::desc("Enable vec acc forwarding"));
 
 static cl::opt<bool> BranchRelaxAsmLarge("branch-relax-asm-large",
-  cl::init(true), cl::Hidden, cl::ZeroOrMore, cl::desc("branch relax asm"));
+                                         cl::init(true), cl::Hidden,
+                                         cl::desc("branch relax asm"));
 
-static cl::opt<bool> UseDFAHazardRec("dfa-hazard-rec",
-  cl::init(true), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Use the DFA based hazard recognizer."));
+static cl::opt<bool>
+    UseDFAHazardRec("dfa-hazard-rec", cl::init(true), cl::Hidden,
+                    cl::desc("Use the DFA based hazard recognizer."));
 
 /// Constants for Hexagon instructions.
 const int Hexagon_MEMW_OFFSET_MAX = 4095;
@@ -158,7 +159,7 @@ bool HexagonInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     auto Op = MI.getOperand(1);
     // If the instruction has a global address as operand, it is not cheap
     // since the operand will be constant extended.
-    if (Op.getType() == MachineOperand::MO_GlobalAddress)
+    if (Op.isGlobal())
       return false;
     // If the instruction has an operand of size > 16bits, its will be
     // const-extended and hence, it is not cheap.
@@ -1799,7 +1800,7 @@ bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       return true;
     // If any of the block's successors is a landing pad, this could be a
     // throwing call.
-    for (auto I : MBB->successors())
+    for (auto *I : MBB->successors())
       if (I->isEHPad())
         return true;
   }
@@ -2126,7 +2127,7 @@ bool HexagonInstrInfo::isComplex(const MachineInstr &MI) const {
          !isMemOp(MI) && !MI.isBranch() && !MI.isReturn() && !MI.isCall();
 }
 
-// Return true if the instruction is a compund branch instruction.
+// Return true if the instruction is a compound branch instruction.
 bool HexagonInstrInfo::isCompoundBranchInstr(const MachineInstr &MI) const {
   return getType(MI) == HexagonII::TypeCJ && MI.isBranch();
 }
@@ -2250,15 +2251,6 @@ bool HexagonInstrInfo::isDuplexPair(const MachineInstr &MIa,
   HexagonII::SubInstructionGroup MIaG = getDuplexCandidateGroup(MIa);
   HexagonII::SubInstructionGroup MIbG = getDuplexCandidateGroup(MIb);
   return (isDuplexPairMatch(MIaG, MIbG) || isDuplexPairMatch(MIbG, MIaG));
-}
-
-bool HexagonInstrInfo::isEarlySourceInstr(const MachineInstr &MI) const {
-  if (MI.mayLoadOrStore() || MI.isCompare())
-    return true;
-
-  // Multiply
-  unsigned SchedClass = MI.getDesc().getSchedClass();
-  return is_TC4x(SchedClass) || is_TC3x(SchedClass);
 }
 
 bool HexagonInstrInfo::isEndLoopN(unsigned Opcode) const {
@@ -2414,43 +2406,6 @@ bool HexagonInstrInfo::isJumpWithinBranchRange(const MachineInstr &MI,
   case Hexagon::J4_cmpeqn1_tp1_jump_nt:
     return isInt<11>(offset);
   }
-}
-
-bool HexagonInstrInfo::isLateInstrFeedsEarlyInstr(const MachineInstr &LRMI,
-      const MachineInstr &ESMI) const {
-  bool isLate = isLateResultInstr(LRMI);
-  bool isEarly = isEarlySourceInstr(ESMI);
-
-  LLVM_DEBUG(dbgs() << "V60" << (isLate ? "-LR  " : " --  "));
-  LLVM_DEBUG(LRMI.dump());
-  LLVM_DEBUG(dbgs() << "V60" << (isEarly ? "-ES  " : " --  "));
-  LLVM_DEBUG(ESMI.dump());
-
-  if (isLate && isEarly) {
-    LLVM_DEBUG(dbgs() << "++Is Late Result feeding Early Source\n");
-    return true;
-  }
-
-  return false;
-}
-
-bool HexagonInstrInfo::isLateResultInstr(const MachineInstr &MI) const {
-  switch (MI.getOpcode()) {
-  case TargetOpcode::EXTRACT_SUBREG:
-  case TargetOpcode::INSERT_SUBREG:
-  case TargetOpcode::SUBREG_TO_REG:
-  case TargetOpcode::REG_SEQUENCE:
-  case TargetOpcode::IMPLICIT_DEF:
-  case TargetOpcode::COPY:
-  case TargetOpcode::INLINEASM:
-  case TargetOpcode::PHI:
-    return false;
-  default:
-    break;
-  }
-
-  unsigned SchedClass = MI.getDesc().getSchedClass();
-  return !is_TC1(SchedClass);
 }
 
 bool HexagonInstrInfo::isLateSourceInstr(const MachineInstr &MI) const {

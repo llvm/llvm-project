@@ -1,8 +1,5 @@
 """Test the lldb public C++ api when creating multiple targets simultaneously."""
 
-from __future__ import print_function
-
-
 import os
 
 import lldb
@@ -12,15 +9,13 @@ from lldbsuite.test import lldbutil
 
 
 class TestMultipleTargets(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @skipIfNoSBHeaders
     @skipIfHostIncompatibleWithRemote
     @expectedFailureAll(
-        oslist=["windows"],
+        oslist=["windows"], archs=["i[3-6]86", "x86_64"],
         bugnumber="llvm.org/pr20282")
     @expectedFlakeyNetBSD
     def test_multiple_targets(self):

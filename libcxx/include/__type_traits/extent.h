@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__array_extent)
+#if __has_builtin(__array_extent)
 
 template<class _Tp, size_t _Dim = 0>
 struct _LIBCPP_TEMPLATE_VIS extent
@@ -30,7 +30,7 @@ template <class _Tp, unsigned _Ip = 0>
 inline constexpr size_t extent_v = __array_extent(_Tp, _Ip);
 #endif
 
-#else // __has_keyword(__array_extent)
+#else // __has_builtin(__array_extent)
 
 template <class _Tp, unsigned _Ip = 0> struct _LIBCPP_TEMPLATE_VIS extent
     : public integral_constant<size_t, 0> {};
@@ -48,7 +48,7 @@ template <class _Tp, unsigned _Ip = 0>
 inline constexpr size_t extent_v = extent<_Tp, _Ip>::value;
 #endif
 
-#endif // __has_keyword(__array_extent)
+#endif // __has_builtin(__array_extent)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -14,13 +14,13 @@ define void @test_direct() {
         ret void
 }
 
-define void @test_indirect(void ()* %fp) {
+define void @test_indirect(ptr %fp) {
         call void %fp( )
         ret void
 }
 
 define void @test_abs() {
-        %fp = inttoptr i32 400 to void ()*              ; <void ()*> [#uses=1]
+        %fp = inttoptr i32 400 to ptr              ; <ptr> [#uses=1]
         call void %fp( )
         ret void
 }

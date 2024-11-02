@@ -139,8 +139,9 @@ public:
   /// It is possible for this to be NULL if the ContentCache encapsulates
   /// an imaginary text buffer.
   ///
-  /// FIXME: Turn this into a FileEntryRef and remove Filename.
-  const FileEntry *OrigEntry;
+  /// FIXME: Make non-optional using a virtual file as needed, remove \c
+  /// Filename and use \c OrigEntry.getNameAsRequested() instead.
+  OptionalFileEntryRefDegradesToFileEntryPtr OrigEntry;
 
   /// References the file which the contents were actually loaded from.
   ///
@@ -177,9 +178,13 @@ public:
 
   mutable unsigned IsBufferInvalid : 1;
 
-  ContentCache(const FileEntry *Ent = nullptr) : ContentCache(Ent, Ent) {}
+  ContentCache()
+      : OrigEntry(None), ContentsEntry(nullptr), BufferOverridden(false),
+        IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {}
 
-  ContentCache(const FileEntry *Ent, const FileEntry *contentEnt)
+  ContentCache(FileEntryRef Ent) : ContentCache(Ent, Ent) {}
+
+  ContentCache(FileEntryRef Ent, const FileEntry *contentEnt)
       : OrigEntry(Ent), ContentsEntry(contentEnt), BufferOverridden(false),
         IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {}
 
@@ -542,10 +547,10 @@ class InBeforeInTUCacheEntry {
   /// If these match up with a subsequent query, the result can be reused.
   FileID LQueryFID, RQueryFID;
 
-  /// True if LQueryFID was created before RQueryFID.
+  /// The relative order of FileIDs that the CommonFID *immediately* includes.
   ///
   /// This is used to compare macro expansion locations.
-  bool IsLQFIDBeforeRQFID;
+  bool LChildBeforeRChild;
 
   /// The file found in common between the two \#include traces, i.e.,
   /// the nearest common ancestor of the \#include tree.
@@ -559,12 +564,17 @@ class InBeforeInTUCacheEntry {
   unsigned LCommonOffset, RCommonOffset;
 
 public:
+  InBeforeInTUCacheEntry() = default;
+  InBeforeInTUCacheEntry(FileID L, FileID R) : LQueryFID(L), RQueryFID(R) {
+    assert(L != R);
+  }
+
   /// Return true if the currently cached values match up with
   /// the specified LHS/RHS query.
   ///
   /// If not, we can't use the cache.
-  bool isCacheValid(FileID LHS, FileID RHS) const {
-    return LQueryFID == LHS && RQueryFID == RHS;
+  bool isCacheValid() const {
+    return CommonFID.isValid();
   }
 
   /// If the cache is valid, compute the result given the
@@ -581,29 +591,28 @@ public:
     // one of the locations points at the inclusion/expansion point of the other
     // in which case its FileID will come before the other.
     if (LOffset == ROffset)
-      return IsLQFIDBeforeRQFID;
+      return LChildBeforeRChild;
 
     return LOffset < ROffset;
   }
 
   /// Set up a new query.
-  void setQueryFIDs(FileID LHS, FileID RHS, bool isLFIDBeforeRFID) {
+  /// If it matches the old query, we can keep the cached answer.
+  void setQueryFIDs(FileID LHS, FileID RHS) {
     assert(LHS != RHS);
-    LQueryFID = LHS;
-    RQueryFID = RHS;
-    IsLQFIDBeforeRQFID = isLFIDBeforeRFID;
-  }
-
-  void clear() {
-    LQueryFID = RQueryFID = FileID();
-    IsLQFIDBeforeRQFID = false;
+    if (LQueryFID != LHS || RQueryFID != RHS) {
+      LQueryFID = LHS;
+      RQueryFID = RHS;
+      CommonFID = FileID();
+    }
   }
 
   void setCommonLoc(FileID commonFID, unsigned lCommonOffset,
-                    unsigned rCommonOffset) {
+                    unsigned rCommonOffset, bool LParentBeforeRParent) {
     CommonFID = commonFID;
     LCommonOffset = lCommonOffset;
     RCommonOffset = rCommonOffset;
+    LChildBeforeRChild = LParentBeforeRParent;
   }
 };
 
@@ -656,7 +665,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   struct OverriddenFilesInfoTy {
     /// Files that have been overridden with the contents from another
     /// file.
-    llvm::DenseMap<const FileEntry *, const FileEntry *> OverriddenFiles;
+    llvm::DenseMap<const FileEntry *, FileEntryRef> OverriddenFiles;
 
     /// Files that were overridden with a memory buffer.
     llvm::DenseSet<const FileEntry *> OverriddenFilesWithBuffer;
@@ -974,8 +983,7 @@ public:
   ///
   /// \param NewFile the file whose contents will be used as the
   /// data instead of the contents of the given source file.
-  void overrideFileContents(const FileEntry *SourceFile,
-                            const FileEntry *NewFile);
+  void overrideFileContents(const FileEntry *SourceFile, FileEntryRef NewFile);
 
   /// Returns true if the file contents have been overridden.
   bool isFileOverridden(const FileEntry *File) const {
@@ -1040,8 +1048,8 @@ public:
 
   /// Returns the FileEntryRef for the provided FileID.
   Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
-    if (auto *Entry = getFileEntryForID(FID))
-      return Entry->getLastRef();
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return Entry->getFile().getContentCache().OrigEntry;
     return None;
   }
 
@@ -1106,13 +1114,7 @@ public:
   /// the entry in SLocEntryTable which contains the specified location.
   ///
   FileID getFileID(SourceLocation SpellingLoc) const {
-    SourceLocation::UIntTy SLocOffset = SpellingLoc.getOffset();
-
-    // If our one-entry cache covers this offset, just return it.
-    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
-      return LastFileIDLookup;
-
-    return getFileIDSlow(SLocOffset);
+    return getFileID(SpellingLoc.getOffset());
   }
 
   /// Return the filename of the file containing a SourceLocation.
@@ -1473,24 +1475,35 @@ public:
 
   /// Returns whether \p Loc is located in a <built-in> file.
   bool isWrittenInBuiltinFile(SourceLocation Loc) const {
-    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
     return Filename.equals("<built-in>");
   }
 
   /// Returns whether \p Loc is located in a <command line> file.
   bool isWrittenInCommandLineFile(SourceLocation Loc) const {
-    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
     return Filename.equals("<command line>");
   }
 
   /// Returns whether \p Loc is located in a <scratch space> file.
   bool isWrittenInScratchSpace(SourceLocation Loc) const {
-    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
     return Filename.equals("<scratch space>");
   }
 
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
+    if (Loc.isInvalid())
+      return false;
     return isSystem(getFileCharacteristic(Loc));
   }
 
@@ -1728,12 +1741,12 @@ public:
 
   /// Returns true if \p Loc came from a PCH/Module.
   bool isLoadedSourceLocation(SourceLocation Loc) const {
-    return Loc.getOffset() >= CurrentLoadedOffset;
+    return isLoadedOffset(Loc.getOffset());
   }
 
   /// Returns true if \p Loc did not come from a PCH/Module.
   bool isLocalSourceLocation(SourceLocation Loc) const {
-    return Loc.getOffset() < NextLocalOffset;
+    return isLocalOffset(Loc.getOffset());
   }
 
   /// Returns true if \p FID came from a PCH/Module.
@@ -1801,6 +1814,22 @@ private:
   const SrcMgr::SLocEntry &
   getLoadedSLocEntryByID(int ID, bool *Invalid = nullptr) const {
     return getLoadedSLocEntry(static_cast<unsigned>(-ID - 2), Invalid);
+  }
+
+  FileID getFileID(SourceLocation::UIntTy SLocOffset) const {
+    // If our one-entry cache covers this offset, just return it.
+    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
+      return LastFileIDLookup;
+
+    return getFileIDSlow(SLocOffset);
+  }
+
+  bool isLocalOffset(SourceLocation::UIntTy SLocOffset) const {
+    return SLocOffset < CurrentLoadedOffset;
+  }
+
+  bool isLoadedOffset(SourceLocation::UIntTy SLocOffset) const {
+    return SLocOffset >= CurrentLoadedOffset;
   }
 
   /// Implements the common elements of storing an expansion info struct into
@@ -1907,11 +1936,11 @@ public:
   }
 };
 
-/// SourceManager and necessary depdencies (e.g. VFS, FileManager) for a single
-/// in-memorty file.
+/// SourceManager and necessary dependencies (e.g. VFS, FileManager) for a
+/// single in-memorty file.
 class SourceManagerForFile {
 public:
-  /// Creates SourceManager and necessary depdencies (e.g. VFS, FileManager).
+  /// Creates SourceManager and necessary dependencies (e.g. VFS, FileManager).
   /// The main file in the SourceManager will be \p FileName with \p Content.
   SourceManagerForFile(StringRef FileName, StringRef Content);
 

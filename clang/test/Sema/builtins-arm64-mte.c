@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -triple arm64-arm-eabi %s -target-feature +mte -fsyntax-only -verify
 // RUN: %clang_cc1 -triple arm64-arm-eabi %s -target-feature +mte -x c++ -fsyntax-only -verify
+// RUN: %clang_cc1 -triple arm64-arm-eabi %s -DNO_MTE -x c++ -S -emit-llvm -verify -o -
 #include <stddef.h>
 #include <arm_acle.h>
 
+#ifndef NO_MTE
 int  *create_tag1(int a, unsigned b) {
   // expected-error@+1 {{first argument of MTE builtin function must be a pointer ('int' invalid)}}
   return __arm_mte_create_random_tag(a,b);
@@ -132,5 +134,12 @@ ptrdiff_t subtract_pointers4(int *a, char *b) {
 ptrdiff_t subtract_pointers5() {
   // expected-error@+1 {{at least one argument of MTE builtin function must be a pointer ('std::nullptr_t', 'std::nullptr_t' invalid)}}
   return __arm_mte_ptrdiff(nullptr, nullptr);
+}
+#endif
+
+#else
+int *create_tag1(int *a, unsigned b) {
+  // expected-error@+1 {{'__builtin_arm_irg' needs target feature mte}}
+  return __arm_mte_create_random_tag(a,b);
 }
 #endif

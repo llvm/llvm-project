@@ -1138,6 +1138,9 @@ template<> __declspec(dllimport) const int MemVarTmpl::StaticVar<ExplicitSpec_De
 // Import individual members of a class template.
 template<typename T>
 struct ImportClassTmplMembers {
+#ifndef GNU
+// expected-note@+2{{attribute is here}}
+#endif
   __declspec(dllimport)                void normalDecl();
 #ifdef GNU
 // expected-note@+2{{previous attribute is here}}
@@ -1299,6 +1302,34 @@ template<typename T> __declspec(dllimport) const  int  CTMR<T>::StaticConstField
 #endif
 template<typename T> __declspec(dllimport) constexpr int CTMR<T>::ConstexprField;
 
+
+// MSVC imports explicit specialization of imported class template member
+// function, and errors on such definitions. MinGW does not treat them as
+// dllimport.
+template <typename> struct ClassTmpl {
+#if !defined(GNU)
+// expected-note@+2{{attribute is here}}
+#endif
+  void __declspec(dllimport) importedNormal();
+#if !defined(GNU)
+// expected-note@+2{{attribute is here}}
+#endif
+  static void __declspec(dllimport) importedStatic();
+};
+#if !defined(GNU)
+// expected-error@+2{{cannot define non-inline dllimport template specialization}}
+#endif
+template<> void ClassTmpl<int>::importedNormal() {}
+#if !defined(GNU)
+// expected-error@+2{{cannot define non-inline dllimport template specialization}}
+#endif
+template<> void ClassTmpl<int>::importedStatic() {}
+
+#if !defined(GNU)
+// expected-error@+3{{cannot define non-inline dllimport template specialization}}
+// expected-error@+2{{attribute 'dllimport' cannot be applied to a deleted function}}
+#endif
+template <> void ImportClassTmplMembers<int>::normalDecl() = delete;
 
 
 //===----------------------------------------------------------------------===//

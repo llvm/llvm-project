@@ -150,8 +150,8 @@ void M68kMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     const MachineOperand &MO = MI->getOperand(i);
     Optional<MCOperand> MCOp = LowerOperand(MI, MO);
 
-    if (MCOp.hasValue() && MCOp.getValue().isValid())
-      OutMI.addOperand(MCOp.getValue());
+    if (MCOp.has_value() && MCOp.value().isValid())
+      OutMI.addOperand(MCOp.value());
   }
 
   // TAILJMPj, TAILJMPq - Lower to the correct jump instructions.

@@ -14,6 +14,7 @@ __attribute__((objc_root_class))
 - (int)getInt __attribute__((objc_direct));
 @property(direct, readonly) int intProperty;
 @property(direct, readonly) int intProperty2;
+@property(direct, readonly) id objectProperty;
 @end
 
 @implementation Root
@@ -28,9 +29,7 @@ __attribute__((objc_root_class))
   // CHECK-LABEL: entry:
   // CHECK-NEXT: [[RETVAL:%.*]] = alloca
   // CHECK-NEXT: [[SELFADDR:%.*]] = alloca %0*,
-  // CHECK-NEXT: [[_CMDADDR:%.*]] = alloca i8*,
   // CHECK-NEXT: store %0* %{{.*}}, %0** [[SELFADDR]],
-  // CHECK-NEXT: store i8* %{{.*}}, i8** [[_CMDADDR]],
 
   // self nil-check
   // CHECK-NEXT: [[SELF:%.*]] = load %0*, %0** [[SELFADDR]],
@@ -60,9 +59,7 @@ __attribute__((objc_root_class))
   // loading parameters
   // CHECK-LABEL: entry:
   // CHECK-NEXT: [[SELFADDR:%.*]] = alloca i8*,
-  // CHECK-NEXT: [[_CMDADDR:%.*]] = alloca i8*,
   // CHECK-NEXT: store i8* %{{.*}}, i8** [[SELFADDR]],
-  // CHECK-NEXT: store i8* %{{.*}}, i8** [[_CMDADDR]],
 
   // [self self]
   // CHECK-NEXT: [[SELF:%.*]] = load i8*, i8** [[SELFADDR]],
@@ -81,9 +78,7 @@ __attribute__((objc_root_class))
   // CHECK-LABEL: entry:
   // CHECK-NEXT: [[RETVAL:%.*]] = alloca
   // CHECK-NEXT: [[SELFADDR:%.*]] = alloca %0*,
-  // CHECK-NEXT: [[_CMDADDR:%.*]] = alloca i8*,
   // CHECK-NEXT: store %0* %{{.*}}, %0** [[SELFADDR]],
-  // CHECK-NEXT: store i8* %{{.*}}, i8** [[_CMDADDR]],
 
   // self nil-check
   // CHECK-NEXT: [[SELF:%.*]] = load %0*, %0** [[SELFADDR]],
@@ -125,9 +120,7 @@ __attribute__((objc_root_class))
   // loading parameters
   // CHECK-LABEL: entry:
   // CHECK-NEXT: [[SELFADDR:%.*]] = alloca %0*,
-  // CHECK-NEXT: [[_CMDADDR:%.*]] = alloca i8*,
   // CHECK-NEXT: store %0* %{{.*}}, %0** [[SELFADDR]],
-  // CHECK-NEXT: store i8* %{{.*}}, i8** [[_CMDADDR]],
 
   // self nil-check
   // CHECK-NEXT: [[SELF:%.*]] = load %0*, %0** [[SELFADDR]],
@@ -159,8 +152,30 @@ __attribute__((objc_root_class))
   // CHECK: ret void
 }
 
+// CHECK-LABEL: define hidden void @"\01-[Root accessCmd]"(
+- (void)accessCmd __attribute__((objc_direct)) {
+  // CHECK-LABEL: entry:
+  // CHECK-NEXT: [[SELFADDR:%.*]] = alloca %0*,
+  // CHECK-NEXT: [[CMDVAL:%_cmd]] = alloca i8*,
+
+  // loading the _cmd selector
+  // CHECK-LABEL: objc_direct_method.cont:
+  // CHECK-NEXT: [[CMD1:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
+  // CHECK-NEXT: store i8* [[CMD1]], i8** [[CMDVAL]],
+  SEL sel = _cmd;
+}
+
 @end
 // CHECK-LABEL: define hidden i32 @"\01-[Root intProperty]"
+
+// Check the synthesized objectProperty calls objc_getProperty(); this also
+// checks that the synthesized method passes undef for the `cmd` argument.
+// CHECK-LABEL: define hidden i8* @"\01-[Root objectProperty]"(
+// CHECK-LABEL: objc_direct_method.cont:
+// CHECK-NEXT: [[SELFVAL:%.*]] = load {{.*}} %self.addr,
+// CHECK-NEXT: [[SELF:%.*]] = bitcast {{.*}} [[SELFVAL]] to i8*
+// CHECK-NEXT: [[IVAR:%.*]] = load {{.*}} @"OBJC_IVAR_$_Root._objectProperty",
+// CHECK-NEXT: call i8* @objc_getProperty(i8* noundef [[SELF]], i8* noundef poison, i64 noundef [[IVAR]], {{.*}})
 
 @interface Foo : Root {
   id __strong _cause_cxx_destruct;
@@ -205,19 +220,19 @@ __attribute__((objc_direct_members))
 
 int useRoot(Root *r) {
   // CHECK-LABEL: define{{.*}} i32 @useRoot
-  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root getInt]"
-  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty]"
-  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty2]"
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root getInt]" to i32 (i8*)
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty]" to i32 (i8*)
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty2]" to i32 (i8*)
   return [r getInt] + [r intProperty] + [r intProperty2];
 }
 
 int useFoo(Foo *f) {
   // CHECK-LABEL: define{{.*}} i32 @useFoo
-  // CHECK: call void bitcast {{.*}} @"\01-[Foo setGetDynamic_setDirect:]"
-  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo getDirect_setDynamic]"
-  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInExtension]"
-  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInCategory]"
-  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInCategoryNoDecl]"
+  // CHECK: call void bitcast {{.*}} @"\01-[Foo setGetDynamic_setDirect:]" to void (i8*, i32)
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo getDirect_setDynamic]" to i32 (i8*)
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInExtension]" to i32 (i8*)
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInCategory]" to i32 (i8*)
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInCategoryNoDecl]" to i32 (i8*)
   [f setGetDynamic_setDirect:1];
   return [f getDirect_setDynamic] +
          [f directMethodInExtension] +

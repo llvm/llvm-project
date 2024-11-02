@@ -3,8 +3,7 @@ Use lldb Python SBFrame API to get the argument values of the call stacks.
 And other SBFrame API tests.
 """
 
-from __future__ import print_function
-
+import io
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -13,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 
 class FrameAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
@@ -37,15 +34,14 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         # Keeps track of the number of times 'a' is called where it is within a
         # depth of 3 of the 'c' leaf function.
         callsOfA = 0
 
-        from six import StringIO as SixStringIO
-        session = SixStringIO()
+        session = io.StringIO()
         while process.GetState() == lldb.eStateStopped:
             thread = lldbutil.get_stopped_thread(
                 process, lldb.eStopReasonBreakpoint)
@@ -140,8 +136,8 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
@@ -181,8 +177,8 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)

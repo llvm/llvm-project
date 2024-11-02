@@ -10,8 +10,6 @@ import lldbvscode_testcase
 
 class TestVSCode_stop_hooks(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfRemote
     def test_stop_hooks_before_run(self):
         '''

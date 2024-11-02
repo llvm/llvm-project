@@ -83,12 +83,12 @@ while.body:                                       ; preds = %while.body, %entry
   br i1 %exitcond.4, label %while.end, label %while.body, !dbg !27, !llvm.loop !28
 
 while.end:                                        ; preds = %while.body
-  %call2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i64 0, i64 0), i32 %spec.select.4), !dbg !31
+  %call2 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %spec.select.4), !dbg !31
   ret i32 0, !dbg !32
 }
 
 ; Function Attrs: nofree nounwind
-declare dso_local i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr #3
+declare dso_local i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr #3
 
 attributes #0 = { noinline norecurse nounwind readnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
 attributes #1 = { norecurse nounwind readnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }

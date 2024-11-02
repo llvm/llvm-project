@@ -235,6 +235,8 @@
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp | FileCheck %s --check-prefix=ARMv81M-MAIN-MVEFP
 ; RUN: llc < %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+pacbti | FileCheck %s --check-prefix=ARMv81M-MAIN-PACBTI
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-m55 | FileCheck %s --check-prefix=CORTEX-M55
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-m85 | FileCheck %s --check-prefix=CORTEX-M85
+; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-m85+nopacbti | FileCheck %s --check-prefix=CHECK-NO-PACBTI
 
 ; CPU-SUPPORTED-NOT: is not a recognized processor for this target
 
@@ -1747,6 +1749,23 @@
 ; CORTEX-M55-NOT: .eabi_attribute 28
 ; CORTEX-M55: .eabi_attribute 38, 1
 ; CORTEX-M55: .eabi_attribute 14, 0
+
+; CORTEX-M85: .cpu cortex-m85
+; CORTEX-M85: .eabi_attribute 6, 21   @ Tag_CPU_arch
+; CORTEX-M85: .eabi_attribute 7, 77   @ Tag_CPU_arch_profile
+; CORTEX-M85: .eabi_attribute 8, 0    @ Tag_ARM_ISA_use
+; CORTEX-M85: .eabi_attribute 9, 3    @ Tag_THUMB_ISA_use
+; CORTEX-M85: .fpu    fpv5-d16
+; CORTEX-M85: .eabi_attribute 36, 1   @ Tag_FP_HP_extension
+; CORTEX-M85: .eabi_attribute 48, 2   @ Tag_MVE_arch
+; CORTEX-M85: .eabi_attribute 46, 1   @ Tag_DSP_extension
+; CORTEX-M85: .eabi_attribute 34, 1   @ Tag_CPU_unaligned_access
+; CORTEX-M85: .eabi_attribute 50, 2   @ Tag_PAC_extension
+; CORTEX-M85: .eabi_attribute 52, 2   @ Tag_BTI_extension
+
+; CHECK-NO-PACBTI-NOT: .eabi_attribute 50
+; CHECK-NO-PACBTI-NOT: .eabi_attribute 52
+
 
 define i32 @f(i64 %z) {
     ret i32 0

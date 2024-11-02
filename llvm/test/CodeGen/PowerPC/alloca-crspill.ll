@@ -19,11 +19,11 @@ entry:
   %conv = sext i32 %n to i64
   %0 = alloca double, i64 %conv, align 16
   tail call void asm sideeffect "", "~{cr2}"()
-  %call = call signext i32 @do_something(double* nonnull %0)
+  %call = call signext i32 @do_something(ptr nonnull %0)
   ret i32 %call
 }
 
-declare signext i32 @do_something(double*)
+declare signext i32 @do_something(ptr)
 
 ; CHECK: name:            test
 ; CHECK: alignment:       16

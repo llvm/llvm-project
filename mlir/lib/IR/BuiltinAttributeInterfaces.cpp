@@ -24,16 +24,12 @@ using namespace mlir::detail;
 // ElementsAttr
 //===----------------------------------------------------------------------===//
 
-ShapedType ElementsAttr::getType() const {
-  return Attribute::getType().cast<ShapedType>();
+Type ElementsAttr::getElementType(ElementsAttr elementsAttr) {
+  return elementsAttr.getType().getElementType();
 }
 
-Type ElementsAttr::getElementType(Attribute elementsAttr) {
-  return elementsAttr.getType().cast<ShapedType>().getElementType();
-}
-
-int64_t ElementsAttr::getNumElements(Attribute elementsAttr) {
-  return elementsAttr.getType().cast<ShapedType>().getNumElements();
+int64_t ElementsAttr::getNumElements(ElementsAttr elementsAttr) {
+  return elementsAttr.getType().getNumElements();
 }
 
 bool ElementsAttr::isValidIndex(ShapedType type, ArrayRef<uint64_t> index) {
@@ -51,9 +47,9 @@ bool ElementsAttr::isValidIndex(ShapedType type, ArrayRef<uint64_t> index) {
     return 0 <= dim && dim < shape[i];
   });
 }
-bool ElementsAttr::isValidIndex(Attribute elementsAttr,
+bool ElementsAttr::isValidIndex(ElementsAttr elementsAttr,
                                 ArrayRef<uint64_t> index) {
-  return isValidIndex(elementsAttr.getType().cast<ShapedType>(), index);
+  return isValidIndex(elementsAttr.getType(), index);
 }
 
 uint64_t ElementsAttr::getFlattenedIndex(Type type, ArrayRef<uint64_t> index) {

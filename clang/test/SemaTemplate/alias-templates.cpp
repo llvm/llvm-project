@@ -193,11 +193,10 @@ namespace PR16904 {
   struct base {
     template <typename> struct derived;
   };
-  // FIXME: The diagnostics here are terrible.
   template <typename T, typename U, typename V>
-  using derived = base<T, U>::template derived<V>; // expected-error {{expected a type}} expected-error {{expected ';'}}
+  using derived = base<T, U>::template derived<V>; // expected-warning {{missing 'typename'}}
   template <typename T, typename U, typename V>
-  using derived2 = ::PR16904::base<T, U>::template derived<V>; // expected-error {{expected a type}} expected-error {{expected ';'}}
+  using derived2 = ::PR16904::base<T, U>::template derived<V>; // expected-warning {{missing 'typename'}}
 }
 
 namespace PR14858 {

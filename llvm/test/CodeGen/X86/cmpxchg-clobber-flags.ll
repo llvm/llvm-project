@@ -23,7 +23,7 @@ declare i32 @bar(i64)
 ; we then promote these copies into independent conditions in GPRs that avoids
 ; repeated saving and restoring logic and can be trivially managed by the
 ; register allocator.
-define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
+define i64 @test_intervening_call(ptr %foo, i64 %bar, i64 %baz) nounwind {
 ; 32-GOOD-RA-LABEL: test_intervening_call:
 ; 32-GOOD-RA:       # %bb.0: # %entry
 ; 32-GOOD-RA-NEXT:    pushl %ebx
@@ -105,7 +105,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; 64-ALL-NEXT:    popq %rbx
 ; 64-ALL-NEXT:    retq
 entry:
-  %cx = cmpxchg i64* %foo, i64 %bar, i64 %baz seq_cst seq_cst
+  %cx = cmpxchg ptr %foo, i64 %bar, i64 %baz seq_cst seq_cst
   %v = extractvalue { i64, i1 } %cx, 0
   %p = extractvalue { i64, i1 } %cx, 1
   call i32 @bar(i64 %v)
@@ -119,7 +119,7 @@ f:
 }
 
 ; Interesting in producing a clobber without any function calls.
-define i32 @test_control_flow(i32* %p, i32 %i, i32 %j) nounwind {
+define i32 @test_control_flow(ptr %p, i32 %i, i32 %j) nounwind {
 ; 32-ALL-LABEL: test_control_flow:
 ; 32-ALL:       # %bb.0: # %entry
 ; 32-ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -183,7 +183,7 @@ loop_start:
   br label %while.condthread-pre-split.i
 
 while.condthread-pre-split.i:
-  %.pr.i = load i32, i32* %p, align 4
+  %.pr.i = load i32, ptr %p, align 4
   br label %while.cond.i
 
 while.cond.i:
@@ -193,7 +193,7 @@ while.cond.i:
 
 while.body.i:
   %.lcssa = phi i32 [ %0, %while.cond.i ]
-  %1 = cmpxchg i32* %p, i32 %.lcssa, i32 %.lcssa seq_cst seq_cst
+  %1 = cmpxchg ptr %p, i32 %.lcssa, i32 %.lcssa seq_cst seq_cst
   %2 = extractvalue { i32, i1 } %1, 1
   br i1 %2, label %cond.end.loopexit, label %while.condthread-pre-split.i
 
@@ -207,7 +207,7 @@ cond.end:
 
 ; This one is an interesting case because CMOV doesn't have a chain
 ; operand. Naive attempts to limit cmpxchg EFLAGS use are likely to fail here.
-define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) nounwind {
+define i32 @test_feed_cmov(ptr %addr, i32 %desired, i32 %new) nounwind {
 ; 32-GOOD-RA-LABEL: test_feed_cmov:
 ; 32-GOOD-RA:       # %bb.0: # %entry
 ; 32-GOOD-RA-NEXT:    pushl %ebx
@@ -269,7 +269,7 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) nounwind {
 ; 64-ALL-NEXT:    popq %rbp
 ; 64-ALL-NEXT:    retq
 entry:
-  %res = cmpxchg i32* %addr, i32 %desired, i32 %new seq_cst seq_cst
+  %res = cmpxchg ptr %addr, i32 %desired, i32 %new seq_cst seq_cst
   %success = extractvalue { i32, i1 } %res, 1
 
   %rhs = call i32 @foo()

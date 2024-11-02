@@ -59,6 +59,7 @@
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
+#include <iterator>
 #include <type_traits>
 #include <unordered_map>
 

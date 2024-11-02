@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass prologepilog %s -o - | FileCheck %s
+--- |
+  declare void @extern(<vscale x 16 x i8>*) #0
+  
+  define void @addi_rvv_stack_object() #0 {
+    %local0 = alloca <vscale x 16 x i8>, align 16
+    call void @extern(<vscale x 16 x i8>* %local0)
+    ret void
+  }
+  
+  attributes #0 = { "target-features"="+v" }
+
+...
+---
+name:            addi_rvv_stack_object
+alignment:       4
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: local0, type: default, offset: 0, size: 16, alignment: 16, 
+      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK: - { id: 2, name: '', type: default, offset: -16, size: 8, alignment: 8,
+# CHECK:     stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0 (%ir-block.0):
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
+    $x10 = ADDI %stack.0.local0, 0
+    PseudoCALL target-flags(riscv-plt) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
+    ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
+    PseudoRET
+
+...

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection %s -analyzer-store=region -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection %s -verify
 
 void clang_analyzer_eval(int);
 

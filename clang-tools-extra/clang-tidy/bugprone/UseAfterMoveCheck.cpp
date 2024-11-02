@@ -14,6 +14,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include "../utils/ExprSequence.h"
 
@@ -158,9 +159,12 @@ bool UseAfterMoveFinder::findInternal(const CFGBlock *Block,
 
   // Ignore all reinitializations where the move potentially comes after the
   // reinit.
+  // If `Reinit` is identical to `MovingCall`, we're looking at a move-to-self
+  // (e.g. `a = std::move(a)`). Count these as reinitializations.
   llvm::SmallVector<const Stmt *, 1> ReinitsToDelete;
   for (const Stmt *Reinit : Reinits) {
-    if (MovingCall && Sequence->potentiallyAfter(MovingCall, Reinit))
+    if (MovingCall && Reinit != MovingCall &&
+        Sequence->potentiallyAfter(MovingCall, Reinit))
       ReinitsToDelete.push_back(Reinit);
   }
   for (const Stmt *Reinit : ReinitsToDelete) {
@@ -225,10 +229,9 @@ void UseAfterMoveFinder::getUsesAndReinits(
   }
 
   // Sort the uses by their occurrence in the source code.
-  std::sort(Uses->begin(), Uses->end(),
-            [](const DeclRefExpr *D1, const DeclRefExpr *D2) {
-              return D1->getExprLoc() < D2->getExprLoc();
-            });
+  llvm::sort(*Uses, [](const DeclRefExpr *D1, const DeclRefExpr *D2) {
+    return D1->getExprLoc() < D2->getExprLoc();
+  });
 }
 
 bool isStandardSmartPointer(const ValueDecl *VD) {
@@ -400,7 +403,8 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto CallMoveMatcher =
       callExpr(callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
                hasArgument(0, declRefExpr().bind("arg")),
-               anyOf(hasAncestor(lambdaExpr().bind("containing-lambda")),
+               anyOf(hasAncestor(compoundStmt(
+                         hasParent(lambdaExpr().bind("containing-lambda")))),
                      hasAncestor(functionDecl().bind("containing-func"))),
                unless(inDecltypeOrTemplateArg()),
                // try_emplace is a common maybe-moving function that returns a

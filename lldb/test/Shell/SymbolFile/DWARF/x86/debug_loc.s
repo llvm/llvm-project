@@ -40,11 +40,11 @@
 # CHECK-NEXT:  [0x0000000000000000, 0x0000000000000001): DW_OP_reg5 RDI
 # CHECK-NEXT:  [0x0000000000000001, 0x0000000000000006): DW_OP_reg0 RAX
 # CHECK:     Variable{{.*}}, name = "x1", {{.*}}, scope = parameter
-# CHECK:     Variable{{.*}}, name = "x2", {{.*}}, scope = parameter, location = 0x00000000: error: unexpected end of data
+# CHECK:     Variable{{.*}}, name = "x2", {{.*}}, scope = parameter
 # CHECK:     Variable{{.*}}, name = "x3", {{.*}}, scope = parameter, location =
 # CHECK-NEXT:  [0x0000000000000002, 0x0000000000000003): DW_OP_reg1 RDX
-# LOCLISTS:  Variable{{.*}}, name = "x4", {{.*}}, scope = parameter, location =
-# LOCLISTS-NEXT: DW_LLE_startx_length   (0x000000000000dead, 0x0000000000000001): DW_OP_reg2 RCX
+# LOCLISTS:  Variable{{.*}}, name = "x4", {{.*}}, scope = parameter
+# LOCLISTS-EMPTY:
 
 .ifdef LOC
 .macro OFFSET_PAIR lo hi

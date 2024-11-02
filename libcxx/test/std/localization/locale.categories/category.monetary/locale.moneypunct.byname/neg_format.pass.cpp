@@ -8,7 +8,6 @@
 //
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
-// XFAIL: LIBCXX-AIX-FIXME
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
@@ -207,7 +206,11 @@ int main(int, char**)
     {
         Fnf f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
+#ifdef _AIX
+        assert_sign_symbol_none_value(p);
+#else
         assert_symbol_sign_none_value(p);
+#endif
     }
     {
         Fnt f(LOCALE_zh_CN_UTF_8, 1);
@@ -222,7 +225,11 @@ int main(int, char**)
     {
         Fwf f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
+#ifdef _AIX
+        assert_sign_symbol_none_value(p);
+#else
         assert_symbol_sign_none_value(p);
+#endif
     }
     {
         Fwt f(LOCALE_zh_CN_UTF_8, 1);

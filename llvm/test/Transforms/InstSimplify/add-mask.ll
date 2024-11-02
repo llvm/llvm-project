@@ -70,13 +70,13 @@ declare void @llvm.assume(i1)
 ; Known bits without a constant
 define i1 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* @B, align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr @B, align 4
 ; CHECK-NEXT:    [[B_AND:%.*]] = and i32 [[B]], 1
 ; CHECK-NEXT:    [[B_CND:%.*]] = icmp eq i32 [[B_AND]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B_CND]])
 ; CHECK-NEXT:    ret i1 false
 ;
-  %b = load i32, i32* @B
+  %b = load i32, ptr @B
   %b.and = and i32 %b, 1
   %b.cnd = icmp eq i32 %b.and, 1
   call void @llvm.assume(i1 %b.cnd)

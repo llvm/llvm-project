@@ -18,6 +18,8 @@ add_llvm_component_library(LLVMObjectYAML
   ObjectYAML.cpp
   MinidumpEmitter.cpp
   MinidumpYAML.cpp
+  OffloadEmitter.cpp
+  OffloadYAML.cpp
   WasmEmitter.cpp
   WasmYAML.cpp
   XCOFFEmitter.cpp

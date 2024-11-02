@@ -210,7 +210,7 @@ define i32 @not_a_masked_merge4(i32 %a0, i32 %a1, i32 %a2) {
 }
 
 ; should not transform when operands have multiple users.
-define i32 @masked_merge_no_transform0(i32 %a0, i32 %a1, i32 %a2, i32* %p1) {
+define i32 @masked_merge_no_transform0(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ; NOBMI-LABEL: masked_merge_no_transform0:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    movl %edi, %eax
@@ -232,12 +232,12 @@ define i32 @masked_merge_no_transform0(i32 %a0, i32 %a1, i32 %a2, i32* %p1) {
   %not = xor i32 %a0, -1
   %and1 = and i32 %not, %a2
   %or = or i32 %and0, %and1
-  store i32 %and0, i32* %p1
+  store i32 %and0, ptr %p1
   ret i32 %or
 }
 
 ; should not transform when operands have multiple users.
-define i32 @masked_merge_no_transform1(i32 %a0, i32 %a1, i32 %a2, i32* %p1) {
+define i32 @masked_merge_no_transform1(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ; NOBMI-LABEL: masked_merge_no_transform1:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    movl %edx, %eax
@@ -260,12 +260,12 @@ define i32 @masked_merge_no_transform1(i32 %a0, i32 %a1, i32 %a2, i32* %p1) {
   %not = xor i32 %a0, -1
   %and1 = and i32 %not, %a2
   %or = or i32 %and0, %and1
-  store i32 %not, i32* %p1
+  store i32 %not, ptr %p1
   ret i32 %or
 }
 
 ; should not transform when operands have multiple users.
-define i32 @masked_merge_no_transform2(i32 %a0, i32 %a1, i32 %a2, i32* %p1) {
+define i32 @masked_merge_no_transform2(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ; NOBMI-LABEL: masked_merge_no_transform2:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    movl %esi, %eax
@@ -288,6 +288,6 @@ define i32 @masked_merge_no_transform2(i32 %a0, i32 %a1, i32 %a2, i32* %p1) {
   %not = xor i32 %a0, -1
   %and1 = and i32 %not, %a2
   %or = or i32 %and0, %and1
-  store i32 %and1, i32* %p1
+  store i32 %and1, ptr %p1
   ret i32 %or
 }

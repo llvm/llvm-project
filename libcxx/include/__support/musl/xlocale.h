@@ -25,28 +25,28 @@ extern "C" {
 #endif
 
 inline _LIBCPP_HIDE_FROM_ABI long long
-strtoll_l(const char *nptr, char **endptr, int base, locale_t) {
-  return ::strtoll(nptr, endptr, base);
+strtoll_l(const char *__nptr, char **__endptr, int __base, locale_t) {
+  return ::strtoll(__nptr, __endptr, __base);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-strtoull_l(const char *nptr, char **endptr, int base, locale_t) {
-  return ::strtoull(nptr, endptr, base);
+strtoull_l(const char *__nptr, char **__endptr, int __base, locale_t) {
+  return ::strtoull(__nptr, __endptr, __base);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long long
-wcstoll_l(const wchar_t *nptr, wchar_t **endptr, int base, locale_t) {
-  return ::wcstoll(nptr, endptr, base);
+wcstoll_l(const wchar_t *__nptr, wchar_t **__endptr, int __base, locale_t) {
+  return ::wcstoll(__nptr, __endptr, __base);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long long
-wcstoull_l(const wchar_t *nptr, wchar_t **endptr, int base, locale_t) {
-  return ::wcstoull(nptr, endptr, base);
+wcstoull_l(const wchar_t *__nptr, wchar_t **__endptr, int __base, locale_t) {
+  return ::wcstoull(__nptr, __endptr, __base);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long double
-wcstold_l(const wchar_t *nptr, wchar_t **endptr, locale_t) {
-  return ::wcstold(nptr, endptr);
+wcstold_l(const wchar_t *__nptr, wchar_t **__endptr, locale_t) {
+  return ::wcstold(__nptr, __endptr);
 }
 
 #ifdef __cplusplus

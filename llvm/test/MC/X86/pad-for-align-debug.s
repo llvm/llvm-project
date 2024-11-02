@@ -1,7 +1,7 @@
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos -x86-pad-for-align=true %S/Inputs/pad-align-with-debug.s | llvm-objdump -d - | FileCheck --check-prefix=CHECK --check-prefix=DEBUG %s
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos -x86-pad-for-align=true %S/Inputs/pad-align-without-debug.s | llvm-objdump -d - | FileCheck --check-prefix=CHECK --check-prefix=NODEBUG %s
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos %S/Inputs/pad-align-without-debug.s | llvm-objdump -d - | FileCheck --check-prefix=DEFAULT %s
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos %S/Inputs/pad-align-with-debug.s | llvm-objdump -d - | FileCheck --check-prefix=DEFAULT %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos -x86-pad-for-align=true %S/Inputs/pad-align-with-debug.s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK --check-prefix=DEBUG %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos -x86-pad-for-align=true %S/Inputs/pad-align-without-debug.s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK --check-prefix=NODEBUG %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos %S/Inputs/pad-align-without-debug.s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=DEFAULT %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-apple-macos %S/Inputs/pad-align-with-debug.s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=DEFAULT %s
 
 ; Test case to show that -x86-pad-for-align causes binary differences in the
 ; presence of debug locations. Inputs/pad-align-with-debug.s and

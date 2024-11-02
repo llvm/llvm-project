@@ -276,7 +276,7 @@ entry:
 ; and the compiler doesn't crash.
 define dso_local i32 @asm_goto(i32 %n) sanitize_memory {
 entry:
-  callbr void asm sideeffect "cmp $0, $1; jnz ${2:l}", "r,r,i,~{dirflag},~{fpsr},~{flags}"(i32 %n, i32 1, i8* blockaddress(@asm_goto, %skip_label))
+  callbr void asm sideeffect "cmp $0, $1; jnz ${2:l}", "r,r,!i,~{dirflag},~{fpsr},~{flags}"(i32 %n, i32 1)
           to label %cleanup [label %skip_label]
 
 skip_label:                                       ; preds = %entry

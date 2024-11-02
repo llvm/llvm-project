@@ -1,12 +1,20 @@
 # The cxx.bnf grammar file
-set(cxx_bnf ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxx.bnf)
+set(cxx_bnf ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxx/cxx.bnf)
 
-if(LLVM_USE_HOST_TOOLS)
-  build_native_tool(pseudo-gen pseudo_gen)
+set(CLANG_PSEUDO_GEN "clang-pseudo-gen" CACHE
+  STRING "Host clang-pseudo-gen executable. Saves building if cross-compiling.")
+
+if(NOT CLANG_PSEUDO_GEN STREQUAL "clang-pseudo-gen")
+  set(pseudo_gen ${CLANG_PSEUDO_GEN})
+  set(pseudo_gen_target ${CLANG_PSEUDO_GEN})
+elseif(LLVM_USE_HOST_TOOLS)
+  # The NATIVE executable *must* depend on the current target, otherwise the
+  # native one won't get rebuilt when the pseudo-gen sources change.
+  build_native_tool(clang-pseudo-gen pseudo_gen DEPENDS clang-pseudo-gen)
   set(pseudo_gen_target "${pseudo_gen}")
 else()
-  set(pseudo_gen $<TARGET_FILE:pseudo-gen>)
-  set(pseudo_gen_target pseudo-gen)
+  set(pseudo_gen $<TARGET_FILE:clang-pseudo-gen>)
+  set(pseudo_gen_target clang-pseudo-gen)
 endif()
 
 # Generate inc files.

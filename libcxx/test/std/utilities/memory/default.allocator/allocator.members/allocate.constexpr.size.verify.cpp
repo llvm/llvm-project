@@ -13,8 +13,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <memory>
 #include <cassert>
+#include <cstddef>
+#include <memory>
 
 #include "test_macros.h"
 
@@ -34,7 +35,7 @@ constexpr bool test()
 
 int main(int, char**)
 {
-    static_assert(test<double>()); // expected-error {{static_assert expression is not an integral constant expression}}
-    LIBCPP_STATIC_ASSERT(test<const double>()); // expected-error {{static_assert expression is not an integral constant expression}}
+    static_assert(test<double>()); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+    LIBCPP_STATIC_ASSERT(test<const double>()); // expected-error-re {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
     return 0;
 }

@@ -88,6 +88,7 @@ private:
   size_t __next_arg_id_;
   size_t __num_args_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_format_parse_context);
 
 using format_parse_context = basic_format_parse_context<char>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS

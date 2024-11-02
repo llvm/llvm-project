@@ -29,12 +29,12 @@
 ; Function Attrs: nofree norecurse nounwind
 define dso_local void @foo() local_unnamed_addr #0 !dbg !7 {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* bitcast ([8 x i16]* @d to <8 x i16>*), align 1
+  %0 = load <8 x i16>, ptr @d, align 1
   call void @llvm.dbg.value(metadata i16 0, metadata !11, metadata !DIExpression()), !dbg !13
   %1 = add <8 x i16> %0, <i16 28690, i16 28690, i16 28690, i16 28690, i16 28690, i16 28690, i16 28690, i16 28690>, !dbg !13
-  store <8 x i16> %1, <8 x i16>* bitcast ([8 x i16]* @d to <8 x i16>*), align 1, !dbg !13
+  store <8 x i16> %1, ptr @d, align 1, !dbg !13
   %2 = extractelement <8 x i16> %1, i32 7, !dbg !13
-  store i16 %2, i16* @e, align 1, !dbg !13
+  store i16 %2, ptr @e, align 1, !dbg !13
   ret void
 }
 

@@ -12,14 +12,14 @@ subroutine s1
  !REF: /s1/t
  !DEF: /s1/z ALLOCATABLE ObjectEntity CLASS(t)
  class(t), allocatable :: z
- !DEF: /s1/Block1/a AssocEntity REAL(8)
+ !DEF: /s1/OtherConstruct1/a AssocEntity REAL(8)
  !REF: /s1/x
- !DEF: /s1/Block1/b AssocEntity REAL(8)
- !DEF: /s1/Block1/c AssocEntity CLASS(t)
+ !DEF: /s1/OtherConstruct1/b AssocEntity REAL(8)
+ !DEF: /s1/OtherConstruct1/c AssocEntity CLASS(t)
  !REF: /s1/z
  associate (a => x, b => x+1, c => z)
   !REF: /s1/x
-  !REF: /s1/Block1/a
+  !REF: /s1/OtherConstruct1/a
   x = a
  end associate
 end subroutine
@@ -29,18 +29,18 @@ subroutine s2
  !DEF: /s2/x ObjectEntity CHARACTER(4_4,1)
  !DEF: /s2/y ObjectEntity CHARACTER(4_4,1)
  character(len=4) x, y
- !DEF: /s2/Block1/z AssocEntity CHARACTER(4_8,1)
+ !DEF: /s2/OtherConstruct1/z AssocEntity CHARACTER(4_8,1)
  !REF: /s2/x
  associate (z => x)
-  !REF: /s2/Block1/z
+  !REF: /s2/OtherConstruct1/z
   print *, "z:", z
  end associate
  !TODO: need correct length for z
- !DEF: /s2/Block2/z AssocEntity CHARACTER(8_8,1)
+ !DEF: /s2/OtherConstruct2/z AssocEntity CHARACTER(8_8,1)
  !REF: /s2/x
  !REF: /s2/y
  associate (z => x//y)
-  !REF: /s2/Block2/z
+  !REF: /s2/OtherConstruct2/z
   print *, "z:", z
  end associate
 end subroutine
@@ -68,17 +68,17 @@ subroutine s3
   !REF: /s3/t2
   class is (t2)
    !REF: /s3/i
-   !DEF: /s3/Block1/y TARGET AssocEntity TYPE(t2)
+   !DEF: /s3/OtherConstruct1/y TARGET AssocEntity TYPE(t2)
    !REF: /s3/t2/a2
    i = y%a2
   !REF: /s3/t1
   type is (t1)
    !REF: /s3/i
-   !DEF: /s3/Block2/y TARGET AssocEntity TYPE(t1)
+   !DEF: /s3/OtherConstruct2/y TARGET AssocEntity TYPE(t1)
    !REF: /s3/t1/a1
    i = y%a1
   class default
-   !DEF: /s3/Block3/y TARGET AssocEntity CLASS(t1)
+   !DEF: /s3/OtherConstruct3/y TARGET AssocEntity CLASS(t1)
    print *, y
  end select
 end subroutine
@@ -99,11 +99,11 @@ subroutine s4
  !REF: /s4/t2
  !DEF: /s4/x ObjectEntity TYPE(t2)
  type(t2) :: x
- !DEF: /s4/Block1/y AssocEntity TYPE(t1)
+ !DEF: /s4/OtherConstruct1/y AssocEntity TYPE(t1)
  !REF: /s4/x
  !REF: /s4/t2/b
  associate(y => x%b)
-  !REF: /s4/Block1/y
+  !REF: /s4/OtherConstruct1/y
   !REF: /s4/t1/a
   y%a = 0.0
  end associate
@@ -118,11 +118,11 @@ subroutine s5
  end type
  !DEF: /s5/b ObjectEntity REAL(4)
  real b
- !DEF: /s5/Block1/x AssocEntity TYPE(t)
+ !DEF: /s5/OtherConstruct1/x AssocEntity TYPE(t)
  !DEF: /s5/f (Function) Subprogram TYPE(t)
  associate(x => f())
   !REF: /s5/b
-  !REF: /s5/Block1/x
+  !REF: /s5/OtherConstruct1/x
   !REF: /s5/t/a
   b = x%a
  end associate

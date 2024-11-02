@@ -33,11 +33,63 @@
 
 namespace llvm {
 
+/// Utility class that parses printf-style format strings to yield the expected
+/// C type(s) of each specifier. This class is used to verify that a format
+/// string unknown at compile-time is equivalent to another format string (which
+/// itself is hopefully known at compile-time).
+class PrintfStyleFormatReader {
+public:
+  enum SpecifierType : char {
+    ST_EndOfFormatString,
+    ST_Unknown,
+    ST_WideChar,
+    ST_Int,
+    ST_Long,
+    ST_LongLong,
+    ST_IntMax,
+    ST_Size,
+    ST_Ptrdiff,
+    ST_Double,
+    ST_LongDouble,
+    ST_CString,
+    ST_WideCString,
+    ST_VoidPointer,
+    ST_Count_Char,
+    ST_Count_Short,
+    ST_Count_Int,
+    ST_Count_Long,
+    ST_Count_LongLong,
+    ST_Count_IntMax,
+    ST_Count_Size,
+    ST_Count_Ptrdiff
+  };
+
+private:
+  const char *Fmt;
+  llvm::SmallVector<SpecifierType, 3> SpecifierQueue;
+
+  void refillSpecifierQueue();
+
+public:
+  /// Verify that the format specifiers in \p Fmt consume no more arguments than
+  /// those in \p Expected, and that all consumed arguments have a compatible
+  /// type. If \p Fmt is compatible with \p Expected in this way, \p Fmt is
+  /// returned. Otherwise, \p Expected is returned.
+  static const char *ensureCompatible(const char *Expected, const char *Fmt);
+
+  PrintfStyleFormatReader(const char *Fmt) : Fmt(Fmt) {}
+
+  SpecifierType nextSpecifier() {
+    if (SpecifierQueue.empty())
+      refillSpecifierQueue();
+    return SpecifierQueue.pop_back_val();
+  }
+};
+
 /// This is a helper class used for handling formatted output.  It is the
 /// abstract base class of a templated derived class.
 class format_object_base {
 protected:
-  const char *Fmt;
   ~format_object_base() = default; // Disallow polymorphic deletion.
   format_object_base(const format_object_base &) = default;
   virtual void home(); // Out of line virtual method.
@@ -46,7 +98,7 @@ protected:
   virtual int snprint(char *Buffer, unsigned BufferSize) const = 0;
 
 public:
-  format_object_base(const char *fmt) : Fmt(fmt) {}
+  format_object_base() = default;
 
   /// Format the object into the specified buffer.  On success, this returns
   /// the length of the formatted string.  If the buffer is too small, this
@@ -86,28 +138,27 @@ struct validate_format_parameters<Arg, Args...> {
 };
 template <> struct validate_format_parameters<> {};
 
+template <typename... Ts> auto format_capture(const char *Fmt, Ts... Vals) {
+  validate_format_parameters<Ts...>();
+  return [=](char *Buffer, unsigned BufferSize) {
+#ifdef _MSC_VER
+    return _snprintf(Buffer, BufferSize, Fmt, Vals...);
+#else
+    return snprintf(Buffer, BufferSize, Fmt, Vals...);
+#endif
+  };
+}
+
 template <typename... Ts>
 class format_object final : public format_object_base {
-  std::tuple<Ts...> Vals;
-
-  template <std::size_t... Is>
-  int snprint_tuple(char *Buffer, unsigned BufferSize,
-                    std::index_sequence<Is...>) const {
-#ifdef _MSC_VER
-    return _snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
-#else
-    return snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
-#endif
-  }
+  decltype(format_capture<Ts...>("", std::declval<Ts>()...)) Format;
 
 public:
-  format_object(const char *fmt, const Ts &... vals)
-      : format_object_base(fmt), Vals(vals...) {
-    validate_format_parameters<Ts...>();
-  }
+  format_object(const char *Fmt, const Ts &...vals)
+      : Format(format_capture(Fmt, vals...)) {}
 
   int snprint(char *Buffer, unsigned BufferSize) const override {
-    return snprint_tuple(Buffer, BufferSize, std::index_sequence_for<Ts...>());
+    return Format(Buffer, BufferSize);
   }
 };
 

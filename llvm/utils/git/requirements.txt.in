@@ -3,5 +3,5 @@
 # pip install pip-tools
 # pip-compile -o requirements.txt  requirements.txt.in
 
-PyGithub==1.55
-GitPython==3.1.26
+PyGithub
+GitPython

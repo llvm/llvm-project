@@ -42,6 +42,10 @@ protected:
   void parseIndexList(SmallVectorImpl<uint8_t> &indexList);
   Error parseSubsection(uint32_t length);
 
+  void setAttributeString(unsigned tag, StringRef value) {
+    attributesStr.emplace(tag, value);
+  }
+
 public:
   virtual ~ELFAttributeParser() { static_cast<void>(!cursor.takeError()); }
   Error integerAttribute(unsigned tag);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple csky -target-feature +fpuv2_sf -target-feature +fpuv2_df -target-feature +hard-float -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple csky -target-feature +fpuv2_sf -target-feature +fpuv2_df -target-feature +hard-float -emit-llvm %s -o - | FileCheck %s
 
 #include <stdint.h>
 
@@ -72,7 +72,7 @@ struct double_float_s {
 // CHECK: define{{.*}} void @f_double_double_s_arg([4 x i32] %a.coerce)
 void f_double_double_s_arg(struct double_double_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_double_s(%struct.double_double_s* noalias sret(%struct.double_double_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_double_s(ptr noalias sret(%struct.double_double_s) align 4 %agg.result)
 struct double_double_s f_ret_double_double_s(void) {
   return (struct double_double_s){1.0, 2.0};
 }
@@ -80,7 +80,7 @@ struct double_double_s f_ret_double_double_s(void) {
 // CHECK: define{{.*}} void @f_double_float_s_arg([3 x i32] %a.coerce)
 void f_double_float_s_arg(struct double_float_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_float_s(%struct.double_float_s* noalias sret(%struct.double_float_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_float_s(ptr noalias sret(%struct.double_float_s) align 4 %agg.result)
 struct double_float_s f_ret_double_float_s(void) {
   return (struct double_float_s){1.0, 2.0};
 }
@@ -118,7 +118,7 @@ struct double_int8_zbf_s {
 // CHECK: define{{.*}}  @f_double_int8_s_arg([3 x i32] %a.coerce)
 void f_double_int8_s_arg(struct double_int8_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_int8_s(%struct.double_int8_s* noalias sret(%struct.double_int8_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_int8_s(ptr noalias sret(%struct.double_int8_s) align 4 %agg.result)
 struct double_int8_s f_ret_double_int8_s(void) {
   return (struct double_int8_s){1.0, 2};
 }
@@ -126,7 +126,7 @@ struct double_int8_s f_ret_double_int8_s(void) {
 // CHECK: define{{.*}} void @f_double_uint8_s_arg([3 x i32] %a.coerce)
 void f_double_uint8_s_arg(struct double_uint8_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_uint8_s(%struct.double_uint8_s* noalias sret(%struct.double_uint8_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_uint8_s(ptr noalias sret(%struct.double_uint8_s) align 4 %agg.result)
 struct double_uint8_s f_ret_double_uint8_s(void) {
   return (struct double_uint8_s){1.0, 2};
 }
@@ -134,7 +134,7 @@ struct double_uint8_s f_ret_double_uint8_s(void) {
 // CHECK: define{{.*}} void @f_double_int32_s_arg([3 x i32] %a.coerce)
 void f_double_int32_s_arg(struct double_int32_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_int32_s(%struct.double_int32_s* noalias sret(%struct.double_int32_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_int32_s(ptr noalias sret(%struct.double_int32_s) align 4 %agg.result)
 struct double_int32_s f_ret_double_int32_s(void) {
   return (struct double_int32_s){1.0, 2};
 }
@@ -142,7 +142,7 @@ struct double_int32_s f_ret_double_int32_s(void) {
 // CHECK: define{{.*}} void @f_double_int64_s_arg([4 x i32] %a.coerce)
 void f_double_int64_s_arg(struct double_int64_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_int64_s(%struct.double_int64_s* noalias sret(%struct.double_int64_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_int64_s(ptr noalias sret(%struct.double_int64_s) align 4 %agg.result)
 struct double_int64_s f_ret_double_int64_s(void) {
   return (struct double_int64_s){1.0, 2};
 }
@@ -150,7 +150,7 @@ struct double_int64_s f_ret_double_int64_s(void) {
 // CHECK: define{{.*}} void @f_double_int64bf_s_arg([3 x i32] %a.coerce)
 void f_double_int64bf_s_arg(struct double_int64bf_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_int64bf_s(%struct.double_int64bf_s* noalias sret(%struct.double_int64bf_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_int64bf_s(ptr noalias sret(%struct.double_int64bf_s) align 4 %agg.result)
 struct double_int64bf_s f_ret_double_int64bf_s(void) {
   return (struct double_int64bf_s){1.0, 2};
 }
@@ -158,7 +158,7 @@ struct double_int64bf_s f_ret_double_int64bf_s(void) {
 // CHECK: define{{.*}} void @f_double_int8_zbf_s([3 x i32] %a.coerce)
 void f_double_int8_zbf_s(struct double_int8_zbf_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_int8_zbf_s(%struct.double_int8_zbf_s* noalias sret(%struct.double_int8_zbf_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_int8_zbf_s(ptr noalias sret(%struct.double_int8_zbf_s) align 4 %agg.result)
 struct double_int8_zbf_s f_ret_double_int8_zbf_s(void) {
   return (struct double_int8_zbf_s){1.0, 2};
 }
@@ -180,7 +180,7 @@ void f_struct_double_int8_insufficient_fprs(float a, double b, double c, double 
 // CHECK: define{{.*}} void @f_doublecomplex([4 x i32] noundef %a.coerce)
 void f_doublecomplex(double __complex__ a) {}
 
-// CHECK: define{{.*}} void @f_ret_doublecomplex({ double, double }* noalias sret({ double, double }) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_doublecomplex(ptr noalias sret({ double, double }) align 4 %agg.result)
 double __complex__ f_ret_doublecomplex(void) {
   return 1.0;
 }
@@ -192,7 +192,7 @@ struct doublecomplex_s {
 // CHECK: define{{.*}} void @f_doublecomplex_s_arg([4 x i32] %a.coerce)
 void f_doublecomplex_s_arg(struct doublecomplex_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_doublecomplex_s(%struct.doublecomplex_s* noalias sret(%struct.doublecomplex_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_doublecomplex_s(ptr noalias sret(%struct.doublecomplex_s) align 4 %agg.result)
 struct doublecomplex_s f_ret_doublecomplex_s(void) {
   return (struct doublecomplex_s){1.0};
 }
@@ -219,7 +219,7 @@ struct doublearr2_s {
 // CHECK: define{{.*}} void @f_doublearr2_s_arg([4 x i32] %a.coerce)
 void f_doublearr2_s_arg(struct doublearr2_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_doublearr2_s(%struct.doublearr2_s* noalias sret(%struct.doublearr2_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_doublearr2_s(ptr noalias sret(%struct.doublearr2_s) align 4 %agg.result)
 struct doublearr2_s f_ret_doublearr2_s(void) {
   return (struct doublearr2_s){{1.0, 2.0}};
 }
@@ -233,7 +233,7 @@ struct doublearr2_tricky1_s {
 // CHECK: define{{.*}} void @f_doublearr2_tricky1_s_arg([4 x i32] %a.coerce)
 void f_doublearr2_tricky1_s_arg(struct doublearr2_tricky1_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_doublearr2_tricky1_s(%struct.doublearr2_tricky1_s* noalias sret(%struct.doublearr2_tricky1_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_doublearr2_tricky1_s(ptr noalias sret(%struct.doublearr2_tricky1_s) align 4 %agg.result)
 struct doublearr2_tricky1_s f_ret_doublearr2_tricky1_s(void) {
   return (struct doublearr2_tricky1_s){{{{1.0}}, {{2.0}}}};
 }
@@ -248,7 +248,7 @@ struct doublearr2_tricky2_s {
 // CHECK: define{{.*}} void @f_doublearr2_tricky2_s_arg([4 x i32] %a.coerce)
 void f_doublearr2_tricky2_s_arg(struct doublearr2_tricky2_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_doublearr2_tricky2_s(%struct.doublearr2_tricky2_s* noalias sret(%struct.doublearr2_tricky2_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_doublearr2_tricky2_s(ptr noalias sret(%struct.doublearr2_tricky2_s) align 4 %agg.result)
 struct doublearr2_tricky2_s f_ret_doublearr2_tricky2_s(void) {
   return (struct doublearr2_tricky2_s){{}, {{{1.0}}, {{2.0}}}};
 }
@@ -263,7 +263,7 @@ struct doublearr2_tricky3_s {
 // CHECK: define{{.*}} void @f_doublearr2_tricky3_s_arg([4 x i32] %a.coerce)
 void f_doublearr2_tricky3_s_arg(struct doublearr2_tricky3_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_doublearr2_tricky3_s(%struct.doublearr2_tricky3_s* noalias sret(%struct.doublearr2_tricky3_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_doublearr2_tricky3_s(ptr noalias sret(%struct.doublearr2_tricky3_s) align 4 %agg.result)
 struct doublearr2_tricky3_s f_ret_doublearr2_tricky3_s(void) {
   return (struct doublearr2_tricky3_s){{}, {{{1.0}}, {{2.0}}}};
 }
@@ -279,7 +279,7 @@ struct doublearr2_tricky4_s {
 // CHECK: define{{.*}} void @f_doublearr2_tricky4_s_arg([4 x i32] %a.coerce)
 void f_doublearr2_tricky4_s_arg(struct doublearr2_tricky4_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_doublearr2_tricky4_s(%struct.doublearr2_tricky4_s* noalias sret(%struct.doublearr2_tricky4_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_doublearr2_tricky4_s(ptr noalias sret(%struct.doublearr2_tricky4_s) align 4 %agg.result)
 struct doublearr2_tricky4_s f_ret_doublearr2_tricky4_s(void) {
   return (struct doublearr2_tricky4_s){{}, {{{}, {1.0}}, {{}, {2.0}}}};
 }
@@ -293,7 +293,7 @@ struct int_double_int_s {
 // CHECK: define{{.*}} void @f_int_double_int_s_arg([4 x i32] %a.coerce)
 void f_int_double_int_s_arg(struct int_double_int_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_int_double_int_s(%struct.int_double_int_s* noalias sret(%struct.int_double_int_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_int_double_int_s(ptr noalias sret(%struct.int_double_int_s) align 4 %agg.result)
 struct int_double_int_s f_ret_int_double_int_s(void) {
   return (struct int_double_int_s){1, 2.0, 3};
 }
@@ -306,7 +306,7 @@ struct int64_double_s {
 // CHECK: define{{.*}} void @f_int64_double_s_arg([4 x i32] %a.coerce)
 void f_int64_double_s_arg(struct int64_double_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_int64_double_s(%struct.int64_double_s* noalias sret(%struct.int64_double_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_int64_double_s(ptr noalias sret(%struct.int64_double_s) align 4 %agg.result)
 struct int64_double_s f_ret_int64_double_s(void) {
   return (struct int64_double_s){1, 2.0};
 }
@@ -320,7 +320,7 @@ struct char_char_double_s {
 // CHECK-LABEL: define{{.*}} void @f_char_char_double_s_arg([3 x i32] %a.coerce)
 void f_char_char_double_s_arg(struct char_char_double_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_char_char_double_s(%struct.char_char_double_s* noalias sret(%struct.char_char_double_s) align 4 %agg.result)
+// CHECK: define{{.*}} void @f_ret_char_char_double_s(ptr noalias sret(%struct.char_char_double_s) align 4 %agg.result)
 struct char_char_double_s f_ret_char_char_double_s(void) {
   return (struct char_char_double_s){1, 2, 3.0};
 }
@@ -339,19 +339,19 @@ union double_u f_ret_double_u(void) {
   return (union double_u){1.0};
 }
 
-// CHECK: define{{.*}} void @f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(%struct.double_int32_s* noalias sret(%struct.double_int32_s) align 4 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, [3 x i32] %h.coerce)
+// CHECK: define{{.*}} void @f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(ptr noalias sret(%struct.double_int32_s) align 4 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, [3 x i32] %h.coerce)
 struct double_int32_s f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(
     int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
   return (struct double_int32_s){1.0, 2};
 }
 
-// CHECK: define{{.*}} void @f_ret_double_double_s_double_int32_s_just_sufficient_gprs(%struct.double_double_s* noalias sret(%struct.double_double_s) align 4 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, [3 x i32] %h.coerce)
+// CHECK: define{{.*}} void @f_ret_double_double_s_double_int32_s_just_sufficient_gprs(ptr noalias sret(%struct.double_double_s) align 4 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, [3 x i32] %h.coerce)
 struct double_double_s f_ret_double_double_s_double_int32_s_just_sufficient_gprs(
     int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
   return (struct double_double_s){1.0, 2.0};
 }
 
-// CHECK: define{{.*}} void @f_ret_doublecomplex_double_int32_s_just_sufficient_gprs({ double, double }* noalias sret({ double, double }) align 4 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, [3 x i32] %h.coerce)
+// CHECK: define{{.*}} void @f_ret_doublecomplex_double_int32_s_just_sufficient_gprs(ptr noalias sret({ double, double }) align 4 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, i32 noundef %e, i32 noundef %f, i32 noundef %g, [3 x i32] %h.coerce)
 double __complex__ f_ret_doublecomplex_double_int32_s_just_sufficient_gprs(
     int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
   return 1.0;
@@ -377,7 +377,7 @@ struct large {
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(%struct.large* noalias sret(%struct.large) align 4 %agg.result, float noundef %a, i64 noundef %b, double noundef %c, double noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(ptr noalias sret(%struct.large) align 4 %agg.result, float noundef %a, i64 noundef %b, double noundef %c, double noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
 struct large f_scalar_stack_2(float a, int64_t b, double c, long double d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};

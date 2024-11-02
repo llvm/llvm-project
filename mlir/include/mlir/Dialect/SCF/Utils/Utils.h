@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SCF_UTILS_UTILS_H_
 #define MLIR_DIALECT_SCF_UTILS_UTILS_H_
 
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -28,14 +29,9 @@ class ValueRange;
 class Value;
 
 namespace func {
+class CallOp;
 class FuncOp;
 } // namespace func
-
-namespace scf {
-class IfOp;
-class ForOp;
-class ParallelOp;
-} // namespace scf
 
 /// Replace the `loop` with `newIterOperands` added as new initialization
 /// values. `newYieldValuesFn` is a callback that can be used to specify
@@ -48,13 +44,36 @@ class ParallelOp;
 /// - `loop` isnt erased, but is left in a "no-op" state where the body of the
 ///   loop just yields the basic block arguments that correspond to the
 ///   initialization values of a loop. The loop is dead after this method.
-/// - All uses of the `newIterOperands` within the generated new loop
-///   are replaced with the corresponding `BlockArgument` in the loop body.
+/// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
+///   `newIterOperands` within the generated new loop are replaced
+///   with the corresponding `BlockArgument` in the loop body.
 using NewYieldValueFn = std::function<SmallVector<Value>(
     OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs)>;
 scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
                                     ValueRange newIterOperands,
-                                    const NewYieldValueFn &newYieldValuesFn);
+                                    const NewYieldValueFn &newYieldValuesFn,
+                                    bool replaceIterOperandsUsesInLoop = true);
+
+/// Update a perfectly nested loop nest to yield new values from the innermost
+/// loop and propagating it up through the loop nest. This function
+/// - Expects `loopNest` to be a perfectly nested loop with outer most loop
+///   first and innermost loop last.
+/// - `newIterOperands` are the initialization values to be used for the
+///    outermost loop
+/// - `newYielValueFn` is the callback that generates the new values to be
+///   yielded from within the innermost loop.
+/// - The original loops are not erased,  but are left in a "no-op" state where
+///   the body of the loop just yields the basic block arguments that correspond
+///   to the initialization values of a loop. The original loops are dead after
+///   this method.
+/// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
+///   `newIterOperands` within the generated new loop are replaced with the
+///   corresponding `BlockArgument` in the loop body.
+SmallVector<scf::ForOp>
+replaceLoopNestWithNewYields(OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
+                             ValueRange newIterOperands,
+                             const NewYieldValueFn &newYieldValueFn,
+                             bool replaceIterOperandsUsesInLoop = true);
 
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the
@@ -63,12 +82,13 @@ scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 /// `outlinedFuncBody` to alloc simple canonicalizations.
 /// Creates a new FuncOp and thus cannot be used in a FuncOp pass.
 /// The client is responsible for providing a unique `funcName` that will not
-/// collide with another FuncOp name.
+/// collide with another FuncOp name.  If `callOp` is provided, it will be set
+/// to point to the operation that calls the outlined function.
 // TODO: support more than single-block regions.
 // TODO: more flexible constant handling.
-FailureOr<func::FuncOp> outlineSingleBlockRegion(RewriterBase &rewriter,
-                                                 Location loc, Region &region,
-                                                 StringRef funcName);
+FailureOr<func::FuncOp>
+outlineSingleBlockRegion(RewriterBase &rewriter, Location loc, Region &region,
+                         StringRef funcName, func::CallOp *callOp = nullptr);
 
 /// Outline the then and/or else regions of `ifOp` as follows:
 ///  - if `thenFn` is not null, `thenFnName` must be specified and the `then`

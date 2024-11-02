@@ -376,11 +376,9 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   State.Bundle = &MI;
   State.Index = 0;
   size_t Last = HexagonMCInstrInfo::bundleSize(HMB) - 1;
-  FeatureBitset Features = computeAvailableFeatures(STI.getFeatureBits());
 
   for (auto &I : HexagonMCInstrInfo::bundleInstructions(HMB)) {
     MCInst &HMI = const_cast<MCInst &>(*I.getInst());
-    verifyInstructionPredicates(HMI, Features);
 
     EncodeSingleInstruction(HMI, OS, Fixups, STI, parseBits(Last, HMB, HMI));
     State.Extended = HexagonMCInstrInfo::isImmext(HMI);
@@ -643,7 +641,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
           Hexagon::fixup_Hexagon_GPREL16_0, Hexagon::fixup_Hexagon_GPREL16_1,
           Hexagon::fixup_Hexagon_GPREL16_2, Hexagon::fixup_Hexagon_GPREL16_3
         };
-        assert(Shift < array_lengthof(GPRelFixups));
+        assert(Shift < std::size(GPRelFixups));
         auto UsesGP = [] (const MCInstrDesc &D) {
           for (const MCPhysReg *U = D.getImplicitUses(); U && *U; ++U)
             if (*U == Hexagon::GP)
@@ -793,5 +791,4 @@ MCCodeEmitter *llvm::createHexagonMCCodeEmitter(MCInstrInfo const &MII,
   return new HexagonMCCodeEmitter(MII, MCT);
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "HexagonGenMCCodeEmitter.inc"

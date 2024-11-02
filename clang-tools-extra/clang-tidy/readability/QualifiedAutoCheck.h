@@ -20,7 +20,7 @@ namespace readability {
 /// 'const auto &'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-qualified-auto.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/qualified-auto.html
 class QualifiedAutoCheck : public ClangTidyCheck {
 public:
   QualifiedAutoCheck(StringRef Name, ClangTidyContext *Context)

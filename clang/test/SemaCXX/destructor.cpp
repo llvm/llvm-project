@@ -439,8 +439,8 @@ namespace PR7900 {
   void foo() {
     B b;
     b.~B();
-    b.~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'PR7900::B' of the object being destroyed}}
-    (&b)->~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'PR7900::B' of the object being destroyed}}
+    b.~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    (&b)->~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
   }
 }
 
@@ -548,6 +548,22 @@ namespace PR44978 {
 
   // We still diagnose if the unqualified lookup is dependent, though.
   template<typename T> void f(T *p) { p->~U(); } // expected-error {{ambiguous}}
+}
+
+namespace crash_on_invalid_base_dtor {
+struct Test {
+  virtual ~Test();
+};
+struct Baz : public Test { // expected-warning {{non-virtual destructor}}
+  Baz() {}
+  ~Baz() = defaul; // expected-error {{undeclared identifier 'defaul'}} \
+                   // expected-error {{initializer on function}} \
+                   // expected-note {{overridden virtual function is here}}
+};
+struct Foo : public Baz { // expected-error {{cannot override a non-deleted function}} \
+                          // expected-note {{destructor of 'Foo' is implicitly deleted}}
+  Foo() {}
+};
 }
 
 #endif // BE_THE_HEADER

@@ -67,7 +67,7 @@ private:
 
   Value *simplify(Instruction *I, const TargetLibraryInfo *TLI,
                   const DominatorTree *DT) {
-    return SimplifyInstruction(I, {*TD, TLI, DT});
+    return simplifyInstruction(I, {*TD, TLI, DT});
   }
 
   const DataLayout *TD;
@@ -153,7 +153,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   // NB: This is important for this string size to be divisible by 4
   const char NonLiteralStr[4] = "???";
 
-  for (auto CI : Printfs) {
+  for (auto *CI : Printfs) {
     unsigned NumOps = CI->arg_size();
 
     SmallString<16> OpConvSpecifiers;
@@ -161,7 +161,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
     if (auto LI = dyn_cast<LoadInst>(Op)) {
       Op = LI->getPointerOperand();
-      for (auto Use : Op->users()) {
+      for (auto *Use : Op->users()) {
         if (auto SI = dyn_cast<StoreInst>(Use)) {
           Op = SI->getValueOperand();
           break;
@@ -537,7 +537,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   }
 
   // erase the printf calls
-  for (auto CI : Printfs)
+  for (auto *CI : Printfs)
     CI->eraseFromParent();
 
   Printfs.clear();

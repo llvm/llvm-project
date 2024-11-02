@@ -20,11 +20,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Before Clang 13, __is_unsigned returned true for enums with signed underlying type.
-// No currently-released version of AppleClang contains the fixed intrinsic.
-#if __has_keyword(__is_unsigned) &&                                            \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1300) &&               \
-    !defined(_LIBCPP_APPLE_CLANG_VER)
+// Before AppleClang 14, __is_unsigned returned true for enums with signed underlying type.
+#if __has_builtin(__is_unsigned) && !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1400)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_unsigned : _BoolConstant<__is_unsigned(_Tp)> { };
@@ -34,7 +31,7 @@ template <class _Tp>
 inline constexpr bool is_unsigned_v = __is_unsigned(_Tp);
 #endif
 
-#else // __has_keyword(__is_unsigned)
+#else // __has_builtin(__is_unsigned)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
 struct __libcpp_is_unsigned_impl : public _BoolConstant<(_Tp(0) < _Tp(-1))> {};
@@ -54,7 +51,7 @@ template <class _Tp>
 inline constexpr bool is_unsigned_v = is_unsigned<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_unsigned)
+#endif // __has_builtin(__is_unsigned)
 
 _LIBCPP_END_NAMESPACE_STD
 

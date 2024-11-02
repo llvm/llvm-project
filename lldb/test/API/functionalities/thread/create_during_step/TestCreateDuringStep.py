@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class CreateDuringStepTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
@@ -143,7 +141,7 @@ class CreateDuringStepTestCase(TestBase):
             'Number of expected threads and actual threads do not match after thread exit.')
 
         stop_reason = stepping_thread.GetStopReason()
-        self.assertEqual(stop_reason, lldb.eStopReasonPlanComplete, "Stopped for plan completion")
+        self.assertStopReason(stop_reason, lldb.eStopReasonPlanComplete, "Stopped for plan completion")
 
         # Run to completion
         self.runCmd("process continue")

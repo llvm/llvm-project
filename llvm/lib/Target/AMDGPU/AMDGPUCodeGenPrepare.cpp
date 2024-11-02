@@ -468,8 +468,10 @@ static void extractValues(IRBuilder<> &Builder,
 static Value *insertValues(IRBuilder<> &Builder,
                            Type *Ty,
                            SmallVectorImpl<Value *> &Values) {
-  if (Values.size() == 1)
+  if (!Ty->isVectorTy()) {
+    assert(Values.size() == 1);
     return Values[0];
+  }
 
   Value *NewVal = UndefValue::get(Ty);
   for (int I = 0, E = Values.size(); I != E; ++I)
@@ -626,13 +628,13 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
   Constant *FoldedT = SelOpNo ?
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CT, *DL) :
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CT, CBO, *DL);
-  if (isa<ConstantExpr>(FoldedT))
+  if (!FoldedT || isa<ConstantExpr>(FoldedT))
     return false;
 
   Constant *FoldedF = SelOpNo ?
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CF, *DL) :
     ConstantFoldBinaryOpOperands(BO.getOpcode(), CF, CBO, *DL);
-  if (isa<ConstantExpr>(FoldedF))
+  if (!FoldedF || isa<ConstantExpr>(FoldedF))
     return false;
 
   IRBuilder<> Builder(&BO);

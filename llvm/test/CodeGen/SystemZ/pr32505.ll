@@ -3,7 +3,7 @@
 
 target triple = "s390x-ibm-linux"
 
-define <2 x float> @pr32505(<2 x i8> * %a) {
+define <2 x float> @pr32505(ptr %a) {
 ; CHECK-LABEL: pr32505:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lbh %r0, 1(%r2)
@@ -13,7 +13,7 @@ define <2 x float> @pr32505(<2 x i8> * %a) {
 ; CHECK-NEXT:    # kill: def $f0s killed $f0s killed $f0d
 ; CHECK-NEXT:    # kill: def $f2s killed $f2s killed $f2d
 ; CHECK-NEXT:    br %r14
-  %L17 = load <2 x i8>, <2 x i8>* %a
+  %L17 = load <2 x i8>, ptr %a
   %Se21 = sext <2 x i8> %L17 to <2 x i32>
   %BC = bitcast <2 x i32> %Se21 to <2 x float>
   ret <2 x float> %BC

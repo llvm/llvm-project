@@ -131,6 +131,10 @@ void BracesAroundStatementsCheck::check(
       return;
     checkStmt(Result, S->getBody(), StartLoc);
   } else if (const auto *S = Result.Nodes.getNodeAs<IfStmt>("if")) {
+    // "if consteval" always has braces.
+    if (S->isConsteval())
+      return;
+
     SourceLocation StartLoc = findRParenLoc(S, SM, Context);
     if (StartLoc.isInvalid())
       return;

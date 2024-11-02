@@ -28,15 +28,13 @@ define i8 @shrink_select(i1 %cond, i32 %x) {
   ret i8 %trunc
 }
 
-define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, <4 x i32>* %ptr1, <4 x i32>* %ptr2) {
+define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: @min_max_bitcast(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SEL1_V:%.*]] = select <4 x i1> [[CMP]], <4 x float> [[A]], <4 x float> [[B]], !prof [[PROF0]]
 ; CHECK-NEXT:    [[SEL2_V:%.*]] = select <4 x i1> [[CMP]], <4 x float> [[B]], <4 x float> [[A]], !prof [[PROF0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32>* [[PTR1:%.*]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[SEL1_V]], <4 x float>* [[TMP1]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32>* [[PTR2:%.*]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[SEL2_V]], <4 x float>* [[TMP2]], align 16
+; CHECK-NEXT:    store <4 x float> [[SEL1_V]], ptr [[PTR1:%.*]], align 16
+; CHECK-NEXT:    store <4 x float> [[SEL2_V]], ptr [[PTR2:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %cmp = fcmp olt <4 x float> %a, %b
@@ -44,8 +42,8 @@ define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, <4 x i32>* %ptr1, <
   %bc2 = bitcast <4 x float> %b to <4 x i32>
   %sel1 = select <4 x i1> %cmp, <4 x i32> %bc1, <4 x i32> %bc2, !prof !1
   %sel2 = select <4 x i1> %cmp, <4 x i32> %bc2, <4 x i32> %bc1, !prof !1
-  store <4 x i32> %sel1, <4 x i32>* %ptr1
-  store <4 x i32> %sel2, <4 x i32>* %ptr2
+  store <4 x i32> %sel1, ptr %ptr1
+  store <4 x i32> %sel2, ptr %ptr2
   ret void
 }
 

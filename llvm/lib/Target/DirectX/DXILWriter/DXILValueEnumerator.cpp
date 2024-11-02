@@ -31,6 +31,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -259,9 +260,7 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
     return LU->getOperandNo() > RU->getOperandNo();
   });
 
-  if (llvm::is_sorted(List, [](const Entry &L, const Entry &R) {
-        return L.second < R.second;
-      }))
+  if (llvm::is_sorted(List, llvm::less_second()))
     // Order is already correct.
     return;
 
@@ -358,15 +357,10 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
   return Stack;
 }
 
-static bool isIntOrIntVectorValue(const std::pair<const Value *, unsigned> &V) {
-  return V.first->getType()->isIntOrIntVectorTy();
-}
-
-ValueEnumerator::ValueEnumerator(const Module &M,
-                                 bool ShouldPreserveUseListOrder)
-    : ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
-  if (ShouldPreserveUseListOrder)
-    UseListOrders = predictUseListOrder(M);
+ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
+  EnumerateType(PrefixType);
+  
+  UseListOrders = predictUseListOrder(M);
 
   // Enumerate the global variables.
   for (const GlobalVariable &GV : M.globals()) {
@@ -378,6 +372,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   for (const Function &F : M) {
     EnumerateValue(&F);
     EnumerateType(F.getValueType());
+    EnumerateType(
+        TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
     EnumerateAttributes(F.getAttributes());
   }
 
@@ -393,13 +389,12 @@ ValueEnumerator::ValueEnumerator(const Module &M,
     EnumerateType(GIF.getValueType());
   }
 
-  // Remember what is the cutoff between globalvalue's and other constants.
-  unsigned FirstConstant = Values.size();
-
   // Enumerate the global variable initializers and attributes.
   for (const GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer())
       EnumerateValue(GV.getInitializer());
+    EnumerateType(
+        TypedPointerType::get(GV.getValueType(), GV.getAddressSpace()));
     if (GV.hasAttributes())
       EnumerateAttributes(GV.getAttributesAsList(AttributeList::FunctionIndex));
   }
@@ -499,9 +494,6 @@ ValueEnumerator::ValueEnumerator(const Module &M,
       }
   }
 
-  // Optimize constant ordering.
-  OptimizeConstants(FirstConstant, Values.size());
-
   // Organize metadata ordering.
   organizeMetadata();
 }
@@ -577,38 +569,6 @@ void ValueEnumerator::print(raw_ostream &OS, const MetadataMapType &Map,
     MD->print(OS);
     OS << "\n";
   }
-}
-
-/// OptimizeConstants - Reorder constant pool for denser encoding.
-void ValueEnumerator::OptimizeConstants(unsigned CstStart, unsigned CstEnd) {
-  if (CstStart == CstEnd || CstStart + 1 == CstEnd)
-    return;
-
-  if (ShouldPreserveUseListOrder)
-    // Optimizing constants makes the use-list order difficult to predict.
-    // Disable it for now when trying to preserve the order.
-    return;
-
-  std::stable_sort(Values.begin() + CstStart, Values.begin() + CstEnd,
-                   [this](const std::pair<const Value *, unsigned> &LHS,
-                          const std::pair<const Value *, unsigned> &RHS) {
-                     // Sort by plane.
-                     if (LHS.first->getType() != RHS.first->getType())
-                       return getTypeID(LHS.first->getType()) <
-                              getTypeID(RHS.first->getType());
-                     // Then by frequency.
-                     return LHS.second > RHS.second;
-                   });
-
-  // Ensure that integer and vector of integer constants are at the start of the
-  // constant pool.  This is important so that GEP structure indices come before
-  // gep constant exprs.
-  std::stable_partition(Values.begin() + CstStart, Values.begin() + CstEnd,
-                        isIntOrIntVectorValue);
-
-  // Rebuild the modified portion of ValueMap.
-  for (; CstStart != CstEnd; ++CstStart)
-    ValueMap[Values[CstStart].first] = CstStart + 1;
 }
 
 /// EnumerateValueSymbolTable - Insert all of the values in the specified symbol
@@ -847,7 +807,7 @@ void ValueEnumerator::organizeMetadata() {
   //   - by function, then
   //   - by isa<MDString>
   // and then sort by the original/current ID.  Since the IDs are guaranteed to
-  // be unique, the result of std::sort will be deterministic.  There's no need
+  // be unique, the result of llvm::sort will be deterministic.  There's no need
   // for std::stable_sort.
   llvm::sort(Order, [this](MDIndex LHS, MDIndex RHS) {
     return std::make_tuple(LHS.F, getMetadataTypeOrder(LHS.get(MDs)), LHS.ID) <
@@ -1097,9 +1057,6 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
     BasicBlocks.push_back(&BB);
     ValueMap[&BB] = BasicBlocks.size();
   }
-
-  // Optimize the constant layout.
-  OptimizeConstants(FirstFuncConstantID, Values.size());
 
   // Add the function's parameter attributes so they are available for use in
   // the function's instruction.

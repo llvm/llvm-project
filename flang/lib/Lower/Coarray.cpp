@@ -14,8 +14,8 @@
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/SymbolMap.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 

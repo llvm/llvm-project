@@ -8,7 +8,6 @@ import os
 import os.path
 import platform
 import re
-import six
 import socket
 import subprocess
 from lldbsuite.support import seven
@@ -78,26 +77,6 @@ def _is_packet_lldb_gdbserver_input(packet_type, llgs_input_is_read):
         # don't understand what type of packet this is
         raise "Unknown packet type: {}".format(packet_type)
 
-
-def handle_O_packet(context, packet_contents, logger):
-    """Handle O packets."""
-    if (not packet_contents) or (len(packet_contents) < 1):
-        return False
-    elif packet_contents[0] != "O":
-        return False
-    elif packet_contents == "OK":
-        return False
-
-    new_text = gdbremote_hex_decode_string(packet_contents[1:])
-    context["O_content"] += new_text
-    context["O_count"] += 1
-
-    if logger:
-        logger.debug(
-            "text: new \"{}\", cumulative: \"{}\"".format(
-                new_text, context["O_content"]))
-
-    return True
 
 _STRIP_CHECKSUM_REGEX = re.compile(r'#[0-9a-fA-F]{2}$')
 _STRIP_COMMAND_PREFIX_REGEX = re.compile(r"^\$")
@@ -284,9 +263,14 @@ def parse_threadinfo_response(response_packet):
     response_packet = _STRIP_COMMAND_PREFIX_M_REGEX.sub("", response_packet)
     response_packet = _STRIP_CHECKSUM_REGEX.sub("", response_packet)
 
-    # Return list of thread ids
-    return [int(thread_id_hex, 16) for thread_id_hex in response_packet.split(
-        ",") if len(thread_id_hex) > 0]
+    for tid in response_packet.split(","):
+        if not tid:
+            continue
+        if tid.startswith("p"):
+            pid, _, tid = tid.partition(".")
+            yield (int(pid[1:], 16), int(tid, 16))
+        else:
+            yield int(tid, 16)
 
 
 def unpack_endian_binary_string(endian, value_string):
@@ -818,7 +802,7 @@ def process_is_running(pid, unknown_value=True):
         If we don't know how to check running process ids on the given OS:
         return the value provided by the unknown_value arg.
     """
-    if not isinstance(pid, six.integer_types):
+    if not isinstance(pid, int):
         raise Exception(
             "pid must be an integral type (actual type: %s)" % str(
                 type(pid)))
@@ -854,19 +838,21 @@ def process_is_running(pid, unknown_value=True):
     # Check if the pid is in the process_ids
     return pid in process_ids
 
+
 def _handle_output_packet_string(packet_contents):
-    if (not packet_contents) or (len(packet_contents) < 1):
+    # Warning: in non-stop mode, we currently handle only the first output
+    # packet since we'd need to inject vStdio packets
+    if not packet_contents.startswith((b"$O", b"%Stdio:O")):
         return None
-    elif packet_contents[0:1] != b"O":
-        return None
-    elif packet_contents == b"OK":
+    elif packet_contents == b"$OK":
         return None
     else:
-        return binascii.unhexlify(packet_contents[1:])
+        return binascii.unhexlify(packet_contents.partition(b"O")[2])
+
 
 class Server(object):
 
-    _GDB_REMOTE_PACKET_REGEX = re.compile(br'^\$([^\#]*)#[0-9a-fA-F]{2}')
+    _GDB_REMOTE_PACKET_REGEX = re.compile(br'^([\$%][^\#]*)#[0-9a-fA-F]{2}')
 
     class ChecksumMismatch(Exception):
         pass
@@ -891,7 +877,7 @@ class Server(object):
     @staticmethod
     def _checksum(packet):
         checksum = 0
-        for c in six.iterbytes(packet):
+        for c in iter(packet):
             checksum += c
         return checksum % 256
 

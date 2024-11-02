@@ -10,9 +10,9 @@ declare i32 @func1() #0
 declare i32 @__xlcxx_personality_v1(...)
 
 ; Function Attrs: mustprogress noinline optnone
-define linkonce_odr void @func2() #1 align 2 personality i8* bitcast (i32 (...)* @__xlcxx_personality_v1 to i8*) {
+define linkonce_odr void @func2() #1 align 2 personality ptr @__xlcxx_personality_v1 {
 entry:
-  %0 = alloca i8*, align 8
+  %0 = alloca ptr, align 8
   %1 = alloca i32, align 4
   br label %2
 
@@ -24,23 +24,23 @@ entry:
           to label %2 unwind label %lpad
 
 lpad:                                                ; preds = %3
-  %5 = landingpad { i8*, i32 }
+  %5 = landingpad { ptr, i32 }
           cleanup
-  %6 = extractvalue { i8*, i32 } %5, 0
-  store i8* %6, i8** %0, align 8
-  %7 = extractvalue { i8*, i32 } %5, 1
-  store i32 %7, i32* %1, align 4
+  %6 = extractvalue { ptr, i32 } %5, 0
+  store ptr %6, ptr %0, align 8
+  %7 = extractvalue { ptr, i32 } %5, 1
+  store i32 %7, ptr %1, align 4
   br label %eh.resume
 
 8:                                               ; preds = 2%
   ret void
 
 eh.resume:                                               ; preds = %lpad
-  %9 = load i8*, i8** %0, align 8
-  %10 = load i32, i32* %1, align 4
-  %11 = insertvalue { i8*, i32 } undef, i8* %9, 0
-  %12 = insertvalue { i8*, i32 } %11, i32 %10, 1
-  resume { i8*, i32 } %12
+  %9 = load ptr, ptr %0, align 8
+  %10 = load i32, ptr %1, align 4
+  %11 = insertvalue { ptr, i32 } undef, ptr %9, 0
+  %12 = insertvalue { ptr, i32 } %11, i32 %10, 1
+  resume { ptr, i32 } %12
 }
 
 attributes #0 = { nounwind }

@@ -2,19 +2,19 @@
 ; RUN: opt -S -passes=instsimplify < %s | FileCheck %s
 
 ; A 0 valued byval pointer may be valid
-define i1 @byval_may_be_zero(i32* byval(i32) %ptr) null_pointer_is_valid {
+define i1 @byval_may_be_zero(ptr byval(i32) %ptr) null_pointer_is_valid {
 ; CHECK-LABEL: @byval_may_be_zero(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[PTR:%.*]], null
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR:%.*]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp = icmp eq i32* %ptr, null
+  %cmp = icmp eq ptr %ptr, null
   ret i1 %cmp
 }
 
-define i1 @nonnull_may_be_zero(i32* nonnull %ptr) null_pointer_is_valid {
+define i1 @nonnull_may_be_zero(ptr nonnull %ptr) null_pointer_is_valid {
 ; CHECK-LABEL: @nonnull_may_be_zero(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %cmp = icmp eq i32* %ptr, null
+  %cmp = icmp eq ptr %ptr, null
   ret i1 %cmp
 }

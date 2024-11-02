@@ -5,11 +5,11 @@
 ;                                          fbreg -8
 ; CHECK-NEXT: DW_AT_location {{.*}} (DW_OP_fbreg -8)
 ; CHECK-NEXT: DW_AT_name {{.*}} "dipsy"
-define void @tinkywinky(i8* %dipsy) !dbg !6 {
+define void @tinkywinky(ptr %dipsy) !dbg !6 {
 entry:
-  %dipsy.addr = alloca i8*
-  store i8* %dipsy, i8** %dipsy.addr
-  call void @llvm.dbg.declare(metadata i8** %dipsy.addr, metadata !12, metadata
+  %dipsy.addr = alloca ptr
+  store ptr %dipsy, ptr %dipsy.addr
+  call void @llvm.dbg.declare(metadata ptr %dipsy.addr, metadata !12, metadata
 !13), !dbg !14
   ret void, !dbg !15
 }

@@ -279,9 +279,7 @@ void ErrorRssLimitExceeded::Print() {
 void ErrorOutOfMemory::Print() {
   Decorator d;
   Printf("%s", d.Error());
-  Report(
-      "ERROR: AddressSanitizer: allocator is out of memory trying to allocate "
-      "0x%zx bytes\n", requested_size);
+  ERROR_OOM("allocator is trying to allocate 0x%zx bytes\n", requested_size);
   Printf("%s", d.Default());
   stack->Print();
   PrintHintAllocatorCannotReturnNull();
@@ -541,7 +539,8 @@ static void PrintShadowBytes(InternalScopedString *str, const char *before,
                              u8 *bytes, u8 *guilty, uptr n) {
   Decorator d;
   if (before)
-    str->append("%s%p:", before, (void *)bytes);
+    str->append("%s%p:", before,
+                (void *)ShadowToMem(reinterpret_cast<uptr>(bytes)));
   for (uptr i = 0; i < n; i++) {
     u8 *p = bytes + i;
     const char *before =

@@ -19,6 +19,7 @@
 namespace llvm {
 
 class AAResults;
+class AssumptionCache;
 class DataLayout;
 class DominatorTree;
 class Instruction;
@@ -31,9 +32,9 @@ class TargetLibraryInfo;
 /// Return true if this is always a dereferenceable pointer. If the context
 /// instruction is specified perform context-sensitive analysis and return true
 /// if the pointer is dereferenceable at the specified instruction.
-bool isDereferenceablePointer(const Value *V, Type *Ty,
-                              const DataLayout &DL,
+bool isDereferenceablePointer(const Value *V, Type *Ty, const DataLayout &DL,
                               const Instruction *CtxI = nullptr,
+                              AssumptionCache *AC = nullptr,
                               const DominatorTree *DT = nullptr,
                               const TargetLibraryInfo *TLI = nullptr);
 
@@ -44,6 +45,7 @@ bool isDereferenceablePointer(const Value *V, Type *Ty,
 bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
                                         Align Alignment, const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
+                                        AssumptionCache *AC = nullptr,
                                         const DominatorTree *DT = nullptr,
                                         const TargetLibraryInfo *TLI = nullptr);
 
@@ -54,6 +56,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
                                         const APInt &Size, const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
+                                        AssumptionCache *AC = nullptr,
                                         const DominatorTree *DT = nullptr,
                                         const TargetLibraryInfo *TLI = nullptr);
 
@@ -68,6 +71,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
+                                 AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
 
@@ -79,8 +83,8 @@ bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 /// if desired.)  This is more powerful than the variants above when the
 /// address loaded from is analyzeable by SCEV.
 bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
-                                       ScalarEvolution &SE,
-                                       DominatorTree &DT);
+                                       ScalarEvolution &SE, DominatorTree &DT,
+                                       AssumptionCache *AC = nullptr);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
@@ -93,6 +97,7 @@ bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
+                                 AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
 

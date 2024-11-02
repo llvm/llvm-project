@@ -1,12 +1,9 @@
-import unittest2
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     THREAD_COUNT = 5
 
     def gather_stop_replies_via_qThreadStopInfo(self, threads):

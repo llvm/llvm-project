@@ -1,4 +1,4 @@
-; RUN: opt -S -strip-nonlinetable-debuginfo %s -o - | FileCheck %s
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o - | FileCheck %s
 ; Test that subroutine types are downgraded to (void)().
 define internal i32 @"__hidden#2878_"() #0 !dbg !12 {
   ret i32 0, !dbg !634

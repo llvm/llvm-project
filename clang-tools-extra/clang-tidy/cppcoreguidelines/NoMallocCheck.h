@@ -21,7 +21,7 @@ namespace cppcoreguidelines {
 /// Static Analyzer - unix.Malloc.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-no-malloc.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/no-malloc.html
 class NoMallocCheck : public ClangTidyCheck {
 public:
   /// Construct Checker and read in configuration for function names.

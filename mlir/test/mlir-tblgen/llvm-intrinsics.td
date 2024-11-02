@@ -21,7 +21,7 @@
 // match the result type.
 // CHECK: [1]
 // It has no side effects.
-// CHECK: [NoSideEffect]
+// CHECK: [NoMemoryEffect]
 // It has a result.
 // CHECK: 1,
 // It does not require an access group.
@@ -42,7 +42,7 @@
 // GROUPS-LABEL: def LLVM_ptrmask
 // GROUPS: LLVM_IntrOp<"ptrmask
 // It has no side effects.
-// GROUPS: [NoSideEffect]
+// GROUPS: [NoMemoryEffect]
 // It has a result.
 // GROUPS: 1,
 // It requires generation of an access group LLVM metadata.
@@ -64,7 +64,7 @@
 // ALIAS-LABEL: def LLVM_ptrmask
 // ALIAS: LLVM_IntrOp<"ptrmask
 // It has no side effects.
-// ALIAS: [NoSideEffect]
+// ALIAS: [NoMemoryEffect]
 // It has a result.
 // ALIAS: 1,
 // It does not require an access group.

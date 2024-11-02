@@ -2,7 +2,11 @@
 #include "java.h"
 #include <memory.h>
 
-extern "C" __attribute__((disable_sanitizer_instrumentation)) void
+#if (__APPLE__)
+__attribute__((weak)) // Required for dyld macOS 12.0+
+#endif
+__attribute__((disable_sanitizer_instrumentation))
+extern "C" void
 __tsan_symbolize_external_ex(jptr pc,
                              void (*add_frame)(void *, const char *,
                                                const char *, int, int),

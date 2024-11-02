@@ -68,15 +68,16 @@ bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
 }
 
 bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
-                             MemorySSAUpdater *MSSAU) const {
+                             MemorySSAUpdater *MSSAU,
+                             ScalarEvolution *SE) const {
   if (Instruction *I = dyn_cast<Instruction>(V))
-    return makeLoopInvariant(I, Changed, InsertPt, MSSAU);
+    return makeLoopInvariant(I, Changed, InsertPt, MSSAU, SE);
   return true; // All non-instructions are loop-invariant.
 }
 
 bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
-                             Instruction *InsertPt,
-                             MemorySSAUpdater *MSSAU) const {
+                             Instruction *InsertPt, MemorySSAUpdater *MSSAU,
+                             ScalarEvolution *SE) const {
   // Test if the value is already loop-invariant.
   if (isLoopInvariant(I))
     return true;
@@ -97,7 +98,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   }
   // Don't hoist instructions with loop-variant operands.
   for (Value *Operand : I->operands())
-    if (!makeLoopInvariant(Operand, Changed, InsertPt, MSSAU))
+    if (!makeLoopInvariant(Operand, Changed, InsertPt, MSSAU, SE))
       return false;
 
   // Hoist.
@@ -112,6 +113,9 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
   I->dropUnknownNonDebugMetadata();
+
+  if (SE)
+    SE->forgetBlockAndLoopDispositions(I);
 
   Changed = true;
   return true;
@@ -425,12 +429,12 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
 
 // Check that 'BB' doesn't have any uses outside of the 'L'
 static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
-                               const DominatorTree &DT) {
+                               const DominatorTree &DT, bool IgnoreTokens) {
   for (const Instruction &I : BB) {
     // Tokens can't be used in PHI nodes and live-out tokens prevent loop
     // optimizations, so for the purposes of considered LCSSA form, we
     // can ignore them.
-    if (I.getType()->isTokenTy())
+    if (IgnoreTokens && I.getType()->isTokenTy())
       continue;
 
     for (const Use &U : I.uses()) {
@@ -455,20 +459,20 @@ static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
   return true;
 }
 
-bool Loop::isLCSSAForm(const DominatorTree &DT) const {
+bool Loop::isLCSSAForm(const DominatorTree &DT, bool IgnoreTokens) const {
   // For each block we check that it doesn't have any uses outside of this loop.
   return all_of(this->blocks(), [&](const BasicBlock *BB) {
-    return isBlockInLCSSAForm(*this, *BB, DT);
+    return isBlockInLCSSAForm(*this, *BB, DT, IgnoreTokens);
   });
 }
 
-bool Loop::isRecursivelyLCSSAForm(const DominatorTree &DT,
-                                  const LoopInfo &LI) const {
+bool Loop::isRecursivelyLCSSAForm(const DominatorTree &DT, const LoopInfo &LI,
+                                  bool IgnoreTokens) const {
   // For each block we check that it doesn't have any uses outside of its
   // innermost loop. This process will transitively guarantee that the current
   // loop and all of the nested loops are in LCSSA form.
   return all_of(this->blocks(), [&](const BasicBlock *BB) {
-    return isBlockInLCSSAForm(*LI.getLoopFor(BB), *BB, DT);
+    return isBlockInLCSSAForm(*LI.getLoopFor(BB), *BB, DT, IgnoreTokens);
   });
 }
 
@@ -482,11 +486,8 @@ bool Loop::isLoopSimplifyForm() const {
 bool Loop::isSafeToClone() const {
   // Return false if any loop blocks contain indirectbrs, or there are any calls
   // to noduplicate functions.
-  // FIXME: it should be ok to clone CallBrInst's if we correctly update the
-  // operand list to reflect the newly cloned labels.
   for (BasicBlock *BB : this->blocks()) {
-    if (isa<IndirectBrInst>(BB->getTerminator()) ||
-        isa<CallBrInst>(BB->getTerminator()))
+    if (isa<IndirectBrInst>(BB->getTerminator()))
       return false;
 
     for (Instruction &I : *BB)
@@ -1082,13 +1083,13 @@ Optional<bool> llvm::getOptionalBoolLoopAttribute(const Loop *TheLoop,
 }
 
 bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
-  return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
+  return getOptionalBoolLoopAttribute(TheLoop, Name).value_or(false);
 }
 
 llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
                                                       StringRef Name) {
   const MDOperand *AttrMD =
-      findStringMetadataForLoop(TheLoop, Name).getValueOr(nullptr);
+      findStringMetadataForLoop(TheLoop, Name).value_or(nullptr);
   if (!AttrMD)
     return None;
 
@@ -1101,7 +1102,7 @@ llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
 
 int llvm::getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
                               int Default) {
-  return getOptionalIntLoopAttribute(TheLoop, Name).getValueOr(Default);
+  return getOptionalIntLoopAttribute(TheLoop, Name).value_or(Default);
 }
 
 bool llvm::isFinite(const Loop *L) {

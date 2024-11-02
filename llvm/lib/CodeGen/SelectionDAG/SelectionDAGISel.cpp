@@ -22,12 +22,12 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -64,7 +65,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
@@ -337,53 +337,13 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GCModuleInfo>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addRequired<AssumptionCacheTracker>();
   if (UseMBPI && OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   if (OptLevel != CodeGenOpt::None)
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
-}
-
-/// SplitCriticalSideEffectEdges - Look for critical edges with a PHI value that
-/// may trap on it.  In this case we have to split the edge so that the path
-/// through the predecessor block that doesn't go to the phi block doesn't
-/// execute the possibly trapping instruction. If available, we pass domtree
-/// and loop info to be updated when we split critical edges. This is because
-/// SelectionDAGISel preserves these analyses.
-/// This is required for correctness, so it must be done at -O0.
-///
-static void SplitCriticalSideEffectEdges(Function &Fn, DominatorTree *DT,
-                                         LoopInfo *LI) {
-  // Loop for blocks with phi nodes.
-  for (BasicBlock &BB : Fn) {
-    PHINode *PN = dyn_cast<PHINode>(BB.begin());
-    if (!PN) continue;
-
-  ReprocessBlock:
-    // For each block with a PHI node, check to see if any of the input values
-    // are potentially trapping constant expressions.  Constant expressions are
-    // the only potentially trapping value that can occur as the argument to a
-    // PHI.
-    for (BasicBlock::iterator I = BB.begin(); (PN = dyn_cast<PHINode>(I)); ++I)
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-        ConstantExpr *CE = dyn_cast<ConstantExpr>(PN->getIncomingValue(i));
-        if (!CE || !CE->canTrap()) continue;
-
-        // The only case we have to worry about is when the edge is critical.
-        // Since this block has a PHI Node, we assume it has multiple input
-        // edges: check to see if the pred has multiple successors.
-        BasicBlock *Pred = PN->getIncomingBlock(i);
-        if (Pred->getTerminator()->getNumSuccessors() == 1)
-          continue;
-
-        // Okay, we have to split this edge.
-        SplitCriticalEdge(
-            Pred->getTerminator(), GetSuccessorNumber(Pred, &BB),
-            CriticalEdgeSplittingOptions(DT, LI).setMergeIdenticalEdges());
-        goto ReprocessBlock;
-      }
-  }
 }
 
 static void computeUsesMSVCFloatingPoint(const Triple &TT, const Function &F,
@@ -445,18 +405,13 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(Fn);
   GFI = Fn.hasGC() ? &getAnalysis<GCModuleInfo>().getFunctionInfo(Fn) : nullptr;
   ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
+  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(mf.getFunction());
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI = nullptr;
   if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::None)
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
   LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
-
-  SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
   CurDAG->init(*MF, *ORE, this, LibInfo,
                getAnalysisIfAvailable<LegacyDivergenceAnalysis>(), PSI, BFI);
@@ -478,7 +433,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   else
     AA = nullptr;
 
-  SDB->init(GFI, AA, LibInfo);
+  SDB->init(GFI, AA, AC, LibInfo);
 
   MF->setHasInlineAsm(false);
 
@@ -1045,6 +1000,15 @@ public:
     if (ISelPosition == SelectionDAG::allnodes_iterator(N))
       ++ISelPosition;
   }
+
+  /// NodeInserted - Handle new nodes inserted into the graph: propagate
+  /// metadata from root nodes that also applies to new nodes, in case the root
+  /// is later deleted.
+  void NodeInserted(SDNode *N) override {
+    SDNode *CurNode = &*ISelPosition;
+    if (MDNode *MD = DAG.getPCSections(CurNode))
+      DAG.addPCSections(N, MD);
+  }
 };
 
 } // end anonymous namespace
@@ -1121,7 +1085,7 @@ void SelectionDAGISel::DoInstructionSelection() {
     ++ISelPosition;
 
     // Make sure that ISelPosition gets properly updated when nodes are deleted
-    // in calls made from this function.
+    // in calls made from this function. New nodes inherit relevant metadata.
     ISelUpdater ISU(*CurDAG, ISelPosition);
 
     // The AllNodes list is now topological-sorted. Visit the
@@ -1229,11 +1193,11 @@ static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
   // In case of single catch (...), we don't emit LSDA, so we don't need
   // this information.
   bool IsSingleCatchAllClause =
-      CPI->getNumArgOperands() == 1 &&
+      CPI->arg_size() == 1 &&
       cast<Constant>(CPI->getArgOperand(0))->isNullValue();
   // cathchpads for longjmp use an empty type list, e.g. catchpad within %0 []
   // and they don't need LSDA info
-  bool IsCatchLongjmp = CPI->getNumArgOperands() == 0;
+  bool IsCatchLongjmp = CPI->arg_size() == 0;
   if (!IsSingleCatchAllClause && !IsCatchLongjmp) {
     // Create a mapping from landing pad label to landing pad index.
     bool IntrFound = false;
@@ -2005,7 +1969,7 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
 
   while (i != e) {
     unsigned Flags = cast<ConstantSDNode>(InOps[i])->getZExtValue();
-    if (!InlineAsm::isMemKind(Flags)) {
+    if (!InlineAsm::isMemKind(Flags) && !InlineAsm::isFuncKind(Flags)) {
       // Just skip over this operand, copying the operands verbatim.
       Ops.insert(Ops.end(), InOps.begin()+i,
                  InOps.begin()+i+InlineAsm::getNumOperandRegisters(Flags) + 1);
@@ -2034,7 +1998,9 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
 
       // Add this to the output node.
       unsigned NewFlags =
-        InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size());
+          InlineAsm::isMemKind(Flags)
+              ? InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size())
+              : InlineAsm::getFlagWord(InlineAsm::Kind_Func, SelOps.size());
       NewFlags = InlineAsm::getFlagWordForMem(NewFlags, ConstraintID);
       Ops.push_back(CurDAG->getTargetConstant(NewFlags, DL, MVT::i32));
       llvm::append_range(Ops, SelOps);
@@ -2239,6 +2205,106 @@ void SelectionDAGISel::Select_FREEZE(SDNode *N) {
 void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {
   CurDAG->SelectNodeTo(N, TargetOpcode::ARITH_FENCE, N->getValueType(0),
                        N->getOperand(0));
+}
+
+void SelectionDAGISel::pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops,
+                                                SDValue OpVal, SDLoc DL) {
+  SDNode *OpNode = OpVal.getNode();
+
+  // FrameIndex nodes should have been directly emitted to TargetFrameIndex
+  // nodes at DAG-construction time.
+  assert(OpNode->getOpcode() != ISD::FrameIndex);
+
+  if (OpNode->getOpcode() == ISD::Constant) {
+    Ops.push_back(
+        CurDAG->getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
+    Ops.push_back(
+        CurDAG->getTargetConstant(cast<ConstantSDNode>(OpNode)->getZExtValue(),
+                                  DL, OpVal.getValueType()));
+  } else {
+    Ops.push_back(OpVal);
+  }
+}
+
+void SelectionDAGISel::Select_STACKMAP(SDNode *N) {
+  SmallVector<SDValue, 32> Ops;
+  auto *It = N->op_begin();
+  SDLoc DL(N);
+
+  // Stash the chain and glue operands so we can move them to the end.
+  SDValue Chain = *It++;
+  SDValue InFlag = *It++;
+
+  // <id> operand.
+  SDValue ID = *It++;
+  assert(ID.getValueType() == MVT::i64);
+  Ops.push_back(ID);
+
+  // <numShadowBytes> operand.
+  SDValue Shad = *It++;
+  assert(Shad.getValueType() == MVT::i32);
+  Ops.push_back(Shad);
+
+  // Live variable operands.
+  for (; It != N->op_end(); It++)
+    pushStackMapLiveVariable(Ops, *It, DL);
+
+  Ops.push_back(Chain);
+  Ops.push_back(InFlag);
+
+  SDVTList NodeTys = CurDAG->getVTList(MVT::Other, MVT::Glue);
+  CurDAG->SelectNodeTo(N, TargetOpcode::STACKMAP, NodeTys, Ops);
+}
+
+void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
+  SmallVector<SDValue, 32> Ops;
+  auto *It = N->op_begin();
+  SDLoc DL(N);
+
+  // Cache arguments that will be moved to the end in the target node.
+  SDValue Chain = *It++;
+  Optional<SDValue> Glue;
+  if (It->getValueType() == MVT::Glue)
+    Glue = *It++;
+  SDValue RegMask = *It++;
+
+  // <id> operand.
+  SDValue ID = *It++;
+  assert(ID.getValueType() == MVT::i64);
+  Ops.push_back(ID);
+
+  // <numShadowBytes> operand.
+  SDValue Shad = *It++;
+  assert(Shad.getValueType() == MVT::i32);
+  Ops.push_back(Shad);
+
+  // Add the callee.
+  Ops.push_back(*It++);
+
+  // Add <numArgs>.
+  SDValue NumArgs = *It++;
+  assert(NumArgs.getValueType() == MVT::i32);
+  Ops.push_back(NumArgs);
+
+  // Calling convention.
+  Ops.push_back(*It++);
+
+  // Push the args for the call.
+  for (uint64_t I = cast<ConstantSDNode>(NumArgs)->getZExtValue(); I != 0; I--)
+    Ops.push_back(*It++);
+
+  // Now push the live variables.
+  for (; It != N->op_end(); It++)
+    pushStackMapLiveVariable(Ops, *It, DL);
+
+  // Finally, the regmask, chain and (if present) glue are moved to the end.
+  Ops.push_back(RegMask);
+  Ops.push_back(Chain);
+  if (Glue.has_value())
+    Ops.push_back(Glue.value());
+
+  SDVTList NodeTys = N->getVTList();
+  CurDAG->SelectNodeTo(N, TargetOpcode::PATCHPOINT, NodeTys, Ops);
 }
 
 /// GetVBR - decode a vbr encoding whose top bit is set.
@@ -2794,6 +2860,12 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::ARITH_FENCE:
     Select_ARITH_FENCE(NodeToMatch);
+    return;
+  case ISD::STACKMAP:
+    Select_STACKMAP(NodeToMatch);
+    return;
+  case ISD::PATCHPOINT:
+    Select_PATCHPOINT(NodeToMatch);
     return;
   }
 

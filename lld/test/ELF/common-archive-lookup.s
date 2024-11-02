@@ -91,7 +91,7 @@
 # NFC-NEXT:  Other: 0
 # NFC-NEXT:  Section: .bss
 
-## Expecting the strong definition from the object file, and the defintions from
+## Expecting the strong definition from the object file, and the definitions from
 ## the archive do not interfere.
 # TEST2-LABEL: Disassembly of section .data:
 # TEST2:         <block>:

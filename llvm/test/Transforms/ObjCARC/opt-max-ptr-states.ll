@@ -1,5 +1,5 @@
-; RUN: opt -objc-arc -S < %s | FileCheck -check-prefix=ENABLE -check-prefix=CHECK %s
-; RUN: opt -objc-arc -arc-opt-max-ptr-states=1 -S < %s | FileCheck -check-prefix=DISABLE -check-prefix=CHECK %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck -check-prefix=ENABLE -check-prefix=CHECK %s
+; RUN: opt -passes=objc-arc -arc-opt-max-ptr-states=1 -S < %s | FileCheck -check-prefix=DISABLE -check-prefix=CHECK %s
 
 @g0 = common global i8* null, align 8
 

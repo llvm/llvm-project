@@ -79,18 +79,6 @@ public:
                const coverage::FunctionRecord &Function) const override;
 };
 
-// TODO: Remove this class when -name-whitelist option is removed.
-class NameWhitelistCoverageFilter : public CoverageFilter {
-  const SpecialCaseList &Whitelist;
-
-public:
-  NameWhitelistCoverageFilter(const SpecialCaseList &Whitelist)
-      : Whitelist(Whitelist) {}
-
-  bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
-};
-
 /// Matches numbers that pass a certain threshold.
 template <typename T> class StatisticThresholdFilter {
 public:

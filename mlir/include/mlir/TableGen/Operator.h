@@ -263,12 +263,12 @@ public:
     explicit ArgOrType(TypeConstraint constraint)
         : index(None), constraint(constraint) {}
     bool isArg() const {
-      assert(constraint.hasValue() ^ index.hasValue());
-      return index.hasValue();
+      assert(constraint.has_value() ^ index.has_value());
+      return index.has_value();
     }
     bool isType() const {
-      assert(constraint.hasValue() ^ index.hasValue());
-      return constraint.hasValue();
+      assert(constraint.has_value() ^ index.has_value());
+      return constraint.has_value();
     }
 
     int getArg() const { return *index; }

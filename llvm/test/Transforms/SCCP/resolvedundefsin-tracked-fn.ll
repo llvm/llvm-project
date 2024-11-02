@@ -14,16 +14,16 @@ define i32 @test1_m(i32 %h) {
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[H]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test1_k(i8 [[CONV]], i32 0)
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[H]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[CONV1]] to %t1*
-; CHECK-NEXT:    [[CALL2:%.*]] = call i1 @test1_g(%t1* [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[CONV1]] to ptr
+; CHECK-NEXT:    [[CALL2:%.*]] = call i1 @test1_g(ptr [[TMP0]], i32 1)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
   %conv = trunc i32 %h to i8
   %call = call i32 @test1_k(i8 %conv, i32 0)
   %conv1 = sext i32 %h to i64
-  %0 = inttoptr i64 %conv1 to %t1*
-  %call2 = call i1 @test1_g(%t1* %0, i32 1)
+  %0 = inttoptr i64 %conv1 to ptr
+  %call2 = call i1 @test1_g(ptr %0, i32 1)
   ret i32 undef
 
 ; uselistorder directives
@@ -36,27 +36,27 @@ define internal i32 @test1_k(i8 %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test1_k
 ; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @e, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @e, align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to %t1*
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test1_g(%t1* [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to ptr
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test1_g(ptr [[TMP1]], i32 0)
 ; CHECK-NEXT:    call void @use.1(i1 false)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  %0 = load i32, i32* @e, align 4
+  %0 = load i32, ptr @e, align 4
   %conv = sext i32 %0 to i64
-  %1 = inttoptr i64 %conv to %t1*
-  %call = call i1 @test1_g(%t1* %1, i32 %i)
+  %1 = inttoptr i64 %conv to ptr
+  %call = call i1 @test1_g(ptr %1, i32 %i)
   %frombool.1 = zext i1 %call to i8
   %tobool.1 = trunc i8 %frombool.1 to i1
   call void @use.1(i1 %tobool.1)
   ret i32 undef
 }
 
-define internal i1 @test1_g(%t1* %h, i32 %i) #0 {
+define internal i1 @test1_g(ptr %h, i32 %i) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@test1_g
-; CHECK-SAME: (%t1* [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -91,16 +91,16 @@ define i32 @test2_m(i32 %h) #0 {
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[H]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test2_k(i8 [[CONV]], i32 0)
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[H]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[CONV1]] to %t1*
-; CHECK-NEXT:    [[CALL2:%.*]] = call i1 @test2_g(%t1* [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[CONV1]] to ptr
+; CHECK-NEXT:    [[CALL2:%.*]] = call i1 @test2_g(ptr [[TMP0]], i32 1)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
   %conv = trunc i32 %h to i8
   %call = call i32 @test2_k(i8 %conv, i32 0)
   %conv1 = sext i32 %h to i64
-  %0 = inttoptr i64 %conv1 to %t1*
-  %call2 = call i1 @test2_g(%t1* %0, i32 1)
+  %0 = inttoptr i64 %conv1 to ptr
+  %call2 = call i1 @test2_g(ptr %0, i32 1)
   ret i32 undef
 
 ; uselistorder directives
@@ -113,18 +113,18 @@ define internal i32 @test2_k(i8 %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test2_k
 ; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @e, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @e, align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to %t1*
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test3_g(%t1* [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to ptr
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test3_g(ptr [[TMP1]], i32 0)
 ; CHECK-NEXT:    call void @use.1(i1 false)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  %0 = load i32, i32* @e, align 4
+  %0 = load i32, ptr @e, align 4
   %conv = sext i32 %0 to i64
-  %1 = inttoptr i64 %conv to %t1*
-  %call = call i1 @test3_g(%t1* %1, i32 %i)
+  %1 = inttoptr i64 %conv to ptr
+  %call = call i1 @test3_g(ptr %1, i32 %i)
   %frombool = icmp slt i1 %call, 1
   %add = add i1 %frombool, %frombool
   call void @use.1(i1 %frombool)
@@ -132,9 +132,9 @@ entry:
 
 }
 
-define internal i1 @test2_g(%t1* %h, i32 %i) {
+define internal i1 @test2_g(ptr %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test2_g
-; CHECK-SAME: (%t1* [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LAND_RHS:%.*]]
 ; CHECK:       land.rhs:
@@ -170,16 +170,16 @@ define i32 @test3_m(i32 %h) #0 {
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[H]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test3_k(i8 [[CONV]], i32 0)
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[H]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[CONV1]] to %t1*
-; CHECK-NEXT:    [[CALL2:%.*]] = call i1 @test3_g(%t1* [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[CONV1]] to ptr
+; CHECK-NEXT:    [[CALL2:%.*]] = call i1 @test3_g(ptr [[TMP0]], i32 1)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
   %conv = trunc i32 %h to i8
   %call = call i32 @test3_k(i8 %conv, i32 0)
   %conv1 = sext i32 %h to i64
-  %0 = inttoptr i64 %conv1 to %t1*
-  %call2 = call i1 @test3_g(%t1* %0, i32 1)
+  %0 = inttoptr i64 %conv1 to ptr
+  %call2 = call i1 @test3_g(ptr %0, i32 1)
   ret i32 undef
 
 ; uselistorder directives
@@ -190,26 +190,26 @@ define internal i32 @test3_k(i8 %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test3_k
 ; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @e, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @e, align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to %t1*
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to ptr
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test3_g(%t1* [[TMP1]], i32 0)
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test3_g(ptr [[TMP1]], i32 0)
 ; CHECK-NEXT:    call void @use.1(i1 false)
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  %0 = load i32, i32* @e, align 4
+  %0 = load i32, ptr @e, align 4
   %conv = sext i32 %0 to i64
-  %1 = inttoptr i64 %conv to %t1*
+  %1 = inttoptr i64 %conv to ptr
   br label %loop
 
 loop:
   %phi = phi i1 [ undef, %entry], [ %call, %loop ]
-  %call = call i1 @test3_g(%t1* %1, i32 %i)
+  %call = call i1 @test3_g(ptr %1, i32 %i)
   %frombool = icmp slt i1 %call, 1
   %add = add i1 %frombool, %frombool
   call void @use.1(i1 %frombool)
@@ -219,9 +219,9 @@ exit:
   ret i32 undef
 }
 
-define internal i1 @test3_g(%t1* %h, i32 %i) {
+define internal i1 @test3_g(ptr %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test3_g
-; CHECK-SAME: (%t1* [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -253,50 +253,48 @@ declare i32 @test3_j(...)
 ; TODO: We can eliminate the bitcast, if we resolve the unknown argument of
 ;       @test4_b first.
 
-declare void @use.16(i16*)
-declare void @use.8(i8*)
+declare void @use.16(ptr)
+declare void @use.8(ptr)
 
 define void @test4_a() {
 ; CHECK-LABEL: define {{[^@]+}}@test4_a()
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i8* @test4_c(i8* null)
-; CHECK-NEXT:    call void @test4_b(i8* null)
+; CHECK-NEXT:    [[TMP:%.*]] = call ptr @test4_c(ptr null)
+; CHECK-NEXT:    call void @test4_b(ptr null)
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = call i8* @test4_c(i8* null)
-  call void @test4_b(i8* %tmp)
+  %tmp = call ptr @test4_c(ptr null)
+  call void @test4_b(ptr %tmp)
   ret void
 }
 
-define internal void @test4_b(i8* %arg) {
+define internal void @test4_b(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_b
-; CHECK-SAME: (i8* [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]])
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = bitcast i8* null to i16*
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i8* null, i8* null
-; CHECK-NEXT:    call void @use.16(i16* [[TMP]])
-; CHECK-NEXT:    call void @use.8(i8* [[SEL]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, ptr null, ptr null
+; CHECK-NEXT:    call void @use.16(ptr null)
+; CHECK-NEXT:    call void @use.8(ptr [[SEL]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = bitcast i8* %arg to i16*
-  %sel = select i1 false, i8* %arg, i8* %arg
-  call void @use.16(i16* %tmp)
-  call void @use.8(i8* %sel)
+  %sel = select i1 false, ptr %arg, ptr %arg
+  call void @use.16(ptr %arg)
+  call void @use.8(ptr %sel)
   ret void
 }
 
-define internal i8* @test4_c(i8* %arg) {
+define internal ptr @test4_c(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_c
-; CHECK-SAME: (i8* [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]])
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = and i1 undef, undef
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB3:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret i8* undef
+; CHECK-NEXT:    ret ptr undef
 ;
 bb1:                                              ; preds = %bb
   %tmp = and i1 undef, undef
@@ -306,7 +304,7 @@ bb2:                                              ; preds = %bb1
   unreachable
 
 bb3:                                              ; preds = %bb1
-  ret i8* null
+  ret ptr null
 }
 
 ; TODO: Same as test4, but with a select instead of a bitcast.
@@ -314,40 +312,40 @@ bb3:                                              ; preds = %bb1
 define void @test5_a() {
 ; CHECK-LABEL: define {{[^@]+}}@test5_a()
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = call i8* @test5_c(i8* null)
-; CHECK-NEXT:    call void @test5_b(i8* null)
+; CHECK-NEXT:    [[TMP:%.*]] = call ptr @test5_c(ptr null)
+; CHECK-NEXT:    call void @test5_b(ptr null)
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = call i8* @test5_c(i8* null)
-  call void @test5_b(i8* %tmp)
+  %tmp = call ptr @test5_c(ptr null)
+  call void @test5_b(ptr %tmp)
   ret void
 }
 
-define internal void @test5_b(i8* %arg) {
+define internal void @test5_b(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test5_b
-; CHECK-SAME: (i8* [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]])
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i8* null, i8* null
-; CHECK-NEXT:    call void @use.8(i8* [[SEL]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, ptr null, ptr null
+; CHECK-NEXT:    call void @use.8(ptr [[SEL]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %sel = select i1 false, i8* %arg, i8* %arg
-  call void @use.8(i8* %sel)
+  %sel = select i1 false, ptr %arg, ptr %arg
+  call void @use.8(ptr %sel)
   ret void
 }
 
-define internal i8* @test5_c(i8* %arg) {
+define internal ptr @test5_c(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test5_c
-; CHECK-SAME: (i8* [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]])
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = and i1 undef, undef
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB3:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret i8* undef
+; CHECK-NEXT:    ret ptr undef
 ;
 bb1:                                              ; preds = %bb
   %tmp = and i1 undef, undef
@@ -357,7 +355,7 @@ bb2:                                              ; preds = %bb1
   unreachable
 
 bb3:                                              ; preds = %bb1
-  ret i8* null
+  ret ptr null
 }
 
 
@@ -371,18 +369,18 @@ define void @test3() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END16:%.*]]
 ; CHECK:       if.end16:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @contextsize, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @contextsize, align 4
 ; CHECK-NEXT:    [[SUB18:%.*]] = sub i32 undef, [[TMP0]]
 ; CHECK-NEXT:    [[SUB19:%.*]] = sub i32 [[SUB18]], undef
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @maxposslen, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @maxposslen, align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 undef, [[ADD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* @pcount, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @pcount, align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], [[SUB19]]
 ; CHECK-NEXT:    [[CMP20:%.*]] = icmp sgt i32 [[TMP2]], [[MUL]]
 ; CHECK-NEXT:    br i1 [[CMP20]], label [[IF_THEN22:%.*]], label [[IF_END24:%.*]]
 ; CHECK:       if.then22:
-; CHECK-NEXT:    store i32 [[MUL]], i32* @pcount, align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr @pcount, align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end24:
 ; CHECK-NEXT:    [[CMP25474:%.*]] = icmp sgt i32 [[TMP2]], 0
@@ -396,19 +394,19 @@ entry:
   br label %if.end16
 
 if.end16:                                         ; preds = %entry
-  %0 = load i32, i32* @contextsize, align 4
+  %0 = load i32, ptr @contextsize, align 4
   %sub18 = sub i32 undef, %0
   %sub19 = sub i32 %sub18, undef
-  %1 = load i32, i32* @maxposslen, align 4
+  %1 = load i32, ptr @maxposslen, align 4
   %add = add nsw i32 %1, 8
   %div = sdiv i32 undef, %add
-  %2 = load i32, i32* @pcount, align 4
+  %2 = load i32, ptr @pcount, align 4
   %mul = mul nsw i32 %div, %sub19
   %cmp20 = icmp sgt i32 %2, %mul
   br i1 %cmp20, label %if.then22, label %if.end24
 
 if.then22:                                        ; preds = %if.end16
-  store i32 %mul, i32* @pcount, align 4
+  store i32 %mul, ptr @pcount, align 4
   ret void
 
 if.end24:                                         ; preds = %if.end16

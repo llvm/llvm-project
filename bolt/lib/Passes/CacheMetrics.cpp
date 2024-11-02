@@ -24,10 +24,6 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-extern cl::opt<double> ForwardWeight;
-extern cl::opt<double> BackwardWeight;
-extern cl::opt<unsigned> ForwardDistance;
-extern cl::opt<unsigned> BackwardDistance;
 extern cl::opt<unsigned> ITLBPageSize;
 extern cl::opt<unsigned> ITLBEntries;
 
@@ -43,66 +39,45 @@ void extractBasicBlockInfo(
 
   for (BinaryFunction *BF : BinaryFunctions) {
     const BinaryContext &BC = BF->getBinaryContext();
-    for (BinaryBasicBlock *BB : BF->layout()) {
+    for (BinaryBasicBlock &BB : *BF) {
       if (BF->isSimple() || BC.HasRelocations) {
         // Use addresses/sizes as in the output binary
-        BBAddr[BB] = BB->getOutputAddressRange().first;
-        BBSize[BB] = BB->getOutputSize();
+        BBAddr[&BB] = BB.getOutputAddressRange().first;
+        BBSize[&BB] = BB.getOutputSize();
       } else {
         // Output ranges should match the input if the body hasn't changed
-        BBAddr[BB] = BB->getInputAddressRange().first + BF->getAddress();
-        BBSize[BB] = BB->getOriginalSize();
+        BBAddr[&BB] = BB.getInputAddressRange().first + BF->getAddress();
+        BBSize[&BB] = BB.getOriginalSize();
       }
     }
   }
 }
 
 /// Calculate TSP metric, which quantifies the number of fallthrough jumps in
-/// the ordering of basic blocks
-double
+/// the ordering of basic blocks. The method returns a pair
+/// (the number of fallthrough branches, the total number of branches)
+std::pair<uint64_t, uint64_t>
 calcTSPScore(const std::vector<BinaryFunction *> &BinaryFunctions,
              const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
              const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
-
-  double Score = 0;
+  uint64_t Score = 0;
+  uint64_t JumpCount = 0;
   for (BinaryFunction *BF : BinaryFunctions) {
     if (!BF->hasProfile())
       continue;
-    for (BinaryBasicBlock *SrcBB : BF->layout()) {
+    for (BinaryBasicBlock *SrcBB : BF->getLayout().blocks()) {
       auto BI = SrcBB->branch_info_begin();
       for (BinaryBasicBlock *DstBB : SrcBB->successors()) {
-        if (SrcBB != DstBB && BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
-            BBAddr.at(SrcBB) + BBSize.at(SrcBB) == BBAddr.at(DstBB))
-          Score += BI->Count;
+        if (SrcBB != DstBB && BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE) {
+          JumpCount += BI->Count;
+          if (BBAddr.at(SrcBB) + BBSize.at(SrcBB) == BBAddr.at(DstBB))
+            Score += BI->Count;
+        }
         ++BI;
       }
     }
   }
-  return Score;
-}
-
-/// Calculate Ext-TSP metric, which quantifies the expected number of i-cache
-/// misses for a given ordering of basic blocks
-double calcExtTSPScore(
-    const std::vector<BinaryFunction *> &BinaryFunctions,
-    const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
-    const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
-
-  double Score = 0.0;
-  for (BinaryFunction *BF : BinaryFunctions) {
-    if (!BF->hasProfile())
-      continue;
-    for (BinaryBasicBlock *SrcBB : BF->layout()) {
-      auto BI = SrcBB->branch_info_begin();
-      for (BinaryBasicBlock *DstBB : SrcBB->successors()) {
-        if (DstBB != SrcBB)
-          Score += CacheMetrics::extTSPScore(BBAddr.at(SrcBB), BBSize.at(SrcBB),
-                                             BBAddr.at(DstBB), BI->Count);
-        ++BI;
-      }
-    }
-  }
-  return Score;
+  return std::make_pair(Score, JumpCount);
 }
 
 using Predecessors = std::vector<std::pair<BinaryFunction *, uint64_t>>;
@@ -115,9 +90,9 @@ extractFunctionCalls(const std::vector<BinaryFunction *> &BinaryFunctions) {
 
   for (BinaryFunction *SrcFunction : BinaryFunctions) {
     const BinaryContext &BC = SrcFunction->getBinaryContext();
-    for (BinaryBasicBlock *BB : SrcFunction->layout()) {
+    for (const BinaryBasicBlock *BB : SrcFunction->getLayout().blocks()) {
       // Find call instructions and extract target symbols from each one
-      for (MCInst &Inst : *BB) {
+      for (const MCInst &Inst : *BB) {
         if (!BC.MIB->isCall(Inst))
           continue;
 
@@ -130,7 +105,7 @@ extractFunctionCalls(const std::vector<BinaryFunction *> &BinaryFunctions) {
 
         const BinaryFunction *DstFunction = BC.getFunctionForSymbol(DstSym);
         // Ignore recursive calls
-        if (DstFunction == nullptr || DstFunction->layout_empty() ||
+        if (DstFunction == nullptr || DstFunction->getLayout().block_empty() ||
             DstFunction == SrcFunction)
           continue;
 
@@ -178,9 +153,9 @@ double expectedCacheHitRatio(
   // Compute 'hotness' of the pages
   std::unordered_map<uint64_t, double> PageSamples;
   for (BinaryFunction *BF : BinaryFunctions) {
-    if (BF->layout_empty())
+    if (BF->getLayout().block_empty())
       continue;
-    double Page = BBAddr.at(BF->layout_front()) / PageSize;
+    double Page = BBAddr.at(BF->getLayout().block_front()) / PageSize;
     PageSamples[Page] += FunctionSamples.at(BF);
   }
 
@@ -188,17 +163,18 @@ double expectedCacheHitRatio(
   double Misses = 0;
   for (BinaryFunction *BF : BinaryFunctions) {
     // Skip the function if it has no samples
-    if (BF->layout_empty() || FunctionSamples.at(BF) == 0.0)
+    if (BF->getLayout().block_empty() || FunctionSamples.at(BF) == 0.0)
       continue;
     double Samples = FunctionSamples.at(BF);
-    double Page = BBAddr.at(BF->layout_front()) / PageSize;
+    double Page = BBAddr.at(BF->getLayout().block_front()) / PageSize;
     // The probability that the page is not present in the cache
     double MissProb = pow(1.0 - PageSamples[Page] / TotalSamples, CacheEntries);
 
     // Processing all callers of the function
     for (std::pair<BinaryFunction *, uint64_t> Pair : Calls[BF]) {
       BinaryFunction *SrcFunction = Pair.first;
-      double SrcPage = BBAddr.at(SrcFunction->layout_front()) / PageSize;
+      double SrcPage =
+          BBAddr.at(SrcFunction->getLayout().block_front()) / PageSize;
       // Is this a 'long' or a 'short' call?
       if (Page != SrcPage) {
         // This is a miss
@@ -215,33 +191,6 @@ double expectedCacheHitRatio(
 }
 
 } // namespace
-
-double CacheMetrics::extTSPScore(uint64_t SrcAddr, uint64_t SrcSize,
-                                 uint64_t DstAddr, uint64_t Count) {
-  assert(Count != BinaryBasicBlock::COUNT_NO_PROFILE);
-
-  // Fallthrough
-  if (SrcAddr + SrcSize == DstAddr) {
-    // Assume that FallthroughWeight = 1.0 after normalization
-    return static_cast<double>(Count);
-  }
-  // Forward
-  if (SrcAddr + SrcSize < DstAddr) {
-    const uint64_t Dist = DstAddr - (SrcAddr + SrcSize);
-    if (Dist <= opts::ForwardDistance) {
-      double Prob = 1.0 - static_cast<double>(Dist) / opts::ForwardDistance;
-      return opts::ForwardWeight * Prob * Count;
-    }
-    return 0;
-  }
-  // Backward
-  const uint64_t Dist = SrcAddr + SrcSize - DstAddr;
-  if (Dist <= opts::BackwardDistance) {
-    double Prob = 1.0 - static_cast<double>(Dist) / opts::BackwardDistance;
-    return opts::BackwardWeight * Prob * Count;
-  }
-  return 0;
-}
 
 void CacheMetrics::printAll(const std::vector<BinaryFunction *> &BFs) {
   // Stats related to hot-cold code splitting
@@ -262,13 +211,13 @@ void CacheMetrics::printAll(const std::vector<BinaryFunction *> &BFs) {
       NumProfiledFunctions++;
     if (BF->hasValidIndex())
       NumHotFunctions++;
-    for (BinaryBasicBlock *BB : BF->layout()) {
+    for (const BinaryBasicBlock &BB : *BF) {
       NumBlocks++;
-      size_t BBAddrMin = BB->getOutputAddressRange().first;
-      size_t BBAddrMax = BB->getOutputAddressRange().second;
+      size_t BBAddrMin = BB.getOutputAddressRange().first;
+      size_t BBAddrMax = BB.getOutputAddressRange().second;
       TotalCodeMinAddr = std::min(TotalCodeMinAddr, BBAddrMin);
       TotalCodeMaxAddr = std::max(TotalCodeMaxAddr, BBAddrMax);
-      if (BF->hasValidIndex() && !BB->isCold()) {
+      if (BF->hasValidIndex() && !BB.isCold()) {
         NumHotBlocks++;
         HotCodeMinAddr = std::min(HotCodeMinAddr, BBAddrMin);
         HotCodeMaxAddr = std::max(HotCodeMaxAddr, BBAddrMax);
@@ -303,9 +252,9 @@ void CacheMetrics::printAll(const std::vector<BinaryFunction *> &BFs) {
   outs() << "  Expected i-TLB cache hit ratio: "
          << format("%.2lf%%\n", expectedCacheHitRatio(BFs, BBAddr, BBSize));
 
+  auto Stats = calcTSPScore(BFs, BBAddr, BBSize);
   outs() << "  TSP score: "
-         << format("%.0lf\n", calcTSPScore(BFs, BBAddr, BBSize));
-
-  outs() << "  ExtTSP score: "
-         << format("%.0lf\n", calcExtTSPScore(BFs, BBAddr, BBSize));
+         << format("%.2lf%% (%zu out of %zu)\n",
+                   100.0 * Stats.first / std::max<uint64_t>(Stats.second, 1),
+                   Stats.first, Stats.second);
 }

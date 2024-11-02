@@ -673,6 +673,7 @@ public:
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 
+  /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
   // Strip linker annotations (such as @@VERSION) from symbol names.
@@ -722,6 +723,8 @@ public:
   /// file when storing cached data.
   uint32_t GetCacheHash();
 
+  static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
+                                        uint64_t Offset);
 
 protected:
   // Member variables.
@@ -736,6 +739,7 @@ protected:
   DataExtractor
       m_data; ///< The data for this object file so things can be parsed lazily.
   lldb::ProcessWP m_process_wp;
+  /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
@@ -761,9 +765,6 @@ protected:
 
   /// The number of bytes to read when going through the plugins.
   static size_t g_initial_bytes_to_read;
-
-  static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
-                                        uint64_t Offset);
 
 private:
   ObjectFile(const ObjectFile &) = delete;

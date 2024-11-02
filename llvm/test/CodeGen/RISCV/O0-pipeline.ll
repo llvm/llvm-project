@@ -19,10 +19,8 @@
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Expand large div/rem
 ; CHECK-NEXT:       Expand Atomic instructions
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       RISCV gather/scatter lowering
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
@@ -38,6 +36,7 @@
 ; CHECK-NEXT:       RISCV DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
+; CHECK-NEXT:       RISCV Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISCV Insert VSETVLI pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:       Two-Address instruction pass

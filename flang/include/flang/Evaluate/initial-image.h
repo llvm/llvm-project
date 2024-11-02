@@ -49,7 +49,10 @@ public:
           bytes !=
               x.values().size() * static_cast<std::size_t>(*elementBytes)) {
         return SizeMismatch;
+      } else if (bytes == 0) {
+        return Ok;
       } else {
+        // TODO endianness
         std::memcpy(&data_.at(offset), &x.values().at(0), bytes);
         return Ok;
       }
@@ -66,6 +69,8 @@ public:
       auto elementBytes{bytes > 0 ? bytes / elements : 0};
       if (elements * elementBytes != bytes) {
         return SizeMismatch;
+      } else if (bytes == 0) {
+        return Ok;
       } else {
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
           auto scalar{x.At(at)}; // this is a std string; size() in chars
@@ -76,7 +81,8 @@ public:
               (scalarBytes > elementBytes && elements != 0)) {
             return SizeMismatch;
           }
-          std::memcpy(&data_[offset], scalar.data(), elementBytes);
+          // TODO endianness
+          std::memcpy(&data_.at(offset), scalar.data(), elementBytes);
           offset += elementBytes;
         }
         return Ok;
@@ -99,7 +105,7 @@ public:
 
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
-      const DynamicType &, const ConstantSubscripts &,
+      const DynamicType &, const ConstantSubscripts &, bool padWithZero = false,
       ConstantSubscript offset = 0) const;
   std::optional<Expr<SomeType>> AsConstantPointer(
       ConstantSubscript offset = 0) const;

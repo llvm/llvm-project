@@ -14,6 +14,7 @@
 #include "mlir/Target/SPIRV/Serialization.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
@@ -46,11 +47,10 @@ protected:
     OperationState state(UnknownLoc::get(&context),
                          spirv::ModuleOp::getOperationName());
     state.addAttribute("addressing_model",
-                       builder.getI32IntegerAttr(static_cast<uint32_t>(
-                           spirv::AddressingModel::Logical)));
-    state.addAttribute("memory_model",
-                       builder.getI32IntegerAttr(
-                           static_cast<uint32_t>(spirv::MemoryModel::GLSL450)));
+                       builder.getAttr<spirv::AddressingModelAttr>(
+                           spirv::AddressingModel::Logical));
+    state.addAttribute("memory_model", builder.getAttr<spirv::MemoryModelAttr>(
+                                           spirv::MemoryModel::GLSL450));
     state.addAttribute("vce_triple",
                        spirv::VerCapExtAttr::get(
                            spirv::Version::V_1_0, ArrayRef<spirv::Capability>(),

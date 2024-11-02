@@ -56,7 +56,7 @@ sw.epilog:                                        ; preds = %sw.bb
   %4 = load i32, i32* %x.addr, align 4, !dbg !20
   %add = add nsw i32 %4, 1, !dbg !21
   store i32 %add, i32* %x.addr, align 4, !dbg !22
-  %asm_res = callbr i32 asm "", "=r,r,i"(i32 %x, i8* blockaddress(@f, %indirect.dest))
+  %asm_res = callbr i32 asm "", "=r,r,!i"(i32 %x)
           to label %coro_Cleanup [label %indirect.dest]
 
 indirect.dest:
@@ -123,7 +123,7 @@ entry:
 ; Function Attrs: argmemonly nounwind readonly
 declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #2
 
-attributes #0 = { noinline nounwind "coroutine.presplit"="1" "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { argmemonly nounwind readonly }
 attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -189,7 +189,7 @@ attributes #7 = { noduplicate }
 ; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke i8* @allocate()
 ; CHECK-NEXT: to label %[[NORMAL_DEST:.+]] unwind
 ; CHECK: [[NORMAL_DEST]]
-; CHEKC-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
 ; CHECK: %[[CALLBR_RES:.+]] = callbr i32 asm
 ; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
 ; CHECK: [[DEFAULT_DEST]]:

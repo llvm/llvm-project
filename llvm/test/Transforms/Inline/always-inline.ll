@@ -1,9 +1,3 @@
-; RUN: opt < %s -inline-threshold=0 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-;
-; Ensure the threshold has no impact on these decisions.
-; RUN: opt < %s -inline-threshold=20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-; RUN: opt < %s -inline-threshold=-20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-;
 ; The new pass manager doesn't re-use any threshold based infrastructure for
 ; the always inliner, but test that we get the correct result.
 ; RUN: opt < %s -inline-threshold=0 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
@@ -40,7 +34,6 @@ define void @outer2(i32 %N) {
 ; rdar://6655932
 ;
 ; CHECK-LABEL: @outer2(
-; CHECK-NOT: call void @inner2
 ; CHECK-NOT: call void @inner2
 ; CHECK: ret void
 
@@ -112,7 +105,7 @@ define i32 @outer5(i32 %x) {
   ret i32 %call
 }
 
-; We alwaysinline a function that call itself recursively.
+; We never inline a function that calls itself recursively.
 define internal void @inner6(i32 %x) alwaysinline {
 ; CHECK-LABEL: @inner6(
 entry:

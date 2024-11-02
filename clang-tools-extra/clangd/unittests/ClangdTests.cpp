@@ -350,7 +350,7 @@ TEST(ClangdServerTest, RespectsConfig) {
   Opts.ContextProvider =
       ClangdServer::createConfiguredContextProvider(&CfgProvider, nullptr);
   OverlayCDB CDB(/*Base=*/nullptr, /*FallbackFlags=*/{},
-                 tooling::ArgumentsAdjuster(CommandMangler::forTests()));
+                 CommandMangler::forTests());
   MockFS FS;
   ClangdServer Server(CDB, FS, Opts);
   // foo.cc sees the expected definition, as FOO is defined.

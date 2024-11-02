@@ -12,6 +12,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -19,6 +20,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <iterator>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -26,8 +28,7 @@ using namespace llvm::support::endian;
 using namespace llvm::COFF;
 using llvm::support::ulittle32_t;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
     : Chunk(SectionKind), file(f), header(h), repl(this) {
@@ -815,7 +816,7 @@ void RVATableChunk::writeTo(uint8_t *buf) const {
   size_t cnt = 0;
   for (const ChunkAndOffset &co : syms)
     begin[cnt++] = co.inputChunk->getRVA() + co.offset;
-  std::sort(begin, begin + cnt);
+  llvm::sort(begin, begin + cnt);
   assert(std::unique(begin, begin + cnt) == begin + cnt &&
          "RVA tables should be de-duplicated");
 }
@@ -947,7 +948,7 @@ MergeChunk::MergeChunk(uint32_t alignment)
 void MergeChunk::addSection(COFFLinkerContext &ctx, SectionChunk *c) {
   assert(isPowerOf2_32(c->getAlignment()));
   uint8_t p2Align = llvm::Log2_32(c->getAlignment());
-  assert(p2Align < array_lengthof(ctx.mergeChunkInstances));
+  assert(p2Align < std::size(ctx.mergeChunkInstances));
   auto *&mc = ctx.mergeChunkInstances[p2Align];
   if (!mc)
     mc = make<MergeChunk>(c->getAlignment());
@@ -995,5 +996,4 @@ void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
   }
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

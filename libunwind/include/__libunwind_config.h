@@ -12,7 +12,7 @@
 #define _LIBUNWIND_VERSION 15000
 
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) && \
-    !defined(__ARM_DWARF_EH__)
+    !defined(__ARM_DWARF_EH__) && !defined(__SEH__)
 #define _LIBUNWIND_ARM_EHABI
 #endif
 

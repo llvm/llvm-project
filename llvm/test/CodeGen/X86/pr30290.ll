@@ -12,10 +12,10 @@ target triple = "x86_64-pc-linux-gnu"
 %struct.face = type { [7 x i32] }
 
 ; Function Attrs: noinline nounwind uwtable
-declare void @bar(%struct.face* byval(%struct.face) nocapture readonly align 8);
+declare void @bar(ptr byval(%struct.face) nocapture readonly align 8);
 
 ; Function Attrs: noinline nounwind uwtable
-define void @foo(%struct.face* byval(%struct.face) nocapture align 8) local_unnamed_addr {
+define void @foo(ptr byval(%struct.face) nocapture align 8) local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
@@ -31,10 +31,9 @@ define void @foo(%struct.face* byval(%struct.face) nocapture align 8) local_unna
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %2 = bitcast %struct.face* %0 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %2, align 8
-  %3 = getelementptr inbounds %struct.face, %struct.face* %0, i64 0, i32 0, i64 4
-  store i32 1, i32* %3, align 8
-  call void @bar(%struct.face* byval(%struct.face) nonnull align 8 %0)
+  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr %0, align 8
+  %2 = getelementptr inbounds %struct.face, ptr %0, i64 0, i32 0, i64 4
+  store i32 1, ptr %2, align 8
+  call void @bar(ptr byval(%struct.face) nonnull align 8 %0)
   ret void
 }

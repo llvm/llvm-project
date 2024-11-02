@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
 
 void __attribute__((fastcall)) f1(void);
 void __attribute__((stdcall)) f2(void);
@@ -69,7 +69,7 @@ void bar2(struct S1 y) {
 void __attribute__((fastcall)) foo3(int *y);
 void bar3(int *y) {
   // CHECK-LABEL: define{{.*}} void @bar3
-  // CHECK: call x86_fastcallcc void @foo3(i32* inreg noundef %
+  // CHECK: call x86_fastcallcc void @foo3(ptr inreg noundef %
   foo3(y);
 }
 
@@ -89,7 +89,7 @@ struct S2 {
 void __attribute__((fastcall)) foo5(struct S2 y);
 void bar5(struct S2 y) {
   // CHECK-LABEL: define{{.*}} void @bar5
-  // CHECK: call x86_fastcallcc void @foo5(%struct.S2* noundef byval(%struct.S2) align 4 %
+  // CHECK: call x86_fastcallcc void @foo5(ptr noundef byval(%struct.S2) align 4 %
   foo5(y);
 }
 
@@ -117,7 +117,7 @@ void bar8(struct S1 a, int b) {
 void __attribute__((fastcall)) foo9(struct S2 a, int b);
 void bar9(struct S2 a, int b) {
   // CHECK-LABEL: define{{.*}} void @bar9
-  // CHECK: call x86_fastcallcc void @foo9(%struct.S2* noundef byval(%struct.S2) align 4 %{{.*}}, i32 noundef %
+  // CHECK: call x86_fastcallcc void @foo9(ptr noundef byval(%struct.S2) align 4 %{{.*}}, i32 noundef %
   foo9(a, b);
 }
 
@@ -143,4 +143,11 @@ void bar12(struct S3 y, int x) {
   // CHECK-LABEL: define{{.*}} void @bar12
   // CHECK: call x86_fastcallcc void @foo12(float %{{.*}}, i32 inreg noundef %
   foo12(y, x);
+}
+
+void __attribute__((fastcall)) foo13(long long a, int b, int c);
+void bar13(long long a, int b, int c) {
+  // CHECK-LABEL: define{{.*}} void @bar13
+  // CHECK: call x86_fastcallcc void @foo13(i64 noundef %{{.*}}, i32 inreg noundef %{{.*}}, i32 inreg noundef %
+  foo13(a, b, c);
 }

@@ -11,7 +11,7 @@ func.func @fuse_by_collapsing(%arg0 : tensor<2x12x5x336x9xi32>,
     %arg1 : tensor<2x3x4xi32>, %arg2 : tensor<5x6x7x8xi32>) -> tensor<2x3x4x5x6x7x8x9xi32> {
   %expand = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6], [7]]
       : tensor<2x12x5x336x9xi32> into tensor<2x3x4x5x6x7x8x9xi32>
-  %init = linalg.init_tensor [2, 3, 4, 5, 6, 7, 8, 9] : tensor<2x3x4x5x6x7x8x9xi32>
+  %init = tensor.empty() : tensor<2x3x4x5x6x7x8x9xi32>
   %generic = linalg.generic {
     indexing_maps = [#map0, #map1, #map2, #map3],
     iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
@@ -31,7 +31,7 @@ func.func @fuse_by_collapsing(%arg0 : tensor<2x12x5x336x9xi32>,
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<2x12x5x336x9xi32>
 // CHECK-SAME:   %[[ARG1:.+]]: tensor<2x3x4xi32>
 // CHECK-SAME:   %[[ARG2:.+]]: tensor<5x6x7x8xi32>
-//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [2, 3, 4, 5, 6, 7, 8, 9]
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
 //  CHECK-DAG:   %[[ARG1_RESHAPE:.+]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0], [1, 2]{{\]}}
 //  CHECK-DAG:   %[[ARG2_RESHAPE:.+]] = tensor.collapse_shape %[[ARG2]] {{\[}}[0], [1, 2, 3]{{\]}}
 //  CHECK-DAG:   %[[INIT_RESHAPE:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1, 2], [3], [4, 5, 6], [7]{{\]}}
@@ -62,7 +62,7 @@ func.func @fuse_by_collapsing_indexing_op(%arg0 : tensor<2x12x5x336x9xi32>,
     %arg1 : tensor<2x3x4xi32>, %arg2 : tensor<5x6x7x8xi32>) -> tensor<2x3x4x5x6x7x8x9xi32> {
   %expand = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6], [7]]
       : tensor<2x12x5x336x9xi32> into tensor<2x3x4x5x6x7x8x9xi32>
-  %init = linalg.init_tensor [2, 3, 4, 5, 6, 7, 8, 9] : tensor<2x3x4x5x6x7x8x9xi32>
+  %init = tensor.empty() : tensor<2x3x4x5x6x7x8x9xi32>
   %generic = linalg.generic {
     indexing_maps = [#map0, #map1, #map2, #map3],
     iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
@@ -124,7 +124,7 @@ func.func @fuse_by_collapsing_change_reshape_order(%arg0 : tensor<9x56x2x60x6xi3
     %arg1 : tensor<7x8x2xi32>, %arg2 : tensor<6x3x4x5xi32>) -> tensor<2x3x4x5x6x7x8x9xi32> {
   %expand = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6], [7]]
       : tensor<9x56x2x60x6xi32> into tensor<9x7x8x2x3x4x5x6xi32>
-  %init = linalg.init_tensor [2, 3, 4, 5, 6, 7, 8, 9] : tensor<2x3x4x5x6x7x8x9xi32>
+  %init = tensor.empty() : tensor<2x3x4x5x6x7x8x9xi32>
   %generic = linalg.generic {
     indexing_maps = [#map0, #map1, #map2, #map3],
     iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
@@ -145,7 +145,7 @@ func.func @fuse_by_collapsing_change_reshape_order(%arg0 : tensor<9x56x2x60x6xi3
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<9x56x2x60x6xi32>
 // CHECK-SAME:   %[[ARG1:.+]]: tensor<7x8x2xi32>
 // CHECK-SAME:   %[[ARG2:.+]]: tensor<6x3x4x5xi32>
-//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [2, 3, 4, 5, 6, 7, 8, 9]
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
 //  CHECK-DAG:   %[[ARG1_RESHAPE:.+]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0, 1], [2]{{\]}}
 //  CHECK-DAG:   %[[ARG2_RESHAPE:.+]] = tensor.collapse_shape %[[ARG2]] {{\[}}[0], [1, 2, 3]{{\]}}
 //  CHECK-DAG:   %[[INIT_RESHAPE:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1, 2, 3], [4], [5, 6], [7]{{\]}}
@@ -176,7 +176,7 @@ func.func @fuse_by_collapsing_dynamic(%arg0 : tensor<?x?x?x?x?xi32>,
   %d4 = tensor.dim %arg2, %c0 : tensor<?x?x?x?xi32>
   %d6 = tensor.dim %arg1, %c1 : tensor<?x?x?xi32>
   %d7 = tensor.dim %arg0, %c0 : tensor<?x?x?x?x?xi32>
-  %init = linalg.init_tensor [%d0, 3, %d2, 5, %d4, 7, %d6, %d7] : tensor<?x3x?x5x?x7x?x?xi32>
+  %init = tensor.empty(%d0, %d2, %d4, %d6, %d7) : tensor<?x3x?x5x?x7x?x?xi32>
   %generic = linalg.generic {
     indexing_maps = [#map0, #map1, #map2, #map3],
     iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
@@ -254,7 +254,7 @@ func.func @fuse_reductions(%arg0 : tensor<2x?x5xf32>, %arg1 : tensor<2x5xf32>) -
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 func.func @no_fuse_unpreserved_folding(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2x3xf32>) -> tensor<2x3x4x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] : tensor<2x12x5xf32> into tensor<2x3x4x5xf32>
-  %init = linalg.init_tensor [2, 3, 4, 5] : tensor<2x3x4x5xf32>
+  %init = tensor.empty(): tensor<2x3x4x5xf32>
   %1 = linalg.generic {
       indexing_maps = [#map0, #map1, #map0],
       iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
@@ -281,7 +281,7 @@ func.func @no_fuse_unpreserved_folding(%arg0 : tensor<2x12x5xf32>, %arg1 : tenso
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>
 func.func @no_fuse_unpreserved_folding_transpose(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2xf32>) -> tensor<2x4x3x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] : tensor<2x12x5xf32> into tensor<2x3x4x5xf32>
-  %init = linalg.init_tensor [2, 4, 3, 5] : tensor<2x4x3x5xf32>
+  %init = tensor.empty() : tensor<2x4x3x5xf32>
   %1 = linalg.generic {
       indexing_maps = [#map0, #map1, #map2],
       iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
@@ -308,7 +308,7 @@ func.func @no_fuse_unpreserved_folding_transpose(%arg0 : tensor<2x12x5xf32>, %ar
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
 func.func @no_fuse_mismatched_iterator_types(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2x3xf32>) -> tensor<2x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] : tensor<2x12x5xf32> into tensor<2x3x4x5xf32>
-  %init = linalg.init_tensor [2, 5] : tensor<2x5xf32>
+  %init = tensor.empty() : tensor<2x5xf32>
   %1 = linalg.generic {
       indexing_maps = [#map0, #map1, #map2],
       iterator_types = ["parallel", "reduction", "parallel", "parallel"]}
@@ -337,7 +337,7 @@ func.func @no_fuse_mismatched_iterator_types(%arg0 : tensor<2x12x5xf32>, %arg1 :
 func.func @control_fusion(%arg0 : tensor<6xf32>, %arg1 : tensor<20xf32>) -> tensor<2x3x4x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<6xf32> into tensor<2x3xf32>
   %1 = tensor.expand_shape %arg1 [[0, 1]] : tensor<20xf32> into tensor<4x5xf32>
-    %init = linalg.init_tensor [2, 3, 4, 5] : tensor<2x3x4x5xf32>
+    %init = tensor.empty() : tensor<2x3x4x5xf32>
   %2 = linalg.generic {
       indexing_maps = [#map0, #map1, #map2],
       iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
@@ -370,7 +370,7 @@ func.func @control_fusion(%arg0 : tensor<6xf32>, %arg1 : tensor<20xf32>) -> tens
 // CONTROL-SAME:     %[[ARG0:.+]]: tensor<6xf32>
 // CONTROL-SAME:     %[[ARG1:.+]]: tensor<20xf32>
 //      CONTROL:     %[[EXPAND:.+]] = tensor.expand_shape %[[ARG0]]
-//      CONTROL:     %[[INIT:.+]] = linalg.init_tensor [2, 3, 4, 5]
+//      CONTROL:     %[[INIT:.+]] = tensor.empty()
 //      CONTROL:     %[[INIT_RESHAPE:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1], [2, 3]{{\]}}
 //      CONTROL:     %[[GENERIC:.+]] = linalg.generic
 // CONTROL-SAME:         ins(%[[EXPAND]], %[[ARG1]] :
@@ -383,7 +383,7 @@ func.func @control_fusion(%arg0 : tensor<6xf32>, %arg1 : tensor<20xf32>) -> tens
 #map = affine_map<(d0) -> (d0)>
 func.func @zero_D_test(%arg0: tensor<f32>) -> tensor<1xf32> {
   %0 = tensor.expand_shape %arg0 [] : tensor<f32> into tensor<1xf32>
-  %init = linalg.init_tensor [1] : tensor<1xf32>
+  %init = tensor.empty() : tensor<1xf32>
   %1 = linalg.generic {
       indexing_maps = [#map, #map],
       iterator_types = ["parallel"]}
@@ -444,7 +444,7 @@ func.func @fold_non_consecutive_dims(%arg0 : tensor<?x?xi32>) -> tensor<?x8x?x4x
   %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xi32> into tensor<?x4x?x8xi32>
   %d0 = tensor.dim %0, %c0 : tensor<?x4x?x8xi32>
   %d1 = tensor.dim %0, %c2 : tensor<?x4x?x8xi32>
-  %init = linalg.init_tensor [%d1, 8, %d0, 4] : tensor<?x8x?x4xi32>
+  %init = tensor.empty(%d1, %d0) : tensor<?x8x?x4xi32>
   %1 = linalg.generic {
       indexing_maps = [#map0, #map1],
       iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
@@ -468,7 +468,7 @@ func.func @fold_non_consecutive_dims(%arg0 : tensor<?x?xi32>) -> tensor<?x8x?x4x
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xi32>)
 //  CHECK-DAG:   %[[C4:.+]] = arith.constant 4 : index
 //  CHECK-DAG:   %[[C8:.+]] = arith.constant 8 : index
-//      CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//      CHECK:   %[[INIT:.+]] = tensor.empty
 //      CHECK:   %[[COLLAPSE_INIT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0, 1], [2, 3]{{\]}}
 //      CHECK:   %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
@@ -500,7 +500,7 @@ func.func @no_fold_non_consecutive_reduction_dims(%arg0 : tensor<?x?xi32>) -> te
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xi32> into tensor<?x4x?x8xi32>
-  %init = linalg.init_tensor [] : tensor<i32>
+  %init = tensor.empty() : tensor<i32>
   %1 = linalg.generic {
       indexing_maps = [#map0, #map1],
       iterator_types = ["reduction", "reduction", "reduction", "reduction"]}

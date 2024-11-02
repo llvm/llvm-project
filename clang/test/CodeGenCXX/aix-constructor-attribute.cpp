@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-ibm-aix-xcoff -x c++ -emit-llvm \
+// RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -x c++ -emit-llvm \
 // RUN:     -fno-use-cxa-atexit < %s |\
 // RUN:   FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-ibm-aix-xcoff -x c++ -emit-llvm \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -x c++ -emit-llvm \
 // RUN:     -fno-use-cxa-atexit < %s | \
 // RUN:   FileCheck %s
 
-// CHECK: @llvm.global_ctors = appending global [4 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* bitcast (i32 ()* @_Z4foo3v to void ()*), i8* null }, { i32, void ()*, i8* } { i32 180, void ()* bitcast (i32 ()* @_Z4foo2v to void ()*), i8* null }, { i32, void ()*, i8* } { i32 180, void ()* bitcast (i32 ()* @_Z3foov to void ()*), i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I__, i8* null }]
-// CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__D_a, i8* null }]
+// CHECK: @llvm.global_ctors = appending global [4 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_Z4foo3v, ptr null }, { i32, ptr, ptr } { i32 180, ptr @_Z4foo2v, ptr null }, { i32, ptr, ptr } { i32 180, ptr @_Z3foov, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I__, ptr null }]
+// CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__D_a, ptr null }]
 
 int foo() __attribute__((constructor(180)));
 int foo2() __attribute__((constructor(180)));

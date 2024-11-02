@@ -48,12 +48,9 @@ public:
 
   /// Signal code completion for a constraint name with an optional decl scope.
   /// `currentType` is the current type of the variable that will use the
-  /// constraint, or nullptr if a type is unknown. `allowNonCoreConstraints`
-  /// indicates if user defined constraints are allowed in the completion
-  /// results. `allowInlineTypeConstraints` enables inline type constraints for
-  /// Attr/Value/ValueRange.
+  /// constraint, or nullptr if a type is unknown. `allowInlineTypeConstraints`
+  /// enables inline type constraints for Attr/Value/ValueRange.
   virtual void codeCompleteConstraintName(ast::Type currentType,
-                                          bool allowNonCoreConstraints,
                                           bool allowInlineTypeConstraints,
                                           const ast::DeclScope *scope);
 

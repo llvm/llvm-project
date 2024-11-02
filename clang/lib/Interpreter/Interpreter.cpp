@@ -116,6 +116,9 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // times, reusing the same AST.
   Clang->getCodeGenOpts().ClearASTBeforeBackend = false;
 
+  Clang->getFrontendOpts().DisableFree = false;
+  Clang->getCodeGenOpts().DisableFree = false;
+
   return std::move(Clang);
 }
 
@@ -180,7 +183,14 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
                                                    *TSCtx->getContext(), Err);
 }
 
-Interpreter::~Interpreter() {}
+Interpreter::~Interpreter() {
+  if (IncrExecutor) {
+    if (llvm::Error Err = IncrExecutor->cleanUp())
+      llvm::report_fatal_error(
+          llvm::Twine("Failed to clean up IncrementalExecutor: ") +
+          toString(std::move(Err)));
+  }
+}
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
@@ -210,16 +220,16 @@ Interpreter::Parse(llvm::StringRef Code) {
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
   if (!IncrExecutor) {
-    const llvm::Triple &Triple =
-        getCompilerInstance()->getASTContext().getTargetInfo().getTriple();
+    const clang::TargetInfo &TI =
+        getCompilerInstance()->getASTContext().getTargetInfo();
     llvm::Error Err = llvm::Error::success();
-    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, Triple);
+    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
 
     if (Err)
       return Err;
   }
   // FIXME: Add a callback to retain the llvm::Module once the JIT is done.
-  if (auto Err = IncrExecutor->addModule(std::move(T.TheModule)))
+  if (auto Err = IncrExecutor->addModule(T))
     return Err;
 
   if (auto Err = IncrExecutor->runCtors())
@@ -256,4 +266,23 @@ Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
                                                std::error_code());
 
   return IncrExecutor->getSymbolAddress(Name, IncrementalExecutor::LinkerName);
+}
+
+llvm::Error Interpreter::Undo(unsigned N) {
+
+  std::list<PartialTranslationUnit> &PTUs = IncrParser->getPTUs();
+  if (N > PTUs.size())
+    return llvm::make_error<llvm::StringError>("Operation failed. "
+                                               "Too many undos",
+                                               std::error_code());
+  for (unsigned I = 0; I < N; I++) {
+    if (IncrExecutor) {
+      if (llvm::Error Err = IncrExecutor->removeModule(PTUs.back()))
+        return Err;
+    }
+
+    IncrParser->CleanUpPTU(PTUs.back());
+    PTUs.pop_back();
+  }
+  return llvm::Error::success();
 }

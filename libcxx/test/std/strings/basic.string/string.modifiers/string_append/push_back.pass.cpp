@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // void push_back(charT c) // constexpr since C++20

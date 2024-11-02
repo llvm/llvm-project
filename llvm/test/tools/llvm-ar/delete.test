@@ -1,4 +1,3 @@
-# XFAIL: system-aix
 ## Test the deletion of members and that symbols are removed from the symbol table.
 
 # RUN: yaml2obj %s -o %t-delete.o --docnum=1

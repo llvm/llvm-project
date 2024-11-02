@@ -15,7 +15,7 @@
 ; RUN:     -mcpu=pwr9 -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:     < %s | FileCheck %s --check-prefix=CHECK-P9
 
-define <8 x i16> @test1(i16*  %a) {
+define <8 x i16> @test1(ptr  %a) {
 ; CHECK-P10LE-LABEL: test1:
 ; CHECK-P10LE:       # %bb.0: # %entry
 ; CHECK-P10LE-NEXT:    lxvrhx v2, 0, r3
@@ -33,12 +33,12 @@ define <8 x i16> @test1(i16*  %a) {
 ; CHECK-P9-NEXT:    vsplth v2, v2, 3
 ; CHECK-P9-NEXT:    blr
 entry:
-  %0 = load i16, i16* %a, align 2
+  %0 = load i16, ptr %a, align 2
   %vecinit = insertelement <8 x i16> undef, i16 %0, i32 0
   ret <8 x i16> %vecinit
 }
 
-define <16 x i8> @test2(i8*  %a) {
+define <16 x i8> @test2(ptr  %a) {
 ; CHECK-P10LE-LABEL: test2:
 ; CHECK-P10LE:       # %bb.0: # %entry
 ; CHECK-P10LE-NEXT:    lxvrbx v2, 0, r3
@@ -56,7 +56,7 @@ define <16 x i8> @test2(i8*  %a) {
 ; CHECK-P9-NEXT:    vspltb v2, v2, 7
 ; CHECK-P9-NEXT:    blr
 entry:
-  %0 = load i8, i8* %a, align 1
+  %0 = load i8, ptr %a, align 1
   %vecins = insertelement <16 x i8> undef, i8 %0, i32 0
   ret <16 x i8> %vecins
 }

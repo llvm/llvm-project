@@ -102,13 +102,17 @@ public:
 
     // Phi-like VPValues. Need to be kept together.
     VPVBlendSC,
+    VPVPredInstPHI,
+    // Header-phi recipes. Need to be kept together.
     VPVCanonicalIVPHISC,
+    VPVActiveLaneMaskPHISC,
     VPVFirstOrderRecurrencePHISC,
     VPVWidenPHISC,
     VPVWidenIntOrFpInductionSC,
     VPVWidenPointerInductionSC,
-    VPVPredInstPHI,
     VPVReductionPHISC,
+    VPVFirstHeaderPHISC = VPVCanonicalIVPHISC,
+    VPVLastPHISC = VPVReductionPHISC,
   };
 
   VPValue(Value *UV = nullptr, VPDef *Def = nullptr)
@@ -194,6 +198,11 @@ public:
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
+
+  /// Returns true if the VPValue is defined outside any vector regions, i.e. it
+  /// is a live-in value.
+  /// TODO: Also handle recipes defined in pre-header blocks.
+  bool isDefinedOutsideVectorRegions() const { return !getDef(); }
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
@@ -209,9 +218,6 @@ public:
   enum class VPUserID {
     Recipe,
     LiveOut,
-    // TODO: Currently VPUsers are used in VPBlockBase, but in the future the
-    // only VPUsers should either be recipes or live-outs.
-    Block
   };
 
 private:
@@ -360,14 +366,17 @@ public:
 
     // Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    VPPredInstPHISC,
+    // Header-phi recipes. Need to be kept together.
     VPCanonicalIVPHISC,
+    VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenPHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
-    VPPredInstPHISC,
     VPReductionPHISC,
     VPFirstPHISC = VPBlendSC,
+    VPFirstHeaderPHISC = VPCanonicalIVPHISC,
     VPLastPHISC = VPReductionPHISC,
   };
 

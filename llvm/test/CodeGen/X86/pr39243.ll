@@ -52,7 +52,7 @@
 ; CHECK:  %foxtrot.sroa.2.0.extract.shift = lshr i64 %foxtrot.coerce, 32
 ; CHECK-NOT:  call void @llvm.dbg.value(metadata i32 %foxtrot.sroa.2.0.extract.trunc, metadata !30, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !34
 ; CHECK:  %foxtrot.sroa.2.0.extract.trunc = trunc i64 %foxtrot.sroa.2.0.extract.shift to i32
-; CHECK:  store i32 %foxtrot.sroa.2.0.extract.trunc, i32* @alpha, align 4, !dbg !25
+; CHECK:  store i32 %foxtrot.sroa.2.0.extract.trunc, ptr @alpha, align 4, !dbg !25
 ; CHECK-NOT:  call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !43
 
 ; ModuleID = 'pr39243.cpp'
@@ -73,7 +73,7 @@ declare dso_local i32 @_Z5bravov() local_unnamed_addr #1
 define dso_local i32 @_Z4echo5onion(i64 %foxtrot.coerce) local_unnamed_addr #0 !dbg !18 {
 entry:
   %foxtrot.sroa.0.0.extract.trunc = trunc i64 %foxtrot.coerce to i32
-  store i32 %foxtrot.sroa.0.0.extract.trunc, i32* @alpha, align 4
+  store i32 %foxtrot.sroa.0.0.extract.trunc, ptr @alpha, align 4
   %tobool = icmp eq i32 %foxtrot.sroa.0.0.extract.trunc, 0
   br i1 %tobool, label %if.end, label %return
 
@@ -81,7 +81,7 @@ if.end:                                           ; preds = %entry
   %foxtrot.sroa.2.0.extract.shift = lshr i64 %foxtrot.coerce, 32
   %foxtrot.sroa.2.0.extract.trunc = trunc i64 %foxtrot.sroa.2.0.extract.shift to i32
   call void @llvm.dbg.value(metadata i32 %foxtrot.sroa.2.0.extract.trunc, metadata !30, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !34
-  store i32 %foxtrot.sroa.2.0.extract.trunc, i32* @alpha, align 4, !dbg !42
+  store i32 %foxtrot.sroa.2.0.extract.trunc, ptr @alpha, align 4, !dbg !42
   call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !43
   br label %return
 

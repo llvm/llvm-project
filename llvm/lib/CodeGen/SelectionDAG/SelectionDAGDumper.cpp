@@ -365,6 +365,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FP16_TO_FP:          return "strict_fp16_to_fp";
   case ISD::FP_TO_FP16:                 return "fp_to_fp16";
   case ISD::STRICT_FP_TO_FP16:          return "strict_fp_to_fp16";
+  case ISD::BF16_TO_FP:                 return "bf16_to_fp";
+  case ISD::FP_TO_BF16:                 return "fp_to_bf16";
   case ISD::LROUND:                     return "lround";
   case ISD::STRICT_LROUND:              return "strict_lround";
   case ISD::LLROUND:                    return "llround";
@@ -484,6 +486,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECREDUCE_UMIN:             return "vecreduce_umin";
   case ISD::VECREDUCE_FMAX:             return "vecreduce_fmax";
   case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
+  case ISD::STACKMAP:
+    return "stackmap";
+  case ISD::PATCHPOINT:
+    return "patchpoint";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
@@ -1053,6 +1059,9 @@ LLVM_DUMP_METHOD void SDNode::dumprFull(const SelectionDAG *G) const {
 
 void SDNode::print(raw_ostream &OS, const SelectionDAG *G) const {
   printr(OS, G);
+  // Under VerboseDAGDumping divergence will be printed always.
+  if (isDivergent() && !VerboseDAGDumping)
+    OS << " # D:1";
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     if (i) OS << ", "; else OS << " ";
     printOperand(OS, G, getOperand(i));

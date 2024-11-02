@@ -11,8 +11,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class BreakpointIDTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         self.build()
 

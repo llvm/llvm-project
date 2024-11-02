@@ -24,7 +24,6 @@ define dso_local i32 @avoid_trunc_gep(i8* nocapture readonly %ip) {
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TAG_0_IN_LCSSA:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP1]], [[FOR_END_LOOPEXIT]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TAG_0_IN_LCSSA]] to i8
 ; CHECK-NEXT:    ret i32 [[TAG_0_IN_LCSSA]]
 ;
 entry:

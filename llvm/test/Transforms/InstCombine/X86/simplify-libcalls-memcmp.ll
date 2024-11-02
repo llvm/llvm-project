@@ -10,13 +10,13 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @str = private unnamed_addr constant [6 x i8] c"abcde\00", align 1
 
-declare i32 @memcmp(i8*, i8*, i32)
+declare i32 @memcmp(ptr, ptr, i32)
 
 define void @PR50850() {
 ; CHECK-LABEL: @PR50850(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @memcmp(i8* bitcast (void ()* @PR50850 to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str, i64 0, i64 0), i32 6)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @memcmp(ptr nonnull @PR50850, ptr nonnull @str, i32 6)
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i32 @memcmp(i8* bitcast (void ()* @PR50850 to i8*), i8* bitcast ([6 x i8]* @str to i8*), i32 6)
+  %call = call i32 @memcmp(ptr @PR50850, ptr @str, i32 6)
   ret void
 }

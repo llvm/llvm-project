@@ -23,54 +23,54 @@ TEST(AnyTest, ConstructionAndAssignment) {
   llvm::Any E{3.7};
 
   // An empty Any is not anything.
-  EXPECT_FALSE(A.hasValue());
+  EXPECT_FALSE(A.has_value());
   EXPECT_FALSE(any_isa<int>(A));
 
   // An int is an int but not something else.
-  EXPECT_TRUE(B.hasValue());
+  EXPECT_TRUE(B.has_value());
   EXPECT_TRUE(any_isa<int>(B));
   EXPECT_FALSE(any_isa<float>(B));
 
-  EXPECT_TRUE(C.hasValue());
+  EXPECT_TRUE(C.has_value());
   EXPECT_TRUE(any_isa<int>(C));
 
   // A const char * is a const char * but not an int.
-  EXPECT_TRUE(D.hasValue());
+  EXPECT_TRUE(D.has_value());
   EXPECT_TRUE(any_isa<const char *>(D));
   EXPECT_FALSE(any_isa<int>(D));
 
   // A double is a double but not a float.
-  EXPECT_TRUE(E.hasValue());
+  EXPECT_TRUE(E.has_value());
   EXPECT_TRUE(any_isa<double>(E));
   EXPECT_FALSE(any_isa<float>(E));
 
   // After copy constructing from an int, the new item and old item are both
   // ints.
   llvm::Any F(B);
-  EXPECT_TRUE(B.hasValue());
-  EXPECT_TRUE(F.hasValue());
+  EXPECT_TRUE(B.has_value());
+  EXPECT_TRUE(F.has_value());
   EXPECT_TRUE(any_isa<int>(F));
   EXPECT_TRUE(any_isa<int>(B));
 
   // After move constructing from an int, the new item is an int and the old one
   // isn't.
   llvm::Any G(std::move(C));
-  EXPECT_FALSE(C.hasValue());
-  EXPECT_TRUE(G.hasValue());
+  EXPECT_FALSE(C.has_value());
+  EXPECT_TRUE(G.has_value());
   EXPECT_TRUE(any_isa<int>(G));
   EXPECT_FALSE(any_isa<int>(C));
 
   // After copy-assigning from an int, the new item and old item are both ints.
   A = F;
-  EXPECT_TRUE(A.hasValue());
-  EXPECT_TRUE(F.hasValue());
+  EXPECT_TRUE(A.has_value());
+  EXPECT_TRUE(F.has_value());
   EXPECT_TRUE(any_isa<int>(A));
   EXPECT_TRUE(any_isa<int>(F));
 
   // After move-assigning from an int, the new item and old item are both ints.
   B = std::move(G);
-  EXPECT_TRUE(B.hasValue());
-  EXPECT_FALSE(G.hasValue());
+  EXPECT_TRUE(B.has_value());
+  EXPECT_FALSE(G.has_value());
   EXPECT_TRUE(any_isa<int>(B));
   EXPECT_FALSE(any_isa<int>(G));
 }
@@ -111,7 +111,7 @@ TEST(AnyTest, GoodAnyCast) {
   // Make sure we can any_cast from an rvalue and that it's properly destroyed
   // in the process.
   EXPECT_EQ(8, llvm::any_cast<int>(std::move(E)));
-  EXPECT_TRUE(E.hasValue());
+  EXPECT_TRUE(E.has_value());
 
   // Make sure moving from pointers gives back pointers, and that we can modify
   // the underlying value through those pointers.

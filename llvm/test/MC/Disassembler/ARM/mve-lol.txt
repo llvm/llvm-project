@@ -1,5 +1,5 @@
 # RUN: llvm-mc -assemble -triple=thumbv8.1m.main -mattr=+mve -filetype=obj %s -o - 2>&1 | \
-# RUN:   llvm-objdump -d -r --triple=thumbv8.1m.main --mattr=+mve - | FileCheck %s
+# RUN:   llvm-objdump --no-print-imm-hex -d -r --triple=thumbv8.1m.main --mattr=+mve - | FileCheck %s
 
 # Test to check that we can evaluate branches and their targets, i.e.
 # checking that we see branch targets annotations like <$t.0+0xc> in the

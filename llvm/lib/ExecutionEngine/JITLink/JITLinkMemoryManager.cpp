@@ -25,7 +25,7 @@ BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
 
   for (auto &Sec : G.sections()) {
     // Skip empty sections.
-    if (empty(Sec.blocks()))
+    if (Sec.blocks().empty())
       continue;
 
     auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemDeallocPolicy()}];
@@ -89,7 +89,7 @@ BasicLayout::getContiguousPageBasedLayoutSizes(uint64_t PageSize) {
                                      inconvertibleErrorCode());
 
     uint64_t SegSize = alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
-    if (AG.getMemDeallocPolicy() == MemDeallocPolicy::Standard)
+    if (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
       SegsSizes.StandardSegs += SegSize;
     else
       SegsSizes.FinalizeSegs += SegSize;
@@ -146,7 +146,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                                 const JITLinkDylib *JD, SegmentMap Segments,
                                 OnCreatedFunction OnCreated) {
 
-  static_assert(AllocGroup::NumGroups == 16,
+  static_assert(orc::AllocGroup::NumGroups == 16,
                 "AllocGroup has changed. Section names below must be updated");
   StringRef AGSectionNames[] = {
       "__---.standard", "__R--.standard", "__-W-.standard", "__RW-.standard",
@@ -156,7 +156,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
 
   auto G =
       std::make_unique<LinkGraph>("", Triple(), 0, support::native, nullptr);
-  AllocGroupSmallMap<Block *> ContentBlocks;
+  orc::AllocGroupSmallMap<Block *> ContentBlocks;
 
   orc::ExecutorAddr NextAddr(0x100000);
   for (auto &KV : Segments) {
@@ -213,7 +213,8 @@ SimpleSegmentAlloc &
 SimpleSegmentAlloc::operator=(SimpleSegmentAlloc &&) = default;
 SimpleSegmentAlloc::~SimpleSegmentAlloc() = default;
 
-SimpleSegmentAlloc::SegmentInfo SimpleSegmentAlloc::getSegInfo(AllocGroup AG) {
+SimpleSegmentAlloc::SegmentInfo
+SimpleSegmentAlloc::getSegInfo(orc::AllocGroup AG) {
   auto I = ContentBlocks.find(AG);
   if (I != ContentBlocks.end()) {
     auto &B = *I->second;
@@ -223,7 +224,8 @@ SimpleSegmentAlloc::SegmentInfo SimpleSegmentAlloc::getSegInfo(AllocGroup AG) {
 }
 
 SimpleSegmentAlloc::SimpleSegmentAlloc(
-    std::unique_ptr<LinkGraph> G, AllocGroupSmallMap<Block *> ContentBlocks,
+    std::unique_ptr<LinkGraph> G,
+    orc::AllocGroupSmallMap<Block *> ContentBlocks,
     std::unique_ptr<JITLinkMemoryManager::InFlightAlloc> Alloc)
     : G(std::move(G)), ContentBlocks(std::move(ContentBlocks)),
       Alloc(std::move(Alloc)) {}
@@ -394,9 +396,10 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     auto &AG = KV.first;
     auto &Seg = KV.second;
 
-    auto &SegAddr = (AG.getMemDeallocPolicy() == MemDeallocPolicy::Standard)
-                        ? NextStandardSegAddr
-                        : NextFinalizeSegAddr;
+    auto &SegAddr =
+        (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
+            ? NextStandardSegAddr
+            : NextFinalizeSegAddr;
 
     Seg.WorkingMem = SegAddr.toPtr<char *>();
     Seg.Addr = SegAddr;

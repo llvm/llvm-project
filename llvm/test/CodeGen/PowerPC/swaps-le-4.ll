@@ -7,12 +7,10 @@
 define void @bar() {
 entry:
   %x = alloca <2 x i64>, align 16
-  %0 = bitcast <2 x i64>* %x to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0)
-  %arrayidx = getelementptr inbounds <2 x i64>, <2 x i64>* %x, i64 0, i64 0
-  store <2 x i64> <i64 0, i64 1>, <2 x i64>* %x, align 16
-  call void @foo(i64* %arrayidx)
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %0)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %x)
+  store <2 x i64> <i64 0, i64 1>, ptr %x, align 16
+  call void @foo(ptr %x)
+  call void @llvm.lifetime.end.p0(i64 16, ptr %x)
   ret void
 }
 
@@ -21,7 +19,7 @@ entry:
 ; CHECK: stxvd2x
 ; CHECK-NOT: xxswapd
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @foo(i64*)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @foo(ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 

@@ -1,12 +1,12 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
 
-%funcref = type i8 addrspace(20)* ;; addrspace 20 is nonintegral
+%funcref = type ptr addrspace(20) ;; addrspace 20 is nonintegral
 
 @funcref_global = local_unnamed_addr addrspace(1) global %funcref undef
 
 define void @set_funcref_global(%funcref %g) {
   ;; this generates a global.set of @funcref_global
-  store %funcref %g, %funcref addrspace(1)* @funcref_global
+  store %funcref %g, ptr addrspace(1) @funcref_global
   ret void
 }
 

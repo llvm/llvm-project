@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs  -mtriple=s390x-linux-gnu < %s -debug -stop-after=machineverifier 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
-define i128 @func1({ i128, i8* } %struct) {
+define i128 @func1({ i128, ptr } %struct) {
 ; Verify that we get a combine on the build_pair, creating a LD8 load somewhere
 ; between "Initial selection DAG" and "Optimized lowered selection DAG".
 ; The target is big-endian, and stack grows towards higher addresses,
@@ -16,7 +16,7 @@ define i128 @func1({ i128, i8* } %struct) {
 ; CHECK-NEXT: into
 ; CHECK-SAME: load<(load (s128), align 8)>
 ; CHECK-LABEL: Optimized lowered selection DAG:
-  %result = extractvalue {i128, i8* } %struct, 0
+  %result = extractvalue {i128, ptr } %struct, 0
   ret i128 %result
 }
 

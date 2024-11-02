@@ -48,7 +48,8 @@ AST_MATCHER(CXXRecordDecl, isMoveConstructible) {
 
 static TypeMatcher notTemplateSpecConstRefType() {
   return lValueReferenceType(
-      pointee(unless(templateSpecializationType()), isConstQualified()));
+      pointee(unless(elaboratedType(namesType(templateSpecializationType()))),
+              isConstQualified()));
 }
 
 static TypeMatcher nonConstValueType() {
@@ -137,7 +138,7 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
   const int ParamIdx = Param->getFunctionScopeIndex();
   const CXXRecordDecl *Record = Ctor->getParent();
 
-  // Check whether a ctor `C` forms a pair with `Ctor` under the aforementionned
+  // Check whether a ctor `C` forms a pair with `Ctor` under the aforementioned
   // rules.
   const auto IsRValueOverload = [&Ctor, ParamIdx](const CXXConstructorDecl *C) {
     if (C == Ctor || C->isDeleted() ||

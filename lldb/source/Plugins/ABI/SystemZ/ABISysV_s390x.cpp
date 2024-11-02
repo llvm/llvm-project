@@ -172,8 +172,7 @@ static const RegisterInfo g_register_infos[] = {
     DEFINE_REG(f15, 8, nullptr, LLDB_INVALID_REGNUM),
 };
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABISysV_s390x::GetRegisterInfoArray(uint32_t &count) {

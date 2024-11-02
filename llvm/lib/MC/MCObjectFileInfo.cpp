@@ -16,6 +16,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
+#include "llvm/MC/MCSectionDXContainer.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -64,8 +65,18 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32))
     SupportsCompactUnwindWithoutEHFrame = true;
 
-  if (T.isWatchABI())
+  switch (Ctx->emitDwarfUnwindInfo()) {
+  case EmitDwarfUnwindType::Always:
+    OmitDwarfIfHaveCompactUnwind = false;
+    break;
+  case EmitDwarfUnwindType::NoCompactUnwind:
     OmitDwarfIfHaveCompactUnwind = true;
+    break;
+  case EmitDwarfUnwindType::Default:
+    OmitDwarfIfHaveCompactUnwind =
+        T.isWatchABI() || SupportsCompactUnwindWithoutEHFrame;
+    break;
+  }
 
   FDECFIEncoding = dwarf::DW_EH_PE_pcrel;
 
@@ -520,6 +531,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
   PseudoProbeDescSection =
       Ctx->getELFSection(".pseudo_probe_desc", DebugSecType, 0);
+
+  LLVMStatsSection = Ctx->getELFSection(".llvm_stats", ELF::SHT_PROGBITS, 0);
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
@@ -564,8 +577,9 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       ".rdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getReadOnly());
 
-  if (T.getArch() == Triple::x86_64 || T.getArch() == Triple::aarch64) {
-    // On Windows 64 with SEH, the LSDA is emitted into the .xdata section
+  if (T.getArch() == Triple::x86_64 || T.getArch() == Triple::aarch64 ||
+      T.getArch() == Triple::arm || T.getArch() == Triple::thumb) {
+    // On Windows with SEH, the LSDA is emitted into the .xdata section
     LSDASection = nullptr;
   } else {
     LSDASection = Ctx->getCOFFSection(".gcc_except_table",
@@ -1008,6 +1022,11 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
 }
 
+void MCObjectFileInfo::initDXContainerObjectFileInfo(const Triple &T) {
+  // At the moment the DXBC section should end up empty.
+  TextSection = Ctx->getDXContainerSection("DXBC", SectionKind::getText());
+}
+
 MCObjectFileInfo::~MCObjectFileInfo() = default;
 
 void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
@@ -1056,6 +1075,7 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
     initXCOFFMCObjectFileInfo(TheTriple);
     break;
   case MCContext::IsDXContainer:
+    initDXContainerObjectFileInfo(TheTriple);
     break;
   }
 }
@@ -1085,7 +1105,8 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 
 MCSection *
 MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
-  if (Ctx->getObjectFileType() != MCContext::IsELF)
+  if ((Ctx->getObjectFileType() != MCContext::IsELF) ||
+      Ctx->getTargetTriple().isPS4())
     return StackSizesSection;
 
   const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
@@ -1122,11 +1143,30 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 }
 
 MCSection *
-MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
+MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return nullptr;
+
+  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+  unsigned Flags = ELF::SHF_LINK_ORDER | ELF::SHF_ALLOC;
+  StringRef GroupName;
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
+  }
+
+  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
+                            GroupName,
+                            /*IsComdat=*/true, ElfSec.getUniqueID(),
+                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+}
+
+MCSection *
+MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
   if (Ctx->getObjectFileType() == MCContext::IsELF) {
-    const auto *ElfSec = static_cast<const MCSectionELF *>(TextSec);
+    const auto &ElfSec = static_cast<const MCSectionELF &>(TextSec);
     // Create a separate section for probes that comes with a comdat function.
-    if (const MCSymbol *Group = ElfSec->getGroup()) {
+    if (const MCSymbol *Group = ElfSec.getGroup()) {
       auto *S = static_cast<MCSectionELF *>(PseudoProbeSection);
       auto Flags = S->getFlags() | ELF::SHF_GROUP;
       return Ctx->getELFSection(S->getName(), S->getType(), Flags,
@@ -1159,4 +1199,30 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
     }
   }
   return PseudoProbeDescSection;
+}
+
+MCSection *MCObjectFileInfo::getLLVMStatsSection() const {
+  return LLVMStatsSection;
+}
+
+MCSection *MCObjectFileInfo::getPCSection(StringRef Name,
+                                          const MCSection *TextSec) const {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return nullptr;
+
+  // SHF_WRITE for relocations, and let user post-process data in-place.
+  unsigned Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
+
+  if (!TextSec)
+    TextSec = getTextSection();
+
+  StringRef GroupName;
+  const auto &ElfSec = static_cast<const MCSectionELF &>(*TextSec);
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
+  }
+  return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+                            ElfSec.getUniqueID(),
+                            cast<MCSymbolELF>(TextSec->getBeginSymbol()));
 }

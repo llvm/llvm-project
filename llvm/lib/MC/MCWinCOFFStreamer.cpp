@@ -70,16 +70,16 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
   // FIXME: this is identical to the ELF one.
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.
-  SwitchSection(getContext().getObjectFileInfo()->getTextSection());
+  switchSection(getContext().getObjectFileInfo()->getTextSection());
   emitCodeAlignment(4, &STI);
 
-  SwitchSection(getContext().getObjectFileInfo()->getDataSection());
+  switchSection(getContext().getObjectFileInfo()->getDataSection());
   emitCodeAlignment(4, &STI);
 
-  SwitchSection(getContext().getObjectFileInfo()->getBSSSection());
+  switchSection(getContext().getObjectFileInfo()->getBSSSection());
   emitCodeAlignment(4, &STI);
 
-  SwitchSection(getContext().getObjectFileInfo()->getTextSection());
+  switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
@@ -133,7 +133,7 @@ void MCWinCOFFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::BeginCOFFSymbolDef(MCSymbol const *S) {
+void MCWinCOFFStreamer::beginCOFFSymbolDef(MCSymbol const *S) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   if (CurSymbol)
     Error("starting a new symbol definition without completing the "
@@ -172,7 +172,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolType(int Type) {
   cast<MCSymbolCOFF>(CurSymbol)->setType((uint16_t)Type);
 }
 
-void MCWinCOFFStreamer::EndCOFFSymbolDef() {
+void MCWinCOFFStreamer::endCOFFSymbolDef() {
   if (!CurSymbol)
     Error("ending symbol definition without starting one");
   CurSymbol = nullptr;
@@ -286,10 +286,10 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     OS << " -aligncomm:\"" << Symbol->getName() << "\","
        << Log2_32_Ceil(ByteAlignment);
 
-    PushSection();
-    SwitchSection(MFI->getDrectveSection());
+    pushSection();
+    switchSection(MFI->getDrectveSection());
     emitBytes(Directive);
-    PopSection();
+    popSection();
   }
 }
 
@@ -298,13 +298,13 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
-  PushSection();
-  SwitchSection(Section);
+  pushSection();
+  switchSection(Section);
   emitValueToAlignment(ByteAlignment, 0, 1, 0);
   emitLabel(Symbol);
   Symbol->setExternal(false);
   emitZeros(Size);
-  PopSection();
+  popSection();
 }
 
 void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,

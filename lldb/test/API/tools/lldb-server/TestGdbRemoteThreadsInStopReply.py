@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 class TestGdbRemoteThreadsInStopReply(
         gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     ENABLE_THREADS_IN_STOP_REPLY_ENTRIES = [
         "read packet: $QListThreadsInStopReply#21",
         "send packet: $OK#00",

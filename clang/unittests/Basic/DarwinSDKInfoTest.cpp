@@ -19,7 +19,7 @@ TEST(DarwinSDKInfo, VersionMapping) {
   Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
                                                             VersionTuple());
-  EXPECT_TRUE(Mapping.hasValue());
+  EXPECT_TRUE(Mapping);
   EXPECT_EQ(Mapping->getMinimumValue(), VersionTuple(1));
 
   // Exact mapping.
@@ -54,7 +54,7 @@ TEST(DarwinSDKInfo, VersionMappingMissingKey) {
   Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
                                                             VersionTuple());
-  EXPECT_TRUE(Mapping.hasValue());
+  EXPECT_TRUE(Mapping);
   EXPECT_EQ(
       Mapping->map(VersionTuple(4), VersionTuple(0, 1), VersionTuple(100)),
       None);
@@ -64,14 +64,14 @@ TEST(DarwinSDKInfo, VersionMappingParseEmpty) {
   llvm::json::Object Obj({});
   EXPECT_FALSE(
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj, VersionTuple())
-          .hasValue());
+          .has_value());
 }
 
 TEST(DarwinSDKInfo, VersionMappingParseError) {
   llvm::json::Object Obj({{"test", "1.2"}});
   EXPECT_FALSE(
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj, VersionTuple())
-          .hasValue());
+          .has_value());
 }
 
 TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {

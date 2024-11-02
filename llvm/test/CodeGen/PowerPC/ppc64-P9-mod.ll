@@ -21,7 +21,7 @@
 define void @modulo_sw(i32 signext %a, i32 signext %b) local_unnamed_addr {
 entry:
   %rem = srem i32 %a, %b
-  store i32 %rem, i32* @mod_resultsw, align 4
+  store i32 %rem, ptr @mod_resultsw, align 4
   ret void
 ; CHECK-LABEL: modulo_sw
 ; CHECK: modsw {{[0-9]+}}, 3, 4
@@ -67,7 +67,7 @@ entry:
 define void @modulo_ud(i64 %a, i64 %b) local_unnamed_addr {
 entry:
   %rem = urem i64 %a, %b
-  store i64 %rem, i64* @mod_resultud, align 8
+  store i64 %rem, ptr @mod_resultud, align 8
   ret void
 ; CHECK-LABEL: modulo_ud
 ; CHECK: modud {{[0-9]+}}, 3, 4
@@ -83,9 +83,9 @@ entry:
 define void @modulo_div_sw(i32 signext %a, i32 signext %b) local_unnamed_addr {
 entry:
   %rem = srem i32 %a, %b
-  store i32 %rem, i32* @mod_resultsw, align 4
+  store i32 %rem, ptr @mod_resultsw, align 4
   %div = sdiv i32 %a, %b
-  store i32 %div, i32* @div_resultsw, align 4
+  store i32 %div, ptr @div_resultsw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_sw
 ; CHECK: modsw {{[0-9]+}}, 3, 4
@@ -109,9 +109,9 @@ entry:
 define void @modulo_div_abc_sw(i32 signext %a, i32 signext %b, i32 signext %c) local_unnamed_addr {
 entry:
   %rem = srem i32 %a, %c
-  store i32 %rem, i32* @mod_resultsw, align 4
+  store i32 %rem, ptr @mod_resultsw, align 4
   %div = sdiv i32 %b, %c
-  store i32 %div, i32* @div_resultsw, align 4
+  store i32 %div, ptr @div_resultsw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_abc_sw
 ; CHECK: modsw {{[0-9]+}}, 3, 5
@@ -127,9 +127,9 @@ entry:
 define void @modulo_div_uw(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr {
 entry:
   %rem = urem i32 %a, %b
-  store i32 %rem, i32* @mod_resultuw, align 4
+  store i32 %rem, ptr @mod_resultuw, align 4
   %div = udiv i32 %a, %b
-  store i32 %div, i32* @div_resultuw, align 4
+  store i32 %div, ptr @div_resultuw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_uw
 ; CHECK: moduw {{[0-9]+}}, 3, 4
@@ -153,9 +153,9 @@ entry:
 define void @modulo_div_swuw(i32 signext %a, i32 signext %b) local_unnamed_addr {
 entry:
   %rem = srem i32 %a, %b
-  store i32 %rem, i32* @mod_resultsw, align 4
+  store i32 %rem, ptr @mod_resultsw, align 4
   %div = udiv i32 %a, %b
-  store i32 %div, i32* @div_resultsw, align 4
+  store i32 %div, ptr @div_resultsw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_swuw
 ; CHECK: modsw {{[0-9]+}}, 3, 4
@@ -171,9 +171,9 @@ entry:
 define void @modulo_div_udsd(i64 %a, i64 %b) local_unnamed_addr {
 entry:
   %rem = urem i64 %a, %b
-  store i64 %rem, i64* @mod_resultud, align 8
+  store i64 %rem, ptr @mod_resultud, align 8
   %div = sdiv i64 %a, %b
-  store i64 %div, i64* @div_resultsd, align 8
+  store i64 %div, ptr @div_resultsd, align 8
   ret void
 ; CHECK-LABEL: modulo_div_udsd
 ; CHECK: modud {{[0-9]+}}, 3, 4
@@ -189,7 +189,7 @@ entry:
 define void @modulo_const32_sw(i32 signext %a) local_unnamed_addr {
 entry:
   %rem = srem i32 %a, 32
-  store i32 %rem, i32* @mod_resultsw, align 4
+  store i32 %rem, ptr @mod_resultsw, align 4
   ret void
 ; CHECK-LABEL: modulo_const32_sw
 ; CHECK-NOT: modsw
@@ -247,13 +247,13 @@ entry:
 define void @blocks_modulo_div_sw(i32 signext %a, i32 signext %b, i32 signext %c) local_unnamed_addr {
 entry:
   %div = sdiv i32 %a, %b
-  store i32 %div, i32* @div_resultsw, align 4
+  store i32 %div, ptr @div_resultsw, align 4
   %cmp = icmp sgt i32 %c, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   %rem = srem i32 %a, %b
-  store i32 %rem, i32* @mod_resultsw, align 4
+  store i32 %rem, ptr @mod_resultsw, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

@@ -157,9 +157,40 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
 
   computeRegisterProperties(STI.getRegisterInfo());
 
+  // We lower the `atomic-compare-and-swap` to `__sync_val_compare_and_swap`
+  // for subtarget < M68020
+  setMaxAtomicSizeInBitsSupported(32);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, {MVT::i8, MVT::i16, MVT::i32},
+                     Subtarget.atLeastM68020() ? Legal : LibCall);
+
+  // M68k does not have native read-modify-write support, so expand all of them
+  // to `__sync_fetch_*` for target < M68020, otherwise expand to CmpxChg.
+  // See `shouldExpandAtomicRMWInIR` below.
+  setOperationAction(
+      {
+          ISD::ATOMIC_LOAD_ADD,
+          ISD::ATOMIC_LOAD_SUB,
+          ISD::ATOMIC_LOAD_AND,
+          ISD::ATOMIC_LOAD_OR,
+          ISD::ATOMIC_LOAD_XOR,
+          ISD::ATOMIC_LOAD_NAND,
+          ISD::ATOMIC_LOAD_MIN,
+          ISD::ATOMIC_LOAD_MAX,
+          ISD::ATOMIC_LOAD_UMIN,
+          ISD::ATOMIC_LOAD_UMAX,
+      },
+      {MVT::i8, MVT::i16, MVT::i32}, LibCall);
+
   // 2^2 bytes
   // FIXME can it be just 2^1?
   setMinFunctionAlignment(Align::Constant<2>());
+}
+
+TargetLoweringBase::AtomicExpansionKind
+M68kTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  return Subtarget.atLeastM68020()
+             ? TargetLoweringBase::AtomicExpansionKind::CmpXChg
+             : TargetLoweringBase::AtomicExpansionKind::None;
 }
 
 EVT M68kTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -765,9 +796,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && IsTailCall) {
-    Chain = DAG.getCALLSEQ_END(Chain,
-                               DAG.getIntPtrConstant(NumBytesToPop, DL, true),
-                               DAG.getIntPtrConstant(0, DL, true), InFlag, DL);
+    Chain = DAG.getCALLSEQ_END(Chain, NumBytesToPop, 0, InFlag, DL);
     InFlag = Chain.getValue(1);
   }
 
@@ -821,9 +850,8 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a flag for retval copy to use.
   if (!IsSibcall) {
-    Chain = DAG.getCALLSEQ_END(
-        Chain, DAG.getIntPtrConstant(NumBytesToPop, DL, true),
-        DAG.getIntPtrConstant(NumBytesForCalleeToPop, DL, true), InFlag, DL);
+    Chain = DAG.getCALLSEQ_END(Chain, NumBytesToPop, NumBytesForCalleeToPop,
+                               InFlag, DL);
     InFlag = Chain.getValue(1);
   }
 
@@ -1666,7 +1694,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
     case ISD::SHL: {
       if (Op.getNode()->getFlags().hasNoSignedWrap())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     default:
       NeedOF = true;
@@ -1755,7 +1783,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
       if (/*!Subtarget.hasBMI() ||*/ !IsAndn || !IsLegalAndnType)
         break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SUB:
   case ISD::OR:
   case ISD::XOR:
@@ -3241,8 +3269,7 @@ SDValue M68kTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     Chain = DAG.getCopyToReg(Chain, DL, SPReg, Result); // Output chain
   }
 
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, DL, true),
-                             DAG.getIntPtrConstant(0, DL, true), SDValue(), DL);
+  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), DL);
 
   SDValue Ops[2] = {Result, Chain};
   return DAG.getMergeValues(Ops, DL);

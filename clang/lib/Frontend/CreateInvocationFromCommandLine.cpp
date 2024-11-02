@@ -54,6 +54,9 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
   if (!C)
     return nullptr;
 
+  if (C->getArgs().hasArg(driver::options::OPT_fdriver_only))
+    return nullptr;
+
   // Just print the cc1 options if -### was present.
   if (C->getArgs().hasArg(driver::options::OPT__HASH_HASH_HASH)) {
     C->getJobs().Print(llvm::errs(), "\n", true);

@@ -84,6 +84,7 @@ class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 let Namespace = "Mips" in {
   // General Purpose Registers
+  let isConstant = true in
   def ZERO : MipsGPRReg< 0, "zero">, DwarfRegNum<[0]>;
   def AT   : MipsGPRReg< 1, "1">,    DwarfRegNum<[1]>;
   def V0   : MipsGPRReg< 2, "2">,    DwarfRegNum<[2]>;
@@ -118,6 +119,7 @@ let Namespace = "Mips" in {
   def RA   : MipsGPRReg< 31, "ra">,  DwarfRegNum<[31]>;
 
   // General Purpose 64-bit Registers
+  let isConstant = true in
   def ZERO_64 : Mips64GPRReg< 0, "zero", [ZERO]>, DwarfRegNum<[0]>;
   def AT_64   : Mips64GPRReg< 1, "1",    [AT]>, DwarfRegNum<[1]>;
   def V0_64   : Mips64GPRReg< 2, "2",    [V0]>, DwarfRegNum<[2]>;

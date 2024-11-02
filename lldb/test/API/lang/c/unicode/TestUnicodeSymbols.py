@@ -7,8 +7,6 @@ from lldbsuite.test.decorators import *
 
 class TestUnicodeSymbols(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_union_members(self):
         self.build()

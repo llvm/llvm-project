@@ -72,7 +72,7 @@ struct WasmDataSegment {
 // A wasm function to be written into the function section.
 struct WasmFunction {
   uint32_t SigIndex;
-  const MCSymbolWasm *Sym;
+  MCSection *Section;
 };
 
 // A wasm global to be written into the global section.
@@ -1058,15 +1058,12 @@ uint32_t WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
   encodeULEB128(Functions.size(), W->OS);
 
   for (const WasmFunction &Func : Functions) {
-    auto &FuncSection = static_cast<MCSectionWasm &>(Func.Sym->getSection());
+    auto *FuncSection = static_cast<MCSectionWasm *>(Func.Section);
 
-    int64_t Size = 0;
-    if (!Func.Sym->getSize()->evaluateAsAbsolute(Size, Layout))
-      report_fatal_error(".size expression must be evaluatable");
-
+    int64_t Size = Layout.getSectionAddressSize(FuncSection);
     encodeULEB128(Size, W->OS);
-    FuncSection.setSectionOffset(W->OS.tell() - Section.ContentsOffset);
-    Asm.writeSectionData(W->OS, &FuncSection, Layout);
+    FuncSection->setSectionOffset(W->OS.tell() - Section.ContentsOffset);
+    Asm.writeSectionData(W->OS, FuncSection, Layout);
   }
 
   // Apply fixups.
@@ -1570,9 +1567,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         continue;
 
       const auto &WS = static_cast<const MCSymbolWasm &>(S);
-      LLVM_DEBUG(dbgs()
-                 << "MCSymbol: "
-                 << toString(WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA))
+      LLVM_DEBUG(
+          dbgs() << "MCSymbol: "
+                 << toString(WS.getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA))
                  << " '" << S << "'"
                  << " isDefined=" << S.isDefined() << " isExternal="
                  << S.isExternal() << " isTemporary=" << S.isTemporary()
@@ -1591,15 +1588,11 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
             report_fatal_error(
                 "function sections must contain one function each");
 
-          if (WS.getSize() == nullptr)
-            report_fatal_error(
-                "function symbols must have a size set with .size");
-
           // A definition. Write out the function body.
           Index = NumFunctionImports + Functions.size();
           WasmFunction Func;
           Func.SigIndex = getFunctionType(WS);
-          Func.Sym = &WS;
+          Func.Section = &WS.getSection();
           assert(WasmIndices.count(&WS) == 0);
           WasmIndices[&WS] = Index;
           Functions.push_back(Func);
@@ -1809,7 +1802,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();
-    Info.Kind = WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA);
+    Info.Kind = WS.getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA);
     Info.Flags = Flags;
     if (!WS.isData()) {
       assert(WasmIndices.count(&WS) > 0);
@@ -1876,7 +1869,8 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     const MCFragment &AlignFrag = *IT;
     if (AlignFrag.getKind() != MCFragment::FT_Align)
       report_fatal_error(".init_array section should be aligned");
-    if (cast<MCAlignFragment>(AlignFrag).getAlignment() != (is64Bit() ? 8 : 4))
+    if (cast<MCAlignFragment>(AlignFrag).getAlignment() !=
+        Align(is64Bit() ? 8 : 4))
       report_fatal_error(".init_array section should be aligned for pointers");
 
     const MCFragment &Frag = *std::next(IT);

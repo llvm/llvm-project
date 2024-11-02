@@ -6,13 +6,14 @@
 define i8*  @translate_element_size1(i64 %arg) {
   ; CHECK-LABEL: name: translate_element_size1
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[C]], [[COPY]](s64)
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK:   $x0 = COPY [[COPY1]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[C]], [[COPY]](s64)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %tmp = getelementptr i8, i8* null, i64 %arg
   ret i8* %tmp
 }
@@ -21,12 +22,13 @@ define %type* @first_offset_const(%type* %addr) {
 
   ; CHECK-LABEL: name: first_offset_const
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-  ; CHECK:   $x0 = COPY [[PTR_ADD]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, %type* %addr, i32 1
   ret %type* %res
 }
@@ -35,11 +37,12 @@ define %type* @first_offset_trivial(%type* %addr) {
 
   ; CHECK-LABEL: name: first_offset_trivial
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; CHECK:   $x0 = COPY [[COPY1]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, %type* %addr, i32 0
   ret %type* %res
 }
@@ -48,15 +51,16 @@ define %type* @first_offset_variable(%type* %addr, i64 %idx) {
 
   ; CHECK-LABEL: name: first_offset_variable
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY1]], [[C]]
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK:   $x0 = COPY [[COPY2]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY1]], [[C]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, %type* %addr, i64 %idx
   ret %type* %res
 }
@@ -65,16 +69,17 @@ define %type* @first_offset_ext(%type* %addr, i32 %idx) {
 
   ; CHECK-LABEL: name: first_offset_ext
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $w1, $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK:   $x0 = COPY [[COPY2]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $w1, $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, %type* %addr, i32 %idx
   ret %type* %res
 }
@@ -84,17 +89,18 @@ define i32* @const_then_var(%type1* %addr, i64 %idx) {
 
   ; CHECK-LABEL: name: const_then_var
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 272
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY1]], [[C1]]
-  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[MUL]](s64)
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD1]](p0)
-  ; CHECK:   $x0 = COPY [[COPY2]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 272
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY1]], [[C1]]
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[MUL]](s64)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD1]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type1, %type1* %addr, i32 4, i32 1, i64 %idx
   ret i32* %res
 }
@@ -103,16 +109,17 @@ define i32* @var_then_const(%type1* %addr, i64 %idx) {
 
   ; CHECK-LABEL: name: var_then_const
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0, $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY1]], [[C]]
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
-  ; CHECK:   $x0 = COPY [[PTR_ADD1]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY1]], [[C]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
+  ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD1]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type1, %type1* %addr, i64 %idx, i32 2, i32 2
   ret i32* %res
 }
@@ -122,17 +129,18 @@ define i32* @var_then_const(%type1* %addr, i64 %idx) {
 define <2 x i32*> @vec_gep_scalar_base(<2 x i64> %offs) {
   ; CHECK-LABEL: name: vec_gep_scalar_base
   ; CHECK: bb.1.entry:
-  ; CHECK:   liveins: $q0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @arr
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[GV]](p0), [[GV]](p0)
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[COPY]], [[BUILD_VECTOR1]]
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p0>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY [[PTR_ADD]](<2 x p0>)
-  ; CHECK:   $q0 = COPY [[COPY1]](<2 x p0>)
-  ; CHECK:   RET_ReallyLR implicit $q0
+  ; CHECK-NEXT:   liveins: $q0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @arr
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[GV]](p0), [[GV]](p0)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[COPY]], [[BUILD_VECTOR1]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(<2 x p0>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY [[PTR_ADD]](<2 x p0>)
+  ; CHECK-NEXT:   $q0 = COPY [[COPY1]](<2 x p0>)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $q0
 entry:
   %0 = getelementptr inbounds [8 x i32], [8 x i32]* @arr, i64 0, <2 x i64> %offs
   ret <2 x i32*> %0

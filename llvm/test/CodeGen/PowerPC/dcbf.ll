@@ -7,9 +7,9 @@
 ; RUN:     llvm-objdump --mcpu=future -dr - | FileCheck %s --check-prefix=CHECK-O
 
 ; Function Attrs: nounwind
-define void @dcbf_test(i8* %a) {
+define void @dcbf_test(ptr %a) {
 entry:
-  tail call void @llvm.ppc.dcbf(i8* %a)
+  tail call void @llvm.ppc.dcbf(ptr %a)
 ; CHECK-S-LABEL: @dcbf_test
 ; CHECK-S: dcbf 0, r3
 ; CHECK-S-NEXT: blr
@@ -19,12 +19,12 @@ entry:
 ret void
 }
 
-declare void @llvm.ppc.dcbf(i8*)
+declare void @llvm.ppc.dcbf(ptr)
 
 ; Function Attrs: nounwind
-define void @dcbfl_test(i8* %a) {
+define void @dcbfl_test(ptr %a) {
 entry:
-  tail call void @llvm.ppc.dcbfl(i8* %a)
+  tail call void @llvm.ppc.dcbfl(ptr %a)
 ; CHECK-S-LABEL: @dcbfl_test
 ; CHECK-S: dcbfl 0, r3
 ; CHECK-S-NEXT: blr
@@ -34,13 +34,13 @@ entry:
 ret void
 }
 
-declare void @llvm.ppc.dcbfl(i8*)
+declare void @llvm.ppc.dcbfl(ptr)
 
 ; Function Attrs: nounwind
-define void @dcbflp_test(i8* %a) {
+define void @dcbflp_test(ptr %a) {
 entry:
-  %add.a = getelementptr inbounds i8, i8* %a, i64 3
-  tail call void @llvm.ppc.dcbflp(i8* %add.a)
+  %add.a = getelementptr inbounds i8, ptr %a, i64 3
+  tail call void @llvm.ppc.dcbflp(ptr %add.a)
 ; CHECK-S-LABEL: @dcbflp_test
 ; CHECK-S: addi r3, r3, 3
 ; CHECK-S-NEXT: dcbflp 0, r3
@@ -52,4 +52,4 @@ entry:
 ret void
 }
 
-declare void @llvm.ppc.dcbflp(i8*)
+declare void @llvm.ppc.dcbflp(ptr)

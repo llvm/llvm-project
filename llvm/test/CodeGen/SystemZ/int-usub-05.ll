@@ -5,7 +5,7 @@
 declare i64 @foo()
 
 ; Check addition of 1.
-define zeroext i1 @f1(i64 %dummy, i64 %a, i64 *%res) {
+define zeroext i1 @f1(i64 %dummy, i64 %a, ptr %res) {
 ; CHECK-LABEL: f1:
 ; CHECK: slgfi %r3, 1
 ; CHECK-DAG: stg %r3, 0(%r4)
@@ -16,12 +16,12 @@ define zeroext i1 @f1(i64 %dummy, i64 %a, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 1)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the SLGFI range.
-define zeroext i1 @f2(i64 %dummy, i64 %a, i64 *%res) {
+define zeroext i1 @f2(i64 %dummy, i64 %a, ptr %res) {
 ; CHECK-LABEL: f2:
 ; CHECK: slgfi %r3, 4294967295
 ; CHECK-DAG: stg %r3, 0(%r4)
@@ -32,12 +32,12 @@ define zeroext i1 @f2(i64 %dummy, i64 %a, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 4294967295)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next value up, which must be loaded into a register first.
-define zeroext i1 @f3(i64 %dummy, i64 %a, i64 *%res) {
+define zeroext i1 @f3(i64 %dummy, i64 %a, ptr %res) {
 ; CHECK-LABEL: f3:
 ; CHECK: llihl [[REG1:%r[0-9]+]], 1
 ; CHECK: slgr %r3, [[REG1]]
@@ -49,12 +49,12 @@ define zeroext i1 @f3(i64 %dummy, i64 %a, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 4294967296)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Likewise for negative values.
-define zeroext i1 @f4(i64 %dummy, i64 %a, i64 *%res) {
+define zeroext i1 @f4(i64 %dummy, i64 %a, ptr %res) {
 ; CHECK-LABEL: f4:
 ; CHECK: lghi [[REG1:%r[0-9]+]], -1
 ; CHECK: slgr %r3, [[REG1]]
@@ -66,12 +66,12 @@ define zeroext i1 @f4(i64 %dummy, i64 %a, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 -1)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check using the overflow result for a branch.
-define void @f5(i64 %dummy, i64 %a, i64 *%res) {
+define void @f5(i64 %dummy, i64 %a, ptr %res) {
 ; CHECK-LABEL: f5:
 ; CHECK: slgfi %r3, 1
 ; CHECK: stg %r3, 0(%r4)
@@ -80,7 +80,7 @@ define void @f5(i64 %dummy, i64 %a, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 1)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   br i1 %obit, label %call, label %exit
 
 call:
@@ -92,7 +92,7 @@ exit:
 }
 
 ; ... and the same with the inverted direction.
-define void @f6(i64 %dummy, i64 %a, i64 *%res) {
+define void @f6(i64 %dummy, i64 %a, ptr %res) {
 ; CHECK-LABEL: f6:
 ; CHECK: slgfi %r3, 1
 ; CHECK: stg %r3, 0(%r4)
@@ -101,7 +101,7 @@ define void @f6(i64 %dummy, i64 %a, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 1)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   br i1 %obit, label %exit, label %call
 
 call:

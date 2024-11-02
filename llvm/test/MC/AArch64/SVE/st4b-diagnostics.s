@@ -91,7 +91,7 @@ st4b { z0.b, z1.b, z2.b, z3.h }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st4b { z0.b, z1.b, z3.b, z5.b }, p0, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must have the same sequential stride
 // CHECK-NEXT: st4b { z0.b, z1.b, z3.b, z5.b }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

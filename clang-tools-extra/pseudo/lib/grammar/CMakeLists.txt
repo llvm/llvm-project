@@ -1,18 +1,15 @@
 set(LLVM_LINK_COMPONENTS Support)
 
-# This library intents to keep as minimal dependencies as possible, it is a base
-# library of the cxx generator, to avoid creating long dep paths in the build
-# graph.
+# This library is used by the clang-pseudo-gen tool which runs at build time.
+# Dependencies should be minimal to avoid long dep paths in the build graph.
+# It does use clangBasic headers (tok::TokenKind), but linking is not needed.
+# We have no transitive dependencies on tablegen files.
+list(REMOVE_ITEM LLVM_COMMON_DEPENDS clang-tablegen-targets)
 add_clang_library(clangPseudoGrammar
   Grammar.cpp
   GrammarBNF.cpp
   LRGraph.cpp
   LRTable.cpp
   LRTableBuild.cpp
-
-  # FIXME: can we get rid of the clangBasic dependency? We need it for the
-  # clang::tok::getTokenName and clang::tok::getPunctuatorSpelling functions, we
-  # could consider remimplement these functions.
-  LINK_LIBS
-  clangBasic
   )
+

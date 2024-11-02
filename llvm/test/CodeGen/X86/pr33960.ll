@@ -34,6 +34,6 @@ entry:
   %bin.rdx19 = or <4 x i32> %bin.rdx, undef
   %tmp13 = extractelement <4 x i32> %bin.rdx19, i32 0
   %or = or i32 0, %tmp13
-  store i32 %or, i32* @b, align 4
+  store i32 %or, ptr @b, align 4
   ret void
 }

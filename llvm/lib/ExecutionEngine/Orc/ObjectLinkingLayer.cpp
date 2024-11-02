@@ -67,7 +67,7 @@ private:
 
   static bool hasMachOInitSection(LinkGraph &G) {
     for (auto &Sec : G.sections())
-      if (Sec.getName() == "__DATA,__obj_selrefs" ||
+      if (Sec.getName() == "__DATA,__objc_selrefs" ||
           Sec.getName() == "__DATA,__objc_classlist" ||
           Sec.getName() == "__TEXT,__swift5_protos" ||
           Sec.getName() == "__TEXT,__swift5_proto" ||
@@ -78,9 +78,12 @@ private:
   }
 
   static bool hasELFInitSection(LinkGraph &G) {
-    for (auto &Sec : G.sections())
-      if (Sec.getName() == ".init_array")
+    for (auto &Sec : G.sections()) {
+      auto SecName = Sec.getName();
+      if (SecName.consume_front(".init_array") &&
+          (SecName.empty() || SecName[0] == '.'))
         return true;
+    }
     return false;
   }
 
@@ -215,6 +218,8 @@ public:
           Flags |= JITSymbolFlags::Callable;
         if (Sym->getScope() == Scope::Default)
           Flags |= JITSymbolFlags::Exported;
+        if (Sym->getLinkage() == Linkage::Weak)
+          Flags |= JITSymbolFlags::Weak;
 
         InternedResult[InternedName] =
             JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
@@ -444,9 +449,15 @@ private:
     // claim, at which point we'll externalize that symbol.
     cantFail(MR->defineMaterializing(std::move(NewSymbolsToClaim)));
 
-    for (auto &KV : NameToSym)
-      if (!MR->getSymbols().count(KV.first))
+    // Walk the list of symbols that we just tried to claim. Symbols that we're
+    // responsible for are marked live. Symbols that we're not responsible for
+    // are turned into external references.
+    for (auto &KV : NameToSym) {
+      if (MR->getSymbols().count(KV.first))
+        KV.second->setLive(true);
+      else
         G.makeExternal(*KV.second);
+    }
 
     return Error::success();
   }
@@ -534,7 +545,8 @@ private:
     for (auto *B : G.blocks()) {
       auto &BI = BlockInfos[B];
       for (auto &E : B->edges()) {
-        if (E.getTarget().getScope() == Scope::Local) {
+        if (E.getTarget().getScope() == Scope::Local &&
+            !E.getTarget().isAbsolute()) {
           auto &TgtB = E.getTarget().getBlock();
           if (&TgtB != B) {
             BI.Dependencies.insert(&TgtB);

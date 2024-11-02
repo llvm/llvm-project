@@ -31,6 +31,12 @@ public:
 
   StorageLocation(Kind LocKind, QualType Type) : LocKind(LocKind), Type(Type) {}
 
+  // Non-copyable because addresses of storage locations are used as their
+  // identities throughout framework and user code. The framework is responsible
+  // for construction and destruction of storage locations.
+  StorageLocation(const StorageLocation &) = delete;
+  StorageLocation &operator=(const StorageLocation &) = delete;
+
   virtual ~StorageLocation() = default;
 
   Kind getKind() const { return LocKind; }

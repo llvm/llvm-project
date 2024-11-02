@@ -33,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "globaldce"
 
 static cl::opt<bool>
-    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true), cl::ZeroOrMore,
+    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
                 cl::desc("Enable virtual function elimination"));
 
 STATISTIC(NumAliases  , "Number of global aliases removed");
@@ -206,7 +206,7 @@ void GlobalDCEPass::ScanVTables(Module &M) {
 
 void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
                                    uint64_t CallOffset) {
-  for (auto &VTableInfo : TypeIdMap[TypeId]) {
+  for (const auto &VTableInfo : TypeIdMap[TypeId]) {
     GlobalVariable *VTable = VTableInfo.first;
     uint64_t VTableOffset = VTableInfo.second;
 
@@ -240,7 +240,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
   if (!TypeCheckedLoadFunc)
     return;
 
-  for (auto U : TypeCheckedLoadFunc->users()) {
+  for (auto *U : TypeCheckedLoadFunc->users()) {
     auto CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
@@ -254,7 +254,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
     } else {
       // type.checked.load with a non-constant offset, so assume every entry in
       // every matching vtable is used.
-      for (auto &VTableInfo : TypeIdMap[TypeId]) {
+      for (const auto &VTableInfo : TypeIdMap[TypeId]) {
         VFESafeVTables.erase(VTableInfo.first);
       }
     }

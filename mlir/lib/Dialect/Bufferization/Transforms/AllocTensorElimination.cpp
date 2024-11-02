@@ -6,16 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/AllocTensorElimination.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_ALLOCTENSORELIMINATION
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -140,6 +146,15 @@ LogicalResult mlir::bufferization::eliminateAllocTensors(
         return WalkResult::skip();
       Value allocTensor = maybeAllocTensor.front();
 
+      // Replace only if the types match.
+      // TODO: This could be extended to support IR such as:
+      // %0 = bufferization.alloc_tensor : tensor<128xf32>
+      // %1 = "some_op"(%0) : (tensor<128xf32>) -> (tensor<128xf32>)
+      // %2 = tensor.expand_shape %1 ...
+      // %3 = tensor.insert_slice %2 into ...
+      if (allocTensor.getType() != operand.get().getType())
+        return WalkResult::skip();
+
       // Find a suitable insertion point.
       Operation *insertionPoint =
           findValidInsertionPoint(allocTensor.getDefiningOp(), neededValues);
@@ -202,45 +217,31 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
           return false;
 
         // Collect all values that are needed to construct the replacement op.
-        neededValues.append(insertSliceOp.offsets().begin(),
-                            insertSliceOp.offsets().end());
-        neededValues.append(insertSliceOp.sizes().begin(),
-                            insertSliceOp.sizes().end());
-        neededValues.append(insertSliceOp.strides().begin(),
-                            insertSliceOp.strides().end());
-        neededValues.push_back(insertSliceOp.dest());
+        neededValues.append(insertSliceOp.getOffsets().begin(),
+                            insertSliceOp.getOffsets().end());
+        neededValues.append(insertSliceOp.getSizes().begin(),
+                            insertSliceOp.getSizes().end());
+        neededValues.append(insertSliceOp.getStrides().begin(),
+                            insertSliceOp.getStrides().end());
+        neededValues.push_back(insertSliceOp.getDest());
 
         return true;
       },
       /*rewriteFunc=*/
       [](OpBuilder &b, Location loc, OpOperand &operand) {
         auto insertOp = cast<tensor::InsertSliceOp>(operand.getOwner());
-        // Expand offsets, sizes and strides to the full rank to handle the
-        // rank-reducing case.
-        SmallVector<OpFoldResult> mixedOffsets = insertOp.getMixedOffsets();
-        SmallVector<OpFoldResult> mixedSizes = insertOp.getMixedSizes();
-        SmallVector<OpFoldResult> mixedStrides = insertOp.getMixedStrides();
-        OffsetSizeAndStrideOpInterface::expandToRank(
-            insertOp.dest(), mixedOffsets, mixedSizes, mixedStrides,
-            [&](Value target, int64_t dim) -> OpFoldResult {
-              auto shapedType = target.getType().cast<ShapedType>();
-              if (shapedType.isDynamicDim(dim))
-                return b.create<tensor::DimOp>(loc, target, dim).result();
-              return b.getIndexAttr(shapedType.getDimSize(dim));
-            });
-        auto t = tensor::ExtractSliceOp::inferRankReducedResultType(
-            insertOp.getSourceType().getRank(),
-            insertOp.dest().getType().cast<RankedTensorType>(), mixedOffsets,
-            mixedSizes, mixedStrides);
         auto extractOp = b.create<tensor::ExtractSliceOp>(
-            loc, t, insertOp.dest(), mixedOffsets, mixedSizes, mixedStrides);
-        return extractOp.result();
+            loc, insertOp.getSourceType(), insertOp.getDest(),
+            insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
+            insertOp.getMixedStrides());
+        return extractOp.getResult();
       });
 }
 
 namespace {
 struct AllocTensorElimination
-    : public AllocTensorEliminationBase<AllocTensorElimination> {
+    : public bufferization::impl::AllocTensorEliminationBase<
+          AllocTensorElimination> {
   AllocTensorElimination() = default;
 
   void runOnOperation() override;

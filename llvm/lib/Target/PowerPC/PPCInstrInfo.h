@@ -67,7 +67,11 @@ enum {
   /// This instruction is an X-Form memory operation.
   XFormMemOp = 0x1 << NewDef_Shift,
   /// This instruction is prefixed.
-  Prefixed = 0x1 << (NewDef_Shift+1)
+  Prefixed = 0x1 << (NewDef_Shift + 1),
+  /// This instruction produced a sign extended result.
+  SExt32To64 = 0x1 << (NewDef_Shift + 2),
+  /// This instruction produced a zero extended result.
+  ZExt32To64 = 0x1 << (NewDef_Shift + 3)
 };
 } // end namespace PPCII
 
@@ -247,7 +251,8 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   bool isRegElgibleForForwarding(const MachineOperand &RegMO,
                                  const MachineInstr &DefMI,
                                  const MachineInstr &MI, bool KillDefMI,
-                                 bool &IsFwdFeederRegKilled) const;
+                                 bool &IsFwdFeederRegKilled,
+                                 bool &SeenIntermediateUse) const;
   unsigned getSpillTarget() const;
   const unsigned *getStoreOpcodesForSpillArray() const;
   const unsigned *getLoadOpcodesForSpillArray() const;
@@ -293,6 +298,12 @@ public:
   }
   bool isPrefixed(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::Prefixed;
+  }
+  bool isSExt32To64(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::SExt32To64;
+  }
+  bool isZExt32To64(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::ZExt32To64;
   }
 
   /// Check if Opcode corresponds to a call instruction that should be marked
@@ -460,9 +471,9 @@ public:
   /// when the register pressure is high for one BB.
   /// Return true if register pressure for \p MBB is high and ABI is supported
   /// to reduce register pressure. Otherwise return false.
-  bool
-  shouldReduceRegisterPressure(MachineBasicBlock *MBB,
-                               RegisterClassInfo *RegClassInfo) const override;
+  bool shouldReduceRegisterPressure(
+      const MachineBasicBlock *MBB,
+      const RegisterClassInfo *RegClassInfo) const override;
 
   /// Fixup the placeholders we put in genAlternativeCodeSequence() for
   /// MachineCombiner.
@@ -495,8 +506,7 @@ public:
                              unsigned &SubIdx) const override;
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                         AAResults *AA) const override;
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
@@ -635,6 +645,8 @@ public:
                                     int64_t &Offset, unsigned &Width,
                                     const TargetRegisterInfo *TRI) const;
 
+  bool optimizeCmpPostRA(MachineInstr &MI) const;
+
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory.
   bool getMemOperandsWithOffsetWidth(
@@ -688,19 +700,20 @@ public:
 
   bool isTOCSaveMI(const MachineInstr &MI) const;
 
-  bool isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
-                            const unsigned PhiDepth) const;
+  std::pair<bool, bool>
+  isSignOrZeroExtended(const unsigned Reg, const unsigned BinOpDepth,
+                       const MachineRegisterInfo *MRI) const;
 
-  /// Return true if the output of the instruction is always a sign-extended,
-  /// i.e. 0 to 31-th bits are same as 32-th bit.
-  bool isSignExtended(const MachineInstr &MI, const unsigned depth = 0) const {
-    return isSignOrZeroExtended(MI, true, depth);
+  // Return true if the register is sign-extended from 32 to 64 bits.
+  bool isSignExtended(const unsigned Reg,
+                      const MachineRegisterInfo *MRI) const {
+    return isSignOrZeroExtended(Reg, 0, MRI).first;
   }
 
-  /// Return true if the output of the instruction is always zero-extended,
-  /// i.e. 0 to 31-th bits are all zeros
-  bool isZeroExtended(const MachineInstr &MI, const unsigned depth = 0) const {
-   return isSignOrZeroExtended(MI, false, depth);
+  // Return true if the register is zero-extended from 32 to 64 bits.
+  bool isZeroExtended(const unsigned Reg,
+                      const MachineRegisterInfo *MRI) const {
+    return isSignOrZeroExtended(Reg, 0, MRI).second;
   }
 
   bool convertToImmediateForm(MachineInstr &MI,
@@ -745,6 +758,12 @@ public:
   // \p SeenIntermediate is set to true if uses between DefMI and \p MI exist.
   MachineInstr *getDefMIPostRA(unsigned Reg, MachineInstr &MI,
                                bool &SeenIntermediateUse) const;
+
+  // Materialize immediate after RA.
+  void materializeImmPostRA(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL, Register Reg,
+                            int64_t Imm) const;
 
   /// getRegNumForOperand - some operands use different numbering schemes
   /// for the same registers. For example, a VSX instruction may have any of

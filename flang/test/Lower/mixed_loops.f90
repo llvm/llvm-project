@@ -90,20 +90,24 @@ subroutine do_inside_while_loop
       ! CHECK-DAG: %[[C13_I32:.*]] = arith.constant 13 : i32
       ! CHECK-DAG: %[[C13:.*]] = fir.convert %[[C13_I32]] : (i32) -> index
       ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-      ! CHECK: %[[RESULT:.*]] = fir.do_loop %[[IDX:.*]] = %[[C8]] to %[[C13]] step %[[C1]] -> index {
-        ! CHECK: %[[I32:.*]] = fir.convert %[[IDX]] : (index) -> i32
-        ! CHECK: fir.store %[[I32]] to %[[I_REF]] : !fir.ref<i32>
+      ! CHECK: %[[I_LB:.*]] = fir.convert %[[C8]] : (index) -> i32
+      ! CHECK: %[[RESULT:.*]]:2 = fir.do_loop %[[IDX:[^ ]*]] =
+      ! CHECK-SAME: %[[C8]] to %[[C13]] step %[[C1]]
+      ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) {
+        ! CHECK: fir.store %[[I_IV]] to %[[I_REF]] : !fir.ref<i32>
         ! CHECK-DAG: %[[J2:.*]] = fir.load %[[J_REF]] : !fir.ref<i32>
         ! CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
         ! CHECK: %[[JINC:.*]] = arith.muli %[[C2]], %[[J2]] : i32
         ! CHECK: fir.store %[[JINC]] to %[[J_REF]] : !fir.ref<i32>
         ! CHECK: %[[IINC:.*]] = arith.addi %[[IDX]], %[[C1]] : index
-        ! CHECK: fir.result %[[IINC]] : index
+        ! CHECK: %[[I_STEPCAST:.*]] = fir.convert %[[C1]] : (index) -> i32
+        ! CHECK: %[[I_IVLOAD:.*]] = fir.load %[[I_REF]] : !fir.ref<i32>
+        ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], %[[I_STEPCAST]] : i32
+        ! CHECK: fir.result %[[IINC]], %[[I_IVINC]] : index, i32
       do i=8,13
         j=j*2
 
-      ! CHECK: %[[IFINAL:.*]] = fir.convert %[[RESULT]] : (index) -> i32
-      ! CHECK: fir.store %[[IFINAL]] to %[[I_REF]] : !fir.ref<i32>
+      ! CHECK: fir.store %[[RESULT]]#1 to %[[I_REF]] : !fir.ref<i32>
       end do
 
     ! CHECK: br ^[[HDR1]]

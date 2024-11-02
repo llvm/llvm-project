@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexceptions -fcxx-exceptions -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -fexceptions -fcxx-exceptions -verify -std=c++11 %s
-// RUN: %clang_cc1 -fsyntax-only -fexceptions -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexceptions -fcxx-exceptions -verify -Wno-dynamic-exception-spec %std_cxx98- %s
 int *use_new(int N) {
   if (N == 1)
     return new int;
@@ -25,6 +23,7 @@ void* operator new(std::size_t) throw(std::bad_alloc);
 #if __cplusplus < 201103L
 // expected-note@-2 {{previous declaration}}
 #endif
+
 void* operator new[](std::size_t) throw(std::bad_alloc); 
 void operator delete(void*) throw(); // expected-note{{previous declaration}}
 void operator delete[](void*) throw();

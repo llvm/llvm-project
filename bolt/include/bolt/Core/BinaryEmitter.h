@@ -22,6 +22,7 @@ class MCStreamer;
 namespace bolt {
 class BinaryContext;
 class BinaryFunction;
+class FunctionFragment;
 
 /// Emit all code and data from the BinaryContext \p BC into the \p Streamer.
 ///
@@ -34,7 +35,7 @@ void emitBinaryContext(MCStreamer &Streamer, BinaryContext &BC,
 /// Emit \p BF function code. The caller is responsible for emitting function
 /// symbol(s) and setting the section to emit the code to.
 void emitFunctionBody(MCStreamer &Streamer, BinaryFunction &BF,
-                      bool EmitColdPart, bool EmitCodeOnly = false);
+                      FunctionFragment &FF, bool EmitCodeOnly);
 
 } // namespace bolt
 } // namespace llvm

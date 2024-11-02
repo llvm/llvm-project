@@ -3,10 +3,10 @@
 ;
 ;    #include <pthread.h>
 ;
-;    void *GlobalVPtr;
+;    ptr GlobalVPtr;
 ;
-;    static void *foo(void *arg) { return arg; }
-;    static void *bar(void *arg) { return arg; }
+;    static ptr foo(ptr arg) { return arg; }
+;    static ptr bar(ptr arg) { return arg; }
 ;
 ;    int main() {
 ;      pthread_t thread;
@@ -22,41 +22,41 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %union.pthread_attr_t = type { i64, [48 x i8] }
 
-@GlobalVPtr = common dso_local global i8* null, align 8
+@GlobalVPtr = common dso_local global ptr null, align 8
 
 define dso_local i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull [[THREAD]], %union.pthread_attr_t* null, i8* (i8*)* nonnull @foo, i8* null)
-; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull [[THREAD]], %union.pthread_attr_t* null, i8* (i8*)* nonnull @bar, i8* bitcast (i8** @GlobalVPtr to i8*))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(ptr nonnull [[THREAD]], ptr null, ptr nonnull @foo, ptr null)
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr nonnull [[THREAD]], ptr null, ptr nonnull @bar, ptr @GlobalVPtr)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %thread = alloca i64, align 8
-  %call = call i32 @pthread_create(i64* nonnull %thread, %union.pthread_attr_t* null, i8* (i8*)* nonnull @foo, i8* null)
-  %call1 = call i32 @pthread_create(i64* nonnull %thread, %union.pthread_attr_t* null, i8* (i8*)* nonnull @bar, i8* bitcast (i8** @GlobalVPtr to i8*))
+  %call = call i32 @pthread_create(ptr nonnull %thread, ptr null, ptr nonnull @foo, ptr null)
+  %call1 = call i32 @pthread_create(ptr nonnull %thread, ptr null, ptr nonnull @bar, ptr @GlobalVPtr)
   ret i32 0
 }
 
-declare !callback !0 dso_local i32 @pthread_create(i64*, %union.pthread_attr_t*, i8* (i8*)*, i8*)
+declare !callback !0 dso_local i32 @pthread_create(ptr, ptr, ptr, ptr)
 
-define internal i8* @foo(i8* %arg) {
+define internal ptr @foo(ptr %arg) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8* [[ARG:%.*]]
+; CHECK-NEXT:    ret ptr [[ARG:%.*]]
 ;
 entry:
-  ret i8* %arg
+  ret ptr %arg
 }
 
-define internal i8* @bar(i8* %arg) {
+define internal ptr @bar(ptr %arg) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8* [[ARG:%.*]]
+; CHECK-NEXT:    ret ptr [[ARG:%.*]]
 ;
 entry:
-  ret i8* %arg
+  ret ptr %arg
 }
 
 !1 = !{i64 2, i64 3, i1 false}

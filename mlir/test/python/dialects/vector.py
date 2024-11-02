@@ -35,7 +35,9 @@ def testTransferReadOp():
   module = Module.create()
   with InsertionPoint(module.body):
     vector_type = VectorType.get([2, 3], F32Type.get())
-    memref_type = MemRefType.get([-1, -1], F32Type.get())
+    memref_type = MemRefType.get(
+        [ShapedType.get_dynamic_size(),
+         ShapedType.get_dynamic_size()], F32Type.get())
     index_type = IndexType.get()
     mask_type = VectorType.get(vector_type.shape, IntegerType.get_signless(1))
     identity_map = AffineMap.get_identity(vector_type.rank)

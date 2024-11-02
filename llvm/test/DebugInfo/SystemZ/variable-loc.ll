@@ -22,31 +22,29 @@
 
 @.str = private unnamed_addr constant [13 x i8] c"Total is %d\0A\00", align 2
 
-declare void @populate_array(i32*, i32) nounwind
+declare void @populate_array(ptr, i32) nounwind
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare i32 @sum_array(i32*, i32) nounwind
+declare i32 @sum_array(ptr, i32) nounwind
 
 define i32 @main() nounwind !dbg !14 {
 entry:
   %retval = alloca i32, align 4
   %main_arr = alloca [100 x i32], align 4
   %val = alloca i32, align 4
-  store volatile i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata [100 x i32]* %main_arr, metadata !17, metadata !DIExpression()), !dbg !22
-  call void @llvm.dbg.declare(metadata i32* %val, metadata !23, metadata !DIExpression()), !dbg !24
-  %arraydecay = getelementptr inbounds [100 x i32], [100 x i32]* %main_arr, i32 0, i32 0, !dbg !25
-  call void @populate_array(i32* %arraydecay, i32 100), !dbg !25
-  %arraydecay1 = getelementptr inbounds [100 x i32], [100 x i32]* %main_arr, i32 0, i32 0, !dbg !26
-  %call = call i32 @sum_array(i32* %arraydecay1, i32 100), !dbg !26
-  store i32 %call, i32* %val, align 4, !dbg !26
-  %0 = load i32, i32* %val, align 4, !dbg !27
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0), i32 %0), !dbg !27
+  store volatile i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %main_arr, metadata !17, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %val, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @populate_array(ptr %main_arr, i32 100), !dbg !25
+  %call = call i32 @sum_array(ptr %main_arr, i32 100), !dbg !26
+  store i32 %call, ptr %val, align 4, !dbg !26
+  %0 = load i32, ptr %val, align 4, !dbg !27
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, i32 %0), !dbg !27
   ret i32 0, !dbg !28
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!30}

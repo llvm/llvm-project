@@ -1,7 +1,7 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
-; RUN: llvm-objdump --disassemble-symbols=__wasm_start --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
+; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
 
 target triple = "wasm32-unknown-emscripten"
 
@@ -70,7 +70,7 @@ declare void @external_func()
 ; CHECK-NEXT:         GlobalMutable:   false
 
 ; CHECK:        - Type:            START
-; CHECK-NEXT:     StartFunction:   4
+; CHECK-NEXT:     StartFunction:   3
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
@@ -84,13 +84,19 @@ declare void @external_func()
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            __wasm_apply_global_relocs
 ; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Name:            __wasm_start
+; CHECK-NEXT:         Name:            foo
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Name:            get_data_address
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Name:            _start
+; CHECK-NEXT:     GlobalNames:
 
-; DISASSEM:       <__wasm_start>:
+; DISASSEM-LABEL:  <__wasm_call_ctors>:
 ; DISASSEM-EMPTY:
-; DISASSEM-NEXT:   call 3
-; DISASSEM-NEXT:   call 2
 ; DISASSEM-NEXT:   end
+
+; DISASSEM-LABEL:  <__wasm_apply_data_relocs>:
+; DISASSEM:        end
 
 ; Run the same test with extended-const support.  When this is available
 ; we don't need __wasm_apply_global_relocs and instead rely on the add
@@ -126,8 +132,7 @@ declare void @external_func()
 ; (global.get[0x23] 0x1 i32.const[0x41] 0x0C i32.add[0x6A] end[0x0b])
 ; EXTENDED-CONST-NEXT:          Body:            2301410C6A0B
 
-;      EXTENDED-CONST:  - Type:            START
-; EXTENDED-CONST-NEXT:    StartFunction:   2
+;  EXTENDED-CONST-NOT:  - Type:            START
 
 ;      EXTENDED-CONST:    FunctionNames:
 ; EXTENDED-CONST-NEXT:      - Index:           0
@@ -150,10 +155,10 @@ declare void @external_func()
 ; SHMEM:         - Type:            START
 ; SHMEM-NEXT:      StartFunction:   6
 
-; DISASSEM-SHMEM:       <__wasm_start>:
+; DISASSEM-SHMEM-LABEL:  <__wasm_start>:
 ; DISASSEM-SHMEM-EMPTY:
 ; DISASSEM-SHMEM-NEXT:   call 5
-; DISASSEM-SHMEM-NEXT:   call 3
+; DISASSEM-SHMEM-NEXT:   call 4
 ; DISASSEM-SHMEM-NEXT:   end
 
 ; SHMEM:         FunctionNames:
@@ -164,9 +169,9 @@ declare void @external_func()
 ; SHMEM-NEXT:      - Index:           2
 ; SHMEM-NEXT:        Name:            __wasm_init_tls
 ; SHMEM-NEXT:      - Index:           3
-; SHMEM-NEXT:        Name:            __wasm_init_memory
-; SHMEM-NEXT:      - Index:           4
 ; SHMEM-NEXT:        Name:            __wasm_apply_data_relocs
+; SHMEM-NEXT:      - Index:           4
+; SHMEM-NEXT:        Name:            __wasm_init_memory
 ; SHMEM-NEXT:      - Index:           5
 ; SHMEM-NEXT:        Name:            __wasm_apply_global_relocs
 ; SHMEM-NEXT:      - Index:           6

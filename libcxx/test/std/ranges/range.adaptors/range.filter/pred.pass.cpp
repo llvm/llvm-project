@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Older Clangs don't properly deduce decltype(auto) with a concept constraint
-// XFAIL: clang-11, clang-12
-// XFAIL: apple-clang-12, apple-clang-13.0
+// XFAIL: apple-clang-13.0
 
 // constexpr Pred const& pred() const;
 

@@ -20,6 +20,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-jitlink
   llvm-jitlink.cpp
+  llvm-jitlink-coff.cpp
   llvm-jitlink-elf.cpp
   llvm-jitlink-macho.cpp
   )

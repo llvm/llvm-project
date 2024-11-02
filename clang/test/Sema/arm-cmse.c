@@ -8,8 +8,8 @@ typedef void (*callback_2t)(void);
 void foo(callback_ns_1t nsfptr, // expected-error{{functions may not be declared with 'cmse_nonsecure_call' attribute}}
          callback_1t fptr) __attribute__((cmse_nonsecure_call))
 {
-  callback_1t fp1 = nsfptr; // expected-warning{{incompatible function pointer types initializing 'callback_1t'}}
-  callback_ns_1t fp2 = fptr; // expected-warning{{incompatible function pointer types initializing 'callback_ns_1t'}}
+  callback_1t fp1 = nsfptr; // expected-error{{incompatible function pointer types initializing 'callback_1t'}}
+  callback_ns_1t fp2 = fptr; // expected-error{{incompatible function pointer types initializing 'callback_ns_1t'}}
   callback_2t fp3 = fptr;
   callback_ns_2t fp4 = nsfptr;
 }

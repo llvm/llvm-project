@@ -2,7 +2,7 @@
 # RUN: lldb-test object-file %t | FileCheck %s
 
 # CHECK: Plugin name: pe-coff
-# CHECK: Architecture: armv7-pc-windows-msvc
+# CHECK: Architecture: armv7-pc-windows-{{(msvc|gnu)}}
 # CHECK: UUID: 
 # CHECK: Executable: true
 # CHECK: Stripped: false

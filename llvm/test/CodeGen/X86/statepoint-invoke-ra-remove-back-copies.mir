@@ -256,155 +256,201 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: hoge
   ; CHECK: bb.0.bb:
-  ; CHECK:   successors: %bb.1(0x80000000), %bb.15(0x00000000)
-  ; CHECK:   liveins: $rdi
-  ; CHECK:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   $rdi = COPY [[COPY]]
-  ; CHECK:   dead [[COPY]]:gr64 = STATEPOINT 2, 5, 2, undef %15:gr64, $rdi, undef $rsi, 2, 0, 2, 0, 2, 27, 2, 0, 2, 10, 2, 0, 2, 6, 2, 0, 2, 4, 2, 1, 2, 0, [[COPY]], 2, 7, 2, 0, 2, 0, [[COPY]], 2, 7, 2, 0, 2, 0, [[COPY]], 2, 2, 2, 1, 2, 5, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, [[COPY]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   TEST8rr [[MOV32r0_]].sub_8bit, [[MOV32r0_]].sub_8bit, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.15, 5, implicit $eflags
-  ; CHECK:   JMP_1 %bb.1
-  ; CHECK: bb.1.bb6:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm undef %17:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[NOT64r:%[0-9]+]]:gr64 = NOT64r [[NOT64r]]
-  ; CHECK:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, [[NOT64r]] :: (store (s64) into %stack.1)
-  ; CHECK:   undef %48.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:gr64 = IMPLICIT_DEF
-  ; CHECK:   [[DEF2:%[0-9]+]]:gr64_with_sub_8bit = IMPLICIT_DEF
-  ; CHECK:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK: bb.2.bb7:
-  ; CHECK:   successors: %bb.3(0x00000000), %bb.4(0x80000000)
-  ; CHECK:   TEST8rr %48.sub_8bit, %48.sub_8bit, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.4, 4, implicit $eflags
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.16(0x80000000)
-  ; CHECK:   JMP_1 %bb.16
-  ; CHECK: bb.4.bb7:
-  ; CHECK:   successors: %bb.5(0x00000000), %bb.6(0x80000000)
-  ; CHECK:   TEST8rr %48.sub_8bit, %48.sub_8bit, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.6, 4, implicit $eflags
-  ; CHECK: bb.5:
-  ; CHECK:   successors: %bb.16(0x80000000)
-  ; CHECK:   JMP_1 %bb.16
-  ; CHECK: bb.6.bb7:
-  ; CHECK:   successors: %bb.16(0x00000000), %bb.7(0x80000000)
-  ; CHECK:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm undef %24:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, align 8, addrspace 1)
-  ; CHECK:   [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[ADD32rr]], [[MOV32r0_1]], implicit-def dead $eflags
-  ; CHECK:   CMP32rr [[MOV32r0_1]], [[ADD32rr]], implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.16, 15, implicit $eflags
-  ; CHECK:   JMP_1 %bb.7
-  ; CHECK: bb.7.bb20:
-  ; CHECK:   successors: %bb.8(0x40000000), %bb.9(0x40000000)
-  ; CHECK:   TEST8rr %48.sub_8bit, %48.sub_8bit, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.9, 4, implicit $eflags
-  ; CHECK: bb.8:
-  ; CHECK:   successors: %bb.11(0x80000000)
-  ; CHECK:   JMP_1 %bb.11
-  ; CHECK: bb.9.bb23:
-  ; CHECK:   successors: %bb.10(0x7ffff800), %bb.12(0x00000800)
-  ; CHECK:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, [[ADD32rr]] :: (store (s32) into %stack.0)
-  ; CHECK:   EH_LABEL <mcsymbol .Ltmp0>
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
-  ; CHECK:   dead $edx = MOV32r0 implicit-def dead $eflags, implicit-def $rdx
-  ; CHECK:   $ecx = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   [[COPY1:%[0-9]+]]:gr64 = COPY [[DEF2]]
-  ; CHECK:   dead [[MOV64rm]]:gr64, dead [[COPY1]]:gr64, dead [[DEF1]]:gr64, dead [[DEF]]:gr64 = STATEPOINT 1, 16, 5, undef %41:gr64, undef $edi, undef $rsi, $rdx, $ecx, undef $r8d, 2, 0, 2, 0, 2, 89, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[COPY1]], 2, 7, 2, 0, 2, 0, [[COPY1]], 2, 10, 2, 2, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, [[COPY1]], 2, 0, [[COPY1]], 2, 7, 2, 0, 2, 0, [[COPY1]], 2, 2, 2, 8, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 12, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 18, 2, 96, 2, 0, 2, 9, 2, 1, 2, 0, [[DEF1]], 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[DEF]], 2, 3, 1, 4, %stack.0, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[DEF]], 2, 8, 2, 9, 2, 34, 2, 0, 2, 3, 2, 1, 2, 0, [[DEF1]], 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 5, [[MOV64rm]](tied-def 0), [[COPY1]](tied-def 1), [[DEF1]](tied-def 2), 2, 4278124286, [[DEF]](tied-def 3), 2, 0, 2, 5, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0)
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   EH_LABEL <mcsymbol .Ltmp1>
-  ; CHECK:   JMP_1 %bb.10
-  ; CHECK: bb.10.bb25:
-  ; CHECK:   successors: %bb.11(0x80000000)
-  ; CHECK:   [[DEF3:%[0-9]+]]:gr64 = IMPLICIT_DEF
-  ; CHECK:   [[DEF3:%[0-9]+]]:gr64 = IMPLICIT_DEF
-  ; CHECK:   undef [[DEF2]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
-  ; CHECK: bb.11.bb27:
-  ; CHECK:   successors: %bb.2(0x80000000), %bb.17(0x00000000)
-  ; CHECK:   TEST32rr [[ADD32rr]], [[ADD32rr]], implicit-def $eflags
-  ; CHECK:   [[COPY2:%[0-9]+]]:gr32 = COPY [[ADD32rr]]
-  ; CHECK:   JCC_1 %bb.2, 8, implicit $eflags
-  ; CHECK:   JMP_1 %bb.17
-  ; CHECK: bb.12.bb35 (landing-pad):
-  ; CHECK:   successors: %bb.14(0x40000000), %bb.13(0x40000000)
-  ; CHECK:   liveins: $rax, $rdx
-  ; CHECK:   EH_LABEL <mcsymbol .Ltmp2>
-  ; CHECK:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   TEST8rr [[MOV32r0_]].sub_8bit, [[MOV32r0_]].sub_8bit, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.14, 5, implicit $eflags
-  ; CHECK:   JMP_1 %bb.13
-  ; CHECK: bb.13.bb37:
-  ; CHECK:   successors:
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   $edi = MOV32ri 3
-  ; CHECK:   STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 87, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 10, 2, 2, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, 2, 8, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 12, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 18, 2, 96, 2, 0, 2, 9, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 3, [[ADD32rr]], 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 0, 2, 9, 2, 51, 2, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, 2, 4278124286, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK: bb.14.bb39:
-  ; CHECK:   successors:
-  ; CHECK: bb.15.bb40:
-  ; CHECK:   successors: %bb.16(0x80000000)
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   CALL64pcrel32 target-flags(x86-plt) @wombat, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK: bb.16.bb41:
-  ; CHECK:   successors:
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   $edi = MOV32ri -39
-  ; CHECK:   STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 103, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 10, 2, 2, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, 2, 8, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 12, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 18, 2, 63, 2, 0, 2, 9, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 3, [[COPY2]], 2, 3, 2, 0, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, 2, 33, 2, 6, 2, 0, 2, 5, 2, 0, 2, 0, 2, 4278124286, 2, 3, [[COPY2]], 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 1, 2, 34, 2, 14, 2, 0, 2, 3, 2, 0, 2, 3, [[COPY2]], 2, 3, 2, 4278124286, 2, 3, 2, 0, 2, 1, 2, 4278124286, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK: bb.17.bb44:
-  ; CHECK:   successors: %bb.22(0x40000000), %bb.18(0x40000000)
-  ; CHECK:   [[COPY3:%[0-9]+]]:gr64 = COPY [[DEF2]]
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   CALL64pcrel32 target-flags(x86-plt) @hoge.1, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   TEST8rr [[MOV32r0_1]].sub_8bit, [[MOV32r0_1]].sub_8bit, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.22, 5, implicit $eflags
-  ; CHECK:   JMP_1 %bb.18
-  ; CHECK: bb.18.bb45:
-  ; CHECK:   successors: %bb.19(0x40000000), %bb.20(0x40000000)
-  ; CHECK:   [[MOV32r0_2:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   TEST8rr [[MOV32r0_2]].sub_8bit, [[MOV32r0_2]].sub_8bit, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.20, 4, implicit $eflags
-  ; CHECK: bb.19:
-  ; CHECK:   successors: %bb.24(0x80000000)
-  ; CHECK:   JMP_1 %bb.24
-  ; CHECK: bb.20.bb46:
-  ; CHECK:   successors: %bb.21(0x40000000), %bb.23(0x40000000)
-  ; CHECK:   EH_LABEL <mcsymbol .Ltmp3>
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   $ecx = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   [[STATEPOINT:%[0-9]+]]:gr64 = STATEPOINT 1, 16, 5, undef %60:gr64, undef $edi, undef $rsi, undef $rdx, $ecx, undef $r8d, 2, 0, 2, 0, 2, 45, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 10, 2, 2, 2, 19, 2, 0, 2, 3, 2, 1, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 8, 2, 9, 2, 34, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, [[STATEPOINT]](tied-def 0), 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   EH_LABEL <mcsymbol .Ltmp4>
-  ; CHECK:   JMP_1 %bb.21
-  ; CHECK: bb.21.bb48:
-  ; CHECK:   successors: %bb.24(0x80000000)
-  ; CHECK:   JMP_1 %bb.24
-  ; CHECK: bb.22.bb50:
-  ; CHECK:   successors:
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   $edi = MOV32ri 10
-  ; CHECK:   dead [[STATEPOINT]]:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 45, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 10, 2, 2, 2, 19, 2, 0, 2, 3, 2, 1, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 1, 2, 9, 2, 6, 2, 1, 2, 3, 2, 0, 2, 0, 2, 0, 2, 0, 2, 4278124286, 2, 0, 2, 0, 2, 7, 2, 0, 2, 3, [[STATEPOINT]](tied-def 0), 2, 0, 2, 4278124286, 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK: bb.23.bb52 (landing-pad):
-  ; CHECK:   successors:
-  ; CHECK:   liveins: $rax, $rdx
-  ; CHECK:   EH_LABEL <mcsymbol .Ltmp5>
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   $edi = MOV32ri 3
-  ; CHECK:   dead [[STATEPOINT]]:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 43, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 10, 2, 2, 2, 19, 2, 0, 2, 3, 2, 1, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 0, 2, 9, 2, 51, 2, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, [[STATEPOINT]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK: bb.24.bb56:
-  ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   $edi = MOV32ri 10
-  ; CHECK:   dead [[STATEPOINT]]:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 33, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 9, 2, 2, 2, 26, 2, 1, 2, 3, 2, 1, 2, 0, 2, 0, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 2, [[STATEPOINT]](tied-def 0), 2, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
-  ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.15(0x00000000)
+  ; CHECK-NEXT:   liveins: $rdi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   $rdi = COPY [[COPY]]
+  ; CHECK-NEXT:   dead [[COPY]]:gr64 = STATEPOINT 2, 5, 2, undef %15:gr64, $rdi, undef $rsi, 2, 0, 2, 0, 2, 27, 2, 0, 2, 10, 2, 0, 2, 6, 2, 0, 2, 4, 2, 1, 2, 0, [[COPY]], 2, 7, 2, 0, 2, 0, [[COPY]], 2, 7, 2, 0, 2, 0, [[COPY]], 2, 2, 2, 1, 2, 5, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, [[COPY]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   TEST8rr [[MOV32r0_]].sub_8bit, [[MOV32r0_]].sub_8bit, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.15, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.bb6:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm undef %17:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK-NEXT:   [[NOT64r:%[0-9]+]]:gr64 = NOT64r [[MOV64rm]]
+  ; CHECK-NEXT:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, [[NOT64r]] :: (store (s64) into %stack.1)
+  ; CHECK-NEXT:   undef %48.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:gr64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:gr64_with_sub_8bit = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.bb7:
+  ; CHECK-NEXT:   successors: %bb.3(0x00000000), %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   TEST8rr %48.sub_8bit, %48.sub_8bit, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.4, 4, implicit $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.16(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.16
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.bb7:
+  ; CHECK-NEXT:   successors: %bb.5(0x00000000), %bb.6(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   TEST8rr %48.sub_8bit, %48.sub_8bit, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.6, 4, implicit $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   successors: %bb.16(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.16
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6.bb7:
+  ; CHECK-NEXT:   successors: %bb.16(0x00000000), %bb.7(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm undef %24:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[ADD32rr]], [[MOV32r0_1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   CMP32rr [[MOV32r0_1]], [[ADD32rr]], implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.16, 15, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7.bb20:
+  ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.9(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   TEST8rr %48.sub_8bit, %48.sub_8bit, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.9, 4, implicit $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.8:
+  ; CHECK-NEXT:   successors: %bb.11(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.11
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.9.bb23:
+  ; CHECK-NEXT:   successors: %bb.10(0x7ffff800), %bb.12(0x00000800)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, [[ADD32rr]] :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   EH_LABEL <mcsymbol .Ltmp0>
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   dead $edx = MOV32r0 implicit-def dead $eflags, implicit-def $rdx
+  ; CHECK-NEXT:   $ecx = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   dead [[MOV64rm]]:gr64, dead [[DEF2]]:gr64_with_sub_8bit, dead [[DEF1]]:gr64, dead [[DEF]]:gr64 = STATEPOINT 1, 16, 5, undef %41:gr64, undef $edi, undef $rsi, $rdx, $ecx, undef $r8d, 2, 0, 2, 0, 2, 89, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[DEF2]], 2, 7, 2, 0, 2, 0, [[DEF2]], 2, 10, 2, 2, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, [[DEF2]], 2, 0, [[DEF2]], 2, 7, 2, 0, 2, 0, [[DEF2]], 2, 2, 2, 8, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 12, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 18, 2, 96, 2, 0, 2, 9, 2, 1, 2, 0, [[DEF1]], 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[DEF]], 2, 3, 1, 4, %stack.0, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[DEF]], 2, 8, 2, 9, 2, 34, 2, 0, 2, 3, 2, 1, 2, 0, [[DEF1]], 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 5, [[MOV64rm]](tied-def 0), [[DEF2]](tied-def 1), [[DEF1]](tied-def 2), 2, 4278124286, [[DEF]](tied-def 3), 2, 0, 2, 5, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0)
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   EH_LABEL <mcsymbol .Ltmp1>
+  ; CHECK-NEXT:   JMP_1 %bb.10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.10.bb25:
+  ; CHECK-NEXT:   successors: %bb.11(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:gr64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:gr64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   undef [[DEF2]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.11.bb27:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.17(0x00000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   TEST32rr [[ADD32rr]], [[ADD32rr]], implicit-def $eflags
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY [[ADD32rr]]
+  ; CHECK-NEXT:   JCC_1 %bb.2, 8, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.17
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.12.bb35 (landing-pad):
+  ; CHECK-NEXT:   successors: %bb.14(0x40000000), %bb.13(0x40000000)
+  ; CHECK-NEXT:   liveins: $rax, $rdx
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   EH_LABEL <mcsymbol .Ltmp2>
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   TEST8rr [[MOV32r0_]].sub_8bit, [[MOV32r0_]].sub_8bit, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.14, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.13.bb37:
+  ; CHECK-NEXT:   successors: {{$}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   $edi = MOV32ri 3
+  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 87, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 10, 2, 2, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, 2, 8, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 12, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 18, 2, 96, 2, 0, 2, 9, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 3, [[ADD32rr]], 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 0, 2, 9, 2, 51, 2, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, 2, 4278124286, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.14.bb39:
+  ; CHECK-NEXT:   successors: {{$}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.15.bb40:
+  ; CHECK-NEXT:   successors: %bb.16(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @wombat, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.16.bb41:
+  ; CHECK-NEXT:   successors: {{$}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   $edi = MOV32ri -39
+  ; CHECK-NEXT:   STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 103, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 10, 2, 2, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, 2, 8, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 12, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 18, 2, 63, 2, 0, 2, 9, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 3, [[COPY1]], 2, 3, 2, 0, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, 2, 33, 2, 6, 2, 0, 2, 5, 2, 0, 2, 0, 2, 4278124286, 2, 3, [[COPY1]], 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 1, 2, 34, 2, 14, 2, 0, 2, 3, 2, 0, 2, 3, [[COPY1]], 2, 3, 2, 4278124286, 2, 3, 2, 0, 2, 1, 2, 4278124286, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.17.bb44:
+  ; CHECK-NEXT:   successors: %bb.22(0x40000000), %bb.18(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @hoge.1, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   TEST8rr [[MOV32r0_1]].sub_8bit, [[MOV32r0_1]].sub_8bit, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.22, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.18
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.18.bb45:
+  ; CHECK-NEXT:   successors: %bb.19(0x40000000), %bb.20(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[MOV32r0_2:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   TEST8rr [[MOV32r0_2]].sub_8bit, [[MOV32r0_2]].sub_8bit, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.20, 4, implicit $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.19:
+  ; CHECK-NEXT:   successors: %bb.24(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.24
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.20.bb46:
+  ; CHECK-NEXT:   successors: %bb.21(0x40000000), %bb.23(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   EH_LABEL <mcsymbol .Ltmp3>
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   $ecx = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[STATEPOINT:%[0-9]+]]:gr64_with_sub_8bit = STATEPOINT 1, 16, 5, undef %60:gr64, undef $edi, undef $rsi, undef $rdx, $ecx, undef $r8d, 2, 0, 2, 0, 2, 45, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 10, 2, 2, 2, 19, 2, 0, 2, 3, 2, 1, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 8, 2, 9, 2, 34, 2, 0, 2, 3, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 2, [[STATEPOINT]](tied-def 0), 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   EH_LABEL <mcsymbol .Ltmp4>
+  ; CHECK-NEXT:   JMP_1 %bb.21
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.21.bb48:
+  ; CHECK-NEXT:   successors: %bb.24(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.24
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.22.bb50:
+  ; CHECK-NEXT:   successors: {{$}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   $edi = MOV32ri 10
+  ; CHECK-NEXT:   dead [[STATEPOINT]]:gr64_with_sub_8bit = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 45, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 10, 2, 2, 2, 19, 2, 0, 2, 3, 2, 1, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 1, 2, 9, 2, 6, 2, 1, 2, 3, 2, 0, 2, 0, 2, 0, 2, 0, 2, 4278124286, 2, 0, 2, 0, 2, 7, 2, 0, 2, 3, [[STATEPOINT]](tied-def 0), 2, 0, 2, 4278124286, 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.23.bb52 (landing-pad):
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT:   liveins: $rax, $rdx
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   EH_LABEL <mcsymbol .Ltmp5>
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   $edi = MOV32ri 3
+  ; CHECK-NEXT:   dead [[STATEPOINT]]:gr64_with_sub_8bit = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 43, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 10, 2, 2, 2, 19, 2, 0, 2, 3, 2, 1, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 0, 2, 9, 2, 51, 2, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, [[STATEPOINT]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.24.bb56:
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   $edi = MOV32ri 10
+  ; CHECK-NEXT:   dead [[STATEPOINT]]:gr64_with_sub_8bit = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, $edi, 2, 0, 2, 2, 2, 33, 2, 0, 2, 10, 2, 0, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 9, 2, 2, 2, 26, 2, 1, 2, 3, 2, 1, 2, 0, 2, 0, 2, 0, [[STATEPOINT]], 2, 0, [[STATEPOINT]], 2, 7, 2, 0, 2, 0, [[STATEPOINT]], 2, 2, [[STATEPOINT]](tied-def 0), 2, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   bb.0.bb:
     successors: %bb.1(0x80000000), %bb.12(0x00000000)
     liveins: $rdi

@@ -126,6 +126,7 @@ class foo {
   void const_after_attr () [[]] const; // expected-error {{expected ';'}}
 };
 extern "C++" [[]] { } // expected-error {{an attribute list cannot appear here}}
+[[]] extern "C++" { } // expected-error {{an attribute list cannot appear here}}
 [[]] template <typename T> void before_template_attr (); // expected-error {{an attribute list cannot appear here}}
 [[]] namespace ns { int i; } // expected-error {{an attribute list cannot appear here}} expected-note {{declared here}}
 [[]] static_assert(true, ""); //expected-error {{an attribute list cannot appear here}}
@@ -421,3 +422,26 @@ class FriendClassesWithAttributes {
 // prefered "protected" vendor namespace. We support __clang__ only for
 // people expecting it to behave the same as __gnu__.
 [[__clang__::annotate("test")]] void annotate3();  // expected-warning {{'__clang__' is a predefined macro name, not an attribute scope specifier; did you mean '_Clang' instead?}}
+
+// Check ordering: C++11 attributes must appear before GNU attributes.
+class Ordering {
+  void f1(
+    int ([[]] __attribute__(()) int n)
+  ) {
+  }
+
+  void f2(
+      int (*)([[]] __attribute__(()) int n)
+  ) {
+  }
+
+  void f3(
+    int (__attribute__(()) [[]] int n) // expected-error {{an attribute list cannot appear here}}
+  ) {
+  }
+
+  void f4(
+      int (*)(__attribute__(()) [[]] int n) // expected-error {{an attribute list cannot appear here}}
+  ) {
+  }
+};

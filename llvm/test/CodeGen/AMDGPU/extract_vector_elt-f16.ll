@@ -58,8 +58,7 @@ define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_vgpr(half addrspace(
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v3f16:
-; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2
+; GCN: s_load_dwordx4
 
 ; GCN: buffer_store_short
 ; GCN: buffer_store_short
@@ -75,11 +74,9 @@ define amdgpu_kernel void @extract_vector_elt_v3f16(half addrspace(1)* %out, <3 
 ; FIXME: Why sometimes vector shift?
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3f16:
 ; SI: s_load_dword s
-; SI: s_load_dwordx2 s
-; SI: s_load_dwordx2 s
+; SI: s_load_dwordx4 s
 
-; GFX89: s_load_dwordx2 s
-; GFX89: s_load_dwordx2 s
+; GFX89: s_load_dwordx4 s
 ; GFX89: s_load_dword s
 
 
@@ -175,6 +172,19 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(half addrspace(1)
   %out.gep = getelementptr inbounds half, half addrspace(1)* %out, i64 %tid.ext
   %vec = load <8 x half>, <8 x half> addrspace(1)* %in.gep
   %vec.extract = extractelement <8 x half> %vec, i32 %n
+  store half %vec.extract, half addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extractelement_v16f16_dynamic_sgpr:
+; GCN-COUNT-15: v_cndmask_b32_e32
+define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(half addrspace(1)* %out, <16 x half> addrspace(1)* %in, i32 %n) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <16 x half>, <16 x half> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds half, half addrspace(1)* %out, i64 %tid.ext
+  %vec = load <16 x half>, <16 x half> addrspace(1)* %in.gep
+  %vec.extract = extractelement <16 x half> %vec, i32 %n
   store half %vec.extract, half addrspace(1)* %out.gep
   ret void
 }

@@ -163,15 +163,15 @@ define i32 @not_sub(i32 %y) {
   ret i32 %r
 }
 
-define i32 @not_sub_extra_use(i32 %y, i32* %p) {
+define i32 @not_sub_extra_use(i32 %y, ptr %p) {
 ; CHECK-LABEL: @not_sub_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = sub i32 123, [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[S]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y]], -124
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 123, %y
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   %r = xor i32 %s, -1
   ret i32 %r
 }
@@ -186,15 +186,15 @@ define <2 x i32> @not_sub_splat(<2 x i32> %y) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @not_sub_extra_use_splat(<2 x i32> %y, <2 x i32>* %p) {
+define <2 x i32> @not_sub_extra_use_splat(<2 x i32> %y, ptr %p) {
 ; CHECK-LABEL: @not_sub_extra_use_splat(
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i32> <i32 123, i32 123>, [[Y:%.*]]
-; CHECK-NEXT:    store <2 x i32> [[S]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    store <2 x i32> [[S]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y]], <i32 -124, i32 -124>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = sub <2 x i32> <i32 123, i32 123>, %y
-  store <2 x i32> %s, <2 x i32>* %p
+  store <2 x i32> %s, ptr %p
   %r = xor <2 x i32> %s, <i32 -1, i32 -1>
   ret <2 x i32> %r
 }
@@ -209,15 +209,15 @@ define <2 x i32> @not_sub_vec(<2 x i32> %y) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @not_sub_extra_use_vec(<2 x i32> %y, <2 x i32>* %p) {
+define <2 x i32> @not_sub_extra_use_vec(<2 x i32> %y, ptr %p) {
 ; CHECK-LABEL: @not_sub_extra_use_vec(
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i32> <i32 123, i32 42>, [[Y:%.*]]
-; CHECK-NEXT:    store <2 x i32> [[S]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    store <2 x i32> [[S]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y]], <i32 -124, i32 -43>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = sub <2 x i32> <i32 123, i32 42>, %y
-  store <2 x i32> %s, <2 x i32>* %p
+  store <2 x i32> %s, ptr %p
   %r = xor <2 x i32> %s, <i32 -1, i32 -1>
   ret <2 x i32> %r
 }

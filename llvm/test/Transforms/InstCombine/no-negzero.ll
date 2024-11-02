@@ -9,22 +9,22 @@ target triple = "i386-apple-darwin9.8"
 ; CHECK: ret
 define double @mysqrt(double %x) nounwind {
 entry:
-  %x_addr = alloca double                         ; <double*> [#uses=2]
-  %retval = alloca double, align 8                ; <double*> [#uses=2]
-  %0 = alloca double, align 8                     ; <double*> [#uses=2]
+  %x_addr = alloca double                         ; <ptr> [#uses=2]
+  %retval = alloca double, align 8                ; <ptr> [#uses=2]
+  %0 = alloca double, align 8                     ; <ptr> [#uses=2]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  store double %x, double* %x_addr
-  %1 = load double, double* %x_addr, align 8              ; <double> [#uses=1]
+  store double %x, ptr %x_addr
+  %1 = load double, ptr %x_addr, align 8              ; <double> [#uses=1]
   %2 = call double @fabs(double %1) nounwind readnone ; <double> [#uses=1]
   %3 = call double @sqrt(double %2) nounwind readonly ; <double> [#uses=1]
   %4 = fadd double %3, 0.000000e+00               ; <double> [#uses=1]
-  store double %4, double* %0, align 8
-  %5 = load double, double* %0, align 8                   ; <double> [#uses=1]
-  store double %5, double* %retval, align 8
+  store double %4, ptr %0, align 8
+  %5 = load double, ptr %0, align 8                   ; <double> [#uses=1]
+  store double %5, ptr %retval, align 8
   br label %return
 
 return:                                           ; preds = %entry
-  %retval1 = load double, double* %retval                 ; <double> [#uses=1]
+  %retval1 = load double, ptr %retval                 ; <double> [#uses=1]
   ret double %retval1
 }
 

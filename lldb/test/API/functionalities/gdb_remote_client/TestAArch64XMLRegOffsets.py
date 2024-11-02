@@ -1,4 +1,3 @@
-from __future__ import print_function
 from textwrap import dedent
 import lldb
 from lldbsuite.test.lldbtest import *
@@ -92,8 +91,6 @@ class MyResponder(MockGDBServerResponder):
 
 
 class TestAArch64XMLRegOffsets(GDBRemoteTestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfXmlSupportMissing
     @skipIfRemote

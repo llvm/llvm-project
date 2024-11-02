@@ -2,9 +2,6 @@
 Test basics of mini dump debugging.
 """
 
-from six import iteritems
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class MiniDumpTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_process_info_in_mini_dump(self):
@@ -36,7 +31,7 @@ class MiniDumpTestCase(TestBase):
         # one and only thread.
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonException)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonException)
         stop_description = thread.GetStopDescription(256)
         self.assertIn("0xc0000005", stop_description)
 
@@ -120,7 +115,7 @@ class MiniDumpTestCase(TestBase):
             breakpoint = target.BreakpointCreateByName("bar")
             process = target.LaunchSimple(
                 None, None, self.get_process_working_directory())
-            self.assertEqual(process.GetState(), lldb.eStateStopped)
+            self.assertState(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
             self.assertSuccess(process.Kill())
@@ -132,7 +127,7 @@ class MiniDumpTestCase(TestBase):
 
             expected_stack = {0: 'bar', 1: 'foo', 2: 'main'}
             self.assertGreaterEqual(thread.GetNumFrames(), len(expected_stack))
-            for index, name in iteritems(expected_stack):
+            for index, name in expected_stack.items():
                 frame = thread.GetFrameAtIndex(index)
                 self.assertTrue(frame.IsValid())
                 function_name = frame.GetFunctionName()
@@ -156,7 +151,7 @@ class MiniDumpTestCase(TestBase):
             breakpoint = target.BreakpointCreateByName("bar")
             process = target.LaunchSimple(
                 None, None, self.get_process_working_directory())
-            self.assertEqual(process.GetState(), lldb.eStateStopped)
+            self.assertState(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
             self.assertSuccess(process.Kill())

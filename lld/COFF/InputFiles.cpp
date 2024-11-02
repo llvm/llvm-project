@@ -1070,7 +1070,8 @@ void BitcodeFile::parse() {
         sym = ctx.symtab.addUndefined(symName, this, false);
       }
     } else {
-      sym = ctx.symtab.addRegular(this, symName, nullptr, fakeSC);
+      sym = ctx.symtab.addRegular(this, symName, nullptr, fakeSC, 0,
+                                  objSym.isWeak());
     }
     symbols.push_back(sym);
     if (objSym.isUsed())

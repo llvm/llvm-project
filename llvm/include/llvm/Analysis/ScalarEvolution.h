@@ -348,7 +348,7 @@ public:
   };
 
   /// Convenient IncrementWrapFlags manipulation methods.
-  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
+  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
   clearFlags(SCEVWrapPredicate::IncrementWrapFlags Flags,
              SCEVWrapPredicate::IncrementWrapFlags OffFlags) {
     assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
@@ -357,7 +357,7 @@ public:
     return (SCEVWrapPredicate::IncrementWrapFlags)(Flags & ~OffFlags);
   }
 
-  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
+  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
   maskFlags(SCEVWrapPredicate::IncrementWrapFlags Flags, int Mask) {
     assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
     assert((Mask & IncrementNoWrapMask) == Mask && "Invalid mask value!");
@@ -365,7 +365,7 @@ public:
     return (SCEVWrapPredicate::IncrementWrapFlags)(Flags & Mask);
   }
 
-  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
+  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
   setFlags(SCEVWrapPredicate::IncrementWrapFlags Flags,
            SCEVWrapPredicate::IncrementWrapFlags OnFlags) {
     assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
@@ -377,7 +377,7 @@ public:
 
   /// Returns the set of SCEVWrapPredicate no wrap flags implied by a
   /// SCEVAddRecExpr.
-  LLVM_NODISCARD static SCEVWrapPredicate::IncrementWrapFlags
+  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
   getImpliedFlags(const SCEVAddRecExpr *AR, ScalarEvolution &SE);
 
 private:
@@ -466,20 +466,20 @@ public:
 
   /// Convenient NoWrapFlags manipulation that hides enum casts and is
   /// visible in the ScalarEvolution name space.
-  LLVM_NODISCARD static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
-                                                    int Mask) {
+  [[nodiscard]] static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
+                                                   int Mask) {
     return (SCEV::NoWrapFlags)(Flags & Mask);
   }
-  LLVM_NODISCARD static SCEV::NoWrapFlags setFlags(SCEV::NoWrapFlags Flags,
-                                                   SCEV::NoWrapFlags OnFlags) {
+  [[nodiscard]] static SCEV::NoWrapFlags setFlags(SCEV::NoWrapFlags Flags,
+                                                  SCEV::NoWrapFlags OnFlags) {
     return (SCEV::NoWrapFlags)(Flags | OnFlags);
   }
-  LLVM_NODISCARD static SCEV::NoWrapFlags
+  [[nodiscard]] static SCEV::NoWrapFlags
   clearFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OffFlags) {
     return (SCEV::NoWrapFlags)(Flags & ~OffFlags);
   }
-  LLVM_NODISCARD static bool hasFlags(SCEV::NoWrapFlags Flags,
-                                      SCEV::NoWrapFlags TestFlags) {
+  [[nodiscard]] static bool hasFlags(SCEV::NoWrapFlags Flags,
+                                     SCEV::NoWrapFlags TestFlags) {
     return TestFlags == maskFlags(Flags, TestFlags);
   };
 
@@ -529,14 +529,18 @@ public:
   bool containsAddRecurrence(const SCEV *S);
 
   /// Is operation \p BinOp between \p LHS and \p RHS provably does not have
-  /// a signed/unsigned overflow (\p Signed)?
+  /// a signed/unsigned overflow (\p Signed)? If \p CtxI is specified, the
+  /// no-overflow fact should be true in the context of this instruction.
   bool willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
-                       const SCEV *LHS, const SCEV *RHS);
+                       const SCEV *LHS, const SCEV *RHS,
+                       const Instruction *CtxI = nullptr);
 
   /// Parse NSW/NUW flags from add/sub/mul IR binary operation \p Op into
   /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
-  /// Does not mutate the original instruction.
-  std::pair<SCEV::NoWrapFlags, bool /*Deduced*/>
+  /// Does not mutate the original instruction. Returns None if it could not
+  /// deduce more precise flags than the instruction already has, otherwise
+  /// returns proven flags.
+  Optional<SCEV::NoWrapFlags>
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
@@ -933,7 +937,14 @@ public:
   ///
   /// We don't have a way to invalidate per-loop dispositions. Clear and
   /// recompute is simpler.
-  void forgetLoopDispositions(const Loop *L);
+  void forgetLoopDispositions();
+
+  /// Called when the client has changed the disposition of values in
+  /// a loop or block.
+  ///
+  /// We don't have a way to invalidate per-loop/per-block dispositions. Clear
+  /// and recompute is simpler.
+  void forgetBlockAndLoopDispositions(Value *V = nullptr);
 
   /// Determine the minimum number of zero bits that S is guaranteed to end in
   /// (at every loop iteration).  It is, at the same time, the minimum number
@@ -1087,7 +1098,8 @@ public:
   /// invariants, available at L's entry. Otherwise, return None.
   Optional<LoopInvariantPredicate>
   getLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
-                            const SCEV *RHS, const Loop *L);
+                            const SCEV *RHS, const Loop *L,
+                            const Instruction *CtxI = nullptr);
 
   /// If the result of the predicate LHS `Pred` RHS is loop invariant with
   /// respect to L at given Context during at least first MaxIter iterations,
@@ -1372,11 +1384,11 @@ private:
     /// Expression indicating the least constant maximum backedge-taken count of
     /// the loop that is known, or a SCEVCouldNotCompute. This expression is
     /// only valid if the redicates associated with all loop exits are true.
-    const SCEV *ConstantMax;
+    const SCEV *ConstantMax = nullptr;
 
     /// Indicating if \c ExitNotTaken has an element for every exiting block in
     /// the loop.
-    bool IsComplete;
+    bool IsComplete = false;
 
     /// Expression indicating the least maximum backedge-taken count of the loop
     /// that is known, or a SCEVCouldNotCompute. Lazily computed on first query.
@@ -1389,7 +1401,7 @@ private:
     const SCEV *getConstantMax() const { return ConstantMax; }
 
   public:
-    BackedgeTakenInfo() : ConstantMax(nullptr), IsComplete(false) {}
+    BackedgeTakenInfo() = default;
     BackedgeTakenInfo(BackedgeTakenInfo &&) = default;
     BackedgeTakenInfo &operator=(BackedgeTakenInfo &&) = default;
 
@@ -1575,8 +1587,16 @@ private:
   ConstantRange getRangeForUnknownRecurrence(const SCEVUnknown *U);
 
   /// We know that there is no SCEV for the specified value.  Analyze the
-  /// expression.
+  /// expression recursively.
   const SCEV *createSCEV(Value *V);
+
+  /// We know that there is no SCEV for the specified value. Create a new SCEV
+  /// for \p V iteratively.
+  const SCEV *createSCEVIter(Value *V);
+  /// Collect operands of \p V for which SCEV expressions should be constructed
+  /// first. Returns a SCEV directly if it can be constructed trivially for \p
+  /// V.
+  const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops);
 
   /// Provide the special handling we need to analyze PHI SCEVs.
   const SCEV *createNodeForPHI(PHINode *PN);
@@ -2104,6 +2124,14 @@ private:
   DenseMap<std::pair<const SCEVUnknown *, const Loop *>,
            std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
       PredicatedSCEVRewrites;
+
+  /// Set of AddRecs for which proving NUW via an induction has already been
+  /// tried.
+  SmallPtrSet<const SCEVAddRecExpr *, 16> UnsignedWrapViaInductionTried;
+
+  /// Set of AddRecs for which proving NSW via an induction has already been
+  /// tried.
+  SmallPtrSet<const SCEVAddRecExpr *, 16> SignedWrapViaInductionTried;
 
   /// The head of a linked list of all SCEVUnknown values that have been
   /// allocated. This is used by releaseMemory to locate them all and call

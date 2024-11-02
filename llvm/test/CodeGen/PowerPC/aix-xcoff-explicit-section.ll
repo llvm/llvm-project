@@ -13,10 +13,10 @@
 
 define dso_local signext i32 @ext_fun() section ".ext_fun_sec" {
 entry:
-  %0 = load i32, i32* @ext_const, align 4
-  %1 = load i32, i32* @ext_var, align 4
+  %0 = load i32, ptr @ext_const, align 4
+  %1 = load i32, ptr @ext_var, align 4
   %add = add nsw i32 %0, %1
-  %2 = load i32, i32* @ext_zvar, align 4
+  %2 = load i32, ptr @ext_zvar, align 4
   %add1 = add nsw i32 %add, %2
   ret i32 %add1
 }
@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT:         .globl  .ext_fun
 ; CHECK-NEXT:         .align  4
 ; CHECK-NEXT:         .csect ext_fun[DS]
-; CHECK:              .csect .ext_fun_sec[PR],2
+; CHECK:              .csect .ext_fun_sec[PR],5
 ; CHECK-NEXT: .ext_fun:
 ; CHECK:              .csect .ext_const_sec[RO],2
 ; CHECK-NEXT:         .globl  ext_const
@@ -90,7 +90,7 @@ entry:
 ; CHECKSYM-NEXT:        SectionLen: 28
 ; CHECKSYM-NEXT:        ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:        TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:        SymbolAlignmentLog2: 4
+; CHECKSYM-NEXT:        SymbolAlignmentLog2: 5
 ; CHECKSYM-NEXT:        SymbolType: XTY_SD (0x1)
 ; CHECKSYM-NEXT:        StorageMappingClass: XMC_PR (0x0)
 ; CHECKSYM-NEXT:        StabInfoIndex: 0x0

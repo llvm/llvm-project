@@ -28,11 +28,11 @@ define void @test_scalarized_intrinsics() {
 ; CHECK64: cost of 1 {{.*}}bswap.v2i64
         %r3 = call %i8 @llvm.bswap.v2i64(%i8 undef)
 
-; CHECK32: cost of 14 {{.*}}cttz.v4i32
-; CHECK64: cost of 14 {{.*}}cttz.v4i32
+; CHECK32: cost of 11 {{.*}}cttz.v4i32
+; CHECK64: cost of 11 {{.*}}cttz.v4i32
         %r4 = call %i4 @llvm.cttz.v4i32(%i4 undef)
-; CHECK32: cost of 10 {{.*}}cttz.v2i64
-; CHECK64: cost of 10 {{.*}}cttz.v2i64
+; CHECK32: cost of 9 {{.*}}cttz.v2i64
+; CHECK64: cost of 9 {{.*}}cttz.v2i64
         %r5 = call %i8 @llvm.cttz.v2i64(%i8 undef)
 
 ; CHECK32: ret

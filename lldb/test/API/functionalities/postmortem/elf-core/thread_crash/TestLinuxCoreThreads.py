@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 class LinuxCoreThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     _i386_pid = 5193
     _x86_64_pid = 5222
 
@@ -55,7 +53,7 @@ class LinuxCoreThreadsTestCase(TestBase):
             self.assertEqual(bytes_read, None)
             reason = thread.GetStopReason()
             if( thread.GetThreadID() == tid ):
-                self.assertEqual(reason, lldb.eStopReasonSignal)
+                self.assertStopReason(reason, lldb.eStopReasonSignal)
                 signal = thread.GetStopReasonDataAtIndex(1)
                 # Check we got signal 4 (SIGILL)
                 self.assertEqual(signal, 4)

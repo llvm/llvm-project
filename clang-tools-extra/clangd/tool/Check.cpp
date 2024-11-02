@@ -34,6 +34,7 @@
 #include "ParsedAST.h"
 #include "Preamble.h"
 #include "Protocol.h"
+#include "SemanticHighlighting.h"
 #include "SourceCode.h"
 #include "XRefs.h"
 #include "index/CanonicalIncludes.h"
@@ -100,18 +101,19 @@ public:
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
     std::unique_ptr<GlobalCompilationDatabase> BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
-    BaseCDB = getQueryDriverDatabase(llvm::makeArrayRef(Opts.QueryDriverGlobs),
-                                     std::move(BaseCDB));
     auto Mangler = CommandMangler::detect();
+    Mangler.SystemIncludeExtractor =
+        getSystemIncludeExtractor(llvm::makeArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
     auto CDB = std::make_unique<OverlayCDB>(
-        BaseCDB.get(), std::vector<std::string>{},
-        tooling::ArgumentsAdjuster(std::move(Mangler)));
+        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);
-      log("Compile command from CDB is: {0}", printArgv(Cmd.CommandLine));
+      log("Compile command {0} is: {1}",
+          Cmd.Heuristic.empty() ? "from CDB" : Cmd.Heuristic,
+          printArgv(Cmd.CommandLine));
     } else {
       Cmd = CDB->getFallbackCommand(File);
       log("Generic fallback command is: {0}", printArgv(Cmd.CommandLine));
@@ -130,7 +132,7 @@ public:
     Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
     Inputs.Opts.PreambleParseForwardingFunctions =
         Opts.PreambleParseForwardingFunctions;
-    if (Contents.hasValue()) {
+    if (Contents) {
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);
     } else {
@@ -204,6 +206,14 @@ public:
     }
   }
 
+  void buildSemanticHighlighting(llvm::Optional<Range> LineRange) {
+    log("Building semantic highlighting");
+    auto Highlights = getSemanticHighlightings(*AST);
+    for (const auto HL : Highlights)
+      if (!LineRange || LineRange->contains(HL.R))
+        vlog(" {0} {1} {2}", HL.R, HL.Kind, HL.Modifiers);
+  }
+
   // Run AST-based features at each token in the file.
   void testLocationFeatures(llvm::Optional<Range> LineRange,
                             const bool EnableCodeCompletion) {
@@ -253,7 +263,7 @@ public:
       vlog("    definition: {0}", Definitions);
 
       auto Hover = getHover(*AST, Pos, Style, &Index);
-      vlog("    hover: {0}", Hover.hasValue());
+      vlog("    hover: {0}", Hover.has_value());
 
       unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
       vlog("    documentHighlight: {0}", DocHighlights);
@@ -300,6 +310,7 @@ bool check(llvm::StringRef File, llvm::Optional<Range> LineRange,
       !C.buildAST())
     return false;
   C.buildInlayHints(LineRange);
+  C.buildSemanticHighlighting(LineRange);
   C.testLocationFeatures(LineRange, EnableCodeCompletion);
 
   log("All checks completed, {0} errors", C.ErrCount);

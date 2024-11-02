@@ -29,7 +29,9 @@ LLVM_LIBC_FUNCTION(int, snprintf,
   va_end(vlist);
   printf_core::StringWriter str_writer(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(reinterpret_cast<void *>(&str_writer),
-                             printf_core::write_to_string);
+                             printf_core::StringWriter::write_str,
+                             printf_core::StringWriter::write_chars,
+                             printf_core::StringWriter::write_char);
 
   int ret_val = printf_core::printf_main(&writer, format, args);
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.

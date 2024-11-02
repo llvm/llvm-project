@@ -42,9 +42,19 @@ entry:
 
 ;; Ensure that 64-bit immediates aren't truncated
 ; CHECK-LABEL: test_large_immediate
-; CHECK: or %o0, %lo(4294967296), %o0
+; CHECK: or %i0, %lo(4294967296), %i0
 define i64 @test_large_immediate(i64) {
 entry:
   %1 = tail call i64 asm "or $0, %lo($1), $0", "=r,i,r"(i64 4294967296, i64 %0)
   ret i64 %1
+}
+
+; Ensure that the input register value is not truncated to 32bit.
+; CHECK-LABEL: test_constraint_input_type
+; CHECK: ldx [%i0], %o0
+define void @test_constraint_input_type(i64* %arg1) {
+Entry:
+  %val = load i64, i64* %arg1
+  tail call void asm sideeffect "", "{o0}"(i64 %val)
+  ret void
 }

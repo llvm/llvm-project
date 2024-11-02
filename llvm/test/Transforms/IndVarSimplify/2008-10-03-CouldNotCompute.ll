@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars
+; RUN: opt < %s -passes=indvars
 ; PR2857
 
 @foo = external global i32		; <i32*> [#uses=1]

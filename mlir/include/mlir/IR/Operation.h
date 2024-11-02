@@ -33,14 +33,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           ArrayRef<NamedAttribute> attributes,
-                           BlockRange successors, unsigned numRegions);
-
-  /// Overload of create that takes an existing DictionaryAttr to avoid
-  /// unnecessarily uniquing a list of attributes.
-  static Operation *create(Location location, OperationName name,
-                           TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes, BlockRange successors,
+                           NamedAttrList &&attributes, BlockRange successors,
                            unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
@@ -49,7 +42,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes,
+                           NamedAttrList &&attributes,
                            BlockRange successors = {},
                            RegionRange regions = {});
 
@@ -467,6 +460,15 @@ public:
     setAttrs(attrs.getDictionary(getContext()));
   }
 
+  /// Sets default attributes on unset attributes.
+  void populateDefaultAttrs() {
+    if (auto registered = getRegisteredInfo()) {
+      NamedAttrList attrs(getAttrDictionary());
+      registered->populateDefaultAttrs(attrs);
+      setAttrs(attrs.getDictionary(getContext()));
+    }
+  }
+
   //===--------------------------------------------------------------------===//
   // Blocks
   //===--------------------------------------------------------------------===//
@@ -567,8 +569,8 @@ public:
   ///       });
   template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 1, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 1,
+                   RetT>
   walk(FnT &&callback) {
     return detail::walk<Order>(this, std::forward<FnT>(callback));
   }
@@ -595,8 +597,8 @@ public:
   ///         return WalkResult::advance();
   ///       });
   template <typename FnT, typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 2, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 2,
+                   RetT>
   walk(FnT &&callback) {
     return detail::walk(this, std::forward<FnT>(callback));
   }

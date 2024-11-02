@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,7 +28,7 @@ public:
   GrammarBuilder(std::vector<std::string> &Diagnostics)
       : Diagnostics(Diagnostics) {}
 
-  std::unique_ptr<Grammar> build(llvm::StringRef BNF) {
+  Grammar build(llvm::StringRef BNF) {
     auto Specs = eliminateOptional(parse(BNF));
 
     assert(llvm::all_of(Specs,
@@ -47,6 +47,9 @@ public:
     // Assemble the name->ID and ID->nonterminal name maps.
     llvm::DenseSet<llvm::StringRef> UniqueNonterminals;
     llvm::DenseMap<llvm::StringRef, SymbolID> SymbolIds;
+
+    llvm::DenseSet<llvm::StringRef> UniqueAttributeValues;
+
     for (uint16_t I = 0; I < NumTerminals; ++I)
       SymbolIds.try_emplace(T->Terminals[I], tokenSymbol(tok::TokenKind(I)));
     auto Consider = [&](llvm::StringRef Name) {
@@ -55,19 +58,32 @@ public:
     };
     for (const auto &Spec : Specs) {
       Consider(Spec.Target);
-      for (const RuleSpec::Element &Elt : Spec.Sequence)
+      for (const RuleSpec::Element &Elt : Spec.Sequence) {
         Consider(Elt.Symbol);
+        for (const auto& KV : Elt.Attributes)
+           UniqueAttributeValues.insert(KV.second);
+      }
     }
-    llvm::for_each(UniqueNonterminals, [&T](llvm::StringRef Name) {
+    for (llvm::StringRef Name : UniqueNonterminals) {
       T->Nonterminals.emplace_back();
       T->Nonterminals.back().Name = Name.str();
-    });
+    }
     assert(T->Nonterminals.size() < (1 << (SymbolBits - 1)) &&
            "Too many nonterminals to fit in SymbolID bits!");
     llvm::sort(T->Nonterminals, [](const GrammarTable::Nonterminal &L,
                                    const GrammarTable::Nonterminal &R) {
       return L.Name < R.Name;
     });
+    // Add an empty string for the corresponding sentinel unset attribute.
+    T->AttributeValues.push_back("");
+    UniqueAttributeValues.erase("");
+    for (llvm::StringRef Name : UniqueAttributeValues) {
+      T->AttributeValues.emplace_back();
+      T->AttributeValues.back() = Name.str();
+    }
+    llvm::sort(T->AttributeValues);
+    assert(T->AttributeValues.front() == "");
+
     // Build name -> ID maps for nonterminals.
     for (SymbolID SID = 0; SID < T->Nonterminals.size(); ++SID)
       SymbolIds.try_emplace(T->Nonterminals[SID].Name, SID);
@@ -86,7 +102,9 @@ public:
       for (const RuleSpec::Element &Elt : Spec.Sequence)
         Symbols.push_back(Lookup(Elt.Symbol));
       T->Rules.push_back(Rule(Lookup(Spec.Target), Symbols));
+      applyAttributes(Spec, *T, T->Rules.back());
     }
+
     assert(T->Rules.size() < (1 << RuleBits) &&
            "Too many rules to fit in RuleID bits!");
     const auto &SymbolOrder = getTopologicalOrder(T.get());
@@ -105,8 +123,8 @@ public:
         ++End;
       T->Nonterminals[SID].RuleRange = {Start, End};
     }
-    auto G = std::make_unique<Grammar>(std::move(T));
-    diagnoseGrammar(*G);
+    Grammar G(std::move(T));
+    diagnoseGrammar(G);
     return G;
   }
 
@@ -164,6 +182,9 @@ private:
     llvm::StringRef Target;
     struct Element {
       llvm::StringRef Symbol; // Name of the symbol
+      // Attributes that are associated to the sequence symbol or rule.
+      std::vector<std::pair<llvm::StringRef/*Key*/, llvm::StringRef/*Value*/>>
+          Attributes;
     };
     std::vector<Element> Sequence;
 
@@ -204,11 +225,51 @@ private:
       Chunk = Chunk.trim();
       if (Chunk.empty())
         continue; // skip empty
+      if (Chunk.startswith("[") && Chunk.endswith("]")) {
+        if (Out.Sequence.empty())
+          continue;
 
-      Out.Sequence.push_back({Chunk});
+        parseAttributes(Chunk, Out.Sequence.back().Attributes);
+        continue;
+      }
+
+      Out.Sequence.push_back({Chunk, /*Attributes=*/{}});
     }
     return true;
-  };
+  }
+
+  bool parseAttributes(
+      llvm::StringRef Content,
+      std::vector<std::pair<llvm::StringRef, llvm::StringRef>> &Out) {
+    assert(Content.startswith("[") && Content.endswith("]"));
+    auto KV = Content.drop_front().drop_back().split('=');
+    Out.push_back({KV.first, KV.second.trim()});
+
+    return true;
+  }
+  // Apply the parsed extensions (stored in RuleSpec) to the grammar Rule.
+  void applyAttributes(const RuleSpec& Spec, const GrammarTable& T, Rule& R) {
+    auto LookupExtensionID = [&T](llvm::StringRef Name) {
+      const auto It = llvm::partition_point(
+          T.AttributeValues, [&](llvm::StringRef X) { return X < Name; });
+      assert(It != T.AttributeValues.end() && *It == Name &&
+             "Didn't find the attribute in AttrValues!");
+      return It - T.AttributeValues.begin();
+    };
+    for (unsigned I = 0; I < Spec.Sequence.size(); ++I) {
+      for (const auto &KV : Spec.Sequence[I].Attributes) {
+        if (KV.first == "guard") {
+          R.Guarded = true;
+        } else if (KV.first == "recover") {
+          R.Recovery = LookupExtensionID(KV.second);
+          R.RecoveryIndex = I;
+        } else {
+          Diagnostics.push_back(
+              llvm::formatv("Unknown attribute '{0}'", KV.first).str());
+        }
+      }
+    }
+  }
 
   // Inlines all _opt symbols.
   // For example, a rule E := id +_opt id, after elimination, we have two
@@ -266,8 +327,13 @@ private:
             "Token-like name {0} is used as a nonterminal", G.symbolName(SID)));
       }
     }
-    for (RuleID RID = 0; RID + 1u < T.Rules.size(); ++RID) {
-      if (T.Rules[RID] == T.Rules[RID + 1])
+    llvm::DenseSet<llvm::hash_code> VisitedRules;
+    for (RuleID RID = 0; RID < T.Rules.size(); ++RID) {
+      const auto &R = T.Rules[RID];
+      auto Code = llvm::hash_combine(
+          R.Target, llvm::hash_combine_range(R.seq().begin(), R.seq().end()));
+      auto [_, New] = VisitedRules.insert(Code);
+      if (!New)
         Diagnostics.push_back(
             llvm::formatv("Duplicate rule: `{0}`", G.dumpRule(RID)));
     }
@@ -286,8 +352,8 @@ private:
 };
 } // namespace
 
-std::unique_ptr<Grammar>
-Grammar::parseBNF(llvm::StringRef BNF, std::vector<std::string> &Diagnostics) {
+Grammar Grammar::parseBNF(llvm::StringRef BNF,
+                          std::vector<std::string> &Diagnostics) {
   Diagnostics.clear();
   return GrammarBuilder(Diagnostics).build(BNF);
 }

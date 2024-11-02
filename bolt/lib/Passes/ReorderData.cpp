@@ -30,11 +30,9 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 
 static cl::opt<bool>
-PrintReorderedData("print-reordered-data",
-  cl::desc("print section contents after reordering"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    PrintReorderedData("print-reordered-data",
+                       cl::desc("print section contents after reordering"),
+                       cl::Hidden, cl::cat(BoltCategory));
 
 cl::list<std::string>
 ReorderData("reorder-data",
@@ -63,18 +61,14 @@ ReorderAlgorithm("reorder-data-algo",
   cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
-ReorderDataMaxSymbols("reorder-data-max-symbols",
-  cl::desc("maximum number of symbols to reorder"),
-  cl::ZeroOrMore,
-  cl::init(std::numeric_limits<unsigned>::max()),
-  cl::cat(BoltOptCategory));
+    ReorderDataMaxSymbols("reorder-data-max-symbols",
+                          cl::desc("maximum number of symbols to reorder"),
+                          cl::init(std::numeric_limits<unsigned>::max()),
+                          cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-ReorderDataMaxBytes("reorder-data-max-bytes",
-  cl::desc("maximum number of bytes to reorder"),
-  cl::ZeroOrMore,
-  cl::init(std::numeric_limits<unsigned>::max()),
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> ReorderDataMaxBytes(
+    "reorder-data-max-bytes", cl::desc("maximum number of bytes to reorder"),
+    cl::init(std::numeric_limits<unsigned>::max()), cl::cat(BoltOptCategory));
 
 static cl::list<std::string>
 ReorderSymbols("reorder-symbols",
@@ -92,13 +86,10 @@ SkipSymbols("reorder-skip-symbols",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-static cl::opt<bool>
-ReorderInplace("reorder-data-inplace",
-  cl::desc("reorder data sections in place"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> ReorderInplace("reorder-data-inplace",
+                                    cl::desc("reorder data sections in place"),
 
+                                    cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -117,13 +108,9 @@ bool filterSymbol(const BinaryData *BD) {
   bool IsValid = true;
 
   if (!opts::ReorderSymbols.empty()) {
-    IsValid = false;
-    for (const std::string &Name : opts::ReorderSymbols) {
-      if (BD->hasName(Name)) {
-        IsValid = true;
-        break;
-      }
-    }
+    IsValid = llvm::any_of(opts::ReorderSymbols, [&](const std::string &Name) {
+      return BD->hasName(Name);
+    });
   }
 
   if (!IsValid)
@@ -195,14 +182,14 @@ void ReorderData::assignMemData(BinaryContext &BC) {
 
     for (const BinaryBasicBlock &BB : BF) {
       for (const MCInst &Inst : BB) {
-        auto ErrorOrMemAccesssProfile =
+        auto ErrorOrMemAccessProfile =
             BC.MIB->tryGetAnnotationAs<MemoryAccessProfile>(
                 Inst, "MemoryAccessProfile");
-        if (!ErrorOrMemAccesssProfile)
+        if (!ErrorOrMemAccessProfile)
           continue;
 
         const MemoryAccessProfile &MemAccessProfile =
-            ErrorOrMemAccesssProfile.get();
+            ErrorOrMemAccessProfile.get();
         for (const AddressAccess &AccessInfo :
              MemAccessProfile.AddressAccessInfo) {
           if (BinaryData *BD = AccessInfo.MemoryObject) {
@@ -251,14 +238,14 @@ ReorderData::sortedByFunc(BinaryContext &BC, const BinarySection &Section,
         continue;
 
       for (const MCInst &Inst : BB) {
-        auto ErrorOrMemAccesssProfile =
+        auto ErrorOrMemAccessProfile =
             BC.MIB->tryGetAnnotationAs<MemoryAccessProfile>(
                 Inst, "MemoryAccessProfile");
-        if (!ErrorOrMemAccesssProfile)
+        if (!ErrorOrMemAccessProfile)
           continue;
 
         const MemoryAccessProfile &MemAccessProfile =
-            ErrorOrMemAccesssProfile.get();
+            ErrorOrMemAccessProfile.get();
         for (const AddressAccess &AccessInfo :
              MemAccessProfile.AddressAccessInfo) {
           if (AccessInfo.MemoryObject)
@@ -284,8 +271,8 @@ ReorderData::sortedByFunc(BinaryContext &BC, const BinarySection &Section,
   DataOrder Order = baseOrder(BC, Section);
   unsigned SplitPoint = Order.size();
 
-  std::sort(
-      Order.begin(), Order.end(),
+  llvm::sort(
+      Order,
       [&](const DataOrder::value_type &A, const DataOrder::value_type &B) {
         // Total execution counts of functions referencing BD.
         const uint64_t ACount = BDtoFuncCount[A.first];
@@ -316,17 +303,17 @@ ReorderData::sortedByCount(BinaryContext &BC,
   DataOrder Order = baseOrder(BC, Section);
   unsigned SplitPoint = Order.size();
 
-  std::sort(Order.begin(), Order.end(),
-            [](const DataOrder::value_type &A, const DataOrder::value_type &B) {
-              // Weight by number of loads/data size.
-              const double AWeight = double(A.second) / A.first->getSize();
-              const double BWeight = double(B.second) / B.first->getSize();
-              return (AWeight > BWeight ||
-                      (AWeight == BWeight &&
-                       (A.first->getSize() < B.first->getSize() ||
-                        (A.first->getSize() == B.first->getSize() &&
-                         A.first->getAddress() < B.first->getAddress()))));
-            });
+  llvm::sort(Order, [](const DataOrder::value_type &A,
+                       const DataOrder::value_type &B) {
+    // Weight by number of loads/data size.
+    const double AWeight = double(A.second) / A.first->getSize();
+    const double BWeight = double(B.second) / B.first->getSize();
+    return (AWeight > BWeight ||
+            (AWeight == BWeight &&
+             (A.first->getSize() < B.first->getSize() ||
+              (A.first->getSize() == B.first->getSize() &&
+               A.first->getAddress() < B.first->getAddress()))));
+  });
 
   for (unsigned Idx = 0; Idx < Order.size(); ++Idx) {
     if (!Order[Idx].second) {
@@ -513,19 +500,21 @@ void ReorderData::runOnFunctions(BinaryContext &BC) {
                << Section->getName() << " falling back to splitting "
                << "instead of in-place reordering.\n";
 
-      // Copy original section to <section name>.cold.
-      BinarySection &Cold = BC.registerSection(
-          std::string(Section->getName()) + ".cold", *Section);
+      // Rename sections.
+      BinarySection &Hot =
+          BC.registerSection(Section->getName() + ".hot", *Section);
+      Hot.setOutputName(Section->getName());
+      Section->setOutputName(".bolt.org" + Section->getName());
 
       // Reorder contents of original section.
-      setSectionOrder(BC, *Section, Order.begin(), SplitPoint);
+      setSectionOrder(BC, Hot, Order.begin(), SplitPoint);
 
       // This keeps the original data from thinking it has been moved.
       for (std::pair<const uint64_t, BinaryData *> &Entry :
            BC.getBinaryDataForSection(*Section)) {
         if (!Entry.second->isMoved()) {
-          Entry.second->setSection(Cold);
-          Entry.second->setOutputSection(Cold);
+          Entry.second->setSection(*Section);
+          Entry.second->setOutputSection(*Section);
         }
       }
     } else {

@@ -14,6 +14,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -105,14 +106,20 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // statement are different from [[]] attributes that follow an __attribute__
   // at the start of the statement. Thus, we're not using MaybeParseAttributes
   // here because we don't want to allow arbitrary orderings.
-  ParsedAttributes Attrs(AttrFactory);
-  MaybeParseCXX11Attributes(Attrs, /*MightBeObjCMessageSend*/ true);
+  ParsedAttributes CXX11Attrs(AttrFactory);
+  MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
+  ParsedAttributes GNUAttrs(AttrFactory);
   if (getLangOpts().OpenCL)
-    MaybeParseGNUAttributes(Attrs);
+    MaybeParseGNUAttributes(GNUAttrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, Attrs);
+      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUAttrs);
   MaybeDestroyTemplateIds();
+
+  // Attributes that are left should all go on the statement, so concatenate the
+  // two lists.
+  ParsedAttributes Attrs(AttrFactory);
+  takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
 
   assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
@@ -158,7 +165,8 @@ private:
 
 StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
     StmtVector &Stmts, ParsedStmtContext StmtCtx,
-    SourceLocation *TrailingElseLoc, ParsedAttributes &Attrs) {
+    SourceLocation *TrailingElseLoc, ParsedAttributes &CXX11Attrs,
+    ParsedAttributes &GNUAttrs) {
   const char *SemiError = nullptr;
   StmtResult Res;
   SourceLocation GNUAttributeLoc;
@@ -181,9 +189,16 @@ Retry:
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
     return StmtError();
 
-  case tok::identifier: {
+  case tok::identifier:
+  ParseIdentifier: {
     Token Next = NextToken();
     if (Next.is(tok::colon)) { // C99 6.8.1: labeled-statement
+      // Both C++11 and GNU attributes preceding the label appertain to the
+      // label, so put them in a single list to pass on to
+      // ParseLabeledStatement().
+      ParsedAttributes Attrs(AttrFactory);
+      takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
+
       // identifier ':' statement
       return ParseLabeledStatement(Attrs, StmtCtx);
     }
@@ -209,29 +224,37 @@ Retry:
     }
 
     // Fall through
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   default: {
+    bool HaveAttrs = !CXX11Attrs.empty() || !GNUAttrs.empty();
+    auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
+    bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
+                                llvm::all_of(GNUAttrs, IsStmtAttr);
     if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
          (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
              ParsedStmtContext()) &&
-        ((GNUAttributeLoc.isValid() &&
-          !(!Attrs.empty() &&
-            llvm::all_of(
-                Attrs, [](ParsedAttr &Attr) { return Attr.isStmtAttr(); }))) ||
+        ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          isDeclarationStatement())) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
       if (GNUAttributeLoc.isValid()) {
         DeclStart = GNUAttributeLoc;
-        Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, Attrs,
-                                &GNUAttributeLoc);
+        Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, CXX11Attrs,
+                                GNUAttrs, &GNUAttributeLoc);
       } else {
-        Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, Attrs);
+        Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, CXX11Attrs,
+                                GNUAttrs);
       }
-      if (Attrs.Range.getBegin().isValid())
-        DeclStart = Attrs.Range.getBegin();
+      if (CXX11Attrs.Range.getBegin().isValid()) {
+        // The caller must guarantee that the CXX11Attrs appear before the
+        // GNUAttrs, and we rely on that here.
+        assert(GNUAttrs.Range.getBegin().isInvalid() ||
+               GNUAttrs.Range.getBegin() > CXX11Attrs.Range.getBegin());
+        DeclStart = CXX11Attrs.Range.getBegin();
+      } else if (GNUAttrs.Range.getBegin().isValid())
+        DeclStart = GNUAttrs.Range.getBegin();
       return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
     }
 
@@ -240,12 +263,24 @@ Retry:
       return StmtError();
     }
 
-    return ParseExprStatement(StmtCtx);
+    switch (Tok.getKind()) {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
+      if (NextToken().is(tok::less)) {
+        Tok.setKind(tok::identifier);
+        Diag(Tok, diag::ext_keyword_as_ident)
+            << Tok.getIdentifierInfo()->getName() << 0;
+        goto ParseIdentifier;
+      }
+      [[fallthrough]];
+    default:
+      return ParseExprStatement(StmtCtx);
+    }
   }
 
   case tok::kw___attribute: {
     GNUAttributeLoc = Tok.getLocation();
-    ParseGNUAttributes(Attrs);
+    ParseGNUAttributes(GNUAttrs);
     goto Retry;
   }
 
@@ -297,10 +332,13 @@ Retry:
     break;
 
   case tok::kw_asm: {
-    ProhibitAttributes(Attrs);
+    for (const ParsedAttr &AL : CXX11Attrs)
+      Diag(AL.getRange().getBegin(), diag::warn_attribute_ignored) << AL;
+    // Prevent these from being interpreted as statement attributes later on.
+    CXX11Attrs.clear();
+    ProhibitAttributes(GNUAttrs);
     bool msAsm = false;
     Res = ParseAsmStatement(msAsm);
-    Res = Actions.ActOnFinishFullStmt(Res.get());
     if (msAsm) return Res;
     SemiError = "asm";
     break;
@@ -308,7 +346,8 @@ Retry:
 
   case tok::kw___if_exists:
   case tok::kw___if_not_exists:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     ParseMicrosoftIfExistsStatement(Stmts);
     // An __if_exists block is like a compound statement, but it doesn't create
     // a new scope.
@@ -318,7 +357,8 @@ Retry:
     return ParseCXXTryBlock();
 
   case tok::kw___try:
-    ProhibitAttributes(Attrs); // TODO: is it correct?
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     return ParseSEHTryBlock();
 
   case tok::kw___leave:
@@ -327,55 +367,65 @@ Retry:
     break;
 
   case tok::annot_pragma_vis:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaVisibility();
     return StmtEmpty();
 
   case tok::annot_pragma_pack:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaPack();
     return StmtEmpty();
 
   case tok::annot_pragma_msstruct:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaMSStruct();
     return StmtEmpty();
 
   case tok::annot_pragma_align:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaAlign();
     return StmtEmpty();
 
   case tok::annot_pragma_weak:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaWeak();
     return StmtEmpty();
 
   case tok::annot_pragma_weakalias:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaWeakAlias();
     return StmtEmpty();
 
   case tok::annot_pragma_redefine_extname:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaRedefineExtname();
     return StmtEmpty();
 
   case tok::annot_pragma_fp_contract:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     Diag(Tok, diag::err_pragma_file_or_compound_scope) << "fp_contract";
     ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_fp:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     Diag(Tok, diag::err_pragma_file_or_compound_scope) << "clang fp";
     ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_fenv_access:
   case tok::annot_pragma_fenv_access_ms:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     Diag(Tok, diag::err_pragma_file_or_compound_scope)
         << (Kind == tok::annot_pragma_fenv_access ? "STDC FENV_ACCESS"
                                                     : "fenv_access");
@@ -383,53 +433,62 @@ Retry:
     return StmtEmpty();
 
   case tok::annot_pragma_fenv_round:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     Diag(Tok, diag::err_pragma_file_or_compound_scope) << "STDC FENV_ROUND";
     ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_float_control:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     Diag(Tok, diag::err_pragma_file_or_compound_scope) << "float_control";
     ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_opencl_extension:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaOpenCLExtension();
     return StmtEmpty();
 
   case tok::annot_pragma_captured:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     return HandlePragmaCaptured();
 
   case tok::annot_pragma_openmp:
     // Prohibit attributes that are not OpenMP attributes, but only before
     // processing a #pragma omp clause.
-    ProhibitAttributes(Attrs);
-    LLVM_FALLTHROUGH;
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    [[fallthrough]];
   case tok::annot_attr_openmp:
     // Do not prohibit attributes if they were OpenMP attributes.
     return ParseOpenMPDeclarativeOrExecutableDirective(StmtCtx);
 
   case tok::annot_pragma_ms_pointers_to_members:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaMSPointersToMembers();
     return StmtEmpty();
 
   case tok::annot_pragma_ms_pragma:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaMSPragma();
     return StmtEmpty();
 
   case tok::annot_pragma_ms_vtordisp:
-    ProhibitAttributes(Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaMSVtorDisp();
     return StmtEmpty();
 
   case tok::annot_pragma_loop_hint:
-    ProhibitAttributes(Attrs);
-    return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, Attrs);
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
 
   case tok::annot_pragma_dump:
     HandlePragmaDump();
@@ -620,9 +679,12 @@ StmtResult Parser::ParseSEHLeaveStatement() {
 
 /// ParseLabeledStatement - We have an identifier and a ':' after it.
 ///
+///       label:
+///         identifier ':'
+/// [GNU]   identifier ':' attributes[opt]
+///
 ///       labeled-statement:
-///         identifier ':' statement
-/// [GNU]   identifier ':' attributes[opt] statement
+///         label statement
 ///
 StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
                                          ParsedStmtContext StmtCtx) {
@@ -658,11 +720,18 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
       Attrs.takeAllFrom(TempAttrs);
     else {
       StmtVector Stmts;
-      SubStmt = ParseStatementOrDeclarationAfterAttributes(Stmts, StmtCtx,
-                                                           nullptr, TempAttrs);
+      ParsedAttributes EmptyCXX11Attrs(AttrFactory);
+      SubStmt = ParseStatementOrDeclarationAfterAttributes(
+          Stmts, StmtCtx, nullptr, EmptyCXX11Attrs, TempAttrs);
       if (!TempAttrs.empty() && !SubStmt.isInvalid())
         SubStmt = Actions.ActOnAttributedStmt(TempAttrs, SubStmt.get());
     }
+  }
+
+  // The label may have no statement following it
+  if (SubStmt.isUnset() && Tok.is(tok::r_brace)) {
+    DiagnoseLabelAtEndOfCompoundStatement();
+    SubStmt = Actions.ActOnNullStmt(ColonLoc);
   }
 
   // If we've not parsed a statement yet, parse one now.
@@ -695,7 +764,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
   // otherwise in the same context as the labeled-statement.
   StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
 
-  // It is very very common for code to contain many case statements recursively
+  // It is very common for code to contain many case statements recursively
   // nested, as in (but usually without indentation):
   //  case 1:
   //    case 2:
@@ -805,18 +874,13 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
   // If we found a non-case statement, start by parsing it.
   StmtResult SubStmt;
 
-  if (Tok.isNot(tok::r_brace)) {
-    SubStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
+  if (Tok.is(tok::r_brace)) {
+    // "switch (X) { case 4: }", is valid and is treated as if label was
+    // followed by a null statement.
+    DiagnoseLabelAtEndOfCompoundStatement();
+    SubStmt = Actions.ActOnNullStmt(ColonLoc);
   } else {
-    // Nicely diagnose the common error "switch (X) { case 4: }", which is
-    // not valid.  If ColonLoc doesn't point to a valid text location, there was
-    // another parsing error, so avoid producing extra diagnostics.
-    if (ColonLoc.isValid()) {
-      SourceLocation AfterColonLoc = PP.getLocForEndOfToken(ColonLoc);
-      Diag(AfterColonLoc, diag::err_label_end_of_compound_statement)
-        << FixItHint::CreateInsertion(AfterColonLoc, " ;");
-    }
-    SubStmt = StmtError();
+    SubStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
   }
 
   // Install the body into the most deeply-nested case.
@@ -862,15 +926,13 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
 
   StmtResult SubStmt;
 
-  if (Tok.isNot(tok::r_brace)) {
-    SubStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
+  if (Tok.is(tok::r_brace)) {
+    // "switch (X) {... default: }", is valid and is treated as if label was
+    // followed by a null statement.
+    DiagnoseLabelAtEndOfCompoundStatement();
+    SubStmt = Actions.ActOnNullStmt(ColonLoc);
   } else {
-    // Diagnose the common error "switch (X) {... default: }", which is
-    // not valid.
-    SourceLocation AfterColonLoc = PP.getLocForEndOfToken(ColonLoc);
-    Diag(AfterColonLoc, diag::err_label_end_of_compound_statement)
-      << FixItHint::CreateInsertion(AfterColonLoc, " ;");
-    SubStmt = true;
+    SubStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
   }
 
   // Broken sub-stmt shouldn't prevent forming the case statement properly.
@@ -910,7 +972,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
 ///
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
                                           unsigned ScopeFlags) {
-  assert(Tok.is(tok::l_brace) && "Not a compount stmt!");
+  assert(Tok.is(tok::l_brace) && "Not a compound stmt!");
 
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
@@ -987,6 +1049,18 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
 
 }
 
+void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
+  if (getLangOpts().CPlusPlus) {
+    Diag(Tok, getLangOpts().CPlusPlus2b
+                  ? diag::warn_cxx20_compat_label_end_of_compound_statement
+                  : diag::ext_cxx_label_end_of_compound_statement);
+  } else {
+    Diag(Tok, getLangOpts().C2x
+                  ? diag::warn_c2x_compat_label_end_of_compound_statement
+                  : diag::ext_c_label_end_of_compound_statement);
+  }
+}
+
 /// Consume any extra semi-colons resulting in null statements,
 /// returning true if any tok::semi were consumed.
 bool Parser::ConsumeNullStmt(StmtVector &Stmts) {
@@ -1036,10 +1110,10 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
   return Actions.ActOnExprStmt(E, /*DiscardedValue=*/!IsStmtExprResult);
 }
 
-/// ParseCompoundStatementBody - Parse a sequence of statements and invoke the
-/// ActOnCompoundStmt action.  This expects the '{' to be the current token, and
-/// consume the '}' at the end of the block.  It does not manipulate the scope
-/// stack.
+/// ParseCompoundStatementBody - Parse a sequence of statements optionally
+/// followed by a label and invoke the ActOnCompoundStmt action.  This expects
+/// the '{' to be the current token, and consume the '}' at the end of the
+/// block.  It does not manipulate the scope stack.
 StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(),
                                 Tok.getLocation(),
@@ -1128,8 +1202,9 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
         ExtensionRAIIObject O(Diags);
 
         SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-        DeclGroupPtrTy Res =
-            ParseDeclaration(DeclaratorContext::Block, DeclEnd, attrs);
+        ParsedAttributes DeclSpecAttrs(AttrFactory);
+        DeclGroupPtrTy Res = ParseDeclaration(DeclaratorContext::Block, DeclEnd,
+                                              attrs, DeclSpecAttrs);
         R = Actions.ActOnDeclStmt(Res, DeclStart, DeclEnd);
       } else {
         // Otherwise this was a unary __extension__ marker.
@@ -1975,8 +2050,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
 
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
       DG = ParseSimpleDeclaration(
-          DeclaratorContext::ForInit, DeclEnd, attrs, false,
+          DeclaratorContext::ForInit, DeclEnd, attrs, DeclSpecAttrs, false,
           MightBeForRangeStmt ? &ForRangeInfo : nullptr);
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
       if (ForRangeInfo.ParsedForRangeDecl()) {
@@ -2347,8 +2423,9 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
   // Get the next statement.
   MaybeParseCXX11Attributes(Attrs);
 
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
   StmtResult S = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, Attrs);
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs);
 
   Attrs.takeAllFrom(TempAttrs);
 
@@ -2584,12 +2661,11 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
     MaybeParseCXX11Attributes(Attributes);
 
     DeclSpec DS(AttrFactory);
-    DS.takeAttributesFrom(Attributes);
 
     if (ParseCXXTypeSpecifierSeq(DS))
       return StmtError();
 
-    Declarator ExDecl(DS, DeclaratorContext::CXXCatch);
+    Declarator ExDecl(DS, Attributes, DeclaratorContext::CXXCatch);
     ParseDeclarator(ExDecl);
     ExceptionDecl = Actions.ActOnExceptionDeclarator(getCurScope(), ExDecl);
   } else

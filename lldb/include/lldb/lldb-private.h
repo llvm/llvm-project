@@ -11,7 +11,6 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/lldb-private-defines.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"

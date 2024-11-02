@@ -10,7 +10,7 @@ define dllexport void @foo() {
   ret void
 }
 
-; CHECK: .section        .drectve,"yn"
+; CHECK: .section        .drectve,"yni"
 ; CHECK: .ascii   " /DEFAULTLIB:msvcrt.lib"
 ; CHECK: .ascii   " /DEFAULTLIB:msvcrt.lib"
 ; CHECK: .ascii   " /DEFAULTLIB:secur32.lib"

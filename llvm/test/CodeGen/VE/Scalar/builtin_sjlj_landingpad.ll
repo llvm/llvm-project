@@ -257,36 +257,6 @@ define dso_local i32 @foo(i32 %arg) local_unnamed_addr personality i8* bitcast (
 ; PIC-NEXT:    bsic %s10, (, %s12)
 ; PIC-NEXT:    or %s0, 1, (0)1
 ; PIC-NEXT:    br.l.t .LBB0_2
-; PIC-NEXT:  .Lfunc_end0:
-; PIC-NEXT:    .size	foo, .Lfunc_end0-foo
-; PIC-NEXT:    .section	.rodata,"a",@progbits
-; PIC-NEXT:    .p2align	2
-; PIC-NEXT:  .LJTI0_0:
-; PIC-NEXT:    .4byte	.LBB0_6-foo
-; PIC-NEXT:    .section	.gcc_except_table,"a",@progbits
-; PIC-NEXT:    .p2align	2
-; PIC-NEXT:  GCC_except_table0:
-; PIC-NEXT:  .Lexception0:
-; PIC-NEXT:    .byte	255 # @LPStart Encoding = omit
-; PIC-NEXT:    .byte	0 # @TType Encoding = absptr
-; PIC-NEXT:    .uleb128 .Lttbase0-.Lttbaseref0
-; PIC-NEXT:  .Lttbaseref0:
-; PIC-NEXT:    .byte	3 # Call site Encoding = udata4
-; PIC-NEXT:    .uleb128 .Lcst_end0-.Lcst_begin0
-; PIC-NEXT:  .Lcst_begin0:
-; PIC-NEXT:    .byte	0 # >> Call Site 0 <<
-; PIC-NEXT:        #   On exception at call site 0
-; PIC-NEXT:    .byte	1 #   Action: 1
-; PIC-NEXT:  .Lcst_end0:
-; PIC-NEXT:    .byte	1 # >> Action Record 1 <<
-; PIC-NEXT:        #   Catch TypeInfo 1
-; PIC-NEXT:    .byte	0 #   No further actions
-; PIC-NEXT:    .p2align	2
-; PIC-NEXT:        # >> Catch TypeInfos <<
-; PIC-NEXT:    .8byte	SomeGlobal                      # TypeInfo 1
-; PIC-NEXT:  .Lttbase0:
-; PIC-NEXT:    .p2align	2
-; PIC-NEXT:        # -- End function
 entry:
   invoke void @errorbar() to label %exit unwind label %handle
 

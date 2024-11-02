@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX-64
 
-define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %dest) nounwind noinline {
+define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinline {
 ; SSE-32-LABEL: PR15298:
 ; SSE-32:       # %bb.0: # %L.entry
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -47,12 +47,12 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; AVX-64-NEXT:    vzeroupper
 ; AVX-64-NEXT:    retq
 L.entry:
-  %0 = getelementptr inbounds <4 x float>, <4 x float>* %source, i32 19
-  %1 = load <4 x float>, <4 x float>* %0, align 16
+  %0 = getelementptr inbounds <4 x float>, ptr %source, i32 19
+  %1 = load <4 x float>, ptr %0, align 16
   %2 = extractelement <4 x float> %1, i32 0
   %3 = insertelement <8 x float> <float 0.000000e+00, float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %2, i32 2
   %4 = insertelement <8 x float> %3, float %2, i32 1
-  %5 = getelementptr <8 x float>, <8 x float>* %dest, i32 19
-  store <8 x float> %4, <8 x float>* %5, align 4
+  %5 = getelementptr <8 x float>, ptr %dest, i32 19
+  store <8 x float> %4, ptr %5, align 4
   ret void
 }

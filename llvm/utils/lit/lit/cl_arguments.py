@@ -16,7 +16,7 @@ class TestOrder(enum.Enum):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(prog='lit')
+    parser = argparse.ArgumentParser(prog='lit', fromfile_prefix_chars='@')
     parser.add_argument('test_paths',
             nargs='+',
             metavar="TEST_PATH",

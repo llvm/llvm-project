@@ -62,18 +62,16 @@ public:
   // Construct from a signed integer.
   template <typename T>
   explicit DiagnosticArgument(
-      T val,
-      typename std::enable_if<std::is_signed<T>::value &&
+      T val, std::enable_if_t<std::is_signed<T>::value &&
                               std::numeric_limits<T>::is_integer &&
-                              sizeof(T) <= sizeof(int64_t)>::type * = nullptr)
+                              sizeof(T) <= sizeof(int64_t)> * = nullptr)
       : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
   // Construct from an unsigned integer.
   template <typename T>
   explicit DiagnosticArgument(
-      T val,
-      typename std::enable_if<std::is_unsigned<T>::value &&
+      T val, std::enable_if_t<std::is_unsigned<T>::value &&
                               std::numeric_limits<T>::is_integer &&
-                              sizeof(T) <= sizeof(uint64_t)>::type * = nullptr)
+                              sizeof(T) <= sizeof(uint64_t)> * = nullptr)
       : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
   // Construct from a string reference.
   explicit DiagnosticArgument(StringRef val)
@@ -175,10 +173,9 @@ public:
 
   /// Stream operator for inserting new diagnostic arguments.
   template <typename Arg>
-  typename std::enable_if<
-      !std::is_convertible<Arg, StringRef>::value &&
-          std::is_constructible<DiagnosticArgument, Arg>::value,
-      Diagnostic &>::type
+  std::enable_if_t<!std::is_convertible<Arg, StringRef>::value &&
+                       std::is_constructible<DiagnosticArgument, Arg>::value,
+                   Diagnostic &>
   operator<<(Arg &&val) {
     arguments.push_back(DiagnosticArgument(std::forward<Arg>(val)));
     return *this;
@@ -200,12 +197,10 @@ public:
   Diagnostic &operator<<(OperationName val);
 
   /// Stream in an Operation.
-  Diagnostic &operator<<(Operation &val);
-  Diagnostic &operator<<(Operation *val) {
-    return *this << *val;
-  }
+  Diagnostic &operator<<(Operation &op);
+  Diagnostic &operator<<(Operation *op) { return *this << *op; }
   /// Append an operation with the given printing flags.
-  Diagnostic &appendOp(Operation &val, const OpPrintingFlags &flags);
+  Diagnostic &appendOp(Operation &op, const OpPrintingFlags &flags);
 
   /// Stream in a Value.
   Diagnostic &operator<<(Value val);
@@ -229,12 +224,13 @@ public:
 
   /// Append arguments to the diagnostic.
   template <typename Arg1, typename Arg2, typename... Args>
-  Diagnostic &append(Arg1 &&arg1, Arg2 &&arg2, Args &&... args) {
+  Diagnostic &append(Arg1 &&arg1, Arg2 &&arg2, Args &&...args) {
     append(std::forward<Arg1>(arg1));
     return append(std::forward<Arg2>(arg2), std::forward<Args>(args)...);
   }
   /// Append one argument to the diagnostic.
-  template <typename Arg> Diagnostic &append(Arg &&arg) {
+  template <typename Arg>
+  Diagnostic &append(Arg &&arg) {
     *this << std::forward<Arg>(arg);
     return *this;
   }
@@ -323,21 +319,25 @@ public:
   }
 
   /// Stream operator for new diagnostic arguments.
-  template <typename Arg> InFlightDiagnostic &operator<<(Arg &&arg) & {
+  template <typename Arg>
+  InFlightDiagnostic &operator<<(Arg &&arg) & {
     return append(std::forward<Arg>(arg));
   }
-  template <typename Arg> InFlightDiagnostic &&operator<<(Arg &&arg) && {
+  template <typename Arg>
+  InFlightDiagnostic &&operator<<(Arg &&arg) && {
     return std::move(append(std::forward<Arg>(arg)));
   }
 
   /// Append arguments to the diagnostic.
-  template <typename... Args> InFlightDiagnostic &append(Args &&... args) & {
+  template <typename... Args>
+  InFlightDiagnostic &append(Args &&...args) & {
     assert(isActive() && "diagnostic not active");
     if (isInFlight())
       impl->append(std::forward<Args>(args)...);
     return *this;
   }
-  template <typename... Args> InFlightDiagnostic &&append(Args &&... args) && {
+  template <typename... Args>
+  InFlightDiagnostic &&append(Args &&...args) && {
     return std::move(append(std::forward<Args>(args)...));
   }
 
@@ -377,7 +377,7 @@ private:
 
   /// Returns true if the diagnostic is still active, i.e. it has a live
   /// diagnostic.
-  bool isActive() const { return impl.hasValue(); }
+  bool isActive() const { return impl.has_value(); }
 
   /// Returns true if the diagnostic is still in flight to be reported.
   bool isInFlight() const { return owner; }
@@ -483,19 +483,19 @@ InFlightDiagnostic emitRemark(Location loc, const Twine &message);
 /// the diagnostic arguments directly instead of relying on the returned
 /// InFlightDiagnostic.
 template <typename... Args>
-LogicalResult emitOptionalError(Optional<Location> loc, Args &&... args) {
+LogicalResult emitOptionalError(Optional<Location> loc, Args &&...args) {
   if (loc)
     return emitError(*loc).append(std::forward<Args>(args)...);
   return failure();
 }
 template <typename... Args>
-LogicalResult emitOptionalWarning(Optional<Location> loc, Args &&... args) {
+LogicalResult emitOptionalWarning(Optional<Location> loc, Args &&...args) {
   if (loc)
     return emitWarning(*loc).append(std::forward<Args>(args)...);
   return failure();
 }
 template <typename... Args>
-LogicalResult emitOptionalRemark(Optional<Location> loc, Args &&... args) {
+LogicalResult emitOptionalRemark(Optional<Location> loc, Args &&...args) {
   if (loc)
     return emitRemark(*loc).append(std::forward<Args>(args)...);
   return failure();
@@ -520,7 +520,8 @@ public:
 
 protected:
   /// Set the handler to manage via RAII.
-  template <typename FuncTy> void setHandler(FuncTy &&handler) {
+  template <typename FuncTy>
+  void setHandler(FuncTy &&handler) {
     auto &diagEngine = ctx->getDiagEngine();
     if (handlerID)
       diagEngine.eraseHandler(handlerID);

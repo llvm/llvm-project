@@ -77,6 +77,7 @@
 # RUN: llvm-nm %t/strip_all_export_one.out | FileCheck --check-prefix STRIP-EXP %s
 
 # STRIP-EXP: U _foo
+# STRIP-EXP: U dyld_stub_binder
 # STRIP-EXP-EMPTY:
 
 ## Test interactions of -x and -non_global_symbols_strip_list with unexported_symbol.
@@ -97,6 +98,7 @@
 ## -unexported_symbol made _globby a local, therefore it should be stripped by -x too
 # STRIP-UNEXP: T __mh_execute_header
 # STRIP-UNEXP-DAG: T _main
+# STRIP-UNEXP-DAG: U dyld_stub_binder
 # STRIP-UNEXP-EMPTY:
 
 ## Test interactions of -non_global_symbols_strip_list and unexported_symbol.
@@ -109,6 +111,7 @@
 # NOSTRIP-UNEXP: T __mh_execute_header
 # NOSTRIP-UNEXP-DAG: T _main
 # NOSTRIP-UNEXP-DAG: t _globby
+# NOSTRIP-UNEXP-DAG: U dyld_stub_binder
 # NOSTRIP-UNEXP-EMPTY:
 
 #--- foo.txt

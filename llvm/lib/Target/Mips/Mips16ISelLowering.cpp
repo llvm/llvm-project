@@ -246,7 +246,7 @@ bool Mips16TargetLowering::isEligibleForTailCallOptimization(
 }
 
 void Mips16TargetLowering::setMips16HardFloatLibCalls() {
-  for (unsigned I = 0; I != array_lengthof(HardFloatLibCalls); ++I) {
+  for (unsigned I = 0; I != std::size(HardFloatLibCalls); ++I) {
     assert((I == 0 || HardFloatLibCalls[I - 1] < HardFloatLibCalls[I]) &&
            "Array not sorted!");
     if (HardFloatLibCalls[I].Libcall != RTLIB::UNKNOWN_LIBCALL)

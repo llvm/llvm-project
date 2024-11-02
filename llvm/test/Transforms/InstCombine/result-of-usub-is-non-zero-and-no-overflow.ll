@@ -549,9 +549,9 @@ define i1 @t9_commutative_logical(i8 %base, i8 %offset) {
 
 ;-------------------------------------------------------------------------------
 
-define i1 @t10(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t10(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t10(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i64 [[OFFSET]], [[BASE]]
@@ -561,7 +561,7 @@ define i1 @t10(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)
@@ -573,9 +573,9 @@ define i1 @t10(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t10_logical(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t10_logical(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t10_logical(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i64 [[OFFSET]], [[BASE]]
@@ -585,7 +585,7 @@ define i1 @t10_logical(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)
@@ -596,9 +596,9 @@ define i1 @t10_logical(i64 %base, i64* nonnull %offsetptr) {
   %r = select i1 %not_null, i1 %no_underflow, i1 false
   ret i1 %r
 }
-define i1 @t11_commutative(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t11_commutative(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t11_commutative(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i64 [[OFFSET]], [[BASE]]
@@ -608,7 +608,7 @@ define i1 @t11_commutative(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)
@@ -620,9 +620,9 @@ define i1 @t11_commutative(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t11_commutative_logical(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t11_commutative_logical(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t11_commutative_logical(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i64 [[OFFSET]], [[BASE]]
@@ -632,7 +632,7 @@ define i1 @t11_commutative_logical(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)
@@ -644,9 +644,9 @@ define i1 @t11_commutative_logical(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t12(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t12(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t12(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i64 [[OFFSET]], [[BASE]]
@@ -656,7 +656,7 @@ define i1 @t12(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)
@@ -668,9 +668,9 @@ define i1 @t12(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t12_logical(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t12_logical(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t12_logical(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i64 [[OFFSET]], [[BASE]]
@@ -680,7 +680,7 @@ define i1 @t12_logical(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)
@@ -691,9 +691,9 @@ define i1 @t12_logical(i64 %base, i64* nonnull %offsetptr) {
   %r = select i1 %not_null, i1 true, i1 %no_underflow
   ret i1 %r
 }
-define i1 @t13(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t13(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t13(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i64 [[OFFSET]], [[BASE]]
@@ -703,7 +703,7 @@ define i1 @t13(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)
@@ -715,9 +715,9 @@ define i1 @t13(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t13_logical(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t13_logical(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t13_logical(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i64 [[OFFSET]], [[BASE]]
@@ -727,7 +727,7 @@ define i1 @t13_logical(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   call void @use64(i64 %adjusted)

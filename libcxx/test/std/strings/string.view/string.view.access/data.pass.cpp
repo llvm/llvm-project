@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // <string_view>
 
 // constexpr const _CharT* data() const noexcept;
 
 #include <string_view>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 

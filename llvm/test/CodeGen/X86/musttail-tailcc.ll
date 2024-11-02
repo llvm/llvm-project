@@ -19,9 +19,9 @@ entry:
   ret i32 %tmp11
 }
 
-declare dso_local tailcc i8* @alias_callee()
+declare dso_local tailcc ptr @alias_callee()
 
-define tailcc noalias i8* @noalias_caller() nounwind {
+define tailcc noalias ptr @noalias_caller() nounwind {
 ; X64-LABEL: noalias_caller:
 ; X64:       # %bb.0:
 ; X64-NEXT:    jmp alias_callee # TAILCALL
@@ -29,13 +29,13 @@ define tailcc noalias i8* @noalias_caller() nounwind {
 ; X32-LABEL: noalias_caller:
 ; X32:       # %bb.0:
 ; X32-NEXT:    jmp alias_callee # TAILCALL
-  %p = musttail call tailcc i8* @alias_callee()
-  ret i8* %p
+  %p = musttail call tailcc ptr @alias_callee()
+  ret ptr %p
 }
 
-declare dso_local tailcc noalias i8* @noalias_callee()
+declare dso_local tailcc noalias ptr @noalias_callee()
 
-define dso_local tailcc i8* @alias_caller() nounwind {
+define dso_local tailcc ptr @alias_caller() nounwind {
 ; X64-LABEL: alias_caller:
 ; X64:       # %bb.0:
 ; X64-NEXT:    jmp noalias_callee # TAILCALL
@@ -43,8 +43,8 @@ define dso_local tailcc i8* @alias_caller() nounwind {
 ; X32-LABEL: alias_caller:
 ; X32:       # %bb.0:
 ; X32-NEXT:    jmp noalias_callee # TAILCALL
-  %p = musttail call tailcc noalias i8* @noalias_callee()
-  ret i8* %p
+  %p = musttail call tailcc noalias ptr @noalias_callee()
+  ret ptr %p
 }
 
 define dso_local tailcc void @void_test(i32, i32, i32, i32) {

@@ -15,7 +15,7 @@
 int __not_null(int *);
 void test_not_null(int *x) {
   __not_null(nullptr); // \
-  // expected-note{{The 1st arg should not be NULL}} \
+  // expected-note{{The 1st argument should not be NULL}} \
   // expected-warning{{}}
 }
 
@@ -29,21 +29,21 @@ void test_buffer_size(int x) {
   case 1: {
     char buf[9];
     __buf_size_arg_constraint_concrete(buf); // \
-    // expected-note{{The size of the 1st arg should be equal to or less than the value of 10}} \
+    // expected-note{{The size of the 1st argument should be equal to or greater than the value of 10}} \
     // expected-warning{{}}
     break;
   }
   case 2: {
     char buf[3];
     __buf_size_arg_constraint(buf, 4); // \
-    // expected-note{{The size of the 1st arg should be equal to or less than the value of the 2nd arg}} \
+    // expected-note{{The size of the 1st argument should be equal to or greater than the value of the 2nd arg}} \
     // expected-warning{{}}
     break;
   }
   case 3: {
     char buf[3];
     __buf_size_arg_constraint_mul(buf, 4, 2); // \
-    // expected-note{{The size of the 1st arg should be equal to or less than the value of the 2nd arg times the 3rd arg}} \
+    // expected-note{{The size of the 1st argument should be equal to or greater than the value of the 2nd argument times the 3rd argument}} \
     // expected-warning{{}}
     break;
   }
@@ -56,7 +56,7 @@ int __range_1_2(int);         // [1, 2]
 int __range_1_2__4_5(int);    // [1, 2], [4, 5]
 void test_range(int x) {
     __single_val_1(2); // \
-    // expected-note{{The 1st arg should be within the range [1, 1]}} \
+    // expected-note{{The 1st argument should be within the range [1, 1]}} \
     // expected-warning{{}}
 }
 // Do more specific check against the range strings.

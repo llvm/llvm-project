@@ -340,6 +340,8 @@ private:
                       unsigned Abbrev);
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
+  void writeDIAssignID(const DIAssignID *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
                                     SmallVectorImpl<uint64_t> &Record,
                                     unsigned Abbrev);
@@ -577,6 +579,8 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::UMin: return bitc::RMW_UMIN;
   case AtomicRMWInst::FAdd: return bitc::RMW_FADD;
   case AtomicRMWInst::FSub: return bitc::RMW_FSUB;
+  case AtomicRMWInst::FMax: return bitc::RMW_FMAX;
+  case AtomicRMWInst::FMin: return bitc::RMW_FMIN;
   }
 }
 
@@ -618,8 +622,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_ALLOC_SIZE;
   case Attribute::AlwaysInline:
     return bitc::ATTR_KIND_ALWAYS_INLINE;
-  case Attribute::ArgMemOnly:
-    return bitc::ATTR_KIND_ARGMEMONLY;
   case Attribute::Builtin:
     return bitc::ATTR_KIND_BUILTIN;
   case Attribute::ByVal:
@@ -632,14 +634,12 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_COLD;
   case Attribute::DisableSanitizerInstrumentation:
     return bitc::ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION;
+  case Attribute::FnRetThunkExtern:
+    return bitc::ATTR_KIND_FNRETTHUNK_EXTERN;
   case Attribute::Hot:
     return bitc::ATTR_KIND_HOT;
   case Attribute::ElementType:
     return bitc::ATTR_KIND_ELEMENTTYPE;
-  case Attribute::InaccessibleMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY;
-  case Attribute::InaccessibleMemOrArgMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY;
   case Attribute::InlineHint:
     return bitc::ATTR_KIND_INLINE_HINT;
   case Attribute::InReg:
@@ -652,6 +652,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_ALLOCATED_POINTER;
   case Attribute::AllocKind:
     return bitc::ATTR_KIND_ALLOC_KIND;
+  case Attribute::Memory:
+    return bitc::ATTR_KIND_MEMORY;
   case Attribute::Naked:
     return bitc::ATTR_KIND_NAKED;
   case Attribute::Nest:
@@ -694,6 +696,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NOCF_CHECK;
   case Attribute::NoProfile:
     return bitc::ATTR_KIND_NO_PROFILE;
+  case Attribute::SkipProfile:
+    return bitc::ATTR_KIND_SKIP_PROFILE;
   case Attribute::NoUnwind:
     return bitc::ATTR_KIND_NO_UNWIND;
   case Attribute::NoSanitizeBounds:
@@ -774,6 +778,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_BYREF;
   case Attribute::MustProgress:
     return bitc::ATTR_KIND_MUSTPROGRESS;
+  case Attribute::PresplitCoroutine:
+    return bitc::ATTR_KIND_PRESPLIT_COROUTINE;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -1023,8 +1029,8 @@ void ModuleBitcodeWriter::writeTypeTable() {
         TypeVals.push_back(true);
       break;
     }
-    case Type::DXILPointerTyID:
-      llvm_unreachable("DXIL pointers cannot be added to IR modules");
+    case Type::TypedPointerTyID:
+      llvm_unreachable("Typed pointers cannot be added to IR modules");
     }
 
     // Emit the finished record.
@@ -1223,6 +1229,14 @@ static StringEncoding getStringEncoding(StringRef Str) {
   return SE_Fixed7;
 }
 
+static_assert(sizeof(GlobalValue::SanitizerMetadata) <= sizeof(unsigned),
+              "Sanitizer Metadata is too large for naive serialization.");
+static unsigned
+serializeSanitizerMetadata(const GlobalValue::SanitizerMetadata &Meta) {
+  return Meta.NoAddress | (Meta.NoHWAddress << 1) |
+         (Meta.Memtag << 2) | (Meta.IsDynInit << 3);
+}
+
 /// Emit top-level description of module, including target triple, inline asm,
 /// descriptors for global variables, and function prototype info.
 /// Returns the bit offset to backpatch with the location of the real VST.
@@ -1346,7 +1360,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // GLOBALVAR: [strtab offset, strtab size, type, isconst, initid,
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
-    //             comdat, attributes, DSO_Local]
+    //             comdat, attributes, DSO_Local, GlobalSanitizer]
     Vals.push_back(addToStrtab(GV.getName()));
     Vals.push_back(GV.getName().size());
     Vals.push_back(VE.getTypeID(GV.getValueType()));
@@ -1362,10 +1376,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
         GV.getUnnamedAddr() != GlobalValue::UnnamedAddr::None ||
         GV.isExternallyInitialized() ||
         GV.getDLLStorageClass() != GlobalValue::DefaultStorageClass ||
-        GV.hasComdat() ||
-        GV.hasAttributes() ||
-        GV.isDSOLocal() ||
-        GV.hasPartition()) {
+        GV.hasComdat() || GV.hasAttributes() || GV.isDSOLocal() ||
+        GV.hasPartition() || GV.hasSanitizerMetadata()) {
       Vals.push_back(getEncodedVisibility(GV));
       Vals.push_back(getEncodedThreadLocalMode(GV));
       Vals.push_back(getEncodedUnnamedAddr(GV));
@@ -1379,6 +1391,10 @@ void ModuleBitcodeWriter::writeModuleInfo() {
       Vals.push_back(GV.isDSOLocal());
       Vals.push_back(addToStrtab(GV.getPartition()));
       Vals.push_back(GV.getPartition().size());
+
+      Vals.push_back((GV.hasSanitizerMetadata() ? serializeSanitizerMetadata(
+                                                      GV.getSanitizerMetadata())
+                                                : 0));
     } else {
       AbbrevToUse = SimpleGVarAbbrev;
     }
@@ -1932,6 +1948,15 @@ void ModuleBitcodeWriter::writeDIModule(const DIModule *N,
   Record.push_back(N->getIsDecl());
 
   Stream.EmitRecord(bitc::METADATA_MODULE, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIAssignID(const DIAssignID *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  // There are no arguments for this metadata type.
+  Record.push_back(N->isDistinct());
+  Stream.EmitRecord(bitc::METADATA_ASSIGN_ID, Record, Abbrev);
   Record.clear();
 }
 
@@ -2662,10 +2687,6 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Record.push_back(VE.getValueID(C->getOperand(1)));
         Record.push_back(CE->getPredicate());
         break;
-      case Instruction::ExtractValue:
-      case Instruction::InsertValue:
-        report_fatal_error("extractvalue/insertvalue constexprs not supported");
-        break;
       }
     } else if (const BlockAddress *BA = dyn_cast<BlockAddress>(C)) {
       Code = bitc::CST_CODE_BLOCKADDRESS;
@@ -2969,7 +2990,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
                                          : bitc::FUNC_CODE_INST_CLEANUPPAD;
     pushValue(FuncletPad.getParentPad(), InstID, Vals);
 
-    unsigned NumArgOperands = FuncletPad.getNumArgOperands();
+    unsigned NumArgOperands = FuncletPad.arg_size();
     Vals.push_back(NumArgOperands);
     for (unsigned Op = 0; Op != NumArgOperands; ++Op)
       pushValueAndType(FuncletPad.getArgOperand(Op), InstID, Vals);
@@ -4092,8 +4113,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 
   for (const GlobalAlias &A : M.aliases()) {
     auto *Aliasee = A.getAliaseeObject();
-    if (!Aliasee->hasName())
-      // Nameless function don't have an entry in the summary, skip it.
+    // Skip ifunc and nameless functions which don't have an entry in the
+    // summary.
+    if (!Aliasee->hasName() || isa<GlobalIFunc>(Aliasee))
       continue;
     auto AliasId = VE.getValueID(&A);
     auto AliaseeId = VE.getValueID(Aliasee);

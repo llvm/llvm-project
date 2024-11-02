@@ -40,6 +40,9 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
+#include <cmath>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "libcalls-shrinkwrap"

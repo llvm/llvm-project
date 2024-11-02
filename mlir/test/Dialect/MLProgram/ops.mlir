@@ -45,12 +45,12 @@ ml_program.func @global_load_store() {
 // CHECK-LABEL: @global_load_store_tokens
 ml_program.subgraph @global_load_store_tokens() -> (tensor<?xi32>, !ml_program.token) {
   %token1 = ml_program.token
-  %0, %token2 = ml_program.global_load @global_mutable_undef
+  %0, %token2 = ml_program.global_load_graph @global_mutable_undef
       ordering(() -> !ml_program.token) : tensor<?xi32>
-  %token3 = ml_program.global_store @global_mutable_undef = %0
+  %token3 = ml_program.global_store_graph @global_mutable_undef = %0
       ordering(%token1, %token2 -> !ml_program.token) : tensor<?xi32>
-  ml_program.global_store @global_mutable_undef = %0
-      ordering(%token3) : tensor<?xi32>
+  %token4 = ml_program.global_store_graph @global_mutable_undef = %0
+      ordering(%token3 -> !ml_program.token) : tensor<?xi32>
 
   ml_program.output %0, %token3 : tensor<?xi32>, !ml_program.token
 }

@@ -20,7 +20,7 @@ namespace abseil {
 /// types) and suggests replacing with absl::StrContains.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-string-find-str-contains.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/string-find-str-contains.html
 class StringFindStrContainsCheck : public utils::TransformerClangTidyCheck {
 public:
   StringFindStrContainsCheck(StringRef Name, ClangTidyContext *Context);

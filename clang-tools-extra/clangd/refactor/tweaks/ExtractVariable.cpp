@@ -485,7 +485,7 @@ const SelectionTree::Node *computeExtractedExpr(const SelectionTree::Node *N) {
 /// int x = placeholder * 3;
 class ExtractVariable : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override {

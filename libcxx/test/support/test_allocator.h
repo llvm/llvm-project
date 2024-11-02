@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 template <class Alloc>
-inline typename std::allocator_traits<Alloc>::size_type alloc_max_size(Alloc const& a) {
+TEST_CONSTEXPR_CXX20 inline typename std::allocator_traits<Alloc>::size_type alloc_max_size(Alloc const& a) {
   typedef std::allocator_traits<Alloc> AT;
   return AT::max_size(a);
 }
@@ -165,8 +165,12 @@ public:
   TEST_CONSTEXPR size_type max_size() const TEST_NOEXCEPT { return UINT_MAX / sizeof(T); }
 
   template <class U>
-  TEST_CONSTEXPR_CXX14 void construct(pointer p, U&& val) {
+  TEST_CONSTEXPR_CXX20 void construct(pointer p, U&& val) {
+#if TEST_STD_VER > 17
+    std::construct_at(std::to_address(p), std::forward<U>(val));
+#else
     ::new (static_cast<void*>(p)) T(std::forward<U>(val));
+#endif
   }
 
   TEST_CONSTEXPR_CXX14 void destroy(pointer p) { p->~T(); }
@@ -399,12 +403,16 @@ public:
   TEST_CONSTEXPR TaggingAllocator(const TaggingAllocator<U>&) {}
 
   template <typename... Args>
-  void construct(Tag_X* p, Args&&... args) {
-    ::new ((void*)p) Tag_X(Ctor_Tag(), std::forward<Args>(args)...);
+  TEST_CONSTEXPR_CXX20 void construct(Tag_X* p, Args&&... args) {
+#if TEST_STD_VER > 17
+    std::construct_at(p, Ctor_Tag{}, std::forward<Args>(args)...);
+#else
+    ::new (static_cast<void*>(p)) Tag_X(Ctor_Tag(), std::forward<Args>(args)...);
+#endif
   }
 
   template <typename U>
-  void destroy(U* p) {
+  TEST_CONSTEXPR_CXX20 void destroy(U* p) {
     p->~U();
   }
 
@@ -421,9 +429,10 @@ struct limited_alloc_handle {
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t N) {
     if (N + outstanding_ > MaxAllocs)
       TEST_THROW(std::bad_alloc());
-    last_alloc_ = std::allocator<T>().allocate(N);
+    auto alloc = std::allocator<T>().allocate(N);
+    last_alloc_ = alloc;
     outstanding_ += N;
-    return static_cast<T*>(last_alloc_);
+    return alloc;
   }
 
   template <class T>

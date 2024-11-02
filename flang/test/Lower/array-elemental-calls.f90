@@ -34,16 +34,12 @@ end
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.array<100xi32>>{{.*}}, %[[arg1:.*]]: !fir.ref<!fir.array<100xi32>>{{.*}}) {
 subroutine test_elem_by_valueref(i, j)
   integer :: i(100), j(100)
-  ! CHECK-DAG: %[[tmpA:.*]] = fir.alloca i32 {adapt.valuebyref}
-  ! CHECK-DAG: %[[tmpB:.*]] = fir.alloca f32 {adapt.valuebyref}
   ! CHECK: %[[jload:.*]] = fir.array_load %[[arg1]]
   ! CHECK: %[[cst:.*]] = arith.constant 4.200000e+01 : f32
-  ! CHECK: fir.store %[[cst]] to %[[tmpB]] : !fir.ref<f32>
 
   ! CHECK: fir.do_loop
     ! CHECK: %[[j:.*]] = fir.array_fetch %[[jload]], %{{.*}} : (!fir.array<100xi32>, index) -> i32
-    ! CHECK: fir.store %[[j]] to %[[tmpA]] : !fir.ref<i32>
-    ! CHECK: fir.call @_QMscalar_in_elemPelem_by_valueref(%[[tmpA]], %[[tmpB]]) : (!fir.ref<i32>, !fir.ref<f32>) -> i32
+    ! CHECK: fir.call @_QMscalar_in_elemPelem_by_valueref(%[[j]], %[[cst]]) : (i32, f32) -> i32
     ! CHECK: fir.result
   i = elem_by_valueref(j, 42.)
 end

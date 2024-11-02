@@ -62,7 +62,7 @@ define void @foo(i32 %vla_size) #0 {
 entry:
   %0 = zext i32 %vla_size to i64
   %vla = alloca i8, i64 %0, align 2048
-  %1 = load volatile i8, i8* %vla, align 2048
+  %1 = load volatile i8, ptr %vla, align 2048
   ret void
 }
 

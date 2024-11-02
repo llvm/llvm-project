@@ -40,8 +40,8 @@ end
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 200 : i64
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:         %[[VAL_12:.*]] = fir.slice %[[VAL_7]], %[[VAL_11]], %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
-! CHECK:         %[[VAL_13:.*]] = fir.rebox %[[VAL_0]] {{\[}}%[[VAL_12]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+! CHECK:         %[[VAL_13:.*]] = fir.rebox %[[VAL_0]] {{\[}}%[[VAL_12]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<50xf32>>
+! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.array<50xf32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_15:.*]] = fir.call @_FortranAioInputDescriptor(%[[VAL_5]], %[[VAL_14]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:         %[[VAL_16:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_5]]) : (!fir.ref<i8>) -> i32
 ! CHECK:         return
@@ -69,8 +69,8 @@ end
 ! CHECK:         %[[VAL_13:.*]] = arith.constant 200 : i64
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i64) -> index
 ! CHECK:         %[[VAL_15:.*]] = fir.slice %[[VAL_10]], %[[VAL_14]], %[[VAL_12]] : (index, index, index) -> !fir.slice<1>
-! CHECK:         %[[VAL_16:.*]] = fir.rebox %[[VAL_0]] {{\[}}%[[VAL_15]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+! CHECK:         %[[VAL_16:.*]] = fir.rebox %[[VAL_0]] {{\[}}%[[VAL_15]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<50xf32>>
+! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.array<50xf32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_18:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_5]], %[[VAL_17]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:         %[[VAL_19:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_5]]) : (!fir.ref<i8>) -> i32
 ! CHECK:         return
@@ -104,6 +104,6 @@ subroutine pass_vector_subscript_write(x, j)
   ! CHECK: %[[embox:.*]] = fir.embox %[[temp]](%{{.*}}) : (!fir.heap<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
   ! CHECK: %[[boxCast:.*]] = fir.convert %[[embox]] : (!fir.box<!fir.array<10xf32>>) -> !fir.box<none>
   ! CHECK: fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[boxCast]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
-  ! CHECK: fir.freemem %[[temp]]
+  ! CHECK: fir.freemem %[[temp]] : !fir.heap<!fir.array<10xf32>>
   write(1, rec=1) x(j)
 end

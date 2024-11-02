@@ -39,7 +39,7 @@ l0.0.0.ph:
 l0.0.0:
   %cond.0.0.0 = load volatile i1, i1* %ptr
   br i1 %cond.0.0.0, label %l0.0.0, label %l0.0.1.ph
-; CHECK: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.0<header>
+; CHECK: LoopFullUnrollPass on l0.0.0
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.0.1.ph:
@@ -48,29 +48,29 @@ l0.0.1.ph:
 l0.0.1:
   %cond.0.0.1 = load volatile i1, i1* %ptr
   br i1 %cond.0.0.1, label %l0.0.1, label %l0.0.latch
-; CHECK: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.1<header>
+; CHECK: LoopFullUnrollPass on l0.0.1
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.0.latch:
   %cmp = icmp slt i32 %iv.next, 2
   br i1 %cmp, label %l0.0, label %l0.latch
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0
+; CHECK: LoopFullUnrollPass on l0.0
 ; CHECK-NOT: LoopFullUnrollPass
 ;
 ; Unrolling occurs, so we visit what were the inner loops twice over. First we
 ; visit their clones, and then we visit the original loops re-parented.
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.1.1<header>
+; CHECK: LoopFullUnrollPass on l0.0.1.1
 ; CHECK-NOT: LoopFullUnrollPass
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.0.1<header>
+; CHECK: LoopFullUnrollPass on l0.0.0.1
 ; CHECK-NOT: LoopFullUnrollPass
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.1<header>
+; CHECK: LoopFullUnrollPass on l0.0.1
 ; CHECK-NOT: LoopFullUnrollPass
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.0<header>
+; CHECK: LoopFullUnrollPass on l0.0.0
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.latch:
   br label %l0
-; CHECK: LoopFullUnrollPass on Loop at depth 1 containing: %l0<header>
+; CHECK: LoopFullUnrollPass on l0
 ; CHECK-NOT: LoopFullUnrollPass
 
 exit:
@@ -105,7 +105,7 @@ l0.0.0.ph:
 l0.0.0:
   %cond.0.0.0 = load volatile i1, i1* %ptr
   br i1 %cond.0.0.0, label %l0.0.0, label %l0.0.1.ph
-; CHECK: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.0<header>
+; CHECK: LoopFullUnrollPass on l0.0.0
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.0.1.ph:
@@ -114,39 +114,39 @@ l0.0.1.ph:
 l0.0.1:
   %cond.0.0.1 = load volatile i1, i1* %ptr
   br i1 %cond.0.0.1, label %l0.0.1, label %l0.0.latch
-; CHECK: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.1<header>
+; CHECK: LoopFullUnrollPass on l0.0.1
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.0.latch:
   %cmp = icmp slt i32 %iv.next, %count
   br i1 %cmp, label %l0.0, label %l0.latch, !llvm.loop !1
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0
+; CHECK: LoopFullUnrollPass on l0.0
 ; CHECK-NOT: LoopFullUnrollPass
 ;
 ; Partial unrolling occurs which introduces both new child loops and new sibling
 ; loops. We only visit the child loops in a special mode, not by default.
-; CHECK-CHILDREN: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.0<header>
+; CHECK-CHILDREN: LoopFullUnrollPass on l0.0.0
 ; CHECK-CHILDREN-NOT: LoopFullUnrollPass
-; CHECK-CHILDREN: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.1<header>
+; CHECK-CHILDREN: LoopFullUnrollPass on l0.0.1
 ; CHECK-CHILDREN-NOT: LoopFullUnrollPass
-; CHECK-CHILDREN: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.0.1<header>
+; CHECK-CHILDREN: LoopFullUnrollPass on l0.0.0.1
 ; CHECK-CHILDREN-NOT: LoopFullUnrollPass
-; CHECK-CHILDREN: LoopFullUnrollPass on Loop at depth 3 containing: %l0.0.1.1<header>
+; CHECK-CHILDREN: LoopFullUnrollPass on l0.0.1.1
 ; CHECK-CHILDREN-NOT: LoopFullUnrollPass
 ;
 ; When we revisit children, we also revisit the current loop.
-; CHECK-CHILDREN: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0<header>
+; CHECK-CHILDREN: LoopFullUnrollPass on l0.0
 ; CHECK-CHILDREN-NOT: LoopFullUnrollPass
 ;
 ; Revisit the children of the outer loop that are part of the epilogue.
 ; 
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.1.epil<header>
+; CHECK: LoopFullUnrollPass on l0.0.1.epil
 ; CHECK-NOT: LoopFullUnrollPass
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.0.epil<header>
+; CHECK: LoopFullUnrollPass on l0.0.0.epil
 ; CHECK-NOT: LoopFullUnrollPass
 l0.latch:
   br label %l0
-; CHECK: LoopFullUnrollPass on Loop at depth 1 containing: %l0<header>
+; CHECK: LoopFullUnrollPass on l0
 ; CHECK-NOT: LoopFullUnrollPass
 
 exit:

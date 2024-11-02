@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-vector-to-llvm |  \
 // RUN: mlir-cpu-runner -e entry_point_with_all_constants -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext
 
 module {
   llvm.func @function_to_run(%a: vector<8xf32>, %b: vector<8xf32>)  {

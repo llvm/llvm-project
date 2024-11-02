@@ -653,7 +653,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
       return;
 
     ImportLocs[ID] = Loc;
-    Vis(M);
+    Vis(V.M);
 
     // Make any exported modules visible.
     SmallVector<Module *, 16> Exports;

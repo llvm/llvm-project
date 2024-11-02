@@ -6,14 +6,14 @@
 ; GCN: define amdgpu_kernel void @caller(float addrspace(1)* nocapture %p) local_unnamed_addr #1 {
 ; GCN: %mul.i = fmul float %load, 1.500000e+01
 
-; UNSAFE: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn "unsafe-fp-math"="true" }
-; UNSAFE: attributes #1 = { argmemonly mustprogress nofree norecurse nosync nounwind willreturn "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "unsafe-fp-math"="true" }
+; UNSAFE: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="true" }
 
-; NOINFS: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn "no-infs-fp-math"="true" }
-; NOINFS: attributes #1 = { argmemonly mustprogress nofree norecurse nosync nounwind willreturn "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "unsafe-fp-math"="false" }
+; NOINFS: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-infs-fp-math"="true" }
+; NOINFS: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "unsafe-fp-math"="false" }
 
-; NONANS: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn "no-nans-fp-math"="true" }
-; NONANS: attributes #1 = { argmemonly mustprogress nofree norecurse nosync nounwind willreturn "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "unsafe-fp-math"="false" }
+; NONANS: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-nans-fp-math"="true" }
+; NONANS: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "unsafe-fp-math"="false" }
 
 define float @foo(float %x) #0 {
 entry:

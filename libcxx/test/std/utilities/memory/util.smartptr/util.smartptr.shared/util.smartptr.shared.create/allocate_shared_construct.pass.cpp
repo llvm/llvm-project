@@ -20,8 +20,10 @@
 
 #include "test_macros.h"
 
-#include <memory>
 #include <cassert>
+#include <memory>
+#include <new>
+#include <utility>
 
 static bool construct_called = false;
 static bool destroy_called = false;

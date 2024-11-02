@@ -1233,3 +1233,12 @@ define i1 @ult_ule_swap(i8 %a, i8 %b) {
   ret i1 %or
 }
 
+define i1 @ule_ule_swap(i8 %a, i8 %b) {
+; CHECK-LABEL: @ule_ule_swap(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp ule i8 %a, %b
+  %cmp2 = icmp ule i8 %b, %a
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}

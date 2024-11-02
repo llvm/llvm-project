@@ -9,7 +9,7 @@ entry:
   %a.addr = alloca i8, align 4
   %0 = add i8 %a, %b
 ; PPC64: add
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -19,7 +19,7 @@ entry:
   %a.addr = alloca i8, align 4
   %0 = add i8 %a, 22;
 ; PPC64: addi
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -29,7 +29,7 @@ entry:
   %a.addr = alloca i16, align 4
   %0 = add i16 %a, %b
 ; PPC64: add
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -39,7 +39,7 @@ entry:
   %a.addr = alloca i16, align 4
   %0 = add i16 %a, 243;
 ; PPC64: addi
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -51,7 +51,7 @@ entry:
   %a.addr = alloca i8, align 4
   %0 = or i8 %a, %b
 ; PPC64: or
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -61,7 +61,7 @@ entry:
   %a.addr = alloca i8, align 4
   %0 = or i8 %a, -13;
 ; PPC64: ori
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -71,7 +71,7 @@ entry:
   %a.addr = alloca i16, align 4
   %0 = or i16 %a, %b
 ; PPC64: or
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -81,7 +81,7 @@ entry:
   %a.addr = alloca i16, align 4
   %0 = or i16 %a, 273;
 ; PPC64: ori
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -93,7 +93,7 @@ entry:
   %a.addr = alloca i8, align 4
   %0 = sub i8 %a, %b
 ; PPC64: sub
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -103,7 +103,7 @@ entry:
   %a.addr = alloca i8, align 4
   %0 = sub i8 %a, 22;
 ; PPC64: addi
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -113,7 +113,7 @@ entry:
   %a.addr = alloca i16, align 4
   %0 = sub i16 %a, %b
 ; PPC64: sub
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -123,7 +123,7 @@ entry:
   %a.addr = alloca i16, align 4
   %0 = sub i16 %a, 247;
 ; PPC64: addi
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -133,6 +133,6 @@ entry:
   %a.addr = alloca i16, align 4
   %0 = sub i16 %a, -32768;
 ; PPC64: sub
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }

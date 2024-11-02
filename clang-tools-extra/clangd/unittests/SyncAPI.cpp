@@ -27,9 +27,7 @@ namespace {
 ///    T Result;
 ///    someAsyncFunc(Param1, Param2, /*Callback=*/capture(Result));
 template <typename T> struct CaptureProxy {
-  CaptureProxy(llvm::Optional<T> &Target) : Target(&Target) {
-    assert(!Target.hasValue());
-  }
+  CaptureProxy(llvm::Optional<T> &Target) : Target(&Target) { assert(!Target); }
 
   CaptureProxy(const CaptureProxy &) = delete;
   CaptureProxy &operator=(const CaptureProxy &) = delete;
@@ -51,7 +49,7 @@ template <typename T> struct CaptureProxy {
     if (!Target)
       return;
     assert(Future.valid() && "conversion to callback was not called");
-    assert(!Target->hasValue());
+    assert(!Target->has_value());
     Target->emplace(std::move(*Future.get()));
   }
 

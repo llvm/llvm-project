@@ -249,12 +249,14 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   // Intersect optional metadata.
   S0->andIRFlags(S1);
   S0->dropUnknownNonDebugMetadata();
+  S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
 
   // Create the new store to be inserted at the join point.
   StoreInst *SNew = cast<StoreInst>(S0->clone());
   Instruction *ANew = A0->clone();
   SNew->insertBefore(&*InsertPt);
   ANew->insertBefore(SNew);
+  ANew->applyMergedLocation(A0->getDebugLoc(), A1->getDebugLoc());
 
   assert(S0->getParent() == A0->getParent());
   assert(S1->getParent() == A1->getParent());

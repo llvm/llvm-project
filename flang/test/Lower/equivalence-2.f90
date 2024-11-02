@@ -97,3 +97,34 @@ end
   ! CHECK: %[[xCast:.*]] = fir.convert %[[x]] : (!fir.ptr<!fir.array<2xf32>>) -> !fir.ref<!fir.array<2xf32>>
   ! CHECK: %[[iCast:.*]] = fir.convert %[[i]] : (!fir.ptr<i32>) -> !fir.ref<i32>
   ! CHECK: fir.call @_QPfoo2(%[[xCast]], %[[iCast]]) : (!fir.ref<!fir.array<2xf32>>, !fir.ref<i32>) -> ()
+
+
+! Check that cases where equivalenced local variables and common blocks will
+! share the same offset use the correct stores
+! CHECK-LABEL: @_QPeq_and_comm_same_offset()
+subroutine eq_and_comm_same_offset
+  real common_arr1(133),common_arr2(133)
+  common /my_common_block/ common_arr1,common_arr2
+  real arr1(133),arr2(133)
+  real arr3(133,133),arr4(133,133)
+  equivalence(arr1,common_arr1),(arr2,common_arr2)
+  equivalence(arr3,arr4)
+
+  ! CHECK: %[[arr4Store:.*]] = fir.alloca !fir.array<70756xi8> {uniq_name = "_QFeq_and_comm_same_offsetEarr3"}
+  ! CHECK: %[[mcbAddr:.*]] = fir.address_of(@_QBmy_common_block) : !fir.ref<!fir.array<1064xi8>>
+  ! CHECK: %[[mcbCast:.*]] = fir.convert %[[mcbAddr]] : (!fir.ref<!fir.array<1064xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  ! CHECK: %[[c0:.*]] = arith.constant 0 : index
+  ! CHECK: %[[mcbCoor:.*]] = fir.coordinate_of %[[mcbCast]], %[[c0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  ! CHECK: %[[mcbCoorCast:.*]] = fir.convert %[[mcbCoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<133xf32>>
+  ! CHECK: %[[c1:.*]] = arith.constant 0 : index
+  ! CHECK: %[[arr4Addr:.*]] = fir.coordinate_of %[[arr4Store]], %[[c1]] : (!fir.ref<!fir.array<70756xi8>>, index) -> !fir.ref<i8>
+  ! CHECK: %[[arr4Cast:.*]] = fir.convert %[[arr4Addr]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<133x133xf32>>
+
+  arr1(1) = 1
+  ! CHECK:%[[mcbFinalAddr:.*]] = fir.coordinate_of %[[mcbCoorCast]], %{{.*}} : (!fir.ptr<!fir.array<133xf32>>, i64) -> !fir.ref<f32>
+  ! CHECK:fir.store %{{.*}} to %[[mcbFinalAddr]] : !fir.ref<f32>
+
+  arr4(1,1) = 2
+  ! CHECK: %[[arr4FinalAddr:.*]] = fir.coordinate_of %[[arr4Cast]], %{{.*}}, %{{.*}} : (!fir.ptr<!fir.array<133x133xf32>>, i64, i64) -> !fir.ref<f32>
+  ! CHECK: fir.store %{{.*}} to %[[arr4FinalAddr]] : !fir.ref<f32>
+end subroutine

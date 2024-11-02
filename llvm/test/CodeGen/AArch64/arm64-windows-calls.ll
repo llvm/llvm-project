@@ -176,3 +176,15 @@ define void @call_copy_notpod() {
   ; CHECK: bl copy_notpod
   ; CHECK-NEXT: stp x0, x1, [{{.*}}]
 }
+
+; We shouldn't return the argument
+; when it has only inreg attribute
+define i64 @foobar(i64* inreg %0) {
+; CHECK-LABEL: foobar:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %1 = load i64, i64* %0
+  ret i64 %1
+}

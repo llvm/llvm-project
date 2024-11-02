@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <cassert>
+#include <memory>
 
 #include "test_macros.h"
 

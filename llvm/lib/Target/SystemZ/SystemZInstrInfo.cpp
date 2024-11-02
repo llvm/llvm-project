@@ -397,8 +397,7 @@ bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       }
 
       // If the block has any instructions after a JMP, delete them.
-      while (std::next(I) != MBB.end())
-        std::next(I)->eraseFromParent();
+      MBB.erase(std::next(I), MBB.end());
 
       Cond.clear();
       FBB = nullptr;
@@ -630,7 +629,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   switch (UseOpc) {
   case SystemZ::SELRMux:
     TieOps = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case SystemZ::LOCRMux:
     if (!STI.hasLoadStoreOnCond2())
       return false;
@@ -644,7 +643,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     break;
   case SystemZ::SELGR:
     TieOps = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case SystemZ::LOCGR:
     if (!STI.hasLoadStoreOnCond2())
       return false;
@@ -1633,7 +1632,8 @@ void SystemZInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
 }
 
 unsigned SystemZInstrInfo::getOpcodeForOffset(unsigned Opcode,
-                                              int64_t Offset) const {
+                                              int64_t Offset,
+                                              const MachineInstr *MI) const {
   const MCInstrDesc &MCID = get(Opcode);
   int64_t Offset2 = (MCID.TSFlags & SystemZII::Is128Bit ? Offset + 8 : Offset);
   if (isUInt<12>(Offset) && isUInt<12>(Offset2)) {
@@ -1655,6 +1655,24 @@ unsigned SystemZInstrInfo::getOpcodeForOffset(unsigned Opcode,
     // Check whether Opcode allows signed 20-bit displacements.
     if (MCID.TSFlags & SystemZII::Has20BitOffset)
       return Opcode;
+
+    // If a VR32/VR64 reg ended up in an FP register, use the FP opcode.
+    if (MI && MI->getOperand(0).isReg()) {
+      Register Reg = MI->getOperand(0).getReg();
+      if (Reg.isPhysical() && SystemZMC::getFirstReg(Reg) < 16) {
+        switch (Opcode) {
+        case SystemZ::VL32:
+          return SystemZ::LEY;
+        case SystemZ::VST32:
+          return SystemZ::STEY;
+        case SystemZ::VL64:
+          return SystemZ::LDY;
+        case SystemZ::VST64:
+          return SystemZ::STDY;
+        default: break;
+        }
+      }
+    }
   }
   return 0;
 }
@@ -1860,16 +1878,15 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
   MachineBasicBlock *MBB = MBBI->getParent();
   bool CCLive = true;
   SmallVector<MachineInstr *, 4> CCUsers;
-  for (MachineBasicBlock::iterator Itr = std::next(MBBI);
-       Itr != MBB->end(); ++Itr) {
-    if (Itr->readsRegister(SystemZ::CC)) {
-      unsigned Flags = Itr->getDesc().TSFlags;
+  for (MachineInstr &MI : llvm::make_range(std::next(MBBI), MBB->end())) {
+    if (MI.readsRegister(SystemZ::CC)) {
+      unsigned Flags = MI.getDesc().TSFlags;
       if ((Flags & SystemZII::CCMaskFirst) || (Flags & SystemZII::CCMaskLast))
-        CCUsers.push_back(&*Itr);
+        CCUsers.push_back(&MI);
       else
         return false;
     }
-    if (Itr->definesRegister(SystemZ::CC)) {
+    if (MI.definesRegister(SystemZ::CC)) {
       CCLive = false;
       break;
     }

@@ -13,7 +13,7 @@ define dso_local i64 @f1(i64 %src1) {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *@g
+  %val = load i32, ptr@g
   %src2 = zext i32 %val to i64
   %cond = icmp ult i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
@@ -31,7 +31,7 @@ define dso_local i64 @f2(i64 %src1) {
 ; CHECK-NOT: clgfrl
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *@g
+  %val = load i32, ptr@g
   %src2 = zext i32 %val to i64
   %cond = icmp slt i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
@@ -50,7 +50,7 @@ define dso_local i64 @f3(i64 %src1) {
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *@g
+  %val = load i32, ptr@g
   %src2 = zext i32 %val to i64
   %cond = icmp eq i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
@@ -69,7 +69,7 @@ define dso_local i64 @f4(i64 %src1) {
 ; CHECK-NEXT: blhr %r14
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *@g
+  %val = load i32, ptr@g
   %src2 = zext i32 %val to i64
   %cond = icmp ne i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
@@ -89,7 +89,7 @@ define dso_local i64 @f5(i64 %src1) {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *@h, align 2
+  %val = load i32, ptr@h, align 2
   %src2 = zext i32 %val to i64
   %cond = icmp ult i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
@@ -108,7 +108,7 @@ define dso_local i64 @f6(i64 %src2) {
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *@g
+  %val = load i32, ptr@g
   %src1 = zext i32 %val to i64
   %cond = icmp ult i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb

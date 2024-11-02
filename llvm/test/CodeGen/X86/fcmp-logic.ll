@@ -297,7 +297,7 @@ define i1 @olt_olt_and_f32_f64(float %w, float %x, double %y, double %z) {
 
 ; This uses ucomis because of extra uses.
 
-define i1 @une_uno_xor_f64_use1(double %w, double %x, double %y, double %z, i1* %p) {
+define i1 @une_uno_xor_f64_use1(double %w, double %x, double %y, double %z, ptr %p) {
 ; SSE2-LABEL: une_uno_xor_f64_use1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    ucomisd %xmm1, %xmm0
@@ -322,7 +322,7 @@ define i1 @une_uno_xor_f64_use1(double %w, double %x, double %y, double %z, i1* 
 ; AVX-NEXT:    xorb %cl, %al
 ; AVX-NEXT:    retq
   %f1 = fcmp une double %w, %x
-  store i1 %f1, i1* %p
+  store i1 %f1, ptr %p
   %f2 = fcmp uno double %y, %z
   %r = xor i1 %f1, %f2
   ret i1 %r
@@ -330,7 +330,7 @@ define i1 @une_uno_xor_f64_use1(double %w, double %x, double %y, double %z, i1* 
 
 ; This uses ucomis because of extra uses.
 
-define i1 @une_uno_xor_f64_use2(double %w, double %x, double %y, double %z, i1* %p) {
+define i1 @une_uno_xor_f64_use2(double %w, double %x, double %y, double %z, ptr %p) {
 ; SSE2-LABEL: une_uno_xor_f64_use2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    ucomisd %xmm1, %xmm0
@@ -356,7 +356,7 @@ define i1 @une_uno_xor_f64_use2(double %w, double %x, double %y, double %z, i1* 
 ; AVX-NEXT:    retq
   %f1 = fcmp une double %w, %x
   %f2 = fcmp uno double %y, %z
-  store i1 %f2, i1* %p
+  store i1 %f2, ptr %p
   %r = xor i1 %f1, %f2
   ret i1 %r
 }

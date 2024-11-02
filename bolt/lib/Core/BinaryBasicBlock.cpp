@@ -102,7 +102,7 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
     if (Valid) {
       for (const MCSymbol *Sym : UniqueSyms) {
         Valid &= (Sym == Function->getFunctionEndLabel() ||
-                  Sym == Function->getFunctionColdEndLabel());
+                  Sym == Function->getFunctionEndLabel(getFragmentNum()));
         if (!Valid) {
           errs() << "BOLT-WARNING: Jump table contains illegal entry: "
                  << Sym->getName() << "\n";
@@ -544,7 +544,7 @@ BinaryBasicBlock::getBranchStats(const BinaryBasicBlock *Succ) const {
     }
 
     if (TotalCount > 0) {
-      auto Itr = std::find(Successors.begin(), Successors.end(), Succ);
+      auto Itr = llvm::find(Successors, Succ);
       assert(Itr != Successors.end());
       const BinaryBranchInfo &BI = BranchInfo[Itr - Successors.begin()];
       if (BI.Count && BI.Count != COUNT_NO_PROFILE) {
@@ -563,7 +563,7 @@ void BinaryBasicBlock::dump() const {
   if (Label)
     outs() << Label->getName() << ":\n";
   BC.printInstructions(outs(), Instructions.begin(), Instructions.end(),
-                       getOffset());
+                       getOffset(), Function);
   outs() << "preds:";
   for (auto itr = pred_begin(); itr != pred_end(); ++itr) {
     outs() << " " << (*itr)->getName();
@@ -581,15 +581,17 @@ uint64_t BinaryBasicBlock::estimateSize(const MCCodeEmitter *Emitter) const {
 
 BinaryBasicBlock::BinaryBranchInfo &
 BinaryBasicBlock::getBranchInfo(const BinaryBasicBlock &Succ) {
-  auto BI = branch_info_begin();
-  for (BinaryBasicBlock *BB : successors()) {
-    if (&Succ == BB)
-      return *BI;
-    ++BI;
-  }
+  return const_cast<BinaryBranchInfo &>(
+      static_cast<const BinaryBasicBlock &>(*this).getBranchInfo(Succ));
+}
 
-  llvm_unreachable("Invalid successor");
-  return *BI;
+const BinaryBasicBlock::BinaryBranchInfo &
+BinaryBasicBlock::getBranchInfo(const BinaryBasicBlock &Succ) const {
+  const auto Zip = llvm::zip(successors(), branch_info());
+  const auto Result = llvm::find_if(
+      Zip, [&](const auto &Tuple) { return std::get<0>(Tuple) == &Succ; });
+  assert(Result != Zip.end() && "Cannot find target in successors");
+  return std::get<1>(*Result);
 }
 
 BinaryBasicBlock::BinaryBranchInfo &
@@ -608,7 +610,7 @@ BinaryBasicBlock::getBranchInfo(const MCSymbol *Label) {
 BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
   assert(II != end() && "expected iterator pointing to instruction");
 
-  BinaryBasicBlock *NewBlock = getFunction()->addBasicBlock(0);
+  BinaryBasicBlock *NewBlock = getFunction()->addBasicBlock();
 
   // Adjust successors/predecessors and propagate the execution count.
   moveAllSuccessorsTo(NewBlock);

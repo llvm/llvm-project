@@ -1,7 +1,9 @@
+; RUN: opt -strip-debug -S < %s | opt -passes=globalopt -mtriple=powerpc64le-unknown-linux-gnu -ppc-enable-coldcc -S | FileCheck %s -check-prefix=COLDCC
+; RUN: opt -strip-debug -S < %s | opt -passes=globalopt -S | FileCheck %s -check-prefix=CHECK
 ; RUN: opt -passes=globalopt -mtriple=powerpc64le-unknown-linux-gnu -ppc-enable-coldcc -S < %s | FileCheck %s -check-prefix=COLDCC
 ; RUN: opt -passes=globalopt -S < %s | FileCheck %s -check-prefix=CHECK
 
-define signext i32 @caller(i32 signext %a, i32 signext %b, i32 signext %lim, i32 signext %i) local_unnamed_addr #0 !prof !30 {
+define signext i32 @caller(i32 signext %a, i32 signext %b, i32 signext %lim, i32 signext %i, ptr %k) local_unnamed_addr #0 !prof !30 {
 entry:
 ; COLDCC: call coldcc signext i32 @callee
 ; CHECK: call fastcc signext i32 @callee
@@ -11,6 +13,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end, !prof !31
 
 if.then:                                          ; preds = %entry
+  call void @llvm.dbg.declare(metadata ptr %k, metadata !101, metadata !DIExpression()), !dbg !122
   %call = tail call signext i32 @callee(i32 signext %a, i32 signext %b)
   br label %if.end
 
@@ -45,7 +48,15 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %inc, 10000000
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !34
 }
+
+; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+declare void @llvm.dbg.declare(metadata, metadata, metadata)  #2
+
 attributes #0 = { noinline }
+attributes #2 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+
+!llvm.dbg.cu = !{!117}
+!llvm.module.flags = !{!100}
 
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
@@ -79,3 +90,16 @@ attributes #0 = { noinline }
 !32 = !{i32 59}
 !33 = !{!"function_entry_count", i64 1}
 !34 = !{!"branch_weights", i32 2, i32 10000001}
+
+!100 = !{i32 2, !"Debug Info Version", i32 3}
+!101 = !DILocalVariable(name: "k", arg: 1, scope: !102, file: !103, line: 13, type: !119)
+!102 = distinct !DISubprogram(name: "h", scope: !103, file: !103, line: 13, type: !104, scopeLine: 13, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !117, retainedNodes: !121)
+!103 = !DIFile(filename: "foo2.c", directory: "/bar")
+!104 = !DISubroutineType(types: !105)
+!105 = !{!119}
+!117 = distinct !DICompileUnit(language: DW_LANG_C99, file: !103, producer: "clang version 16", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !118, globals: !120, splitDebugInlining: false, nameTableKind: None)
+!118 = !{!119}
+!119 = !DIBasicType(name: "int", size: 16, encoding: DW_ATE_signed)
+!120 = !{}
+!121 = !{!101}
+!122 = !DILocation(line: 13, column: 27, scope: !102)

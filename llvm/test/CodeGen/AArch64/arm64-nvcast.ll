@@ -6,13 +6,12 @@ define void @test(float * %p1, i32 %v1) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    and x8, x1, #0x3
-; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    fmov.2d v0, #2.00000000
-; CHECK-NEXT:    bfi x9, x8, #2, #2
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    bfi x8, x1, #2, #2
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldr s0, [x9]
+; CHECK-NEXT:    ldr s0, [x8]
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
@@ -27,13 +26,12 @@ define void @test2(float * %p1, i32 %v1) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    and x8, x1, #0x3
-; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    movi.16b v0, #63
-; CHECK-NEXT:    bfi x9, x8, #2, #2
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    bfi x8, x1, #2, #2
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldr s0, [x9]
+; CHECK-NEXT:    ldr s0, [x8]
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret

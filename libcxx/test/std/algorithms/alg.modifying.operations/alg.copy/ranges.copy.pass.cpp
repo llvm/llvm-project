@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I, sentinel_for<I> S, weakly_incrementable O>
 //   requires indirectly_copyable<I, O>
@@ -95,13 +94,29 @@ constexpr void test_iterators() {
   }
 }
 
+template <class In, class Out>
+constexpr void test_sentinels() {
+  test_iterators<In, Out>();
+  test_iterators<In, Out, sized_sentinel<In>>();
+  test_iterators<In, Out, sentinel_wrapper<In>>();
+}
+
 template <class Out>
 constexpr void test_in_iterators() {
   test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  test_iterators<forward_iterator<int*>, Out>();
-  test_iterators<bidirectional_iterator<int*>, Out>();
-  test_iterators<random_access_iterator<int*>, Out>();
-  test_iterators<contiguous_iterator<int*>, Out>();
+  test_sentinels<forward_iterator<int*>, Out>();
+  test_sentinels<bidirectional_iterator<int*>, Out>();
+  test_sentinels<random_access_iterator<int*>, Out>();
+  test_sentinels<contiguous_iterator<int*>, Out>();
+}
+
+template <class Out>
+constexpr void test_proxy_in_iterators() {
+  test_iterators<ProxyIterator<cpp20_input_iterator<int*>>, Out, sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
+  test_iterators<ProxyIterator<forward_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
 }
 
 constexpr bool test() {
@@ -110,6 +125,12 @@ constexpr bool test() {
   test_in_iterators<bidirectional_iterator<int*>>();
   test_in_iterators<random_access_iterator<int*>>();
   test_in_iterators<contiguous_iterator<int*>>();
+
+  test_proxy_in_iterators<ProxyIterator<cpp20_input_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<forward_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<random_access_iterator<int*>>>();
+  test_proxy_in_iterators<ProxyIterator<contiguous_iterator<int*>>>();
 
   { // check that ranges::dangling is returned
     std::array<int, 4> out;

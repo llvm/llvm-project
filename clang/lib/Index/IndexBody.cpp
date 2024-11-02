@@ -468,7 +468,7 @@ public:
     return true;
   }
 
-  bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
+  bool VisitOverloadExpr(OverloadExpr *E) {
     SmallVector<SymbolRelation, 4> Relations;
     SymbolRoleSet Roles = getRolesForRef(E, Relations);
     for (auto *D : E->decls())

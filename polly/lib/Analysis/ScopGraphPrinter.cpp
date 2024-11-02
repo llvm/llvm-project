@@ -23,11 +23,11 @@ using namespace llvm;
 static cl::opt<std::string>
     ViewFilter("polly-view-only",
                cl::desc("Only view functions that match this pattern"),
-               cl::Hidden, cl::init(""), cl::ZeroOrMore);
+               cl::Hidden, cl::init(""));
 
 static cl::opt<bool> ViewAll("polly-view-all",
                              cl::desc("Also show functions without any scops"),
-                             cl::Hidden, cl::init(false), cl::ZeroOrMore);
+                             cl::Hidden, cl::init(false));
 
 namespace llvm {
 

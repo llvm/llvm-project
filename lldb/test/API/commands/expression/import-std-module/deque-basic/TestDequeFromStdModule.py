@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestBasicDeque(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -23,16 +21,16 @@ class TestBasicDeque(TestBase):
         self.runCmd("settings set target.import-std-module true")
 
         deque_type = "std::deque<int>"
-        size_type = deque_type + "::size_type"
-        value_type = "std::__deque_base<int, std::allocator<int> >::value_type"
-        iterator = deque_type + "::iterator"
+        size_type = "size_type"
+        value_type = "value_type"
+        iterator = "iterator"
         iterator_children = [
             ValueCheck(name="__m_iter_"),
             ValueCheck(name="__ptr_")
         ]
-        riterator = deque_type + "::reverse_iterator"
+        riterator = "reverse_iterator"
         riterator_children = [
-            ValueCheck(name="__t"),
+            ValueCheck(), # Deprecated __t_ member; no need to check
             ValueCheck(name="current")
         ]
 

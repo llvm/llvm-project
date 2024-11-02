@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify -fms-compatibility
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy-dtor -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy-dtor -verify -fms-compatibility
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy-with-dtor -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy-with-dtor -verify -fms-compatibility
 
 class A {
 public:

@@ -13,7 +13,7 @@
 
 // This is the minimal set of safe functions.
 // https://wiki.sei.cmu.edu/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
-constexpr std::initializer_list<llvm::StringRef> MinimalConformingFunctions = {
+constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
     "signal", "abort", "_Exit", "quick_exit"};
 
 // The POSIX-defined set of safe functions.
@@ -22,7 +22,8 @@ constexpr std::initializer_list<llvm::StringRef> MinimalConformingFunctions = {
 // mentioned POSIX specification was not updated after 'quick_exit' appeared
 // in the C11 standard.
 // Also, we want to keep the "minimal set" a subset of the "POSIX set".
-constexpr std::initializer_list<llvm::StringRef> POSIXConformingFunctions = {
+// The list is repeated in bugprone-signal-handler.rst and should be kept up to date.
+constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "_Exit",
     "_exit",
     "abort",
@@ -277,6 +278,25 @@ bool isStandardFunction(const FunctionDecl *FD) {
       FD->getCanonicalDecl()->getLocation());
 }
 
+/// Check if a statement is "C++-only".
+/// This includes all statements that have a class name with "CXX" prefix
+/// and every other statement that is declared in file ExprCXX.h.
+bool isCXXOnlyStmt(const Stmt *S) {
+  StringRef Name = S->getStmtClassName();
+  if (Name.startswith("CXX"))
+    return true;
+  // Check for all other class names in ExprCXX.h that have no 'CXX' prefix.
+  return isa<ArrayTypeTraitExpr, BuiltinBitCastExpr, CUDAKernelCallExpr,
+             CoawaitExpr, CoreturnStmt, CoroutineBodyStmt, CoroutineSuspendExpr,
+             CoyieldExpr, DependentCoawaitExpr, DependentScopeDeclRefExpr,
+             ExprWithCleanups, ExpressionTraitExpr, FunctionParmPackExpr,
+             LambdaExpr, MSDependentExistsStmt, MSPropertyRefExpr,
+             MSPropertySubscriptExpr, MaterializeTemporaryExpr, OverloadExpr,
+             PackExpansionExpr, SizeOfPackExpr, SubstNonTypeTemplateParmExpr,
+             SubstNonTypeTemplateParmPackExpr, TypeTraitExpr,
+             UserDefinedLiteral>(S);
+}
+
 /// Given a call graph node of a \p Caller function and a \p Callee that is
 /// called from \p Caller, get a \c CallExpr of the corresponding function call.
 /// It is unspecified which call is found if multiple calls exist, but the order
@@ -291,6 +311,18 @@ Expr *findCallExpr(const CallGraphNode *Caller, const CallGraphNode *Callee) {
   return FoundCallee->CallExpr;
 }
 
+SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
+  ParentMapContext &PM = Ctx.getParentMapContext();
+  DynTypedNode P = DynTypedNode::create(*S);
+  while (P.getSourceRange().isInvalid()) {
+    DynTypedNodeList PL = PM.getParents(P);
+    if (PL.size() != 1)
+      return {};
+    P = PL[0];
+  }
+  return P.getSourceRange();
+}
+
 } // namespace
 
 AST_MATCHER(FunctionDecl, isStandardFunction) {
@@ -300,12 +332,16 @@ AST_MATCHER(FunctionDecl, isStandardFunction) {
 SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AsyncSafeFunctionSet(
-          Options.get("AsyncSafeFunctionSet", AsyncSafeFunctionSetKind::POSIX)),
-      ConformingFunctions(AsyncSafeFunctionSet ==
-                                  AsyncSafeFunctionSetKind::Minimal
-                              ? MinimalConformingFunctions
-                              : POSIXConformingFunctions) {}
+      AsyncSafeFunctionSet(Options.get("AsyncSafeFunctionSet",
+                                       AsyncSafeFunctionSetKind::POSIX)) {
+  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal) {
+    for (StringRef v : MinimalConformingFunctions)
+      ConformingFunctions.insert(v);
+  } else {
+    for (StringRef v : POSIXConformingFunctions)
+      ConformingFunctions.insert(v);
+  }
+}
 
 void SignalHandlerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AsyncSafeFunctionSet", AsyncSafeFunctionSet);
@@ -313,11 +349,7 @@ void SignalHandlerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 bool SignalHandlerCheck::isLanguageVersionSupported(
     const LangOptions &LangOpts) const {
-  // FIXME: Make the checker useful on C++ code.
-  if (LangOpts.CPlusPlus)
-    return false;
-
-  return true;
+  return !LangOpts.CPlusPlus17;
 }
 
 void SignalHandlerCheck::registerMatchers(MatchFinder *Finder) {
@@ -328,13 +360,23 @@ void SignalHandlerCheck::registerMatchers(MatchFinder *Finder) {
                   unless(isExpandedFromMacro("SIG_IGN")),
                   unless(isExpandedFromMacro("SIG_DFL")))
           .bind("handler_expr");
-  Finder->addMatcher(
-      callExpr(callee(SignalFunction), hasArgument(1, HandlerExpr))
-          .bind("register_call"),
-      this);
+  auto HandlerLambda = cxxMemberCallExpr(
+      on(expr(ignoringParenImpCasts(lambdaExpr().bind("handler_lambda")))));
+  Finder->addMatcher(callExpr(callee(SignalFunction),
+                              hasArgument(1, anyOf(HandlerExpr, HandlerLambda)))
+                         .bind("register_call"),
+                     this);
 }
 
 void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
+  if (const auto *HandlerLambda =
+          Result.Nodes.getNodeAs<LambdaExpr>("handler_lambda")) {
+    diag(HandlerLambda->getBeginLoc(),
+         "lambda function is not allowed as signal handler (until C++17)")
+        << HandlerLambda->getSourceRange();
+    return;
+  }
+
   const auto *HandlerDecl =
       Result.Nodes.getNodeAs<FunctionDecl>("handler_decl");
   const auto *HandlerExpr = Result.Nodes.getNodeAs<DeclRefExpr>("handler_expr");
@@ -352,32 +394,48 @@ void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (!HandlerDecl->hasBody()) {
-    (void)checkFunction(HandlerDecl, HandlerExpr);
-    // Here checkFunction will put the messages to HandlerExpr.
-    // No need to show a call chain.
-    // Without code body there is nothing more to check.
+    // Check the handler function.
+    // The warning is placed to the signal handler registration.
+    // No need to display a call chain and no need for more checks.
+    (void)checkFunction(HandlerDecl, HandlerExpr, {});
     return;
   }
 
+  // FIXME: Update CallGraph::getNode to use canonical decl?
   CallGraphNode *HandlerNode = CG.getNode(HandlerDecl->getCanonicalDecl());
   assert(HandlerNode &&
          "Handler with body should be present in the call graph.");
   // Start from signal handler and visit every function call.
-  for (auto Itr = llvm::df_begin(HandlerNode), ItrE = llvm::df_end(HandlerNode);
-       Itr != ItrE; ++Itr) {
-    if (const auto *CallF = dyn_cast<FunctionDecl>((*Itr)->getDecl())) {
-      unsigned int PathL = Itr.getPathLength();
-      const Expr *CallOrRef = (PathL == 1)
-                                  ? HandlerExpr
-                                  : findCallExpr(Itr.getPath(PathL - 2), *Itr);
-      if (checkFunction(CallF, CallOrRef))
-        reportHandlerChain(Itr, HandlerExpr);
+  auto Itr = llvm::df_begin(HandlerNode), ItrE = llvm::df_end(HandlerNode);
+  while (Itr != ItrE) {
+    const auto *CallF = dyn_cast<FunctionDecl>((*Itr)->getDecl());
+    unsigned int PathL = Itr.getPathLength();
+    if (CallF) {
+      // A signal handler or a function transitively reachable from the signal
+      // handler was found to be unsafe.
+      // Generate notes for the whole call chain (including the signal handler
+      // registration).
+      const Expr *CallOrRef = (PathL > 1)
+                                  ? findCallExpr(Itr.getPath(PathL - 2), *Itr)
+                                  : HandlerExpr;
+      auto ChainReporter = [this, &Itr, HandlerExpr](bool SkipPathEnd) {
+        reportHandlerChain(Itr, HandlerExpr, SkipPathEnd);
+      };
+      // If problems were found in a function (`CallF`), skip the analysis of
+      // functions that are called from it.
+      if (checkFunction(CallF, CallOrRef, ChainReporter))
+        Itr.skipChildren();
+      else
+        ++Itr;
+    } else {
+      ++Itr;
     }
   }
 }
 
-bool SignalHandlerCheck::checkFunction(const FunctionDecl *FD,
-                                       const Expr *CallOrRef) {
+bool SignalHandlerCheck::checkFunction(
+    const FunctionDecl *FD, const Expr *CallOrRef,
+    std::function<void(bool)> ChainReporter) {
   bool FunctionIsCalled = isa<CallExpr>(CallOrRef);
 
   if (isStandardFunction(FD)) {
@@ -386,7 +444,9 @@ bool SignalHandlerCheck::checkFunction(const FunctionDecl *FD,
                                      "asynchronous-safe; "
                                      "%select{using it as|calling it from}1 "
                                      "a signal handler may be dangerous")
-          << FD << FunctionIsCalled;
+          << FD << FunctionIsCalled << CallOrRef->getSourceRange();
+      if (ChainReporter)
+        ChainReporter(/*SkipPathEnd=*/true);
       return true;
     }
     return false;
@@ -397,11 +457,58 @@ bool SignalHandlerCheck::checkFunction(const FunctionDecl *FD,
                                    "asynchronous-safe; "
                                    "%select{using it as|calling it from}1 "
                                    "a signal handler may be dangerous")
-        << FD << FunctionIsCalled;
+        << FD << FunctionIsCalled << CallOrRef->getSourceRange();
+    if (ChainReporter)
+      ChainReporter(/*SkipPathEnd=*/true);
     return true;
   }
 
+  if (getLangOpts().CPlusPlus)
+    return checkFunctionCPP14(FD, CallOrRef, ChainReporter);
+
   return false;
+}
+
+bool SignalHandlerCheck::checkFunctionCPP14(
+    const FunctionDecl *FD, const Expr *CallOrRef,
+    std::function<void(bool)> ChainReporter) {
+  if (!FD->isExternC()) {
+    diag(CallOrRef->getBeginLoc(),
+         "functions without C linkage are not allowed as signal "
+         "handler (until C++17)");
+    if (ChainReporter)
+      ChainReporter(/*SkipPathEnd=*/true);
+    return true;
+  }
+
+  const FunctionDecl *FBody;
+  const Stmt *BodyS = FD->getBody(FBody);
+  if (!BodyS)
+    return false;
+
+  bool StmtProblemsFound = false;
+  ASTContext &Ctx = FBody->getASTContext();
+  auto Matches =
+      match(decl(forEachDescendant(stmt().bind("stmt"))), *FBody, Ctx);
+  for (const auto &Match : Matches) {
+    const auto *FoundS = Match.getNodeAs<Stmt>("stmt");
+    if (isCXXOnlyStmt(FoundS)) {
+      SourceRange R = getSourceRangeOfStmt(FoundS, Ctx);
+      if (R.isInvalid())
+        continue;
+      diag(R.getBegin(),
+           "C++-only construct is not allowed in signal handler (until C++17)")
+          << R;
+      diag(R.getBegin(), "internally, the statement is parsed as a '%0'",
+           DiagnosticIDs::Remark)
+          << FoundS->getStmtClassName();
+      if (ChainReporter)
+        ChainReporter(/*SkipPathEnd=*/false);
+      StmtProblemsFound = true;
+    }
+  }
+
+  return StmtProblemsFound;
 }
 
 bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
@@ -410,10 +517,14 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
 
   const IdentifierInfo *II = FD->getIdentifier();
   // Unnamed functions are not explicitly allowed.
+  // C++ std operators may be unsafe and not within the
+  // "common subset of C and C++".
   if (!II)
     return false;
 
-  // FIXME: Improve for C++ (check for namespace).
+  if (!FD->isInStdNamespace() && !FD->isGlobal())
+    return false;
+
   if (ConformingFunctions.count(II->getName()))
     return true;
 
@@ -422,7 +533,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
 
 void SignalHandlerCheck::reportHandlerChain(
     const llvm::df_iterator<clang::CallGraphNode *> &Itr,
-    const DeclRefExpr *HandlerRef) {
+    const DeclRefExpr *HandlerRef, bool SkipPathEnd) {
   int CallLevel = Itr.getPathLength() - 2;
   assert(CallLevel >= -1 && "Empty iterator?");
 
@@ -431,16 +542,21 @@ void SignalHandlerCheck::reportHandlerChain(
     Callee = Caller;
     Caller = Itr.getPath(CallLevel);
     const Expr *CE = findCallExpr(Caller, Callee);
-    diag(CE->getBeginLoc(), "function %0 called here from %1",
-         DiagnosticIDs::Note)
-        << cast<FunctionDecl>(Callee->getDecl())
-        << cast<FunctionDecl>(Caller->getDecl());
+    if (SkipPathEnd)
+      SkipPathEnd = false;
+    else
+      diag(CE->getBeginLoc(), "function %0 called here from %1",
+           DiagnosticIDs::Note)
+          << cast<FunctionDecl>(Callee->getDecl())
+          << cast<FunctionDecl>(Caller->getDecl());
     --CallLevel;
   }
 
-  diag(HandlerRef->getBeginLoc(),
-       "function %0 registered here as signal handler", DiagnosticIDs::Note)
-      << cast<FunctionDecl>(Caller->getDecl()) << HandlerRef->getSourceRange();
+  if (!SkipPathEnd)
+    diag(HandlerRef->getBeginLoc(),
+         "function %0 registered here as signal handler", DiagnosticIDs::Note)
+        << cast<FunctionDecl>(Caller->getDecl())
+        << HandlerRef->getSourceRange();
 }
 
 } // namespace bugprone

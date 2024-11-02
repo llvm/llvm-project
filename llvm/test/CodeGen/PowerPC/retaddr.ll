@@ -23,12 +23,12 @@
 ; PPC64: mtlr 0
 ; PPC64: blr
 
-define void @foo(i8** %X) nounwind {
+define void @foo(ptr %X) nounwind {
 entry:
-	%tmp = tail call i8* @llvm.returnaddress( i32 0 )		; <i8*> [#uses=1]
-	store i8* %tmp, i8** %X, align 4
+	%tmp = tail call ptr @llvm.returnaddress( i32 0 )		; <ptr> [#uses=1]
+	store ptr %tmp, ptr %X, align 4
 	ret void
 }
 
-declare i8* @llvm.returnaddress(i32)
+declare ptr @llvm.returnaddress(i32)
 

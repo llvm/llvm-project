@@ -1,17 +1,42 @@
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=none -S -emit-llvm -o - | \
-// RUN:   FileCheck -check-prefixes=UNSPECIFIED-DEF,EXPLICIT-DEF,FUND-DEF %s
+// RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-DEF,EXPLICIT-DEF,FUND-DEF %s
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=explicit -S -emit-llvm -o - | \
-// RUN:   FileCheck -check-prefixes=UNSPECIFIED-DEF,EXPLICIT-EXP,FUND-DEF %s
+// RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-DEF,EXPLICIT-EXP,FUND-DEF %s
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=explicit -DFUNDAMENTAL_IS_EXPLICIT -S -emit-llvm -o - | \
-// RUN:   FileCheck -check-prefixes=UNSPECIFIED-DEF,EXPLICIT-EXP,FUND-EXP %s
+// RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-DEF,EXPLICIT-EXP,FUND-EXP %s
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -S -emit-llvm -o - | \
-// RUN:   FileCheck -check-prefixes=UNSPECIFIED-EXP,EXPLICIT-EXP,FUND-EXP %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -fvisibility hidden -S -emit-llvm -o - | \
-// RUN:   FileCheck -check-prefixes=UNSPECIFIED-HID,EXPLICIT-EXP,FUND-HID %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -DFUNDAMENTAL_IS_EXPLICIT -fvisibility hidden -S -emit-llvm -o - | \
-// RUN:   FileCheck -check-prefixes=UNSPECIFIED-HID,EXPLICIT-EXP,FUND-EXP %s
+// RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-EXP,EXPLICIT-EXP,FUND-EXP %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -fvisibility=hidden -S -emit-llvm -o - | \
+// RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-HID,EXPLICIT-EXP,FUND-HID %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -DFUNDAMENTAL_IS_EXPLICIT -fvisibility=hidden -S -emit-llvm -o - | \
+// RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-HID,EXPLICIT-EXP,FUND-EXP %s
 
 #include <typeinfo>
+
+// C is an incomplete class type, so any direct or indirect pointer types should have 
+// internal linkage, as should the type info for C itself.
+struct C;
+// CHECK: @_ZTSP1C = internal constant
+// CHECK: @_ZTS1C = internal constant
+// CHECK: @_ZTI1C = internal constant
+// CHECK: @_ZTIP1C = internal constant
+// CHECK: @_ZTSPP1C = internal constant
+// CHECK: @_ZTIPP1C = internal constant
+
+struct __attribute__((type_visibility("default"))) D;
+// CHECK: @_ZTSP1D = internal constant
+// CHECK: @_ZTS1D = internal constant
+// CHECK: @_ZTI1D = internal constant
+// CHECK: @_ZTIP1D = internal constant
+// CHECK: @_ZTSPP1D = internal constant
+// CHECK: @_ZTIPP1D = internal constant
+
+void __attribute__((visibility("default"))) tfunc() {
+  (void)typeid(C *);
+  (void)typeid(C **);
+  (void)typeid(D *);
+  (void)typeid(D **);
+}
 
 // unspecified visibility RTTI & vtable
 struct s {

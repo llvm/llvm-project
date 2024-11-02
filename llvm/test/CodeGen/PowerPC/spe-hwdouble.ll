@@ -15,8 +15,8 @@ define i32 @test_dasmconst(double %x) #0 {
 ; CHECK-NEXT:    blr
 entry:
   %x.addr = alloca double, align 8
-  store double %x, double* %x.addr, align 8
-  %0 = load double, double* %x.addr, align 8
+  store double %x, ptr %x.addr, align 8
+  %0 = load double, ptr %x.addr, align 8
   %1 = call i32 asm sideeffect "efdctsi $0, $1", "=d,d"(double %0)
   ret i32 %1
 }

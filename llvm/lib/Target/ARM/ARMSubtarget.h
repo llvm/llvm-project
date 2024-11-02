@@ -94,10 +94,6 @@ protected:
     RClass
   };
   enum ARMArchEnum {
-    ARMv2,
-    ARMv2a,
-    ARMv3,
-    ARMv3m,
     ARMv4,
     ARMv4t,
     ARMv5,
@@ -430,7 +426,8 @@ public:
   }
 
   MCPhysReg getFramePointerReg() const {
-    if (isTargetDarwin() || (!isTargetWindows() && isThumb()))
+    if (isTargetDarwin() ||
+        (!isTargetWindows() && isThumb() && !createAAPCSFrameChain()))
       return ARM::R7;
     return ARM::R11;
   }
@@ -446,6 +443,8 @@ public:
             MF.getTarget().Options.DisableFramePointerElim(MF)) ||
            isThumb1Only();
   }
+
+  bool splitFramePointerPush(const MachineFunction &MF) const;
 
   bool useStride4VFPs() const;
 

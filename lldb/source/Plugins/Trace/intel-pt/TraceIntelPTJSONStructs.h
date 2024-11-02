@@ -9,67 +9,93 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTJSONSTRUCTS_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTJSONSTRUCTS_H
 
-#include "../common/TraceJSONStructs.h"
+#include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/JSON.h"
 #include <intel-pt.h>
+#include <vector>
 
 namespace lldb_private {
 namespace trace_intel_pt {
 
-struct JSONTraceIntelPTCPUInfo {
-  JSONTraceIntelPTCPUInfo() = default;
-
-  JSONTraceIntelPTCPUInfo(pt_cpu cpu_info) {
-    family = static_cast<int64_t>(cpu_info.family);
-    model = static_cast<int64_t>(cpu_info.model);
-    stepping = static_cast<int64_t>(cpu_info.stepping);
-    vendor = cpu_info.vendor == pcv_intel ? "intel" : "Unknown";
-  }
-
-  int64_t family;
-  int64_t model;
-  int64_t stepping;
-  std::string vendor;
+struct JSONModule {
+  std::string system_path;
+  llvm::Optional<std::string> file;
+  JSONUINT64 load_address;
+  llvm::Optional<std::string> uuid;
 };
 
-struct JSONTraceIntelPTTrace {
+struct JSONThread {
+  uint64_t tid;
+  llvm::Optional<std::string> ipt_trace;
+};
+
+struct JSONProcess {
+  uint64_t pid;
+  llvm::Optional<std::string> triple;
+  std::vector<JSONThread> threads;
+  std::vector<JSONModule> modules;
+};
+
+struct JSONCpu {
+  lldb::cpu_id_t id;
+  std::string ipt_trace;
+  std::string context_switch_trace;
+};
+
+struct JSONKernel {
+  llvm::Optional<JSONUINT64> load_address;
+  std::string file;
+};
+
+struct JSONTraceBundleDescription {
   std::string type;
-  JSONTraceIntelPTCPUInfo cpuInfo;
+  pt_cpu cpu_info;
+  llvm::Optional<std::vector<JSONProcess>> processes;
+  llvm::Optional<std::vector<JSONCpu>> cpus;
+  llvm::Optional<LinuxPerfZeroTscConversion> tsc_perf_zero_conversion;
+  llvm::Optional<JSONKernel> kernel;
+
+  llvm::Optional<std::vector<lldb::cpu_id_t>> GetCpuIds();
 };
 
-struct JSONTraceIntelPTSession {
-  JSONTraceIntelPTTrace ipt_trace;
-  JSONTraceSessionBase session_base;
-};
+llvm::json::Value toJSON(const JSONModule &module);
 
-struct JSONTraceIntelPTSettings : JSONTracePluginSettings {
-  JSONTraceIntelPTCPUInfo cpuInfo;
-};
+llvm::json::Value toJSON(const JSONThread &thread);
 
-} // namespace trace_intel_pt
-} // namespace lldb_private
+llvm::json::Value toJSON(const JSONProcess &process);
 
-namespace llvm {
-namespace json {
+llvm::json::Value toJSON(const JSONCpu &cpu);
 
-bool fromJSON(
-    const Value &value,
-    lldb_private::trace_intel_pt::JSONTraceIntelPTSettings &plugin_settings,
-    Path path);
+llvm::json::Value toJSON(const pt_cpu &cpu_info);
 
-bool fromJSON(const llvm::json::Value &value,
-              lldb_private::trace_intel_pt::JSONTraceIntelPTCPUInfo &packet,
+llvm::json::Value toJSON(const JSONKernel &kernel);
+
+llvm::json::Value toJSON(const JSONTraceBundleDescription &bundle_description);
+
+bool fromJSON(const llvm::json::Value &value, JSONModule &module,
               llvm::json::Path path);
 
-llvm::json::Value
-toJSON(const lldb_private::trace_intel_pt::JSONTraceIntelPTCPUInfo &cpu_info);
+bool fromJSON(const llvm::json::Value &value, JSONThread &thread,
+              llvm::json::Path path);
 
-llvm::json::Value
-toJSON(const lldb_private::trace_intel_pt::JSONTraceIntelPTTrace &trace);
+bool fromJSON(const llvm::json::Value &value, JSONProcess &process,
+              llvm::json::Path path);
 
-llvm::json::Value
-toJSON(const lldb_private::trace_intel_pt::JSONTraceIntelPTSession &session);
+bool fromJSON(const llvm::json::Value &value, JSONCpu &cpu,
+              llvm::json::Path path);
 
-} // namespace json
-} // namespace llvm
+bool fromJSON(const llvm::json::Value &value, pt_cpu &cpu_info,
+              llvm::json::Path path);
+
+bool fromJSON(const llvm::json::Value &value, JSONModule &kernel,
+              llvm::json::Path path);
+
+bool fromJSON(const llvm::json::Value &value,
+              JSONTraceBundleDescription &bundle_description,
+              llvm::json::Path path);
+} // namespace trace_intel_pt
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTJSONSTRUCTS_H

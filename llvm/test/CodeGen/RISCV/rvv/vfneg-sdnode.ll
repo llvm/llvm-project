@@ -7,7 +7,7 @@
 define <vscale x 1 x half> @vfneg_vv_nxv1f16(<vscale x 1 x half> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 1 x half> %va
@@ -17,7 +17,7 @@ define <vscale x 1 x half> @vfneg_vv_nxv1f16(<vscale x 1 x half> %va) {
 define <vscale x 2 x half> @vfneg_vv_nxv2f16(<vscale x 2 x half> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 2 x half> %va
@@ -27,7 +27,7 @@ define <vscale x 2 x half> @vfneg_vv_nxv2f16(<vscale x 2 x half> %va) {
 define <vscale x 4 x half> @vfneg_vv_nxv4f16(<vscale x 4 x half> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 4 x half> %va
@@ -37,7 +37,7 @@ define <vscale x 4 x half> @vfneg_vv_nxv4f16(<vscale x 4 x half> %va) {
 define <vscale x 8 x half> @vfneg_vv_nxv8f16(<vscale x 8 x half> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 8 x half> %va
@@ -47,7 +47,7 @@ define <vscale x 8 x half> @vfneg_vv_nxv8f16(<vscale x 8 x half> %va) {
 define <vscale x 16 x half> @vfneg_vv_nxv16f16(<vscale x 16 x half> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 16 x half> %va
@@ -57,7 +57,7 @@ define <vscale x 16 x half> @vfneg_vv_nxv16f16(<vscale x 16 x half> %va) {
 define <vscale x 32 x half> @vfneg_vv_nxv32f16(<vscale x 32 x half> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 32 x half> %va
@@ -67,7 +67,7 @@ define <vscale x 32 x half> @vfneg_vv_nxv32f16(<vscale x 32 x half> %va) {
 define <vscale x 1 x float> @vfneg_vv_nxv1f32(<vscale x 1 x float> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 1 x float> %va
@@ -77,7 +77,7 @@ define <vscale x 1 x float> @vfneg_vv_nxv1f32(<vscale x 1 x float> %va) {
 define <vscale x 2 x float> @vfneg_vv_nxv2f32(<vscale x 2 x float> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 2 x float> %va
@@ -87,7 +87,7 @@ define <vscale x 2 x float> @vfneg_vv_nxv2f32(<vscale x 2 x float> %va) {
 define <vscale x 4 x float> @vfneg_vv_nxv4f32(<vscale x 4 x float> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 4 x float> %va
@@ -97,7 +97,7 @@ define <vscale x 4 x float> @vfneg_vv_nxv4f32(<vscale x 4 x float> %va) {
 define <vscale x 8 x float> @vfneg_vv_nxv8f32(<vscale x 8 x float> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 8 x float> %va
@@ -107,7 +107,7 @@ define <vscale x 8 x float> @vfneg_vv_nxv8f32(<vscale x 8 x float> %va) {
 define <vscale x 16 x float> @vfneg_vv_nxv16f32(<vscale x 16 x float> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 16 x float> %va
@@ -117,7 +117,7 @@ define <vscale x 16 x float> @vfneg_vv_nxv16f32(<vscale x 16 x float> %va) {
 define <vscale x 1 x double> @vfneg_vv_nxv1f64(<vscale x 1 x double> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 1 x double> %va
@@ -127,7 +127,7 @@ define <vscale x 1 x double> @vfneg_vv_nxv1f64(<vscale x 1 x double> %va) {
 define <vscale x 2 x double> @vfneg_vv_nxv2f64(<vscale x 2 x double> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 2 x double> %va
@@ -137,7 +137,7 @@ define <vscale x 2 x double> @vfneg_vv_nxv2f64(<vscale x 2 x double> %va) {
 define <vscale x 4 x double> @vfneg_vv_nxv4f64(<vscale x 4 x double> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 4 x double> %va
@@ -147,7 +147,7 @@ define <vscale x 4 x double> @vfneg_vv_nxv4f64(<vscale x 4 x double> %va) {
 define <vscale x 8 x double> @vfneg_vv_nxv8f64(<vscale x 8 x double> %va) {
 ; CHECK-LABEL: vfneg_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    ret
   %vb = fneg <vscale x 8 x double> %va

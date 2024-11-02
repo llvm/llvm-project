@@ -34,13 +34,11 @@
 //   operator/(const month_day& md, int y) noexcept;
 // Returns: year(y) / md.
 
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "test_comparisons.h"
 
 int main(int, char**)
 {

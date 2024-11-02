@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 
 ; Check that reassociate pass now undefs debug intrinsics that reference a value
 ; that gets dropped and cannot be salvaged.

@@ -10,11 +10,12 @@ body:             |
 
     ; CHECK-LABEL: name: sshlsat_1
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[SSHLSAT]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SSHLSAT]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 2
     %3:_(s32) = G_SSHLSAT %0, %2(s32)
@@ -32,12 +33,13 @@ body:             |
 
     ; CHECK-LABEL: name: sshlsat_2
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; CHECK: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C]](s32)
-    ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[SSHLSAT]](s32)
-    ; CHECK: $sgpr0 = COPY [[INT]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[SSHLSAT]](s32)
+    ; CHECK-NEXT: $sgpr0 = COPY [[INT]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
     %0:_(s32) = COPY $sgpr0
     %2:_(s32) = G_CONSTANT i32 1
     %4:_(s32) = G_CONSTANT i32 2
@@ -61,11 +63,12 @@ body:             |
 
     ; CHECK-LABEL: name: sshlsat_i32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[SSHLSAT]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SSHLSAT]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 10
     %3:_(s32) = G_SSHLSAT %0, %2(s32)
@@ -85,15 +88,16 @@ body:             |
 
     ; CHECK-LABEL: name: sshlsat_i64
     ; CHECK: liveins: $sgpr0, $sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 62
-    ; CHECK: [[SSHLSAT:%[0-9]+]]:_(s64) = G_SSHLSAT [[MV]], [[C]](s64)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SSHLSAT]](s64)
-    ; CHECK: $sgpr0 = COPY [[UV]](s32)
-    ; CHECK: $sgpr1 = COPY [[UV1]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 62
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s64) = G_SSHLSAT [[MV]], [[C]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SSHLSAT]](s64)
+    ; CHECK-NEXT: $sgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $sgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = COPY $sgpr1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
@@ -121,11 +125,12 @@ body:             |
 
     ; CHECK-LABEL: name: ushlsat_1
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[USHLSAT]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[USHLSAT]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 2
     %3:_(s32) = G_USHLSAT %0, %2(s32)
@@ -143,11 +148,12 @@ body:             |
 
     ; CHECK-LABEL: name: ushlsat_2
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; CHECK: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C]](s32)
-    ; CHECK: $sgpr0 = COPY [[USHLSAT]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: $sgpr0 = COPY [[USHLSAT]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
     %0:_(s32) = COPY $sgpr0
     %2:_(s32) = G_CONSTANT i32 1
     %4:_(s32) = G_CONSTANT i32 2
@@ -170,13 +176,14 @@ body:             |
 
     ; CHECK-LABEL: name: ushlsat_i32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 30
-    ; CHECK: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C1]](s32)
-    ; CHECK: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[USHLSAT]], [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[USHLSAT1]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C1]](s32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[USHLSAT]], [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[USHLSAT1]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 10
     %3:_(s32) = G_USHLSAT %0, %2(s32)
@@ -196,17 +203,18 @@ body:             |
 
     ; CHECK-LABEL: name: ushlsat_i64
     ; CHECK: liveins: $sgpr0, $sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 60
-    ; CHECK: [[USHLSAT:%[0-9]+]]:_(s64) = G_USHLSAT [[MV]], [[C1]](s64)
-    ; CHECK: [[USHLSAT1:%[0-9]+]]:_(s64) = G_USHLSAT [[USHLSAT]], [[C]](s64)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[USHLSAT1]](s64)
-    ; CHECK: $sgpr0 = COPY [[UV]](s32)
-    ; CHECK: $sgpr1 = COPY [[UV1]](s32)
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 60
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s64) = G_USHLSAT [[MV]], [[C1]](s64)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s64) = G_USHLSAT [[USHLSAT]], [[C]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[USHLSAT1]](s64)
+    ; CHECK-NEXT: $sgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $sgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = COPY $sgpr1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)

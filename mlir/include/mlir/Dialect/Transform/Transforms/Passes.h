@@ -16,7 +16,8 @@ namespace mlir {
 class Pass;
 
 namespace transform {
-std::unique_ptr<Pass> createCheckUsesPass();
+#define GEN_PASS_DECL
+#include "mlir/Dialect/Transform/Transforms/Passes.h.inc"
 
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Transform/Transforms/Passes.h.inc"

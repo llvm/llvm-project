@@ -106,13 +106,13 @@ void basic_test()
 #endif
 }
 
+template <class It>
 void test_emplacable_concept() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
   {
     using T = EmplaceConstructibleMoveableAndAssignable<int>;
-    using It = random_access_iterator<int*>;
     {
       std::deque<T> v;
       v.assign(It(arr1), It(std::end(arr1)));
@@ -123,35 +123,25 @@ void test_emplacable_concept() {
       v.assign(It(arr2), It(std::end(arr2)));
       assert(v[0].value == 1);
       assert(v[1].value == 101);
-      assert(v[2].value == 42);
-    }
-  }
-  {
-    using T = EmplaceConstructibleMoveableAndAssignable<int>;
-    using It = cpp17_input_iterator<int*>;
-    {
-      std::deque<T> v;
-      v.assign(It(arr1), It(std::end(arr1)));
-      assert(v[0].copied == 0);
-      assert(v[0].value == 42);
-    }
-    {
-      std::deque<T> v;
-      v.assign(It(arr2), It(std::end(arr2)));
-      //assert(v[0].copied == 0);
-      assert(v[0].value == 1);
-      //assert(v[1].copied == 0);
-      assert(v[1].value == 101);
-      assert(v[2].copied == 0);
       assert(v[2].value == 42);
     }
   }
 #endif
 }
 
+void test_iterators() {
+  test_emplacable_concept<cpp17_input_iterator<int*> >();
+  test_emplacable_concept<forward_iterator<int*> >();
+  test_emplacable_concept<bidirectional_iterator<int*> >();
+  test_emplacable_concept<random_access_iterator<int*> >();
+#if TEST_STD_VER > 17
+  test_emplacable_concept<contiguous_iterator<int*> >();
+#endif
+  test_emplacable_concept<int*>();
+}
+
 int main(int, char**) {
   basic_test();
-  test_emplacable_concept();
 
   return 0;
 }

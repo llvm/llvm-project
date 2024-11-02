@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -Wno-microsoft -fms-extensions -fno-rtti -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -Wno-microsoft -fms-extensions -fno-rtti -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 
 template <typename T, int (T::*)() = nullptr>
 struct J {};
@@ -57,4 +57,4 @@ template struct ClassTemplate<&MostGeneral::h>;
 
 // Test that we mangle in the vbptr offset, which is 12 here.
 //
-// CHECK: define weak_odr dso_local x86_thiscallcc noundef %struct.ClassTemplate* @"??0?$ClassTemplate@$J??_9MostGeneral@@$BA@AEA@M@3@@QAE@XZ"
+// CHECK: define weak_odr dso_local x86_thiscallcc noundef ptr @"??0?$ClassTemplate@$J??_9MostGeneral@@$BA@AEA@M@3@@QAE@XZ"

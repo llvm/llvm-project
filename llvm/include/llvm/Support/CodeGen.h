@@ -103,6 +103,13 @@ namespace llvm {
     Async = 2, ///< "Asynchronous" unwind tables (instr precise)
     Default = 2,
   };
+
+  enum class FunctionReturnThunksKind : unsigned int {
+    Keep = 0,    ///< No function return thunk.
+    Extern = 1,  ///< Replace returns with jump to thunk, don't emit thunk.
+    Invalid = 2, ///< Not used.
+  };
+
   } // namespace llvm
 
 #endif

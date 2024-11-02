@@ -8,8 +8,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_simm_16_sub_to_lo
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: [[COPY:%[0-9]+]]:sgpr_lo16 = COPY killed [[S_MOV_B32_]].lo16
-    ; GCN: SI_RETURN_TO_EPILOG [[COPY]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_lo16 = COPY killed [[S_MOV_B32_]].lo16
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
     %0:sreg_32 = S_MOV_B32 2048
     %1:sgpr_lo16 = COPY killed %0.lo16
     SI_RETURN_TO_EPILOG %1
@@ -23,8 +23,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_simm_16_sub_to_phys
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: $sgpr0 = S_MOV_B32 2048
-    ; GCN: SI_RETURN_TO_EPILOG $sgpr0_lo16
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 2048
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $sgpr0_lo16
     %0:sreg_32 = S_MOV_B32 2048
     $sgpr0_lo16 = COPY killed %0.lo16
     SI_RETURN_TO_EPILOG $sgpr0_lo16
@@ -38,8 +38,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_aimm_16_sub_to_phys
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN: $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
-    ; GCN: SI_RETURN_TO_EPILOG $agpr0_lo16
+    ; GCN-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $agpr0_lo16
     %0:sreg_32 = S_MOV_B32 0
     $agpr0_lo16 = COPY killed %0.lo16
     SI_RETURN_TO_EPILOG $agpr0_lo16
@@ -53,8 +53,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_vimm_16_sub_to_lo
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_lo16 = COPY killed [[S_MOV_B32_]].lo16
-    ; GCN: SI_RETURN_TO_EPILOG [[COPY]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_lo16 = COPY killed [[S_MOV_B32_]].lo16
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
     %0:sreg_32 = S_MOV_B32 2048
     %1:vgpr_lo16 = COPY killed %0.lo16
     SI_RETURN_TO_EPILOG %1
@@ -68,8 +68,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_vimm_16_sub_to_phys
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: $vgpr0_lo16 = COPY killed [[S_MOV_B32_]].lo16
-    ; GCN: SI_RETURN_TO_EPILOG $vgpr0_lo16
+    ; GCN-NEXT: $vgpr0_lo16 = COPY killed [[S_MOV_B32_]].lo16
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0_lo16
     %0:sreg_32 = S_MOV_B32 2048
     $vgpr0_lo16 = COPY killed %0.lo16
     SI_RETURN_TO_EPILOG $vgpr0_lo16

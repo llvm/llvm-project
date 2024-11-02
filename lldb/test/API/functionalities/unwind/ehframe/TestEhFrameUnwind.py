@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class EHFrameBasedUnwind(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessPlatform(['linux'])
     @skipIf(archs=["aarch64", "arm", "i386", "i686"])

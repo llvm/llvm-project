@@ -9,6 +9,8 @@ int pthread_threadid_np(pthread_t, __uint64_t *);
 #elif defined(__linux__)
 #include <sys/syscall.h>
 #include <unistd.h>
+#elif defined(__FreeBSD__)
+#include <pthread_np.h>
 #elif defined(__NetBSD__)
 #include <lwp.h>
 #elif defined(_WIN32)
@@ -22,6 +24,8 @@ inline uint64_t get_thread_id() {
   return tid;
 #elif defined(__linux__)
   return syscall(__NR_gettid);
+#elif defined(__FreeBSD__)
+  return static_cast<uint64_t>(pthread_getthreadid_np());
 #elif defined(__NetBSD__)
   // Technically lwpid_t is 32-bit signed integer
   return static_cast<uint64_t>(_lwp_self());

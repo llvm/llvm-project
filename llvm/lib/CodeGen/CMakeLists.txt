@@ -2,10 +2,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
-  # This url points to the most recent most which is known to be compatible with
-  # LLVM. When better models are published, this url should be updated to aid
-  # discoverability.
-  set(LLVM_RAEVICT_MODEL_CURRENT_URL "https://github.com/google/ml-compiler-opt/releases/download/regalloc-evict-v1.0/regalloc-evict-e67430c-v1.0.tar.gz")
+  set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM register allocator eviction model")
 
   if (DEFINED LLVM_HAVE_TF_AOT)
     tf_find_and_compile(
@@ -55,6 +52,7 @@ add_llvm_component_library(LLVMCodeGen
   EdgeBundles.cpp
   EHContGuardCatchret.cpp
   ExecutionDomainFix.cpp
+  ExpandLargeDivRem.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
@@ -103,6 +101,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineBlockFrequencyInfo.cpp
   MachineBlockPlacement.cpp
   MachineBranchProbabilityInfo.cpp
+  MachineCFGPrinter.cpp
   MachineCombiner.cpp
   MachineCopyPropagation.cpp
   MachineCSE.cpp
@@ -144,6 +143,7 @@ add_llvm_component_library(LLVMCodeGen
   MIRSampleProfile.cpp
   MIRYamlMapping.cpp
   MLRegallocEvictAdvisor.cpp
+  MLRegallocPriorityAdvisor.cpp
   ModuloSchedule.cpp
   MultiHazardRecognizer.cpp
   PatchableFunction.cpp
@@ -174,6 +174,7 @@ add_llvm_component_library(LLVMCodeGen
   RegAllocFast.cpp
   RegAllocGreedy.cpp
   RegAllocPBQP.cpp
+  RegAllocPriorityAdvisor.cpp
   RegAllocScore.cpp
   RegisterClassInfo.cpp
   RegisterCoalescer.cpp
@@ -254,6 +255,7 @@ add_llvm_component_library(LLVMCodeGen
   BitWriter
   Core
   MC
+  ObjCARC
   ProfileData
   Scalar
   Support

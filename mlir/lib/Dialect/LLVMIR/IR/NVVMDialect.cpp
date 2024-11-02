@@ -16,7 +16,9 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
@@ -27,6 +29,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -34,7 +37,6 @@ using namespace NVVM;
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
-#include "mlir/Dialect/LLVMIR/NVVMOpsStructs.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Printing/parsing for NVVM ops
@@ -65,9 +67,9 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncOp::verify() {
-  if (size() != 4 && size() != 8 && size() != 16)
+  if (getSize() != 4 && getSize() != 8 && getSize() != 16)
     return emitError("expected byte size to be either 4, 8 or 16.");
-  if (bypass_l1() && size() != 16)
+  if (getBypassL1() && getSize() != 16)
     return emitError("bypass l1 is only support for 16 bytes copy.");
   return success();
 }
@@ -118,15 +120,15 @@ static bool isIntegerPtxType(MMATypes type) {
 MMATypes MmaOp::accumPtxType() {
   Optional<mlir::NVVM::MMATypes> val = inferOperandMMAType(
       getODSOperands(2).getTypes().front(), /*isAccum=*/true);
-  assert(val.hasValue() && "accumulator PTX type should always be inferrable");
-  return val.getValue();
+  assert(val.has_value() && "accumulator PTX type should always be inferrable");
+  return val.value();
 }
 
 MMATypes MmaOp::resultPtxType() {
   Optional<mlir::NVVM::MMATypes> val =
       inferOperandMMAType(getResult().getType(), /*isAccum=*/true);
-  assert(val.hasValue() && "result PTX type should always be inferrable");
-  return val.getValue();
+  assert(val.has_value() && "result PTX type should always be inferrable");
+  return val.value();
 }
 
 void MmaOp::print(OpAsmPrinter &p) {
@@ -140,8 +142,8 @@ void MmaOp::print(OpAsmPrinter &p) {
   };
 
   std::array<OperandFragment, 3> frags{
-      OperandFragment("A", multiplicandAPtxTypeAttrName()),
-      OperandFragment("B", multiplicandBPtxTypeAttrName()),
+      OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
       OperandFragment("C", "")};
   SmallVector<StringRef, 4> ignoreAttrNames{
       mlir::NVVM::MmaOp::getOperandSegmentSizeAttr()};
@@ -184,7 +186,7 @@ void MmaOp::print(OpAsmPrinter &p) {
                                              frags[2].regs[0].getType()},
                         p);
   p << ")";
-  p.printArrowTypeList(TypeRange{this->res().getType()});
+  p.printArrowTypeList(TypeRange{this->getRes().getType()});
 }
 
 void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
@@ -196,17 +198,14 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
 
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
   MLIRContext *ctx = builder.getContext();
-  Type i32 = builder.getIntegerType(32);
   result.addAttribute(
-      "shape", MMAShapeAttr::get(builder.getIntegerAttr(i32, shape[0]),
-                                 builder.getIntegerAttr(i32, shape[1]),
-                                 builder.getIntegerAttr(i32, shape[2]), ctx));
+      "shape", builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
 
   result.addOperands(operandA);
   result.addOperands(operandB);
   result.addOperands(operandC);
 
-  if (multiplicandPtxTypes.hasValue()) {
+  if (multiplicandPtxTypes) {
     result.addAttribute("multiplicandAPtxType",
                         MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[0]));
     result.addAttribute("multiplicandBPtxType",
@@ -218,7 +217,7 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
       result.addAttribute("multiplicandBPtxType", MMATypesAttr::get(ctx, *res));
   }
 
-  if (multiplicandLayouts.hasValue()) {
+  if (multiplicandLayouts) {
     result.addAttribute("layoutA",
                         MMALayoutAttr::get(ctx, (*multiplicandLayouts)[0]));
     result.addAttribute("layoutB",
@@ -228,18 +227,18 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
     result.addAttribute("layoutB", MMALayoutAttr::get(ctx, MMALayout::col));
   }
 
-  if (intOverflow.hasValue())
+  if (intOverflow.has_value())
     result.addAttribute("intOverflowBehavior",
                         MMAIntOverflowAttr::get(ctx, *intOverflow));
-  if (b1Op.hasValue())
+  if (b1Op.has_value())
     result.addAttribute("b1Op", MMAB1OpAttr::get(ctx, *b1Op));
 
   result.addTypes(resultType);
   result.addAttribute(
       MmaOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(operandA.size()),
-                                static_cast<int32_t>(operandB.size()),
-                                static_cast<int32_t>(operandC.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(operandA.size()),
+                                    static_cast<int32_t>(operandB.size()),
+                                    static_cast<int32_t>(operandC.size())}));
 }
 
 // <operation> :=
@@ -315,13 +314,13 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   for (unsigned idx = 0; idx < names.size(); idx++) {
     const auto &frag = frags[idx];
     Optional<NamedAttribute> attr = namedAttributes.getNamed(names[idx]);
-    if (!frag.elemtype.hasValue() && !attr.hasValue()) {
+    if (!frag.elemtype.has_value() && !attr.has_value()) {
       return parser.emitError(
           parser.getNameLoc(),
           "attribute " + names[idx] +
               " is not provided explicitly and cannot be inferred");
     }
-    if (!attr.hasValue())
+    if (!attr.has_value())
       result.addAttribute(
           names[idx], MMATypesAttr::get(parser.getContext(), *frag.elemtype));
   }
@@ -330,7 +329,7 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!namedAttributes.empty())
     result.addAttributes(namedAttributes);
   result.addAttribute(MmaOp::getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr({
+                      builder.getDenseI32ArrayAttr({
                           static_cast<int32_t>(frags[0].regs.size()),
                           static_cast<int32_t>(frags[1].regs.size()),
                           static_cast<int32_t>(frags[2].regs.size()),
@@ -358,9 +357,8 @@ LogicalResult MmaOp::verify() {
   auto s32x2StructTy =
       LLVM::LLVMStructType::getLiteral(context, {i32Ty, i32Ty});
 
-  std::array<int64_t, 3> mmaShape{shapeAttr().m().getInt(),
-                                  shapeAttr().n().getInt(),
-                                  shapeAttr().k().getInt()};
+  std::array<int64_t, 3> mmaShape{getShapeAttr().getM(), getShapeAttr().getN(),
+                                  getShapeAttr().getK()};
 
   // These variables define the set of allowed data types for matrices A, B, C,
   // and result.
@@ -377,7 +375,7 @@ LogicalResult MmaOp::verify() {
   if (mmaShape[0] == 16) {
     int64_t kFactor;
     Type multiplicandFragType;
-    switch (multiplicandAPtxType().getValue()) {
+    switch (*getMultiplicandAPtxType()) {
     case MMATypes::tf32:
       kFactor = 4;
       multiplicandFragType = i32Ty;
@@ -404,10 +402,10 @@ LogicalResult MmaOp::verify() {
       break;
     default:
       return emitError("invalid shape or multiplicand type: " +
-                       stringifyEnum(multiplicandAPtxType().getValue()));
+                       stringifyEnum(getMultiplicandAPtxType().value()));
     }
 
-    if (isIntegerPtxType(multiplicandAPtxType().getValue())) {
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
       expectedResult.push_back(s32x4StructTy);
       expectedC.emplace_back(4, i32Ty);
       multiplicandFragType = i32Ty;
@@ -426,7 +424,7 @@ LogicalResult MmaOp::verify() {
 
   // In the M=8 case, there is only 1 possible case per data type.
   if (mmaShape[0] == 8) {
-    if (multiplicandAPtxType().getValue() == MMATypes::f16) {
+    if (*getMultiplicandAPtxType() == MMATypes::f16) {
       expectedA.emplace_back(2, f16x2Ty);
       expectedB.emplace_back(2, f16x2Ty);
       expectedResult.push_back(f16x2x4StructTy);
@@ -435,7 +433,7 @@ LogicalResult MmaOp::verify() {
       expectedC.emplace_back(8, f32Ty);
       allowedShapes.push_back({8, 8, 4});
     }
-    if (multiplicandAPtxType().getValue() == MMATypes::f64) {
+    if (*getMultiplicandAPtxType() == MMATypes::f64) {
       Type f64Ty = Float64Type::get(context);
       expectedA.emplace_back(1, f64Ty);
       expectedB.emplace_back(1, f64Ty);
@@ -445,16 +443,16 @@ LogicalResult MmaOp::verify() {
           context, SmallVector<Type>(2, f64Ty)));
       allowedShapes.push_back({8, 8, 4});
     }
-    if (isIntegerPtxType(multiplicandAPtxType().getValue())) {
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
       expectedA.push_back({i32Ty});
       expectedB.push_back({i32Ty});
       expectedC.push_back({i32Ty, i32Ty});
       expectedResult.push_back(s32x2StructTy);
-      if (isInt4PtxType(multiplicandAPtxType().getValue()))
+      if (isInt4PtxType(getMultiplicandAPtxType().value()))
         allowedShapes.push_back({8, 8, 32});
-      if (isInt8PtxType(multiplicandAPtxType().getValue()))
+      if (isInt8PtxType(getMultiplicandAPtxType().value()))
         allowedShapes.push_back({8, 8, 16});
-      if (multiplicandAPtxType().getValue() == MMATypes::b1)
+      if (getMultiplicandAPtxType().value() == MMATypes::b1)
         allowedShapes.push_back({8, 8, 128});
     }
   }
@@ -464,8 +462,7 @@ LogicalResult MmaOp::verify() {
 
   // Check that we matched an existing shape/dtype combination.
   if (expectedA.empty() || expectedB.empty() || expectedC.empty() ||
-      !llvm::any_of(allowedShapes,
-                    [&](const auto &allowed) { return allowed == mmaShape; })) {
+      !llvm::is_contained(allowedShapes, mmaShape)) {
     errorStream << "unimplemented variant for MMA shape <";
     llvm::interleaveComma(mmaShape, errorStream);
     errorStream << ">";
@@ -480,10 +477,7 @@ LogicalResult MmaOp::verify() {
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
                                           spec.second);
-    bool match =
-        llvm::any_of(iter.value(), [&](const SmallVector<Type, 4> &typeSet) {
-          return typeSet == operandTySeg;
-        });
+    bool match = llvm::is_contained(iter.value(), operandTySeg);
 
     if (!match) {
       errorStream << "Could not match types for the "
@@ -510,17 +504,19 @@ LogicalResult MmaOp::verify() {
   }
 
   // Ensure that binary MMA variants have a b1 MMA operation defined.
-  if (multiplicandAPtxType() == MMATypes::b1 && !b1Op().hasValue()) {
-    return emitOpError("op requires " + b1OpAttrName().strref() + " attribute");
+  if (getMultiplicandAPtxType() == MMATypes::b1 && !getB1Op()) {
+    return emitOpError("op requires " + getB1OpAttrName().strref() +
+                       " attribute");
   }
 
   // Ensure int4/int8 MMA variants specify the accum overflow behavior
   // attribute.
-  if (isInt4PtxType(*multiplicandAPtxType()) ||
-      isInt8PtxType(*multiplicandAPtxType())) {
-    if (!intOverflowBehavior().hasValue())
+  if (isInt4PtxType(*getMultiplicandAPtxType()) ||
+      isInt8PtxType(*getMultiplicandAPtxType())) {
+    if (!getIntOverflowBehavior())
       return emitOpError("op requires " +
-                         intOverflowBehaviorAttrName().strref() + " attribute");
+                         getIntOverflowBehaviorAttrName().strref() +
+                         " attribute");
   }
 
   return success();
@@ -565,16 +561,16 @@ std::pair<mlir::Type, unsigned> NVVM::inferMMAType(NVVM::MMATypes type,
 
 LogicalResult NVVM::WMMALoadOp::verify() {
   unsigned addressSpace =
-      ptr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
   if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
     return emitOpError("expected source pointer in memory "
                        "space 0, 1, 3");
 
-  if (NVVM::WMMALoadOp::getIntrinsicID(m(), n(), k(), layout(), eltype(),
-                                       frag()) == 0)
+  if (NVVM::WMMALoadOp::getIntrinsicID(getM(), getN(), getK(), getLayout(),
+                                       getEltype(), getFrag()) == 0)
     return emitOpError() << "invalid attribute combination";
   std::pair<Type, unsigned> typeInfo =
-      inferMMAType(eltype(), frag(), getContext());
+      inferMMAType(getEltype(), getFrag(), getContext());
   Type dstType = LLVM::LLVMStructType::getLiteral(
       getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
   if (getType() != dstType)
@@ -585,18 +581,19 @@ LogicalResult NVVM::WMMALoadOp::verify() {
 
 LogicalResult NVVM::WMMAStoreOp::verify() {
   unsigned addressSpace =
-      ptr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
   if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
     return emitOpError("expected operands to be a source pointer in memory "
                        "space 0, 1, 3");
 
-  if (NVVM::WMMAStoreOp::getIntrinsicID(m(), n(), k(), layout(), eltype()) == 0)
+  if (NVVM::WMMAStoreOp::getIntrinsicID(getM(), getN(), getK(), getLayout(),
+                                        getEltype()) == 0)
     return emitOpError() << "invalid attribute combination";
   std::pair<Type, unsigned> typeInfo =
-      inferMMAType(eltype(), NVVM::MMAFrag::c, getContext());
-  if (args().size() != typeInfo.second)
+      inferMMAType(getEltype(), NVVM::MMAFrag::c, getContext());
+  if (getArgs().size() != typeInfo.second)
     return emitOpError() << "expected " << typeInfo.second << " data operands";
-  if (llvm::any_of(args(), [&typeInfo](Value operands) {
+  if (llvm::any_of(getArgs(), [&typeInfo](Value operands) {
         return operands.getType() != typeInfo.first;
       }))
     return emitOpError() << "expected data operands of type " << typeInfo.first;
@@ -604,24 +601,25 @@ LogicalResult NVVM::WMMAStoreOp::verify() {
 }
 
 LogicalResult NVVM::WMMAMmaOp::verify() {
-  if (NVVM::WMMAMmaOp::getIntrinsicID(m(), n(), k(), layoutA(), layoutB(),
-                                      eltypeA(), eltypeB()) == 0)
+  if (NVVM::WMMAMmaOp::getIntrinsicID(getM(), getN(), getK(), getLayoutA(),
+                                      getLayoutB(), getEltypeA(),
+                                      getEltypeB()) == 0)
     return emitOpError() << "invalid attribute combination";
   std::pair<Type, unsigned> typeInfoA =
-      inferMMAType(eltypeA(), NVVM::MMAFrag::a, getContext());
+      inferMMAType(getEltypeA(), NVVM::MMAFrag::a, getContext());
   std::pair<Type, unsigned> typeInfoB =
-      inferMMAType(eltypeA(), NVVM::MMAFrag::b, getContext());
+      inferMMAType(getEltypeA(), NVVM::MMAFrag::b, getContext());
   std::pair<Type, unsigned> typeInfoC =
-      inferMMAType(eltypeB(), NVVM::MMAFrag::c, getContext());
+      inferMMAType(getEltypeB(), NVVM::MMAFrag::c, getContext());
   SmallVector<Type, 32> arguments;
   arguments.append(typeInfoA.second, typeInfoA.first);
   arguments.append(typeInfoB.second, typeInfoB.first);
   arguments.append(typeInfoC.second, typeInfoC.first);
   unsigned numArgs = arguments.size();
-  if (args().size() != numArgs)
+  if (getArgs().size() != numArgs)
     return emitOpError() << "expected " << numArgs << " arguments";
   for (unsigned i = 0; i < numArgs; i++) {
-    if (args()[i].getType() != arguments[i])
+    if (getArgs()[i].getType() != arguments[i])
       return emitOpError() << "expected argument " << i << " to be of type "
                            << arguments[i];
   }
@@ -635,22 +633,22 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 
 LogicalResult NVVM::LdMatrixOp::verify() {
   unsigned addressSpace =
-      ptr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
   if (addressSpace != 3)
     return emitOpError("expected source pointer in memory space 3");
 
-  if (num() != 1 && num() != 2 && num() != 4)
+  if (getNum() != 1 && getNum() != 2 && getNum() != 4)
     return emitOpError("expected num attribute to be 1, 2 or 4");
 
   Type i32 = IntegerType::get(getContext(), 32);
-  if (num() == 1 && getType() != i32)
+  if (getNum() == 1 && getType() != i32)
     return emitOpError("expected destination type is i32");
-  if (num() == 2 || num() == 4) {
+  if (getNum() == 2 || getNum() == 4) {
     Type dstType = LLVM::LLVMStructType::getLiteral(
-        getContext(), SmallVector<Type>(num(), i32));
+        getContext(), SmallVector<Type>(getNum(), i32));
     if (getType() != dstType)
       return emitOpError("expected destination type is a structure of ")
-             << num() << " elements of type i32";
+             << getNum() << " elements of type i32";
   }
   return success();
 }
@@ -677,13 +675,37 @@ void NVVMDialect::initialize() {
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
+  StringAttr attrName = attr.getName();
   // Kernel function attribute should be attached to functions.
-  if (attr.getName() == NVVMDialect::getKernelFuncAttrName()) {
+  if (attrName == NVVMDialect::getKernelFuncAttrName()) {
     if (!isa<LLVM::LLVMFuncOp>(op)) {
       return op->emitError() << "'" << NVVMDialect::getKernelFuncAttrName()
                              << "' attribute attached to unexpected op";
     }
   }
+  // If maxntid and reqntid exist, it must be an array with max 3 dim
+  if (attrName == NVVMDialect::getMaxntidAttrName() ||
+      attrName == NVVMDialect::getReqntidAttrName()) {
+    auto values = attr.getValue().dyn_cast<ArrayAttr>();
+    if (!values || values.empty() || values.size() > 3)
+      return op->emitError()
+             << "'" << attrName
+             << "' attribute must be integer array with maximum 3 index";
+    for (auto val : attr.getValue().cast<ArrayAttr>()) {
+      if (!val.dyn_cast<IntegerAttr>())
+        return op->emitError()
+               << "'" << attrName
+               << "' attribute must be integer array with maximum 3 index";
+    }
+  }
+  // If minctasm and maxnreg exist, it must be an array with max 3 dim
+  if (attrName == NVVMDialect::getMinctasmAttrName() ||
+      attrName == NVVMDialect::getMaxnregAttrName()) {
+    if (!attr.getValue().dyn_cast<IntegerAttr>())
+      return op->emitError()
+             << "'" << attrName << "' attribute must be integer constant";
+  }
+
   return success();
 }
 

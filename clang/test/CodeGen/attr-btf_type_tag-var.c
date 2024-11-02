@@ -1,5 +1,16 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -debug-info-kind=limited -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -DDOUBLE_BRACKET_ATTRS=1 -fdouble-square-bracket-attributes -debug-info-kind=limited -S -emit-llvm -o - %s | FileCheck %s
 
+#if DOUBLE_BRACKET_ATTRS
+#define __tag1 [[clang::btf_type_tag("tag1")]]
+#define __tag2 [[clang::btf_type_tag("tag2")]]
+#define __tag3 [[clang::btf_type_tag("tag3")]]
+#define __tag4 [[clang::btf_type_tag("tag4")]]
+#define __tag5 [[clang::btf_type_tag("tag5")]]
+#define __tag6 [[clang::btf_type_tag("tag6")]]
+
+const volatile int __tag1 __tag2 * __tag3 __tag4 const volatile  * __tag5 __tag6 const volatile * g;
+#else
 #define __tag1 __attribute__((btf_type_tag("tag1")))
 #define __tag2 __attribute__((btf_type_tag("tag2")))
 #define __tag3 __attribute__((btf_type_tag("tag3")))
@@ -8,6 +19,7 @@
 #define __tag6 __attribute__((btf_type_tag("tag6")))
 
 const int __tag1 __tag2 volatile * const __tag3  __tag4  volatile * __tag5  __tag6 const volatile * g;
+#endif
 
 // CHECK:  distinct !DIGlobalVariable(name: "g", scope: ![[#]], file: ![[#]], line: [[#]], type: ![[L6:[0-9]+]]
 // CHECK:  ![[L6]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[L7:[0-9]+]], size: [[#]], annotations: ![[L22:[0-9]+]]

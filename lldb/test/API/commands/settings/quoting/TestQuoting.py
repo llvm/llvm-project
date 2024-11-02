@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class SettingsCommandTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     output_file_name = "output.txt"
 
     @classmethod

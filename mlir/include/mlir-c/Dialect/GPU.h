@@ -10,7 +10,7 @@
 #ifndef MLIR_C_DIALECT_GPU_H
 #define MLIR_C_DIALECT_GPU_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
 #ifdef __cplusplus
@@ -23,6 +23,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(GPU, gpu);
 }
 #endif
 
-#include "mlir/Dialect/GPU/Passes.capi.h.inc"
+#include "mlir/Dialect/GPU/Transforms/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_GPU_H

@@ -1,6 +1,6 @@
 // REQUIRES: system-windows, amdgpu-registered-target
 
-// RUN: %clang -### -target x86_64-pc-windows-msvc \
+// RUN: %clang -### --target=x86_64-pc-windows-msvc \
 // RUN:   -x hip \
 // RUN:   --offload-arch=gfx908:xnack+ \
 // RUN:   -nogpuinc -nogpulib -save-temps \

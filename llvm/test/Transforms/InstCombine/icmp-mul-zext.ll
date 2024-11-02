@@ -60,10 +60,10 @@ define void @PR33765(i8 %beth) {
 ; CHECK:       if.then9:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[BETH:%.*]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV]]
-; CHECK-NEXT:    [[TINKY:%.*]] = load i16, i16* @glob, align 2
+; CHECK-NEXT:    [[TINKY:%.*]] = load i16, ptr @glob, align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[MUL]] to i16
 ; CHECK-NEXT:    [[CONV14:%.*]] = and i16 [[TINKY]], [[TMP1]]
-; CHECK-NEXT:    store i16 [[CONV14]], i16* @glob, align 2
+; CHECK-NEXT:    store i16 [[CONV14]], ptr @glob, align 2
 ; CHECK-NEXT:    ret void
 ;
   %conv = zext i8 %beth to i32
@@ -73,11 +73,11 @@ define void @PR33765(i8 %beth) {
   br i1 %tobool8, label %if.then9, label %if.then9
 
 if.then9:
-  %tinky = load i16, i16* @glob
+  %tinky = load i16, ptr @glob
   %conv13 = sext i16 %tinky to i32
   %and = and i32 %mul, %conv13
   %conv14 = trunc i32 %and to i16
-  store i16 %conv14, i16* @glob
+  store i16 %conv14, ptr @glob
   ret void
 }
 

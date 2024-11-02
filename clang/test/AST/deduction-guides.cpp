@@ -67,9 +67,8 @@ namespace PR48177 {
 // CHECK-NEXT: ElaboratedType {{.*}} 'typename Derived<int, 1, int>::type_alias' sugar
 // CHECK-NEXT: TypedefType {{.*}} 'PR48177::Base<int>::type_alias' sugar
 // CHECK-NEXT: TypeAlias {{.*}} 'type_alias'
-// CHECK-NEXT: SubstTemplateTypeParmType {{.*}} 'int' sugar
-// CHECK-NEXT: TemplateTypeParmType {{.*}} 'A'
-// CHECK-NEXT: TemplateTypeParm {{.*}} 'A'
+// CHECK-NEXT: SubstTemplateTypeParmType {{.*}} 'int' sugar class depth 0 index 0 A
+// CHECK-NEXT: ClassTemplateSpecialization {{.*}} 'Base'
 // CHECK-NEXT: BuiltinType {{.*}} 'int'
 
 // CHECK: CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Derived> 'auto (Derived<T, S, A> &&, const typename Derived<T, S, A>::type_alias &) -> Derived<T, S, A>'

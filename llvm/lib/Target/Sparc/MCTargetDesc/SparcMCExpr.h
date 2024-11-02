@@ -58,7 +58,12 @@ public:
     VK_Sparc_TLS_IE_LDX,
     VK_Sparc_TLS_IE_ADD,
     VK_Sparc_TLS_LE_HIX22,
-    VK_Sparc_TLS_LE_LOX10
+    VK_Sparc_TLS_LE_LOX10,
+    VK_Sparc_HIX22,
+    VK_Sparc_LOX10,
+    VK_Sparc_GOTDATA_HIX22,
+    VK_Sparc_GOTDATA_LOX10,
+    VK_Sparc_GOTDATA_OP,
   };
 
 private:

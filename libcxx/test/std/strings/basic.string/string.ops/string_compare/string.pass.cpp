@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // int compare(const basic_string& str) const // constexpr since C++20
@@ -77,7 +75,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 #endif
 
-#if TEST_STD_VER > 3
+#if TEST_STD_VER >= 11
   { // LWG 2946
     std::string s = " !";
     assert(s.compare({"abc", 1}) < 0);

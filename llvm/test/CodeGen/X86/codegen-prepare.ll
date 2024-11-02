@@ -15,20 +15,18 @@
 %class.C = type { float, float, float }
 %class.D = type { [3 x %class.C] }
 
-define linkonce_odr void @foo(%class.A* nocapture %this, i32 %BoolValue) nounwind uwtable {
+define linkonce_odr void @foo(ptr nocapture %this, i32 %BoolValue) nounwind uwtable {
 entry:
   %cmp = icmp eq i32 %BoolValue, 0
-  %address1 = getelementptr inbounds %class.A, %class.A* %this, i64 0, i32 0, i32 3
-  %address2 = getelementptr inbounds %class.A, %class.A* %this, i64 0, i32 0, i32 1
+  %address1 = getelementptr inbounds %class.A, ptr %this, i64 0, i32 0, i32 3
+  %address2 = getelementptr inbounds %class.A, ptr %this, i64 0, i32 0, i32 1
   br i1 %cmp, label %if.else, label %if.then
 
 if.then:                                         ; preds = %entry
-  %0 = getelementptr inbounds %class.D, %class.D* %address2, i64 0, i32 0, i64 0, i32 0
-  %1 = load float, float* %0, align 4 
-  %2 = getelementptr inbounds float, float* %0, i64 3
-  %3 = load float, float* %2, align 4 
-  %4 = getelementptr inbounds %class.D, %class.D* %address1, i64 0, i32 0, i64 0, i32 0
-  store float %1, float* %4, align 4
+  %0 = load float, ptr %address2, align 4 
+  %1 = getelementptr inbounds float, ptr %address2, i64 3
+  %2 = load float, ptr %1, align 4 
+  store float %0, ptr %address1, align 4
   br label %if.end
 
 if.else:                                          ; preds = %entry

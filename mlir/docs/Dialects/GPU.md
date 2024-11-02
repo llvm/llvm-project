@@ -12,6 +12,8 @@ manipulations to launch a GPU kernel and provide a simple path towards GPU
 execution from MLIR. It may be targeted, for example, by DSLs using MLIR. The
 dialect uses `gpu` as its canonical prefix.
 
+[TOC]
+
 ## Memory attribution
 
 Memory buffers are defined at the function level, either in "gpu.launch" or in

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -fblocks -fms-extensions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -fblocks -fms-extensions -fsyntax-only -verify=expected,cxx11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++2b -fblocks -fms-extensions -fsyntax-only -verify=expected %s
 
 template<typename T, typename U> struct pair;
 template<typename ...> struct tuple;
@@ -164,7 +165,9 @@ template<typename T, typename... Types>
 // FIXME: this should test that the diagnostic reads "type contains..."
 struct alignas(Types) TestUnexpandedDecls : T{ // expected-error{{expression contains unexpanded parameter pack 'Types'}}
   void member_function(Types);  // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
+#if __cplusplus < 201703L
   void member_function () throw(Types); // expected-error{{exception type contains unexpanded parameter pack 'Types'}}
+#endif
   void member_function2() noexcept(Types()); // expected-error{{expression contains unexpanded parameter pack 'Types'}}
   operator Types() const; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
   Types data_member;  // expected-error{{data member type contains unexpanded parameter pack 'Types'}}
@@ -427,7 +430,7 @@ namespace PR16303 {
 namespace PR21289 {
   template<int> using T = int;
   template<typename> struct S { static const int value = 0; };
-  template<typename> const int vt = 0; // expected-warning {{extension}}
+  template<typename> const int vt = 0; // cxx11-warning {{extension}}
   int f(...);
   template<int ...Ns> void g() {
     f(T<Ns>()...);
@@ -469,3 +472,52 @@ int fn() {
   bar(b);
 }
 }
+
+namespace pr56094 {
+template <typename... T> struct D {
+  template <typename... U> using B = int(int (*...p)(T, U));
+  // expected-error@-1 {{pack expansion contains parameter packs 'T' and 'U' that have different lengths (1 vs. 2)}}
+  template <typename U1, typename U2> D(B<U1, U2> *);
+  // expected-note@-1 {{in instantiation of template type alias 'B' requested here}}
+};
+using t1 = D<float>::B<int>;
+// expected-note@-1 {{in instantiation of template class 'pr56094::D<float>' requested here}}
+
+template <bool...> struct F {};
+template <class...> struct G {};
+template <bool... I> struct E {
+  template <bool... U> using B = G<F<I, U>...>;
+  // expected-error@-1 {{pack expansion contains parameter packs 'I' and 'U' that have different lengths (1 vs. 2)}}
+  template <bool U1, bool U2> E(B<U1, U2> *);
+  // expected-note@-1 {{in instantiation of template type alias 'B' requested here}}
+};
+using t2 = E<true>::B<false>;
+// expected-note@-1 {{in instantiation of template class 'pr56094::E<true>' requested here}}
+} // namespace pr56094
+
+namespace GH56094 {
+#if __cplusplus >= 201402L
+template <class> struct A; // expected-note {{template is declared here}}
+template <class> using B = char;
+template <class ...Cs> int C{ A<B<Cs>>{}... }; // expected-error {{implicit instantiation of undefined template}}
+#endif
+} // namespace GH56094
+
+namespace GH58679 {
+#if __cplusplus >= 201402L
+template <class> constexpr int A = 1;
+
+template <int> struct B;
+template <> struct B<1> { using b1 = void; };
+
+template <class> using C = char;
+
+template <class... Ds> int D{ B<A<C<Ds>>>{}... };
+
+struct E {
+  template <class E1, class = typename B<A<E1>>::b1> E(E1);
+};
+
+template <typename... Es> int F{ E(C<Es>{})... };
+#endif
+} // namespace GH58679

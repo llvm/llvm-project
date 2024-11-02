@@ -58,7 +58,7 @@ ext z0.b, { z1.b, z2.h }, #0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ext z0.b, { z1.b, z31.b }, #0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: ext z0.b, { z1.b, z31.b }, #0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

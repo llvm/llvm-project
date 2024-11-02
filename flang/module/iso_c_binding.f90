@@ -83,6 +83,10 @@ module iso_c_binding
   end interface
   private :: c_associated_c_ptr, c_associated_c_funptr
 
+  interface c_f_procpointer
+    module procedure c_f_procpointer
+  end interface
+
   ! gfortran extensions
   integer, parameter :: &
     c_float128 = 16, &
@@ -120,6 +124,10 @@ module iso_c_binding
     c_funloc = c_funptr(loc(x))
   end function c_funloc
 
-  ! TODO c_f_procpointer
+  subroutine c_f_procpointer(cptr, fptr)
+    type(c_funptr), intent(in) :: cptr
+    procedure(), pointer, intent(out) :: fptr
+    ! TODO: implement
+  end subroutine c_f_procpointer
 
 end module iso_c_binding

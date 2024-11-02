@@ -212,7 +212,9 @@ body: |
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_max_min_ValK1_K0_f32
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]

@@ -70,8 +70,8 @@ std::string getFlagName(DISubprogram &SP, bool UseX86FastCall) {
   // relative posix path:             posix
   sys::path::Style PathStyle =
       has_root_name(SP.getDirectory(), sys::path::Style::windows_backslash) ||
-              SP.getDirectory().find("\\") != StringRef::npos ||
-              SP.getFilename().find("\\") != StringRef::npos
+              SP.getDirectory().contains("\\") ||
+              SP.getFilename().contains("\\")
           ? sys::path::Style::windows_backslash
           : sys::path::Style::posix;
   // Best effort path normalization. This is to guarantee an unique flag symbol
@@ -151,7 +151,7 @@ bool JMCInstrumenter::runOnModule(Module &M) {
   bool IsELF = ModuleTriple.isOSBinFormatELF();
   assert((IsELF || IsMSVC) && "Unsupported triple for JMC");
   bool UseX86FastCall = IsMSVC && ModuleTriple.getArch() == Triple::x86;
-  const char *const FlagSymbolSection = IsELF ? ".just.my.code" : ".msvcjmc";
+  const char *const FlagSymbolSection = IsELF ? ".data.just.my.code" : ".msvcjmc";
 
   GlobalValue *CheckFunction = nullptr;
   DenseMap<DISubprogram *, Constant *> SavedFlags(8);

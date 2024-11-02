@@ -15,9 +15,9 @@
 // The following constructors should not be selected by class template argument
 // deduction:
 //
-// explicit unique_ptr(pointer p)
-// unique_ptr(pointer p, const D& d) noexcept
-// unique_ptr(pointer p, remove_reference_t<D>&& d) noexcept
+// constexpr explicit unique_ptr(pointer p) // constexpr since C++23
+// constexpr unique_ptr(pointer p, const D& d) noexcept // constexpr since C++23
+// constexpr unique_ptr(pointer p, remove_reference_t<D>&& d) noexcept // constexpr since C++23
 
 #include <memory>
 

@@ -16,6 +16,7 @@
 #include "host.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
+#include <cfloat>
 #include <cmath>
 #include <complex>
 #include <functional>
@@ -148,7 +149,7 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
   Scalar<TR> result{};
   std::tuple<Scalar<TA>...> scalarArgs{
       GetScalarConstantValue<TA>(args[I]).value()...};
-  if (context.flushSubnormalsToZero() &&
+  if (context.targetCharacteristics().areSubnormalsFlushedToZero() &&
       !hostFPE.hasSubnormalFlushingHardwareControl()) {
     hostResult = func(host::CastFortranToHost<TA>(
         FlushSubnormals<TA>(std::move(std::get<I>(scalarArgs))))...);
@@ -324,8 +325,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-#if !defined(__PPC__) || defined(__LONG_DOUBLE_IEEE128__)
-// TODO: use HostTypeExists instead?
+#if LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
 template <>
 struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<long double, long double>;
@@ -341,7 +341,7 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif // !defined(__PPC__) || defined(__LONG_DOUBLE_IEEE128__)
+#endif // LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
 #endif
 
 /// Define pgmath description

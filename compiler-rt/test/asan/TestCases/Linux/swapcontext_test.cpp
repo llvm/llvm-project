@@ -9,6 +9,8 @@
 // Android and musl do not support swapcontext.
 // REQUIRES: x86-target-arch && glibc-2.27
 
+#include <assert.h>
+#include <memory.h>
 #include <stdio.h>
 #include <ucontext.h>
 #include <unistd.h>
@@ -33,6 +35,7 @@ void ThrowAndCatch() {
 }
 
 void Child(int mode) {
+  assert(orig_context.uc_stack.ss_size == 0);
   char x[32] = {0};  // Stack gets poisoned.
   printf("Child: %p\n", x);
   ThrowAndCatch();  // Simulate __asan_handle_no_return().
@@ -50,13 +53,16 @@ void Child(int mode) {
 int Run(int arg, int mode, char *child_stack) {
   printf("Child stack: %p\n", child_stack);
   // Setup child context.
+  memset(&child_context, 0xff, sizeof(child_context));
   getcontext(&child_context);
+  assert(child_context.uc_stack.ss_size == 0);
   child_context.uc_stack.ss_sp = child_stack;
   child_context.uc_stack.ss_size = kStackSize / 2;
   if (mode == 0) {
     child_context.uc_link = &orig_context;
   }
   makecontext(&child_context, (void (*)())Child, 1, mode);
+  memset(&orig_context, 0xff, sizeof(orig_context));
   if (swapcontext(&orig_context, &child_context) < 0) {
     perror("swapcontext");
     return 0;

@@ -12,16 +12,14 @@ missing_variable:
 	.type bad_expression,%function
 bad_expression:
 .tlsdescseq variable(tlsdesc)
-
-@ CHECK: error: unexpected token
+@ CHECK: :[[#@LINE-1]]:21: error: expected newline
 @ CHECK: 	.tlsdescseq variable(tlsdesc)
 @ CHECK:                            ^
 
 	.type trailing_garbage,%function
 trailing_garbage:
 .tlsdescseq variable,
-
-@ CHECK: error: unexpected token
+@ CHECK: :[[#@LINE-1]]:21: error: expected newline
 @ CHECK: 	.tlsdescseq variable,
 @ CHECK:                            ^
 

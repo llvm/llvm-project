@@ -14,7 +14,7 @@ define internal i32 @t32(i32) #0 {
   %3 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
   %4 = load i32, i32* %3, align 4
-  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,i,i,~{dirflag},~{fpsr},~{flags}"(i32 %4, i8* blockaddress(@t32, %7), i8* blockaddress(@t32, %6)) #1
+  callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %4) #1
           to label %5 [label %7, label %6]
 
 ; <label>:5:                                      ; preds = %1
@@ -39,7 +39,7 @@ define internal i32 @t32(i32) #0 {
 
 ; CHECK-NOT: @t32
 ; CHECK: define dso_local i32 @main
-; CHECK: callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,i,i,~{dirflag},~{fpsr},~{flags}"(i32 %6, i8* blockaddress(@main, %9), i8* blockaddress(@main, %8))
+; CHECK: callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %6)
 ; CHECK: to label %7 [label %9, label %8]
 ; CHECK: 7:
 ; CHECK-NEXT: store i32 0, i32* %1, align 4

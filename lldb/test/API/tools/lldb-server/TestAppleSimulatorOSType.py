@@ -10,8 +10,6 @@ import re
 
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # Number of stderr lines to read from the simctl output.
     READ_LINES = 10
 
@@ -48,9 +46,10 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
                 # Stop searching in this runtime
                 break
 
-        # Launch the process using simctl
-        self.assertIsNotNone(deviceUDID)
+        if not deviceUDID:
+            self.skipTest('Could not find a simulator for {} ({})'.format(platform_name, arch))
 
+        # Launch the process using simctl
         exe_name = 'test_simulator_platform_{}'.format(platform_name)
         sdkroot = lldbutil.get_xcode_sdk_root(sdk)
         vers = lldbutil.get_xcode_sdk_version(sdk)
@@ -71,6 +70,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
                 'SDKROOT': sdkroot.strip(),
                 'ARCH': arch,
                 'ARCH_CFLAGS': '-target {} {}'.format(triple, version_min),
+                'USE_SYSTEM_STDLIB': 1,
             })
         exe_path = os.path.realpath(self.getBuildArtifact(exe_name))
         cmd = [

@@ -12,22 +12,22 @@
 
 # CHECK-ASM-AND-OBJ: c.fldsp  fs0, 504(sp)
 # CHECK-ASM: encoding: [0x7e,0x34]
-# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point)
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point)
+# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
+# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point){{$}}
 c.fldsp  fs0, 504(sp)
 # CHECK-ASM-AND-OBJ: c.fsdsp  fa7, 504(sp)
 # CHECK-ASM: encoding: [0xc6,0xbf]
-# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point)
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point)
+# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
+# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point){{$}}
 c.fsdsp  fa7, 504(sp)
 
 # CHECK-ASM-AND-OBJ: c.fld  fa3, 248(a5)
 # CHECK-ASM: encoding: [0xf4,0x3f]
-# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point)
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point)
+# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
+# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point){{$}}
 c.fld  fa3, 248(a5)
 # CHECK-ASM-AND-OBJ: c.fsd  fa2, 248(a1)
 # CHECK-ASM: encoding: [0xf0,0xbd]
-# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point)
-# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point)
+# CHECK-NO-EXT-D:  error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
+# CHECK-NO-EXT-DC:  error: instruction requires the following: 'C' (Compressed Instructions), 'D' (Double-Precision Floating-Point){{$}}
 c.fsd  fa2, 248(a1)

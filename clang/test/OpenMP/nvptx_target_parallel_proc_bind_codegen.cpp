@@ -16,9 +16,9 @@
 #define HEADER
 
 // Check that the execution mode of all 3 target regions on the gpu is set to SPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l29}}_exec_mode = weak constant i8 2
-// CHECK-DAG: {{@__omp_offloading_.+l33}}_exec_mode = weak constant i8 2
-// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l29}}_exec_mode = weak protected constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l33}}_exec_mode = weak protected constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak protected constant i8 2
 
 template<typename tx>
 tx ftemplate(int n) {

@@ -38,23 +38,23 @@
 @f = common local_unnamed_addr global i32 0, align 4
 
 @.str = private unnamed_addr constant [9 x i8] c"abcdefgh\00", align 1
-@p = global i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), align 4
+@p = global ptr @.str, align 4
 
 define i8 @foo() {
 entry:
-  %0 = load i8*, i8** @p, align 4
-  %1 = load i8, i8* %0, align 1
+  %0 = load ptr, ptr @p, align 4
+  %1 = load i8, ptr %0, align 1
   ret i8 %1
 }
 
 define i32 @bar() {
 entry:
-  %0 = load i32, i32* @ivar, align 4
-  %1 = load i32, i32* @const_ivar, align 4
+  %0 = load i32, ptr @ivar, align 4
+  %1 = load i32, ptr @const_ivar, align 4
   %add = add nsw i32 %0, %1
-  %2 = load i32, i32* @a, align 4
+  %2 = load i32, ptr @a, align 4
   %add1 = add nsw i32 %add, %2
-  %3 = load i32, i32* @f, align 4
+  %3 = load i32, ptr @f, align 4
   %add2 = add nsw i32 %add1, %3
   ret i32 %add2
 }

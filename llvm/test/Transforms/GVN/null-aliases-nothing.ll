@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -gvn -S | FileCheck %s
 
 %t = type { i32 }
 declare void @test1f(i8*)

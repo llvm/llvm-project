@@ -184,13 +184,38 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/min.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/move_iterator.h>
+#include <__iterator/next.h>
+#include <__memory/addressof.h>
+#include <__memory/allocator.h>
+#include <__memory/allocator_destructor.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
+#include <__memory/pointer_traits.h>
+#include <__memory/swap_allocator.h>
+#include <__memory/unique_ptr.h>
+#include <__memory_resource/polymorphic_allocator.h>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
-#include <initializer_list>
-#include <iterator>
+#include <__utility/move.h>
 #include <limits>
-#include <memory>
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [forward.list.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -217,30 +242,23 @@ struct __forward_list_node_value_type<__forward_list_node<_Tp, _VoidPtr> > {
 template <class _NodePtr>
 struct __forward_node_traits {
 
-  typedef typename remove_cv<
-        typename pointer_traits<_NodePtr>::element_type>::type  __node;
+  typedef __remove_cv_t<
+        typename pointer_traits<_NodePtr>::element_type>        __node;
   typedef typename __forward_list_node_value_type<__node>::type __node_value_type;
   typedef _NodePtr                                              __node_pointer;
   typedef __forward_begin_node<_NodePtr>                        __begin_node;
-  typedef typename __rebind_pointer<_NodePtr, __begin_node>::type
-                                                                __begin_node_pointer;
-  typedef typename __rebind_pointer<_NodePtr, void>::type       __void_pointer;
+  typedef __rebind_pointer_t<_NodePtr, __begin_node>            __begin_node_pointer;
+  typedef __rebind_pointer_t<_NodePtr, void>                    __void_pointer;
 
 #if defined(_LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB)
   typedef __begin_node_pointer __iter_node_pointer;
 #else
-  typedef typename conditional<
-          is_pointer<__void_pointer>::value,
-          __begin_node_pointer,
-          __node_pointer
-    >::type __iter_node_pointer;
+  typedef __conditional_t<is_pointer<__void_pointer>::value, __begin_node_pointer, __node_pointer>
+      __iter_node_pointer;
 #endif
 
-  typedef typename conditional<
-          is_same<__iter_node_pointer, __node_pointer>::value,
-          __begin_node_pointer,
-          __node_pointer
-    >::type __non_iter_node_pointer;
+  typedef __conditional_t<is_same<__iter_node_pointer, __node_pointer>::value, __begin_node_pointer, __node_pointer>
+      __non_iter_node_pointer;
 
   _LIBCPP_INLINE_VISIBILITY
   static __iter_node_pointer __as_iter_node(__iter_node_pointer __p) {
@@ -256,7 +274,7 @@ template <class _NodePtr>
 struct __forward_begin_node
 {
     typedef _NodePtr pointer;
-    typedef typename __rebind_pointer<_NodePtr, __forward_begin_node>::type __begin_node_pointer;
+    typedef __rebind_pointer_t<_NodePtr, __forward_begin_node> __begin_node_pointer;
 
     pointer __next_;
 
@@ -269,16 +287,11 @@ struct __forward_begin_node
 };
 
 template <class _Tp, class _VoidPtr>
-struct _LIBCPP_HIDDEN __begin_node_of
-{
-    typedef __forward_begin_node<
-        typename __rebind_pointer<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> >::type
-    > type;
-};
+using __begin_node_of = __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
 
 template <class _Tp, class _VoidPtr>
 struct _LIBCPP_STANDALONE_DEBUG __forward_list_node
-    : public __begin_node_of<_Tp, _VoidPtr>::type
+    : public __begin_node_of<_Tp, _VoidPtr>
 {
     typedef _Tp value_type;
 
@@ -331,7 +344,7 @@ public:
     typedef value_type&                                       reference;
     typedef typename pointer_traits<__node_pointer>::difference_type
                                                               difference_type;
-    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
+    typedef __rebind_pointer_t<__node_pointer, value_type> pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_iterator() _NOEXCEPT : __ptr_(nullptr) {}
@@ -412,7 +425,7 @@ public:
     typedef const value_type&                                 reference;
     typedef typename pointer_traits<__node_pointer>::difference_type
                                                               difference_type;
-    typedef typename __rebind_pointer<__node_pointer, const value_type>::type
+    typedef __rebind_pointer_t<__node_pointer, const value_type>
                                                               pointer;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -460,20 +473,22 @@ protected:
 
     typedef typename allocator_traits<allocator_type>::void_pointer  void_pointer;
     typedef __forward_list_node<value_type, void_pointer>            __node;
-    typedef typename __begin_node_of<value_type, void_pointer>::type __begin_node;
-    typedef typename __rebind_alloc_helper<allocator_traits<allocator_type>, __node>::type __node_allocator;
+    typedef __begin_node_of<value_type, void_pointer>                __begin_node;
+    typedef __rebind_alloc<allocator_traits<allocator_type>, __node> __node_allocator;
     typedef allocator_traits<__node_allocator>        __node_traits;
     typedef typename __node_traits::pointer           __node_pointer;
 
-    typedef typename __rebind_alloc_helper<
-        allocator_traits<allocator_type>, __begin_node
-    >::type                                           __begin_node_allocator;
+    typedef __rebind_alloc<allocator_traits<allocator_type>, __begin_node> __begin_node_allocator;
     typedef typename allocator_traits<__begin_node_allocator>::pointer
                                                       __begin_node_pointer;
 
     static_assert((!is_same<allocator_type, __node_allocator>::value),
                   "internal allocator type must differ from user-specified "
                   "type; otherwise overload resolution breaks");
+
+    static_assert(is_same<allocator_type, __rebind_alloc<__node_traits, value_type> >::value,
+                  "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
+                  "original allocator");
 
     __compressed_pair<__begin_node, __node_allocator> __before_begin_;
 
@@ -682,15 +697,11 @@ public:
 
     template <class _InputIterator>
         forward_list(_InputIterator __f, _InputIterator __l,
-                     typename enable_if<
-                       __is_cpp17_input_iterator<_InputIterator>::value
-                     >::type* = nullptr);
+                     __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>* = nullptr);
     template <class _InputIterator>
         forward_list(_InputIterator __f, _InputIterator __l,
                      const allocator_type& __a,
-                     typename enable_if<
-                       __is_cpp17_input_iterator<_InputIterator>::value
-                     >::type* = nullptr);
+                     __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>* = nullptr);
     forward_list(const forward_list& __x);
     forward_list(const forward_list& __x, const __type_identity_t<allocator_type>& __a);
 
@@ -722,11 +733,7 @@ public:
     // ~forward_list() = default;
 
     template <class _InputIterator>
-        typename enable_if
-        <
-            __is_cpp17_input_iterator<_InputIterator>::value,
-            void
-        >::type
+    __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>
         assign(_InputIterator __f, _InputIterator __l);
     void assign(size_type __n, const value_type& __v);
 
@@ -802,12 +809,8 @@ public:
     iterator insert_after(const_iterator __p, const value_type& __v);
     iterator insert_after(const_iterator __p, size_type __n, const value_type& __v);
     template <class _InputIterator>
-        _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_cpp17_input_iterator<_InputIterator>::value,
-            iterator
-        >::type
+    _LIBCPP_INLINE_VISIBILITY
+    __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, iterator>
         insert_after(const_iterator __p, _InputIterator __f, _InputIterator __l);
 
     iterator erase_after(const_iterator __p);
@@ -956,9 +959,7 @@ forward_list<_Tp, _Alloc>::forward_list(size_type __n, const value_type& __v)
 template <class _Tp, class _Alloc>
 template <class _InputIterator>
 forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l,
-                                        typename enable_if<
-                                          __is_cpp17_input_iterator<_InputIterator>::value
-                                        >::type*)
+                                        __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>*)
 {
     insert_after(cbefore_begin(), __f, __l);
 }
@@ -967,9 +968,7 @@ template <class _Tp, class _Alloc>
 template <class _InputIterator>
 forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l,
                                         const allocator_type& __a,
-                                        typename enable_if<
-                                          __is_cpp17_input_iterator<_InputIterator>::value
-                                        >::type*)
+                                        __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>*)
     : base(__a)
 {
     insert_after(cbefore_begin(), __f, __l);
@@ -1079,11 +1078,7 @@ forward_list<_Tp, _Alloc>::operator=(initializer_list<value_type> __il)
 
 template <class _Tp, class _Alloc>
 template <class _InputIterator>
-typename enable_if
-<
-    __is_cpp17_input_iterator<_InputIterator>::value,
-    void
->::type
+__enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>
 forward_list<_Tp, _Alloc>::assign(_InputIterator __f, _InputIterator __l)
 {
     iterator __i = before_begin();
@@ -1275,11 +1270,7 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n,
 
 template <class _Tp, class _Alloc>
 template <class _InputIterator>
-typename enable_if
-<
-    __is_cpp17_input_iterator<_InputIterator>::value,
-    typename forward_list<_Tp, _Alloc>::iterator
->::type
+__enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, typename forward_list<_Tp, _Alloc>::iterator>
 forward_list<_Tp, _Alloc>::insert_after(const_iterator __p,
                                         _InputIterator __f, _InputIterator __l)
 {
@@ -1704,6 +1695,7 @@ forward_list<_Tp, _Alloc>::reverse() _NOEXCEPT
 }
 
 template <class _Tp, class _Alloc>
+_LIBCPP_HIDE_FROM_ABI
 bool operator==(const forward_list<_Tp, _Alloc>& __x,
                 const forward_list<_Tp, _Alloc>& __y)
 {
@@ -1787,6 +1779,25 @@ inline _LIBCPP_INLINE_VISIBILITY
 
 _LIBCPP_END_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr {
+template <class _ValueT>
+using forward_list = std::forward_list<_ValueT, polymorphic_allocator<_ValueT>>;
+} // namespace pmr
+_LIBCPP_END_NAMESPACE_STD
+#endif
+
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <algorithm>
+#  include <atomic>
+#  include <concepts>
+#  include <functional>
+#  include <iosfwd>
+#  include <iterator>
+#  include <typeinfo>
+#endif
 
 #endif // _LIBCPP_FORWARD_LIST

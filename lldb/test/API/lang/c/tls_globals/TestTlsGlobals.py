@@ -2,7 +2,6 @@
 
 
 
-import unittest2
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -11,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TlsGlobalTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)

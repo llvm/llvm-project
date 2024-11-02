@@ -120,6 +120,11 @@ bool MprotectReadOnly(uptr addr, uptr size);
 
 void MprotectMallocZones(void *addr, int prot);
 
+#if SANITIZER_WINDOWS
+// Zero previously mmap'd memory. Currently used only on Windows.
+bool ZeroMmapFixedRegion(uptr fixed_addr, uptr size) WARN_UNUSED_RESULT;
+#endif
+
 #if SANITIZER_LINUX
 // Unmap memory. Currently only used on Linux.
 void UnmapFromTo(uptr from, uptr to);
@@ -310,6 +315,18 @@ CheckFailed(const char *file, int line, const char *cond, u64 v1, u64 v2);
 void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report = false);
+
+// Returns true if the platform-specific error reported is an OOM error.
+bool ErrorIsOOM(error_t err);
+
+// This reports an error in the form:
+//
+//   `ERROR: {{SanitizerToolName}}: out of memory: {{err_msg}}`
+//
+// Downstream tools that read sanitizer output will know that errors starting
+// in this format are specifically OOM errors.
+#define ERROR_OOM(err_msg, ...) \
+  Report("ERROR: %s: out of memory: " err_msg, SanitizerToolName, __VA_ARGS__)
 
 // Specific tools may override behavior of "Die" function to do tool-specific
 // job.
@@ -692,6 +709,7 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
+  kModuleArchLoongArch64,
   kModuleArchRISCV64,
   kModuleArchHexagon
 };
@@ -764,6 +782,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "armv7k";
     case kModuleArchARM64:
       return "arm64";
+    case kModuleArchLoongArch64:
+      return "loongarch64";
     case kModuleArchRISCV64:
       return "riscv64";
     case kModuleArchHexagon:
@@ -1004,7 +1024,6 @@ struct SignalContext {
 };
 
 void InitializePlatformEarly();
-void MaybeReexec();
 
 template <typename Fn>
 class RunOnDestruction {

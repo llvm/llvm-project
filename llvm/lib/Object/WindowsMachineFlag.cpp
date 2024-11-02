@@ -25,6 +25,7 @@ COFF::MachineTypes llvm::getMachineType(StringRef S) {
       .Cases("x86", "i386", COFF::IMAGE_FILE_MACHINE_I386)
       .Case("arm", COFF::IMAGE_FILE_MACHINE_ARMNT)
       .Case("arm64", COFF::IMAGE_FILE_MACHINE_ARM64)
+      .Case("arm64ec", COFF::IMAGE_FILE_MACHINE_ARM64EC)
       .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
@@ -34,6 +35,8 @@ StringRef llvm::machineToStr(COFF::MachineTypes MT) {
     return "arm";
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return "arm64";
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return "arm64ec";
   case COFF::IMAGE_FILE_MACHINE_AMD64:
     return "x64";
   case COFF::IMAGE_FILE_MACHINE_I386:

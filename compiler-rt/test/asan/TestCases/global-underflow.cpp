@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
   memset(XXX, 0, 2*sizeof(int));
   // CHECK: {{READ of size 4 at 0x.* thread T0}}
   // CHECK: {{    #0 0x.* in main .*global-underflow.cpp:}}[[@LINE+3]]
-  // CHECK: {{0x.* is located 4 bytes to the left of global variable}}
+  // CHECK: {{0x.* is located 4 bytes before global variable}}
   // CHECK:   {{.*YYY.* of size 12}}
   int res = YYY[-1];
   return res;

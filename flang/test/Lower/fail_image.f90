@@ -14,7 +14,7 @@ subroutine fail_image_test(fail)
 ! CHECK: ^[[BB2]]:
 ! CHECK-NEXT:  br ^[[BB3:.*]]
 ! CHECK-NEXT: ^[[BB3]]
-! CEHCK-NEXT:  return
+! CHECK-NEXT:  return
   return
 end subroutine
 ! CHECK-LABEL: func private @_FortranAFailImageStatement() -> none attributes {fir.runtime}

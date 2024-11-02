@@ -215,7 +215,7 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
   RegisterValue Value;
   Status ST;
   Value.SetFromMemoryData(
-      &Info, Bytes.data(), Bytes.size(),
+      Info, Bytes.data(), Bytes.size(),
       Endian == support::little ? eByteOrderLittle : eByteOrderBig, ST);
   if (ST.Fail())
     return ST.ToError();

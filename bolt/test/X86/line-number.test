@@ -1,9 +1,9 @@
 # Verifies that the extraction of DWARF line number information is correct.
 
 RUN: %clangxx %cxxflags %S/Inputs/linenumber.cpp -g -o %t
-RUN: llvm-bolt %t -o /dev/null -print-reordered -update-debug-sections \
-RUN:   -print-debug-info -reorder-blocks=reverse -sequential-disassembly 2>&1 \
-RUN: | FileCheck %s
+RUN: llvm-bolt %t -o /dev/null --print-reordered --update-debug-sections \
+RUN:   --print-debug-info --reorder-blocks=reverse --sequential-disassembly \
+RUN:   2>&1 | FileCheck %s
 
 # Local variable in f()
 CHECK: movl    $0xbeef, -0x4(%rbp) # debug line {{.*}}linenumber.cpp:9

@@ -132,7 +132,7 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       const MachineOperand &A = MI->getOperand(2);
       if (!A.isImm() || A.getImm() != 0)
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case Hexagon::A2_tfr: {
       const MachineOperand &DstOp = MI->getOperand(0);
@@ -299,8 +299,7 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   if (RDFDump)
     MF.print(dbgs() << "Before " << getPassName() << "\n", nullptr);
 
-  TargetOperandInfo TOI(HII);
-  DataFlowGraph G(MF, HII, HRI, *MDT, MDF, TOI);
+  DataFlowGraph G(MF, HII, HRI, *MDT, MDF);
   // Dead phi nodes are necessary for copy propagation: we can add a use
   // of a register in a block where it would need a phi node, but which
   // was dead (and removed) during the graph build time.

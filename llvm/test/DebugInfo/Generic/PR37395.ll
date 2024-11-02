@@ -6,7 +6,7 @@ source_filename = "small.c"
 ; CHECK-LABEL: @f
 define dso_local void @f() !dbg !10 {
 entry:
-  %0 = load i32, i32* @a, align 4, !dbg !17
+  %0 = load i32, ptr @a, align 4, !dbg !17
   %tobool1 = icmp eq i32 %0, 0, !dbg !18
   br i1 %tobool1, label %for.end, label %for.inc.lr.ph, !dbg !18
 
@@ -21,7 +21,7 @@ for.inc:                                          ; preds = %for.inc, %for.inc.l
   br i1 %tobool, label %for.cond.for.end_crit_edge, label %for.inc, !dbg !18, !llvm.loop !21
 
 for.cond.for.end_crit_edge:                       ; preds = %for.inc
-  store i32 %inc, i32* @a, align 4, !dbg !17
+  store i32 %inc, ptr @a, align 4, !dbg !17
   br label %for.end, !dbg !18
 
 for.end:                                          ; preds = %entry, %for.cond.for.end_crit_edge

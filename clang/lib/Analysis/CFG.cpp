@@ -72,6 +72,10 @@ static SourceLocation GetEndLoc(Decl *D) {
 
 /// Returns true on constant values based around a single IntegerLiteral.
 /// Allow for use of parentheses, integer casts, and negative signs.
+/// FIXME: it would be good to unify this function with
+/// getIntegerLiteralSubexpressionValue at some point given the similarity
+/// between the functions.
+
 static bool IsIntegerLiteralConstantExpr(const Expr *E) {
   // Allow parentheses
   E = E->IgnoreParens();
@@ -564,6 +568,7 @@ private:
                                         AddStmtChoice asc);
   CFGBlock *VisitCXXThrowExpr(CXXThrowExpr *T);
   CFGBlock *VisitCXXTryStmt(CXXTryStmt *S);
+  CFGBlock *VisitCXXTypeidExpr(CXXTypeidExpr *S, AddStmtChoice asc);
   CFGBlock *VisitDeclStmt(DeclStmt *DS);
   CFGBlock *VisitDeclSubExpr(DeclStmt *DS);
   CFGBlock *VisitDefaultStmt(DefaultStmt *D);
@@ -597,6 +602,8 @@ private:
   CFGBlock *VisitObjCMessageExpr(ObjCMessageExpr *E, AddStmtChoice asc);
   CFGBlock *VisitPseudoObjectExpr(PseudoObjectExpr *E);
   CFGBlock *VisitReturnStmt(Stmt *S);
+  CFGBlock *VisitCoroutineSuspendExpr(CoroutineSuspendExpr *S,
+                                      AddStmtChoice asc);
   CFGBlock *VisitSEHExceptStmt(SEHExceptStmt *S);
   CFGBlock *VisitSEHFinallyStmt(SEHFinallyStmt *S);
   CFGBlock *VisitSEHLeaveStmt(SEHLeaveStmt *S);
@@ -607,6 +614,7 @@ private:
                                           AddStmtChoice asc);
   CFGBlock *VisitUnaryOperator(UnaryOperator *U, AddStmtChoice asc);
   CFGBlock *VisitWhileStmt(WhileStmt *W);
+  CFGBlock *VisitArrayInitLoopExpr(ArrayInitLoopExpr *A, AddStmtChoice asc);
 
   CFGBlock *Visit(Stmt *S, AddStmtChoice asc = AddStmtChoice::NotAlwaysAdd,
                   bool ExternallyDestructed = false);
@@ -719,9 +727,9 @@ private:
   // hence strict duck-typing.
   template <typename CallLikeExpr,
             typename = std::enable_if_t<
-                std::is_base_of<CallExpr, CallLikeExpr>::value ||
-                std::is_base_of<CXXConstructExpr, CallLikeExpr>::value ||
-                std::is_base_of<ObjCMessageExpr, CallLikeExpr>::value>>
+                std::is_base_of_v<CallExpr, CallLikeExpr> ||
+                std::is_base_of_v<CXXConstructExpr, CallLikeExpr> ||
+                std::is_base_of_v<ObjCMessageExpr, CallLikeExpr>>>
   void findConstructionContextsForArguments(CallLikeExpr *E) {
     for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
       Expr *Arg = E->getArg(i);
@@ -960,15 +968,16 @@ private:
     const Expr *LHSExpr = B->getLHS()->IgnoreParens();
     const Expr *RHSExpr = B->getRHS()->IgnoreParens();
 
-    const IntegerLiteral *IntLiteral = dyn_cast<IntegerLiteral>(LHSExpr);
+    Optional<llvm::APInt> IntLiteral1 =
+        getIntegerLiteralSubexpressionValue(LHSExpr);
     const Expr *BoolExpr = RHSExpr;
 
-    if (!IntLiteral) {
-      IntLiteral = dyn_cast<IntegerLiteral>(RHSExpr);
+    if (!IntLiteral1) {
+      IntLiteral1 = getIntegerLiteralSubexpressionValue(RHSExpr);
       BoolExpr = LHSExpr;
     }
 
-    if (!IntLiteral)
+    if (!IntLiteral1)
       return TryResult();
 
     const BinaryOperator *BitOp = dyn_cast<BinaryOperator>(BoolExpr);
@@ -977,32 +986,72 @@ private:
       const Expr *LHSExpr2 = BitOp->getLHS()->IgnoreParens();
       const Expr *RHSExpr2 = BitOp->getRHS()->IgnoreParens();
 
-      const IntegerLiteral *IntLiteral2 = dyn_cast<IntegerLiteral>(LHSExpr2);
+      Optional<llvm::APInt> IntLiteral2 =
+          getIntegerLiteralSubexpressionValue(LHSExpr2);
 
       if (!IntLiteral2)
-        IntLiteral2 = dyn_cast<IntegerLiteral>(RHSExpr2);
+        IntLiteral2 = getIntegerLiteralSubexpressionValue(RHSExpr2);
 
       if (!IntLiteral2)
         return TryResult();
 
-      llvm::APInt L1 = IntLiteral->getValue();
-      llvm::APInt L2 = IntLiteral2->getValue();
-      if ((BitOp->getOpcode() == BO_And && (L2 & L1) != L1) ||
-          (BitOp->getOpcode() == BO_Or  && (L2 | L1) != L1)) {
+      if ((BitOp->getOpcode() == BO_And &&
+           (*IntLiteral2 & *IntLiteral1) != *IntLiteral1) ||
+          (BitOp->getOpcode() == BO_Or &&
+           (*IntLiteral2 | *IntLiteral1) != *IntLiteral1)) {
         if (BuildOpts.Observer)
           BuildOpts.Observer->compareBitwiseEquality(B,
                                                      B->getOpcode() != BO_EQ);
-        TryResult(B->getOpcode() != BO_EQ);
+        return TryResult(B->getOpcode() != BO_EQ);
       }
     } else if (BoolExpr->isKnownToHaveBooleanValue()) {
-      llvm::APInt IntValue = IntLiteral->getValue();
-      if ((IntValue == 1) || (IntValue == 0)) {
+      if ((*IntLiteral1 == 1) || (*IntLiteral1 == 0)) {
         return TryResult();
       }
       return TryResult(B->getOpcode() != BO_EQ);
     }
 
     return TryResult();
+  }
+
+  // Helper function to get an APInt from an expression. Supports expressions
+  // which are an IntegerLiteral or a UnaryOperator and returns the value with
+  // all operations performed on it.
+  // FIXME: it would be good to unify this function with
+  // IsIntegerLiteralConstantExpr at some point given the similarity between the
+  // functions.
+  Optional<llvm::APInt> getIntegerLiteralSubexpressionValue(const Expr *E) {
+
+    // If unary.
+    if (const auto *UnOp = dyn_cast<UnaryOperator>(E->IgnoreParens())) {
+      // Get the sub expression of the unary expression and get the Integer
+      // Literal.
+      const Expr *SubExpr = UnOp->getSubExpr()->IgnoreParens();
+
+      if (const auto *IntLiteral = dyn_cast<IntegerLiteral>(SubExpr)) {
+
+        llvm::APInt Value = IntLiteral->getValue();
+
+        // Perform the operation manually.
+        switch (UnOp->getOpcode()) {
+        case UO_Plus:
+          return Value;
+        case UO_Minus:
+          return -Value;
+        case UO_Not:
+          return ~Value;
+        case UO_LNot:
+          return llvm::APInt(Context->getTypeSize(Context->IntTy), !Value);
+        default:
+          assert(false && "Unexpected unary operator!");
+          return llvm::None;
+        }
+      }
+    } else if (const auto *IntLiteral =
+                   dyn_cast<IntegerLiteral>(E->IgnoreParens()))
+      return IntLiteral->getValue();
+
+    return llvm::None;
   }
 
   TryResult analyzeLogicOperatorCondition(BinaryOperatorKind Relation,
@@ -1282,6 +1331,18 @@ private:
 };
 
 } // namespace
+
+Expr *
+clang::extractElementInitializerFromNestedAILE(const ArrayInitLoopExpr *AILE) {
+  if (!AILE)
+    return nullptr;
+
+  Expr *AILEInit = AILE->getSubExpr();
+  while (const auto *E = dyn_cast<ArrayInitLoopExpr>(AILEInit))
+    AILEInit = E->getSubExpr();
+
+  return AILEInit;
+}
 
 inline bool AddStmtChoice::alwaysAdd(CFGBuilder &builder,
                                      const Stmt *stmt) const {
@@ -1612,7 +1673,7 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
 }
 
 /// createBlock - Used to lazily create blocks that are connected
-///  to the current (global) succcessor.
+///  to the current (global) successor.
 CFGBlock *CFGBuilder::createBlock(bool add_successor) {
   CFGBlock *B = cfg->createBlock();
   if (add_successor && Succ)
@@ -1655,9 +1716,14 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   appendInitializer(Block, I);
 
   if (Init) {
+    // If the initializer is an ArrayInitLoopExpr, we want to extract the
+    // initializer, that's used for each element.
+    auto *AILEInit = extractElementInitializerFromNestedAILE(
+        dyn_cast<ArrayInitLoopExpr>(Init));
+
     findConstructionContexts(
         ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
-        Init);
+        AILEInit ? AILEInit : Init);
 
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
@@ -1883,7 +1949,7 @@ void CFGBuilder::addImplicitDtorsForDestructor(const CXXDestructorDecl *DD) {
     // (which is different from the current class) is responsible for
     // destroying them.
     const CXXRecordDecl *CD = VI.getType()->getAsCXXRecordDecl();
-    if (!CD->hasTrivialDestructor()) {
+    if (CD && !CD->hasTrivialDestructor()) {
       autoCreateBlock();
       appendBaseDtor(Block, &VI);
     }
@@ -1893,7 +1959,7 @@ void CFGBuilder::addImplicitDtorsForDestructor(const CXXDestructorDecl *DD) {
   for (const auto &BI : RD->bases()) {
     if (!BI.isVirtual()) {
       const CXXRecordDecl *CD = BI.getType()->getAsCXXRecordDecl();
-      if (!CD->hasTrivialDestructor()) {
+      if (CD && !CD->hasTrivialDestructor()) {
         autoCreateBlock();
         appendBaseDtor(Block, &BI);
       }
@@ -1904,9 +1970,10 @@ void CFGBuilder::addImplicitDtorsForDestructor(const CXXDestructorDecl *DD) {
   for (auto *FI : RD->fields()) {
     // Check for constant size array. Set type to array element type.
     QualType QT = FI->getType();
-    if (const ConstantArrayType *AT = Context->getAsConstantArrayType(QT)) {
+    // It may be a multidimensional array.
+    while (const ConstantArrayType *AT = Context->getAsConstantArrayType(QT)) {
       if (AT->getSize() == 0)
-        continue;
+        break;
       QT = AT->getElementType();
     }
 
@@ -2217,6 +2284,9 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
     case Stmt::CXXTryStmtClass:
       return VisitCXXTryStmt(cast<CXXTryStmt>(S));
 
+    case Stmt::CXXTypeidExprClass:
+      return VisitCXXTypeidExpr(cast<CXXTypeidExpr>(S), asc);
+
     case Stmt::CXXForRangeStmtClass:
       return VisitCXXForRangeStmt(cast<CXXForRangeStmt>(S));
 
@@ -2297,6 +2367,10 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
     case Stmt::CoreturnStmtClass:
       return VisitReturnStmt(S);
 
+    case Stmt::CoyieldExprClass:
+    case Stmt::CoawaitExprClass:
+      return VisitCoroutineSuspendExpr(cast<CoroutineSuspendExpr>(S), asc);
+
     case Stmt::SEHExceptStmtClass:
       return VisitSEHExceptStmt(cast<SEHExceptStmt>(S));
 
@@ -2324,6 +2398,9 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
 
     case Stmt::WhileStmtClass:
       return VisitWhileStmt(cast<WhileStmt>(S));
+
+    case Stmt::ArrayInitLoopExprClass:
+      return VisitArrayInitLoopExpr(cast<ArrayInitLoopExpr>(S), asc);
   }
 }
 
@@ -2914,12 +2991,30 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
     }
   }
 
+  // If we bind to a tuple-like type, we iterate over the HoldingVars, and
+  // create a DeclStmt for each of them.
+  if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+    for (auto *BD : llvm::reverse(DD->bindings())) {
+      if (auto *VD = BD->getHoldingVar()) {
+        DeclGroupRef DG(VD);
+        DeclStmt *DSNew =
+            new (Context) DeclStmt(DG, VD->getLocation(), GetEndLoc(VD));
+        cfg->addSyntheticDeclStmt(DSNew, DS);
+        Block = VisitDeclSubExpr(DSNew);
+      }
+    }
+  }
+
   autoCreateBlock();
   appendStmt(Block, DS);
 
+  // If the initializer is an ArrayInitLoopExpr, we want to extract the
+  // initializer, that's used for each element.
+  const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+
   findConstructionContexts(
       ConstructionContextLayer::create(cfg->getBumpVectorContext(), DS),
-      Init);
+      AILE ? AILE->getSubExpr() : Init);
 
   // Keep track of the last non-null block, as 'Block' can be nulled out
   // if the initializer expression is something like a 'while' in a
@@ -3152,6 +3247,27 @@ CFGBlock *CFGBuilder::VisitReturnStmt(Stmt *S) {
   return B;
 }
 
+CFGBlock *CFGBuilder::VisitCoroutineSuspendExpr(CoroutineSuspendExpr *E,
+                                                AddStmtChoice asc) {
+  // We're modelling the pre-coro-xform CFG. Thus just evalate the various
+  // active components of the co_await or co_yield. Note we do not model the
+  // edge from the builtin_suspend to the exit node.
+  if (asc.alwaysAdd(*this, E)) {
+    autoCreateBlock();
+    appendStmt(Block, E);
+  }
+  CFGBlock *B = Block;
+  if (auto *R = Visit(E->getResumeExpr()))
+    B = R;
+  if (auto *R = Visit(E->getSuspendExpr()))
+    B = R;
+  if (auto *R = Visit(E->getReadyExpr()))
+    B = R;
+  if (auto *R = Visit(E->getCommonExpr()))
+    B = R;
+  return B;
+}
+
 CFGBlock *CFGBuilder::VisitSEHExceptStmt(SEHExceptStmt *ES) {
   // SEHExceptStmt are treated like labels, so they are the first statement in a
   // block.
@@ -3305,9 +3421,21 @@ CFGBlock *CFGBuilder::VisitBlockExpr(BlockExpr *E, AddStmtChoice asc) {
 
 CFGBlock *CFGBuilder::VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc) {
   CFGBlock *LastBlock = VisitNoRecurse(E, asc);
+
+  unsigned Idx = 0;
   for (LambdaExpr::capture_init_iterator it = E->capture_init_begin(),
-       et = E->capture_init_end(); it != et; ++it) {
+                                         et = E->capture_init_end();
+       it != et; ++it, ++Idx) {
     if (Expr *Init = *it) {
+      // If the initializer is an ArrayInitLoopExpr, we want to extract the
+      // initializer, that's used for each element.
+      auto *AILEInit = extractElementInitializerFromNestedAILE(
+          dyn_cast<ArrayInitLoopExpr>(Init));
+
+      findConstructionContexts(ConstructionContextLayer::create(
+                                   cfg->getBumpVectorContext(), {E, Idx}),
+                               AILEInit ? AILEInit : Init);
+
       CFGBlock *Tmp = Visit(Init);
       if (Tmp)
         LastBlock = Tmp;
@@ -3854,6 +3982,27 @@ CFGBlock *CFGBuilder::VisitWhileStmt(WhileStmt *W) {
   return EntryConditionBlock;
 }
 
+CFGBlock *CFGBuilder::VisitArrayInitLoopExpr(ArrayInitLoopExpr *A,
+                                             AddStmtChoice asc) {
+  if (asc.alwaysAdd(*this, A)) {
+    autoCreateBlock();
+    appendStmt(Block, A);
+  }
+
+  CFGBlock *B = Block;
+
+  if (CFGBlock *R = Visit(A->getSubExpr()))
+    B = R;
+
+  auto *OVE = dyn_cast<OpaqueValueExpr>(A->getCommonExpr());
+  assert(OVE && "ArrayInitLoopExpr->getCommonExpr() should be wrapped in an "
+                "OpaqueValueExpr!");
+  if (CFGBlock *R = Visit(OVE->getSourceExpr()))
+    B = R;
+
+  return B;
+}
+
 CFGBlock *CFGBuilder::VisitObjCAtCatchStmt(ObjCAtCatchStmt *CS) {
   // ObjCAtCatchStmt are treated like labels, so they are the first statement
   // in a block.
@@ -3991,6 +4140,25 @@ CFGBlock *CFGBuilder::VisitCXXThrowExpr(CXXThrowExpr *T) {
   // Add the statement to the block.  This may create new blocks if S contains
   // control-flow (short-circuit operations).
   return VisitStmt(T, AddStmtChoice::AlwaysAdd);
+}
+
+CFGBlock *CFGBuilder::VisitCXXTypeidExpr(CXXTypeidExpr *S, AddStmtChoice asc) {
+  if (asc.alwaysAdd(*this, S)) {
+    autoCreateBlock();
+    appendStmt(Block, S);
+  }
+
+  // C++ [expr.typeid]p3:
+  //   When typeid is applied to an expression other than an glvalue of a
+  //   polymorphic class type [...] [the] expression is an unevaluated
+  //   operand. [...]
+  // We add only potentially evaluated statements to the block to avoid
+  // CFG generation for unevaluated operands.
+  if (S && !S->isTypeDependent() && S->isPotentiallyEvaluated())
+    return VisitChildren(S);
+
+  // Return block without CFG for unevaluated operands.
+  return Block;
 }
 
 CFGBlock *CFGBuilder::VisitDoStmt(DoStmt *D) {
@@ -5166,8 +5334,19 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
       const CXXTemporary *temp = bindExpr->getTemporary();
       return temp->getDestructor();
     }
+    case CFGElement::MemberDtor: {
+      const FieldDecl *field = castAs<CFGMemberDtor>().getFieldDecl();
+      QualType ty = field->getType();
+
+      while (const ArrayType *arrayType = astContext.getAsArrayType(ty)) {
+        ty = arrayType->getElementType();
+      }
+
+      const CXXRecordDecl *classDecl = ty->getAsCXXRecordDecl();
+      assert(classDecl);
+      return classDecl->getDestructor();
+    }
     case CFGElement::BaseDtor:
-    case CFGElement::MemberDtor:
       // Not yet supported.
       return nullptr;
   }
@@ -5540,6 +5719,12 @@ static void print_construction_context(raw_ostream &OS,
     Stmts.push_back(TOCC->getMaterializedTemporaryExpr());
     Stmts.push_back(TOCC->getConstructorAfterElision());
     break;
+  }
+  case ConstructionContext::LambdaCaptureKind: {
+    const auto *LCC = cast<LambdaCaptureConstructionContext>(CC);
+    Helper.handledStmt(const_cast<LambdaExpr *>(LCC->getLambdaExpr()), OS);
+    OS << "+" << LCC->getIndex();
+    return;
   }
   case ConstructionContext::ArgumentKind: {
     const auto *ACC = cast<ArgumentConstructionContext>(CC);

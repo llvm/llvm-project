@@ -19,6 +19,17 @@ using namespace clang::ast_matchers;
 /// Returns true when the statements are Type I clones of each other.
 static bool areStatementsIdentical(const Stmt *LHS, const Stmt *RHS,
                                    const ASTContext &Context) {
+  if (isa<Expr>(LHS) && isa<Expr>(RHS)) {
+    // If we have errors in expressions, we will be unable
+    // to accurately profile and compute hashes for each
+    // of the left and right statements.
+    const auto *LHSExpr = llvm::cast<Expr>(LHS);
+    const auto *RHSExpr = llvm::cast<Expr>(RHS);
+    if (LHSExpr->containsErrors() && RHSExpr->containsErrors()) {
+      return false;
+    }
+  }
+
   llvm::FoldingSetNodeID DataLHS, DataRHS;
   LHS->Profile(DataLHS, Context, false);
   RHS->Profile(DataRHS, Context, false);

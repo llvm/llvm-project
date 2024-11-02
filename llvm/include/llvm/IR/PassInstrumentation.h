@@ -107,13 +107,21 @@ public:
     BeforeNonSkippedPassCallbacks.emplace_back(std::move(C));
   }
 
-  template <typename CallableT> void registerAfterPassCallback(CallableT C) {
-    AfterPassCallbacks.emplace_back(std::move(C));
+  template <typename CallableT>
+  void registerAfterPassCallback(CallableT C, bool ToFront = false) {
+    if (ToFront)
+      AfterPassCallbacks.insert(AfterPassCallbacks.begin(), std::move(C));
+    else
+      AfterPassCallbacks.emplace_back(std::move(C));
   }
 
   template <typename CallableT>
-  void registerAfterPassInvalidatedCallback(CallableT C) {
-    AfterPassInvalidatedCallbacks.emplace_back(std::move(C));
+  void registerAfterPassInvalidatedCallback(CallableT C, bool ToFront = false) {
+    if (ToFront)
+      AfterPassInvalidatedCallbacks.insert(
+          AfterPassInvalidatedCallbacks.begin(), std::move(C));
+    else
+      AfterPassInvalidatedCallbacks.emplace_back(std::move(C));
   }
 
   template <typename CallableT>
@@ -122,8 +130,12 @@ public:
   }
 
   template <typename CallableT>
-  void registerAfterAnalysisCallback(CallableT C) {
-    AfterAnalysisCallbacks.emplace_back(std::move(C));
+  void registerAfterAnalysisCallback(CallableT C, bool ToFront = false) {
+    if (ToFront)
+      AfterAnalysisCallbacks.insert(AfterAnalysisCallbacks.begin(),
+                                    std::move(C));
+    else
+      AfterAnalysisCallbacks.emplace_back(std::move(C));
   }
 
   template <typename CallableT>

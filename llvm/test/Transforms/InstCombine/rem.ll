@@ -484,12 +484,12 @@ define <2 x i64> @test20(<2 x i64> %X, <2 x i1> %C) {
   ret <2 x i64> %R
 }
 
-define i32 @test21(i1 %c0, i32* %p) {
+define i32 @test21(i1 %c0, ptr %p) {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[PHI_BO:%.*]] = srem i32 [[V]], 5
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -500,7 +500,7 @@ entry:
   br i1 %c0, label %if.then, label %if.end
 
 if.then:
-  %v = load volatile i32, i32* %p
+  %v = load volatile i32, ptr %p
   br label %if.end
 
 if.end:
@@ -512,15 +512,15 @@ if.end:
 @a = common global [5 x i16] zeroinitializer, align 2
 @b = common global i16 0, align 2
 
-define i32 @pr27968_0(i1 %c0, i32* %p) {
+define i32 @pr27968_0(i1 %c0, ptr %p) {
 ; CHECK-LABEL: @pr27968_0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
+; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       rem.is.unsafe:
@@ -530,27 +530,27 @@ entry:
   br i1 %c0, label %if.then, label %if.end
 
 if.then:
-  %v = load volatile i32, i32* %p
+  %v = load volatile i32, ptr %p
   br label %if.end
 
 if.end:
   %lhs = phi i32 [ %v, %if.then ], [ 5, %entry ]
-  br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label %rem.is.safe, label %rem.is.unsafe
+  br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label %rem.is.safe, label %rem.is.unsafe
 
 rem.is.safe:
-  %rem = srem i32 %lhs, zext (i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b) to i32)
+  %rem = srem i32 %lhs, zext (i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32)
   ret i32 %rem
 
 rem.is.unsafe:
   ret i32 0
 }
 
-define i32 @pr27968_1(i1 %c0, i1 %always_false, i32* %p) {
+define i32 @pr27968_1(i1 %c0, i1 %always_false, ptr %p) {
 ; CHECK-LABEL: @pr27968_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[V]], [[IF_THEN]] ], [ 5, [[ENTRY:%.*]] ]
@@ -565,7 +565,7 @@ entry:
   br i1 %c0, label %if.then, label %if.end
 
 if.then:
-  %v = load volatile i32, i32* %p
+  %v = load volatile i32, ptr %p
   br label %if.end
 
 if.end:
@@ -580,15 +580,15 @@ rem.is.unsafe:
   ret i32 0
 }
 
-define i32 @pr27968_2(i1 %c0, i32* %p) {
+define i32 @pr27968_2(i1 %c0, ptr %p) {
 ; CHECK-LABEL: @pr27968_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
+; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       rem.is.unsafe:
@@ -598,27 +598,27 @@ entry:
   br i1 %c0, label %if.then, label %if.end
 
 if.then:
-  %v = load volatile i32, i32* %p
+  %v = load volatile i32, ptr %p
   br label %if.end
 
 if.end:
   %lhs = phi i32 [ %v, %if.then ], [ 5, %entry ]
-  br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label %rem.is.safe, label %rem.is.unsafe
+  br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label %rem.is.safe, label %rem.is.unsafe
 
 rem.is.safe:
-  %rem = urem i32 %lhs, zext (i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b) to i32)
+  %rem = urem i32 %lhs, zext (i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32)
   ret i32 %rem
 
 rem.is.unsafe:
   ret i32 0
 }
 
-define i32 @pr27968_3(i1 %c0, i1 %always_false, i32* %p) {
+define i32 @pr27968_3(i1 %c0, i1 %always_false, ptr %p) {
 ; CHECK-LABEL: @pr27968_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[PHI_BO:%.*]] = and i32 [[V]], 2147483647
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -633,7 +633,7 @@ entry:
   br i1 %c0, label %if.then, label %if.end
 
 if.then:
-  %v = load volatile i32, i32* %p
+  %v = load volatile i32, ptr %p
   br label %if.end
 
 if.end:
@@ -728,15 +728,15 @@ define i1 @test26(i32 %A, i32 %B) {
   ret i1 %E
 }
 
-define i1 @test27(i32 %A, i32* %remdst) {
+define i1 @test27(i32 %A, ptr %remdst) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:    [[B:%.*]] = srem i32 [[A:%.*]], -2147483648
-; CHECK-NEXT:    store i32 [[B]], i32* [[REMDST:%.*]], align 1
+; CHECK-NEXT:    store i32 [[B]], ptr [[REMDST:%.*]], align 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[B]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = srem i32 %A, 2147483648 ; signbit
-  store i32 %B, i32* %remdst, align 1 ; extra use of rem
+  store i32 %B, ptr %remdst, align 1 ; extra use of rem
   %C = icmp ne i32 %B, 0
   ret i1 %C
 }

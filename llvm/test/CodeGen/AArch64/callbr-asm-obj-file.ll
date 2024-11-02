@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -filetype=obj -o - \
-; RUN:  | llvm-objdump --triple=aarch64-unknown-linux-gnu -d - \
+; RUN:  | llvm-objdump --no-print-imm-hex --triple=aarch64-unknown-linux-gnu -d - \
 ; RUN:  | FileCheck %s
 
 %struct.c = type { i1 (...)* }
@@ -20,7 +20,7 @@ define hidden i32 @test1() {
   br i1 %2, label %3, label %5
 
 3:                                                ; preds = %0
-  callbr void asm sideeffect "1: nop\0A\09.quad a\0A\09b ${1:l}\0A\09.quad ${0:c}", "i,i"(i32* null, i8* blockaddress(@test1, %7))
+  callbr void asm sideeffect "1: nop\0A\09.quad a\0A\09b ${1:l}\0A\09.quad ${0:c}", "i,!i"(i32* null)
           to label %4 [label %7]
 
 4:                                                ; preds = %3
@@ -55,7 +55,7 @@ define hidden i32 @test2() local_unnamed_addr {
   br i1 %5, label %6, label %7
 
 6:                                                ; preds = %3
-  callbr void asm sideeffect "1: nop\0A\09.quad b\0A\09b ${1:l}\0A\09.quad ${0:c}", "i,i"(i32* null, i8* blockaddress(@test2, %7))
+  callbr void asm sideeffect "1: nop\0A\09.quad b\0A\09b ${1:l}\0A\09.quad ${0:c}", "i,!i"(i32* null)
           to label %10 [label %7]
 
 7:                                                ; preds = %3
@@ -72,9 +72,8 @@ define hidden i32 @test2() local_unnamed_addr {
 ; CHECK-LABEL: <test3>:
 ; CHECK-LABEL: <$d.9>:
 ; CHECK-LABEL: <$x.10>:
-; CHECK-NEXT:    b {{.*}} <test3+0x18>
+; CHECK-NEXT:    b {{.*}} <$x.12>
 ; CHECK-LABEL: <$x.12>:
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    ret
 define internal i1 @test3() {
@@ -83,7 +82,7 @@ define internal i1 @test3() {
   br i1 %2, label %3, label %5
 
 3:                                                ; preds = %0
-  callbr void asm sideeffect "1: nop\0A\09.quad c\0A\09b ${1:l}\0A\09.quad ${0:c}", "i,i"(i32* null, i8* blockaddress(@test3, %8))
+  callbr void asm sideeffect "1: nop\0A\09.quad c\0A\09b ${1:l}\0A\09.quad ${0:c}", "i,!i"(i32* null)
           to label %4 [label %8]
 
 4:                                                ; preds = %3

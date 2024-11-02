@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,precxx17 %std_cxx98-14 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify %std_cxx17- %s
 
 struct A; // expected-note 4 {{forward declaration of 'A'}}
 
@@ -128,6 +127,7 @@ namespace PR6831 {
   }
 }
 
+#if __cplusplus < 201703L
 namespace Decay {
   struct A {
     void f() throw (A[10]);
@@ -165,6 +165,7 @@ void rval_ref() throw (int &&); // expected-error {{rvalue reference type 'int &
 #if __cplusplus <= 199711L
 // expected-warning@-2 {{rvalue references are a C++11 extension}}
 #endif
+#endif
 
 namespace HandlerInversion {
 struct B {};
@@ -173,15 +174,15 @@ struct D2 : D {};
 
 void f1() {
   try {
-  } catch (B &b) { // expected-note {{for type 'HandlerInversion::B &'}}
-  } catch (D &d) { // expected-warning {{exception of type 'HandlerInversion::D &' will be caught by earlier handler}}
+  } catch (B &b) { // expected-note {{for type 'B &'}}
+  } catch (D &d) { // expected-warning {{exception of type 'D &' will be caught by earlier handler}}
   }
 }
 
 void f2() {
   try {
-  } catch (B *b) { // expected-note {{for type 'HandlerInversion::B *'}}
-  } catch (D *d) { // expected-warning {{exception of type 'HandlerInversion::D *' will be caught by earlier handler}}
+  } catch (B *b) { // expected-note {{for type 'B *'}}
+  } catch (D *d) { // expected-warning {{exception of type 'D *' will be caught by earlier handler}}
   }
 }
 
@@ -207,8 +208,8 @@ void f5() {
 
 void f6() {
   try {
-  } catch (B &b) {  // expected-note {{for type 'HandlerInversion::B &'}}
-  } catch (D2 &d) {  // expected-warning {{exception of type 'HandlerInversion::D2 &' will be caught by earlier handler}}
+  } catch (B &b) {  // expected-note {{for type 'B &'}}
+  } catch (D2 &d) {  // expected-warning {{exception of type 'D2 &' will be caught by earlier handler}}
   }
 }
 
@@ -226,32 +227,32 @@ void f7() {
 
 void f8() {
   try {
-  } catch (const B &b) {  // expected-note {{for type 'const HandlerInversion::B &'}}
-  } catch (D2 &d) {  // expected-warning {{exception of type 'HandlerInversion::D2 &' will be caught by earlier handler}}
+  } catch (const B &b) {  // expected-note {{for type 'const B &'}}
+  } catch (D2 &d) {  // expected-warning {{exception of type 'D2 &' will be caught by earlier handler}}
   }
 
   try {
-  } catch (B &b) {  // expected-note {{for type 'HandlerInversion::B &'}}
-  } catch (const D2 &d) {  // expected-warning {{exception of type 'const HandlerInversion::D2 &' will be caught by earlier handler}}
+  } catch (B &b) {  // expected-note {{for type 'B &'}}
+  } catch (const D2 &d) {  // expected-warning {{exception of type 'const D2 &' will be caught by earlier handler}}
   }
 
   try {
-  } catch (B b) { // expected-note {{for type 'HandlerInversion::B'}}
-  } catch (D &d) { // expected-warning {{exception of type 'HandlerInversion::D &' will be caught by earlier handler}}
+  } catch (B b) { // expected-note {{for type 'B'}}
+  } catch (D &d) { // expected-warning {{exception of type 'D &' will be caught by earlier handler}}
   }
 }
 }
 
 namespace ConstVolatileThrow {
 struct S {
-  S() {}         // expected-note{{candidate constructor not viable}}
-  S(const S &s); // expected-note{{candidate constructor not viable}}
+  S() {}         // precxx17-note{{candidate constructor not viable}}
+  S(const S &s); // precxx17-note{{candidate constructor not viable}}
 };
 
 typedef const volatile S CVS;
 
 void f() {
-  throw CVS(); // expected-error{{no matching constructor for initialization}}
+  throw CVS(); // precxx17-error{{no matching constructor for initialization}}
 }
 }
 

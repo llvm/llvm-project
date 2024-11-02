@@ -179,8 +179,20 @@ func.func @f() -> !shape.shape {
   // CHECK: shape.const_shape [0, 1, 2, 3] : !shape.shape
   %lhs = shape.const_shape [0, 1] : !shape.shape
   %rhs = shape.const_shape [2, 3] : !shape.shape
-  %0 = shape.concat %lhs, %rhs
+  %0 = shape.concat %lhs, %rhs : !shape.shape , !shape.shape -> !shape.shape
   return %0 : !shape.shape
+}
+
+// -----
+
+// Basic case.
+// CHECK-LABEL: func @f
+func.func @f() -> tensor<4xindex> {
+  // CHECK: shape.const_shape [0, 1, 2, 3] : tensor<4xindex>
+  %lhs = shape.const_shape [0, 1] : tensor<2xindex>
+  %rhs = shape.const_shape [2, 3] : tensor<2xindex>
+  %0 = shape.concat %lhs, %rhs : tensor<2xindex>, tensor<2xindex> -> tensor<4xindex>
+  return %0 : tensor<4xindex>
 }
 
 // -----

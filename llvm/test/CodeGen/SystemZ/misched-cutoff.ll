@@ -5,7 +5,7 @@
 ; Test that the post-ra scheduler does not crash with -misched-cutoff.
 
 @g_184 = external dso_local global i16, align 2
-@g_294 = external dso_local global [1 x [9 x i32*]], align 8
+@g_294 = external dso_local global [1 x [9 x ptr]], align 8
 
 define void @fun() {
 bb:
@@ -33,19 +33,19 @@ bb1:                                              ; preds = %bb1, %bb
   %i19 = select i1 false, i32 %i18, i32 undef
   %i20 = lshr i32 %i19, 1
   %i21 = select i1 false, i32 %i20, i32 undef
-  store i32 %i21, i32* undef, align 4
+  store i32 %i21, ptr undef, align 4
   %i22 = add nuw nsw i64 %i, 1
   %i23 = icmp ult i64 %i, 255
   br i1 %i23, label %bb1, label %bb24
 
 bb24:                                             ; preds = %bb1
-  %i25 = load volatile i16, i16* undef
-  store i32* null, i32** undef, align 8
-  store i32 -10, i32* undef, align 4
-  store i32 -10, i32* null, align 4
-  store i32 -10, i32* undef, align 4
-  store i16 0, i16* @g_184, align 2
-  store i32* null, i32** getelementptr inbounds ([1 x [9 x i32*]], [1 x [9 x i32*]]* @g_294, i64 0, i64 0, i64 2), align 8
-  store i32* null, i32** getelementptr inbounds ([1 x [9 x i32*]], [1 x [9 x i32*]]* @g_294, i64 0, i64 0, i64 5), align 8
+  %i25 = load volatile i16, ptr undef
+  store ptr null, ptr undef, align 8
+  store i32 -10, ptr undef, align 4
+  store i32 -10, ptr null, align 4
+  store i32 -10, ptr undef, align 4
+  store i16 0, ptr @g_184, align 2
+  store ptr null, ptr getelementptr inbounds ([1 x [9 x ptr]], ptr @g_294, i64 0, i64 0, i64 2), align 8
+  store ptr null, ptr getelementptr inbounds ([1 x [9 x ptr]], ptr @g_294, i64 0, i64 0, i64 5), align 8
   unreachable
 }

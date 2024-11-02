@@ -275,8 +275,9 @@ void InstrumentationRuntimeUBSan::Activate() {
           .CreateBreakpoint(symbol_address, /*internal=*/true,
                             /*hardware=*/false)
           .get();
+  const bool sync = false;
   breakpoint->SetCallback(InstrumentationRuntimeUBSan::NotifyBreakpointHit,
-                          this, true);
+                          this, sync);
   breakpoint->SetBreakpointKind("undefined-behavior-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 

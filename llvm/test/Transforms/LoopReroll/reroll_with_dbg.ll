@@ -1,4 +1,4 @@
-;RUN: opt < %s -loop-reroll -S | FileCheck %s
+;RUN: opt < %s -passes=loop-reroll -S | FileCheck %s
 ;void foo(float * restrict a, float * restrict b, int n) {
 ;  for(int i = 0; i < n; i+=4) {
 ;    a[i] = b[i];

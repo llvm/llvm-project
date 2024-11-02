@@ -9,8 +9,10 @@
 #ifndef LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
 #define LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
 
-#include "src/__support/CPP/Limits.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
@@ -50,24 +52,22 @@ template <class T> uint32_t inline leading_zeroes(T inputNumber) {
 }
 
 template <> uint32_t inline leading_zeroes<uint32_t>(uint32_t inputNumber) {
-  return inputNumber == 0 ? 32 : __builtin_clz(inputNumber);
+  return safe_clz(inputNumber);
 }
 
 template <> uint32_t inline leading_zeroes<uint64_t>(uint64_t inputNumber) {
-  return inputNumber == 0 ? 64 : __builtin_clzll(inputNumber);
+  return safe_clz(inputNumber);
 }
 
-static inline uint64_t low64(__uint128_t num) {
+static inline uint64_t low64(const UInt128 &num) {
   return static_cast<uint64_t>(num & 0xffffffffffffffff);
 }
 
-static inline uint64_t high64(__uint128_t num) {
+static inline uint64_t high64(const UInt128 &num) {
   return static_cast<uint64_t>(num >> 64);
 }
 
-template <class T> inline void set_implicit_bit(fputil::FPBits<T> &result) {
-  return;
-}
+template <class T> inline void set_implicit_bit(fputil::FPBits<T> &) { return; }
 
 #if defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
@@ -108,18 +108,19 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   uint32_t clz = leading_zeroes<BitsType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = exp10_to_exp2(exp10) + BITS_IN_MANTISSA +
-                  fputil::FloatProperties<T>::EXPONENT_BIAS - clz;
+  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) +
+                  BITS_IN_MANTISSA + fputil::FloatProperties<T>::EXPONENT_BIAS -
+                  clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
       DETAILED_POWERS_OF_TEN[exp10 - DETAILED_POWERS_OF_TEN_MIN_EXP_10];
 
-  __uint128_t first_approx = static_cast<__uint128_t>(mantissa) *
-                             static_cast<__uint128_t>(power_of_ten[1]);
+  UInt128 first_approx =
+      static_cast<UInt128>(mantissa) * static_cast<UInt128>(power_of_ten[1]);
 
   // Wider Approximation
-  __uint128_t final_approx;
+  UInt128 final_approx;
   // The halfway constant is used to check if the bits that will be shifted away
   // intially are all 1. For doubles this is 64 (bitstype size) - 52 (final
   // mantissa size) - 3 (we shift away the last two bits separately for
@@ -131,10 +132,10 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
       1;
   if ((high64(first_approx) & halfway_constant) == halfway_constant &&
       low64(first_approx) + mantissa < mantissa) {
-    __uint128_t low_bits = static_cast<__uint128_t>(mantissa) *
-                           static_cast<__uint128_t>(power_of_ten[0]);
-    __uint128_t second_approx =
-        first_approx + static_cast<__uint128_t>(high64(low_bits));
+    UInt128 low_bits =
+        static_cast<UInt128>(mantissa) * static_cast<UInt128>(power_of_ten[0]);
+    UInt128 second_approx =
+        first_approx + static_cast<UInt128>(high64(low_bits));
 
     if ((high64(second_approx) & halfway_constant) == halfway_constant &&
         low64(second_approx) + 1 == 0 &&
@@ -147,11 +148,13 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   }
 
   // Shifting to 54 bits for doubles and 25 bits for floats
-  BitsType msb = high64(final_approx) >> (BITS_IN_MANTISSA - 1);
-  BitsType final_mantissa = high64(final_approx) >>
+  BitsType msb =
+      static_cast<BitsType>(high64(final_approx) >> (BITS_IN_MANTISSA - 1));
+  BitsType final_mantissa =
+      static_cast<BitsType>(high64(final_approx) >>
                             (msb + BITS_IN_MANTISSA -
-                             (fputil::FloatProperties<T>::MANTISSA_WIDTH + 3));
-  exp2 -= 1 ^ msb; // same as !msb
+                             (fputil::FloatProperties<T>::MANTISSA_WIDTH + 3)));
+  exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   // Half-way ambiguity
   if (low64(final_approx) == 0 &&
@@ -208,7 +211,8 @@ inline bool eisel_lemire<long double>(
   uint32_t clz = leading_zeroes<BitsType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = exp10_to_exp2(exp10) + BITS_IN_MANTISSA +
+  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) +
+                  BITS_IN_MANTISSA +
                   fputil::FloatProperties<long double>::EXPONENT_BIAS - clz;
 
   // Multiplication
@@ -219,31 +223,31 @@ inline bool eisel_lemire<long double>(
   // full 128 bits of the power of ten to get an approximation with the same
   // number of significant bits. This means that we only get the one
   // approximation, and that approximation is 256 bits long.
-  __uint128_t approx_upper = static_cast<__uint128_t>(high64(mantissa)) *
-                             static_cast<__uint128_t>(power_of_ten[1]);
+  UInt128 approx_upper = static_cast<UInt128>(high64(mantissa)) *
+                         static_cast<UInt128>(power_of_ten[1]);
 
-  __uint128_t approx_middle = static_cast<__uint128_t>(high64(mantissa)) *
-                                  static_cast<__uint128_t>(power_of_ten[0]) +
-                              static_cast<__uint128_t>(low64(mantissa)) *
-                                  static_cast<__uint128_t>(power_of_ten[1]);
+  UInt128 approx_middle = static_cast<UInt128>(high64(mantissa)) *
+                              static_cast<UInt128>(power_of_ten[0]) +
+                          static_cast<UInt128>(low64(mantissa)) *
+                              static_cast<UInt128>(power_of_ten[1]);
 
-  __uint128_t approx_lower = static_cast<__uint128_t>(low64(mantissa)) *
-                             static_cast<__uint128_t>(power_of_ten[0]);
+  UInt128 approx_lower = static_cast<UInt128>(low64(mantissa)) *
+                         static_cast<UInt128>(power_of_ten[0]);
 
-  __uint128_t final_approx_lower =
-      approx_lower + (static_cast<__uint128_t>(low64(approx_middle)) << 64);
-  __uint128_t final_approx_upper = approx_upper + high64(approx_middle) +
-                                   (final_approx_lower < approx_lower ? 1 : 0);
+  UInt128 final_approx_lower =
+      approx_lower + (static_cast<UInt128>(low64(approx_middle)) << 64);
+  UInt128 final_approx_upper = approx_upper + high64(approx_middle) +
+                               (final_approx_lower < approx_lower ? 1 : 0);
 
   // The halfway constant is used to check if the bits that will be shifted away
   // intially are all 1. For 80 bit floats this is 128 (bitstype size) - 64
   // (final mantissa size) - 3 (we shift away the last two bits separately for
   // accuracy, and the most significant bit is ignored.) = 61 bits. Similarly,
   // it's 12 bits for 128 bit floats in this case.
-  constexpr __uint128_t HALFWAY_CONSTANT =
-      (__uint128_t(1) << (BITS_IN_MANTISSA -
-                          fputil::FloatProperties<long double>::MANTISSA_WIDTH -
-                          3)) -
+  constexpr UInt128 HALFWAY_CONSTANT =
+      (UInt128(1) << (BITS_IN_MANTISSA -
+                      fputil::FloatProperties<long double>::MANTISSA_WIDTH -
+                      3)) -
       1;
 
   if ((final_approx_upper & HALFWAY_CONSTANT) == HALFWAY_CONSTANT &&
@@ -257,7 +261,7 @@ inline bool eisel_lemire<long double>(
       final_approx_upper >>
       (msb + BITS_IN_MANTISSA -
        (fputil::FloatProperties<long double>::MANTISSA_WIDTH + 3));
-  exp2 -= 1 ^ msb; // same as !msb
+  exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   // Half-way ambiguity
   if (final_approx_lower == 0 && (final_approx_upper & HALFWAY_CONSTANT) == 0 &&
@@ -542,6 +546,41 @@ clinger_fast_path(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   return true;
 }
 
+// The upper bound is the highest base-10 exponent that could possibly give a
+// non-inf result for this size of float. The value is
+// log10(2^(exponent bias)).
+// The generic approximation uses the fact that log10(2^x) ~= x/3
+template <typename T> constexpr int32_t get_upper_bound() {
+  return static_cast<int32_t>(fputil::FloatProperties<T>::EXPONENT_BIAS) / 3;
+}
+
+template <> constexpr int32_t get_upper_bound<float>() { return 39; }
+
+template <> constexpr int32_t get_upper_bound<double>() { return 309; }
+
+// The lower bound is the largest negative base-10 exponent that could possibly
+// give a non-zero result for this size of float. The value is
+// log10(2^(exponent bias + final mantissa width + intermediate mantissa width))
+// The intermediate mantissa is the integer that's been parsed from the string,
+// and the final mantissa is the fractional part of the output number. A very
+// low base 10 exponent with a very high intermediate mantissa can cancel each
+// other out, and subnormal numbers allow for the result to be at the very low
+// end of the final mantissa.
+template <typename T> constexpr int32_t get_lower_bound() {
+  return -(static_cast<int32_t>(fputil::FloatProperties<T>::EXPONENT_BIAS +
+                                fputil::FloatProperties<T>::MANTISSA_WIDTH +
+                                (sizeof(T) * 8)) /
+           3);
+}
+
+template <> constexpr int32_t get_lower_bound<float>() {
+  return -(39 + 6 + 10);
+}
+
+template <> constexpr int32_t get_lower_bound<double>() {
+  return -(309 + 15 + 20);
+}
+
 // Takes a mantissa and base 10 exponent and converts it into its closest
 // floating point type T equivalient. First we try the Eisel-Lemire algorithm,
 // then if that fails then we fall back to a more accurate algorithm for
@@ -555,33 +594,31 @@ decimal_exp_to_float(typename fputil::FPBits<T>::UIntType mantissa,
                      typename fputil::FPBits<T>::UIntType *outputMantissa,
                      uint32_t *outputExp2) {
   // If the exponent is too large and can't be represented in this size of
-  // float, return inf. These bounds are very loose, but are mostly serving as a
-  // first pass. Some close numbers getting through is okay.
-  if (exp10 >
-      static_cast<int64_t>(fputil::FloatProperties<T>::EXPONENT_BIAS) / 3) {
+  // float, return inf. These bounds are relatively loose, but are mostly
+  // serving as a first pass. Some close numbers getting through is okay.
+  if (exp10 > get_upper_bound<T>()) {
     *outputMantissa = 0;
     *outputExp2 = fputil::FPBits<T>::MAX_EXPONENT;
     errno = ERANGE;
     return;
   }
   // If the exponent is too small even for a subnormal, return 0.
-  if (exp10 < 0 &&
-      -static_cast<int64_t>(exp10) >
-          static_cast<int64_t>(fputil::FloatProperties<T>::EXPONENT_BIAS +
-                               fputil::FloatProperties<T>::MANTISSA_WIDTH) /
-              2) {
+  if (exp10 < get_lower_bound<T>()) {
     *outputMantissa = 0;
     *outputExp2 = 0;
     errno = ERANGE;
     return;
   }
 
+#ifndef LLVM_LIBC_DISABLE_CLINGER_FAST_PATH
   if (!truncated) {
     if (clinger_fast_path<T>(mantissa, exp10, outputMantissa, outputExp2)) {
       return;
     }
   }
+#endif // LLVM_LIBC_DISABLE_CLINGER_FAST_PATH
 
+#ifndef LLVM_LIBC_DISABLE_EISEL_LEMIRE
   // Try Eisel-Lemire
   if (eisel_lemire<T>(mantissa, exp10, outputMantissa, outputExp2)) {
     if (!truncated) {
@@ -598,8 +635,11 @@ decimal_exp_to_float(typename fputil::FPBits<T>::UIntType mantissa,
       }
     }
   }
+#endif // LLVM_LIBC_DISABLE_EISEL_LEMIRE
 
+#ifndef LLVM_LIBC_DISABLE_SIMPLE_DECIMAL_CONVERSION
   simple_decimal_conversion<T>(numStart, outputMantissa, outputExp2);
+#endif // LLVM_LIBC_DISABLE_SIMPLE_DECIMAL_CONVERSION
 
   return;
 }
@@ -736,7 +776,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
 
   // The loop fills the mantissa with as many digits as it can hold
   const BitsType bitstype_max_div_by_base =
-      __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
+      cpp::numeric_limits<BitsType>::max() / BASE;
   while (true) {
     if (isdigit(*src)) {
       uint32_t digit = *src - '0';
@@ -826,7 +866,7 @@ static inline bool hexadecimal_string_to_float(
 
   // The loop fills the mantissa with as many digits as it can hold
   const BitsType bitstype_max_div_by_base =
-      __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
+      cpp::numeric_limits<BitsType>::max() / BASE;
   while (true) {
     if (isalnum(*src)) {
       uint32_t digit = b36_char_to_int(*src);
@@ -924,8 +964,8 @@ static inline T strtofloatingpoint(const char *__restrict src,
     }
     char *new_str_end = nullptr;
 
-    BitsType output_mantissa = 0;
-    uint32_t output_exponent = 0;
+    BitsType output_mantissa = ~0;
+    uint32_t output_exponent = ~0;
     if (base == 16) {
       seen_digit = hexadecimal_string_to_float<T>(
           src, DECIMAL_POINT, &new_str_end, &output_mantissa, &output_exponent);
@@ -971,11 +1011,11 @@ static inline T strtofloatingpoint(const char *__restrict src,
       }
       nan_mantissa |= fputil::FloatProperties<T>::QUIET_NAN_MASK;
       if (result.get_sign()) {
-        result = fputil::FPBits<T>(result.build_nan(nan_mantissa));
+        result = fputil::FPBits<T>(result.build_quiet_nan(nan_mantissa));
         result.set_sign(true);
       } else {
         result.set_sign(false);
-        result = fputil::FPBits<T>(result.build_nan(nan_mantissa));
+        result = fputil::FPBits<T>(result.build_quiet_nan(nan_mantissa));
       }
     }
   } else if ((*src | 32) == 'i') { // INF

@@ -3,7 +3,7 @@
 
 declare void @llvm.memset.p5i8.i32(i8 addrspace(5)* nocapture, i8, i32, i32, i1) #1
 
-; ERROR: error: stack frame size (131061) exceeds limit (131056) in function 'stack_size_limit_wave64'
+; ERROR: error: <unknown>:0:0: stack frame size (131061) exceeds limit (131056) in function 'stack_size_limit_wave64'
 ; GCN: ; ScratchSize: 131061
 define amdgpu_kernel void @stack_size_limit_wave64() #0 {
 entry:
@@ -13,7 +13,7 @@ entry:
   ret void
 }
 
-; ERROR: error: stack frame size (262117) exceeds limit (262112) in function 'stack_size_limit_wave32'
+; ERROR: error: <unknown>:0:0: stack frame size (262117) exceeds limit (262112) in function 'stack_size_limit_wave32'
 ; GCN: ; ScratchSize: 262117
 define amdgpu_kernel void @stack_size_limit_wave32() #1 {
 entry:

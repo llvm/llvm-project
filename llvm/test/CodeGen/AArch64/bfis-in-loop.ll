@@ -28,8 +28,8 @@ define i64 @bfis_in_loop_zero() {
 ; CHECK-NEXT:    ldr x11, [x9, #8]
 ; CHECK-NEXT:    and x9, x10, #0xff
 ; CHECK-NEXT:    and x10, x0, #0xffffffff00000000
-; CHECK-NEXT:    bfi x9, x8, #8, #32
-; CHECK-NEXT:    bfi x10, x12, #16, #1
+; CHECK-NEXT:    orr x9, x9, x8, lsl #8
+; CHECK-NEXT:    orr x10, x10, x12, lsl #16
 ; CHECK-NEXT:    orr x0, x10, x9
 ; CHECK-NEXT:    ldr x9, [x11, #16]
 ; CHECK-NEXT:    cbnz x11, .LBB0_1
@@ -97,8 +97,8 @@ define i64 @bfis_in_loop_undef() {
 ; CHECK-NEXT:    ldr x11, [x9, #8]
 ; CHECK-NEXT:    and x9, x10, #0xff
 ; CHECK-NEXT:    and x10, x0, #0xffffffff00000000
-; CHECK-NEXT:    bfi x9, x8, #8, #32
-; CHECK-NEXT:    bfi x10, x12, #16, #1
+; CHECK-NEXT:    orr x9, x9, x8, lsl #8
+; CHECK-NEXT:    orr x10, x10, x12, lsl #16
 ; CHECK-NEXT:    orr x0, x10, x9
 ; CHECK-NEXT:    ldr x9, [x11, #16]
 ; CHECK-NEXT:    cbnz x11, .LBB1_1

@@ -49,6 +49,7 @@ class MCObjectFileInfo;
 class MCRegisterInfo;
 class MCSection;
 class MCSectionCOFF;
+class MCSectionDXContainer;
 class MCSectionELF;
 class MCSectionGOFF;
 class MCSectionMachO;
@@ -67,6 +68,7 @@ template <typename T> class SmallVectorImpl;
 class SMDiagnostic;
 class SMLoc;
 class SourceMgr;
+enum class EmitDwarfUnwindType;
 
 /// Context object for machine code objects.  This class owns all of the
 /// sections that it creates.
@@ -128,6 +130,7 @@ private:
   BumpPtrAllocator Allocator;
 
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
+  SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
   SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
   SpecificBumpPtrAllocator<MCSectionGOFF> GOFFAllocator;
@@ -169,10 +172,13 @@ private:
   /// for the LocalLabelVal and adds it to the map if needed.
   unsigned GetInstance(unsigned LocalLabelVal);
 
+  /// LLVM_BB_ADDR_MAP version to emit.
+  uint8_t BBAddrMapVersion = 1;
+
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
   /// directive is used or it is an error.
-  char *SecureLogFile;
+  std::string SecureLogFile;
   /// The stream that gets written to for the .secure_log_unique directive.
   std::unique_ptr<raw_fd_ostream> SecureLog;
   /// Boolean toggled when .secure_log_unique / .secure_log_reset is seen to
@@ -184,7 +190,8 @@ private:
   SmallString<128> CompilationDir;
 
   /// Prefix replacement map for source file information.
-  std::map<const std::string, const std::string> DebugPrefixMap;
+  std::map<std::string, const std::string, std::greater<std::string>>
+      DebugPrefixMap;
 
   /// The main file name if passed in explicitly.
   std::string MainFileName;
@@ -342,6 +349,7 @@ private:
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
+  StringMap<MCSectionDXContainer *> DXCUniquingMap;
   StringMap<bool> RelSecNames;
 
   SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
@@ -596,8 +604,6 @@ public:
                                     const MCSymbolELF *Group,
                                     const MCSectionELF *RelInfoSection);
 
-  void renameELFSection(MCSectionELF *Section, StringRef Name);
-
   MCSectionELF *createELFGroupSection(const MCSymbolELF *Group, bool IsComdat);
 
   void recordELFMergeableSectionInfo(StringRef SectionName, unsigned Flags,
@@ -659,6 +665,9 @@ public:
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const MCSymbolWasm *Group,
                                 unsigned UniqueID, const char *BeginSymName);
+  
+  /// Get the section for the provided Section name
+  MCSectionDXContainer *getDXContainerSection(StringRef Section, SectionKind K);
 
   bool hasXCOFFSection(StringRef Section,
                        XCOFF::CsectProperties CsectProp) const;
@@ -671,6 +680,8 @@ public:
 
   // Create and save a copy of STI and return a reference to the copy.
   MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
+
+  uint8_t getBBAddrMapVersion() const { return BBAddrMapVersion; }
 
   /// @}
 
@@ -687,6 +698,9 @@ public:
 
   /// Add an entry to the debug prefix map.
   void addDebugPrefixMapEntry(const std::string &From, const std::string &To);
+
+  /// Remap one path in-place as per the debug prefix map.
+  void remapDebugPath(SmallVectorImpl<char> &Path);
 
   // Remaps all debug directory paths in-place as per the debug prefix map.
   void RemapDebugPaths();
@@ -772,6 +786,7 @@ public:
   bool getGenDwarfForAssembly() { return GenDwarfForAssembly; }
   void setGenDwarfForAssembly(bool Value) { GenDwarfForAssembly = Value; }
   unsigned getGenDwarfFileNumber() { return GenDwarfFileNumber; }
+  EmitDwarfUnwindType emitDwarfUnwindInfo() const;
 
   void setGenDwarfFileNumber(unsigned FileNumber) {
     GenDwarfFileNumber = FileNumber;
@@ -813,7 +828,7 @@ public:
 
   /// @}
 
-  char *getSecureLogFile() { return SecureLogFile; }
+  StringRef getSecureLogFile() { return SecureLogFile; }
   raw_fd_ostream *getSecureLog() { return SecureLog.get(); }
 
   void setSecureLog(std::unique_ptr<raw_fd_ostream> Value) {

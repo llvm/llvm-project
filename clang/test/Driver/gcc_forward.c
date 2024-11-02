@@ -34,9 +34,3 @@
 // CHECK-NOT: "-Wall"
 // CHECK-NOT: "-Wdocumentation"
 // CHECK: "-o" "a.out"
-
-// Check that we're not forwarding -g options to the assembler
-// RUN: %clang -g -target x86_64-unknown-linux-gnu -no-integrated-as -c %s -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ASM %s
-// CHECK-ASM: as
-// CHECK-ASM-NOT: "-g"

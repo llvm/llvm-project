@@ -7,7 +7,7 @@
 # RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck %s
 
 # WARNING-NOT: ignoring unknown
-# WARNING: ignoring unknown debug$S subsection kind 0xFF
+# WARNING: ignoring unknown debug$S subsection kind 0x1FF
 # WARNING-NOT: ignoring unknown
 
 # CHECK:                           Symbols
@@ -43,7 +43,7 @@ ret
 	.p2align	2
 .Ltmp8:
 .Ltmp6:
-	.long	0xFF # Unknown subsection kind
+	.long	0x1FF # Unknown subsection kind
 	.long	4           # Subsection size
 	.long  0
 	.long	0x800000F1 # Unknown subsection kind

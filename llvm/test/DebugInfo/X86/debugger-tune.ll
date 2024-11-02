@@ -5,6 +5,7 @@
 
 ; Verify defaults for various targets.
 ; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
+; RUN: llc -mtriple=x86_64-sie-ps5 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
 ; RUN: llc -mtriple=x86_64-pc-freebsd -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s

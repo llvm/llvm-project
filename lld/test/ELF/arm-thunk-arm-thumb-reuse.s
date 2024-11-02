@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %t/test.s -o %t.o
 // RUN: ld.lld --script %t/script %t.o -o %t2
-// RUN: llvm-objdump --no-show-raw-insn -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t2 | FileCheck %s
 
 /// Test that we can reuse thunks between Arm and Thumb callers
 /// using a BL. Expect two thunks, one for far, one for far2.

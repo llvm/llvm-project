@@ -71,7 +71,7 @@
 ; CHECK-NEXT:   .long 3
 define i64 @test() nounwind ssp uwtable {
 entry:
-  call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 14, i8* null, i32 2, i32 1, i32 2, i64 3)
+  call anyregcc void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 14, ptr null, i32 2, i32 1, i32 2, i64 3)
   ret i64 0
 }
 
@@ -94,10 +94,10 @@ entry:
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
-define i64 @property_access1(i8* %obj) nounwind ssp uwtable {
+define i64 @property_access1(ptr %obj) nounwind ssp uwtable {
 entry:
-  %f = inttoptr i64 12297829382473034410 to i8*
-  %ret = call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 1, i32 14, i8* %f, i32 1, i8* %obj)
+  %f = inttoptr i64 12297829382473034410 to ptr
+  %ret = call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 1, i32 14, ptr %f, i32 1, ptr %obj)
   ret i64 %ret
 }
 
@@ -123,8 +123,8 @@ entry:
 define i64 @property_access2() nounwind ssp uwtable {
 entry:
   %obj = alloca i64, align 8
-  %f = inttoptr i64 12297829382473034410 to i8*
-  %ret = call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 2, i32 14, i8* %f, i32 1, i64* %obj)
+  %f = inttoptr i64 12297829382473034410 to ptr
+  %ret = call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 2, i32 14, ptr %f, i32 1, ptr %obj)
   ret i64 %ret
 }
 
@@ -150,8 +150,8 @@ entry:
 define i64 @property_access3() nounwind ssp uwtable {
 entry:
   %obj = alloca i64, align 8
-  %f = inttoptr i64 12297829382473034410 to i8*
-  %ret = call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 3, i32 14, i8* %f, i32 0, i64* %obj)
+  %f = inttoptr i64 12297829382473034410 to ptr
+  %ret = call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 3, i32 14, ptr %f, i32 0, ptr %obj)
   ret i64 %ret
 }
 
@@ -251,10 +251,10 @@ entry:
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
-define i64 @anyreg_test1(i8* %a1, i8* %a2, i8* %a3, i8* %a4, i8* %a5, i8* %a6, i8* %a7, i8* %a8, i8* %a9, i8* %a10, i8* %a11, i8* %a12) nounwind ssp uwtable {
+define i64 @anyreg_test1(ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5, ptr %a6, ptr %a7, ptr %a8, ptr %a9, ptr %a10, ptr %a11, ptr %a12) nounwind ssp uwtable {
 entry:
-  %f = inttoptr i64 12297829382473034410 to i8*
-  %ret = call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 4, i32 14, i8* %f, i32 12, i8* %a1, i8* %a2, i8* %a3, i8* %a4, i8* %a5, i8* %a6, i8* %a7, i8* %a8, i8* %a9, i8* %a10, i8* %a11, i8* %a12)
+  %f = inttoptr i64 12297829382473034410 to ptr
+  %ret = call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 4, i32 14, ptr %f, i32 12, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5, ptr %a6, ptr %a7, ptr %a8, ptr %a9, ptr %a10, ptr %a11, ptr %a12)
   ret i64 %ret
 }
 
@@ -354,10 +354,10 @@ entry:
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
-define i64 @anyreg_test2(i8* %a1, i8* %a2, i8* %a3, i8* %a4, i8* %a5, i8* %a6, i8* %a7, i8* %a8, i8* %a9, i8* %a10, i8* %a11, i8* %a12) nounwind ssp uwtable {
+define i64 @anyreg_test2(ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5, ptr %a6, ptr %a7, ptr %a8, ptr %a9, ptr %a10, ptr %a11, ptr %a12) nounwind ssp uwtable {
 entry:
-  %f = inttoptr i64 12297829382473034410 to i8*
-  %ret = call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 14, i8* %f, i32 8, i8* %a1, i8* %a2, i8* %a3, i8* %a4, i8* %a5, i8* %a6, i8* %a7, i8* %a8, i8* %a9, i8* %a10, i8* %a11, i8* %a12)
+  %f = inttoptr i64 12297829382473034410 to ptr
+  %ret = call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 14, ptr %f, i32 8, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5, ptr %a6, ptr %a7, ptr %a8, ptr %a9, ptr %a10, ptr %a11, ptr %a12)
   ret i64 %ret
 }
 
@@ -391,7 +391,7 @@ entry:
 ; CHECK-NEXT: .long  0
 define i64 @patchpoint_spilldef(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 entry:
-  %result = tail call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 12, i32 14, i8* inttoptr (i64 0 to i8*), i32 2, i64 %p1, i64 %p2)
+  %result = tail call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 12, i32 14, ptr inttoptr (i64 0 to ptr), i32 2, i64 %p1, i64 %p2)
   tail call void asm sideeffect "nopr %r0", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14}"() nounwind
   ret i64 %result
 }
@@ -441,9 +441,9 @@ entry:
 define i64 @patchpoint_spillargs(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 entry:
   tail call void asm sideeffect "nopr %r0", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14}"() nounwind
-  %result = tail call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 13, i32 14, i8* inttoptr (i64 0 to i8*), i32 2, i64 %p1, i64 %p2, i64 %p3, i64 %p4)
+  %result = tail call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 13, i32 14, ptr inttoptr (i64 0 to ptr), i32 2, i64 %p1, i64 %p2, i64 %p3, i64 %p4)
   ret i64 %result
 }
 
-declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
-declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)

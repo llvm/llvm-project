@@ -1,4 +1,4 @@
-//===--- BareMetal.h - Bare Metal Tool and ToolChain -------------*- C++ -*-===//
+//===--- BareMetal.h - Bare Metal Tool and ToolChain ------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,13 +33,9 @@ public:
 protected:
   Tool *buildLinker() const override;
 
-  std::string buildCompilerRTBasename(const llvm::opt::ArgList &Args,
-                                      StringRef Component,
-                                      FileType Type = ToolChain::FT_Static,
-                                      bool AddArch = true) const override;
-
 public:
   bool useIntegratedAs() const override { return true; }
+  bool isBareMetal() const override { return true; }
   bool isCrossCompiling() const override { return true; }
   bool isPICDefault() const override { return false; }
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
@@ -50,8 +46,6 @@ public:
 
   StringRef getOSLibName() const override { return "baremetal"; }
 
-  std::string getCompilerRTPath() const override;
-
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
   }
@@ -61,12 +55,13 @@ public:
 
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  std::string getRuntimesDir() const;
-  void AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                                 llvm::opt::ArgStringList &CC1Args) const override;
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;

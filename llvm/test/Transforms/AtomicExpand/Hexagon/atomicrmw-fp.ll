@@ -14,8 +14,7 @@ define float @test_atomicrmw_fadd_f32(float* %ptr, float %value) {
 ; CHECK-NEXT:    [[STCX:%.*]] = call i32 @llvm.hexagon.S2.storew.locked(i32* [[TMP3]], i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[STCX]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[TRYAGAIN:%.*]] = icmp ne i32 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[TRYAGAIN]], label [[ATOMICRMW_START]], label [[ATOMICRMW_END:%.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[ATOMICRMW_START]], label [[ATOMICRMW_END:%.*]]
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
@@ -36,8 +35,7 @@ define float @test_atomicrmw_fsub_f32(float* %ptr, float %value) {
 ; CHECK-NEXT:    [[STCX:%.*]] = call i32 @llvm.hexagon.S2.storew.locked(i32* [[TMP3]], i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[STCX]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[TRYAGAIN:%.*]] = icmp ne i32 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[TRYAGAIN]], label [[ATOMICRMW_START]], label [[ATOMICRMW_END:%.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[ATOMICRMW_START]], label [[ATOMICRMW_END:%.*]]
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;

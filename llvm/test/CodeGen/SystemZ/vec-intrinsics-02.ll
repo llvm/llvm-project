@@ -4,8 +4,8 @@
 
 declare <2 x i64> @llvm.s390.vbperm(<16 x i8>, <16 x i8>)
 declare <16 x i8> @llvm.s390.vmslg(<2 x i64>, <2 x i64>, <16 x i8>, i32)
-declare <16 x i8> @llvm.s390.vlrl(i32, i8 *)
-declare void @llvm.s390.vstrl(<16 x i8>, i32, i8 *)
+declare <16 x i8> @llvm.s390.vlrl(i32, ptr)
+declare void @llvm.s390.vstrl(<16 x i8>, i32, ptr)
 
 declare {<4 x i32>, i32} @llvm.s390.vfcesbs(<4 x float>, <4 x float>)
 declare {<4 x i32>, i32} @llvm.s390.vfchsbs(<4 x float>, <4 x float>)
@@ -46,176 +46,176 @@ define <16 x i8> @test_vmslg2(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c) {
 }
 
 ; VLRLR with the lowest in-range displacement.
-define <16 x i8> @test_vlrlr1(i8 *%ptr, i32 %length) {
+define <16 x i8> @test_vlrlr1(ptr %ptr, i32 %length) {
 ; CHECK-LABEL: test_vlrlr1:
 ; CHECK: vlrlr %v24, %r3, 0(%r2)
 ; CHECK: br %r14
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, i8 *%ptr)
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLRLR with the highest in-range displacement.
-define <16 x i8> @test_vlrlr2(i8 *%base, i32 %length) {
+define <16 x i8> @test_vlrlr2(ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vlrlr2:
 ; CHECK: vlrlr %v24, %r3, 4095(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4095
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4095
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLRLR with an out-of-range displacement.
-define <16 x i8> @test_vlrlr3(i8 *%base, i32 %length) {
+define <16 x i8> @test_vlrlr3(ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vlrlr3:
 ; CHECK: vlrlr %v24, %r3, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; Check that VLRLR doesn't allow an index.
-define <16 x i8> @test_vlrlr4(i8 *%base, i64 %index, i32 %length) {
+define <16 x i8> @test_vlrlr4(ptr %base, i64 %index, i32 %length) {
 ; CHECK-LABEL: test_vlrlr4:
 ; CHECK: vlrlr %v24, %r4, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 %index
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 %index
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLRL with the lowest in-range displacement.
-define <16 x i8> @test_vlrl1(i8 *%ptr) {
+define <16 x i8> @test_vlrl1(ptr %ptr) {
 ; CHECK-LABEL: test_vlrl1:
 ; CHECK: vlrl %v24, 0(%r2), 0
 ; CHECK: br %r14
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, i8 *%ptr)
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLRL with the highest in-range displacement.
-define <16 x i8> @test_vlrl2(i8 *%base) {
+define <16 x i8> @test_vlrl2(ptr %base) {
 ; CHECK-LABEL: test_vlrl2:
 ; CHECK: vlrl %v24, 4095(%r2), 0
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4095
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4095
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLRL with an out-of-range displacement.
-define <16 x i8> @test_vlrl3(i8 *%base) {
+define <16 x i8> @test_vlrl3(ptr %base) {
 ; CHECK-LABEL: test_vlrl3:
 ; CHECK: vlrl %v24, 0({{%r[1-5]}}), 0
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; Check that VLRL doesn't allow an index.
-define <16 x i8> @test_vlrl4(i8 *%base, i64 %index) {
+define <16 x i8> @test_vlrl4(ptr %base, i64 %index) {
 ; CHECK-LABEL: test_vlrl4:
 ; CHECK: vlrl %v24, 0({{%r[1-5]}}), 0
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 %index
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 %index
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 0, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLRL with length >= 15 should become VL.
-define <16 x i8> @test_vlrl5(i8 *%ptr) {
+define <16 x i8> @test_vlrl5(ptr %ptr) {
 ; CHECK-LABEL: test_vlrl5:
 ; CHECK: vl %v24, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %res = call <16 x i8> @llvm.s390.vlrl(i32 15, i8 *%ptr)
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 15, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VSTRLR with the lowest in-range displacement.
-define void @test_vstrlr1(<16 x i8> %vec, i8 *%ptr, i32 %length) {
+define void @test_vstrlr1(<16 x i8> %vec, ptr %ptr, i32 %length) {
 ; CHECK-LABEL: test_vstrlr1:
 ; CHECK: vstrlr %v24, %r3, 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; VSTRLR with the highest in-range displacement.
-define void @test_vstrlr2(<16 x i8> %vec, i8 *%base, i32 %length) {
+define void @test_vstrlr2(<16 x i8> %vec, ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vstrlr2:
 ; CHECK: vstrlr %v24, %r3, 4095(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4095
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4095
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; VSTRLR with an out-of-range displacement.
-define void @test_vstrlr3(<16 x i8> %vec, i8 *%base, i32 %length) {
+define void @test_vstrlr3(<16 x i8> %vec, ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vstrlr3:
 ; CHECK: vstrlr %v24, %r3, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; Check that VSTRLR doesn't allow an index.
-define void @test_vstrlr4(<16 x i8> %vec, i8 *%base, i64 %index, i32 %length) {
+define void @test_vstrlr4(<16 x i8> %vec, ptr %base, i64 %index, i32 %length) {
 ; CHECK-LABEL: test_vstrlr4:
 ; CHECK: vstrlr %v24, %r4, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 %index
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 %index
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; VSTRL with the lowest in-range displacement.
-define void @test_vstrl1(<16 x i8> %vec, i8 *%ptr) {
+define void @test_vstrl1(<16 x i8> %vec, ptr %ptr) {
 ; CHECK-LABEL: test_vstrl1:
 ; CHECK: vstrl %v24, 0(%r2), 8
 ; CHECK: br %r14
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, i8 *%ptr)
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, ptr %ptr)
   ret void
 }
 
 ; VSTRL with the highest in-range displacement.
-define void @test_vstrl2(<16 x i8> %vec, i8 *%base) {
+define void @test_vstrl2(<16 x i8> %vec, ptr %base) {
 ; CHECK-LABEL: test_vstrl2:
 ; CHECK: vstrl %v24, 4095(%r2), 8
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4095
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4095
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, ptr %ptr)
   ret void
 }
 
 ; VSTRL with an out-of-range displacement.
-define void @test_vstrl3(<16 x i8> %vec, i8 *%base) {
+define void @test_vstrl3(<16 x i8> %vec, ptr %base) {
 ; CHECK-LABEL: test_vstrl3:
 ; CHECK: vstrl %v24, 0({{%r[1-5]}}), 8
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, ptr %ptr)
   ret void
 }
 
 ; Check that VSTRL doesn't allow an index.
-define void @test_vstrl4(<16 x i8> %vec, i8 *%base, i64 %index) {
+define void @test_vstrl4(<16 x i8> %vec, ptr %base, i64 %index) {
 ; CHECK-LABEL: test_vstrl4:
 ; CHECK: vstrl %v24, 0({{%r[1-5]}}), 8
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 %index
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 %index
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, ptr %ptr)
   ret void
 }
 
 ; VSTRL with length >= 15 should become VST.
-define void @test_vstrl5(<16 x i8> %vec, i8 *%ptr) {
+define void @test_vstrl5(<16 x i8> %vec, ptr %ptr) {
 ; CHECK-LABEL: test_vstrl5:
 ; CHECK: vst %v24, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 15, i8 *%ptr)
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 15, ptr %ptr)
   ret void
 }
 
@@ -249,7 +249,7 @@ define i32 @test_vfcesbs_any_bool(<4 x float> %a, <4 x float> %b) {
 
 ; VFCESBS, storing to %ptr if any elements are equal.
 define <4 x i32> @test_vfcesbs_any_store(<4 x float> %a, <4 x float> %b,
-                                         i32 *%ptr) {
+                                         ptr %ptr) {
 ; CHECK-LABEL: test_vfcesbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vfcesbs %v24, %v24, %v26
@@ -264,7 +264,7 @@ define <4 x i32> @test_vfcesbs_any_store(<4 x float> %a, <4 x float> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -301,7 +301,7 @@ define i32 @test_vfchsbs_notall_bool(<4 x float> %a, <4 x float> %b) {
 
 ; VFCHSBS, storing to %ptr if not all elements are higher.
 define <4 x i32> @test_vfchsbs_notall_store(<4 x float> %a, <4 x float> %b,
-                                            i32 *%ptr) {
+                                            ptr %ptr) {
 ; CHECK-LABEL: test_vfchsbs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vfchsbs %v24, %v24, %v26
@@ -316,7 +316,7 @@ define <4 x i32> @test_vfchsbs_notall_store(<4 x float> %a, <4 x float> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -353,7 +353,7 @@ define i32 @test_vfchesbs_none_bool(<4 x float> %a, <4 x float> %b) {
 
 ; VFCHESBS, storing to %ptr if neither element is higher or equal.
 define <4 x i32> @test_vfchesbs_none_store(<4 x float> %a, <4 x float> %b,
-                                           i32 *%ptr) {
+                                           ptr %ptr) {
 ; CHECK-LABEL: test_vfchesbs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vfchesbs %v24, %v24, %v26
@@ -368,7 +368,7 @@ define <4 x i32> @test_vfchesbs_none_store(<4 x float> %a, <4 x float> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:

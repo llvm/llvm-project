@@ -1,9 +1,17 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -debug-info-kind=limited -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -DDOUBLE_BRACKET_ATTRS=1 -fdouble-square-bracket-attributes -debug-info-kind=limited -S -emit-llvm -o - %s | FileCheck %s
 
+#if DOUBLE_BRACKET_ATTRS
+#define __tag1 [[clang::btf_type_tag("tag1")]]
+#define __tag2 [[clang::btf_type_tag("tag2")]]
+#define __tag3 [[clang::btf_type_tag("tag3")]]
+#define __tag4 [[clang::btf_type_tag("tag4")]]
+#else
 #define __tag1 __attribute__((btf_type_tag("tag1")))
 #define __tag2 __attribute__((btf_type_tag("tag2")))
 #define __tag3 __attribute__((btf_type_tag("tag3")))
 #define __tag4 __attribute__((btf_type_tag("tag4")))
+#endif
 
 int __tag1 * __tag2 *foo(int __tag1 * __tag2 *arg) { return arg; }
 

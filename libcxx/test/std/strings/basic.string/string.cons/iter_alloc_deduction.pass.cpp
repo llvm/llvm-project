@@ -9,8 +9,6 @@
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // template<class InputIterator,
 //      class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
 //  basic_string(InputIterator, InputIterator, Allocator = Allocator())

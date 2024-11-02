@@ -33,7 +33,7 @@ module m2
     integer, kind :: dtypeParam = 4
     type(baseType(dtypeParam)) :: baseField
     !ERROR: KIND parameter value (343) of intrinsic type REAL did not resolve to a supported value
-    real(baseField%baseParam) :: realField
+    real(dtypeParam) :: realField
   end type dtype
 
   type(dtype) :: v1

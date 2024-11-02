@@ -122,7 +122,7 @@ ArgumentsAdjuster getInsertArgumentAdjuster(const CommandLineArguments &Extra,
 
     CommandLineArguments::iterator I;
     if (Pos == ArgumentInsertPosition::END) {
-      I = std::find(Return.begin(), Return.end(), "--");
+      I = llvm::find(Return, "--");
     } else {
       I = Return.begin();
       ++I; // To leave the program name in place

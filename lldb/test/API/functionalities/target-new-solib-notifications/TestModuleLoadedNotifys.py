@@ -3,17 +3,12 @@ Test how many times newly loaded binaries are notified;
 they should be delivered in batches instead of one-by-one.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class ModuleLoadedNotifysTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # At least DynamicLoaderDarwin and DynamicLoaderPOSIXDYLD should batch up
@@ -80,14 +75,18 @@ class ModuleLoadedNotifysTestCase(TestBase):
                     total_modules_added_events += 1
                     total_solibs_added += solib_count
                     added_files = []
-                    i = 0
-                    while i < solib_count:
+                    for i in range (solib_count):
                         module = lldb.SBTarget.GetModuleAtIndexFromEvent(i, event)
-                        self.assertTrue(module not in already_loaded_modules)
+                        # On macOS Ventura and later, dyld and the main binary
+                        # will be loaded again when dyld moves itself into the
+                        # shared cache. Use the basename so this also works
+                        # when reading dyld from the expanded shared cache.
+                        exe_basename = lldb.SBFileSpec(exe).basename
+                        if module.file.basename not in ['dyld', exe_basename]:
+                            self.assertTrue(module not in already_loaded_modules, '{} is already loaded'.format(module))
                         already_loaded_modules.append(module)
                         if self.TraceOn():
                             added_files.append(module.GetFileSpec().GetFilename())
-                        i = i + 1
                     if self.TraceOn():
                         # print all of the binaries that have been added
                         print("Loaded files: %s" % (', '.join(added_files)))
@@ -105,11 +104,11 @@ class ModuleLoadedNotifysTestCase(TestBase):
                             removed_files.append(module.GetFileSpec().GetFilename())
                             i = i + 1
                         print("Unloaded files: %s" % (', '.join(removed_files)))
-        
 
-        # This is testing that we get back a small number of events with the loaded 
-        # binaries in batches.  Check that we got back more than 1 solib per event.  
-        # In practice on Darwin today, we get back two events for a do-nothing c 
+
+        # This is testing that we get back a small number of events with the loaded
+        # binaries in batches.  Check that we got back more than 1 solib per event.
+        # In practice on Darwin today, we get back two events for a do-nothing c
         # program: a.out and dyld, and then all the rest of the system libraries.
         # On Linux we get events for ld.so, [vdso], the binary and then all libraries.
 

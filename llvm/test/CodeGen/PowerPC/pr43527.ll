@@ -54,12 +54,12 @@ bb4:                                              ; preds = %bb3
 
 bb5:                                              ; preds = %bb5, %bb4
   %tmp6 = phi i64 [ %tmp12, %bb5 ], [ 0, %bb4 ]
-  %tmp7 = getelementptr inbounds float, float* null, i64 %tmp6
-  %tmp8 = load float, float* %tmp7, align 4
+  %tmp7 = getelementptr inbounds float, ptr null, i64 %tmp6
+  %tmp8 = load float, ptr %tmp7, align 4
   %tmp9 = fpext float %tmp8 to double
   %tmp10 = tail call i64 @llvm.lrint.i64.f64(double %tmp9) #2
   %tmp11 = trunc i64 %tmp10 to i8
-  store i8 %tmp11, i8* undef, align 1
+  store i8 %tmp11, ptr undef, align 1
   %tmp12 = add nuw i64 %tmp6, 1
   %tmp13 = icmp eq i64 %tmp12, %tmp
   br i1 %tmp13, label %bb15, label %bb5

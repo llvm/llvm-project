@@ -31,6 +31,10 @@ using namespace llvm;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
+    Mode(MF.getFunction()),
+    BufferPSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
+    ImagePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
+    GWSResourcePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),
@@ -41,6 +45,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkGroupIDY(false),
     WorkGroupIDZ(false),
     WorkGroupInfo(false),
+    LDSKernelId(false),
     PrivateSegmentWaveByteOffset(false),
     WorkItemIDX(false),
     WorkItemIDY(false),
@@ -101,7 +106,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (ST.hasGFX90AInsts() &&
         ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
-        !mayUseAGPRs(MF))
+        !mayUseAGPRs(F))
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
 
@@ -140,6 +145,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (!F.hasFnAttribute("amdgpu-no-dispatch-id"))
       DispatchID = true;
+
+    if (!IsKernel && !F.hasFnAttribute("amdgpu-no-lds-kernel-id"))
+      LDSKernelId = true;
   }
 
   // FIXME: This attribute is a hack, we just need an analysis on the function
@@ -190,6 +198,13 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+}
+
+MachineFunctionInfo *SIMachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<SIMachineFunctionInfo>(*this);
 }
 
 void SIMachineFunctionInfo::limitOccupancy(const MachineFunction &MF) {
@@ -251,6 +266,12 @@ Register SIMachineFunctionInfo::addImplicitBufferPtr(const SIRegisterInfo &TRI) 
   return ArgInfo.ImplicitBufferPtr.getRegister();
 }
 
+Register SIMachineFunctionInfo::addLDSKernelId() {
+  ArgInfo.LDSKernelId = ArgDescriptor::createRegister(getNextUserSGPR());
+  NumUserSGPRs += 1;
+  return ArgInfo.LDSKernelId.getRegister();
+}
+
 bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
                                              MCPhysReg Reg) {
   for (unsigned I = 0; CSRegs[I]; ++I) {
@@ -275,7 +296,7 @@ bool SIMachineFunctionInfo::haveFreeLanesForSGPRSpill(const MachineFunction &MF,
 /// Reserve a slice of a VGPR to support spilling for FrameIndex \p FI.
 bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
                                                     int FI) {
-  std::vector<SpilledReg> &SpillLanes = SGPRToVGPRSpills[FI];
+  std::vector<SIRegisterInfo::SpilledReg> &SpillLanes = SGPRToVGPRSpills[FI];
 
   // This has already been allocated.
   if (!SpillLanes.empty())
@@ -338,7 +359,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
       LaneVGPR = SpillVGPRs.back().VGPR;
     }
 
-    SpillLanes.push_back(SpilledReg(LaneVGPR, VGPRIndex));
+    SpillLanes.push_back(SIRegisterInfo::SpilledReg(LaneVGPR, VGPRIndex));
   }
 
   return true;
@@ -551,6 +572,7 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
   Any |= convertArg(AI.KernargSegmentPtr, ArgInfo.KernargSegmentPtr);
   Any |= convertArg(AI.DispatchID, ArgInfo.DispatchID);
   Any |= convertArg(AI.FlatScratchInit, ArgInfo.FlatScratchInit);
+  Any |= convertArg(AI.LDSKernelId, ArgInfo.LDSKernelId);
   Any |= convertArg(AI.PrivateSegmentSize, ArgInfo.PrivateSegmentSize);
   Any |= convertArg(AI.WorkGroupIDX, ArgInfo.WorkGroupIDX);
   Any |= convertArg(AI.WorkGroupIDY, ArgInfo.WorkGroupIDY);
@@ -607,7 +629,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
     const yaml::SIMachineFunctionInfo &YamlMFI, const MachineFunction &MF,
     PerFunctionMIParsingState &PFS, SMDiagnostic &Error, SMRange &SourceRange) {
   ExplicitKernArgSize = YamlMFI.ExplicitKernArgSize;
-  MaxKernArgAlign = assumeAligned(YamlMFI.MaxKernArgAlign);
+  MaxKernArgAlign = YamlMFI.MaxKernArgAlign;
   LDSSize = YamlMFI.LDSSize;
   GDSSize = YamlMFI.GDSSize;
   DynLDSAlign = YamlMFI.DynLDSAlign;
@@ -642,8 +664,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   return false;
 }
 
-bool SIMachineFunctionInfo::mayUseAGPRs(const MachineFunction &MF) const {
-  for (const BasicBlock &BB : MF.getFunction()) {
+bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
+  for (const BasicBlock &BB : F) {
     for (const Instruction &I : BB) {
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB)

@@ -12,14 +12,14 @@ from lldbsuite.test import lldbutil
 
 class FoundationTestCaseString(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_NSString_expr_commands(self):
         """Test expression commands for NSString."""
         self.build()
         self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
                 self, '// Break here for NSString tests',
                 lldb.SBFileSpec('main.m', False))
+
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
         # Test_NSString:
         self.runCmd("thread backtrace")

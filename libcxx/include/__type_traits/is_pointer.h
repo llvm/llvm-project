@@ -19,9 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Before AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
-#if __has_keyword(__is_pointer) &&                                             \
-    !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1205)
+#if __has_builtin(__is_pointer)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
@@ -31,7 +29,7 @@ template <class _Tp>
 inline constexpr bool is_pointer_v = __is_pointer(_Tp);
 #endif
 
-#else // __has_keyword(__is_pointer)
+#else // __has_builtin(__is_pointer)
 
 template <class _Tp> struct __libcpp_is_pointer       : public false_type {};
 template <class _Tp> struct __libcpp_is_pointer<_Tp*> : public true_type {};
@@ -45,14 +43,14 @@ template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __unsafe_unretai
 #endif
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_pointer
-    : public __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<typename remove_cv<_Tp>::type>::type> {};
+    : public __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<__remove_cv_t<_Tp> >::type> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
 inline constexpr bool is_pointer_v = is_pointer<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_pointer)
+#endif // __has_builtin(__is_pointer)
 
 _LIBCPP_END_NAMESPACE_STD
 

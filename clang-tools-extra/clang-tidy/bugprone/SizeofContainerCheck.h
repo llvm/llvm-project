@@ -19,7 +19,7 @@ namespace bugprone {
 /// user wanted to use `.size()` instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-container.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-container.html
 class SizeofContainerCheck : public ClangTidyCheck {
 public:
   SizeofContainerCheck(StringRef Name, ClangTidyContext *Context)

@@ -164,6 +164,11 @@ public:
 
   StringRef getData() const { return Data.getData(); }
 
+  static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
+                                    DIDumpOptions DumpOpts, uint8_t Opcode,
+                                    const uint64_t Operands[2],
+                                    const MCRegisterInfo *MRI, bool isEH);
+
 private:
   DataExtractor Data;
   uint8_t AddressSize;

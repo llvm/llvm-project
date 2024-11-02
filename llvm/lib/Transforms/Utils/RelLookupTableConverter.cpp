@@ -57,11 +57,15 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
     return false;
 
   ConstantArray *Array = dyn_cast<ConstantArray>(GV.getInitializer());
-  // If values are not pointers, do not generate a relative lookup table.
-  if (!Array || !Array->getType()->getElementType()->isPointerTy())
+  if (!Array)
     return false;
 
+  // If values are not 64-bit pointers, do not generate a relative lookup table.
   const DataLayout &DL = M.getDataLayout();
+  Type *ElemType = Array->getType()->getElementType();
+  if (!ElemType->isPointerTy() || DL.getPointerTypeSizeInBits(ElemType) != 64)
+    return false;
+
   for (const Use &Op : Array->operands()) {
     Constant *ConstOp = cast<Constant>(&Op);
     GlobalValue *GVOp;

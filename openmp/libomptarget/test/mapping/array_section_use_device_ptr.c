@@ -12,7 +12,7 @@
 int main() {
   float *A = (float *)malloc(N * sizeof(float));
 
-#pragma omp target enter data map(to : A [FROM:LENGTH])
+#pragma omp target enter data map(to : A[FROM : LENGTH])
 
   // A, has been mapped starting at index FROM, but inside the use_device_ptr
   // clause it is captured by base so the library must look it up using the
@@ -21,7 +21,7 @@ int main() {
   float *A_dev = NULL;
 #pragma omp target data use_device_ptr(A)
   { A_dev = A; }
-#pragma omp target exit data map(delete : A [FROM:LENGTH])
+#pragma omp target exit data map(delete : A[FROM : LENGTH])
 
   // CHECK: Success
   if (A_dev == NULL || A_dev == A)

@@ -307,7 +307,6 @@ defm : X86WriteResPairUnsupported<WriteFMAZ>;
 defm : X86WriteResPairUnsupported<WriteDPPD>;
 defm : X86WriteResPairUnsupported<WriteDPPS>;
 defm : X86WriteResPairUnsupported<WriteDPPSY>;
-defm : X86WriteResPairUnsupported<WriteDPPSZ>;
 defm : X86WriteResPairUnsupported<WriteFBlend>;
 defm : X86WriteResPairUnsupported<WriteFBlendY>;
 defm : X86WriteResPairUnsupported<WriteFBlendZ>;

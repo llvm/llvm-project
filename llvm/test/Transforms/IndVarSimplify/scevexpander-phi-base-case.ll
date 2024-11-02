@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 define i32 @fn() {
 entry:

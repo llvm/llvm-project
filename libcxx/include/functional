@@ -482,6 +482,16 @@ template <> struct hash<long double>;
 template<class T> struct hash<T*>;
 template <> struct hash<nullptr_t>;  // C++17
 
+namespace ranges {
+  // [range.cmp], concept-constrained comparisons
+  struct equal_to;
+  struct not_equal_to;
+  struct greater;
+  struct less;
+  struct greater_equal;
+  struct less_equal;
+}
+
 }  // std
 
 POLICY:  For non-variadic implementations, the number of arguments is limited
@@ -502,6 +512,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__functional/bind_front.h>
 #include <__functional/binder1st.h>
 #include <__functional/binder2nd.h>
+#include <__functional/boyer_moore_searcher.h>
 #include <__functional/compose.h>
 #include <__functional/default_searcher.h>
 #include <__functional/function.h>
@@ -520,16 +531,20 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__functional/unary_negate.h>
 #include <__functional/unwrap_ref.h>
 #include <__utility/forward.h>
-#include <concepts>
 #include <exception>
-#include <memory>
-#include <tuple>
+#include <memory> // TODO: find out why removing this breaks the modules build
 #include <type_traits>
 #include <typeinfo>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <concepts>
+#  include <tuple>
+#  include <utility>
 #endif
 
 #endif // _LIBCPP_FUNCTIONAL

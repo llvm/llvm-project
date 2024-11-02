@@ -152,9 +152,8 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX9-LABEL: undef_lo2_v4i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0xffff0000
-; GFX9-NEXT:    v_and_or_b32 v0, v0, v2, v1
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND
@@ -178,9 +177,8 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX9-LABEL: undef_lo2_v4f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
 ; GFX9-NEXT:    ;;#ASMEND

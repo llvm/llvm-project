@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx17 %std_cxx98-14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 -std=c++17 %s
 
 template<template<typename T> class X> struct A; // expected-note 2{{previous template template parameter is here}}
 
@@ -42,7 +41,8 @@ A<::N::Z> *a10;
 
 // Do not do a digraph correction here.
 A<: :N::Z> *a11;  // expected-error{{expected expression}} \
-                     expected-error{{a type specifier is required for all declarations}}
+                     precxx17-error{{a type specifier is required for all declarations}} \
+                     cxx17-error{{expected unqualified-id}}
 
 // PR7807
 namespace N {
@@ -104,7 +104,8 @@ void foo() {
 namespace CheckDependentNonTypeParamTypes {
   template<template<typename T, typename U, T v> class X> struct A {
     void f() {
-      X<int, void*, 3> x; // expected-error {{does not refer to any declaration}}
+      X<int, void*, 3> x; // precxx17-error {{does not refer to any declaration}} \
+                             cxx17-error {{value of type 'int' is not implicitly convertible to 'void *'}}
     }
     void g() {
       X<int, long, 3> x;
@@ -123,7 +124,7 @@ namespace CheckDependentNonTypeParamTypes {
     }
   };
 
-  template<typename T, typename U, U v> struct B { // expected-note {{parameter}}
+  template<typename T, typename U, U v> struct B { // precxx17-note {{parameter}}
     static const U value = v;
   };
 

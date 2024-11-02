@@ -8,7 +8,7 @@
 ///      treated as VARARGS (in order to place arguments in both registers and
 ///      memory locations in the back end)
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple ve-linux-gnu -emit-llvm -Wno-strict-prototypes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple ve-linux-gnu -emit-llvm -Wno-strict-prototypes %s -o - | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} signext i8 @fun_si8(i8 noundef signext %a, i8 noundef signext %b) #0 {
 char fun_si8(char a, char b) {
@@ -91,6 +91,6 @@ long double __complex__ fun_qcomplex(long double __complex__ a, long double __co
 
 extern int hoge();
 void func(void) {
-  // CHECK: %call = call signext i32 (i32, i32, i32, i32, i32, i32, i32, ...) bitcast (i32 (...)* @hoge to i32 (i32, i32, i32, i32, i32, i32, i32, ...)*)(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i32 noundef signext 7)
+  // CHECK: %call = call signext i32 (i32, i32, i32, i32, i32, i32, i32, ...) @hoge(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i32 noundef signext 7)
   hoge(1, 2, 3, 4, 5, 6, 7);
 }

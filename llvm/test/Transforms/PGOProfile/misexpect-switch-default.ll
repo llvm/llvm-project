@@ -40,39 +40,37 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local void @init_arry() #0 {
 entry:
   %i = alloca i32, align 4
-  %0 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #6
-  store i32 0, i32* %i, align 4, !tbaa !4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #6
+  store i32 0, ptr %i, align 4, !tbaa !4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %1 = load i32, i32* %i, align 4, !tbaa !4
-  %cmp = icmp slt i32 %1, 25
+  %0 = load i32, ptr %i, align 4, !tbaa !4
+  %cmp = icmp slt i32 %0, 25
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
   %call = call i32 @rand() #6
   %rem = srem i32 %call, 10
-  %2 = load i32, i32* %i, align 4, !tbaa !4
-  %idxprom = sext i32 %2 to i64
-  %arrayidx = getelementptr inbounds [25 x i32], [25 x i32]* @arry, i64 0, i64 %idxprom
-  store i32 %rem, i32* %arrayidx, align 4, !tbaa !4
+  %1 = load i32, ptr %i, align 4, !tbaa !4
+  %idxprom = sext i32 %1 to i64
+  %arrayidx = getelementptr inbounds [25 x i32], ptr @arry, i64 0, i64 %idxprom
+  store i32 %rem, ptr %arrayidx, align 4, !tbaa !4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %3 = load i32, i32* %i, align 4, !tbaa !4
-  %inc = add nsw i32 %3, 1
-  store i32 %inc, i32* %i, align 4, !tbaa !4
+  %2 = load i32, ptr %i, align 4, !tbaa !4
+  %inc = add nsw i32 %2, 1
+  store i32 %inc, ptr %i, align 4, !tbaa !4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %4 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %4) #6
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #6
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -81,7 +79,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 declare dso_local i32 @rand() #3
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() #0 {
@@ -90,29 +88,26 @@ entry:
   %val = alloca i32, align 4
   %j = alloca i32, align 4
   %condition = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   call void @init_arry()
-  %0 = bitcast i32* %val to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #6
-  store i32 0, i32* %val, align 4, !tbaa !4
-  %1 = bitcast i32* %j to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %1) #6
-  store i32 0, i32* %j, align 4, !tbaa !4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %val) #6
+  store i32 0, ptr %val, align 4, !tbaa !4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %j) #6
+  store i32 0, ptr %j, align 4, !tbaa !4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %2 = load i32, i32* %j, align 4, !tbaa !4
-  %cmp = icmp slt i32 %2, 20000
+  %0 = load i32, ptr %j, align 4, !tbaa !4
+  %cmp = icmp slt i32 %0, 20000
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %3 = bitcast i32* %condition to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %3) #6
+  call void @llvm.lifetime.start.p0(i64 4, ptr %condition) #6
   %call = call i32 @rand() #6
   %rem = srem i32 %call, 5
-  store i32 %rem, i32* %condition, align 4, !tbaa !4
-  %4 = load i32, i32* %condition, align 4, !tbaa !4
-  %conv = zext i32 %4 to i64
+  store i32 %rem, ptr %condition, align 4, !tbaa !4
+  %1 = load i32, ptr %condition, align 4, !tbaa !4
+  %conv = zext i32 %1 to i64
   %expval = call i64 @llvm.expect.i64(i64 %conv, i64 6)
   switch i64 %expval, label %sw.default [
     i64 0, label %sw.bb
@@ -123,50 +118,47 @@ for.body:                                         ; preds = %for.cond
   ]
 
 sw.bb:                                            ; preds = %for.body
-  %call1 = call i32 @sum(i32* getelementptr inbounds ([25 x i32], [25 x i32]* @arry, i64 0, i64 0), i32 25)
-  %5 = load i32, i32* %val, align 4, !tbaa !4
-  %add = add nsw i32 %5, %call1
-  store i32 %add, i32* %val, align 4, !tbaa !4
+  %call1 = call i32 @sum(ptr @arry, i32 25)
+  %2 = load i32, ptr %val, align 4, !tbaa !4
+  %add = add nsw i32 %2, %call1
+  store i32 %add, ptr %val, align 4, !tbaa !4
   br label %sw.epilog
 
 sw.bb2:                                           ; preds = %for.body, %for.body, %for.body
   br label %sw.epilog
 
 sw.bb3:                                           ; preds = %for.body
-  %call4 = call i32 @random_sample(i32* getelementptr inbounds ([25 x i32], [25 x i32]* @arry, i64 0, i64 0), i32 25)
-  %6 = load i32, i32* %val, align 4, !tbaa !4
-  %add5 = add nsw i32 %6, %call4
-  store i32 %add5, i32* %val, align 4, !tbaa !4
+  %call4 = call i32 @random_sample(ptr @arry, i32 25)
+  %3 = load i32, ptr %val, align 4, !tbaa !4
+  %add5 = add nsw i32 %3, %call4
+  store i32 %add5, ptr %val, align 4, !tbaa !4
   br label %sw.epilog
 
 sw.default:                                       ; preds = %for.body
   unreachable
 
 sw.epilog:                                        ; preds = %sw.bb3, %sw.bb2, %sw.bb
-  %7 = bitcast i32* %condition to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %7) #6
+  call void @llvm.lifetime.end.p0(i64 4, ptr %condition) #6
   br label %for.inc
 
 for.inc:                                          ; preds = %sw.epilog
-  %8 = load i32, i32* %j, align 4, !tbaa !4
-  %inc = add nsw i32 %8, 1
-  store i32 %inc, i32* %j, align 4, !tbaa !4
+  %4 = load i32, ptr %j, align 4, !tbaa !4
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, ptr %j, align 4, !tbaa !4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %9 = bitcast i32* %j to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %9) #6
-  %10 = bitcast i32* %val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %10) #6
+  call void @llvm.lifetime.end.p0(i64 4, ptr %j) #6
+  call void @llvm.lifetime.end.p0(i64 4, ptr %val) #6
   ret i32 0
 }
 
 ; Function Attrs: nounwind readnone willreturn
 declare i64 @llvm.expect.i64(i64, i64) #4
 
-declare dso_local i32 @sum(i32*, i32) #5
+declare dso_local i32 @sum(ptr, i32) #5
 
-declare dso_local i32 @random_sample(i32*, i32) #5
+declare dso_local i32 @random_sample(ptr, i32) #5
 
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }

@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -S < %s | FileCheck %s
+; RUN: opt -loop-distribute -enable-loop-distribute -S < %s | FileCheck %s
 
 ; When emitting the memchecks for:
 ;

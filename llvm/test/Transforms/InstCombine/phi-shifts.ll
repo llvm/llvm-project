@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 ; OSS Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15217
-define i64 @fuzz15217(i1 %cond, i8* %Ptr, i64 %Val) {
+define i64 @fuzz15217(i1 %cond, ptr %Ptr, i64 %Val) {
 ; CHECK-LABEL: @fuzz15217(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[END:%.*]], label [[TWO:%.*]]

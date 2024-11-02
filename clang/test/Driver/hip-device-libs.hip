@@ -5,7 +5,7 @@
 // expected denormal mode.
 
 // Test subtarget with flushing on by default.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:  --cuda-gpu-arch=gfx803 \
 // RUN:  --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
@@ -13,7 +13,7 @@
 
 
 // Test subtarget with flushing off by ddefault.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:  --cuda-gpu-arch=gfx900 \
 // RUN:  --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
@@ -21,7 +21,7 @@
 
 
 // Test explicit flag, opposite of target default.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -30,7 +30,7 @@
 
 
 // Test explicit flag, opposite of target default.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -39,7 +39,7 @@
 
 
 // Test explicit flag, same as target default.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -48,7 +48,7 @@
 
 
 // Test explicit flag, same as target default.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -57,7 +57,7 @@
 
 
 // Test last flag wins, not flushing
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -65,7 +65,7 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
 
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
@@ -73,7 +73,7 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
 
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
@@ -81,7 +81,7 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
 
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
@@ -90,7 +90,7 @@
 
 
 // Test --hip-device-lib-path flag
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 -nogpuinc \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
@@ -99,13 +99,13 @@
 
 // Test environment variable HIP_DEVICE_LIB_PATH
 // RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/rocm/amdgcn/bitcode \
-// RUN:   %clang -### -target x86_64-linux-gnu \
+// RUN:   %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 -nogpuinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL
 
 // Test --gpu-instrument-lib
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   --gpu-instrument-lib=%S/Inputs/hip_multiple_inputs/instrument.bc \
@@ -113,67 +113,67 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,INST
 
 // Test -fast-math
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -ffast-math --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
 
 // Test -ffinite-math-only
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -ffinite-math-only --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
 
 // Test -funsafe-math-optimizations
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -funsafe-math-optimizations --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=UNSAFE
 
 // Test -fno-hip-fp32-correctly-rounded-divide-sqrt
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -fno-hip-fp32-correctly-rounded-divide-sqrt \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=DIVSQRT
 
 // Test default code object version.
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ABI4
 
 // Test default code object version with old device library without abi_version_400.bc
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver   \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=NOABI4
 
 // Test -mcode-object-version=3
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=3 \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ABI4
 
 // Test -mcode-object-version=4
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=4 \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ABI4
 
 // Test -mcode-object-version=4 with old device library without abi_version_400.bc
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=4 \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver   \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=NOABI4
 
 // Test -mcode-object-version=5
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=5 \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ABI5
 
 // Test -mcode-object-version=5 with old device library without abi_version_400.bc
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=5 \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver   \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \

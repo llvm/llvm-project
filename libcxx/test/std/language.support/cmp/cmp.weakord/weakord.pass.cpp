@@ -42,12 +42,10 @@ void test_signatures() {
   ASSERT_NOEXCEPT(Eq > 0);
   ASSERT_NOEXCEPT(0 >= Eq);
   ASSERT_NOEXCEPT(Eq >= 0);
-#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
   ASSERT_NOEXCEPT(0 <=> Eq);
   ASSERT_NOEXCEPT(Eq <=> 0);
   ASSERT_SAME_TYPE(decltype(Eq <=> 0), std::weak_ordering);
   ASSERT_SAME_TYPE(decltype(0 <=> Eq), std::weak_ordering);
-#endif
 }
 
 constexpr bool test_conversion() {
@@ -72,14 +70,12 @@ constexpr bool test_conversion() {
 }
 
 constexpr void test_equality() {
-#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
   auto& WeakEq = std::weak_ordering::equivalent;
   auto& PartialEq = std::partial_ordering::equivalent;
   assert(WeakEq == PartialEq);
 
   auto& StrongEq = std::strong_ordering::equal;
   assert(WeakEq == StrongEq);
-#endif
 }
 
 constexpr bool test_constexpr() {
@@ -114,7 +110,6 @@ constexpr bool test_constexpr() {
     assert((0 <= V) == (TC.ExpectGreater || TC.ExpectEq));
     assert((0 >= V) == (TC.ExpectLess || TC.ExpectEq));
   }
-#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
   {
     std::weak_ordering res = (Eq <=> 0);
     ((void)res);
@@ -169,7 +164,6 @@ constexpr bool test_constexpr() {
   }
 
   test_equality();
-#endif
 
   return true;
 }

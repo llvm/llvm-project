@@ -27,7 +27,7 @@
 //   static_assert(year_month_day{local_days{2017y/January/0}}  == 2016y/December/31);
 //   static_assert(year_month_day{local_days{2017y/January/31}} == 2017y/January/31);
 //   static_assert(year_month_day{local_days{2017y/January/32}} == 2017y/February/1);
-// —end example]
+// -end example]
 
 #include <chrono>
 #include <type_traits>

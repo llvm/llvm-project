@@ -8,7 +8,7 @@ declare void @llvm.sideeffect()
 ; CHECK: load
 ; CHECK: loop:
 ; CHECK-NOT: load
-define float @licm(i64 %n, float* nocapture readonly %p) #0 {
+define float @licm(i64 %n, ptr nocapture readonly %p) #0 {
 bb0:
   br label %loop
 
@@ -16,7 +16,7 @@ loop:
   %i = phi i64 [ 0, %bb0 ], [ %t5, %loop ]
   %sum = phi float [ 0.000000e+00, %bb0 ], [ %t4, %loop ]
   call void @llvm.sideeffect()
-  %t3 = load float, float* %p
+  %t3 = load float, ptr %p
   %t4 = fadd float %sum, %t3
   %t5 = add i64 %i, 1
   %t6 = icmp ult i64 %t5, %n

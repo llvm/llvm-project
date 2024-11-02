@@ -295,13 +295,15 @@ DynamicOpDefinition::DynamicOpDefinition(
     OperationName::PrintAssemblyFn &&printFn,
     OperationName::FoldHookFn &&foldHookFn,
     OperationName::GetCanonicalizationPatternsFn
-        &&getCanonicalizationPatternsFn)
+        &&getCanonicalizationPatternsFn,
+    OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn)
     : typeID(dialect->allocateTypeID()),
       name((dialect->getNamespace() + "." + name).str()), dialect(dialect),
       verifyFn(std::move(verifyFn)), verifyRegionFn(std::move(verifyRegionFn)),
       parseFn(std::move(parseFn)), printFn(std::move(printFn)),
       foldHookFn(std::move(foldHookFn)),
-      getCanonicalizationPatternsFn(std::move(getCanonicalizationPatternsFn)) {}
+      getCanonicalizationPatternsFn(std::move(getCanonicalizationPatternsFn)),
+      populateDefaultAttrsFn(std::move(populateDefaultAttrsFn)) {}
 
 std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
     StringRef name, ExtensibleDialect *dialect,
@@ -336,25 +338,31 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
   auto getCanonicalizationPatternsFn = [](RewritePatternSet &, MLIRContext *) {
   };
 
+  auto populateDefaultAttrsFn = [](const RegisteredOperationName &,
+                                   NamedAttrList &) {};
+
   return DynamicOpDefinition::get(name, dialect, std::move(verifyFn),
                                   std::move(verifyRegionFn), std::move(parseFn),
                                   std::move(printFn), std::move(foldHookFn),
-                                  std::move(getCanonicalizationPatternsFn));
+                                  std::move(getCanonicalizationPatternsFn),
+                                  std::move(populateDefaultAttrsFn));
 }
 
-std::unique_ptr<DynamicOpDefinition>
-DynamicOpDefinition::get(StringRef name, ExtensibleDialect *dialect,
-                         OperationName::VerifyInvariantsFn &&verifyFn,
-                         OperationName::VerifyInvariantsFn &&verifyRegionFn,
-                         OperationName::ParseAssemblyFn &&parseFn,
-                         OperationName::PrintAssemblyFn &&printFn,
-                         OperationName::FoldHookFn &&foldHookFn,
-                         OperationName::GetCanonicalizationPatternsFn
-                             &&getCanonicalizationPatternsFn) {
+std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
+    StringRef name, ExtensibleDialect *dialect,
+    OperationName::VerifyInvariantsFn &&verifyFn,
+    OperationName::VerifyInvariantsFn &&verifyRegionFn,
+    OperationName::ParseAssemblyFn &&parseFn,
+    OperationName::PrintAssemblyFn &&printFn,
+    OperationName::FoldHookFn &&foldHookFn,
+    OperationName::GetCanonicalizationPatternsFn
+        &&getCanonicalizationPatternsFn,
+    OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn) {
   return std::unique_ptr<DynamicOpDefinition>(new DynamicOpDefinition(
       name, dialect, std::move(verifyFn), std::move(verifyRegionFn),
       std::move(parseFn), std::move(printFn), std::move(foldHookFn),
-      std::move(getCanonicalizationPatternsFn)));
+      std::move(getCanonicalizationPatternsFn),
+      std::move(populateDefaultAttrsFn)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -447,7 +455,8 @@ void ExtensibleDialect::registerDynamicOp(
       std::move(op->printFn), std::move(op->verifyFn),
       std::move(op->verifyRegionFn), std::move(op->foldHookFn),
       std::move(op->getCanonicalizationPatternsFn),
-      detail::InterfaceMap::get<>(), std::move(hasTraitFn), {});
+      detail::InterfaceMap::get<>(), std::move(hasTraitFn), {},
+      std::move(op->populateDefaultAttrsFn));
 }
 
 bool ExtensibleDialect::classof(const Dialect *dialect) {
@@ -497,4 +506,85 @@ LogicalResult ExtensibleDialect::printIfDynamicAttr(Attribute attribute,
     return success();
   }
   return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// Dynamic dialect
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Interface that can only be implemented by extensible dialects.
+/// The interface is used to check if a dialect is extensible or not.
+class IsDynamicDialect : public DialectInterface::Base<IsDynamicDialect> {
+public:
+  IsDynamicDialect(Dialect *dialect) : Base(dialect) {}
+
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(IsDynamicDialect)
+};
+} // namespace
+
+DynamicDialect::DynamicDialect(StringRef name, MLIRContext *ctx)
+    : SelfOwningTypeID(),
+      ExtensibleDialect(name, ctx, SelfOwningTypeID::getTypeID()) {
+  addInterfaces<IsDynamicDialect>();
+}
+
+bool DynamicDialect::classof(const Dialect *dialect) {
+  return const_cast<Dialect *>(dialect)
+      ->getRegisteredInterface<IsDynamicDialect>();
+}
+
+Type DynamicDialect::parseType(DialectAsmParser &parser) const {
+  auto loc = parser.getCurrentLocation();
+  StringRef typeTag;
+  if (failed(parser.parseKeyword(&typeTag)))
+    return Type();
+
+  {
+    Type dynType;
+    auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
+        return dynType;
+      return Type();
+    }
+  }
+
+  parser.emitError(loc, "expected dynamic type");
+  return Type();
+}
+
+void DynamicDialect::printType(Type type, DialectAsmPrinter &printer) const {
+  auto wasDynamic = printIfDynamicType(type, printer);
+  (void)wasDynamic;
+  assert(succeeded(wasDynamic) &&
+         "non-dynamic type defined in dynamic dialect");
+}
+
+Attribute DynamicDialect::parseAttribute(DialectAsmParser &parser,
+                                         Type type) const {
+  auto loc = parser.getCurrentLocation();
+  StringRef typeTag;
+  if (failed(parser.parseKeyword(&typeTag)))
+    return Attribute();
+
+  {
+    Attribute dynAttr;
+    auto parseResult = parseOptionalDynamicAttr(typeTag, parser, dynAttr);
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
+        return dynAttr;
+      return Attribute();
+    }
+  }
+
+  parser.emitError(loc, "expected dynamic attribute");
+  return Attribute();
+}
+void DynamicDialect::printAttribute(Attribute attr,
+                                    DialectAsmPrinter &printer) const {
+  auto wasDynamic = printIfDynamicAttr(attr, printer);
+  (void)wasDynamic;
+  assert(succeeded(wasDynamic) &&
+         "non-dynamic attribute defined in dynamic dialect");
 }

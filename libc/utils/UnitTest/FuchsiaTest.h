@@ -13,4 +13,8 @@
 
 #define WITH_SIGNAL(X) #X
 
+namespace __llvm_libc::testing {
+using Test = ::zxtest::Test;
+}
+
 #endif // LLVM_LIBC_UTILS_UNITTEST_FUCHSIATEST_H

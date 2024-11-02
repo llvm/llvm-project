@@ -92,12 +92,12 @@ void TypeList::ForEach(
 }
 
 void TypeList::Dump(Stream *s, bool show_context) {
-  for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    pos->get()->Dump(s, show_context);
-  }
+  for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos)
+    if (Type *t = pos->get())
+      t->Dump(s, show_context);
 }
 
-void TypeList::RemoveMismatchedTypes(const char *qualified_typename,
+void TypeList::RemoveMismatchedTypes(llvm::StringRef qualified_typename,
                                      bool exact_match) {
   llvm::StringRef type_scope;
   llvm::StringRef type_basename;
@@ -107,13 +107,12 @@ void TypeList::RemoveMismatchedTypes(const char *qualified_typename,
     type_basename = qualified_typename;
     type_scope = "";
   }
-  return RemoveMismatchedTypes(std::string(type_scope),
-                               std::string(type_basename), type_class,
+  return RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                exact_match);
 }
 
-void TypeList::RemoveMismatchedTypes(const std::string &type_scope,
-                                     const std::string &type_basename,
+void TypeList::RemoveMismatchedTypes(llvm::StringRef type_scope,
+                                     llvm::StringRef type_basename,
                                      TypeClass type_class, bool exact_match) {
   // Our "collection" type currently is a std::map which doesn't have any good
   // way to iterate and remove items from the map so we currently just make a

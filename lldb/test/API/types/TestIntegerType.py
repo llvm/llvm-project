@@ -9,8 +9,6 @@ from lldbsuite.test.decorators import *
 
 class IntegerTypesTestCase(AbstractBase.GenericTester):
 
-    mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
     def test_int_type(self):
         """Test that int-type variables are displayed correctly."""
         self.build_and_run('int.cpp', ['int'])

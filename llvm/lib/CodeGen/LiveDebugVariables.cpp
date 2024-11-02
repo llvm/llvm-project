@@ -972,7 +972,7 @@ void UserValue::extendDef(
     if (Segment->end < Stop) {
       Stop = Segment->end;
       Kills = {Stop, {LII.first}};
-    } else if (Segment->end == Stop && Kills.hasValue()) {
+    } else if (Segment->end == Stop && Kills) {
       // If multiple locations end at the same place, track all of them in
       // Kills.
       Kills->second.push_back(LII.first);
@@ -1891,7 +1891,7 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   // insert position, insert all instructions at the same SlotIdx. They are
   // guaranteed to appear in-sequence in StashedDebugInstrs because we insert
   // them in order.
-  for (auto StashIt = StashedDebugInstrs.begin();
+  for (auto *StashIt = StashedDebugInstrs.begin();
        StashIt != StashedDebugInstrs.end(); ++StashIt) {
     SlotIndex Idx = StashIt->Idx;
     MachineBasicBlock *MBB = StashIt->MBB;

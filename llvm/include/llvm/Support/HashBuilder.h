@@ -76,7 +76,7 @@ protected:
 
   template <typename... ArgTypes>
   explicit HashBuilderBase(ArgTypes &&...Args)
-      : OptionalHasher(in_place, std::forward<ArgTypes>(Args)...),
+      : OptionalHasher(std::in_place, std::forward<ArgTypes>(Args)...),
         Hasher(*OptionalHasher) {}
 
 private:
@@ -281,7 +281,7 @@ public:
   /// add(Arg2)
   /// ```
   template <typename T, typename... Ts>
-  typename std::enable_if<(sizeof...(Ts) >= 1), HashBuilderImpl &>::type
+  std::enable_if_t<(sizeof...(Ts) >= 1), HashBuilderImpl &>
   add(const T &FirstArg, const Ts &...Args) {
     add(FirstArg);
     add(Args...);

@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tensor-to-spirv-pattern"
@@ -45,7 +44,7 @@ public:
   LogicalResult
   matchAndRewrite(tensor::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TensorType tensorType = extractOp.tensor().getType().cast<TensorType>();
+    TensorType tensorType = extractOp.getTensor().getType().cast<TensorType>();
 
     if (!tensorType.hasStaticShape())
       return rewriter.notifyMatchFailure(extractOp, "non-static tensor");
@@ -63,14 +62,18 @@ public:
       strides[i] = strides[i + 1] * tensorType.getDimSize(i + 1);
     }
 
-    Type varType = spirv::PointerType::get(adaptor.tensor().getType(),
+    Type varType = spirv::PointerType::get(adaptor.getTensor().getType(),
                                            spirv::StorageClass::Function);
 
     spirv::VariableOp varOp;
-    if (adaptor.tensor().getDefiningOp<spirv::ConstantOp>()) {
-      varOp = rewriter.create<spirv::VariableOp>(
-          loc, varType, spirv::StorageClass::Function,
-          /*initializer=*/adaptor.tensor());
+    if (adaptor.getTensor().getDefiningOp<spirv::ConstantOp>()) {
+      // We could use the initializer directly; but certain driver compilers
+      // have bugs dealing with that. So for now, use spirv.Store for
+      // initialization.
+      varOp = rewriter.create<spirv::VariableOp>(loc, varType,
+                                                 spirv::StorageClass::Function,
+                                                 /*initializer=*/nullptr);
+      rewriter.create<spirv::StoreOp>(loc, varOp, adaptor.getTensor());
     } else {
       // Need to store the value to the local variable. It's questionable
       // whether we want to support such case though.
@@ -80,7 +83,7 @@ public:
     auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto indexType = typeConverter.getIndexType();
 
-    Value index = spirv::linearizeIndex(adaptor.indices(), strides,
+    Value index = spirv::linearizeIndex(adaptor.getIndices(), strides,
                                         /*offset=*/0, indexType, loc, rewriter);
     auto acOp = rewriter.create<spirv::AccessChainOp>(loc, varOp, index);
 

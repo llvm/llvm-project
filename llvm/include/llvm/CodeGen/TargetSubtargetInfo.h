@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include <memory>
@@ -29,6 +30,7 @@ class APInt;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
+class GlobalValue;
 class InlineAsmLowering;
 class InstrItineraryData;
 struct InstrStage;
@@ -307,6 +309,14 @@ public:
   virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
                                            unsigned PhysReg) const {
     return false;
+  }
+
+  /// Classify a global function reference. This mainly used to fetch target
+  /// special flags for lowering a function address. For example mark a function
+  /// call should be plt or pc-related addressing.
+  virtual unsigned char
+  classifyGlobalFunctionReference(const GlobalValue *GV) const {
+    return 0;
   }
 };
 

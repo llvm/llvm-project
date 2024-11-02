@@ -9,19 +9,20 @@
 define dso_local <8 x i8> @test8x32(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8) {
 ; CHECK-LABEL: test8x32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addis r11, r2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    rldimi r3, r4, 32, 0
 ; CHECK-NEXT:    rldimi r5, r6, 32, 0
-; CHECK-NEXT:    addis r11, r2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    rldimi r7, r8, 32, 0
-; CHECK-NEXT:    rldimi r9, r10, 32, 0
 ; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    addi r3, r11, .LCPI0_0@toc@l
+; CHECK-NEXT:    rldimi r7, r8, 32, 0
+; CHECK-NEXT:    rldimi r9, r10, 32, 0
+; CHECK-NEXT:    lxvd2x vs3, 0, r3
 ; CHECK-NEXT:    mtfprd f1, r5
-; CHECK-NEXT:    lvx v4, 0, r3
 ; CHECK-NEXT:    mtfprd f2, r7
-; CHECK-NEXT:    mtfprd f3, r9
+; CHECK-NEXT:    mtfprd f4, r9
 ; CHECK-NEXT:    xxmrghd v2, vs1, vs0
-; CHECK-NEXT:    xxmrghd v3, vs3, vs2
+; CHECK-NEXT:    xxswapd v4, vs3
+; CHECK-NEXT:    xxmrghd v3, vs4, vs2
 ; CHECK-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-NEXT:    blr
 ;
@@ -79,13 +80,14 @@ define dso_local <4 x i16> @test4x64(i64 %i1, i64 %i2, i64 %i3, i64 %i4) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis r7, r2, .LCPI1_0@toc@ha
 ; CHECK-NEXT:    mtfprd f0, r5
+; CHECK-NEXT:    addi r5, r7, .LCPI1_0@toc@l
 ; CHECK-NEXT:    mtfprd f1, r6
+; CHECK-NEXT:    lxvd2x vs3, 0, r5
 ; CHECK-NEXT:    mtfprd f2, r3
-; CHECK-NEXT:    addi r3, r7, .LCPI1_0@toc@l
-; CHECK-NEXT:    mtfprd f3, r4
+; CHECK-NEXT:    mtfprd f4, r4
 ; CHECK-NEXT:    xxmrghd v2, vs1, vs0
-; CHECK-NEXT:    lvx v4, 0, r3
-; CHECK-NEXT:    xxmrghd v3, vs3, vs2
+; CHECK-NEXT:    xxmrghd v3, vs4, vs2
+; CHECK-NEXT:    xxswapd v4, vs3
 ; CHECK-NEXT:    vperm v2, v2, v3, v4
 ; CHECK-NEXT:    blr
 ;

@@ -151,13 +151,13 @@ define i64 @f13(i64 %a, i64 %b, i64 %c) {
 }
 
 ; Check that the shift amount uses an address register.  It cannot be in %r0.
-define i64 @f14(i64 %a, i64 *%ptr) {
+define i64 @f14(i64 %a, ptr %ptr) {
 ; CHECK-LABEL: f14:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    l %r1, 4(%r3)
 ; CHECK-NEXT:    srag %r2, %r2, 0(%r1)
 ; CHECK-NEXT:    br %r14
-  %amt = load i64, i64 *%ptr
+  %amt = load i64, ptr %ptr
   %shift = ashr i64 %a, %amt
   ret i64 %shift
 }

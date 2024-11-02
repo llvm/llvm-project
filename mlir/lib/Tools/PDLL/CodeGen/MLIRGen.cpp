@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/PDLL/CodeGen/MLIRGen.h"
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Parser/Parser.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
@@ -97,6 +97,7 @@ private:
   SmallVector<Value> genExprImpl(const ast::DeclRefExpr *expr);
   Value genExprImpl(const ast::MemberAccessExpr *expr);
   Value genExprImpl(const ast::OperationExpr *expr);
+  Value genExprImpl(const ast::RangeExpr *expr);
   SmallVector<Value> genExprImpl(const ast::TupleExpr *expr);
   Value genExprImpl(const ast::TypeExpr *expr);
 
@@ -203,7 +204,7 @@ static void checkAndNestUnderRewriteOp(OpBuilder &builder, Value rootExpr,
     pdl::RewriteOp rewrite =
         builder.create<pdl::RewriteOp>(loc, rootExpr, /*name=*/StringAttr(),
                                        /*externalArgs=*/ValueRange());
-    builder.createBlock(&rewrite.body());
+    builder.createBlock(&rewrite.getBodyRegion());
   }
 }
 
@@ -377,7 +378,8 @@ void CodeGen::applyVarConstraints(const ast::VariableDecl *varDecl,
 Value CodeGen::genSingleExpr(const ast::Expr *expr) {
   return TypeSwitch<const ast::Expr *, Value>(expr)
       .Case<const ast::AttributeExpr, const ast::MemberAccessExpr,
-            const ast::OperationExpr, const ast::TypeExpr>(
+            const ast::OperationExpr, const ast::RangeExpr,
+            const ast::TypeExpr>(
           [&](auto derivedNode) { return this->genExprImpl(derivedNode); })
       .Case<const ast::CallExpr, const ast::DeclRefExpr, const ast::TupleExpr>(
           [&](auto derivedNode) {
@@ -515,6 +517,15 @@ Value CodeGen::genExprImpl(const ast::OperationExpr *expr) {
 
   return builder.create<pdl::OperationOp>(loc, opName, operands, attrNames,
                                           attrValues, results);
+}
+
+Value CodeGen::genExprImpl(const ast::RangeExpr *expr) {
+  SmallVector<Value> elements;
+  for (const ast::Expr *element : expr->getElements())
+    llvm::append_range(elements, genExpr(element));
+
+  return builder.create<pdl::RangeOp>(genLoc(expr->getLoc()),
+                                      genType(expr->getType()), elements);
 }
 
 SmallVector<Value> CodeGen::genExprImpl(const ast::TupleExpr *expr) {

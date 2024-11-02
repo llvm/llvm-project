@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+mmx,+sse2 | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+mmx,+sse2 | FileCheck %s --check-prefix=X64
 
-define i32 @test0(<1 x i64>* %v4) nounwind {
+define i32 @test0(ptr %v4) nounwind {
 ; X32-LABEL: test0:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -18,7 +18,7 @@ define i32 @test0(<1 x i64>* %v4) nounwind {
 ; X64-NEXT:    addl $32, %eax
 ; X64-NEXT:    retq
 entry:
-  %v5 = load <1 x i64>, <1 x i64>* %v4, align 8
+  %v5 = load <1 x i64>, ptr %v4, align 8
   %v12 = bitcast <1 x i64> %v5 to <4 x i16>
   %v13 = bitcast <4 x i16> %v12 to x86_mmx
   %v14 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %v13, i8 -18)
@@ -31,7 +31,7 @@ entry:
   ret i32 %v20
 }
 
-define i32 @test1(i32* nocapture readonly %ptr) nounwind {
+define i32 @test1(ptr nocapture readonly %ptr) nounwind {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -49,7 +49,7 @@ define i32 @test1(i32* nocapture readonly %ptr) nounwind {
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %1 = insertelement <2 x i32> undef, i32 %0, i32 0
   %2 = insertelement <2 x i32> %1, i32 0, i32 1
   %3 = bitcast <2 x i32> %2 to x86_mmx
@@ -66,7 +66,7 @@ entry:
   ret i32 %12
 }
 
-define i32 @test2(i32* nocapture readonly %ptr) nounwind {
+define i32 @test2(ptr nocapture readonly %ptr) nounwind {
 ; X32-LABEL: test2:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -82,16 +82,15 @@ define i32 @test2(i32* nocapture readonly %ptr) nounwind {
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast i32* %ptr to x86_mmx*
-  %1 = load x86_mmx, x86_mmx* %0, align 8
-  %2 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %1, i8 -24)
-  %3 = bitcast x86_mmx %2 to <4 x i16>
-  %4 = bitcast <4 x i16> %3 to <1 x i64>
-  %5 = extractelement <1 x i64> %4, i32 0
-  %6 = bitcast i64 %5 to <2 x i32>
-  %7 = extractelement <2 x i32> %6, i32 0
+  %0 = load x86_mmx, ptr %ptr, align 8
+  %1 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %0, i8 -24)
+  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %3 = bitcast <4 x i16> %2 to <1 x i64>
+  %4 = extractelement <1 x i64> %3, i32 0
+  %5 = bitcast i64 %4 to <2 x i32>
+  %6 = extractelement <2 x i32> %5, i32 0
   tail call void @llvm.x86.mmx.emms()
-  ret i32 %7
+  ret i32 %6
 }
 
 define i32 @test3(x86_mmx %a) nounwind {

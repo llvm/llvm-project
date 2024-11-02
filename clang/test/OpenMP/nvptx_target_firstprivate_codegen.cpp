@@ -95,7 +95,7 @@ int foo(int n, double *ptr) {
     ptr[0]++;
   }
 
-  // TCHECK:  define weak_odr void @__omp_offloading_{{.+}}(double* noundef [[PTR_IN:%.+]])
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(double* noundef [[PTR_IN:%.+]])
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
   // TCHECK-NOT: alloca double*,
   // TCHECK:  store double* [[PTR_IN]], double** [[PTR_ADDR]],

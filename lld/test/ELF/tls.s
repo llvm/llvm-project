@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 // RUN: ld.lld %t -o %tout
 // RUN: llvm-readobj -S -l --symbols %tout | FileCheck %s
-// RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DIS
+// RUN: llvm-objdump --no-print-imm-hex -d %tout | FileCheck %s --check-prefix=DIS
 
 /// Reject local-exec TLS relocations for -shared, regardless of the preemptibility.
 // RUN: not ld.lld -shared %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR

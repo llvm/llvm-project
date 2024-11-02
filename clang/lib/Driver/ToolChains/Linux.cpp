@@ -8,6 +8,7 @@
 
 #include "Linux.h"
 #include "Arch/ARM.h"
+#include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -124,6 +125,8 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     return "powerpc64-linux-gnu";
   case llvm::Triple::ppc64le:
     return "powerpc64le-linux-gnu";
+  case llvm::Triple::riscv64:
+    return "riscv64-linux-gnu";
   case llvm::Triple::sparc:
     return "sparc-linux-gnu";
   case llvm::Triple::sparcv9:
@@ -236,24 +239,17 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // Android loader does not support .gnu.hash until API 23.
   // Hexagon linker/loader does not support .gnu.hash
   if (!IsMips && !IsHexagon) {
-    if (Distro.IsRedhat() || Distro.IsOpenSUSE() || Distro.IsAlpineLinux() ||
-        (Distro.IsUbuntu() && Distro >= Distro::UbuntuMaverick) ||
-        (IsAndroid && !Triple.isAndroidVersionLT(23)))
-      ExtraOpts.push_back("--hash-style=gnu");
-
-    if (Distro.IsDebian() || Distro.IsOpenSUSE() ||
-        Distro == Distro::UbuntuLucid || Distro == Distro::UbuntuJaunty ||
-        Distro == Distro::UbuntuKarmic ||
+    if (Distro.IsOpenSUSE() || Distro == Distro::UbuntuLucid ||
+        Distro == Distro::UbuntuJaunty || Distro == Distro::UbuntuKarmic ||
         (IsAndroid && Triple.isAndroidVersionLT(23)))
       ExtraOpts.push_back("--hash-style=both");
+    else
+      ExtraOpts.push_back("--hash-style=gnu");
   }
 
 #ifdef ENABLE_LINKER_BUILD_ID
   ExtraOpts.push_back("--build-id");
 #endif
-
-  if (IsAndroid || Distro.IsOpenSUSE())
-    ExtraOpts.push_back("--enable-new-dtags");
 
   // The selection of paths to try here is designed to match the patterns which
   // the GCC driver itself uses, as this is part of the GCC-compatible driver.
@@ -471,6 +467,22 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     Loader = HF ? "ld-linux-armhf.so.3" : "ld-linux.so.3";
     break;
   }
+  case llvm::Triple::loongarch32: {
+    LibDir = "lib32";
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
+    break;
+  }
+  case llvm::Triple::loongarch64: {
+    LibDir = "lib64";
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
+    break;
+  }
   case llvm::Triple::m68k:
     LibDir = "lib";
     Loader = "ld.so.1";
@@ -679,9 +691,13 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
-  CmdArgs.append(
-      {Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()),
-       "-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
+  CmdArgs.push_back(
+      Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()));
+
+  if (Args.hasFlag(options::OPT_offload_add_rpath,
+                   options::OPT_no_offload_add_rpath, false))
+    CmdArgs.append(
+        {"-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
 
   CmdArgs.push_back("-lamdhip64");
 }
@@ -799,4 +815,10 @@ Linux::getDefaultDenormalModeForType(const llvm::opt::ArgList &DriverArgs,
 void Linux::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   for (const auto &Opt : ExtraOpts)
     CmdArgs.push_back(Opt.c_str());
+}
+
+const char *Linux::getDefaultLinker() const {
+  if (getTriple().isAndroid())
+    return "ld.lld";
+  return Generic_ELF::getDefaultLinker();
 }

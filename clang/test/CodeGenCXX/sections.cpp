@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i686-pc-win32 -fms-extensions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i686-pc-win32 -fms-extensions -o - %s | FileCheck %s
 
 extern "C" {
 
@@ -80,7 +80,7 @@ __declspec(allocate("short_section")) short short_var = 42;
 //CHECK: @a = dso_local global i32 1, section ".data"
 //CHECK: @b = dso_local constant i32 1, section ".my_const"
 //CHECK: @[[MYSTR:.*]] = {{.*}} unnamed_addr constant [11 x i8] c"my string!\00"
-//CHECK: @s = dso_local global i8* getelementptr inbounds ([11 x i8], [11 x i8]* @[[MYSTR]], i32 0, i32 0), section ".data2"
+//CHECK: @s = dso_local global ptr @[[MYSTR]], section ".data2"
 //CHECK: @c = dso_local global i32 1, section ".my_seg"
 //CHECK: @d = dso_local global i32 1, section ".data"
 //CHECK: @e = dso_local global i32 0, section ".my_bss"

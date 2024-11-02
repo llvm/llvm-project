@@ -103,10 +103,7 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
     StringInstrMap.push_back({(i == std::string::npos) ? S : S.substr(i), II});
   }
 
-  llvm::sort(StringInstrMap,
-             [](const StringInstrPair &a, const StringInstrPair &b) -> bool {
-               return (a.first < b.first);
-             });
+  llvm::sort(StringInstrMap, llvm::less_first());
 
   for (auto &II : StringInstrMap) {
 
@@ -132,7 +129,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
   // Calculates the distance of MI from the beginning of its parent BB.
   auto getInstrIdx = [](const MachineInstr &MI) {
     unsigned i = 0;
-    for (auto &CurMI : *MI.getParent()) {
+    for (const auto &CurMI : *MI.getParent()) {
       if (&CurMI == &MI)
         return i;
       i++;
@@ -419,7 +416,7 @@ bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   VRegRenamer Renamer(MRI);
-  for (auto MBB : RPOList)
+  for (auto *MBB : RPOList)
     Changed |= runOnBasicBlock(MBB, BBNum++, Renamer);
 
   return Changed;

@@ -54,6 +54,8 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
     def test_float_literal(self):
         self.runToBreakpoint()
 
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
+
         self.expect("expr -- @123.45", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["NSNumber", "123.45"])
 
@@ -61,6 +63,8 @@ class ObjCNewSyntaxTestCaseLiteral(ObjCNewSyntaxTest):
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_expressions_in_literals(self):
         self.runToBreakpoint()
+
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
         self.expect(
             "expr --object-description -- @( 1 + 3 )",

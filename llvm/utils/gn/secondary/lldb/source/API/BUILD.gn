@@ -94,6 +94,7 @@ target(liblldb_type, "liblldb") {
     "SBThreadCollection.cpp",
     "SBThreadPlan.cpp",
     "SBTrace.cpp",
+    "SBTraceCursor.cpp",
     "SBType.cpp",
     "SBTypeCategory.cpp",
     "SBTypeEnumMember.cpp",

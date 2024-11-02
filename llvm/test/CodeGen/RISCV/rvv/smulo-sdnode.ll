@@ -6,7 +6,7 @@ declare { <vscale x 1 x i8>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i8
 define <vscale x 1 x i8> @smulo_nxv1i8(<vscale x 1 x i8> %x, <vscale x 1 x i8> %y) {
 ; CHECK-LABEL: smulo_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 7
@@ -25,7 +25,7 @@ declare { <vscale x 2 x i8>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i8
 define <vscale x 2 x i8> @smulo_nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y) {
 ; CHECK-LABEL: smulo_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 7
@@ -44,7 +44,7 @@ declare { <vscale x 4 x i8>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i8
 define <vscale x 4 x i8> @smulo_nxv4i8(<vscale x 4 x i8> %x, <vscale x 4 x i8> %y) {
 ; CHECK-LABEL: smulo_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 7
@@ -63,7 +63,7 @@ declare { <vscale x 8 x i8>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i8
 define <vscale x 8 x i8> @smulo_nxv8i8(<vscale x 8 x i8> %x, <vscale x 8 x i8> %y) {
 ; CHECK-LABEL: smulo_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 7
@@ -82,7 +82,7 @@ declare { <vscale x 16 x i8>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv1
 define <vscale x 16 x i8> @smulo_nxv16i8(<vscale x 16 x i8> %x, <vscale x 16 x i8> %y) {
 ; CHECK-LABEL: smulo_nxv16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmulh.vv v12, v8, v10
 ; CHECK-NEXT:    vmul.vv v8, v8, v10
 ; CHECK-NEXT:    vsra.vi v10, v8, 7
@@ -101,7 +101,7 @@ declare { <vscale x 32 x i8>, <vscale x 32 x i1> } @llvm.smul.with.overflow.nxv3
 define <vscale x 32 x i8> @smulo_nxv32i8(<vscale x 32 x i8> %x, <vscale x 32 x i8> %y) {
 ; CHECK-LABEL: smulo_nxv32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmulh.vv v16, v8, v12
 ; CHECK-NEXT:    vmul.vv v8, v8, v12
 ; CHECK-NEXT:    vsra.vi v12, v8, 7
@@ -120,7 +120,7 @@ declare { <vscale x 64 x i8>, <vscale x 64 x i1> } @llvm.smul.with.overflow.nxv6
 define <vscale x 64 x i8> @smulo_nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i8> %y) {
 ; CHECK-LABEL: smulo_nxv64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmulh.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
 ; CHECK-NEXT:    vsra.vi v16, v8, 7
@@ -139,7 +139,7 @@ declare { <vscale x 1 x i16>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i
 define <vscale x 1 x i16> @smulo_nxv1i16(<vscale x 1 x i16> %x, <vscale x 1 x i16> %y) {
 ; CHECK-LABEL: smulo_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 15
@@ -158,7 +158,7 @@ declare { <vscale x 2 x i16>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i
 define <vscale x 2 x i16> @smulo_nxv2i16(<vscale x 2 x i16> %x, <vscale x 2 x i16> %y) {
 ; CHECK-LABEL: smulo_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 15
@@ -177,7 +177,7 @@ declare { <vscale x 4 x i16>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i
 define <vscale x 4 x i16> @smulo_nxv4i16(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y) {
 ; CHECK-LABEL: smulo_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 15
@@ -196,7 +196,7 @@ declare { <vscale x 8 x i16>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i
 define <vscale x 8 x i16> @smulo_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
 ; CHECK-LABEL: smulo_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmulh.vv v12, v8, v10
 ; CHECK-NEXT:    vmul.vv v8, v8, v10
 ; CHECK-NEXT:    vsra.vi v10, v8, 15
@@ -215,7 +215,7 @@ declare { <vscale x 16 x i16>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv
 define <vscale x 16 x i16> @smulo_nxv16i16(<vscale x 16 x i16> %x, <vscale x 16 x i16> %y) {
 ; CHECK-LABEL: smulo_nxv16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vmulh.vv v16, v8, v12
 ; CHECK-NEXT:    vmul.vv v8, v8, v12
 ; CHECK-NEXT:    vsra.vi v12, v8, 15
@@ -234,7 +234,7 @@ declare { <vscale x 32 x i16>, <vscale x 32 x i1> } @llvm.smul.with.overflow.nxv
 define <vscale x 32 x i16> @smulo_nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 x i16> %y) {
 ; CHECK-LABEL: smulo_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmulh.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
 ; CHECK-NEXT:    vsra.vi v16, v8, 15
@@ -253,7 +253,7 @@ declare { <vscale x 1 x i32>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i
 define <vscale x 1 x i32> @smulo_nxv1i32(<vscale x 1 x i32> %x, <vscale x 1 x i32> %y) {
 ; CHECK-LABEL: smulo_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 31
@@ -272,7 +272,7 @@ declare { <vscale x 2 x i32>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i
 define <vscale x 2 x i32> @smulo_nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
 ; CHECK-LABEL: smulo_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsra.vi v9, v8, 31
@@ -291,7 +291,7 @@ declare { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i
 define <vscale x 4 x i32> @smulo_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
 ; CHECK-LABEL: smulo_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmulh.vv v12, v8, v10
 ; CHECK-NEXT:    vmul.vv v8, v8, v10
 ; CHECK-NEXT:    vsra.vi v10, v8, 31
@@ -310,7 +310,7 @@ declare { <vscale x 8 x i32>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i
 define <vscale x 8 x i32> @smulo_nxv8i32(<vscale x 8 x i32> %x, <vscale x 8 x i32> %y) {
 ; CHECK-LABEL: smulo_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmulh.vv v16, v8, v12
 ; CHECK-NEXT:    vmul.vv v8, v8, v12
 ; CHECK-NEXT:    vsra.vi v12, v8, 31
@@ -329,7 +329,7 @@ declare { <vscale x 16 x i32>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv
 define <vscale x 16 x i32> @smulo_nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 x i32> %y) {
 ; CHECK-LABEL: smulo_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmulh.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
 ; CHECK-NEXT:    vsra.vi v16, v8, 31
@@ -348,7 +348,7 @@ declare { <vscale x 1 x i64>, <vscale x 1 x i1> } @llvm.smul.with.overflow.nxv1i
 define <vscale x 1 x i64> @smulo_nxv1i64(<vscale x 1 x i64> %x, <vscale x 1 x i64> %y) {
 ; CHECK-LABEL: smulo_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmulh.vv v10, v8, v9
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    li a0, 63
@@ -368,7 +368,7 @@ declare { <vscale x 2 x i64>, <vscale x 2 x i1> } @llvm.smul.with.overflow.nxv2i
 define <vscale x 2 x i64> @smulo_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y) {
 ; CHECK-LABEL: smulo_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmulh.vv v12, v8, v10
 ; CHECK-NEXT:    vmul.vv v8, v8, v10
 ; CHECK-NEXT:    li a0, 63
@@ -388,7 +388,7 @@ declare { <vscale x 4 x i64>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i
 define <vscale x 4 x i64> @smulo_nxv4i64(<vscale x 4 x i64> %x, <vscale x 4 x i64> %y) {
 ; CHECK-LABEL: smulo_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vmulh.vv v16, v8, v12
 ; CHECK-NEXT:    vmul.vv v8, v8, v12
 ; CHECK-NEXT:    li a0, 63
@@ -408,7 +408,7 @@ declare { <vscale x 8 x i64>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i
 define <vscale x 8 x i64> @smulo_nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i64> %y) {
 ; CHECK-LABEL: smulo_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmulh.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
 ; CHECK-NEXT:    li a0, 63

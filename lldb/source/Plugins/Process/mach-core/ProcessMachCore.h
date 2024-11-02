@@ -85,7 +85,14 @@ protected:
                         lldb_private::MemoryRegionInfo &region_info) override;
 
 private:
-  bool GetDynamicLoaderAddress(lldb::addr_t addr);
+  void CreateMemoryRegions();
+  void LoadBinariesViaMetadata();
+  void LoadBinariesViaExhaustiveSearch();
+  void LoadBinariesAndSetDYLD();
+  void CleanupMemoryRegionPermissions();
+
+  bool CheckAddressForDyldOrKernel(lldb::addr_t addr, lldb::addr_t &dyld,
+                                   lldb::addr_t &kernel);
 
   enum CorefilePreference { eUserProcessCorefile, eKernelCorefile };
 

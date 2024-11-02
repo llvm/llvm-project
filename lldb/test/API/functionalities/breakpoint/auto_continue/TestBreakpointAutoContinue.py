@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class BreakpointAutoContinue(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_breakpoint_auto_continue(self):
@@ -66,7 +64,7 @@ class BreakpointAutoContinue(TestBase):
         bpno = self.make_target_and_bkpt("-N BKPT -C 'break modify --auto-continue 0 BKPT'")
         process = self.launch_it(lldb.eStateStopped)
         state = process.GetState()
-        self.assertEqual(state, lldb.eStateStopped, "Process should be stopped")
+        self.assertState(state, lldb.eStateStopped, "Process should be stopped")
         bkpt = self.target.FindBreakpointByID(bpno)
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1, "There was a thread stopped at our breakpoint")

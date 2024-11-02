@@ -16,6 +16,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Swift.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/Support/VersionTuple.h"
 
 #include <array>
@@ -178,6 +179,9 @@ protected:
   /// Section for pseudo probe information used by AutoFDO
   MCSection *PseudoProbeSection = nullptr;
   MCSection *PseudoProbeDescSection = nullptr;
+
+  // Section for metadata of llvm statistics.
+  MCSection *LLVMStatsSection = nullptr;
 
   // ELF specific sections.
   MCSection *DataRelROSection = nullptr;
@@ -359,9 +363,15 @@ public:
 
   MCSection *getBBAddrMapSection(const MCSection &TextSec) const;
 
-  MCSection *getPseudoProbeSection(const MCSection *TextSec) const;
+  MCSection *getKCFITrapSection(const MCSection &TextSec) const;
+
+  MCSection *getPseudoProbeSection(const MCSection &TextSec) const;
 
   MCSection *getPseudoProbeDescSection(StringRef FuncName) const;
+
+  MCSection *getLLVMStatsSection() const;
+
+  MCSection *getPCSection(StringRef Name, const MCSection *TextSec) const;
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }
@@ -459,6 +469,7 @@ private:
   void initSPIRVMCObjectFileInfo(const Triple &T);
   void initWasmMCObjectFileInfo(const Triple &T);
   void initXCOFFMCObjectFileInfo(const Triple &T);
+  void initDXContainerObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;
 
 public:

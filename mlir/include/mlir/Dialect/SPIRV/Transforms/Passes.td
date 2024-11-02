@@ -12,14 +12,14 @@
 include "mlir/Pass/PassBase.td"
 
 def SPIRVCompositeTypeLayout
-    : Pass<"decorate-spirv-composite-type-layout", "ModuleOp"> {
+    : Pass<"decorate-spirv-composite-type-layout", "mlir::ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
   let constructor = "mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass()";
 }
 
-def SPIRVCanonicalizeGLSL : Pass<"spirv-canonicalize-glsl", ""> {
+def SPIRVCanonicalizeGL : Pass<"spirv-canonicalize-gl", ""> {
   let summary = "Run canonicalization involving GLSL ops";
-  let constructor = "mlir::spirv::createCanonicalizeGLSLPass()";
+  let constructor = "mlir::spirv::createCanonicalizeGLPass()";
 }
 
 def SPIRVLowerABIAttributes : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
@@ -28,8 +28,8 @@ def SPIRVLowerABIAttributes : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
 }
 
 def SPIRVRewriteInsertsPass : Pass<"spirv-rewrite-inserts", "spirv::ModuleOp"> {
-  let summary = "Rewrite sequential chains of spv.CompositeInsert operations into "
-                "spv.CompositeConstruct operations";
+  let summary = "Rewrite sequential chains of spirv.CompositeInsert operations into "
+                "spirv.CompositeConstruct operations";
   let constructor = "mlir::spirv::createRewriteInsertsPass()";
 }
 
@@ -42,7 +42,7 @@ def SPIRVUnifyAliasedResourcePass
 
 def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
   let summary = "Deduce and attach minimal (version, capabilities, extensions) "
-                "requirements to spv.module ops";
+                "requirements to spirv.module ops";
   let constructor = "mlir::spirv::createUpdateVersionCapabilityExtensionPass()";
 }
 

@@ -27,6 +27,6 @@ define void @nop() nounwind {
 ; X64-NEXT:    retq
   %1 = alloca <4 x float>, align 16
   %2 = call <4 x float> asm "", "=x,~{dirflag},~{fpsr},~{flags}"()
-  store <4 x float> %2, <4 x float>* %1, align 16
+  store <4 x float> %2, ptr %1, align 16
   ret void
 }

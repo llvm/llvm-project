@@ -72,7 +72,7 @@ inline APInt operator-(APInt);
 ///     shifts are defined, but sign extension and ashr is not.  Zero bit values
 ///     compare and hash equal to themselves, and countLeadingZeros returns 0.
 ///
-class LLVM_NODISCARD APInt {
+class [[nodiscard]] APInt {
 public:
   typedef uint64_t WordType;
 
@@ -147,7 +147,7 @@ public:
   APInt(unsigned numBits, StringRef str, uint8_t radix);
 
   /// Default constructor that creates an APInt with a 1-bit zero value.
-  explicit APInt() : BitWidth(1) { U.VAL = 0; }
+  explicit APInt() { U.VAL = 0; }
 
   /// Copy Constructor.
   APInt(const APInt &that) : BitWidth(that.BitWidth) {
@@ -857,6 +857,26 @@ public:
     return R;
   }
 
+  /// relative logical shift right
+  APInt relativeLShr(int RelativeShift) const {
+    return RelativeShift > 0 ? lshr(RelativeShift) : shl(-RelativeShift);
+  }
+
+  /// relative logical shift left
+  APInt relativeLShl(int RelativeShift) const {
+    return relativeLShr(-RelativeShift);
+  }
+
+  /// relative arithmetic shift right
+  APInt relativeAShr(int RelativeShift) const {
+    return RelativeShift > 0 ? ashr(RelativeShift) : shl(-RelativeShift);
+  }
+
+  /// relative arithmetic shift left
+  APInt relativeAShl(int RelativeShift) const {
+    return relativeAShr(-RelativeShift);
+  }
+
   /// Rotate left by rotateAmt.
   APInt rotl(unsigned rotateAmt) const;
 
@@ -1260,18 +1280,6 @@ public:
   /// Make this APInt have the bit width given by \p width. The value is zero
   /// extended, truncated, or left alone to make it that width.
   APInt zextOrTrunc(unsigned width) const;
-
-  /// Truncate this APInt if necessary to ensure that its bit width is <= \p
-  /// width.
-  [[deprecated("Use trunc instead")]] APInt truncOrSelf(unsigned width) const;
-
-  /// Sign-extend this APInt if necessary to ensure that its bit width is >= \p
-  /// width.
-  [[deprecated("Use sext instead")]] APInt sextOrSelf(unsigned width) const;
-
-  /// Zero-extend this APInt if necessary to ensure that its bit width is >= \p
-  /// width.
-  [[deprecated("Use zext instead")]] APInt zextOrSelf(unsigned width) const;
 
   /// @}
   /// \name Bit Manipulation Operators
@@ -1836,7 +1844,7 @@ private:
     uint64_t *pVal; ///< Used to store the >64 bits integer value.
   } U;
 
-  unsigned BitWidth; ///< The number of bits in this APInt.
+  unsigned BitWidth = 1; ///< The number of bits in this APInt.
 
   friend struct DenseMapInfo<APInt, void>;
   friend class APSInt;
@@ -2251,12 +2259,16 @@ Optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
 /// Splat/Merge neighboring bits to widen/narrow the bitmask represented
 /// by \param A to \param NewBitWidth bits.
 ///
+/// MatchAnyBits: (Default)
 /// e.g. ScaleBitMask(0b0101, 8) -> 0b00110011
 /// e.g. ScaleBitMask(0b00011011, 4) -> 0b0111
-/// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
 ///
-/// TODO: Do we need a mode where all bits must be set when merging down?
-APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth);
+/// MatchAllBits:
+/// e.g. ScaleBitMask(0b0101, 8) -> 0b00110011
+/// e.g. ScaleBitMask(0b00011011, 4) -> 0b0001
+/// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
+APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth,
+                   bool MatchAllBits = false);
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
@@ -2275,13 +2287,13 @@ void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src, unsigned LoadBytes);
 template <> struct DenseMapInfo<APInt, void> {
   static inline APInt getEmptyKey() {
     APInt V(nullptr, 0);
-    V.U.VAL = 0;
+    V.U.VAL = ~0ULL;
     return V;
   }
 
   static inline APInt getTombstoneKey() {
     APInt V(nullptr, 0);
-    V.U.VAL = 1;
+    V.U.VAL = ~1ULL;
     return V;
   }
 

@@ -34,7 +34,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX90A-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -71,7 +71,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX90A-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 4095, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 4095, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %voffset.add = add i32 %voffset, 4095
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset.add, i32 %soffset, i32 0)
@@ -105,7 +105,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_IDXEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 4095, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_IDXEN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 4095, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 4095, i32 %soffset, i32 0)
   ret void
@@ -139,7 +139,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_IDXEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_IDXEN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
   ret void
@@ -252,7 +252,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__
   ; GFX90A-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_BOTHEN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX90A-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX90A-NEXT: {{  $}}
@@ -368,7 +368,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__
   ; GFX90A-NEXT: bb.3:
   ; GFX90A-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_IDXEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_IDXEN [[COPY7]], [[COPY8]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX90A-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX90A-NEXT: {{  $}}
@@ -415,7 +415,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX90A-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 2, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
   ret void
@@ -448,7 +448,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_IDXEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_ADD_F32_IDXEN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 2, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 2)
   ret void
@@ -485,7 +485,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX90A-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (<2 x s16>), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_PK_ADD_F16_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (<2 x s16>), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %ret = call <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -518,7 +518,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX90A-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_IDXEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store (<2 x s16>), align 1, addrspace 4)
+  ; GFX90A-NEXT:   BUFFER_ATOMIC_PK_ADD_F16_IDXEN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, implicit $exec :: (volatile dereferenceable load store (<2 x s16>), align 1, addrspace 4)
   ; GFX90A-NEXT:   S_ENDPGM 0
   %ret = call <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
   ret void

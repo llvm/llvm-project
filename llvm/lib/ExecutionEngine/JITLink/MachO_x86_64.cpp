@@ -15,7 +15,6 @@
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 
 #include "MachOLinkGraphBuilder.h"
-#include "PerGraphGOTAndPLTStubsBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -205,7 +204,7 @@ private:
 
     LLVM_DEBUG(dbgs() << "Processing relocations:\n");
 
-    for (auto &S : Obj.sections()) {
+    for (const auto &S : Obj.sections()) {
 
       orc::ExecutorAddr SectionAddress(S.getAddress());
 

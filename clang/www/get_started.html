@@ -69,9 +69,13 @@ follows:</p>
     <li><tt>cd llvm-project</tt></li>
     <li><tt>mkdir build</tt> (in-tree build is not supported)</li>
     <li><tt>cd build</tt></li>
-    <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm</tt></li>
+    <li>This builds both LLVM and Clang in release mode. Alternatively, if
+        you need a debug build, switch Release to Debug. See
+        <a href="https://llvm.org/docs/CMake.html#frequently-used-cmake-variables">frequently used cmake variables</a>
+        for more options.
+    </li>
+    <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" ../llvm</tt></li>
     <li><tt>make</tt></li>
-    <li>This builds both LLVM and Clang for debug mode.</li>
     <li>Note: For subsequent Clang development, you can just run
         <tt>make clang</tt>.</li>
     <li>CMake allows you to generate project files for several IDEs: Xcode,

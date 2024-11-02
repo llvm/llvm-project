@@ -34,9 +34,7 @@ struct AliasSummary;
 
 } // end namespace cflaa
 
-class CFLSteensAAResult : public AAResultBase<CFLSteensAAResult> {
-  friend AAResultBase<CFLSteensAAResult>;
-
+class CFLSteensAAResult : public AAResultBase {
   class FunctionInfo;
 
 public:

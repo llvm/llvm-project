@@ -3,7 +3,7 @@
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-readobj -S %t | FileCheck %s
 // RUN: llvm-readobj -S --symbols %t | FileCheck -check-prefix=SYMBOLS %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t | FileCheck --check-prefix=CODE %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t | FileCheck --check-prefix=CODE %s
 
 // Test the R_ARM_GOT_PREL relocation
  .syntax unified

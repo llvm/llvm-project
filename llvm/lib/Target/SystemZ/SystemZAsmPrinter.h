@@ -25,7 +25,6 @@ class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
 private:
-  StackMaps SM;
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
 
@@ -51,14 +50,13 @@ private:
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), SM(*this),
-        CurrentFnPPA1Sym(nullptr), CurrentFnEPMarkerSym(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer)), CurrentFnPPA1Sym(nullptr),
+        CurrentFnEPMarkerSym(nullptr) {}
 
   // Override AsmPrinter.
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
-  void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,

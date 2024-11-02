@@ -3,7 +3,7 @@
 // RUN:  -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" \
-// RUN:  --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  --dlopen=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // Note: To run this test, your CPU must support AMX.

@@ -26,6 +26,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer32";
   case Pointer32Signed:
     return "Pointer32Signed";
+  case Pointer16:
+    return "Pointer16";
   case Delta64:
     return "Delta64";
   case Delta32:
@@ -36,6 +38,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "NegDelta32";
   case Delta64FromGOT:
     return "Delta64FromGOT";
+  case PCRel32:
+    return "PCRel32";
   case BranchPCRel32:
     return "BranchPCRel32";
   case BranchPCRel32ToPtrJumpStub:

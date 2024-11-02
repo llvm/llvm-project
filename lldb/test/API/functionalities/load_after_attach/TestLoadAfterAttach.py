@@ -4,13 +4,13 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
     def test_load_after_attach(self):
         self.build()
+
+        sync_file_path = lldbutil.append_to_process_working_directory(self, "process_ready")
 
         ctx = self.platformContext
         lib_name = ctx.shlib_prefix + 'lib_b.' + ctx.shlib_extension
@@ -24,7 +24,9 @@ class TestCase(TestBase):
         # Spawn a new process.
         # use realpath to workaround llvm.org/pr48376
         # Pass path to solib for dlopen to properly locate the library.
-        popen = self.spawnSubprocess(os.path.realpath(exe), extra_env=environment)
+        popen = self.spawnSubprocess(os.path.realpath(exe), [sync_file_path],
+                extra_env=environment)
+        lldbutil.wait_for_file_on_target(self, sync_file_path)
 
         # Attach to the spawned process.
         error = lldb.SBError()

@@ -10,7 +10,7 @@
 ; CHECK-2: repeat<5>(function(mem2reg)),invalidate<all>
 
 ;; Test that we get ClassName printed when there is no ClassName to pass-name mapping (as is the case for the BitcodeWriterPass).
-; RUN: opt -o /dev/null -disable-verify -print-pipeline-passes -passes='function(mem2reg)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-3
+; RUN: opt -o /dev/null -disable-verify -print-pipeline-passes -passes='function(mem2reg)' < %s -disable-pipeline-verification | FileCheck %s --match-full-lines --check-prefixes=CHECK-3
 ; CHECK-3: function(mem2reg),BitcodeWriterPass
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-mssa(indvars))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-4
@@ -40,8 +40,8 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(early-cse<>,early-cse<memssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-12
 ; CHECK-12: function(early-cse<>,early-cse<memssa>)
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='msan-module,function(msan,msan<>,msan<recover;kernel;eager-checks;track-origins=5>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-13
-; CHECK-13: msan-module,function(msan<track-origins=0>,msan<track-origins=0>,msan<recover;kernel;eager-checks;track-origins=5>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='msan,module(msan,msan<>,msan<recover;kernel;eager-checks;track-origins=5>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-13
+; CHECK-13: msan<track-origins=0>,msan<track-origins=0>,msan<track-origins=0>,msan<recover;kernel;eager-checks;track-origins=5>
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(hwasan<>,hwasan<kernel;recover>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-14
 ; CHECK-14: hwasan<>,hwasan<kernel;recover>
@@ -79,3 +79,13 @@
 ;; Test that LICM & LNICM with options.
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-mssa(licm<allowspeculation>,licm<no-allowspeculation>,lnicm<allowspeculation>,lnicm<no-allowspeculation>))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-25
 ; CHECK-25: function(loop-mssa(licm<allowspeculation>,licm<no-allowspeculation>,lnicm<allowspeculation>,lnicm<no-allowspeculation>))
+
+;; Test coro-cond.
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='coro-cond(no-op-module)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-26
+; CHECK-26: coro-cond(no-op-module)
+
+;; Test that -print-pipeline-passes is parsable (implicitly done with -print-pipeline-passes) for various default pipelines.
+; RUN: opt -disable-output -passes='default<O0>' < %s
+; RUN: opt -disable-output -passes='default<O1>' < %s
+; RUN: opt -disable-output -passes='default<O2>' < %s
+; RUN: opt -disable-output -passes='default<O3>' < %s

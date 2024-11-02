@@ -122,9 +122,8 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | | |   `-BuiltinType [[ADDR_8:0x[a-z0-9]*]] 'float'
 // CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_9:0x[a-z0-9]*]] <col:22, col:29> col:29 implicit struct remove_reference
 // CHECK-NEXT: | | `-TypedefDecl [[ADDR_10:0x[a-z0-9]*]] <col:55, col:67> col:67 referenced type 'float':'float'
-// CHECK-NEXT: | |   `-SubstTemplateTypeParmType [[ADDR_11:0x[a-z0-9]*]] 'float' sugar
-// CHECK-NEXT: | |     |-TemplateTypeParmType [[ADDR_12:0x[a-z0-9]*]] '_Tp' dependent depth 0 index 0
-// CHECK-NEXT: | |     | `-TemplateTypeParm [[ADDR_13:0x[a-z0-9]*]] '_Tp'
+// CHECK-NEXT: | |   `-SubstTemplateTypeParmType [[ADDR_11:0x[a-z0-9]*]] 'float' sugar class depth 0 index 0 _Tp
+// CHECK-NEXT: | |     |-ClassTemplateSpecialization [[ADDR_6]] 'remove_reference'
 // CHECK-NEXT: | |     `-BuiltinType [[ADDR_8]] 'float'
 // CHECK-NEXT: | `-ClassTemplateSpecializationDecl [[ADDR_14:0x[a-z0-9]*]] <col:1, col:73> col:29 struct remove_reference definition
 // CHECK-NEXT: |   |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
@@ -139,9 +138,8 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |   |   `-BuiltinType [[ADDR_16:0x[a-z0-9]*]] 'short'
 // CHECK-NEXT: |   |-CXXRecordDecl [[ADDR_17:0x[a-z0-9]*]] <col:22, col:29> col:29 implicit struct remove_reference
 // CHECK-NEXT: |   `-TypedefDecl [[ADDR_18:0x[a-z0-9]*]] <col:55, col:67> col:67 referenced type 'short':'short'
-// CHECK-NEXT: |     `-SubstTemplateTypeParmType [[ADDR_19:0x[a-z0-9]*]] 'short' sugar
-// CHECK-NEXT: |       |-TemplateTypeParmType [[ADDR_12]] '_Tp' dependent depth 0 index 0
-// CHECK-NEXT: |       | `-TemplateTypeParm [[ADDR_13]] '_Tp'
+// CHECK-NEXT: |     `-SubstTemplateTypeParmType [[ADDR_19:0x[a-z0-9]*]] 'short' sugar class depth 0 index 0 _Tp
+// CHECK-NEXT: |       |-ClassTemplateSpecialization [[ADDR_14]] 'remove_reference'
 // CHECK-NEXT: |       `-BuiltinType [[ADDR_16]] 'short'
 // CHECK-NEXT: |-ClassTemplatePartialSpecializationDecl [[ADDR_20:0x[a-z0-9]*]] <col:1, col:73> col:29 struct remove_reference definition
 // CHECK-NEXT: | |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
@@ -154,10 +152,10 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |-TemplateArgument type 'type-parameter-0-0 &'
 // CHECK-NEXT: | | `-LValueReferenceType [[ADDR_21:0x[a-z0-9]*]] 'type-parameter-0-0 &' dependent
 // CHECK-NEXT: | |   `-TemplateTypeParmType [[ADDR_22:0x[a-z0-9]*]] 'type-parameter-0-0' dependent depth 0 index 0
-// CHECK-NEXT: | |-TemplateTypeParmDecl [[ADDR_13]] <col:11, col:17> col:17 referenced class depth 0 index 0 _Tp
+// CHECK-NEXT: | |-TemplateTypeParmDecl [[ADDR_13:0x[a-z0-9]*]] <col:11, col:17> col:17 referenced class depth 0 index 0 _Tp
 // CHECK-NEXT: | |-CXXRecordDecl [[ADDR_23:0x[a-z0-9]*]] <col:22, col:29> col:29 implicit struct remove_reference
 // CHECK-NEXT: | `-TypedefDecl [[ADDR_24:0x[a-z0-9]*]] <col:55, col:67> col:67 type '_Tp'
-// CHECK-NEXT: |   `-TemplateTypeParmType [[ADDR_12]] '_Tp' dependent depth 0 index 0
+// CHECK-NEXT: |   `-TemplateTypeParmType [[ADDR_12:0x[a-z0-9]*]] '_Tp' dependent depth 0 index 0
 // CHECK-NEXT: |     `-TemplateTypeParm [[ADDR_13]] '_Tp'
 // CHECK-NEXT: |-ClassTemplatePartialSpecializationDecl [[ADDR_25:0x[a-z0-9]*]] <line:7:1, col:74> col:29 struct remove_reference definition
 // CHECK-NEXT: | |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
@@ -197,9 +195,8 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |   |   `-ElaboratedType [[ADDR_47:0x[a-z0-9]*]] 'typename remove_reference<float &>::type' sugar
 // CHECK-NEXT: | |   |     `-TypedefType [[ADDR_48:0x[a-z0-9]*]] 'remove_reference<float &>::type' sugar
 // CHECK-NEXT: | |   |       |-Typedef [[ADDR_10]] 'type'
-// CHECK-NEXT: | |   |       `-SubstTemplateTypeParmType [[ADDR_11]] 'float' sugar
-// CHECK-NEXT: | |   |         |-TemplateTypeParmType [[ADDR_12]] '_Tp' dependent depth 0 index 0
-// CHECK-NEXT: | |   |         | `-TemplateTypeParm [[ADDR_13]] '_Tp'
+// CHECK-NEXT: | |   |       `-SubstTemplateTypeParmType [[ADDR_11]] 'float' sugar class depth 0 index 0 _Tp
+// CHECK-NEXT: | |   |         |-ClassTemplateSpecialization [[ADDR_6]] 'remove_reference'
 // CHECK-NEXT: | |   |         `-BuiltinType [[ADDR_8]] 'float'
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_49:0x[a-z0-9]*]] <line:13:3, col:33>
 // CHECK-NEXT: | |     `-CXXStaticCastExpr [[ADDR_50:0x[a-z0-9]*]] <col:10, col:33> '_Up':'float' xvalue static_cast<_Up &&> <NoOp>
@@ -215,9 +212,8 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |     |   `-ElaboratedType [[ADDR_57:0x[a-z0-9]*]] 'typename remove_reference<short &>::type' sugar
 // CHECK-NEXT: |     |     `-TypedefType [[ADDR_58:0x[a-z0-9]*]] 'remove_reference<short &>::type' sugar
 // CHECK-NEXT: |     |       |-Typedef [[ADDR_18]] 'type'
-// CHECK-NEXT: |     |       `-SubstTemplateTypeParmType [[ADDR_19]] 'short' sugar
-// CHECK-NEXT: |     |         |-TemplateTypeParmType [[ADDR_12]] '_Tp' dependent depth 0 index 0
-// CHECK-NEXT: |     |         | `-TemplateTypeParm [[ADDR_13]] '_Tp'
+// CHECK-NEXT: |     |       `-SubstTemplateTypeParmType [[ADDR_19]] 'short' sugar class depth 0 index 0 _Tp
+// CHECK-NEXT: |     |         |-ClassTemplateSpecialization [[ADDR_14]] 'remove_reference'
 // CHECK-NEXT: |     |         `-BuiltinType [[ADDR_16]] 'short'
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_59:0x[a-z0-9]*]] <line:13:3, col:33>
 // CHECK-NEXT: |       `-CXXStaticCastExpr [[ADDR_60:0x[a-z0-9]*]] <col:10, col:33> '_Up':'short' xvalue static_cast<_Up &&> <NoOp>

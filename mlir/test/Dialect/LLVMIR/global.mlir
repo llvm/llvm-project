@@ -6,16 +6,16 @@ llvm.mlir.global @default_external() : i64
 // CHECK: llvm.mlir.global external constant @default_external_constant
 llvm.mlir.global constant @default_external_constant(42) : i64
 
-// CHECK: llvm.mlir.global internal @global(42 : i64) : i64
+// CHECK: llvm.mlir.global internal @global(42 : i64) {addr_space = 0 : i32} : i64
 llvm.mlir.global internal @global(42 : i64) : i64
 
-// CHECK: llvm.mlir.global private @aligned_global(42 : i64) {aligned = 64 : i64} : i64
+// CHECK: llvm.mlir.global private @aligned_global(42 : i64) {addr_space = 0 : i32, aligned = 64 : i64} : i64
 llvm.mlir.global private @aligned_global(42 : i64) {aligned = 64} : i64
 
-// CHECK: llvm.mlir.global private constant @aligned_global_const(42 : i64) {aligned = 32 : i64} : i64
+// CHECK: llvm.mlir.global private constant @aligned_global_const(42 : i64) {addr_space = 0 : i32, aligned = 32 : i64} : i64
 llvm.mlir.global private constant @aligned_global_const(42 : i64) {aligned = 32} : i64
 
-// CHECK: llvm.mlir.global internal constant @constant(3.700000e+01 : f64) : f32
+// CHECK: llvm.mlir.global internal constant @constant(3.700000e+01 : f64) {addr_space = 0 : i32} : f32
 llvm.mlir.global internal constant @constant(37.0) : f32
 
 // CHECK: llvm.mlir.global internal constant @".string"("foobar")
@@ -27,7 +27,7 @@ llvm.mlir.global internal @string_notype("1234567")
 // CHECK: llvm.mlir.global internal @global_undef()
 llvm.mlir.global internal @global_undef() : i64
 
-// CHECK: llvm.mlir.global internal @global_mega_initializer() : i64 {
+// CHECK: llvm.mlir.global internal @global_mega_initializer() {addr_space = 0 : i32} : i64 {
 // CHECK-NEXT:  %[[c:[0-9]+]] = llvm.mlir.constant(42 : i64) : i64
 // CHECK-NEXT:  llvm.return %[[c]] : i64
 // CHECK-NEXT: }
@@ -57,9 +57,9 @@ llvm.mlir.global extern_weak @extern_weak() : i64
 llvm.mlir.global linkonce_odr @linkonce_odr() : i64
 // CHECK: llvm.mlir.global weak_odr
 llvm.mlir.global weak_odr @weak_odr() : i64
-// CHECK: llvm.mlir.global external @has_thr_local(42 : i64) {thr_local} : i64
+// CHECK: llvm.mlir.global external @has_thr_local(42 : i64) {addr_space = 0 : i32, thr_local} : i64
 llvm.mlir.global external @has_thr_local(42 : i64) {thr_local} : i64
-// CHECK: llvm.mlir.global external @has_dso_local(42 : i64) {dso_local} : i64
+// CHECK: llvm.mlir.global external @has_dso_local(42 : i64) {addr_space = 0 : i32, dso_local} : i64
 llvm.mlir.global external @has_dso_local(42 : i64) {dso_local} : i64
 // CHECK: llvm.mlir.global external @has_addr_space(32 : i64) {addr_space = 3 : i32} : i64
 llvm.mlir.global external @has_addr_space(32 : i64) {addr_space = 3: i32} : i64
@@ -81,13 +81,13 @@ func.func @references() {
   llvm.return
 }
 
-// CHECK: llvm.mlir.global private local_unnamed_addr constant @local(42 : i64) : i64
+// CHECK: llvm.mlir.global private local_unnamed_addr constant @local(42 : i64) {addr_space = 0 : i32} : i64
 llvm.mlir.global private local_unnamed_addr constant @local(42 : i64) : i64
 
-// CHECK: llvm.mlir.global private unnamed_addr constant @foo(42 : i64) : i64
+// CHECK: llvm.mlir.global private unnamed_addr constant @foo(42 : i64) {addr_space = 0 : i32} : i64
 llvm.mlir.global private unnamed_addr constant @foo(42 : i64) : i64
 
-// CHECK: llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}
+// CHECK: llvm.mlir.global internal constant @sectionvar("teststring") {addr_space = 0 : i32, section = ".mysection"}
 llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}: !llvm.array<10 x i8>
 
 // -----
@@ -155,6 +155,7 @@ func.func @foo() {
   // them to trigger the attribute type mismatch error.
   // expected-error @+1 {{invalid kind of attribute specified}}
   llvm.mlir.addressof "foo" : i64 : !llvm.ptr<func<void ()>>
+  llvm.return
 }
 
 // -----
@@ -162,6 +163,7 @@ func.func @foo() {
 func.func @foo() {
   // expected-error @+1 {{must reference a global defined by 'llvm.mlir.global'}}
   llvm.mlir.addressof @foo : !llvm.ptr<func<void ()>>
+  llvm.return
 }
 
 // -----
@@ -171,6 +173,7 @@ llvm.mlir.global internal @foo(0: i32) : i32
 func.func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referenced global}}
   llvm.mlir.addressof @foo : !llvm.ptr<i64>
+  llvm.return
 }
 
 // -----
@@ -180,6 +183,7 @@ llvm.func @foo()
 llvm.func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referenced function}}
   llvm.mlir.addressof @foo : !llvm.ptr<i8>
+  llvm.return
 }
 
 // -----
@@ -211,6 +215,7 @@ llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
 func.func @mismatch_addr_space_implicit_global() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64>
+  llvm.return
 }
 
 // -----
@@ -219,6 +224,7 @@ llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
 func.func @mismatch_addr_space() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64, 4>
+  llvm.return
 }
 // -----
 
@@ -227,6 +233,7 @@ llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
 func.func @mismatch_addr_space_opaque() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<4>
+  llvm.return
 }
 
 // -----

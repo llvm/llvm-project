@@ -14,12 +14,12 @@ entry:
 for: 
   %0 = phi i64 [ %add, %for ], [ undef, %entry ]
   %next = phi i32 [ %inc, %for ], [ undef, %entry ]
-  store i32 %next, i32* undef, align 4
+  store i32 %next, ptr undef, align 4
   %add = add i64 %0, 9223372036854775807
   %inc = add nsw i32 %next, 1
   br i1 undef, label %exit, label %for
 
 exit:
-  store i64 %add, i64* undef
+  store i64 %add, ptr undef
   ret void
 }

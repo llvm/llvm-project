@@ -24,61 +24,48 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void convert(Writer *writer, const FormatSection &to_conv) {
-  if (!to_conv.has_conv) {
-    writer->write(to_conv.raw_string, to_conv.raw_len);
-    return;
-  }
+int convert(Writer *writer, const FormatSection &to_conv) {
+  if (!to_conv.has_conv)
+    return writer->write(to_conv.raw_string);
+
   switch (to_conv.conv_name) {
   case '%':
-    writer->write("%", 1);
-    return;
+    return writer->write("%");
   case 'c':
-    convert_char(writer, to_conv);
-    return;
+    return convert_char(writer, to_conv);
   case 's':
-    convert_string(writer, to_conv);
-    return;
+    return convert_string(writer, to_conv);
   case 'd':
   case 'i':
   case 'u':
-    // convert_int(writer, to_conv);
-    return;
   case 'o':
-    // convert_oct(writer, to_conv);
-    return;
   case 'x':
   case 'X':
-    // convert_hex(writer, to_conv);
-    return;
-  // TODO(michaelrj): add a flag to disable float point values here
+    return convert_int(writer, to_conv);
+#ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
   case 'f':
   case 'F':
-    // convert_float_decimal(writer, to_conv);
-    return;
-  case 'e':
-  case 'E':
-    // convert_float_dec_exp(writer, to_conv);
-    return;
+    return convert_float_decimal(writer, to_conv);
+  // case 'e':
+  // case 'E':
+  // return convert_float_dec_exp(writer, to_conv);
   case 'a':
   case 'A':
-    // convert_float_hex_exp(writer, to_conv);
-    return;
-  case 'g':
-  case 'G':
-    // convert_float_mixed(writer, to_conv);
-    return;
-  // TODO(michaelrj): add a flag to disable writing an int here
+    return convert_float_hex_exp(writer, to_conv);
+    // case 'g':
+    // case 'G':
+    // return convert_float_mixed(writer, to_conv);
+#endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
+#ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
   case 'n':
-    // convert_write_int(writer, to_conv);
-    return;
+    return convert_write_int(writer, to_conv);
+#endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
   case 'p':
-    // convert_pointer(writer, to_conv);
-    return;
+    return convert_pointer(writer, to_conv);
   default:
-    writer->write(to_conv.raw_string, to_conv.raw_len);
-    return;
+    return writer->write(to_conv.raw_string);
   }
+  return -1;
 }
 
 } // namespace printf_core

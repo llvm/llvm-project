@@ -10,23 +10,23 @@ define void @caller() {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG:%.*]] = alloca [[CLASS_ANON:%.*]], align 8
-; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[AGG]], i32 0, i32 2
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[OFF]], i32 0, i32 0
-; CHECK-NEXT:    store i64 1, i64* [[DOTFCA_0_GEP]], align 8, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[OFF]], i32 0, i32 1
-; CHECK-NEXT:    store i64 2, i64* [[DOTFCA_1_GEP]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    call void @use(%class.anon* [[AGG]])
+; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[AGG]], i32 0, i32 2
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 0
+; CHECK-NEXT:    store i64 1, ptr [[DOTFCA_0_GEP]], align 8, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 1
+; CHECK-NEXT:    store i64 2, ptr [[DOTFCA_1_GEP]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    call void @use(ptr [[AGG]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %agg = alloca %class.anon, align 8
-  %off = getelementptr inbounds %class.anon, %class.anon* %agg, i32 0, i32 2
-  store { i64, i64 } { i64 1, i64 2 }, { i64, i64 }* %off, align 8, !tbaa !7
-  call void @use(%class.anon* %agg)
+  %off = getelementptr inbounds %class.anon, ptr %agg, i32 0, i32 2
+  store { i64, i64 } { i64 1, i64 2 }, ptr %off, align 8, !tbaa !7
+  call void @use(ptr %agg)
   ret void
 }
 
-declare void @use(%class.anon* %this)
+declare void @use(ptr %this)
 
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C++ TBAA"}

@@ -93,3 +93,24 @@ kernel void trivial_r(__global Trivial &in) {}
 #ifndef UNSAFEKERNELPARAMETER
 //expected-error@-2{{'__global Trivial &__private' cannot be used as the type of a kernel parameter}}
 #endif
+
+// Nested types and templates
+struct Outer {
+  struct Inner{
+    int i;
+  };
+};
+template<class T>
+struct OuterTempl {
+  struct Inner{
+    int i;
+  };
+};
+// FIXME: (PR58590) Use of template parameter dependent types doesn't
+// work yet due to lazy instantiation of reference types.
+//template<class T>
+//struct Templ {
+//T i;
+//};
+
+extern kernel void nested(constant Outer::Inner& r1, constant OuterTempl<int>::Inner& r2/*, constant Templ<int>& r3*/);

@@ -178,6 +178,16 @@ class Shadow {
 
 static_assert(sizeof(Shadow) == kShadowSize, "bad Shadow size");
 
+ALWAYS_INLINE RawShadow LoadShadow(RawShadow *p) {
+  return static_cast<RawShadow>(
+      atomic_load((atomic_uint32_t *)p, memory_order_relaxed));
+}
+
+ALWAYS_INLINE void StoreShadow(RawShadow *sp, RawShadow s) {
+  atomic_store((atomic_uint32_t *)sp, static_cast<u32>(s),
+               memory_order_relaxed);
+}
+
 }  // namespace __tsan
 
 #endif

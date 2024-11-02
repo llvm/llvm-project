@@ -2,13 +2,12 @@
 Test TestBase test functions.
 """
 
+import io
+
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test_event import build_exception
-import six
 
 class TestBuildMethod(Base):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         super().setUp()
@@ -17,9 +16,9 @@ class TestBuildMethod(Base):
 
     # override the parent trace method
     def trace(self, *args, **kwargs):
-        io = six.StringIO()
-        print(*args, file=io, **kwargs)
-        self._traces.append(io.getvalue())
+        buf = io.StringIO()
+        print(*args, file=buf, **kwargs)
+        self._traces.append(buf.getvalue())
 
     def test_build_fails_helpfully(self):
         try:

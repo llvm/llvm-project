@@ -7,7 +7,7 @@ declare double @fabs(double)
 
 declare double @llvm.pow.f64(double, double) nounwind readonly
 
-define void @SolveCubic_bb1(i32* %solutions, double* %x, x86_fp80 %.reload, x86_fp80 %.reload5, x86_fp80 %.reload6, double %.reload8) nounwind {
+define void @SolveCubic_bb1(ptr %solutions, ptr %x, x86_fp80 %.reload, x86_fp80 %.reload5, x86_fp80 %.reload6, double %.reload8) nounwind {
 newFuncRoot:
 	br label %bb1
 
@@ -15,7 +15,7 @@ bb1.ret.exitStub:		; preds = %bb1
 	ret void
 
 bb1:		; preds = %newFuncRoot
-	store i32 1, i32* %solutions, align 4
+	store i32 1, ptr %solutions, align 4
 	%0 = tail call double @llvm.sqrt.f64(double %.reload8)		; <double> [#uses=1]
 	%1 = fptrunc x86_fp80 %.reload6 to double		; <double> [#uses=1]
 	%2 = tail call double @fabs(double %1) nounwind readnone		; <double> [#uses=1]
@@ -32,6 +32,6 @@ bb1:		; preds = %newFuncRoot
 	%12 = fdiv x86_fp80 %.reload, 0xKC000C000000000000000		; <x86_fp80> [#uses=1]
 	%13 = fadd x86_fp80 %11, %12		; <x86_fp80> [#uses=1]
 	%14 = fptrunc x86_fp80 %13 to double		; <double> [#uses=1]
-	store double %14, double* %x, align 1
+	store double %14, ptr %x, align 1
 	br label %bb1.ret.exitStub
 }

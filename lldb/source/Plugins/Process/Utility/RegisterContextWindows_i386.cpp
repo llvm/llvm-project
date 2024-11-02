@@ -78,11 +78,11 @@ const RegisterInfo *RegisterContextWindows_i386::GetRegisterInfo() const {
 }
 
 uint32_t RegisterContextWindows_i386::GetRegisterCount() const {
-  return llvm::array_lengthof(g_register_infos_i386);
+  return std::size(g_register_infos_i386);
 }
 
 uint32_t RegisterContextWindows_i386::GetUserRegisterCount() const {
-  return llvm::array_lengthof(g_register_infos_i386);
+  return std::size(g_register_infos_i386);
 }
 
 size_t RegisterContextWindows_i386::GetGPRSize() const { return sizeof(GPR); }

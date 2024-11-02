@@ -65,6 +65,8 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -91,11 +93,13 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
@@ -105,6 +109,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -113,14 +118,17 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <numeric>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::memprof;
 using ProfileCount = Function::ProfileCount;
 using VPCandidateInfo = ValueProfileCollector::CandidateInfo;
 
@@ -135,6 +143,7 @@ STATISTIC(NumOfPGOSplit, "Number of critical edge splits.");
 STATISTIC(NumOfPGOFunc, "Number of functions having valid profile counts.");
 STATISTIC(NumOfPGOMismatch, "Number of functions having mismatch profile.");
 STATISTIC(NumOfPGOMissing, "Number of functions without profile.");
+STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
 STATISTIC(NumOfPGOICall, "Number of indirect call value instrumentations.");
 STATISTIC(NumOfCSPGOInstrument, "Number of edges instrumented in CSPGO.");
 STATISTIC(NumOfCSPGOSelectInsts,
@@ -172,14 +181,14 @@ static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
 // Command line option to set the maximum number of VP annotations to write to
 // the metadata for a single indirect call callsite.
 static cl::opt<unsigned> MaxNumAnnotations(
-    "icp-max-annotations", cl::init(3), cl::Hidden, cl::ZeroOrMore,
+    "icp-max-annotations", cl::init(3), cl::Hidden,
     cl::desc("Max number of annotations for a single indirect "
              "call callsite"));
 
 // Command line option to set the maximum number of value annotations
 // to write to the metadata for a single memop intrinsic.
 static cl::opt<unsigned> MaxNumMemOPAnnotations(
-    "memop-max-annotations", cl::init(4), cl::Hidden, cl::ZeroOrMore,
+    "memop-max-annotations", cl::init(4), cl::Hidden,
     cl::desc("Max number of preicise value annotations for a single memop"
              "intrinsic"));
 
@@ -210,12 +219,11 @@ cl::opt<bool>
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data for Comdat functions, which often turns out to be false
 // positive due to the pre-instrumentation inline.
-static cl::opt<bool>
-    NoPGOWarnMismatchComdat("no-pgo-warn-mismatch-comdat", cl::init(true),
-                            cl::Hidden,
-                            cl::desc("The option is used to turn on/off "
-                                     "warnings about hash mismatch for comdat "
-                                     "functions."));
+static cl::opt<bool> NoPGOWarnMismatchComdatWeak(
+    "no-pgo-warn-mismatch-comdat-weak", cl::init(true), cl::Hidden,
+    cl::desc("The option is used to turn on/off "
+             "warnings about hash mismatch for comdat "
+             "or weak functions."));
 
 // Command line option to enable/disable select instruction instrumentation.
 static cl::opt<bool>
@@ -255,7 +263,7 @@ static cl::opt<bool> PGOInstrumentEntry(
     cl::desc("Force to instrument function entry basicblock."));
 
 static cl::opt<bool> PGOFunctionEntryCoverage(
-    "pgo-function-entry-coverage", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    "pgo-function-entry-coverage", cl::Hidden,
     cl::desc(
         "Use this option to enable function entry coverage instrumentation."));
 
@@ -286,6 +294,24 @@ static cl::opt<unsigned> PGOVerifyBFICutoff(
     "pgo-verify-bfi-cutoff", cl::init(5), cl::Hidden,
     cl::desc("Set the threshold for pgo-verify-bfi: skip the counts whose "
              "profile count value is below."));
+
+static cl::opt<std::string> PGOTraceFuncHash(
+    "pgo-trace-func-hash", cl::init("-"), cl::Hidden,
+    cl::value_desc("function name"),
+    cl::desc("Trace the hash of the function with this name."));
+
+static cl::opt<unsigned> PGOFunctionSizeThreshold(
+    "pgo-function-size-threshold", cl::Hidden,
+    cl::desc("Do not instrument functions smaller than this threshold."));
+
+static cl::opt<bool> MatchMemProf(
+    "pgo-match-memprof", cl::init(true), cl::Hidden,
+    cl::desc("Perform matching and annotation of memprof profiles."));
+
+static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
+    "pgo-critical-edge-threshold", cl::init(20000), cl::Hidden,
+    cl::desc("Do not instrument functions with the number of critical edges "
+             " greater than this threshold."));
 
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
@@ -359,7 +385,7 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
-  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
+  IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
@@ -495,6 +521,7 @@ private:
   void renameComdatFunction();
 
 public:
+  const TargetLibraryInfo &TLI;
   std::vector<std::vector<VPCandidateInfo>> ValueSites;
   SelectInstVisitor SIVisitor;
   std::string FuncName;
@@ -533,7 +560,7 @@ public:
       BlockFrequencyInfo *BFI = nullptr, bool IsCS = false,
       bool InstrumentFuncEntry = true)
       : F(Func), IsCS(IsCS), ComdatMembers(ComdatMembers), VPC(Func, TLI),
-        ValueSites(IPVK_Last + 1), SIVisitor(Func),
+        TLI(TLI), ValueSites(IPVK_Last + 1), SIVisitor(Func),
         MST(F, InstrumentFuncEntry, BPI, BFI) {
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
@@ -630,6 +657,10 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
                       << ", High32 CRC = " << JCH.getCRC());
   }
   LLVM_DEBUG(dbgs() << ", Hash = " << FunctionHash << "\n";);
+
+  if (PGOTraceFuncHash != "-" && F.getName().contains(PGOTraceFuncHash))
+    dbgs() << "Funcname=" << F.getName() << ", Hash=" << FunctionHash
+           << " in building " << F.getParent()->getSourceFileName() << "\n";
 }
 
 // Check if we can safely rename this Comdat function.
@@ -832,8 +863,6 @@ static void instrumentOneFunc(
   auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                   FuncInfo.FunctionHash);
   if (PGOFunctionEntryCoverage) {
-    assert(!IsCS &&
-           "entry coverge does not support context-sensitive instrumentation");
     auto &EntryBB = F.getEntryBlock();
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
@@ -985,7 +1014,7 @@ struct UseBBInfo : public BBInfo {
 // Sum up the count values for all the edges.
 static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
   uint64_t Total = 0;
-  for (auto &E : Edges) {
+  for (const auto &E : Edges) {
     if (E->Removed)
       continue;
     Total += E->CountValue;
@@ -1008,7 +1037,10 @@ public:
 
   // Read counts for the instrumented BB from profile.
   bool readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
-                    bool &AllMinusOnes);
+                    InstrProfRecord::CountPseudoKind &PseudoKind);
+
+  // Read memprof data for the instrumented function from profile.
+  bool readMemprof(IndexedInstrProfReader *PGOReader);
 
   // Populate the counts for all BBs.
   void populateCounters();
@@ -1197,7 +1229,7 @@ static void annotateFunctionWithHashMismatch(Function &F,
   auto *Existing = F.getMetadata(LLVMContext::MD_annotation);
   if (Existing) {
     MDTuple *Tuple = cast<MDTuple>(Existing);
-    for (auto &N : Tuple->operands()) {
+    for (const auto &N : Tuple->operands()) {
       if (cast<MDString>(N.get())->getString() ==  MetadataName)
         return;
       Names.push_back(N.get());
@@ -1210,14 +1242,266 @@ static void annotateFunctionWithHashMismatch(Function &F,
   F.setMetadata(LLVMContext::MD_annotation, MD);
 }
 
+static void addCallsiteMetadata(Instruction &I,
+                                std::vector<uint64_t> &InlinedCallStack,
+                                LLVMContext &Ctx) {
+  I.setMetadata(LLVMContext::MD_callsite,
+                buildCallstackMetadata(InlinedCallStack, Ctx));
+}
+
+static uint64_t computeStackId(GlobalValue::GUID Function, uint32_t LineOffset,
+                               uint32_t Column) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::support::endianness::little>
+      HashBuilder;
+  HashBuilder.add(Function, LineOffset, Column);
+  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+  uint64_t Id;
+  std::memcpy(&Id, Hash.data(), sizeof(Hash));
+  return Id;
+}
+
+static uint64_t computeStackId(const memprof::Frame &Frame) {
+  return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
+}
+
+static void addCallStack(CallStackTrie &AllocTrie,
+                         const AllocationInfo *AllocInfo) {
+  SmallVector<uint64_t> StackIds;
+  for (auto StackFrame : AllocInfo->CallStack)
+    StackIds.push_back(computeStackId(StackFrame));
+  auto AllocType = getAllocType(AllocInfo->Info.getMaxAccessCount(),
+                                AllocInfo->Info.getMinSize(),
+                                AllocInfo->Info.getMinLifetime());
+  AllocTrie.addCallStack(AllocType, StackIds);
+}
+
+// Helper to compare the InlinedCallStack computed from an instruction's debug
+// info to a list of Frames from profile data (either the allocation data or a
+// callsite). For callsites, the StartIndex to use in the Frame array may be
+// non-zero.
+static bool
+stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
+                                   ArrayRef<uint64_t> InlinedCallStack,
+                                   unsigned StartIndex = 0) {
+  auto StackFrame = ProfileCallStack.begin() + StartIndex;
+  auto InlCallStackIter = InlinedCallStack.begin();
+  for (; StackFrame != ProfileCallStack.end() &&
+         InlCallStackIter != InlinedCallStack.end();
+       ++StackFrame, ++InlCallStackIter) {
+    uint64_t StackId = computeStackId(*StackFrame);
+    if (StackId != *InlCallStackIter)
+      return false;
+  }
+  // Return true if we found and matched all stack ids from the call
+  // instruction.
+  return InlCallStackIter == InlinedCallStack.end();
+}
+
+bool PGOUseFunc::readMemprof(IndexedInstrProfReader *PGOReader) {
+  if (!MatchMemProf)
+    return true;
+
+  auto &Ctx = M->getContext();
+
+  auto FuncGUID = Function::getGUID(FuncInfo.FuncName);
+  Expected<memprof::MemProfRecord> MemProfResult =
+      PGOReader->getMemProfRecord(FuncGUID);
+  if (Error E = MemProfResult.takeError()) {
+    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
+      auto Err = IPE.get();
+      bool SkipWarning = false;
+      LLVM_DEBUG(dbgs() << "Error in reading profile for Func "
+                        << FuncInfo.FuncName << ": ");
+      if (Err == instrprof_error::unknown_function) {
+        NumOfMemProfMissing++;
+        SkipWarning = !PGOWarnMissing;
+        LLVM_DEBUG(dbgs() << "unknown function");
+      } else if (Err == instrprof_error::hash_mismatch) {
+        SkipWarning =
+            NoPGOWarnMismatch ||
+            (NoPGOWarnMismatchComdatWeak &&
+             (F.hasComdat() ||
+              F.getLinkage() == GlobalValue::AvailableExternallyLinkage));
+        LLVM_DEBUG(dbgs() << "hash mismatch (skip=" << SkipWarning << ")");
+      }
+
+      if (SkipWarning)
+        return;
+
+      std::string Msg =
+          (IPE.message() + Twine(" ") + F.getName().str() + Twine(" Hash = ") +
+           std::to_string(FuncInfo.FunctionHash))
+              .str();
+
+      Ctx.diagnose(
+          DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
+    });
+    return false;
+  }
+
+  // Build maps of the location hash to all profile data with that leaf location
+  // (allocation info and the callsites).
+  std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
+  // For the callsites we need to record the index of the associated frame in
+  // the frame array (see comments below where the map entries are added).
+  std::map<uint64_t, std::set<std::pair<const SmallVector<Frame> *, unsigned>>>
+      LocHashToCallSites;
+  const auto MemProfRec = std::move(MemProfResult.get());
+  for (auto &AI : MemProfRec.AllocSites) {
+    // Associate the allocation info with the leaf frame. The later matching
+    // code will match any inlined call sequences in the IR with a longer prefix
+    // of call stack frames.
+    uint64_t StackId = computeStackId(AI.CallStack[0]);
+    LocHashToAllocInfo[StackId].insert(&AI);
+  }
+  for (auto &CS : MemProfRec.CallSites) {
+    // Need to record all frames from leaf up to and including this function,
+    // as any of these may or may not have been inlined at this point.
+    unsigned Idx = 0;
+    for (auto &StackFrame : CS) {
+      uint64_t StackId = computeStackId(StackFrame);
+      LocHashToCallSites[StackId].insert(std::make_pair(&CS, Idx++));
+      // Once we find this function, we can stop recording.
+      if (StackFrame.Function == FuncGUID)
+        break;
+    }
+    assert(Idx <= CS.size() && CS[Idx - 1].Function == FuncGUID);
+  }
+
+  auto GetOffset = [](const DILocation *DIL) {
+    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+           0xffff;
+  };
+
+  // Now walk the instructions, looking up the associated profile data using
+  // dbug locations.
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      if (I.isDebugOrPseudoInst())
+        continue;
+      // We are only interested in calls (allocation or interior call stack
+      // context calls).
+      auto *CI = dyn_cast<CallBase>(&I);
+      if (!CI)
+        continue;
+      auto *CalledFunction = CI->getCalledFunction();
+      if (CalledFunction && CalledFunction->isIntrinsic())
+        continue;
+      // List of call stack ids computed from the location hashes on debug
+      // locations (leaf to inlined at root).
+      std::vector<uint64_t> InlinedCallStack;
+      // Was the leaf location found in one of the profile maps?
+      bool LeafFound = false;
+      // If leaf was found in a map, iterators pointing to its location in both
+      // of the maps. It might exist in neither, one, or both (the latter case
+      // can happen because we don't currently have discriminators to
+      // distinguish the case when a single line/col maps to both an allocation
+      // and another callsite).
+      std::map<uint64_t, std::set<const AllocationInfo *>>::iterator
+          AllocInfoIter;
+      std::map<uint64_t, std::set<std::pair<const SmallVector<Frame> *,
+                                            unsigned>>>::iterator CallSitesIter;
+      for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
+           DIL = DIL->getInlinedAt()) {
+        // Use C++ linkage name if possible. Need to compile with
+        // -fdebug-info-for-profiling to get linkage name.
+        StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
+        if (Name.empty())
+          Name = DIL->getScope()->getSubprogram()->getName();
+        auto CalleeGUID = Function::getGUID(Name);
+        auto StackId =
+            computeStackId(CalleeGUID, GetOffset(DIL), DIL->getColumn());
+        // LeafFound will only be false on the first iteration, since we either
+        // set it true or break out of the loop below.
+        if (!LeafFound) {
+          AllocInfoIter = LocHashToAllocInfo.find(StackId);
+          CallSitesIter = LocHashToCallSites.find(StackId);
+          // Check if the leaf is in one of the maps. If not, no need to look
+          // further at this call.
+          if (AllocInfoIter == LocHashToAllocInfo.end() &&
+              CallSitesIter == LocHashToCallSites.end())
+            break;
+          LeafFound = true;
+        }
+        InlinedCallStack.push_back(StackId);
+      }
+      // If leaf not in either of the maps, skip inst.
+      if (!LeafFound)
+        continue;
+
+      // First add !memprof metadata from allocation info, if we found the
+      // instruction's leaf location in that map, and if the rest of the
+      // instruction's locations match the prefix Frame locations on an
+      // allocation context with the same leaf.
+      if (AllocInfoIter != LocHashToAllocInfo.end()) {
+        // Only consider allocations via new, to reduce unnecessary metadata,
+        // since those are the only allocations that will be targeted initially.
+        if (!isNewLikeFn(CI, &FuncInfo.TLI))
+          continue;
+        // We may match this instruction's location list to multiple MIB
+        // contexts. Add them to a Trie specialized for trimming the contexts to
+        // the minimal needed to disambiguate contexts with unique behavior.
+        CallStackTrie AllocTrie;
+        for (auto *AllocInfo : AllocInfoIter->second) {
+          // Check the full inlined call stack against this one.
+          // If we found and thus matched all frames on the call, include
+          // this MIB.
+          if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
+                                                 InlinedCallStack))
+            addCallStack(AllocTrie, AllocInfo);
+        }
+        // We might not have matched any to the full inlined call stack.
+        // But if we did, create and attach metadata, or a function attribute if
+        // all contexts have identical profiled behavior.
+        if (!AllocTrie.empty()) {
+          // MemprofMDAttached will be false if a function attribute was
+          // attached.
+          bool MemprofMDAttached = AllocTrie.buildAndAttachMIBMetadata(CI);
+          assert(MemprofMDAttached == I.hasMetadata(LLVMContext::MD_memprof));
+          if (MemprofMDAttached) {
+            // Add callsite metadata for the instruction's location list so that
+            // it simpler later on to identify which part of the MIB contexts
+            // are from this particular instruction (including during inlining,
+            // when the callsite metdata will be updated appropriately).
+            // FIXME: can this be changed to strip out the matching stack
+            // context ids from the MIB contexts and not add any callsite
+            // metadata here to save space?
+            addCallsiteMetadata(I, InlinedCallStack, Ctx);
+          }
+        }
+        continue;
+      }
+
+      // Otherwise, add callsite metadata. If we reach here then we found the
+      // instruction's leaf location in the callsites map and not the allocation
+      // map.
+      assert(CallSitesIter != LocHashToCallSites.end());
+      for (auto CallStackIdx : CallSitesIter->second) {
+        // If we found and thus matched all frames on the call, create and
+        // attach call stack metadata.
+        if (stackFrameIncludesInlinedCallStack(
+                *CallStackIdx.first, InlinedCallStack, CallStackIdx.second)) {
+          addCallsiteMetadata(I, InlinedCallStack, Ctx);
+          // Only need to find one with a matching call stack and add a single
+          // callsite metadata.
+          break;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
 // Read the profile from ProfileFileName and assign the value to the
 // instrumented BB and the edges. This function also updates ProgramMaxCount.
 // Return true if the profile are successfully read, and false on errors.
 bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
-                              bool &AllMinusOnes) {
+                              InstrProfRecord::CountPseudoKind &PseudoKind) {
   auto &Ctx = M->getContext();
-  Expected<InstrProfRecord> Result =
-      PGOReader->getInstrProfRecord(FuncInfo.FuncName, FuncInfo.FunctionHash);
+  uint64_t MismatchedFuncSum = 0;
+  Expected<InstrProfRecord> Result = PGOReader->getInstrProfRecord(
+      FuncInfo.FuncName, FuncInfo.FunctionHash, &MismatchedFuncSum);
   if (Error E = Result.takeError()) {
     handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
       auto Err = IPE.get();
@@ -1233,10 +1517,11 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
         IsCS ? NumOfCSPGOMismatch++ : NumOfPGOMismatch++;
         SkipWarning =
             NoPGOWarnMismatch ||
-            (NoPGOWarnMismatchComdat &&
-             (F.hasComdat() ||
+            (NoPGOWarnMismatchComdatWeak &&
+             (F.hasComdat() || F.getLinkage() == GlobalValue::WeakAnyLinkage ||
               F.getLinkage() == GlobalValue::AvailableExternallyLinkage));
-        LLVM_DEBUG(dbgs() << "hash mismatch (skip=" << SkipWarning << ")");
+        LLVM_DEBUG(dbgs() << "hash mismatch (hash= " << FuncInfo.FunctionHash
+                          << " skip=" << SkipWarning << ")");
         // Emit function metadata indicating PGO profile mismatch.
         annotateFunctionWithHashMismatch(F, M->getContext());
       }
@@ -1245,9 +1530,11 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
       if (SkipWarning)
         return;
 
-      std::string Msg = IPE.message() + std::string(" ") + F.getName().str() +
-                        std::string(" Hash = ") +
-                        std::to_string(FuncInfo.FunctionHash);
+      std::string Msg =
+          IPE.message() + std::string(" ") + F.getName().str() +
+          std::string(" Hash = ") + std::to_string(FuncInfo.FunctionHash) +
+          std::string(" up to ") + std::to_string(MismatchedFuncSum) +
+          std::string(" count discarded");
 
       Ctx.diagnose(
           DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
@@ -1255,17 +1542,19 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
     return false;
   }
   ProfileRecord = std::move(Result.get());
+  PseudoKind = ProfileRecord.getCountPseudoKind();
+  if (PseudoKind != InstrProfRecord::NotPseudo) {
+    return true;
+  }
   std::vector<uint64_t> &CountFromProfile = ProfileRecord.Counts;
 
   IsCS ? NumOfCSPGOFunc++ : NumOfPGOFunc++;
   LLVM_DEBUG(dbgs() << CountFromProfile.size() << " counts\n");
-  AllMinusOnes = (CountFromProfile.size() > 0);
+
   uint64_t ValueSum = 0;
   for (unsigned I = 0, S = CountFromProfile.size(); I < S; I++) {
     LLVM_DEBUG(dbgs() << "  " << I << ": " << CountFromProfile[I] << "\n");
     ValueSum += CountFromProfile[I];
-    if (CountFromProfile[I] != (uint64_t)-1)
-      AllMinusOnes = false;
   }
   AllZeros = (ValueSum == 0);
 
@@ -1381,7 +1670,8 @@ void PGOUseFunc::setBranchWeights() {
     if (TI->getNumSuccessors() < 2)
       continue;
     if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
-          isa<IndirectBrInst>(TI) || isa<InvokeInst>(TI)))
+          isa<IndirectBrInst>(TI) || isa<InvokeInst>(TI) ||
+          isa<CallBrInst>(TI)))
       continue;
 
     if (getBBInfo(&BB).CountValue == 0)
@@ -1404,7 +1694,21 @@ void PGOUseFunc::setBranchWeights() {
         MaxCount = EdgeCount;
       EdgeCounts[SuccNum] = EdgeCount;
     }
-    setProfMetadata(M, TI, EdgeCounts, MaxCount);
+
+    if (MaxCount)
+      setProfMetadata(M, TI, EdgeCounts, MaxCount);
+    else {
+      // A zero MaxCount can come about when we have a BB with a positive
+      // count, and whose successor blocks all have 0 count. This can happen
+      // when there is no exit block and the code exits via a noreturn function.
+      auto &Ctx = M->getContext();
+      Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M->getName().data(),
+        Twine("Profile in ") + F.getName().str() +
+            Twine(" partially ignored") +
+            Twine(", possibly due to the lack of a return path."),
+        DS_Warning));
+    }
   }
 }
 
@@ -1547,6 +1851,38 @@ static void collectComdatMembers(
       ComdatMembers.insert(std::make_pair(C, &GA));
 }
 
+// Don't perform PGO instrumeatnion / profile-use.
+static bool skipPGO(const Function &F) {
+  if (F.isDeclaration())
+    return true;
+  if (F.hasFnAttribute(llvm::Attribute::NoProfile))
+    return true;
+  if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
+    return true;
+  if (F.getInstructionCount() < PGOFunctionSizeThreshold)
+    return true;
+
+  // If there are too many critical edges, PGO might cause
+  // compiler time problem. Skip PGO if the number of
+  // critical edges execeed the threshold.
+  unsigned NumCriticalEdges = 0;
+  for (auto &BB : F) {
+    const Instruction *TI = BB.getTerminator();
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
+      if (isCriticalEdge(TI, I))
+        NumCriticalEdges++;
+    }
+  }
+  if (NumCriticalEdges > PGOFunctionCriticalEdgeThreshold) {
+    LLVM_DEBUG(dbgs() << "In func " << F.getName()
+                      << ", NumCriticalEdges=" << NumCriticalEdges
+                      << " exceed the threshold. Skip PGO.\n");
+    return true;
+  }
+
+  return false;
+}
+
 static bool InstrumentAllFunctions(
     Module &M, function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
@@ -1559,9 +1895,7 @@ static bool InstrumentAllFunctions(
   collectComdatMembers(M, ComdatMembers);
 
   for (auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-    if (F.hasFnAttribute(llvm::Attribute::NoProfile))
+    if (skipPGO(F))
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
@@ -1607,7 +1941,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
   BlockFrequencyInfo NBFI(F, NBPI, LI);
 #ifndef NDEBUG
   auto BFIEntryCount = F.getEntryCount();
-  assert(BFIEntryCount.hasValue() && (BFIEntryCount->getCount() > 0) &&
+  assert(BFIEntryCount && (BFIEntryCount->getCount() > 0) &&
          "Invalid BFI Entrycount");
 #endif
   auto SumCount = APFloat::getZero(APFloat::IEEEdouble());
@@ -1619,7 +1953,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
       continue;
     auto BFICount = NBFI.getBlockProfileCount(&BBI);
     CountValue = Func.getBBInfo(&BBI).CountValue;
-    BFICountValue = BFICount.getValue();
+    BFICountValue = *BFICount;
     SumCount.add(APFloat(CountValue * 1.0), APFloat::rmNearestTiesToEven);
     SumBFICount.add(APFloat(BFICountValue * 1.0), APFloat::rmNearestTiesToEven);
   }
@@ -1672,7 +2006,7 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
       NonZeroBBNum++;
     auto BFICount = NBFI.getBlockProfileCount(&BBI);
     if (BFICount)
-      BFICountValue = BFICount.getValue();
+      BFICountValue = *BFICount;
 
     if (HotBBOnly) {
       bool rawIsHot = CountValue >= HotCountThreshold;
@@ -1752,7 +2086,7 @@ static bool annotateAllFunctions(
     return false;
 
   // TODO: might need to change the warning once the clang option is finalized.
-  if (!PGOReader->isIRLevelProfile()) {
+  if (!PGOReader->isIRLevelProfile() && !PGOReader->hasMemoryProfile()) {
     Ctx.diagnose(DiagnosticInfoPGOProfile(
         ProfileFileName.data(), "Not an IR level instrumentation profile"));
     return false;
@@ -1789,7 +2123,7 @@ static bool annotateAllFunctions(
   if (PGOInstrumentEntry.getNumOccurrences() > 0)
     InstrumentFuncEntry = PGOInstrumentEntry;
   for (auto &F : M) {
-    if (F.isDeclaration())
+    if (skipPGO(F))
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
@@ -1799,13 +2133,21 @@ static bool annotateAllFunctions(
     SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI, BFI);
     PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS,
                     InstrumentFuncEntry);
-    // When AllMinusOnes is true, it means the profile for the function
-    // is unrepresentative and this function is actually hot. Set the
-    // entry count of the function to be multiple times of hot threshold
-    // and drop all its internal counters.
-    bool AllMinusOnes = false;
+    // Read and match memprof first since we do this via debug info and can
+    // match even if there is an IR mismatch detected for regular PGO below.
+    if (PGOReader->hasMemoryProfile())
+      Func.readMemprof(PGOReader.get());
+
+    if (!PGOReader->isIRLevelProfile())
+      continue;
+
+    // When PseudoKind is set to a vaule other than InstrProfRecord::NotPseudo,
+    // it means the profile for the function is unrepresentative and this
+    // function is actually hot / warm. We will reset the function hot / cold
+    // attribute and drop all the profile counters.
+    InstrProfRecord::CountPseudoKind PseudoKind = InstrProfRecord::NotPseudo;
     bool AllZeros = false;
-    if (!Func.readCounters(PGOReader.get(), AllZeros, AllMinusOnes))
+    if (!Func.readCounters(PGOReader.get(), AllZeros, PseudoKind))
       continue;
     if (AllZeros) {
       F.setEntryCount(ProfileCount(0, Function::PCT_Real));
@@ -1813,13 +2155,13 @@ static bool annotateAllFunctions(
         ColdFunctions.push_back(&F);
       continue;
     }
-    const unsigned MultiplyFactor = 3;
-    if (AllMinusOnes) {
-      uint64_t HotThreshold = PSI->getHotCountThreshold();
-      if (HotThreshold)
-        F.setEntryCount(
-            ProfileCount(HotThreshold * MultiplyFactor, Function::PCT_Real));
-      HotFunctions.push_back(&F);
+    if (PseudoKind != InstrProfRecord::NotPseudo) {
+      // Clear function attribute cold.
+      if (F.hasFnAttribute(Attribute::Cold))
+        F.removeFnAttr(Attribute::Cold);
+      // Set function attribute as hot.
+      if (PseudoKind == InstrProfRecord::PseudoHot)
+        F.addFnAttr(Attribute::Hot);
       continue;
     }
     Func.populateCounters();
@@ -2057,7 +2399,7 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
       // Display scaled counts for SELECT instruction:
       OS << "SELECT : { T = ";
       uint64_t TC, FC;
-      bool HasProf = I.extractProfMetadata(TC, FC);
+      bool HasProf = extractBranchWeights(I, TC, FC);
       if (!HasProf)
         OS << "Unknown, F = Unknown }\\l";
       else

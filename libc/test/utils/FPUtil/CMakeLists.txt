@@ -5,6 +5,6 @@ if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86})
       x86_long_double_test.cpp
     DEPENDS
       libc.include.math
-      libc.src.__support.FPUtil.fputil
+      libc.src.__support.FPUtil.fp_bits
   )
 endif()

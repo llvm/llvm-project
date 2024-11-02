@@ -94,9 +94,9 @@ public:
     assert(!isDirectory() && "not a file");
     assert(Contents && "contents not initialized");
     if (auto *Directives = Contents->DepDirectives.load()) {
-      if (Directives->hasValue())
+      if (Directives->has_value())
         return ArrayRef<dependency_directives_scan::Directive>(
-            Directives->getValue());
+            Directives->value());
     }
     return None;
   }
@@ -271,7 +271,7 @@ public:
 
 /// A virtual file system optimized for the dependency discovery.
 ///
-/// It is primarily designed to work with source files whose contents was was
+/// It is primarily designed to work with source files whose contents was
 /// preprocessed to remove any tokens that are unlikely to affect the dependency
 /// computation.
 ///

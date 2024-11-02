@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/merge.s -o %t2.o
 // RUN: ld.lld %t.o %t2.o -o %t
 // RUN: llvm-readobj -S --section-data --symbols %t | FileCheck %s
-// RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DISASM %s
 
         .section        .mysec,"aM",@progbits,4
         .align  4

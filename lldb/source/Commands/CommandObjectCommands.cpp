@@ -13,6 +13,7 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
@@ -484,29 +485,31 @@ protected:
         OptionArgVectorSP(new OptionArgVector);
 
     const bool include_aliases = true;
-    if (CommandObjectSP cmd_obj_sp = m_interpreter.GetCommandSPExact(
-            cmd_obj.GetCommandName(), include_aliases)) {
-      if (m_interpreter.AliasExists(alias_command) ||
-          m_interpreter.UserCommandExists(alias_command)) {
-        result.AppendWarningWithFormat(
-            "Overwriting existing definition for '%s'.\n",
-            alias_command.str().c_str());
-      }
-      if (CommandAlias *alias = m_interpreter.AddAlias(
-              alias_command, cmd_obj_sp, raw_command_string)) {
-        if (m_command_options.m_help.OptionWasSet())
-          alias->SetHelp(m_command_options.m_help.GetCurrentValue());
-        if (m_command_options.m_long_help.OptionWasSet())
-          alias->SetHelpLong(m_command_options.m_long_help.GetCurrentValue());
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      } else {
-        result.AppendError("Unable to create requested alias.\n");
-      }
+    // Look up the command using command's name first.  This is to resolve
+    // aliases when you are making nested aliases.  But if you don't find
+    // it that way, then it wasn't an alias and we can just use the object
+    // we were passed in.
+    CommandObjectSP cmd_obj_sp = m_interpreter.GetCommandSPExact(
+            cmd_obj.GetCommandName(), include_aliases);
+    if (!cmd_obj_sp)
+      cmd_obj_sp = cmd_obj.shared_from_this();
 
+    if (m_interpreter.AliasExists(alias_command) ||
+        m_interpreter.UserCommandExists(alias_command)) {
+      result.AppendWarningWithFormat(
+          "Overwriting existing definition for '%s'.\n",
+          alias_command.str().c_str());
+    }
+    if (CommandAlias *alias = m_interpreter.AddAlias(
+            alias_command, cmd_obj_sp, raw_command_string)) {
+      if (m_command_options.m_help.OptionWasSet())
+        alias->SetHelp(m_command_options.m_help.GetCurrentValue());
+      if (m_command_options.m_long_help.OptionWasSet())
+        alias->SetHelpLong(m_command_options.m_long_help.GetCurrentValue());
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError("Unable to create requested alias.\n");
     }
-
     return result.Succeeded();
   }
 
@@ -824,6 +827,8 @@ a number follows 'f':"
         R"(
 
     (lldb) command regex f s/^$/finish/ 's/([0-9]+)/frame select %1/')");
+    CommandArgumentData thread_arg{eArgTypeSEDStylePair, eArgRepeatOptional};
+    m_arguments.push_back({thread_arg});
   }
 
   ~CommandObjectCommandsAddRegex() override = default;
@@ -888,7 +893,7 @@ protected:
           llvm::StringRef(),     // Continuation prompt
           multiple_lines, color_prompt,
           0, // Don't show line numbers
-          *this, nullptr));
+          *this));
 
       if (io_handler_sp) {
         debugger.RunIOHandlerAsync(io_handler_sp);
@@ -1352,29 +1357,6 @@ protected:
   CommandOptions m_options;
 };
 
-// CommandObjectCommandsScriptAdd
-static constexpr OptionEnumValueElement g_script_synchro_type[] = {
-    {
-        eScriptedCommandSynchronicitySynchronous,
-        "synchronous",
-        "Run synchronous",
-    },
-    {
-        eScriptedCommandSynchronicityAsynchronous,
-        "asynchronous",
-        "Run asynchronous",
-    },
-    {
-        eScriptedCommandSynchronicityCurrentValue,
-        "current",
-        "Do not alter current setting",
-    },
-};
-
-static constexpr OptionEnumValues ScriptSynchroType() {
-  return OptionEnumValues(g_script_synchro_type);
-}
-
 #define LLDB_OPTIONS_script_add
 #include "CommandOptions.inc"
 
@@ -1664,11 +1646,6 @@ public:
   ~CommandObjectCommandsScriptList() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 0) {
-      result.AppendError("'command script list' doesn't take any arguments");
-      return false;
-    }
-
     m_interpreter.GetHelp(result, CommandInterpreter::eCommandTypesUserDef);
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1689,11 +1666,6 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 0) {
-      result.AppendError("'command script clear' doesn't take any arguments");
-      return false;
-    }
-
     m_interpreter.RemoveAllUser();
 
     result.SetStatus(eReturnStatusSuccessFinishResult);

@@ -131,7 +131,7 @@ namespace DeduceDifferentType {
 
   struct X { constexpr operator int() { return 0; } } x;
   template<X &> struct C {};
-  template<int N> int c(C<N>); // expected-error {{value of type 'int' is not implicitly convertible to 'DeduceDifferentType::X &'}}
+  template<int N> int c(C<N>); // expected-error {{value of type 'int' is not implicitly convertible to 'X &'}}
   int c_imp = c(C<x>()); // expected-error {{no matching function}}
   int c_exp = c<x>(C<x>()); // expected-error {{no matching function}}
 
@@ -557,4 +557,49 @@ namespace TypeSuffix {
   template <auto... N> struct X {};
   X<1, 1u>::type y; // expected-error {{no type named 'type' in 'TypeSuffix::X<1, 1U>'}}
   X<1, 1>::type z; // expected-error {{no type named 'type' in 'TypeSuffix::X<1, 1>'}}
+}
+
+namespace no_crash {
+template <class T>
+class Base {
+public:
+  template <class> class EntryPointSpec {};
+  template <auto Method>
+  using EntryPoint = EntryPointSpec<T>;
+};
+
+class Derived : Base<Derived>{
+  template <class...> class Spec {};
+
+  void Invalid(Undefined) const; // expected-error {{unknown type name 'Undefined'}}
+  void crash() {
+    return Spec{
+        EntryPoint<&Invalid>()
+    };
+  }
+};
+} // no_crash
+
+namespace PR47792 {
+  using I = int;
+
+  template<decltype(auto)> int a;
+  const int n = 0;
+  const I n2 = 0;
+  static_assert(&a<n> == &a<0>, "both should have type 'int'");
+  static_assert(&a<n2> == &a<0>, "both should have type 'int'");
+
+  int m;
+  const int &r1 = m;
+  int &r2 = m;
+  static_assert(&a<r1> != &a<r2>, "should have different types");
+
+  const I &r3 = m;
+  static_assert(&a<r1> == &a<r3>, "should have different types");
+  static_assert(&a<r2> != &a<r3>, "should have different types");
+
+  void foo();
+  template <void () = foo> void bar() {}
+  template void bar<>();    // expected-note {{previous explicit instantiation is here}}
+  template void bar<foo>(); // expected-error {{duplicate explicit instantiation of 'bar<&PR47792::foo>'}}
 }

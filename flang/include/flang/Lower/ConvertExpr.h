@@ -47,13 +47,6 @@ fir::ExtendedValue createSomeExtendedExpression(mlir::Location loc,
                                                 SymMap &symMap,
                                                 StatementContext &stmtCtx);
 
-/// Create a global array symbol with the Dense attribute
-fir::GlobalOp createDenseGlobal(mlir::Location loc, mlir::Type symTy,
-                                llvm::StringRef globalName,
-                                mlir::StringAttr linkage, bool isConst,
-                                const SomeExpr &expr,
-                                Fortran::lower::AbstractConverter &converter);
-
 /// Create the IR for the expression \p expr in an initialization context.
 /// Expressions that appear in initializers may not allocate temporaries, do not
 /// have a stack, etc.
@@ -231,10 +224,6 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(fir::FirOpBuilder &builder) {
                                 fir::getAdaptToByRefAttrName()),
           builder.getUnitAttr()};
 }
-
-/// Generate max(\p value, 0) where \p value is a scalar integer.
-mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value value);
 
 } // namespace Fortran::lower
 

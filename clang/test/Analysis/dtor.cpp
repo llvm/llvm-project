@@ -140,10 +140,8 @@ void testArrayInvalidation() {
     IntWrapper arr[2];
 
     // There should be no undefined value warnings here.
-    // Eventually these should be TRUE as well, but right now
-    // we can't handle array constructors.
-    clang_analyzer_eval(arr[0].x == 0); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(arr[1].x == 0); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(arr[0].x == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(arr[1].x == 0); // expected-warning{{TRUE}}
 
     arr[0].x = &i;
     arr[1].x = &j;
@@ -312,10 +310,8 @@ namespace MultidimensionalArrays {
       IntWrapper arr[2][2];
 
       // There should be no undefined value warnings here.
-      // Eventually these should be TRUE as well, but right now
-      // we can't handle array constructors.
-      clang_analyzer_eval(arr[0][0].x == 0); // expected-warning{{UNKNOWN}}
-      clang_analyzer_eval(arr[1][1].x == 0); // expected-warning{{UNKNOWN}}
+      clang_analyzer_eval(arr[0][0].x == 0); // expected-warning{{TRUE}}
+      clang_analyzer_eval(arr[1][1].x == 0); // expected-warning{{TRUE}}
 
       arr[0][0].x = &i;
       arr[1][1].x = &j;
@@ -597,5 +593,5 @@ void overrideLeak() {
 void overrideDoubleDelete() {
   auto *a = new CustomOperators();
   delete a;
-  delete a; // expected-warning@581 {{Attempt to free released memory}}
+  delete a; // expected-warning@577 {{Attempt to free released memory}}
 }

@@ -5,14 +5,14 @@ add_mlir_dialect_library(MLIRVectorUtils
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Vector/Utils
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAffineAnalysis
-  MLIRArithmetic
+  MLIRArithDialect
   MLIRDialectUtils
-  MLIRFunc
+  MLIRFuncDialect
   MLIRIR
-  MLIRMemRef
-  MLIRTensor
-  MLIRVector
+  MLIRMemRefDialect
+  MLIRTensorDialect
+  MLIRVectorDialect
   MLIRVectorInterfaces
   )

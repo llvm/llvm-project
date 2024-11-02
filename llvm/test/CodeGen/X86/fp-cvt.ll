@@ -46,7 +46,7 @@ define i16 @fptosi_i16_fp80(x86_fp80 %a0) nounwind {
   ret i16  %1
 }
 
-define i16 @fptosi_i16_fp80_ld(x86_fp80 *%a0) nounwind {
+define i16 @fptosi_i16_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: fptosi_i16_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
@@ -82,7 +82,7 @@ define i16 @fptosi_i16_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    fisttps -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-SSSE3-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = fptosi x86_fp80 %1 to i16
   ret i16  %2
 }
@@ -126,7 +126,7 @@ define i32 @fptosi_i32_fp80(x86_fp80 %a0) nounwind {
   ret i32  %1
 }
 
-define i32 @fptosi_i32_fp80_ld(x86_fp80 *%a0) nounwind {
+define i32 @fptosi_i32_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: fptosi_i32_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
@@ -162,7 +162,7 @@ define i32 @fptosi_i32_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    fisttpl -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-SSSE3-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = fptosi x86_fp80 %1 to i32
   ret i32  %2
 }
@@ -211,7 +211,7 @@ define i64 @fptosi_i64_fp80(x86_fp80 %a0) nounwind {
   ret i64  %1
 }
 
-define i64 @fptosi_i64_fp80_ld(x86_fp80 *%a0) nounwind {
+define i64 @fptosi_i64_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: fptosi_i64_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -252,7 +252,7 @@ define i64 @fptosi_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-SSSE3-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = fptosi x86_fp80 %1 to i64
   ret i64  %2
 }
@@ -303,7 +303,7 @@ define i16 @fptoui_i16_fp80(x86_fp80 %a0) nounwind {
   ret i16  %1
 }
 
-define i16 @fptoui_i16_fp80_ld(x86_fp80 *%a0) nounwind {
+define i16 @fptoui_i16_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: fptoui_i16_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
@@ -342,7 +342,7 @@ define i16 @fptoui_i16_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-SSSE3-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = fptoui x86_fp80 %1 to i16
   ret i16  %2
 }
@@ -390,7 +390,7 @@ define i32 @fptoui_i32_fp80(x86_fp80 %a0) nounwind {
   ret i32  %1
 }
 
-define i32 @fptoui_i32_fp80_ld(x86_fp80 *%a0) nounwind {
+define i32 @fptoui_i32_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: fptoui_i32_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -430,7 +430,7 @@ define i32 @fptoui_i32_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-SSSE3-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = fptoui x86_fp80 %1 to i32
   ret i32  %2
 }
@@ -514,7 +514,7 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
   ret i64  %1
 }
 
-define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
+define i64 @fptoui_i64_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: fptoui_i64_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -590,7 +590,7 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    shlq $63, %rax
 ; X64-SSSE3-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; X64-SSSE3-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = fptoui x86_fp80 %1 to i64
   ret i64  %2
 }
@@ -618,7 +618,7 @@ define x86_fp80 @sitofp_fp80_i16(i16 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @sitofp_fp80_i16_ld(i16 *%a0) nounwind {
+define x86_fp80 @sitofp_fp80_i16_ld(ptr%a0) nounwind {
 ; X86-LABEL: sitofp_fp80_i16_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
@@ -635,7 +635,7 @@ define x86_fp80 @sitofp_fp80_i16_ld(i16 *%a0) nounwind {
 ; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
-  %1 = load i16, i16 *%a0
+  %1 = load i16, ptr%a0
   %2 = sitofp i16 %1 to x86_fp80
   ret x86_fp80 %2
 }
@@ -659,7 +659,7 @@ define x86_fp80 @sitofp_fp80_i32(i32 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @sitofp_fp80_i32_ld(i32 *%a0) nounwind {
+define x86_fp80 @sitofp_fp80_i32_ld(ptr%a0) nounwind {
 ; X86-LABEL: sitofp_fp80_i32_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
@@ -676,7 +676,7 @@ define x86_fp80 @sitofp_fp80_i32_ld(i32 *%a0) nounwind {
 ; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
-  %1 = load i32, i32 *%a0
+  %1 = load i32, ptr%a0
   %2 = sitofp i32 %1 to x86_fp80
   ret x86_fp80 %2
 }
@@ -696,7 +696,7 @@ define x86_fp80 @sitofp_fp80_i64(i64 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @sitofp_fp80_i64_ld(i64 *%a0) nounwind {
+define x86_fp80 @sitofp_fp80_i64_ld(ptr%a0) nounwind {
 ; X86-LABEL: sitofp_fp80_i64_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -709,7 +709,7 @@ define x86_fp80 @sitofp_fp80_i64_ld(i64 *%a0) nounwind {
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
-  %1 = load i64, i64 *%a0
+  %1 = load i64, ptr%a0
   %2 = sitofp i64 %1 to x86_fp80
   ret x86_fp80 %2
 }
@@ -738,7 +738,7 @@ define x86_fp80 @uitofp_fp80_i16(i16 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @uitofp_fp80_i16_ld(i16 *%a0) nounwind {
+define x86_fp80 @uitofp_fp80_i16_ld(ptr%a0) nounwind {
 ; X86-LABEL: uitofp_fp80_i16_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
@@ -755,7 +755,7 @@ define x86_fp80 @uitofp_fp80_i16_ld(i16 *%a0) nounwind {
 ; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
-  %1 = load i16, i16 *%a0
+  %1 = load i16, ptr%a0
   %2 = uitofp i16 %1 to x86_fp80
   ret x86_fp80 %2
 }
@@ -785,7 +785,7 @@ define x86_fp80 @uitofp_fp80_i32(i32 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @uitofp_fp80_i32_ld(i32 *%a0) nounwind {
+define x86_fp80 @uitofp_fp80_i32_ld(ptr%a0) nounwind {
 ; X86-LABEL: uitofp_fp80_i32_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -807,7 +807,7 @@ define x86_fp80 @uitofp_fp80_i32_ld(i32 *%a0) nounwind {
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
-  %1 = load i32, i32 *%a0
+  %1 = load i32, ptr%a0
   %2 = uitofp i32 %1 to x86_fp80
   ret x86_fp80 %2
 }
@@ -843,7 +843,7 @@ define x86_fp80 @uitofp_fp80_i64(i64 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @uitofp_fp80_i64_ld(i64 *%a0) nounwind {
+define x86_fp80 @uitofp_fp80_i64_ld(ptr%a0) nounwind {
 ; X86-LABEL: uitofp_fp80_i64_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -872,7 +872,7 @@ define x86_fp80 @uitofp_fp80_i64_ld(i64 *%a0) nounwind {
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%rcx,4)
 ; X64-NEXT:    retq
-  %1 = load i64, i64 *%a0
+  %1 = load i64, ptr%a0
   %2 = uitofp i64 %1 to x86_fp80
   ret x86_fp80 %2
 }
@@ -903,7 +903,7 @@ define x86_fp80 @floor_fp80(x86_fp80 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @floor_fp80_ld(x86_fp80 *%a0) nounwind {
+define x86_fp80 @floor_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: floor_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -922,7 +922,7 @@ define x86_fp80 @floor_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    callq floorl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = call x86_fp80 @llvm.floor.f80(x86_fp80 %1)
   ret x86_fp80 %2
 }
@@ -955,7 +955,7 @@ define x86_fp80 @ceil_fp80(x86_fp80 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @ceil_fp80_ld(x86_fp80 *%a0) nounwind {
+define x86_fp80 @ceil_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: ceil_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -974,7 +974,7 @@ define x86_fp80 @ceil_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    callq ceill@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = call x86_fp80 @llvm.ceil.f80(x86_fp80 %1)
   ret x86_fp80 %2
 }
@@ -1007,7 +1007,7 @@ define x86_fp80 @trunc_fp80(x86_fp80 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @trunc_fp80_ld(x86_fp80 *%a0) nounwind {
+define x86_fp80 @trunc_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: trunc_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -1026,7 +1026,7 @@ define x86_fp80 @trunc_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    callq truncl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = call x86_fp80 @llvm.trunc.f80(x86_fp80 %1)
   ret x86_fp80 %2
 }
@@ -1059,7 +1059,7 @@ define x86_fp80 @rint_fp80(x86_fp80 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @rint_fp80_ld(x86_fp80 *%a0) nounwind {
+define x86_fp80 @rint_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: rint_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -1078,7 +1078,7 @@ define x86_fp80 @rint_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    callq rintl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = call x86_fp80 @llvm.rint.f80(x86_fp80 %1)
   ret x86_fp80 %2
 }
@@ -1111,7 +1111,7 @@ define x86_fp80 @roundeven_fp80(x86_fp80 %a0) nounwind {
   ret x86_fp80 %1
 }
 
-define x86_fp80 @roundeven_fp80_ld(x86_fp80 *%a0) nounwind {
+define x86_fp80 @roundeven_fp80_ld(ptr%a0) nounwind {
 ; X86-LABEL: roundeven_fp80_ld:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -1130,7 +1130,7 @@ define x86_fp80 @roundeven_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    callq roundevenl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
-  %1 = load x86_fp80, x86_fp80 *%a0
+  %1 = load x86_fp80, ptr%a0
   %2 = call x86_fp80 @llvm.roundeven.f80(x86_fp80 %1)
   ret x86_fp80 %2
 }

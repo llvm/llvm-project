@@ -10,13 +10,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: lost_valid_lanes_maybe_erasable_implicit_def
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   undef %0.sub1:sreg_64 = IMPLICIT_DEF
-  ; CHECK: bb.1:
-  ; CHECK:   %0.sub0:sreg_64 = S_MOV_B32 0
-  ; CHECK:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
-  ; CHECK:   dead %0.sub1:sreg_64 = COPY %0.sub0
-  ; CHECK:   S_ENDPGM 0, implicit [[COPY]].sub1
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %0.sub1:sreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %0.sub0:sreg_64 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
+  ; CHECK-NEXT:   dead %0.sub1:sreg_64 = COPY %0.sub0
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]].sub1
   bb.0:
     successors: %bb.1
     undef %0.sub1:sreg_64 = IMPLICIT_DEF
@@ -37,13 +39,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: lost_valid_lanes_real_value
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   undef %0.sub1:sreg_64 = S_MOV_B32 -1
-  ; CHECK: bb.1:
-  ; CHECK:   %0.sub0:sreg_64 = S_MOV_B32 0
-  ; CHECK:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
-  ; CHECK:   dead %0.sub1:sreg_64 = COPY %0.sub0
-  ; CHECK:   S_ENDPGM 0, implicit [[COPY]].sub1
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %0.sub1:sreg_64 = S_MOV_B32 -1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %0.sub0:sreg_64 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
+  ; CHECK-NEXT:   dead %0.sub1:sreg_64 = COPY %0.sub0
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]].sub1
   bb.0:
     successors: %bb.1
     undef %0.sub1:sreg_64 = S_MOV_B32 -1

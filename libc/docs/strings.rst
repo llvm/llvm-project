@@ -1,14 +1,8 @@
-=============================
-String Functions in LLVM-libc
-=============================
+================
+String Functions
+================
 
--------
-Summary
--------
-
-This site tracks the status of the implementation of string functions in LLVM
-Libc. This includes a few extra functions that are not in string.h, such as
-functions converting strings to numbers.
+.. include:: check.rst
 
 ---------------
 Source location
@@ -40,12 +34,12 @@ Primary memory functions
 =============  =========
 Function Name  Available
 =============  =========
-bzero          YES
-bcmp           YES
-memcpy         YES
-memset         YES
-memcmp         YES
-memmove        YES
+bzero          |check|
+bcmp           |check|
+memcpy         |check|
+memset         |check|
+memcmp         |check|
+memmove        |check|
 =============  =========
 
 
@@ -55,10 +49,10 @@ Other Raw Memory Functions
 =============  =========
 Function Name  Available
 =============  =========
-memchr         YES
-memrchr        YES
-memccpy        YES
-mempcpy        YES
+memchr         |check|
+memrchr        |check|
+memccpy        |check|
+mempcpy        |check|
 =============  =========
 
 String Memory Functions
@@ -67,14 +61,14 @@ String Memory Functions
 =============  =========
 Function Name  Available
 =============  =========
-stpcpy         YES
-stpncpy        YES
-strcpy         YES
-strncpy        YES
-strcat         YES
-strncat        YES
-strdup         YES
-strndup        YES
+stpcpy         |check|
+stpncpy        |check|
+strcpy         |check|
+strncpy        |check|
+strcat         |check|
+strncat        |check|
+strdup         |check|
+strndup        |check|
 =============  =========
 
 String Examination Functions
@@ -83,18 +77,18 @@ String Examination Functions
 =============  =========
 Function Name  Available
 =============  =========
-strlen         YES
-strnlen        YES
-strcmp         YES
-strncmp        YES
-strchr         YES
-strrchr        YES
-strspn         YES
-strcspn        YES
-strpbrk        YES
-strstr         YES
-strtok         YES
-strtok_r       YES
+strlen         |check|
+strnlen        |check|
+strcmp         |check|
+strncmp        |check|
+strchr         |check|
+strrchr        |check|
+strspn         |check|
+strcspn        |check|
+strpbrk        |check|
+strstr         |check|
+strtok         |check|
+strtok_r       |check|
 =============  =========
 
 String Conversion Functions
@@ -119,19 +113,19 @@ with LLVM-libc built on 2022-04-14 and Debian GLibc version 2.33-6. The targets
 =============  =========
 Function Name  Available
 =============  =========
-atof           YES
-atoi           YES
-atol           YES
-atoll          YES
-strtol         YES
-strtoll        YES
-strtoul        YES
-strtoull       YES
-strtof         YES
-strtod         YES
-strtold        YES
-strtoimax      YES
-strtoumax      YES
+atof           |check|
+atoi           |check|
+atol           |check|
+atoll          |check|
+strtol         |check|
+strtoll        |check|
+strtoul        |check|
+strtoull       |check|
+strtof         |check|
+strtod         |check|
+strtold        |check|
+strtoimax      |check|
+strtoumax      |check|
 =============  =========
 
 String Error Functions

@@ -5,11 +5,11 @@ target datalayout = "p:64:64"
 
 ; This would crash - PR50836
 
-define i64 @strlen(i32* %s) {
+define i64 @strlen(ptr %s) {
 ; CHECK-LABEL: @strlen(
-; CHECK-NEXT:    [[R:%.*]] = call i64 @strlen(i32* noundef nonnull dereferenceable(1) [[S:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[S:%.*]])
 ; CHECK-NEXT:    ret i64 0
 ;
-  %r = call i64 @strlen(i32* %s)
+  %r = call i64 @strlen(ptr %s)
   ret i64 0
 }

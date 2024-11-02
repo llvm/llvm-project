@@ -15,4 +15,15 @@ _Noreturn int; // expected-error {{'_Noreturn' can only appear on functions}} ex
 _Noreturn struct S; // expected-error {{'_Noreturn' can only appear on functions}}
 _Noreturn enum E { e }; // expected-error {{'_Noreturn' can only appear on functions}}
 
+struct GH56800 {
+  _Noreturn int f1; // expected-error {{type name does not allow function specifier to be specified}}
+};
+
+_Noreturn int AlsoBad; // expected-error {{'_Noreturn' can only appear on functions}}
+void func(_Noreturn int ThisToo) { // expected-error {{'_Noreturn' can only appear on functions}}
+  for (_Noreturn int i = 0; i < 10; ++i) // expected-error {{'_Noreturn' can only appear on functions}}
+    ;
+}
+
+
 // CHECK-EXT: '_Noreturn' is a C11 extension

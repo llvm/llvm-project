@@ -196,6 +196,15 @@ public:
                                           ->getFirstInsertionPt().getNonConst();
   }
 
+  /// Returns an iterator to the first instruction in this block that is
+  /// not a PHINode, a debug intrinsic, a static alloca or any pseudo operation.
+  const_iterator getFirstNonPHIOrDbgOrAlloca() const;
+  iterator getFirstNonPHIOrDbgOrAlloca() {
+    return static_cast<const BasicBlock *>(this)
+        ->getFirstNonPHIOrDbgOrAlloca()
+        .getNonConst();
+  }
+
   /// Return a const iterator range over the instructions in the block, skipping
   /// any debug instructions. Skip any pseudo operations as well if \c
   /// SkipPseudoOp is true.

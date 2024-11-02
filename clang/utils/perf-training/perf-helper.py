@@ -38,11 +38,21 @@ def clean(args):
 
 def merge(args):
   if len(args) != 3:
-    print('Usage: %s clean <llvm-profdata> <output> <path>\n' % __file__ +
+    print('Usage: %s merge <llvm-profdata> <output> <path>\n' % __file__ +
       '\tMerges all profraw files from path into output.')
     return 1
   cmd = [args[0], 'merge', '-o', args[1]]
   cmd.extend(findFilesWithExtension(args[2], "profraw"))
+  subprocess.check_call(cmd)
+  return 0
+
+def merge_fdata(args):
+  if len(args) != 3:
+    print('Usage: %s merge-fdata <merge-fdata> <output> <path>\n' % __file__ +
+      '\tMerges all fdata files from path into output.')
+    return 1
+  cmd = [args[0], '-o', args[1]]
+  cmd.extend(findFilesWithExtension(args[2], "fdata"))
   subprocess.check_call(cmd)
   return 0
 
@@ -395,10 +405,12 @@ def genOrderFile(args):
   return 0
 
 commands = {'clean' : clean,
-  'merge' : merge, 
+  'merge' : merge,
   'dtrace' : dtrace,
   'cc1' : cc1,
-  'gen-order-file' : genOrderFile}
+  'gen-order-file' : genOrderFile,
+  'merge-fdata' : merge_fdata,
+  }
 
 def main():
   f = commands[sys.argv[1]]

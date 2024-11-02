@@ -37,19 +37,9 @@ declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
     runtime/*.py
 )
 
-declare_mlir_python_sources(MLIRPythonSources.Passes
-  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  ADD_TO_PARENT MLIRPythonSources
-  SOURCES_GLOB
-    all_passes_registration/*.py
-    conversions/*.py
-    transforms/*.py
-)
-
-declare_mlir_python_sources(MLIRPythonCAPIHeaderSources
+declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
   ROOT_DIR "${MLIR_SOURCE_DIR}/include"
   SOURCES_GLOB "mlir-c/*.h"
-  DEST_PREFIX "_mlir_libs/include"
 )
 
 ################################################################################
@@ -80,6 +70,14 @@ declare_mlir_dialect_python_bindings(
     dialects/builtin.py
     dialects/_builtin_ops_ext.py
   DIALECT_NAME builtin)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/ComplexOps.td
+  SOURCES
+    dialects/complex.py
+  DIALECT_NAME complex)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -123,7 +121,18 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/_transform_ops_ext.py
     dialects/transform/__init__.py
+    _mlir_libs/_mlir/dialects/transform/__init__.pyi
   DIALECT_NAME transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SCFLoopTransformOps.td
+  SOURCES
+    dialects/_loop_transform_ops_ext.py
+    dialects/transform/loop.py
+  DIALECT_NAME transform
+  EXTENSION_NAME loop_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -145,7 +154,7 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/ArithmeticOps.td
+  TD_FILE dialects/ArithOps.td
   SOURCES
     dialects/arith.py
     dialects/_arith_ops_ext.py
@@ -214,7 +223,9 @@ declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TensorOps.td
-  SOURCES dialects/tensor.py
+  SOURCES
+    dialects/tensor.py
+    dialects/_tensor_ops_ext.py
   DIALECT_NAME tensor)
 
 declare_mlir_dialect_python_bindings(
@@ -266,10 +277,29 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     MLIRCAPIDebug
     MLIRCAPIIR
     MLIRCAPIInterfaces
-    MLIRCAPIRegistration  # TODO: See about dis-aggregating
 
     # Dialects
     MLIRCAPIFunc
+)
+
+# This extension exposes an API to register all dialects, extensions, and passes
+# packaged in upstream MLIR and it is used for the upstream "mlir" Python
+# package. Downstreams will likely want to provide their own and not depend
+# on this one, since it links in the world.
+# Note that this is not added to any top-level source target for transitive
+# inclusion: It must be included explicitly by downstreams if desired. Note that
+# this has a very large impact on what gets built/packaged.
+declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
+  MODULE_NAME _mlirRegisterEverything
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    RegisterEverything.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIConversion
+    MLIRCAPITransforms
+    MLIRCAPIRegisterEverything
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
@@ -324,16 +354,17 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
     MLIRCAPISparseTensor
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.AllPassesRegistration
-  MODULE_NAME _mlirAllPassesRegistration
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
+  MODULE_NAME _mlirDialectsTransform
+  ADD_TO_PARENT MLIRPythonSources.Dialects.transform
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    AllPassesRegistration.cpp
+    DialectTransform.cpp
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
-    MLIRCAPIConversion
-    MLIRCAPITransforms
+    MLIRCAPIIR
+    MLIRCAPITransformDialect
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
@@ -348,20 +379,7 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
     MLIRCAPIAsync
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Conversions
-  MODULE_NAME _mlirConversions
-  ADD_TO_PARENT MLIRPythonSources.Passes
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
-  SOURCES
-    Conversions/Conversions.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
-  EMBED_CAPI_LINK_LIBS
-  MLIRCAPIConversion
-)
-
-# Only enable the ExecutionEngine if the native target is configured in.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(MLIR_ENABLE_EXECUTION_ENGINE)
   declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
     MODULE_NAME _mlirExecutionEngine
     ADD_TO_PARENT MLIRPythonSources.ExecutionEngine
@@ -409,18 +427,6 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPISparseTensor
-)
-
-declare_mlir_python_extension(MLIRPythonExtension.Transforms
-  MODULE_NAME _mlirTransforms
-  ADD_TO_PARENT MLIRPythonSources.Passes
-  ROOT_DIR "${PYTHON_SOURCE_DIR}"
-  SOURCES
-    Transforms/Transforms.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPITransforms
 )
 
 # TODO: Figure out how to put this in the test tree.
@@ -485,9 +491,11 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_DESTINATION python_packages/mlir_core/mlir/_mlir_libs
   OUTPUT_DIRECTORY "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir/_mlir_libs"
   RELATIVE_INSTALL_ROOT "../../../.."
+  DECLARED_HEADERS
+    MLIRPythonCAPI.HeaderSources
   DECLARED_SOURCES
     MLIRPythonSources
-    MLIRPythonExtension.AllPassesRegistration
+    MLIRPythonExtension.RegisterEverything
     ${_ADDL_TEST_SOURCES}
 )
 
@@ -501,9 +509,8 @@ add_mlir_python_modules(MLIRPythonModules
   INSTALL_PREFIX "python_packages/mlir_core/mlir"
   DECLARED_SOURCES
     MLIRPythonSources
-    MLIRPythonExtension.AllPassesRegistration
-    MLIRPythonCAPIHeaderSources
+    MLIRPythonExtension.RegisterEverything
     ${_ADDL_TEST_SOURCES}
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
-  )
+)

@@ -29,7 +29,7 @@ public:
   virtual ~AMDGPUMIRFormatter() = default;
 
   /// Implement target specific parsing of target custom pseudo source value.
-  virtual bool
+  bool
   parseCustomPseudoSourceValue(StringRef Src, MachineFunction &MF,
                                PerFunctionMIParsingState &PFS,
                                const PseudoSourceValue *&PSV,

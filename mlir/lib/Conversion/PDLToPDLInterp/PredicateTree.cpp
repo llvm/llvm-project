@@ -53,9 +53,9 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
   predList.emplace_back(pos, builder.getIsNotNull());
 
   // If the attribute has a type or value, add a constraint.
-  if (Value type = attr.type())
+  if (Value type = attr.getValueType())
     getTreePredicates(predList, type, builder, inputs, builder.getType(pos));
-  else if (Attribute value = attr.valueAttr())
+  else if (Attribute value = attr.getValueAttr())
     predList.emplace_back(pos, builder.getAttributeConstraint(value));
 }
 
@@ -76,12 +76,12 @@ static void getOperandTreePredicates(std::vector<PositionalPredicate> &predList,
             cast<OperandGroupPosition>(pos)->getOperandGroupNumber())
           predList.emplace_back(pos, builder.getIsNotNull());
 
-        if (Value type = op.type())
+        if (Value type = op.getValueType())
           getTreePredicates(predList, type, builder, inputs,
                             builder.getType(pos));
       })
       .Case<pdl::ResultOp, pdl::ResultsOp>([&](auto op) {
-        Optional<unsigned> index = op.index();
+        Optional<unsigned> index = op.getIndex();
 
         // Prevent traversal into a null value if the result has a proper index.
         if (index)
@@ -101,7 +101,7 @@ static void getOperandTreePredicates(std::vector<PositionalPredicate> &predList,
         predList.emplace_back(resultPos, builder.getEqualTo(pos));
 
         // Collect the predicates of the parent operation.
-        getTreePredicates(predList, op.parent(), builder, inputs,
+        getTreePredicates(predList, op.getParent(), builder, inputs,
                           (Position *)parentPos);
       });
 }
@@ -120,12 +120,12 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
     predList.emplace_back(pos, builder.getIsNotNull());
 
   // Check that this is the correct root operation.
-  if (Optional<StringRef> opName = op.name())
+  if (Optional<StringRef> opName = op.getOpName())
     predList.emplace_back(pos, builder.getOperationName(*opName));
 
   // Check that the operation has the proper number of operands. If there are
   // any variable length operands, we check a minimum instead of an exact count.
-  OperandRange operands = op.operands();
+  OperandRange operands = op.getOperandValues();
   unsigned minOperands = getNumNonRangeValues(operands);
   if (minOperands != operands.size()) {
     if (minOperands)
@@ -136,7 +136,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
 
   // Check that the operation has the proper number of results. If there are
   // any variable length results, we check a minimum instead of an exact count.
-  OperandRange types = op.types();
+  OperandRange types = op.getTypeValues();
   unsigned minResults = getNumNonRangeValues(types);
   if (minResults == types.size())
     predList.emplace_back(pos, builder.getResultCount(types.size()));
@@ -144,11 +144,11 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
     predList.emplace_back(pos, builder.getResultCountAtLeast(minResults));
 
   // Recurse into any attributes, operands, or results.
-  for (auto it : llvm::zip(op.attributeNames(), op.attributes())) {
+  for (auto [attrName, attr] :
+       llvm::zip(op.getAttributeValueNames(), op.getAttributeValues())) {
     getTreePredicates(
-        predList, std::get<1>(it), builder, inputs,
-        builder.getAttribute(opPos,
-                             std::get<0>(it).cast<StringAttr>().getValue()));
+        predList, attr, builder, inputs,
+        builder.getAttribute(opPos, attrName.cast<StringAttr>().getValue()));
   }
 
   // Process the operands and results of the operation. For all values up to
@@ -208,10 +208,10 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
                               TypePosition *pos) {
   // Check for a constraint on a constant type.
   if (pdl::TypeOp typeOp = val.getDefiningOp<pdl::TypeOp>()) {
-    if (Attribute type = typeOp.typeAttr())
+    if (Attribute type = typeOp.getConstantTypeAttr())
       predList.emplace_back(pos, builder.getTypeConstraint(type));
   } else if (pdl::TypesOp typeOp = val.getDefiningOp<pdl::TypesOp>()) {
-    if (Attribute typeAttr = typeOp.typesAttr())
+    if (Attribute typeAttr = typeOp.getConstantTypesAttr())
       predList.emplace_back(pos, builder.getTypeConstraint(typeAttr));
   }
 }
@@ -253,7 +253,7 @@ static void getAttributePredicates(pdl::AttributeOp op,
   Position *&attrPos = inputs[op];
   if (attrPos)
     return;
-  Attribute value = op.valueAttr();
+  Attribute value = op.getValueAttr();
   assert(value && "expected non-tree `pdl.attribute` to contain a value");
   attrPos = builder.getAttributeLiteral(value);
 }
@@ -262,7 +262,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
                                     std::vector<PositionalPredicate> &predList,
                                     PredicateBuilder &builder,
                                     DenseMap<Value, Position *> &inputs) {
-  OperandRange arguments = op.args();
+  OperandRange arguments = op.getArgs();
 
   std::vector<Position *> allPositions;
   allPositions.reserve(arguments.size());
@@ -273,7 +273,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
   Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
                                     comparePosDepth);
   PredicateBuilder::Predicate pred =
-      builder.getConstraint(op.name(), allPositions);
+      builder.getConstraint(op.getName(), allPositions);
   predList.emplace_back(pos, pred);
 }
 
@@ -286,8 +286,8 @@ static void getResultPredicates(pdl::ResultOp op,
     return;
 
   // Ensure that the result isn't null.
-  auto *parentPos = cast<OperationPosition>(inputs.lookup(op.parent()));
-  resultPos = builder.getResult(parentPos, op.index());
+  auto *parentPos = cast<OperationPosition>(inputs.lookup(op.getParent()));
+  resultPos = builder.getResult(parentPos, op.getIndex());
   predList.emplace_back(resultPos, builder.getIsNotNull());
 }
 
@@ -300,9 +300,9 @@ static void getResultPredicates(pdl::ResultsOp op,
     return;
 
   // Ensure that the result isn't null if the result has an index.
-  auto *parentPos = cast<OperationPosition>(inputs.lookup(op.parent()));
+  auto *parentPos = cast<OperationPosition>(inputs.lookup(op.getParent()));
   bool isVariadic = op.getType().isa<pdl::RangeType>();
-  Optional<unsigned> index = op.index();
+  Optional<unsigned> index = op.getIndex();
   resultPos = builder.getResultGroup(parentPos, index, isVariadic);
   if (index)
     predList.emplace_back(resultPos, builder.getIsNotNull());
@@ -327,7 +327,7 @@ static void getNonTreePredicates(pdl::PatternOp pattern,
                                  std::vector<PositionalPredicate> &predList,
                                  PredicateBuilder &builder,
                                  DenseMap<Value, Position *> &inputs) {
-  for (Operation &op : pattern.body().getOps()) {
+  for (Operation &op : pattern.getBodyRegion().getOps()) {
     TypeSwitch<Operation *>(&op)
         .Case([&](pdl::AttributeOp attrOp) {
           getAttributePredicates(attrOp, predList, builder, inputs);
@@ -340,11 +340,13 @@ static void getNonTreePredicates(pdl::PatternOp pattern,
         })
         .Case([&](pdl::TypeOp typeOp) {
           getTypePredicates(
-              typeOp, [&] { return typeOp.typeAttr(); }, builder, inputs);
+              typeOp, [&] { return typeOp.getConstantTypeAttr(); }, builder,
+              inputs);
         })
         .Case([&](pdl::TypesOp typeOp) {
           getTypePredicates(
-              typeOp, [&] { return typeOp.typesAttr(); }, builder, inputs);
+              typeOp, [&] { return typeOp.getConstantTypesAttr(); }, builder,
+              inputs);
         });
   }
 }
@@ -369,21 +371,21 @@ static SmallVector<Value> detectRoots(pdl::PatternOp pattern) {
   // First, collect all the operations that are used as operands
   // to other operations. These are not roots by default.
   DenseSet<Value> used;
-  for (auto operationOp : pattern.body().getOps<pdl::OperationOp>()) {
-    for (Value operand : operationOp.operands())
+  for (auto operationOp : pattern.getBodyRegion().getOps<pdl::OperationOp>()) {
+    for (Value operand : operationOp.getOperandValues())
       TypeSwitch<Operation *>(operand.getDefiningOp())
           .Case<pdl::ResultOp, pdl::ResultsOp>(
-              [&used](auto resultOp) { used.insert(resultOp.parent()); });
+              [&used](auto resultOp) { used.insert(resultOp.getParent()); });
   }
 
   // Remove the specified root from the use set, so that we can
   // always select it as a root, even if it is used by other operations.
-  if (Value root = pattern.getRewriter().root())
+  if (Value root = pattern.getRewriter().getRoot())
     used.erase(root);
 
   // Finally, collect all the unused operations.
   SmallVector<Value> roots;
-  for (Value operationOp : pattern.body().getOps<pdl::OperationOp>())
+  for (Value operationOp : pattern.getBodyRegion().getOps<pdl::OperationOp>())
     if (!used.contains(operationOp))
       roots.push_back(operationOp);
 
@@ -451,7 +453,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
       // are expensive to join on.
       TypeSwitch<Operation *>(entry.value.getDefiningOp())
           .Case<pdl::OperationOp>([&](auto operationOp) {
-            OperandRange operands = operationOp.operands();
+            OperandRange operands = operationOp.getOperandValues();
             // Special case when we pass all the operands in one range.
             // For those, the index is empty.
             if (operands.size() == 1 &&
@@ -462,13 +464,14 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
             }
 
             // Default case: visit all the operands.
-            for (const auto &p : llvm::enumerate(operationOp.operands()))
+            for (const auto &p :
+                 llvm::enumerate(operationOp.getOperandValues()))
               toVisit.emplace(p.value(), entry.value, p.index(),
                               entry.depth + 1);
           })
           .Case<pdl::ResultOp, pdl::ResultsOp>([&](auto resultOp) {
-            toVisit.emplace(resultOp.parent(), entry.value, resultOp.index(),
-                            entry.depth);
+            toVisit.emplace(resultOp.getParent(), entry.value,
+                            resultOp.getIndex(), entry.depth);
           });
     }
   }
@@ -507,7 +510,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
 /// Returns true if the operand at the given index needs to be queried using an
 /// operand group, i.e., if it is variadic itself or follows a variadic operand.
 static bool useOperandGroup(pdl::OperationOp op, unsigned index) {
-  OperandRange operands = op.operands();
+  OperandRange operands = op.getOperandValues();
   assert(index < operands.size() && "operand index out of range");
   for (unsigned i = 0; i <= index; ++i)
     if (operands[i].getType().isa<pdl::RangeType>())
@@ -537,7 +540,7 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
           operandPos = builder.getAllOperands(opPos);
         } else if (useOperandGroup(operationOp, *opIndex.index)) {
           // We are querying an operand group.
-          Type type = operationOp.operands()[*opIndex.index].getType();
+          Type type = operationOp.getOperandValues()[*opIndex.index].getType();
           bool variadic = type.isa<pdl::RangeType>();
           operandPos = builder.getOperandGroup(opPos, opIndex.index, variadic);
         } else {
@@ -613,7 +616,7 @@ static Value buildPredicateList(pdl::PatternOp pattern,
 
   // Solve the optimal branching problem for each candidate root, or use the
   // provided one.
-  Value bestRoot = pattern.getRewriter().root();
+  Value bestRoot = pattern.getRewriter().getRoot();
   OptimalBranching::EdgeList bestEdges;
   if (!bestRoot) {
     unsigned bestCost = 0;

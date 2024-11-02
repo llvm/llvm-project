@@ -48,7 +48,9 @@ namespace llvm {
 
       TLS_ADD,     // For Thread Local Storage (TLS).
       TLS_LD,
-      TLS_CALL
+      TLS_CALL,
+
+      LOAD_GDOP,   // Load operation w/ gdop relocation.
     };
   }
 
@@ -141,6 +143,11 @@ namespace llvm {
                          SmallVectorImpl<SDValue> &InVals) const;
     SDValue LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
                          SmallVectorImpl<SDValue> &InVals) const;
+
+    bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                        bool isVarArg,
+                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        LLVMContext &Context) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -gvn -disable-output < %s
+; RUN: opt -gvn -disable-output < %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

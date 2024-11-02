@@ -13,6 +13,7 @@
 #include "X86InstrFoldTables.h"
 #include "X86InstrInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include <atomic>
 #include <vector>
 
 using namespace llvm;
@@ -3994,6 +3995,14 @@ static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
   { X86::VPCONFLICTQZ128rrk,         X86::VPCONFLICTQZ128rmk,         0 },
   { X86::VPCONFLICTQZ256rrk,         X86::VPCONFLICTQZ256rmk,         0 },
   { X86::VPCONFLICTQZrrk,            X86::VPCONFLICTQZrmk,            0 },
+  { X86::VPDPBSSDSYrr,               X86::VPDPBSSDSYrm,               0 },
+  { X86::VPDPBSSDSrr,                X86::VPDPBSSDSrm,                0 },
+  { X86::VPDPBSSDYrr,                X86::VPDPBSSDYrm,                0 },
+  { X86::VPDPBSSDrr,                 X86::VPDPBSSDrm,                 0 },
+  { X86::VPDPBSUDSYrr,               X86::VPDPBSUDSYrm,               0 },
+  { X86::VPDPBSUDSrr,                X86::VPDPBSUDSrm,                0 },
+  { X86::VPDPBSUDYrr,                X86::VPDPBSUDYrm,                0 },
+  { X86::VPDPBSUDrr,                 X86::VPDPBSUDrm,                 0 },
   { X86::VPDPBUSDSYrr,               X86::VPDPBUSDSYrm,               0 },
   { X86::VPDPBUSDSZ128r,             X86::VPDPBUSDSZ128m,             0 },
   { X86::VPDPBUSDSZ256r,             X86::VPDPBUSDSZ256m,             0 },
@@ -4004,6 +4013,10 @@ static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
   { X86::VPDPBUSDZ256r,              X86::VPDPBUSDZ256m,              0 },
   { X86::VPDPBUSDZr,                 X86::VPDPBUSDZm,                 0 },
   { X86::VPDPBUSDrr,                 X86::VPDPBUSDrm,                 0 },
+  { X86::VPDPBUUDSYrr,               X86::VPDPBUUDSYrm,               0 },
+  { X86::VPDPBUUDSrr,                X86::VPDPBUUDSrm,                0 },
+  { X86::VPDPBUUDYrr,                X86::VPDPBUUDYrm,                0 },
+  { X86::VPDPBUUDrr,                 X86::VPDPBUUDrm,                 0 },
   { X86::VPDPWSSDSYrr,               X86::VPDPWSSDSYrm,               0 },
   { X86::VPDPWSSDSZ128r,             X86::VPDPWSSDSZ128m,             0 },
   { X86::VPDPWSSDSZ256r,             X86::VPDPWSSDSZ256m,             0 },
@@ -4102,12 +4115,16 @@ static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
   { X86::VPLZCNTQZ128rrk,            X86::VPLZCNTQZ128rmk,            0 },
   { X86::VPLZCNTQZ256rrk,            X86::VPLZCNTQZ256rmk,            0 },
   { X86::VPLZCNTQZrrk,               X86::VPLZCNTQZrmk,               0 },
+  { X86::VPMADD52HUQYrr,             X86::VPMADD52HUQYrm,             0 },
   { X86::VPMADD52HUQZ128r,           X86::VPMADD52HUQZ128m,           0 },
   { X86::VPMADD52HUQZ256r,           X86::VPMADD52HUQZ256m,           0 },
   { X86::VPMADD52HUQZr,              X86::VPMADD52HUQZm,              0 },
+  { X86::VPMADD52HUQrr,              X86::VPMADD52HUQrm,              0 },
+  { X86::VPMADD52LUQYrr,             X86::VPMADD52LUQYrm,             0 },
   { X86::VPMADD52LUQZ128r,           X86::VPMADD52LUQZ128m,           0 },
   { X86::VPMADD52LUQZ256r,           X86::VPMADD52LUQZ256m,           0 },
   { X86::VPMADD52LUQZr,              X86::VPMADD52LUQZm,              0 },
+  { X86::VPMADD52LUQrr,              X86::VPMADD52LUQrm,              0 },
   { X86::VPMADDUBSWZ128rrkz,         X86::VPMADDUBSWZ128rmkz,         0 },
   { X86::VPMADDUBSWZ256rrkz,         X86::VPMADDUBSWZ256rmkz,         0 },
   { X86::VPMADDUBSWZrrkz,            X86::VPMADDUBSWZrmkz,            0 },
@@ -6102,7 +6119,7 @@ llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
 namespace {
 
 // This class stores the memory unfolding tables. It is instantiated as a
-// ManagedStatic to lazily init the unfolding table.
+// function scope static variable to lazily init the unfolding table.
 struct X86MemUnfoldTable {
   // Stores memory unfolding tables entries sorted by opcode.
   std::vector<X86MemoryFoldTableEntry> Table;
@@ -6159,11 +6176,10 @@ struct X86MemUnfoldTable {
 };
 }
 
-static ManagedStatic<X86MemUnfoldTable> MemUnfoldTable;
-
 const X86MemoryFoldTableEntry *
 llvm::lookupUnfoldTable(unsigned MemOp) {
-  auto &Table = MemUnfoldTable->Table;
+  static X86MemUnfoldTable MemUnfoldTable;
+  auto &Table = MemUnfoldTable.Table;
   auto I = llvm::lower_bound(Table, MemOp);
   if (I != Table.end() && I->KeyOp == MemOp)
     return &*I;

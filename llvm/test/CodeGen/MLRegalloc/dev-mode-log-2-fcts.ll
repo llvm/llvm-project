@@ -11,8 +11,9 @@
 ; RUN: sed -i 's/\\n/ /g' %t1
 ; RUN: FileCheck --input-file %t1 %s
 
-; RUN: rm -rf %t && mkdir %t
-; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t
+; RUN: rm -rf %t %t_savedmodel
+; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t_savedmodel
+; RUN: %python %S/../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=development \
 ; RUN:   -regalloc-training-log=%t2 -tfutils-text-log -regalloc-model=%t < %s
 ; RUN: sed -i 's/ \+/ /g' %t2

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++1y -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++1y -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm %s -o - | FileCheck %s
 
 struct S {
   S();
@@ -56,7 +56,7 @@ void h(bool b1, bool b2) {
 
   // lambda init: s and t, branch on b1
   // CHECK: call void @_ZN1SC1Ev(
-  // CHECK: store i1 true, i1* %[[S_ISACTIVE]], align 1
+  // CHECK: store i1 true, ptr %[[S_ISACTIVE]], align 1
   // CHECK: call void @_ZN1TC1Ev(
   // CHECK: br i1
 
@@ -65,7 +65,7 @@ void h(bool b1, bool b2) {
 
   // completion of lambda init, branch on b2
   // CHECK: store i32 42,
-  // CHECK: store i1 false, i1* %[[S_ISACTIVE]], align 1
+  // CHECK: store i1 false, ptr %[[S_ISACTIVE]], align 1
   // CHECK: br i1
 
   // throw 2
@@ -73,24 +73,24 @@ void h(bool b1, bool b2) {
 
   // end of full-expression
   // CHECK: call void @_Z1xv(
-  // CHECK: call void @"_ZZ1hbbEN3$_2D1Ev"(
+  // CHECK: call void @"_ZZ1hbbEN3$_0D1Ev"(
   // CHECK: call void @_ZN1TD1Ev(
   // CHECK: call void @_Z1yv(
   // CHECK: ret void
 
   // cleanups for throw 1
   // CHECK: landingpad
-  // CHECK-NOT: @"_ZZ1hbbEN3$_2D1Ev"(
+  // CHECK-NOT: @"_ZZ1hbbEN3$_0D1Ev"(
   // CHECK: br
 
   // cleanups for throw 2
   // CHECK: landingpad
-  // CHECK: call void @"_ZZ1hbbEN3$_2D1Ev"(
+  // CHECK: call void @"_ZZ1hbbEN3$_0D1Ev"(
   // CHECK: br
 
   // common cleanup code
   // CHECK: call void @_ZN1TD1Ev(
-  // CHECK: load i1, i1* %[[S_ISACTIVE]],
+  // CHECK: load i1, ptr %[[S_ISACTIVE]],
   // CHECK: br i1
 
   // CHECK: call void @_ZN1SD1Ev(

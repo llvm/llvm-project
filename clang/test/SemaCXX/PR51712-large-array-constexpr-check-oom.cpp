@@ -5,6 +5,7 @@
 // REQUIRES: system-linux
 // UNSUPPORTED: msan
 // UNSUPPORTED: asan
+// UNSUPPORTED: hwasan
 //
 // RUN: ulimit -v 1048576
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -triple=x86_64 %s

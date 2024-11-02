@@ -33,6 +33,9 @@ struct _LIBCPP_TEMPLATE_VIS __parse_number_result {
 };
 
 template <class _CharT>
+__parse_number_result(const _CharT*, uint32_t) -> __parse_number_result<_CharT>;
+
+template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI constexpr __parse_number_result<_CharT>
 __parse_number(const _CharT* __begin, const _CharT* __end);
 

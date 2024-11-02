@@ -1,5 +1,5 @@
 ; A module with no asan-instrumented globals has no asan destructor, and has an asan constructor in a comdat.
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu < %s -passes='asan-pipeline' -asan-with-comdat=1 -asan-globals-live-support=1 -S | FileCheck %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu < %s -passes=asan -asan-with-comdat=1 -asan-globals-live-support=1 -S | FileCheck %s
 
 define void @f() {
   ret void

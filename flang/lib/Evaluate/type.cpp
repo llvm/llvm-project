@@ -8,9 +8,9 @@
 
 #include "flang/Evaluate/type.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/template.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/target.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
@@ -96,7 +96,7 @@ DynamicType::DynamicType(int k, const semantics::ParamValue &pv)
     : category_{TypeCategory::Character}, kind_{k} {
   CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   if (auto n{ToInt64(pv.GetExplicit())}) {
-    knownLength_ = *n;
+    knownLength_ = *n > 0 ? *n : 0;
   } else {
     charLengthParamValue_ = &pv;
   }
@@ -127,32 +127,14 @@ std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
   return std::nullopt;
 }
 
-static constexpr std::size_t RealKindBytes(int kind) {
-  switch (kind) {
-  case 3: // non-IEEE 16-bit format (truncated 32-bit)
-    return 2;
-  case 10: // 80387 80-bit extended precision
-  case 12: // possible variant spelling
-    return 16;
-  default:
-    return kind;
-  }
-}
-
-std::size_t DynamicType::GetAlignment(const FoldingContext &context) const {
-  switch (category_) {
-  case TypeCategory::Integer:
-  case TypeCategory::Character:
-  case TypeCategory::Logical:
-    return std::min<std::size_t>(kind_, context.maxAlignment());
-  case TypeCategory::Real:
-  case TypeCategory::Complex:
-    return std::min(RealKindBytes(kind_), context.maxAlignment());
-  case TypeCategory::Derived:
+std::size_t DynamicType::GetAlignment(
+    const TargetCharacteristics &targetCharacteristics) const {
+  if (category_ == TypeCategory::Derived) {
     if (derived_ && derived_->scope()) {
       return derived_->scope()->alignment().value_or(1);
     }
-    break;
+  } else {
+    return targetCharacteristics.GetAlignment(category_, kind_);
   }
   return 1; // needs to be after switch to dodge a bogus gcc warning
 }
@@ -161,18 +143,19 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     FoldingContext &context, bool aligned) const {
   switch (category_) {
   case TypeCategory::Integer:
-    return Expr<SubscriptInteger>{kind_};
   case TypeCategory::Real:
-    return Expr<SubscriptInteger>{RealKindBytes(kind_)};
   case TypeCategory::Complex:
-    return Expr<SubscriptInteger>{2 * RealKindBytes(kind_)};
+  case TypeCategory::Logical:
+    return Expr<SubscriptInteger>{
+        context.targetCharacteristics().GetByteSize(category_, kind_)};
   case TypeCategory::Character:
     if (auto len{GetCharLength()}) {
-      return Fold(context, Expr<SubscriptInteger>{kind_} * std::move(*len));
+      return Fold(context,
+          Expr<SubscriptInteger>{
+              context.targetCharacteristics().GetByteSize(category_, kind_)} *
+              std::move(*len));
     }
     break;
-  case TypeCategory::Logical:
-    return Expr<SubscriptInteger>{kind_};
   case TypeCategory::Derived:
     if (derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
@@ -335,13 +318,18 @@ static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
 }
 
 static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
-    bool ignoreTypeParameterValues) {
+    bool ignoreTypeParameterValues, bool ignoreLengths) {
   if (x.IsUnlimitedPolymorphic()) {
     return true;
   } else if (y.IsUnlimitedPolymorphic()) {
     return false;
   } else if (x.category() != y.category()) {
     return false;
+  } else if (x.category() == TypeCategory::Character) {
+    const auto xLen{x.knownLength()};
+    const auto yLen{y.knownLength()};
+    return x.kind() == y.kind() &&
+        (ignoreLengths || !xLen || !yLen || *xLen == *yLen);
   } else if (x.category() != TypeCategory::Derived) {
     return x.kind() == y.kind();
   } else {
@@ -355,13 +343,17 @@ static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
 
 // See 7.3.2.3 (5) & 15.5.2.4
 bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
-  return AreCompatibleTypes(*this, that, false);
+  return AreCompatibleTypes(*this, that, false, true);
+}
+
+bool DynamicType::IsTkLenCompatibleWith(const DynamicType &that) const {
+  return AreCompatibleTypes(*this, that, false, false);
 }
 
 // 16.9.165
 std::optional<bool> DynamicType::SameTypeAs(const DynamicType &that) const {
-  bool x{AreCompatibleTypes(*this, that, true)};
-  bool y{AreCompatibleTypes(that, *this, true)};
+  bool x{AreCompatibleTypes(*this, that, true, true)};
+  bool y{AreCompatibleTypes(that, *this, true, true)};
   if (x == y) {
     return x;
   } else {
@@ -509,75 +501,57 @@ int SelectedCharKind(const std::string &s, int defaultKind) { // 16.9.168
   }
 }
 
-class SelectedIntKindVisitor {
-public:
-  explicit SelectedIntKindVisitor(std::int64_t p) : precision_{p} {}
-  using Result = std::optional<int>;
-  using Types = IntegerTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::RANGE >= precision_) {
-      return T::kind;
-    } else {
+std::optional<DynamicType> ComparisonType(
+    const DynamicType &t1, const DynamicType &t2) {
+  switch (t1.category()) {
+  case TypeCategory::Integer:
+    switch (t2.category()) {
+    case TypeCategory::Integer:
+      return DynamicType{TypeCategory::Integer, std::max(t1.kind(), t2.kind())};
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+      return t2;
+    default:
       return std::nullopt;
     }
-  }
-
-private:
-  std::int64_t precision_;
-};
-
-int SelectedIntKind(std::int64_t precision) {
-  if (auto kind{common::SearchTypes(SelectedIntKindVisitor{precision})}) {
-    return *kind;
-  } else {
-    return -1;
+  case TypeCategory::Real:
+    switch (t2.category()) {
+    case TypeCategory::Integer:
+      return t1;
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+      return DynamicType{t2.category(), std::max(t1.kind(), t2.kind())};
+    default:
+      return std::nullopt;
+    }
+  case TypeCategory::Complex:
+    switch (t2.category()) {
+    case TypeCategory::Integer:
+      return t1;
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+      return DynamicType{TypeCategory::Complex, std::max(t1.kind(), t2.kind())};
+    default:
+      return std::nullopt;
+    }
+  case TypeCategory::Character:
+    switch (t2.category()) {
+    case TypeCategory::Character:
+      return DynamicType{
+          TypeCategory::Character, std::max(t1.kind(), t2.kind())};
+    default:
+      return std::nullopt;
+    }
+  case TypeCategory::Logical:
+    switch (t2.category()) {
+    case TypeCategory::Logical:
+      return DynamicType{TypeCategory::Logical, LogicalResult::kind};
+    default:
+      return std::nullopt;
+    }
+  default:
+    return std::nullopt;
   }
 }
 
-class SelectedRealKindVisitor {
-public:
-  explicit SelectedRealKindVisitor(std::int64_t p, std::int64_t r)
-      : precision_{p}, range_{r} {}
-  using Result = std::optional<int>;
-  using Types = RealTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::PRECISION >= precision_ && Scalar<T>::RANGE >= range_) {
-      return {T::kind};
-    } else {
-      return std::nullopt;
-    }
-  }
-
-private:
-  std::int64_t precision_, range_;
-};
-
-int SelectedRealKind(
-    std::int64_t precision, std::int64_t range, std::int64_t radix) {
-  if (radix != 2) {
-    return -5;
-  }
-  if (auto kind{
-          common::SearchTypes(SelectedRealKindVisitor{precision, range})}) {
-    return *kind;
-  }
-  // No kind has both sufficient precision and sufficient range.
-  // The negative return value encodes whether any kinds exist that
-  // could satisfy either constraint independently.
-  bool pOK{common::SearchTypes(SelectedRealKindVisitor{precision, 0})};
-  bool rOK{common::SearchTypes(SelectedRealKindVisitor{0, range})};
-  if (pOK) {
-    if (rOK) {
-      return -4;
-    } else {
-      return -2;
-    }
-  } else {
-    if (rOK) {
-      return -1;
-    } else {
-      return -3;
-    }
-  }
-}
 } // namespace Fortran::evaluate

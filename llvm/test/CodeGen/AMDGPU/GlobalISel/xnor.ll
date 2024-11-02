@@ -4,6 +4,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX900 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX906 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 
 define amdgpu_ps i32 @scalar_xnor_i32_one_use(i32 inreg %a, i32 inreg %b) {
 ; GCN-LABEL: scalar_xnor_i32_one_use:

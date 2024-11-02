@@ -2,9 +2,6 @@
 Test SBThread APIs.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +10,6 @@ from lldbsuite.test.lldbutil import get_stopped_thread, get_caller_symbol
 
 
 class ThreadAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_get_process(self):
         """Test Python SBThread.GetProcess() API."""
@@ -197,7 +192,7 @@ class ThreadAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.step_out_of_malloc.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(),
@@ -216,7 +211,7 @@ class ThreadAPITestCase(TestBase):
         # main2.cpp.
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
         # Expected failure with clang as the compiler.
         # rdar://problem/9223880
         #
@@ -243,7 +238,7 @@ class ThreadAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.step_out_of_malloc.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(),

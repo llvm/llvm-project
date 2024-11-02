@@ -164,7 +164,7 @@ operator!=(const discard_block_engine<_Eng, _Pp, _Rp>& __x,
 
 template <class _CharT, class _Traits,
           class _Eng, size_t _Pp, size_t _Rp>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
            const discard_block_engine<_Eng, _Pp, _Rp>& __x)
 {
@@ -178,7 +178,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 
 template <class _CharT, class _Traits,
           class _Eng, size_t _Pp, size_t _Rp>
-basic_istream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
            discard_block_engine<_Eng, _Pp, _Rp>& __x)
 {

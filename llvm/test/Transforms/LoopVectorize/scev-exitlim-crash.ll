@@ -18,7 +18,9 @@ entry:
 for.cond:                                         ; preds = %for.cond, %entry
   %i.0 = phi i32 [ undef, %entry ], [ %inc, %for.cond ]
   %cmp = icmp slt i32 %i.0, 0
-  %call = tail call i32 @fn2(double fadd (double fsub (double undef, double undef), double 1.000000e+00)) #2
+  %fsub = fsub double undef, undef
+  %fadd = fadd double %fsub, 1.000000e+00
+  %call = tail call i32 @fn2(double %fadd) #2
   %inc = add nsw i32 %i.0, 1
   br i1 %cmp, label %for.cond, label %for.cond4.preheader
 

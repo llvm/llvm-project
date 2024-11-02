@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; This is regression test for the bug in ScalarEvolution::isKnownPredicate.
 ; It does not check whether SCEV is available at loop entry before invoking

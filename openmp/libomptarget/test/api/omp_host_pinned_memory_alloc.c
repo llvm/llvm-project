@@ -1,5 +1,4 @@
-// RUN: %libomptarget-compile-run-and-check-nvptx64-nvidia-cuda
-// REQUIRES: nvptx64-nvidia-cuda
+// RUN: %libomptarget-compile-run-and-check-generic
 
 #include <omp.h>
 #include <stdio.h>
@@ -12,7 +11,7 @@ int main() {
   for (int i = 0; i < N; ++i)
     hst_ptr[i] = 2;
 
-#pragma omp target teams distribute parallel for map(tofrom : hst_ptr [0:N])
+#pragma omp target teams distribute parallel for map(tofrom : hst_ptr[0 : N])
   for (int i = 0; i < N; ++i)
     hst_ptr[i] -= 1;
 

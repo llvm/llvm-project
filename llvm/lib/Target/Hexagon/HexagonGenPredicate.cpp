@@ -335,7 +335,7 @@ bool HexagonGenPredicate::isScalarPred(RegisterSubReg PredReg) {
         if (MRI->getRegClass(PR.R) != PredRC)
           return false;
         // If it is a copy between two predicate registers, fall through.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       case Hexagon::C2_and:
       case Hexagon::C2_andn:

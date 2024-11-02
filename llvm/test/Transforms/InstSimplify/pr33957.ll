@@ -20,8 +20,8 @@ bb:
   br i1 true, label %bb1, label %bb3
 
 bb1:
-  %tmp = getelementptr inbounds [78 x %struct.bar], [78 x %struct.bar]* @global, i32 0, <4 x i32> undef
-  %tmp2 = getelementptr inbounds %struct.bar, <4 x %struct.bar*> %tmp, i32 1
+  %tmp = getelementptr inbounds [78 x %struct.bar], ptr @global, i32 0, <4 x i32> undef
+  %tmp2 = getelementptr inbounds %struct.bar, <4 x ptr> %tmp, i32 1
   br i1 true, label %bb3, label %bb1
 
 bb3:

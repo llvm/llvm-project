@@ -105,22 +105,22 @@ define i1 @used_by_fncall(i1 %x) {
   ret i1 %f
 }
 
-define i32 @noundef_metadata(i32* %p) {
+define i32 @noundef_metadata(ptr %p) {
 ; CHECK-LABEL: @noundef_metadata(
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4, !noundef !0
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !noundef !0
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %v = load i32, i32* %p, !noundef !{}
+  %v = load i32, ptr %p, !noundef !{}
   %v.fr = freeze i32 %v
   ret i32 %v.fr
 }
 
-define {i8, i32} @noundef_metadata2({i8, i32}* %p) {
+define {i8, i32} @noundef_metadata2(ptr %p) {
 ; CHECK-LABEL: @noundef_metadata2(
-; CHECK-NEXT:    [[V:%.*]] = load { i8, i32 }, { i8, i32 }* [[P:%.*]], align 4, !noundef !0
+; CHECK-NEXT:    [[V:%.*]] = load { i8, i32 }, ptr [[P:%.*]], align 4, !noundef !0
 ; CHECK-NEXT:    ret { i8, i32 } [[V]]
 ;
-  %v = load {i8, i32}, {i8, i32}* %p, !noundef !{}
+  %v = load {i8, i32}, ptr %p, !noundef !{}
   %v.fr = freeze {i8, i32} %v
   ret {i8, i32} %v.fr
 }

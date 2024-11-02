@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: Current executable set to '{{.*}}local-variables.cpp.tmp.exe'
 // CHECK-NEXT: (lldb) command source -s 0 '{{.*}}local-variables.lldbinit'
 // CHECK-NEXT: Executing commands in '{{.*}}local-variables.lldbinit'.
-// CHECK-NEXT: (lldb) break set -n main
+// CHECK-NEXT: (lldb) break set -f local-variables.cpp -l 17
 // CHECK-NEXT: Breakpoint 1: where = local-variables.cpp.tmp.exe`main + {{.*}} at local-variables.cpp:{{.*}}, address = {{.*}}
 // CHECK-NEXT: (lldb) run a b c d e f g
 // CHECK-NEXT: Process {{.*}} stopped
@@ -158,6 +158,6 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: | `-ParmVarDecl {{.*}} argv 'char **'
 // CHECK-NEXT: |-FunctionDecl {{.*}} __scrt_common_main_seh 'int ()' static 
 // CHECK-NEXT: |-FunctionDecl {{.*}} invoke_main 'int ()' inline
-// CHECK-NEXT: `-FunctionDecl {{.*}} Function 'int (int, char)'
+// CHECK: `-FunctionDecl {{.*}} Function 'int (int, char)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} Param1 'int'
 // CHECK-NEXT:   `-ParmVarDecl {{.*}} Param2 'char'

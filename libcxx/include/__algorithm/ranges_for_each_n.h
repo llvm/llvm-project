@@ -15,16 +15,16 @@
 #include <__functional/invoke.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
+#include <__iterator/iterator_traits.h>
 #include <__iterator/projected.h>
 #include <__ranges/concepts.h>
-#include <__ranges/dangling.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -61,6 +61,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 #endif // _LIBCPP___ALGORITHM_RANGES_FOR_EACH_N_H

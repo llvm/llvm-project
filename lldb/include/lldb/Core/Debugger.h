@@ -54,7 +54,9 @@ class ThreadPool;
 
 namespace lldb_private {
 class Address;
+class CallbackLogHandler;
 class CommandInterpreter;
+class LogHandler;
 class Process;
 class Stream;
 class SymbolContext;
@@ -80,6 +82,7 @@ public:
     eBroadcastBitProgress = (1 << 0),
     eBroadcastBitWarning = (1 << 1),
     eBroadcastBitError = (1 << 2),
+    eBroadcastSymbolChange = (1 << 3),
   };
 
   static ConstString GetStaticBroadcasterClass();
@@ -149,11 +152,7 @@ public:
 
   Status SetInputString(const char *data);
 
-  // This method will setup data recorder if reproducer enabled.
-  // On reply mode this method should take instructions from reproducer file.
-  Status SetInputFile(lldb::FileSP file);
-
-  void SetInputFile(lldb::FileSP file, repro::DataRecorder *recorder);
+  void SetInputFile(lldb::FileSP file);
 
   void SetOutputFile(lldb::FileSP file);
 
@@ -243,6 +242,7 @@ public:
   bool EnableLog(llvm::StringRef channel,
                  llvm::ArrayRef<const char *> categories,
                  llvm::StringRef log_file, uint32_t log_options,
+                 size_t buffer_size, LogHandlerKind log_handler_kind,
                  llvm::raw_ostream &error_stream);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
@@ -289,8 +289,6 @@ public:
 
   void SetPrompt(llvm::StringRef p);
   void SetPrompt(const char *) = delete;
-
-  llvm::StringRef GetReproducerPath() const;
 
   bool GetUseExternalEditor() const;
 
@@ -385,29 +383,29 @@ public:
 
   /// Report warning events.
   ///
-  /// Progress events will be delivered to any debuggers that have listeners
-  /// for the eBroadcastBitError.
+  /// Warning events will be delivered to any debuggers that have listeners
+  /// for the eBroadcastBitWarning.
   ///
   /// \param[in] message
   ///   The warning message to be reported.
   ///
   /// \param [in] debugger_id
   ///   If this optional parameter has a value, it indicates the unique
-  ///   debugger identifier that this progress should be delivered to. If this
-  ///   optional parameter does not have a value, the progress will be
-  ///   delivered to all debuggers.
+  ///   debugger identifier that this diagnostic should be delivered to. If
+  ///   this optional parameter does not have a value, the diagnostic event
+  ///   will be delivered to all debuggers.
   ///
   /// \param [in] once
   ///   If a pointer is passed to a std::once_flag, then it will be used to
   ///   ensure the given warning is only broadcast once.
   static void
-  ReportWarning(std::string messsage,
+  ReportWarning(std::string message,
                 llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
                 std::once_flag *once = nullptr);
 
   /// Report error events.
   ///
-  /// Progress events will be delivered to any debuggers that have listeners
+  /// Error events will be delivered to any debuggers that have listeners
   /// for the eBroadcastBitError.
   ///
   /// \param[in] message
@@ -415,17 +413,39 @@ public:
   ///
   /// \param [in] debugger_id
   ///   If this optional parameter has a value, it indicates the unique
-  ///   debugger identifier that this progress should be delivered to. If this
-  ///   optional parameter does not have a value, the progress will be
-  ///   delivered to all debuggers.
+  ///   debugger identifier that this diagnostic should be delivered to. If
+  ///   this optional parameter does not have a value, the diagnostic event
+  ///   will be delivered to all debuggers.
   ///
   /// \param [in] once
   ///   If a pointer is passed to a std::once_flag, then it will be used to
   ///   ensure the given error is only broadcast once.
   static void
-  ReportError(std::string messsage,
+  ReportError(std::string message,
               llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
               std::once_flag *once = nullptr);
+
+  /// Report info events.
+  ///
+  /// Unlike warning and error events, info events are not broadcast but are
+  /// logged for diagnostic purposes.
+  ///
+  /// \param[in] message
+  ///   The info message to be reported.
+  ///
+  /// \param [in] debugger_id
+  ///   If this optional parameter has a value, it indicates this diagnostic is
+  ///   associated with a unique debugger instance.
+  ///
+  /// \param [in] once
+  ///   If a pointer is passed to a std::once_flag, then it will be used to
+  ///   ensure the given info is only logged once.
+  static void
+  ReportInfo(std::string message,
+             llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
+             std::once_flag *once = nullptr);
+
+  static void ReportSymbolChange(const ModuleSpec &module_spec);
 
 protected:
   friend class CommandInterpreter;
@@ -553,8 +573,8 @@ protected:
 
   llvm::Optional<uint64_t> m_current_event_id;
 
-  llvm::StringMap<std::weak_ptr<llvm::raw_ostream>> m_log_streams;
-  std::shared_ptr<llvm::raw_ostream> m_log_callback_stream_sp;
+  llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
+  std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
   ConstString m_instance_name;
   static LoadPluginCallbackType g_load_plugin_callback;
   typedef std::vector<llvm::sys::DynamicLibrary> LoadedPluginsList;

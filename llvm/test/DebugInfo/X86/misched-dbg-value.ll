@@ -36,7 +36,7 @@
 
 source_filename = "test/DebugInfo/X86/misched-dbg-value.ll"
 
-%struct.Record = type { %struct.Record*, i32, i32, i32, [31 x i8] }
+%struct.Record = type { ptr, i32, i32, i32, [31 x i8] }
 
 @Version = global [4 x i8] c"1.1\00", align 1, !dbg !0
 @IntGlob = common global i32 0, align 4, !dbg !7
@@ -45,37 +45,37 @@ source_filename = "test/DebugInfo/X86/misched-dbg-value.ll"
 @Char2Glob = common global i8 0, align 1, !dbg !15
 @Array1Glob = common global [51 x i32] zeroinitializer, align 16, !dbg !17
 @Array2Glob = common global [51 x [51 x i32]] zeroinitializer, align 16, !dbg !23
-@PtrGlb = common global %struct.Record* null, align 8, !dbg !28
-@PtrGlbNext = common global %struct.Record* null, align 8, !dbg !54
+@PtrGlb = common global ptr null, align 8, !dbg !28
+@PtrGlbNext = common global ptr null, align 8, !dbg !54
 
 ; Function Attrs: nounwind optsize
-define void @Proc8(i32* nocapture %Array1Par, [51 x i32]* nocapture %Array2Par, i32 %IntParI1, i32 %IntParI2) #0 !dbg !61 {
+define void @Proc8(ptr nocapture %Array1Par, ptr nocapture %Array2Par, i32 %IntParI1, i32 %IntParI2) #0 !dbg !61 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %Array1Par, metadata !67, metadata !73), !dbg !74
-  tail call void @llvm.dbg.value(metadata [51 x i32]* %Array2Par, metadata !68, metadata !73), !dbg !75
+  tail call void @llvm.dbg.value(metadata ptr %Array1Par, metadata !67, metadata !73), !dbg !74
+  tail call void @llvm.dbg.value(metadata ptr %Array2Par, metadata !68, metadata !73), !dbg !75
   tail call void @llvm.dbg.value(metadata i32 %IntParI1, metadata !69, metadata !73), !dbg !76
   tail call void @llvm.dbg.value(metadata i32 %IntParI2, metadata !70, metadata !73), !dbg !77
   %add = add i32 %IntParI1, 5, !dbg !78
   tail call void @llvm.dbg.value(metadata i32 %add, metadata !71, metadata !73), !dbg !78
   %idxprom = sext i32 %add to i64, !dbg !79
-  %arrayidx = getelementptr inbounds i32, i32* %Array1Par, i64 %idxprom, !dbg !79
-  store i32 %IntParI2, i32* %arrayidx, align 4, !dbg !79
+  %arrayidx = getelementptr inbounds i32, ptr %Array1Par, i64 %idxprom, !dbg !79
+  store i32 %IntParI2, ptr %arrayidx, align 4, !dbg !79
   %add3 = add nsw i32 %IntParI1, 6, !dbg !80
   %idxprom4 = sext i32 %add3 to i64, !dbg !80
-  %arrayidx5 = getelementptr inbounds i32, i32* %Array1Par, i64 %idxprom4, !dbg !80
-  store i32 %IntParI2, i32* %arrayidx5, align 4, !dbg !80
+  %arrayidx5 = getelementptr inbounds i32, ptr %Array1Par, i64 %idxprom4, !dbg !80
+  store i32 %IntParI2, ptr %arrayidx5, align 4, !dbg !80
   %add6 = add nsw i32 %IntParI1, 35, !dbg !81
   %idxprom7 = sext i32 %add6 to i64, !dbg !81
-  %arrayidx8 = getelementptr inbounds i32, i32* %Array1Par, i64 %idxprom7, !dbg !81
-  store i32 %add, i32* %arrayidx8, align 4, !dbg !81
+  %arrayidx8 = getelementptr inbounds i32, ptr %Array1Par, i64 %idxprom7, !dbg !81
+  store i32 %add, ptr %arrayidx8, align 4, !dbg !81
   tail call void @llvm.dbg.value(metadata i32 %add, metadata !72, metadata !73), !dbg !82
   br label %for.body, !dbg !82
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %idxprom, %entry ], [ %indvars.iv.next, %for.body ]
   %IntIndex.046 = phi i32 [ %add, %entry ], [ %inc, %for.body ]
-  %arrayidx13 = getelementptr inbounds [51 x i32], [51 x i32]* %Array2Par, i64 %idxprom, i64 %indvars.iv, !dbg !84
-  store i32 %add, i32* %arrayidx13, align 4, !dbg !84
+  %arrayidx13 = getelementptr inbounds [51 x i32], ptr %Array2Par, i64 %idxprom, i64 %indvars.iv, !dbg !84
+  store i32 %add, ptr %arrayidx13, align 4, !dbg !84
   %inc = add nsw i32 %IntIndex.046, 1, !dbg !82
   tail call void @llvm.dbg.value(metadata i32 %inc, metadata !72, metadata !73), !dbg !82
   %cmp = icmp sgt i32 %inc, %add3, !dbg !82
@@ -85,16 +85,16 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   %sub = add nsw i32 %IntParI1, 4, !dbg !85
   %idxprom14 = sext i32 %sub to i64, !dbg !85
-  %arrayidx17 = getelementptr inbounds [51 x i32], [51 x i32]* %Array2Par, i64 %idxprom, i64 %idxprom14, !dbg !85
-  %0 = load i32, i32* %arrayidx17, align 4, !dbg !85
+  %arrayidx17 = getelementptr inbounds [51 x i32], ptr %Array2Par, i64 %idxprom, i64 %idxprom14, !dbg !85
+  %0 = load i32, ptr %arrayidx17, align 4, !dbg !85
   %inc18 = add nsw i32 %0, 1, !dbg !85
-  store i32 %inc18, i32* %arrayidx17, align 4, !dbg !85
-  %1 = load i32, i32* %arrayidx, align 4, !dbg !86
+  store i32 %inc18, ptr %arrayidx17, align 4, !dbg !85
+  %1 = load i32, ptr %arrayidx, align 4, !dbg !86
   %add22 = add nsw i32 %IntParI1, 25, !dbg !86
   %idxprom23 = sext i32 %add22 to i64, !dbg !86
-  %arrayidx25 = getelementptr inbounds [51 x i32], [51 x i32]* %Array2Par, i64 %idxprom23, i64 %idxprom, !dbg !86
-  store i32 %1, i32* %arrayidx25, align 4, !dbg !86
-  store i32 5, i32* @IntGlob, align 4, !dbg !87
+  %arrayidx25 = getelementptr inbounds [51 x i32], ptr %Array2Par, i64 %idxprom23, i64 %idxprom, !dbg !86
+  store i32 %1, ptr %arrayidx25, align 4, !dbg !86
+  store i32 5, ptr @IntGlob, align 4, !dbg !87
   ret void, !dbg !88
 }
 

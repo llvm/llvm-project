@@ -8,6 +8,7 @@
 //--- Config file (full path) in output of -###
 //
 // RUN: %clang --config %S/Inputs/config-1.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-HHH
+// RUN: %clang --config=%S/Inputs/config-1.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-HHH
 // CHECK-HHH: Configuration file: {{.*}}Inputs{{.}}config-1.cfg
 // CHECK-HHH: -Werror
 // CHECK-HHH: -std=c99
@@ -68,11 +69,15 @@
 
 //--- User directory is searched first.
 //
-// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4 -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-PRECEDENCE
+// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4.cfg -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-PRECEDENCE
 // CHECK-PRECEDENCE: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
 // CHECK-PRECEDENCE: -Wall
 
 
-//--- Duplicate --config options are allowed if the value is the same
-// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4 --config config-4 -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-SAME-CONFIG
-// CHECK-SAME-CONFIG: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
+//--- Multiple configuration files can be specified.
+// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir= --config config-4.cfg --config %S/Inputs/config2/config-4.cfg -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-TWO-CONFIGS
+// CHECK-TWO-CONFIGS: Configuration file: {{.*}}Inputs{{.}}config{{.}}config-4.cfg
+// CHECK-TWO-CONFIGS-NEXT: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
+// CHECK-TWO-CONFIGS: -isysroot
+// CHECK-TWO-CONFIGS-SAME: /opt/data
+// CHECK-TWO-CONFIGS-SAME: -Wall

@@ -7,7 +7,7 @@ macro(set_flang_windows_version_resource_properties name)
       VERSION_MAJOR ${FLANG_VERSION_MAJOR}
       VERSION_MINOR ${FLANG_VERSION_MINOR}
       VERSION_PATCHLEVEL ${FLANG_VERSION_PATCHLEVEL}
-      VERSION_STRING "${FLANG_VERSION} (${BACKEND_PACKAGE_STRING})"
+      VERSION_STRING "${FLANG_VERSION}"
       PRODUCT_NAME "flang")
   endif()
 endmacro()
@@ -18,7 +18,7 @@ endmacro()
 
 macro(add_flang_library name)
   cmake_parse_arguments(ARG
-    "SHARED;STATIC"
+    "SHARED;STATIC;INSTALL_WITH_TOOLCHAIN"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -65,7 +65,8 @@ macro(add_flang_library name)
 
   if (TARGET ${name})
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libflang")
+    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libflang"
+        OR ARG_INSTALL_WITH_TOOLCHAIN)
       get_target_export_arg(${name} Flang export_to_flangtargets UMBRELLA flang-libraries)
       install(TARGETS ${name}
         COMPONENT ${name}
@@ -122,8 +123,8 @@ macro(add_flang_tool name)
 endmacro()
 
 macro(add_flang_symlink name dest)
-  add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)
+  llvm_add_tool_symlink(FLANG ${name} ${dest} ALWAYS_GENERATE)
   # Always generate install targets
-  llvm_install_symlink(${name} ${dest} ALWAYS_GENERATE)
+  llvm_install_symlink(FLANG ${name} ${dest} ALWAYS_GENERATE)
 endmacro()
 

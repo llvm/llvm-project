@@ -10,7 +10,7 @@ entry:
   unreachable
 }
 
-define dso_local void @test() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @test() personality ptr @__CxxFrameHandler3 {
 entry:
 
 ; CHECK-NOT: .Ltmp0:
@@ -29,13 +29,13 @@ except:
 ; CHECK: callq	printf
 
   %0 = cleanuppad within none []
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str, i64 0, i64 0)) [ "funclet"(token %0) ]
+  call void (ptr, ...) @printf(ptr @str) [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 
 declare dso_local i32 @__CxxFrameHandler3(...)
 
-declare dso_local void @printf(i8*, ...)
+declare dso_local void @printf(ptr, ...)
 
 ; SEH Table
 

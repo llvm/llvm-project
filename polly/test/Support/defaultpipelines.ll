@@ -1,18 +1,9 @@
-; Legacy pass manager
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-;
-; New pass manager
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
 ;
 ; Check that Polly's default pipeline works from detection to code generation
 ; with either pass manager.

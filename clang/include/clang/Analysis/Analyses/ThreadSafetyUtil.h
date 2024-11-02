@@ -204,11 +204,11 @@ public:
   }
 
   llvm::iterator_range<reverse_iterator> reverse() {
-    return llvm::make_range(rbegin(), rend());
+    return llvm::reverse(*this);
   }
 
   llvm::iterator_range<const_reverse_iterator> reverse() const {
-    return llvm::make_range(rbegin(), rend());
+    return llvm::reverse(*this);
   }
 
 private:

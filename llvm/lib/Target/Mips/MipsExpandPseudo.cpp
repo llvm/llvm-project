@@ -347,50 +347,50 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   switch (I->getOpcode()) {
   case Mips::ATOMIC_LOAD_NAND_I8_POSTRA:
     SEOp = Mips::SEB;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_NAND_I16_POSTRA:
     IsNand = true;
     break;
   case Mips::ATOMIC_SWAP_I8_POSTRA:
     SEOp = Mips::SEB;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_SWAP_I16_POSTRA:
     IsSwap = true;
     break;
   case Mips::ATOMIC_LOAD_ADD_I8_POSTRA:
     SEOp = Mips::SEB;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_ADD_I16_POSTRA:
     Opcode = Mips::ADDu;
     break;
   case Mips::ATOMIC_LOAD_SUB_I8_POSTRA:
     SEOp = Mips::SEB;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_SUB_I16_POSTRA:
     Opcode = Mips::SUBu;
     break;
   case Mips::ATOMIC_LOAD_AND_I8_POSTRA:
     SEOp = Mips::SEB;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_AND_I16_POSTRA:
     Opcode = Mips::AND;
     break;
   case Mips::ATOMIC_LOAD_OR_I8_POSTRA:
     SEOp = Mips::SEB;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_OR_I16_POSTRA:
     Opcode = Mips::OR;
     break;
   case Mips::ATOMIC_LOAD_XOR_I8_POSTRA:
     SEOp = Mips::SEB;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_XOR_I16_POSTRA:
     Opcode = Mips::XOR;
     break;
   case Mips::ATOMIC_LOAD_UMIN_I8_POSTRA:
   case Mips::ATOMIC_LOAD_UMIN_I16_POSTRA:
     IsUnsigned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_MIN_I8_POSTRA:
   case Mips::ATOMIC_LOAD_MIN_I16_POSTRA:
     IsMin = true;
@@ -398,7 +398,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   case Mips::ATOMIC_LOAD_UMAX_I8_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I16_POSTRA:
     IsUnsigned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_MAX_I8_POSTRA:
   case Mips::ATOMIC_LOAD_MAX_I16_POSTRA:
     IsMax = true;
@@ -694,7 +694,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   case Mips::ATOMIC_LOAD_UMIN_I32_POSTRA:
   case Mips::ATOMIC_LOAD_UMIN_I64_POSTRA:
     IsUnsigned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_MIN_I32_POSTRA:
   case Mips::ATOMIC_LOAD_MIN_I64_POSTRA:
     IsMin = true;
@@ -702,7 +702,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   case Mips::ATOMIC_LOAD_UMAX_I32_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I64_POSTRA:
     IsUnsigned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::ATOMIC_LOAD_MAX_I32_POSTRA:
   case Mips::ATOMIC_LOAD_MAX_I64_POSTRA:
     IsMax = true;

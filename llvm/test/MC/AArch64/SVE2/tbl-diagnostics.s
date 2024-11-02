@@ -25,7 +25,7 @@ tbl z0.d, { z1.d, z2.b }, z3.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 tbl z0.d, { z1.d, z21.d }, z3.d
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: tbl z0.d, { z1.d, z21.d }, z3.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

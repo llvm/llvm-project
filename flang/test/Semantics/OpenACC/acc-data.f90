@@ -45,6 +45,12 @@ program openacc_data_validity
 
   !$acc enter data create(aa) if(.TRUE.)
 
+  !$acc enter data create(a(1:10))
+
+  !$acc enter data create(t%arr)
+
+  !$acc enter data create(t%arr(2:4))
+
   !ERROR: At most one IF clause can appear on the ENTER DATA directive
   !$acc enter data create(aa) if(.TRUE.) if(ifCondition)
 

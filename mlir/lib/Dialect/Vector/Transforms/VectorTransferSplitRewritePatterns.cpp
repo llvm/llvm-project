@@ -14,10 +14,10 @@
 #include <type_traits>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -179,7 +179,7 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
       (aOffset == bOffset) ? aOffset : ShapedType::kDynamicStrideOrOffset;
   return MemRefType::get(
       resShape, aT.getElementType(),
-      makeStridedLinearLayoutMap(resStrides, resOffset, aT.getContext()));
+      StridedLayoutAttr::get(aT.getContext(), resOffset, resStrides));
 }
 
 /// Operates under a scoped context to build the intersection between the

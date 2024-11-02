@@ -6,26 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/string_view.h"
 #include "src/stdio/printf_core/string_writer.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include "utils/UnitTest/Test.h"
 
+using __llvm_libc::cpp::string_view;
+
+__llvm_libc::printf_core::Writer get_writer(void *str_writer) {
+  return __llvm_libc::printf_core::Writer(
+      str_writer, __llvm_libc::printf_core::StringWriter::write_str,
+      __llvm_libc::printf_core::StringWriter::write_chars,
+      __llvm_libc::printf_core::StringWriter::write_char);
+}
+
 TEST(LlvmLibcPrintfStringWriterTest, Constructor) {
   char str[10];
   __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  (void)writer;
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, Write) {
   char str[4] = {'D', 'E', 'F', 'G'};
   __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write("abc", 3);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write({"abc", 3});
 
   EXPECT_EQ(str[3], 'G');
   // This null terminates the string. The writer has no indication when the
@@ -36,63 +45,59 @@ TEST(LlvmLibcPrintfStringWriterTest, Write) {
   str_writer.terminate();
 
   ASSERT_STREQ("abc", str);
-  ASSERT_EQ(writer.get_chars_written(), 3ull);
+  ASSERT_EQ(writer.get_chars_written(), 3);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteMultipleTimes) {
   char str[10];
   __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write("abc", 3);
-  writer.write("DEF", 3);
-  writer.write("1234", 3);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write({"abc", 3});
+  writer.write({"DEF", 3});
+  writer.write({"1234", 3});
 
   str_writer.terminate();
 
   ASSERT_STREQ("abcDEF123", str);
-  ASSERT_EQ(writer.get_chars_written(), 9ull);
+  ASSERT_EQ(writer.get_chars_written(), 9);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteChars) {
   char str[4] = {'D', 'E', 'F', 'G'};
   __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write_chars('a', 3);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write('a', 3);
 
   EXPECT_EQ(str[3], 'G');
   str_writer.terminate();
 
   ASSERT_STREQ("aaa", str);
-  ASSERT_EQ(writer.get_chars_written(), 3ull);
+  ASSERT_EQ(writer.get_chars_written(), 3);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteCharsMultipleTimes) {
   char str[10];
   __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write_chars('a', 3);
-  writer.write_chars('D', 3);
-  writer.write_chars('1', 3);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write('a', 3);
+  writer.write('D', 3);
+  writer.write('1', 3);
 
   str_writer.terminate();
 
   ASSERT_STREQ("aaaDDD111", str);
-  ASSERT_EQ(writer.get_chars_written(), 9ull);
+  ASSERT_EQ(writer.get_chars_written(), 9);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteManyChars) {
   char str[100];
   __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write_chars('Z', 99);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write('Z', 99);
 
   str_writer.terminate();
 
@@ -107,100 +112,94 @@ TEST(LlvmLibcPrintfStringWriterTest, WriteManyChars) {
                "ZZZZZZZZZZ"
                "ZZZZZZZZZ",
                str);
-  ASSERT_EQ(writer.get_chars_written(), 99ull);
+  ASSERT_EQ(writer.get_chars_written(), 99);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, MixedWrites) {
   char str[13];
   __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write_chars('a', 3);
-  writer.write("DEF", 3);
-  writer.write_chars('1', 3);
-  writer.write("456", 3);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write('a', 3);
+  writer.write({"DEF", 3});
+  writer.write('1', 3);
+  writer.write({"456", 3});
 
   str_writer.terminate();
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteWithMaxLength) {
   char str[11];
   __llvm_libc::printf_core::StringWriter str_writer(str, 10);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write("abcDEF123456", 12);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write({"abcDEF123456", 12});
 
   str_writer.terminate();
 
   ASSERT_STREQ("abcDEF1234", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteCharsWithMaxLength) {
   char str[11];
   __llvm_libc::printf_core::StringWriter str_writer(str, 10);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
 
-  writer.write_chars('1', 15);
+  writer.write('1', 15);
 
   str_writer.terminate();
 
   ASSERT_STREQ("1111111111", str);
-  ASSERT_EQ(writer.get_chars_written(), 15ull);
+  ASSERT_EQ(writer.get_chars_written(), 15);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, MixedWriteWithMaxLength) {
   char str[11];
   __llvm_libc::printf_core::StringWriter str_writer(str, 10);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write_chars('a', 3);
-  writer.write("DEF", 3);
-  writer.write_chars('1', 3);
-  writer.write("456", 3);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write('a', 3);
+  writer.write({"DEF", 3});
+  writer.write('1', 3);
+  writer.write({"456", 3});
 
   str_writer.terminate();
 
   ASSERT_STREQ("aaaDEF1114", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, StringWithMaxLengthOne) {
   char str[1];
   __llvm_libc::printf_core::StringWriter str_writer(str, 0);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
   // This is because the max length should be at most 1 less than the size of
   // the buffer it's writing to.
-  writer.write_chars('a', 3);
-  writer.write("DEF", 3);
-  writer.write_chars('1', 3);
-  writer.write("456", 3);
+  writer.write('a', 3);
+  writer.write({"DEF", 3});
+  writer.write('1', 3);
+  writer.write({"456", 3});
 
   str_writer.terminate();
 
   ASSERT_STREQ("", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, NullStringWithZeroMaxLength) {
   __llvm_libc::printf_core::StringWriter str_writer(nullptr, 0);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-  writer.write_chars('a', 3);
-  writer.write("DEF", 3);
-  writer.write_chars('1', 3);
-  writer.write("456", 3);
+  __llvm_libc::printf_core::Writer writer =
+      get_writer(reinterpret_cast<void *>(&str_writer));
+  writer.write('a', 3);
+  writer.write({"DEF", 3});
+  writer.write('1', 3);
+  writer.write({"456", 3});
 
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }

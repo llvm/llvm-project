@@ -2,8 +2,8 @@
 ; RUN: -sanitizer-coverage-level=3 %s -S -o - | FileCheck %s
 
 ; The edge between %entry and %for.inc.i is a critical edge.
-; ModuleSanitizerCoveragePass must split this critical edge in order to track
-; coverage of this edge. ModuleSanitizerCoveragePass will also insert calls to
+; SanitizerCoveragePass must split this critical edge in order to track
+; coverage of this edge. SanitizerCoveragePass will also insert calls to
 ; @__sanitizer_cov_trace_pc using the debug location from the predecessor's
 ; branch.  but, if the branch itself is missing debug info (say, by accident
 ; due to a bug in an earlier transform), we would fail a verifier check that
@@ -13,7 +13,7 @@
 ; Of the below checks, we really only care that the calls to
 ; @__sanitizer_cov_trace_pc retain !dbg metadata.
 
-define void @update_shadow() !dbg !3 {
+define void @update_shadow(i1 %c) !dbg !3 {
 ; CHECK-LABEL: @update_shadow(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR0:[0-9]+]], !dbg [[DBG6:![0-9]+]]
@@ -25,7 +25,7 @@ define void @update_shadow() !dbg !3 {
 ; CHECK:       [[DBG7]] = !DILocation(line: 0, scope: !3)
 ; CHECK:       [[DBG8]] = !DILocation(line: 129, column: 2, scope: !3)
 entry:
-  br i1 undef, label %for.inc.i, label %if.end22.i
+  br i1 %c, label %for.inc.i, label %if.end22.i
 
 if.end22.i:                                       ; preds = %entry
   br label %for.inc.i, !dbg !8

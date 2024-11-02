@@ -1,5 +1,5 @@
 =========================================
-Libc++ 15.0.0 (In-Progress) Release Notes
+Libc++ 16.0.0 (In-Progress) Release Notes
 =========================================
 
 .. contents::
@@ -10,7 +10,7 @@ Written by the `Libc++ Team <https://libcxx.llvm.org>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming libc++ 15 release.
+   These are in-progress notes for the upcoming libc++ 16 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the libc++ C++ Standard Library,
-part of the LLVM Compiler Infrastructure, release 15.0.0. Here we describe the
+part of the LLVM Compiler Infrastructure, release 16.0.0. Here we describe the
 status of libc++ in some detail, including major improvements from the previous
 release and new feature work. For the general LLVM release notes, see `the LLVM
 documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
@@ -32,124 +32,102 @@ main Libc++ web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
-What's New in Libc++ 15.0.0?
+What's New in Libc++ 16.0.0?
 ============================
 
-New Features
-------------
+Implemented Papers
+------------------
+- P2499R0 - ``string_view`` range constructor should be ``explicit``
+- P2417R2 - A more constexpr bitset
+- P2445R1 - ``std::forward_like``
+- P2273R3 - Making ``std::unique_ptr`` constexpr
+- P0591R4 - Utility functions to implement uses-allocator construction
+- P2291R3 - Add Constexpr Modifiers to Functions ``to_chars`` and
+  ``from_chars`` for Integral Types in ``<charconv>`` Header
+- P0220R1 - Adopt Library Fundamentals V1 TS Components for C++17
+- P0482R6 - char8_t: A type for UTF-8 characters and strings
+- P2438R2 - ``std::string::substr() &&``
 
-- Implemented P0627R6 (Function to mark unreachable code)
+Improvements and New Features
+-----------------------------
+- Declarations of ``std::c8rtomb()`` and ``std::mbrtoc8()`` from P0482R6 are
+  now provided when implementations in the global namespace are provided by
+  the C library.
+- Implemented ``<memory_resource>`` header from C++17
 
-- Implemented P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
+Deprecations and Removals
+-------------------------
+- ``unary_function`` and ``binary_function`` are no longer provided in C++17 and newer Standard modes.
+  They can be re-enabled with ``_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION``.
 
-- Implemented P0674R1 (Support arrays in ``make_shared`` and ``allocate_shared``)
+- Several incidental transitive includes have been removed from libc++. Those
+  includes are removed based on the language version used. Incidental transitive
+  inclusions of the following headers have been removed:
 
-- Implemented P0980R1 (Making ``std::string`` constexpr)
+  - C++20: ``chrono``
+  - C++2b: ``algorithm``, ``array``, ``atomic``, ``bit``, ``chrono``,
+    ``climits``, ``cmath``, ``compare``, ``concepts``, ``cstdarg`, ``cstddef``,
+    ``cstdint``, ``cstdlib``, ``cstring``, ``ctime``, ``exception``,
+    ``functional``, ``initializer_list``, ``iosfwd``, ``iterator``, ``limits``,
+    ``memory``, ``new``, ``numeric``, ``optional``, ``ratio``, ``stdexcept``,
+    ``string``, ``tuple``, ``type_traits``, ``typeinfo``, ``unordered_map``,
+    ``utility``, ``variant``, ``vector``.
 
-- Marked the following papers as "Complete" (note that some of those might have
-  been implemented in a previous release but not marked as such):
+  Users can also remove all incidental transitive includes by defining
+  ``_LIBCPP_REMOVE_TRANSITIVE_INCLUDES`` regardless of the language version
+  in use. Note that in the future, libc++ reserves the right to remove
+  incidental transitive includes more aggressively, in particular regardless
+  of the language version in use.
 
-    - P1207R4 (Movability of Single-pass Iterators);
-    - P1474R1 (Helpful pointers for ``ContiguousIterator``);
-    - P1522R1 (Iterator Difference Type and Integer Overflow);
-    - P1523R1 (Views and Size Types);
-    - P1456R1 (Move-only views);
-    - P1870R1 (``forwarding-range`` is too subtle);
-    - P1878R1 (Constraining Readable Types);
-    - P1970R2 (Consistency for ``size()`` functions: Add ``ranges::ssize``);
-    - P1983R0 (Wording for GB301, US296, US292, US291, and US283).
+- The legacy testing system for libc++, libc++abi and libunwind has been removed.
+  All known clients have been migrated to the new configuration system, but please
+  reach out to the libc++ developers if you find something missing in the new
+  configuration system.
 
-- `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
-  "heapsort with bounce" to reduce the number of comparisons, and rearranges
-  elements using move-assignment instead of `swap`.
+- The functions ``to_chars`` and ``from_chars`` for integral types are
+  available starting with C++17. Libc++ offered these functions in C++11 and
+  C++14 as an undocumented extension. This extension makes it hard to implement
+  the C++23 paper that makes these functions ``constexpr``, therefore the
+  extension has been removed.
 
-- Libc++ now supports a variety of assertions that can be turned on to help catch
-  undefined behavior in user code. This new support is now separate from the old
-  (and incomplete) Debug Mode. Vendors can select whether the library they ship
-  should include assertions or not by default. For details, see
-  :ref:`the documentation <assertions-mode>` about this new feature.
+- The ``_LIBCPP_ENABLE_CXX03_FUNCTION`` macro that allowed re-enabling the now-deprecated C++03 implementation of
+  ``std::function`` has been removed. Users who need to use ``std::function`` should switch to C++11 and above.
+
+- The contents of ``<experimental/memory_resource>`` are now deprecated since libc++ ships ``<memory_resource>`` now.
+  Please migrate to ``<memory_resource>`` instead. Per libc++'s TS deprecation policy,
+  ``<experimental/memory_resource>`` will be removed in LLVM 18.
+
+Upcoming Deprecations and Removals
+----------------------------------
 
 API Changes
 -----------
+- The comparison operators on ``thread::id`` are now defined as free-standing
+  functions instead of as hidden friends, in conformance with the C++ standard.
+  Also see `issue 56187 <https://github.com/llvm/llvm-project/issues/56187>`_.
 
-- The ``_LIBCPP_ABI_UNSTABLE`` macro has been removed in favour of setting
-  ``_LIBCPP_ABI_VERSION=2``. This should not have any impact on users because
-  they were not supposed to set ``_LIBCPP_ABI_UNSTABLE`` manually, however we
-  still feel that it is worth mentioning in the release notes in case some users
-  had been doing it.
+- ``_LIBCPP_ENABLE_NODISCARD`` and ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17`` are no longer respected.
+  Any standards-required ``[[nodiscard]]`` applications in C++20 are now always enabled. Any extended applications
+  are now enabled by default and can be disabled by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
 
-- The header ``<experimental/filesystem>`` has been removed. Instead, use
-  ``<filesystem>`` header. The associated macro
-  ``_LIBCPP_DEPRECATED_EXPERIMENTAL_FILESYSTEM`` has also been removed.
+- ``_LIBCPP_VERSION`` was previously defined to e.g. ``15001`` to represent LLVM 15.0.01, but this value had been
+  left undocumented. Starting with LLVM 16, ``_LIBCPP_VERSION`` will contain the version of LLVM represented as
+  ``XXYYZZ``. In other words, ``_LIBCPP_VERSION`` is gaining a digit. This should not be an issue for existing
+  code, since using e.g. ``_LIBCPP_VERSION > 15000`` will still give the right answer now that ``_LIBCPP_VERSION``
+  is defined as e.g. ``160000`` (with one more digit).
 
-- Some libc++ headers no longer transitively include all of:
-    - ``<algorithm>``
-    - ``<chrono>``
-    - ``<functional>``
-    - ``<utility>``
+ABI Affecting Changes
+---------------------
+- In freestanding mode, ``atomic<small enum class>`` does not contain a lock byte anymore if the platform
+  can implement lockfree atomics for that size. More specifically, in LLVM <= 11.0.1, an ``atomic<small enum class>``
+  would not contain a lock byte. This was broken in LLVM >= 12.0.0, where it started including a lock byte despite
+  the platform supporting lockfree atomics for that size. Starting in LLVM 15.0.1, the ABI for these types has been
+  restored to what it used to be (no lock byte), which is the most efficient implementation.
 
-  If, after updating libc++, you see compiler errors related to missing declarations
-  in namespace ``std``, it might be because one of your source files now needs to
-  include one or more of the headers listed above.
-
-- The integer distributions ``binomial_distribution``, ``discrete_distribution``,
-  ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
-  and ``uniform_int_distribution`` now conform to the Standard by rejecting
-  template parameter types other than ``short``, ``int``, ``long``, ``long long``,
-  (as an extension) ``__int128_t``, and the unsigned versions thereof.
-  In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
-
-- The C++14 function ``std::quoted(const char*)`` is no longer supported in
-  C++03 or C++11 modes.
-
-- Setting a custom debug handler with ``std::__libcpp_debug_function`` is not
-  supported anymore. Please migrate to using the new support for
-  :ref:`assertions <assertions-mode>` instead.
-
-- ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
-  and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI.
-
-ABI Changes
------------
-
-- The ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` macro controlling whether we use an
-  emulation for ``std::nullptr_t`` in C++03 mode has been removed. After this change,
-  ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` will not be honoured anymore and there
-  will be no way to opt back into the C++03 emulation of ``std::nullptr_t``.
-
-- On FreeBSD, NetBSD, DragonFlyBSD and Solaris, ``std::random_device`` is now implemented on
-  top of ``arc4random()`` instead of reading from ``/dev/urandom``. Any implementation-defined
-  token used when constructing a ``std::random_device`` will now be ignored instead of
-  interpreted as a file to read entropy from.
+  This ABI break only affects users that compile with ``-ffreestanding``, and only for ``atomic<T>`` where ``T``
+  is a non-builtin type that could be lockfree on the platform. See https://llvm.org/D133377 for more details.
 
 Build System Changes
 --------------------
-
-- Support for standalone builds have been entirely removed from libc++, libc++abi and
-  libunwind. Please use :ref:`these instructions <build instructions>` for building
-  libc++, libc++abi and/or libunwind.
-
-- The ``{LIBCXX,LIBCXXABI,LIBUNWIND}_TARGET_TRIPLE``, ``{LIBCXX,LIBCXXABI,LIBUNWIND}_SYSROOT`` and
-  ``{LIBCXX,LIBCXXABI,LIBUNWIND}_GCC_TOOLCHAIN`` CMake variables have been removed. Instead, please
-  use the ``CMAKE_CXX_COMPILER_TARGET``, ``CMAKE_SYSROOT`` and ``CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN``
-  variables provided by CMake.
-
-- When building for Windows, vendors who want to avoid dll-exporting symbols from the static libc++abi
-  library should set ``LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON`` when configuring CMake. The current
-  behavior, which tries to guess the correct dll-export semantics based on whether we're building
-  the libc++ shared library, will be removed in LLVM 16.
-
-- Previously, the C++ ABI library headers would be installed inside ``<prefix>/include/c++/v1``
-  alongside the libc++ headers as part of building libc++. This is not the case anymore -- the
-  ABI library is expected to install its headers where it wants them as part of its own build.
-  Note that no action is required for most users, who build libc++ against libc++abi, since
-  libc++abi already installs its headers in the right location. However, vendors building
-  libc++ against alternate ABI libraries should make sure that their ABI library installs
-  its own headers.
-
-- The legacy testing configuration is now deprecated and will be removed in the next release. For
-  most users, this should not have any impact. However, if you are testing libc++, libc++abi or
-  libunwind in a configuration or on a platform that used to be supported by the legacy testing
-  configuration and isn't supported by one of the configurations in ``libcxx/test/configs``,
-  ``libcxxabi/test/configs`` or ``libunwind/test/configs``, please move to one of those
-  configurations or define your own.
+- Support for ``libcxx``, ``libcxxabi`` and ``libunwind`` in ``LLVM_ENABLE_PROJECTS`` has officially
+  been removed. Instead, please build according to :ref:`these instructions <build instructions>`.

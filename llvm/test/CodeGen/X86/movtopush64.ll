@@ -8,7 +8,7 @@ declare void @eightparams(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g
 declare void @eightparams16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h)
 declare void @eightparams64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h)
 declare void @ten_params(i32 %a, i64 %b, i32 %c, i64 %d, i32 %e, i64 %f, i32 %g, i64 %h, i32 %i, i64 %j)
-declare void @ten_params_ptr(i32 %a, i64 %b, i32 %c, i64 %d, i32 %e, i64 %f, i32 %g, i8* %h, i32 %i, i64 %j)
+declare void @ten_params_ptr(i32 %a, i64 %b, i32 %c, i64 %d, i32 %e, i64 %f, i32 %g, ptr %h, i32 %i, i64 %j)
 declare void @cannot_push(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i)
 
 ; We should get pushes for the last 4 parameters. Test that the
@@ -102,7 +102,7 @@ entry:
 @ext = external dso_local constant i8
 define void @test5() {
 entry:
-  call void @ten_params_ptr(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 7, i8* @ext, i32 9, i64 10)
+  call void @ten_params_ptr(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 7, ptr @ext, i32 9, i64 10)
   ret void
 }
 
@@ -114,10 +114,10 @@ entry:
 ; NORMAL: pushq ([[REG64]])
 ; NORMAL: pushq {{%r..}}
 ; NORMAL: callq ten_params
-define void @test6(i32* %p32, i64* %p64) {
+define void @test6(ptr %p32, ptr %p64) {
 entry:
-  %v32 = load i32, i32* %p32
-  %v64 = load i64, i64* %p64
+  %v32 = load i32, ptr %p32
+  %v64 = load i64, ptr %p64
   call void @ten_params(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 %v32, i64 %v64, i32 9, i64 10)
   ret void
 }
@@ -139,9 +139,9 @@ entry:
 ; NORMAL: callq *40(%rsp)
 define void @test7(i64 %p1, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6, i64 %p7, i64 %p8) {
 entry:
-  %stack_fptr = alloca void (i32, i64, i32, i64, i32, i64, i32, i64, i32, i64)*
-  store void (i32, i64, i32, i64, i32, i64, i32, i64, i32, i64)* @ten_params, void (i32, i64, i32, i64, i32, i64, i32, i64, i32, i64)** %stack_fptr
-  %ten_params_ptr = load volatile void (i32, i64, i32, i64, i32, i64, i32, i64, i32, i64)*, void (i32, i64, i32, i64, i32, i64, i32, i64, i32, i64)** %stack_fptr
+  %stack_fptr = alloca ptr
+  store ptr @ten_params, ptr %stack_fptr
+  %ten_params_ptr = load volatile ptr, ptr %stack_fptr
   call void asm sideeffect "nop", "~{ax},~{bx},~{cx},~{dx},~{bp},~{si},~{di},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   call void (i32, i64, i32, i64, i32, i64, i32, i64, i32, i64) %ten_params_ptr(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 7, i64 %p7, i32 9, i64 %p8)
   ret void
@@ -159,8 +159,8 @@ entry:
 ; NORMAL: callq ten_params
 @the_global = external dso_local global i64
 define void @test8() {
-  %myload = load i64, i64* @the_global
-  store i64 42, i64* @the_global
+  %myload = load i64, ptr @the_global
+  store i64 42, ptr @the_global
   call void @ten_params(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 7, i64 %myload, i32 9, i64 10)
   ret void
 }

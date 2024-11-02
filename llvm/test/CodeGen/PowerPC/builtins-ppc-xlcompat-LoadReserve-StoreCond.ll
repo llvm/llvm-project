@@ -8,8 +8,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
 ; RUN:   -mcpu=pwr8 < %s | FileCheck %s --check-prefix=CHECK-64
 
-declare i32 @llvm.ppc.lwarx(i8*)
-define dso_local signext i32 @test_lwarx(i32* readnone %a) {
+declare i32 @llvm.ppc.lwarx(ptr)
+define dso_local signext i32 @test_lwarx(ptr readnone %a) {
 ; CHECK-64-LABEL: test_lwarx:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    #APP
@@ -25,12 +25,12 @@ define dso_local signext i32 @test_lwarx(i32* readnone %a) {
 ; CHECK-32-NEXT:    #NO_APP
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = call i32 asm sideeffect "lwarx $0, ${1:y}", "=r,*Z,~{memory}"(i32* elementtype(i32) %a)
+  %0 = call i32 asm sideeffect "lwarx $0, ${1:y}", "=r,*Z,~{memory}"(ptr elementtype(i32) %a)
   ret i32 %0
 }
 
-declare i32 @llvm.ppc.stwcx(i8*, i32)
-define dso_local signext i32 @test_stwcx(i32* %a, i32 signext %b) {
+declare i32 @llvm.ppc.stwcx(ptr, i32)
+define dso_local signext i32 @test_stwcx(ptr %a, i32 signext %b) {
 ; CHECK-64-LABEL: test_stwcx:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    stwcx. 4, 0, 3
@@ -46,13 +46,12 @@ define dso_local signext i32 @test_stwcx(i32* %a, i32 signext %b) {
 ; CHECK-32-NEXT:    srwi 3, 3, 28
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = bitcast i32* %a to i8*
-  %1 = tail call i32 @llvm.ppc.stwcx(i8* %0, i32 %b)
-  ret i32 %1
+  %0 = tail call i32 @llvm.ppc.stwcx(ptr %a, i32 %b)
+  ret i32 %0
 }
 
-declare i32 @llvm.ppc.sthcx(i8*, i32)
-define dso_local signext i32 @test_sthcx(i16* %a, i16 signext %val) {
+declare i32 @llvm.ppc.sthcx(ptr, i32)
+define dso_local signext i32 @test_sthcx(ptr %a, i16 signext %val) {
 ; CHECK-64-LABEL: test_sthcx:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    sthcx. 4, 0, 3
@@ -68,14 +67,13 @@ define dso_local signext i32 @test_sthcx(i16* %a, i16 signext %val) {
 ; CHECK-32-NEXT:    srwi 3, 3, 28
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = bitcast i16* %a to i8*
-  %1 = sext i16 %val to i32
-  %2 = tail call i32 @llvm.ppc.sthcx(i8* %0, i32 %1)
-  ret i32 %2
+  %0 = sext i16 %val to i32
+  %1 = tail call i32 @llvm.ppc.sthcx(ptr %a, i32 %0)
+  ret i32 %1
 }
 
-declare i32 @llvm.ppc.stbcx(i8*, i32)
-define signext i32 @test_stbcx(i8* %addr, i8 signext %val) {
+declare i32 @llvm.ppc.stbcx(ptr, i32)
+define signext i32 @test_stbcx(ptr %addr, i8 signext %val) {
 ; CHECK-64-LABEL: test_stbcx:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    stbcx. 4, 0, 3
@@ -92,11 +90,11 @@ define signext i32 @test_stbcx(i8* %addr, i8 signext %val) {
 ; CHECK-32-NEXT:    blr
 entry:
   %conv = sext i8 %val to i32
-  %0 = tail call i32 @llvm.ppc.stbcx(i8* %addr, i32 %conv)
+  %0 = tail call i32 @llvm.ppc.stbcx(ptr %addr, i32 %conv)
   ret i32 %0
 }
 
-define dso_local signext i16 @test_lharx(i16* %a) {
+define dso_local signext i16 @test_lharx(ptr %a) {
 ; CHECK-64-LABEL: test_lharx:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    #APP
@@ -113,12 +111,12 @@ define dso_local signext i16 @test_lharx(i16* %a) {
 ; CHECK-32-NEXT:    extsh 3, 3
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = tail call i16 asm sideeffect "lharx $0, ${1:y}", "=r,*Z,~{memory}"(i16* elementtype(i16) %a)
+  %0 = tail call i16 asm sideeffect "lharx $0, ${1:y}", "=r,*Z,~{memory}"(ptr elementtype(i16) %a)
   ret i16 %0
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local zeroext i8 @test_lbarx(i8* %a) {
+define dso_local zeroext i8 @test_lbarx(ptr %a) {
 ; CHECK-64-LABEL: test_lbarx:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    #APP
@@ -135,6 +133,6 @@ define dso_local zeroext i8 @test_lbarx(i8* %a) {
 ; CHECK-32-NEXT:    clrlwi 3, 3, 24
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = tail call i8 asm sideeffect "lbarx $0, ${1:y}", "=r,*Z,~{memory}"(i8* elementtype(i8) %a)
+  %0 = tail call i8 asm sideeffect "lbarx $0, ${1:y}", "=r,*Z,~{memory}"(ptr elementtype(i8) %a)
   ret i8 %0
 }

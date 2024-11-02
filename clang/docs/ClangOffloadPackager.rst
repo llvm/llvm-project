@@ -95,7 +95,7 @@ the following values for the :ref:`offload kind<table-offload_kind>` and the
     +---------------+-------+---------------------------------------+
     | IMG_Fatbinary | 0x04  | The image is a CUDA fatbinary file    |
     +---------------+-------+---------------------------------------+
-    | IMG_PTX       | 0x05  | The iamge is a CUDA PTX file          |
+    | IMG_PTX       | 0x05  | The image is a CUDA PTX file          |
     +---------------+-------+---------------------------------------+
 
 .. table:: Offload Kind
@@ -145,8 +145,9 @@ Usage
 =====
 
 This tool can be used with the following arguments. Generally information is
-passed as a key-value pair to the ``image=`` argument. The ``file``, ``triple``,
-and ``arch`` arguments are considered mandatory to make a valid image.
+passed as a key-value pair to the ``image=`` argument. The ``file`` and ``triple``,
+arguments are considered mandatory to make a valid image. The ``arch`` argument 
+is suggested.
 
 .. code-block:: console
 
@@ -168,7 +169,7 @@ and ``arch`` arguments are considered mandatory to make a valid image.
   
     --image=<<key>=<value>,...> - List of key and value arguments. Required
                                   keywords are 'file' and 'triple'.
-    -o=<file>                   - Write output to <file>.
+    -o <file>                   - Write output to <file>.
 
 Example
 =======
@@ -179,3 +180,12 @@ single output file with all the images combined.
 .. code-block:: console
 
   clang-offload-packager -o out.bin --image=file=input.o,triple=nvptx64,arch=sm_70
+
+The inverse operation can be performed instead by passing the packaged binary as 
+input. In this mode the matching images will either be placed in the output 
+specified by the ``file`` option. If no ``file`` argument is provided a name 
+will be generated for each matching image.
+
+.. code-block:: console
+
+  clang-offload-packager in.bin --image=file=output.o,triple=nvptx64,arch=sm_70

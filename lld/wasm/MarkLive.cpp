@@ -90,7 +90,7 @@ void MarkLive::run() {
     enqueue(symtab->find(config->entry));
 
   // We need to preserve any no-strip or exported symbol
-  for (Symbol *sym : symtab->getSymbols())
+  for (Symbol *sym : symtab->symbols())
     if (sym->isNoStrip() || sym->isExported())
       enqueue(sym);
 

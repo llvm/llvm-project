@@ -36,7 +36,7 @@ namespace opts {
 cl::OptionCategory CXXDumpCategory("CXX Dump Options");
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input object files>"),
-                                     cl::ZeroOrMore, cl::cat(CXXDumpCategory));
+                                     cl::cat(CXXDumpCategory));
 } // namespace opts
 
 namespace llvm {
@@ -499,7 +499,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
 
 static void dumpArchive(const Archive *Arc) {
   Error Err = Error::success();
-  for (auto &ArcC : Arc->children(Err)) {
+  for (const auto &ArcC : Arc->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
     if (!ChildOrErr) {
       // Ignore non-object files.

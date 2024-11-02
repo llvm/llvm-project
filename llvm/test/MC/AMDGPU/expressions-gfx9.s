@@ -14,13 +14,13 @@ v_mov_b32_sdwa v1, sext(u)
 //===----------------------------------------------------------------------===//
 
 s_sub_u32 s0, 123, u
-// NOGFX9: error: only one literal operand is allowed
+// NOGFX9: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u
-// NOGFX9: error: only one literal operand is allowed
+// NOGFX9: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u1
-// NOGFX9: error: only one literal operand is allowed
+// NOGFX9: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, v3, u
 // NOGFX9: error: literal operands are not supported

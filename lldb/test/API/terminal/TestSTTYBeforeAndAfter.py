@@ -2,11 +2,8 @@
 Test that 'stty -a' displays the same output before and after running the lldb command.
 """
 
-from __future__ import print_function
-
-
 import lldb
-import six
+import io
 import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -14,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestSTTYBeforeAndAfter(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @classmethod
     def classCleanup(cls):
@@ -59,8 +54,8 @@ class TestSTTYBeforeAndAfter(TestBase):
         child.expect(expect_prompt)
 
         # Turn on loggings for input/output to/from the child.
-        child.logfile_send = child_send1 = six.StringIO()
-        child.logfile_read = child_read1 = six.StringIO()
+        child.logfile_send = child_send1 = io.StringIO()
+        child.logfile_read = child_read1 = io.StringIO()
         child.sendline('stty -a')
         child.expect(expect_prompt)
 
@@ -77,8 +72,8 @@ class TestSTTYBeforeAndAfter(TestBase):
         child.sendline('quit')
         child.expect(expect_prompt)
 
-        child.logfile_send = child_send2 = six.StringIO()
-        child.logfile_read = child_read2 = six.StringIO()
+        child.logfile_send = child_send2 = io.StringIO()
+        child.logfile_read = child_read2 = io.StringIO()
         child.sendline('stty -a')
         child.expect(expect_prompt)
 

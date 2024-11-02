@@ -25,6 +25,7 @@
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
 #include "clang/Tooling/Tooling.h"
@@ -157,9 +158,11 @@ public:
         clang::syntax::TokenBuffer TB = std::move(Collector).consume();
         if (TokensDump)
           llvm::outs() << TB.dumpForTests();
-        clang::syntax::Arena A(AST.getSourceManager(), AST.getLangOpts(), TB);
-        llvm::outs() << clang::syntax::buildSyntaxTree(A, AST)->dump(
-            AST.getSourceManager());
+        clang::syntax::TokenBufferTokenManager TBTM(TB, AST.getLangOpts(),
+                                                    AST.getSourceManager());
+        clang::syntax::Arena A;
+        llvm::outs()
+            << clang::syntax::buildSyntaxTree(A, TBTM, AST)->dump(TBTM);
       }
 
     private:

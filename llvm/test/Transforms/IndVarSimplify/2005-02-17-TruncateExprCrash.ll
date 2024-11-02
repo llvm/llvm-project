@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 
 declare void @q_atomic_increment()
 

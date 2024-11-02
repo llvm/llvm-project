@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // <string_view>
 
 // constexpr basic_string_view () noexcept;
@@ -37,7 +39,7 @@ void test () {
 int main(int, char**) {
     test<std::string_view> ();
     test<std::u16string_view> ();
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test<std::u8string_view> ();
 #endif
     test<std::u32string_view> ();

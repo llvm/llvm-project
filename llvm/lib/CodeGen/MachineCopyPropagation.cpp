@@ -660,77 +660,76 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       Register RegSrc = CopyOperands->Source->getReg();
       Register RegDef = CopyOperands->Destination->getReg();
 
-      if (TRI->regsOverlap(RegDef, RegSrc))
+      if (!TRI->regsOverlap(RegDef, RegSrc)) {
+        assert(RegDef.isPhysical() && RegSrc.isPhysical() &&
+              "MachineCopyPropagation should be run after register allocation!");
+
+        MCRegister Def = RegDef.asMCReg();
+        MCRegister Src = RegSrc.asMCReg();
+
+        // The two copies cancel out and the source of the first copy
+        // hasn't been overridden, eliminate the second one. e.g.
+        //  %ecx = COPY %eax
+        //  ... nothing clobbered eax.
+        //  %eax = COPY %ecx
+        // =>
+        //  %ecx = COPY %eax
+        //
+        // or
+        //
+        //  %ecx = COPY %eax
+        //  ... nothing clobbered eax.
+        //  %ecx = COPY %eax
+        // =>
+        //  %ecx = COPY %eax
+        if (eraseIfRedundant(MI, Def, Src) || eraseIfRedundant(MI, Src, Def))
+          continue;
+
+        forwardUses(MI);
+
+        // Src may have been changed by forwardUses()
+        CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
+        Src = CopyOperands->Source->getReg().asMCReg();
+
+        // If Src is defined by a previous copy, the previous copy cannot be
+        // eliminated.
+        ReadRegister(Src, MI, RegularUse);
+        for (const MachineOperand &MO : MI.implicit_operands()) {
+          if (!MO.isReg() || !MO.readsReg())
+            continue;
+          MCRegister Reg = MO.getReg().asMCReg();
+          if (!Reg)
+            continue;
+          ReadRegister(Reg, MI, RegularUse);
+        }
+
+        LLVM_DEBUG(dbgs() << "MCP: Copy is a deletion candidate: "; MI.dump());
+
+        // Copy is now a candidate for deletion.
+        if (!MRI->isReserved(Def))
+          MaybeDeadCopies.insert(&MI);
+
+        // If 'Def' is previously source of another copy, then this earlier copy's
+        // source is no longer available. e.g.
+        // %xmm9 = copy %xmm2
+        // ...
+        // %xmm2 = copy %xmm0
+        // ...
+        // %xmm2 = copy %xmm9
+        Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr);
+        for (const MachineOperand &MO : MI.implicit_operands()) {
+          if (!MO.isReg() || !MO.isDef())
+            continue;
+          MCRegister Reg = MO.getReg().asMCReg();
+          if (!Reg)
+            continue;
+          Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
+        }
+
+        Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
+
         continue;
-
-      assert(RegDef.isPhysical() && RegSrc.isPhysical() &&
-             "MachineCopyPropagation should be run after register allocation!");
-
-      MCRegister Def = RegDef.asMCReg();
-      MCRegister Src = RegSrc.asMCReg();
-
-      // The two copies cancel out and the source of the first copy
-      // hasn't been overridden, eliminate the second one. e.g.
-      //  %ecx = COPY %eax
-      //  ... nothing clobbered eax.
-      //  %eax = COPY %ecx
-      // =>
-      //  %ecx = COPY %eax
-      //
-      // or
-      //
-      //  %ecx = COPY %eax
-      //  ... nothing clobbered eax.
-      //  %ecx = COPY %eax
-      // =>
-      //  %ecx = COPY %eax
-      if (eraseIfRedundant(MI, Def, Src) || eraseIfRedundant(MI, Src, Def))
-        continue;
-
-      forwardUses(MI);
-
-      // Src may have been changed by forwardUses()
-      CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
-      Src = CopyOperands->Source->getReg().asMCReg();
-
-      // If Src is defined by a previous copy, the previous copy cannot be
-      // eliminated.
-      ReadRegister(Src, MI, RegularUse);
-      for (const MachineOperand &MO : MI.implicit_operands()) {
-        if (!MO.isReg() || !MO.readsReg())
-          continue;
-        MCRegister Reg = MO.getReg().asMCReg();
-        if (!Reg)
-          continue;
-        ReadRegister(Reg, MI, RegularUse);
       }
-
-      LLVM_DEBUG(dbgs() << "MCP: Copy is a deletion candidate: "; MI.dump());
-
-      // Copy is now a candidate for deletion.
-      if (!MRI->isReserved(Def))
-        MaybeDeadCopies.insert(&MI);
-
-      // If 'Def' is previously source of another copy, then this earlier copy's
-      // source is no longer available. e.g.
-      // %xmm9 = copy %xmm2
-      // ...
-      // %xmm2 = copy %xmm0
-      // ...
-      // %xmm2 = copy %xmm9
-      Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr);
-      for (const MachineOperand &MO : MI.implicit_operands()) {
-        if (!MO.isReg() || !MO.isDef())
-          continue;
-        MCRegister Reg = MO.getReg().asMCReg();
-        if (!Reg)
-          continue;
-        Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
-      }
-
-      Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
-
-      continue;
     }
 
     // Clobber any earlyclobber regs first.
@@ -927,23 +926,22 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
   for (MachineInstr &MI : llvm::make_early_inc_range(llvm::reverse(MBB))) {
     // Ignore non-trivial COPYs.
     Optional<DestSourcePair> CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands) {
+    if (CopyOperands && MI.getNumOperands() == 2) {
       Register DefReg = CopyOperands->Destination->getReg();
       Register SrcReg = CopyOperands->Source->getReg();
 
-      if (TRI->regsOverlap(DefReg, SrcReg))
-        continue;
+      if (!TRI->regsOverlap(DefReg, SrcReg)) {
+        MCRegister Def = DefReg.asMCReg();
+        MCRegister Src = SrcReg.asMCReg();
 
-      MCRegister Def = DefReg.asMCReg();
-      MCRegister Src = SrcReg.asMCReg();
-
-      // Unlike forward cp, we don't invoke propagateDefs here,
-      // just let forward cp do COPY-to-COPY propagation.
-      if (isBackwardPropagatableCopy(MI, *MRI, *TII, UseCopyInstr)) {
-        Tracker.invalidateRegister(Src, *TRI, *TII, UseCopyInstr);
-        Tracker.invalidateRegister(Def, *TRI, *TII, UseCopyInstr);
-        Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
-        continue;
+        // Unlike forward cp, we don't invoke propagateDefs here,
+        // just let forward cp do COPY-to-COPY propagation.
+        if (isBackwardPropagatableCopy(MI, *MRI, *TII, UseCopyInstr)) {
+          Tracker.invalidateRegister(Src, *TRI, *TII, UseCopyInstr);
+          Tracker.invalidateRegister(Def, *TRI, *TII, UseCopyInstr);
+          Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
+          continue;
+        }
       }
     }
 

@@ -586,6 +586,20 @@ namespace {
                                                   includeBriefComments());
         
         CXCompletionResult R;
+        switch (Results[I].Kind) {
+        case CodeCompletionResult::RK_Declaration:
+          R.ResultKind = CXCompletionResult_Declaration;
+          break;
+        case CodeCompletionResult::RK_Keyword:
+          R.ResultKind = CXCompletionResult_Keyword;
+          break;
+        case CodeCompletionResult::RK_Macro:
+          R.ResultKind = CXCompletionResult_Macro;
+          break;
+        case CodeCompletionResult::RK_Pattern:
+          R.ResultKind = CXCompletionResult_Pattern;
+          break;
+        }
         R.CursorKind = Results[I].CursorKind;
         R.CompletionString = StoredCompletion;
         StoredResults.push_back(R);
@@ -666,6 +680,7 @@ namespace {
                                                 includeBriefComments(), Braced);
 
         CXCompletionResult R;
+        R.ResultKind = CXCompletionResult_Declaration;
         R.CursorKind = CXCursor_OverloadCandidate;
         R.CompletionString = StoredCompletion;
         StoredResults.push_back(R);

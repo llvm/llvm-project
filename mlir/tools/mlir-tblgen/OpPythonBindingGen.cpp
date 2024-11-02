@@ -669,10 +669,11 @@ populateBuilderLinesAttr(const Operator &op,
       continue;
     }
 
-    builderLines.push_back(llvm::formatv(attribute->attr.isOptional()
-                                             ? initOptionalAttributeTemplate
-                                             : initAttributeTemplate,
-                                         attribute->name, argNames[i]));
+    builderLines.push_back(llvm::formatv(
+        (attribute->attr.isOptional() || attribute->attr.hasDefaultValue())
+            ? initOptionalAttributeTemplate
+            : initAttributeTemplate,
+        attribute->name, argNames[i]));
   }
 }
 

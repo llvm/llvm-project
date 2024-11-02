@@ -6,7 +6,7 @@
 # Delete our BB symbols so BOLT doesn't mark them as entry points
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: ld.lld %t.o -o %t.exe -q -shared -fini=_fini
-# RUN: llvm-bolt -instrument %t.exe -relocs -o %t.out
+# RUN: llvm-bolt --instrument %t.exe --relocs -o %t.out
 
   .text
   .globl  _start

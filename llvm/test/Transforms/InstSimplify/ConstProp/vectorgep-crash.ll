@@ -10,57 +10,57 @@ target triple = "x86_64-unknown-linux-gnu"
 %Partials.73 = type { [2 x %Dual.72] }
 
 ; Function Attrs: sspreq
-define <8 x i64*> @"julia_axpy!_65480"(%Dual* %arg1, <8 x i64> %arg2) {
+define <8 x ptr> @"julia_axpy!_65480"(ptr %arg1, <8 x i64> %arg2) {
 top:
-; CHECK: %VectorGep14 = getelementptr inbounds %Dual, %Dual* %arg1, <8 x i64> %arg2, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
-  %VectorGep14 = getelementptr inbounds %Dual, %Dual* %arg1, <8 x i64> %arg2, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
-  %0 = bitcast <8 x double*> %VectorGep14 to <8 x i64*>
-  ret <8 x i64*> %0
+; CHECK: %VectorGep14 = getelementptr inbounds %Dual, ptr %arg1, <8 x i64> %arg2, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
+  %VectorGep14 = getelementptr inbounds %Dual, ptr %arg1, <8 x i64> %arg2, i32 1, i32 0, i64 0, i32 1, i32 0, i64 0
+  %0 = bitcast <8 x ptr> %VectorGep14 to <8 x ptr>
+  ret <8 x ptr> %0
 }
 
-%struct.A = type { i32, %struct.B* }
-%struct.B = type { i64, %struct.C* }
+%struct.A = type { i32, ptr }
+%struct.B = type { i64, ptr }
 %struct.C = type { i64 }
 
 @G = internal global [65 x %struct.A] zeroinitializer, align 16
 ; CHECK-LABEL: @test
-; CHECK: ret <16 x i32*> getelementptr ([65 x %struct.A], [65 x %struct.A]* @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, i32 0)
-define <16 x i32*> @test() {
+; CHECK: ret <16 x ptr> getelementptr ([65 x %struct.A], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, i32 0)
+define <16 x ptr> @test() {
 vector.body:
-  %VectorGep = getelementptr [65 x %struct.A], [65 x %struct.A]* @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, <16 x i32> zeroinitializer
-  ret <16 x i32*> %VectorGep
+  %VectorGep = getelementptr [65 x %struct.A], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, <16 x i32> zeroinitializer
+  ret <16 x ptr> %VectorGep
 }
 
 ; CHECK-LABEL: @test2
-; CHECK: ret <16 x i32*> getelementptr ([65 x %struct.A], [65 x %struct.A]* @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, 
-define <16 x i32*> @test2() {
+; CHECK: ret <16 x ptr> getelementptr ([65 x %struct.A], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, 
+define <16 x ptr> @test2() {
 vector.body:
-  %VectorGep = getelementptr [65 x %struct.A], [65 x %struct.A]* @G, <16 x i32> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, <16 x i32> zeroinitializer
-  ret <16 x i32*> %VectorGep
+  %VectorGep = getelementptr [65 x %struct.A], ptr @G, <16 x i32> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, <16 x i32> zeroinitializer
+  ret <16 x ptr> %VectorGep
 }
 
 @g = external global i8, align 1
 
-define <2 x i8*> @constant_zero_index() {
+define <2 x ptr> @constant_zero_index() {
 ; CHECK-LABEL: @constant_zero_index(
-; CHECK-NEXT:    ret <2 x i8*> <i8* @g, i8* @g>
+; CHECK-NEXT:    ret <2 x ptr> <ptr @g, ptr @g>
 ;
-  %gep = getelementptr i8, i8* @g, <2 x i64> zeroinitializer
-  ret <2 x i8*> %gep
+  %gep = getelementptr i8, ptr @g, <2 x i64> zeroinitializer
+  ret <2 x ptr> %gep
 }
 
-define <2 x i8*> @constant_undef_index() {
+define <2 x ptr> @constant_undef_index() {
 ; CHECK-LABEL: @constant_undef_index(
-; CHECK-NEXT:    ret <2 x i8*> <i8* @g, i8* @g>
+; CHECK-NEXT:    ret <2 x ptr> <ptr @g, ptr @g>
 ;
-  %gep = getelementptr i8, i8* @g, <2 x i64> undef
-  ret <2 x i8*> %gep
+  %gep = getelementptr i8, ptr @g, <2 x i64> undef
+  ret <2 x ptr> %gep
 }
 
-define <2 x i8*> @constant_inbounds() {
+define <2 x ptr> @constant_inbounds() {
 ; CHECK-LABEL: @constant_inbounds(
-; CHECK-NEXT:    ret <2 x i8*> getelementptr inbounds (i8, i8* @g, <2 x i64> <i64 1, i64 1>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds (i8, ptr @g, <2 x i64> <i64 1, i64 1>)
 ;
-  %gep = getelementptr i8, i8* @g, <2 x i64> <i64 1, i64 1>
-  ret <2 x i8*> %gep
+  %gep = getelementptr i8, ptr @g, <2 x i64> <i64 1, i64 1>
+  ret <2 x ptr> %gep
 }

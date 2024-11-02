@@ -54,6 +54,15 @@ int main(int, char**)
         for (std::size_t i = 0; i < v2.size(); ++i)
             assert(v2[i] == ~(2*v[i]));
     }
+    {
+        // Make sure we don't have dangling reference problems with unary expressions
+        int array[] = {1, 2, 3};
+        std::valarray<int> a(array, 3);
+        std::valarray<int> b(array, 3);
+        auto c = ~a + b;
+        assert(c.size() == 3);
+        assert(c[0] == (~1 + 1) && c[1] == (~2 + 2) && c[2] == (~3 + 3));
+    }
 
-  return 0;
+    return 0;
 }

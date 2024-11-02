@@ -62,6 +62,21 @@ int test_html10(int);
 /// <br></br>
 int test_html11(int);
 
+/// Aaa bbb<img/>
+int test_html12(int);
+
+/// Aaa bbb<img />
+int test_html13(int);
+
+/// Aaa bbb<img src="">
+int test_html14(int);
+
+/// Aaa bbb<img src=""/>
+int test_html15(int);
+
+/// Aaa bbb<img src="" />
+int test_html16(int);
+
 /// <blockquote>Meow</blockquote>
 int test_html_nesting1(int);
 

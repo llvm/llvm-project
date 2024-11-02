@@ -3,8 +3,8 @@
 
 define void @foo(i1 zeroext %0) nounwind {
 entry:
-  %1 = select i1 %0, i8* blockaddress(@foo, %bb1), i8* blockaddress(@foo, %bb2) ; <i8*> [#uses=1]
-  indirectbr i8* %1, [label %bb1, label %bb2]
+  %1 = select i1 %0, ptr blockaddress(@foo, %bb1), ptr blockaddress(@foo, %bb2) ; <ptr> [#uses=1]
+  indirectbr ptr %1, [label %bb1, label %bb2]
 
 ; CHECK:         .text
 ; CHECK:         .section .text.foo,"ax",@progbits

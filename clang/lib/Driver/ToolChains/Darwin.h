@@ -254,7 +254,8 @@ public:
 
   bool UseObjCMixedDispatch() const override { return true; }
 
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
@@ -495,12 +496,6 @@ public:
                 : TargetVersion) < VersionTuple(V0, V1, V2);
   }
 
-  /// Returns the darwin target variant triple, the variant of the deployment
-  /// target for which the code is being compiled.
-  Optional<llvm::Triple> getTargetVariantTriple() const override {
-    return TargetVariantTriple;
-  }
-
 protected:
   /// Return true if c++17 aligned allocation/deallocation functions are not
   /// implemented in the c++ standard library of the deployment target we are
@@ -510,6 +505,10 @@ protected:
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
+
+  void addClangCC1ASTargetOptions(
+      const llvm::opt::ArgList &Args,
+      llvm::opt::ArgStringList &CC1ASArgs) const override;
 
   StringRef getPlatformFamily() const;
   StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const override;
@@ -628,7 +627,8 @@ private:
                                    llvm::StringRef ArchDir,
                                    llvm::StringRef BitDir) const;
 
-  llvm::StringRef GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const;
+  llvm::SmallString<128>
+  GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const;
 };
 
 } // end namespace toolchains

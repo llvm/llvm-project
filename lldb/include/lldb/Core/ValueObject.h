@@ -795,7 +795,7 @@ protected:
 
   class ChildrenManager {
   public:
-    ChildrenManager() {}
+    ChildrenManager() = default;
 
     bool HasChildAtIndex(size_t idx) {
       std::lock_guard<std::recursive_mutex> guard(m_mutex);

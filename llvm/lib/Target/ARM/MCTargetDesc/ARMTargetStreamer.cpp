@@ -114,8 +114,8 @@ void ARMTargetStreamer::emitArchExtension(uint64_t ArchExt) {}
 void ARMTargetStreamer::emitObjectArch(ARM::ArchKind Arch) {}
 void ARMTargetStreamer::emitFPU(unsigned FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
-void
-ARMTargetStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) {}
+void ARMTargetStreamer::annotateTLSDescriptorSequence(
+    const MCSymbolRefExpr *SRE) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}
 
 void ARMTargetStreamer::emitARMWinCFIAllocStack(unsigned Size, bool Wide) {}

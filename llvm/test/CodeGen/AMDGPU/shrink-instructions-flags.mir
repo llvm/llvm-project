@@ -12,10 +12,11 @@ body:             |
 
     ; CHECK-LABEL: name: shrink_fadd_f32_flags
     ; CHECK: liveins: $vgpr0, $vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %2:vgpr_32 = nnan nofpexcept V_ADD_F32_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
-    ; CHECK: S_NOP 0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: %2:vgpr_32 = nnan nofpexcept V_ADD_F32_e32 [[COPY]], [[COPY1]], implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_NOP 0
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = nofpexcept nnan V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec

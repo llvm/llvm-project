@@ -10,7 +10,7 @@ struct WithConstructor {
   WithConstructor(int *x) : ptr(x) {}
 
   static auto compliant() {
-    WithConstructor c(new int);
+    WithConstructor c(new int{});
     return *(c.ptr); // no warning
   }
 
@@ -28,7 +28,7 @@ struct RegularAggregate {
   int *const ptr = nullptr;
 
   static int compliant() {
-    RegularAggregate c{new int};
+    RegularAggregate c{new int{}};
     return *(c.ptr); // no warning
   }
 

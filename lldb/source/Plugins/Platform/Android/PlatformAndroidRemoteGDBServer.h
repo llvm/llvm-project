@@ -49,7 +49,8 @@ protected:
 
   void DeleteForwardPort(lldb::pid_t pid);
 
-  Status MakeConnectURL(const lldb::pid_t pid, const uint16_t remote_port,
+  Status MakeConnectURL(const lldb::pid_t pid, const uint16_t local_port,
+                        const uint16_t remote_port,
                         llvm::StringRef remote_socket_name,
                         std::string &connect_url);
 

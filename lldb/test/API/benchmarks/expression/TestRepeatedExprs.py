@@ -1,8 +1,5 @@
 """Test evaluating expressions repeatedly comparing lldb against gdb."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test.lldbbench import BenchBase
@@ -13,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class RepeatedExprsCase(BenchBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         BenchBase.setUp(self)

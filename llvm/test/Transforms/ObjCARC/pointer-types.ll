@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
 ; Don't hoist @llvm.objc.release past a use of its pointer, even
 ; if the use has function type, because clang uses function types

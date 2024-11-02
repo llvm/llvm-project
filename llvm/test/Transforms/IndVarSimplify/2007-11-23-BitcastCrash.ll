@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 ; PR1814
 target datalayout = "e-p:32:32-f64:32:64-i64:32:64-f80:32:32"
 

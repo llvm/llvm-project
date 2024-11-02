@@ -30,9 +30,9 @@
   ! OK
   call foo2(dabs)
 
-  !ERROR: Actual procedure argument has interface incompatible with dummy argument 'f='
+  !ERROR: Actual procedure argument has interface incompatible with dummy argument 'f=': function results have incompatible types: REAL(4) vs REAL(8)
   call foo(dabs)
 
-  !ERROR: Actual procedure argument has interface incompatible with dummy argument 'f='
+  !ERROR: Actual procedure argument has interface incompatible with dummy argument 'f=': function results have incompatible types: REAL(8) vs REAL(4)
   call foo2(abs)
 end

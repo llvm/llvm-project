@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_attach_with_vAttach(self):
         self.build()
         self.set_inferior_startup_attach_manually()

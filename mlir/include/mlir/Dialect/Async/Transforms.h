@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_ASYNC_TRANSFORMS_H_
 #define MLIR_DIALECT_ASYNC_TRANSFORMS_H_
 
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 
 namespace mlir {

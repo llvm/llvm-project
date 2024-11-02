@@ -308,9 +308,11 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   llvm::cl::ResetAllOptionOccurrences();
 
   llvm::BumpPtrAllocator A;
-  llvm::StringSaver Saver(A);
-  llvm::cl::ExpandResponseFiles(Saver, &llvm::cl::TokenizeGNUCommandLine, ArgV,
-                                /*MarkEOLs=*/false);
+  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+  if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
+    llvm::errs() << toString(std::move(Err)) << '\n';
+    return 1;
+  }
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   if (Tool == "-cc1")
@@ -327,7 +329,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   return 1;
 }
 
-int main(int Argc, const char **Argv) {
+int clang_main(int Argc, char **Argv) {
   noteBottomOfStack();
   llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
@@ -373,7 +375,12 @@ int main(int Argc, const char **Argv) {
 
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
     MarkEOLs = false;
-  llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Args, MarkEOLs);
+  llvm::cl::ExpansionContext ECtx(A, Tokenizer);
+  ECtx.setMarkEOLs(MarkEOLs);
+  if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
+    llvm::errs() << toString(std::move(Err)) << '\n';
+    return 1;
+  }
 
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
@@ -406,18 +413,18 @@ int main(int Argc, const char **Argv) {
   if (ClangCLMode) {
     // Arguments in "CL" are prepended.
     llvm::Optional<std::string> OptCL = llvm::sys::Process::GetEnv("CL");
-    if (OptCL.hasValue()) {
+    if (OptCL) {
       SmallVector<const char *, 8> PrependedOpts;
-      getCLEnvVarOptions(OptCL.getValue(), Saver, PrependedOpts);
+      getCLEnvVarOptions(OptCL.value(), Saver, PrependedOpts);
 
       // Insert right after the program name to prepend to the argument list.
       Args.insert(Args.begin() + 1, PrependedOpts.begin(), PrependedOpts.end());
     }
     // Arguments in "_CL_" are appended.
     llvm::Optional<std::string> Opt_CL_ = llvm::sys::Process::GetEnv("_CL_");
-    if (Opt_CL_.hasValue()) {
+    if (Opt_CL_) {
       SmallVector<const char *, 8> AppendedOpts;
-      getCLEnvVarOptions(Opt_CL_.getValue(), Saver, AppendedOpts);
+      getCLEnvVarOptions(Opt_CL_.value(), Saver, AppendedOpts);
 
       // Insert at the end of the argument list to append.
       Args.append(AppendedOpts.begin(), AppendedOpts.end());

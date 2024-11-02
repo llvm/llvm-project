@@ -2837,11 +2837,13 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
     // Enter the continuation block and emit a phi if required.
     CGF.EmitBlock(continueBB);
     if (msgRet.isScalar()) {
-      llvm::Value *v = msgRet.getScalarVal();
-      llvm::PHINode *phi = Builder.CreatePHI(v->getType(), 2);
-      phi->addIncoming(v, nonNilPathBB);
-      phi->addIncoming(CGM.EmitNullConstant(ResultType), nilPathBB);
-      msgRet = RValue::get(phi);
+      // If the return type is void, do nothing
+      if (llvm::Value *v = msgRet.getScalarVal()) {
+        llvm::PHINode *phi = Builder.CreatePHI(v->getType(), 2);
+        phi->addIncoming(v, nonNilPathBB);
+        phi->addIncoming(CGM.EmitNullConstant(ResultType), nilPathBB);
+        msgRet = RValue::get(phi);
+      }
     } else if (msgRet.isAggregate()) {
       // Aggregate zeroing is handled in nilCleanupBB when it's required.
     } else /* isComplex() */ {
@@ -3314,7 +3316,7 @@ llvm::Constant *CGObjCGNU::MakeBitField(ArrayRef<bool> bits) {
   auto fields = builder.beginStruct();
   fields.addInt(Int32Ty, values.size());
   auto array = fields.beginArray();
-  for (auto v : values) array.add(v);
+  for (auto *v : values) array.add(v);
   array.finishAndAddTo(fields);
 
   llvm::Constant *GS =

@@ -38,21 +38,29 @@ module m
     integer :: n
     common /block/ y
     external :: extfunc
-    !ERROR: Pure subprogram 'test' may not define 'x' because it is host-associated
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'x' may not be defined in pure subprogram 'test' because it is host-associated
     x%a = 0.
-    !ERROR: Pure subprogram 'test' may not define 'y' because it is in a COMMON block
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'y' may not be defined in pure subprogram 'test' because it is in a COMMON block
     y%a = 0. ! C1594(1)
-    !ERROR: Pure subprogram 'test' may not define 'useassociated' because it is USE-associated
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'useassociated' may not be defined in pure subprogram 'test' because it is USE-associated
     useassociated = 0.  ! C1594(1)
-    !ERROR: Pure subprogram 'test' may not define 'ptr' because it is a POINTER dummy argument of a pure function
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'ptr' is externally visible via 'ptr' and not definable in a pure subprogram
     ptr%a = 0. ! C1594(1)
-    !ERROR: Pure subprogram 'test' may not define 'in' because it is an INTENT(IN) dummy argument
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'in' is an INTENT(IN) dummy argument
     in%a = 0. ! C1594(1)
-    !ERROR: A pure subprogram may not define a coindexed object
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: A pure subprogram may not define the coindexed object 'hcp%co[1_8]'
     hcp%co[1] = 0. ! C1594(1)
-    !ERROR: Pure subprogram 'test' may not define 'ptr' because it is a POINTER dummy argument of a pure function
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: 'ptr' may not be defined in pure subprogram 'test' because it is a POINTER dummy argument of a pure function
     ptr => z ! C1594(2)
-    !ERROR: Pure subprogram 'test' may not define 'ptr' because it is a POINTER dummy argument of a pure function
+    !ERROR: 'ptr' may not appear in NULLIFY
+    !BECAUSE: 'ptr' may not be defined in pure subprogram 'test' because it is a POINTER dummy argument of a pure function
     nullify(ptr) ! C1594(2), 19.6.8
     !ERROR: A pure subprogram may not use 'ptr' as the target of pointer assignment because it is a POINTER dummy argument of a pure function
     ptr2 => ptr ! C1594(3)
@@ -77,7 +85,8 @@ module m
    contains
     pure subroutine internal
       type(hasPtr) :: localhp
-      !ERROR: Pure subprogram 'internal' may not define 'z' because it is host-associated
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'z' may not be defined in pure subprogram 'internal' because it is host-associated
       z%a = 0.
       !ERROR: Externally visible object 'z' may not be associated with pointer component 'p' in a pure procedure
       localhp = hasPtr(z%a)

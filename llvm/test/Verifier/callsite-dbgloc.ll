@@ -19,14 +19,38 @@ entry:
   ret void, !dbg !10
 }
 
-declare void @i(...) #1
+; Function Attrs: nounwind ssp uwtable
+define weak void @j() #0 !dbg !17 {
+entry:
+  call void (...) @i(), !dbg !18
+  ret void, !dbg !19
+}
+
+; Function Attrs: nounwind ssp uwtable
+define linkonce_odr void @k() #0 !dbg !20 {
+entry:
+  call void (...) @i(), !dbg !21
+  ret void, !dbg !22
+}
+
+declare !dbg !23 void @i(...) #1
 
 ; Function Attrs: nounwind ssp uwtable
 define void @g() #0 !dbg !11 {
 entry:
 ; Manually removed !dbg.
 ; CHECK: inlinable function call in a function with debug info must have a !dbg location
+; CHECK: @h()
   call void @h()
+; CHECK-NOT: inlinable function call in a function with debug info must have a !dbg location
+; CHECK-NOT: @j()
+  call void @j()
+; CHECK: inlinable function call in a function with debug info must have a !dbg location
+; CHECK: @k()
+  call void @k()
+; CHECK-NOT: inlinable function call in a function with debug info must have a !dbg location
+; CHECK-NOT: @i()
+  call void (...) @i()
   ret void, !dbg !13
 }
 
@@ -62,3 +86,12 @@ attributes #0 = { nounwind ssp uwtable }
 !14 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, scopeLine: 4, isOptimized: false, unit: !0, retainedNodes: !2)
 !15 = !DILocation(line: 4, column: 12, scope: !14)
 !16 = !DILocation(line: 4, column: 17, scope: !14)
+!17 = distinct !DISubprogram(name: "j", scope: !1, file: !1, line: 5, type: !8, isLocal: false, isDefinition: true, scopeLine: 5, isOptimized: false, unit: !0, retainedNodes: !2)
+!18 = !DILocation(line: 4, column: 12, scope: !17)
+!19 = !DILocation(line: 4, column: 17, scope: !17)
+!20 = distinct !DISubprogram(name: "k", scope: !1, file: !1, line: 6, type: !8, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: false, unit: !0, retainedNodes: !2)
+!21 = !DILocation(line: 4, column: 12, scope: !20)
+!22 = !DILocation(line: 4, column: 17, scope: !20)
+!23 = !DISubprogram(name: "i", scope: !1, file: !1, line: 1, type: !24, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+!24 = !DISubroutineType(types: !25)
+!25 = !{null}

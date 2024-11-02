@@ -1,6 +1,7 @@
 
 // RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
 // RUN: llvm-cov export --format=lcov %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s --check-prefix=NOBRANCH
 
 // CHECK-DAG: BRDA:14,0,0,1
 // CHECK-DAG: BRDA:14,0,1,5
@@ -39,6 +40,7 @@
 // Check recursive macro-expansions.
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
 // RUN: llvm-cov export --format=lcov %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
+// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=NOBRANCH
 
 // MACROS-COUNT-4: BRDA:17
 // MACROS-NOT: BRDA:17
@@ -71,3 +73,8 @@
 // MACROS-NOT: BRDA
 // MACROS: BRF:40
 // MACROS: BRH:24
+
+// NOBRANCH-NOT: BRDA
+// NOBRANCH-NOT: BRF
+// NOBRANCH-NOT: BRH
+

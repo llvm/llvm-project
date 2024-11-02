@@ -57,10 +57,11 @@ public:
 
   virtual Status DumpPropertyValue(const ExecutionContext *exe_ctx,
                                    Stream &strm, llvm::StringRef property_path,
-                                   uint32_t dump_mask);
+                                   uint32_t dump_mask, bool is_json = false);
 
   virtual void DumpAllPropertyValues(const ExecutionContext *exe_ctx,
-                                     Stream &strm, uint32_t dump_mask);
+                                     Stream &strm, uint32_t dump_mask,
+                                     bool is_json = false);
 
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
                                    Stream &strm) const;

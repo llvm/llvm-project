@@ -60,6 +60,7 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF);
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr);
+  using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                      unsigned Index);
 };

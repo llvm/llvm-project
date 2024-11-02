@@ -67,6 +67,7 @@
 #include "isl/options.h"
 #include "isl/set.h"
 #include <cassert>
+#include <numeric>
 
 using namespace llvm;
 using namespace polly;
@@ -126,7 +127,7 @@ static int const MaxDisjunktsInDefinedBehaviourContext = 8;
 static cl::opt<bool> PollyRemarksMinimal(
     "polly-remarks-minimal",
     cl::desc("Do not emit remarks about assumptions that are known"),
-    cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     IslOnErrorAbort("polly-on-isl-error-abort",
@@ -155,8 +156,7 @@ bool polly::UseInstructionNames;
 static cl::opt<bool, true> XUseInstructionNames(
     "polly-use-llvm-names",
     cl::desc("Use LLVM-IR names when deriving statement names"),
-    cl::location(UseInstructionNames), cl::Hidden, cl::init(false),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::location(UseInstructionNames), cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyPrintInstructions(
     "polly-print-instructions", cl::desc("Output instructions per ScopStmt"),
@@ -165,7 +165,7 @@ static cl::opt<bool> PollyPrintInstructions(
 static cl::list<std::string> IslArgs("polly-isl-arg",
                                      cl::value_desc("argument"),
                                      cl::desc("Option passed to ISL"),
-                                     cl::ZeroOrMore, cl::cat(PollyCategory));
+                                     cl::cat(PollyCategory));
 
 //===----------------------------------------------------------------------===//
 
@@ -293,7 +293,7 @@ void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementSize % OldElementSize == 0 && NewElementSize < OldElementSize) {
     ElementType = NewElementType;
   } else {
-    auto GCD = GreatestCommonDivisor64(NewElementSize, OldElementSize);
+    auto GCD = std::gcd((uint64_t)NewElementSize, (uint64_t)OldElementSize);
     ElementType = IntegerType::get(ElementType->getContext(), GCD);
   }
 }
@@ -2560,7 +2560,7 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   NumScops++;
   NumLoopsInScop += Stats.NumLoops;
   MaxNumLoopsInScop =
-      std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
+      std::max(MaxNumLoopsInScop.getValue(), (uint64_t)Stats.NumLoops);
 
   if (Stats.MaxDepth == 0)
     NumScopsDepthZero++;

@@ -18,9 +18,11 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -52,5 +54,20 @@ inline bool isRefCounted(Type type) {
 
 } // namespace async
 } // namespace mlir
+
+namespace llvm {
+
+/// Allow stealing the low bits of async::FuncOp.
+template <>
+struct PointerLikeTypeTraits<mlir::async::FuncOp> {
+  static inline void *getAsVoidPointer(mlir::async::FuncOp val) {
+    return const_cast<void *>(val.getAsOpaquePointer());
+  }
+  static inline mlir::async::FuncOp getFromVoidPointer(void *p) {
+    return mlir::async::FuncOp::getFromOpaquePointer(p);
+  }
+  static constexpr int numLowBitsAvailable = 3;
+};
+} // namespace llvm
 
 #endif // MLIR_DIALECT_ASYNC_IR_ASYNC_H

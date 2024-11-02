@@ -10,6 +10,7 @@
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_JOIN_TYPES_H
 
 #include <concepts>
+#include <cstdint>
 #include <tuple>
 
 #include "test_macros.h"
@@ -73,6 +74,9 @@ struct ParentView : std::ranges::view_base {
   constexpr sentinel end() { return sentinel(iterator(ptr_ + size_)); }
   constexpr const_sentinel end() const { return const_sentinel(const_iterator(ptr_ + size_)); }
 };
+
+template <class T>
+ParentView(T*) -> ParentView<T>;
 
 struct CopyableChild : std::ranges::view_base {
   int* ptr_;
@@ -363,7 +367,7 @@ static_assert(!std::is_lvalue_reference_v<std::ranges::range_reference_t<InnerRV
 
 struct move_swap_aware_iter {
 
-  // This is a proxy-like iterator where `reference` is a prvalue, and 
+  // This is a proxy-like iterator where `reference` is a prvalue, and
   // `reference` and `value_type` are distinct types (similar to `zip_view::iterator`).
   using value_type = std::pair<int, int>;
   using reference = std::pair<int&, int&>;

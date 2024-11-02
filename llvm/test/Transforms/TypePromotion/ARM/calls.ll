@@ -216,12 +216,11 @@ define i32 @check_zext_phi_call_arg() {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[D_SROA_0_0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_COND_BACKEDGE]], label [[IF_THEN:%.*]]
 ; CHECK:       for.cond.backedge:
-; CHECK-NEXT:    [[D_SROA_0_0_BE]] = phi i32 [ [[TMP1:%.*]], [[IF_THEN]] ], [ 0, [[FOR_COND]] ]
+; CHECK-NEXT:    [[D_SROA_0_0_BE]] = phi i32 [ [[TMP0:%.*]], [[IF_THEN]] ], [ 0, [[FOR_COND]] ]
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[D_SROA_0_0]] to i16
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i16 bitcast (i16 (...)* @f to i16 (i32)*)(i32 [[D_SROA_0_0]])
-; CHECK-NEXT:    [[TMP1]] = zext i16 [[CALL]] to i32
+; CHECK-NEXT:    [[TMP0]] = zext i16 [[CALL]] to i32
 ; CHECK-NEXT:    br label [[FOR_COND_BACKEDGE]]
 ;
 entry:

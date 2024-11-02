@@ -24,6 +24,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -181,8 +182,7 @@ static void StripTypeNames(Module &M, bool PreserveDbgInfo) {
   TypeFinder StructTypes;
   StructTypes.run(M, false);
 
-  for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
-    StructType *STy = StructTypes[i];
+  for (StructType *STy : StructTypes) {
     if (STy->isLiteral() || STy->getName().empty()) continue;
 
     if (PreserveDbgInfo && STy->getName().startswith("llvm.dbg"))
@@ -295,6 +295,44 @@ bool StripDebugDeclare::runOnModule(Module &M) {
   return stripDebugDeclareImpl(M);
 }
 
+/// Collects compilation units referenced by functions or lexical scopes.
+/// Accepts any DIScope and uses recursive bottom-up approach to reach either
+/// DISubprogram or DILexicalBlockBase.
+static void
+collectCUsWithScope(const DIScope *Scope, std::set<DICompileUnit *> &LiveCUs,
+                    SmallPtrSet<const DIScope *, 8> &VisitedScopes) {
+  if (!Scope)
+    return;
+
+  auto InS = VisitedScopes.insert(Scope);
+  if (!InS.second)
+    return;
+
+  if (const auto *SP = dyn_cast<DISubprogram>(Scope)) {
+    if (SP->getUnit())
+      LiveCUs.insert(SP->getUnit());
+    return;
+  }
+  if (const auto *LB = dyn_cast<DILexicalBlockBase>(Scope)) {
+    const DISubprogram *SP = LB->getSubprogram();
+    if (SP && SP->getUnit())
+      LiveCUs.insert(SP->getUnit());
+    return;
+  }
+
+  collectCUsWithScope(Scope->getScope(), LiveCUs, VisitedScopes);
+}
+
+static void
+collectCUsForInlinedFuncs(const DILocation *Loc,
+                          std::set<DICompileUnit *> &LiveCUs,
+                          SmallPtrSet<const DIScope *, 8> &VisitedScopes) {
+  if (!Loc || !Loc->getInlinedAt())
+    return;
+  collectCUsWithScope(Loc->getScope(), LiveCUs, VisitedScopes);
+  collectCUsForInlinedFuncs(Loc->getInlinedAt(), LiveCUs, VisitedScopes);
+}
+
 static bool stripDeadDebugInfoImpl(Module &M) {
   bool Changed = false;
 
@@ -322,10 +360,18 @@ static bool stripDeadDebugInfoImpl(Module &M) {
   }
 
   std::set<DICompileUnit *> LiveCUs;
-  // Any CU referenced from a subprogram is live.
-  for (DISubprogram *SP : F.subprograms()) {
-    if (SP->getUnit())
-      LiveCUs.insert(SP->getUnit());
+  SmallPtrSet<const DIScope *, 8> VisitedScopes;
+  // Any CU is live if is referenced from a subprogram metadata that is attached
+  // to a function defined or inlined in the module.
+  for (const Function &Fn : M.functions()) {
+    collectCUsWithScope(Fn.getSubprogram(), LiveCUs, VisitedScopes);
+    for (const_inst_iterator I = inst_begin(&Fn), E = inst_end(&Fn); I != E;
+         ++I) {
+      if (!I->getDebugLoc())
+        continue;
+      const DILocation *DILoc = I->getDebugLoc().get();
+      collectCUsForInlinedFuncs(DILoc, LiveCUs, VisitedScopes);
+    }
   }
 
   bool HasDeadCUs = false;

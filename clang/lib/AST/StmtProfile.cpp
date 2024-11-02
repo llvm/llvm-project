@@ -472,7 +472,7 @@ void OMPClauseProfiler::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
-  for (auto E : C->getSizesRefs())
+  for (auto *E : C->getSizesRefs())
     if (E)
       Profiler->VisitExpr(E);
 }
@@ -988,6 +988,11 @@ void StmtProfiler::VisitOMPParallelMasterDirective(
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPParallelMaskedDirective(
+    const OMPParallelMaskedDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPParallelSectionsDirective(
     const OMPParallelSectionsDirective *S) {
   VisitOMPExecutableDirective(S);
@@ -1009,6 +1014,9 @@ void StmtProfiler::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPErrorDirective(const OMPErrorDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
 void StmtProfiler::VisitOMPTaskgroupDirective(const OMPTaskgroupDirective *S) {
   VisitOMPExecutableDirective(S);
   if (const Expr *E = S->getReductionRef())
@@ -1090,8 +1098,18 @@ void StmtProfiler::VisitOMPMasterTaskLoopDirective(
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPMaskedTaskLoopDirective(
+    const OMPMaskedTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitOMPMasterTaskLoopSimdDirective(
     const OMPMasterTaskLoopSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPMaskedTaskLoopSimdDirective(
+    const OMPMaskedTaskLoopSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
@@ -1100,8 +1118,18 @@ void StmtProfiler::VisitOMPParallelMasterTaskLoopDirective(
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPParallelMaskedTaskLoopDirective(
+    const OMPParallelMaskedTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitOMPParallelMasterTaskLoopSimdDirective(
     const OMPParallelMasterTaskLoopSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPParallelMaskedTaskLoopSimdDirective(
+    const OMPParallelMaskedTaskLoopSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 

@@ -70,5 +70,5 @@ entry:
   ret void
 }
 
-declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
-declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)

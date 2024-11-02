@@ -84,13 +84,14 @@ public:
     }
   }
 
-  // Checks if the intrinsic is an annotation.
+  /// Checks if the intrinsic is an annotation.
   bool isAssumeLikeIntrinsic() const {
     switch (getIntrinsicID()) {
     default: break;
     case Intrinsic::assume:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
+    case Intrinsic::dbg_assign:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
     case Intrinsic::dbg_label:
@@ -107,7 +108,11 @@ public:
     return false;
   }
 
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Check if the intrinsic might lower into a regular function call in the
+  /// course of IR transformations
+  static bool mayLowerToFunctionCall(Intrinsic::ID IID);
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     if (const Function *CF = I->getCalledFunction())
       return CF->isIntrinsic();
@@ -125,6 +130,7 @@ static inline bool isDbgInfoIntrinsic(Intrinsic::ID ID) {
   case Intrinsic::dbg_value:
   case Intrinsic::dbg_addr:
   case Intrinsic::dbg_label:
+  case Intrinsic::dbg_assign:
     return true;
   default:
     return false;
@@ -227,10 +233,12 @@ public:
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
 
-  /// Does this describe the address of a local variable. True for dbg.addr
-  /// and dbg.declare, but not dbg.value, which describes its value.
+  /// Does this describe the address of a local variable. True for dbg.addr and
+  /// dbg.declare, but not dbg.value, which describes its value, or dbg.assign,
+  /// which describes a combination of the variable's value and address.
   bool isAddressOfVariable() const {
-    return getIntrinsicID() != Intrinsic::dbg_value;
+    return getIntrinsicID() != Intrinsic::dbg_value &&
+           getIntrinsicID() != Intrinsic::dbg_assign;
   }
 
   void setUndef() {
@@ -282,6 +290,11 @@ public:
   /// is described.
   Optional<uint64_t> getFragmentSizeInBits() const;
 
+  /// Get the FragmentInfo for the variable.
+  Optional<DIExpression::FragmentInfo> getFragment() const {
+    return getExpression()->getFragmentInfo();
+  }
+
   /// \name Casting methods
   /// @{
   static bool classof(const IntrinsicInst *I) {
@@ -289,6 +302,7 @@ public:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
     case Intrinsic::dbg_addr:
+    case Intrinsic::dbg_assign:
       return true;
     default:
       return false;
@@ -298,7 +312,7 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
   /// @}
-private:
+protected:
   void setArgOperand(unsigned i, Value *v) {
     DbgInfoIntrinsic::setArgOperand(i, v);
   }
@@ -359,7 +373,52 @@ public:
   /// \name Casting methods
   /// @{
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::dbg_value;
+    return I->getIntrinsicID() == Intrinsic::dbg_value ||
+           I->getIntrinsicID() == Intrinsic::dbg_assign;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
+/// This represents the llvm.dbg.assign instruction.
+class DbgAssignIntrinsic : public DbgValueInst {
+  enum Operands {
+    OpValue,
+    OpVar,
+    OpExpr,
+    OpAssignID,
+    OpAddress,
+    OpAddressExpr,
+  };
+
+public:
+  Value *getAddress() const;
+  Metadata *getRawAddress() const {
+    return cast<MetadataAsValue>(getArgOperand(OpAddress))->getMetadata();
+  }
+  Metadata *getRawAssignID() const {
+    return cast<MetadataAsValue>(getArgOperand(OpAssignID))->getMetadata();
+  }
+  DIAssignID *getAssignID() const { return cast<DIAssignID>(getRawAssignID()); }
+  Metadata *getRawAddressExpression() const {
+    return cast<MetadataAsValue>(getArgOperand(OpAddressExpr))->getMetadata();
+  }
+  DIExpression *getAddressExpression() const {
+    return cast<DIExpression>(getRawAddressExpression());
+  }
+  void setAddressExpression(DIExpression *NewExpr) {
+    setArgOperand(OpAddressExpr,
+                  MetadataAsValue::get(NewExpr->getContext(), NewExpr));
+  }
+  void setAssignId(DIAssignID *New);
+  void setAddress(Value *V);
+  void setValue(Value *V);
+  /// \name Casting methods
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::dbg_assign;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -759,11 +818,6 @@ public:
     setArgOperand(ARG_DEST, Ptr);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
-  void setDestAlignment(unsigned Alignment) {
-    setDestAlignment(MaybeAlign(Alignment));
-  }
   void setDestAlignment(MaybeAlign Alignment) {
     removeParamAttr(ARG_DEST, Attribute::Alignment);
     if (Alignment)
@@ -978,6 +1032,7 @@ public:
     case Intrinsic::memcpy:
     case Intrinsic::memmove:
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
     case Intrinsic::memcpy_inline:
       return true;
     default:
@@ -989,12 +1044,33 @@ public:
   }
 };
 
-/// This class wraps the llvm.memset intrinsic.
+/// This class wraps the llvm.memset and llvm.memset.inline intrinsics.
 class MemSetInst : public MemSetBase<MemIntrinsic> {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memset;
+    switch (I->getIntrinsicID()) {
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This class wraps the llvm.memset.inline intrinsic.
+class MemSetInlineInst : public MemSetInst {
+public:
+  ConstantInt *getLength() const {
+    return cast<ConstantInt>(MemSetInst::getLength());
+  }
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::memset_inline;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -1079,6 +1155,7 @@ public:
     case Intrinsic::memcpy_inline:
     case Intrinsic::memmove:
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
@@ -1100,6 +1177,7 @@ public:
   static bool classof(const IntrinsicInst *I) {
     switch (I->getIntrinsicID()) {
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
     case Intrinsic::memset_element_unordered_atomic:
       return true;
     default:
@@ -1337,9 +1415,6 @@ public:
   }
 };
 
-// Defined in Statepoint.h -- NOT a subclass of IntrinsicInst
-class GCStatepointInst;
-
 /// Common base class for representing values projected from a statepoint.
 /// Currently, the only projections available are gc.result and gc.relocate.
 class GCProjectionInst : public IntrinsicInst {
@@ -1362,7 +1437,7 @@ public:
   }
 
   /// The statepoint with which this gc.relocate is associated.
-  const GCStatepointInst *getStatepoint() const;
+  const Value *getStatepoint() const;
 };
 
 /// Represents calls to the gc.relocate intrinsic.

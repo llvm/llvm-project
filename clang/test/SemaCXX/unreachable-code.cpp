@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -Wunreachable-code-aggressive -fblocks -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fexceptions -fsyntax-only -Wunreachable-code-aggressive -fblocks -verify %s
 
 int j;
 int bar();
@@ -98,4 +98,35 @@ void f(int a) {
   [[clang::musttail]] return g(a); // expected-warning {{will never be executed}}
 }
 
+}
+
+namespace gh57123 {
+  bool foo() {
+    if constexpr (true) {
+      if (true)
+        return true;
+      else
+        return false; // expected-warning {{will never be executed}}
+    }
+    else
+      return false; // no-warning
+  }
+
+  bool bar() {
+    if (true)
+      return true;
+    else
+      return false; // expected-warning {{will never be executed}}
+  }
+
+  bool baz() {
+    if constexpr (true)
+      return true;
+    else {
+      if (true)
+        return true;
+      else
+        return false; // expected-warning {{will never be executed}}
+    }
+  }
 }

@@ -21,12 +21,13 @@ void MisplacedConstCheck::registerMatchers(MatchFinder *Finder) {
       pointee(anyOf(isConstQualified(), ignoringParens(functionType()))))));
 
   Finder->addMatcher(
-      valueDecl(
-          hasType(isConstQualified()),
-          hasType(typedefType(hasDeclaration(anyOf(
-              typedefDecl(NonConstAndNonFunctionPointerType).bind("typedef"),
-              typeAliasDecl(NonConstAndNonFunctionPointerType)
-                  .bind("typeAlias"))))))
+      valueDecl(hasType(qualType(
+                    isConstQualified(),
+                    elaboratedType(namesType(typedefType(hasDeclaration(
+                        anyOf(typedefDecl(NonConstAndNonFunctionPointerType)
+                                  .bind("typedef"),
+                              typeAliasDecl(NonConstAndNonFunctionPointerType)
+                                  .bind("typeAlias")))))))))
           .bind("decl"),
       this);
 }

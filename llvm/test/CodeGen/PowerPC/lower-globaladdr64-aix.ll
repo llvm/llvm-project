@@ -13,8 +13,8 @@
 ; RUN: -print-before=simple-register-coalescing 2>&1 < %s | FileCheck \
 ; RUN: --check-prefix=SMALL %s
 
-@msg = common global i8* null, align 8
-@ptr = common global i8* null, align 8
+@msg = common global ptr null, align 8
+@ptr = common global ptr null, align 8
 
 define void @foo() {
 entry:
@@ -32,7 +32,7 @@ entry:
 ; LARGE: %4:g8rc_and_g8rc_nox0 = LDtocL @ptr, %3:g8rc_and_g8rc_nox0, implicit $x2 :: (load (s64) from got)
 ; LARGE: STD %2:g8rc, 0, %4:g8rc_and_g8rc_nox0 :: (store (s64) into @ptr)
 
-  %0 = load i8*, i8** @msg, align 8
-  store i8* %0, i8** @ptr, align 8
+  %0 = load ptr, ptr @msg, align 8
+  store ptr %0, ptr @ptr, align 8
   ret void
 }

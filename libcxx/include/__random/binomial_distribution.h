@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _IntType = int>
 class _LIBCPP_TEMPLATE_VIS binomial_distribution
 {
-    static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be an integer type larger than char");
+    static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be a supported integer type");
 public:
     // types
     typedef _IntType result_type;
@@ -189,7 +189,7 @@ binomial_distribution<_IntType>::operator()(_URNG& __g, const param_type& __pr)
 }
 
 template <class _CharT, class _Traits, class _IntType>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
            const binomial_distribution<_IntType>& __x)
 {
@@ -203,7 +203,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 }
 
 template <class _CharT, class _Traits, class _IntType>
-basic_istream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
            binomial_distribution<_IntType>& __x)
 {

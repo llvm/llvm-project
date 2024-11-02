@@ -16,7 +16,7 @@ SourceLocationSpec::SourceLocationSpec(FileSpec file_spec, uint32_t line,
                                        llvm::Optional<uint16_t> column,
                                        bool check_inlines, bool exact_match)
     : m_declaration(file_spec, line,
-                    column.getValueOr(LLDB_INVALID_COLUMN_NUMBER)),
+                    column.value_or(LLDB_INVALID_COLUMN_NUMBER)),
       m_check_inlines(check_inlines), m_exact_match(exact_match) {}
 
 SourceLocationSpec::operator bool() const { return m_declaration.IsValid(); }

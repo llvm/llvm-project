@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: define internal fastcc void @g.resume(
-define void @g(i1 %cond, i32 %x, i32 %y) "coroutine.presplit"="1" personality i32 0 {
+define void @g(i1 %cond, i32 %x, i32 %y) presplitcoroutine personality i32 0 {
 entry:
   %id = call token @llvm.coro.id(i32 16, i8* null, i8* null, i8* null)
   %size = tail call i64 @llvm.coro.size.i64()

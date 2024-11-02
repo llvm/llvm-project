@@ -20,6 +20,9 @@
 
 namespace llvm {
 
+using EdgeT = std::pair<uint64_t, uint64_t>;
+using EdgeCountT = std::pair<EdgeT, uint64_t>;
+
 /// Find a layout of nodes (basic blocks) of a given CFG optimizing jump
 /// locality and thus processor I-cache utilization. This is achieved via
 /// increasing the number of fall-through jumps and co-locating frequently
@@ -31,25 +34,24 @@ namespace llvm {
 /// \p EdgeCounts: The execution counts of every edge (jump) in the profile. The
 ///    map also defines the edges in CFG and should include 0-count edges.
 /// \returns The best block order found.
-std::vector<uint64_t> applyExtTspLayout(
-    const std::vector<uint64_t> &NodeSizes,
-    const std::vector<uint64_t> &NodeCounts,
-    const DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> &EdgeCounts);
+std::vector<uint64_t>
+applyExtTspLayout(const std::vector<uint64_t> &NodeSizes,
+                  const std::vector<uint64_t> &NodeCounts,
+                  const std::vector<EdgeCountT> &EdgeCounts);
 
 /// Estimate the "quality" of a given node order in CFG. The higher the score,
 /// the better the order is. The score is designed to reflect the locality of
 /// the given order, which is anti-correlated with the number of I-cache misses
 /// in a typical execution of the function.
-double calcExtTspScore(
-    const std::vector<uint64_t> &Order, const std::vector<uint64_t> &NodeSizes,
-    const std::vector<uint64_t> &NodeCounts,
-    const DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> &EdgeCounts);
+double calcExtTspScore(const std::vector<uint64_t> &Order,
+                       const std::vector<uint64_t> &NodeSizes,
+                       const std::vector<uint64_t> &NodeCounts,
+                       const std::vector<EdgeCountT> &EdgeCounts);
 
 /// Estimate the "quality" of the current node order in CFG.
-double calcExtTspScore(
-    const std::vector<uint64_t> &NodeSizes,
-    const std::vector<uint64_t> &NodeCounts,
-    const DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> &EdgeCounts);
+double calcExtTspScore(const std::vector<uint64_t> &NodeSizes,
+                       const std::vector<uint64_t> &NodeCounts,
+                       const std::vector<EdgeCountT> &EdgeCounts);
 
 } // end namespace llvm
 

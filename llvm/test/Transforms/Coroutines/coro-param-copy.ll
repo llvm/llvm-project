@@ -2,7 +2,7 @@
 ; frame slot if it was written to.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define i8* @f() "coroutine.presplit"="1" {
+define i8* @f() presplitcoroutine {
 entry:
   %a.addr = alloca i64 ; read-only before coro.begin
   %a = load i64, i64* %a.addr ; cannot modify the value, don't need to copy

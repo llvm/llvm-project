@@ -17,7 +17,7 @@
 // Returns: If x.ok() == true and y.ok() == true, returns a value d in the range
 //    [days{0}, days{6}] satisfying y + d == x.
 // Otherwise the value returned is unspecified.
-// [Example: Sunday - Monday == days{6}. —end example]
+// [Example: Sunday - Monday == days{6}. -end example]
 
 #include <chrono>
 #include <type_traits>

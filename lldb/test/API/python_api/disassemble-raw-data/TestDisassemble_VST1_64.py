@@ -2,8 +2,6 @@
 Use lldb Python API to disassemble raw machine code bytes
 """
 
-from __future__ import print_function
-
 from io import StringIO
 import sys
 
@@ -14,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 
 class Disassemble_VST1_64(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @no_debug_info_test
     @skipIfLLVMTargetMissing("ARM")

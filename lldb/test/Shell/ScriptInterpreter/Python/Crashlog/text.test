@@ -9,4 +9,5 @@
 # CHECK: [  0] {{.*}}out`foo + 16 at test.c
 # CHECK: [  1] {{.*}}out`bar + 8 at test.c
 # CHECK: [  2] {{.*}}out`main + 19 at test.c
+# CHECK: [  3] 0x{{[0]+}}1000000 start + 1
 # CHECK: rbp = 0x00007ffee42d8020

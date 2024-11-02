@@ -3,7 +3,7 @@
 // RUN:   -disable-O0-optnone \
 // RUN:   -target-cpu cortex-a8 \
 // RUN:   -ffreestanding \
-// RUN:   -emit-llvm -w -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:   -emit-llvm -w -o - %s | opt -S -passes=mem2reg | FileCheck %s
 
 #include <arm_neon.h>
 

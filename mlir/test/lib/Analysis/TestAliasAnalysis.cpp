@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestAliasAnalysis.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Pass/Pass.h"
 
@@ -39,13 +40,80 @@ static void printAliasOperand(Value value) {
   llvm::errs() << "#" << result.getResultNumber();
 }
 
+namespace mlir {
+namespace test {
+void printAliasResult(AliasResult result, Value lhs, Value rhs) {
+  printAliasOperand(lhs);
+  llvm::errs() << " <-> ";
+  printAliasOperand(rhs);
+  llvm::errs() << ": " << result << "\n";
+}
+
+/// Print the result of an alias query.
+void printModRefResult(ModRefResult result, Operation *op, Value location) {
+  printAliasOperand(op);
+  llvm::errs() << " -> ";
+  printAliasOperand(location);
+  llvm::errs() << ": " << result << "\n";
+}
+
+void TestAliasAnalysisBase::runAliasAnalysisOnOperation(
+    Operation *op, AliasAnalysis &aliasAnalysis) {
+  llvm::errs() << "Testing : " << op->getAttr("sym_name") << "\n";
+
+  // Collect all of the values to check for aliasing behavior.
+  SmallVector<Value, 32> valsToCheck;
+  op->walk([&](Operation *op) {
+    if (!op->getAttr("test.ptr"))
+      return;
+    valsToCheck.append(op->result_begin(), op->result_end());
+    for (Region &region : op->getRegions())
+      for (Block &block : region)
+        valsToCheck.append(block.args_begin(), block.args_end());
+  });
+
+  // Check for aliasing behavior between each of the values.
+  for (auto it = valsToCheck.begin(), e = valsToCheck.end(); it != e; ++it)
+    for (auto *innerIt = valsToCheck.begin(); innerIt != it; ++innerIt)
+      printAliasResult(aliasAnalysis.alias(*innerIt, *it), *innerIt, *it);
+}
+
+void TestAliasAnalysisModRefBase::runAliasAnalysisOnOperation(
+    Operation *op, AliasAnalysis &aliasAnalysis) {
+  llvm::errs() << "Testing : " << op->getAttr("sym_name") << "\n";
+
+  // Collect all of the values to check for aliasing behavior.
+  SmallVector<Value, 32> valsToCheck;
+  op->walk([&](Operation *op) {
+    if (!op->getAttr("test.ptr"))
+      return;
+    valsToCheck.append(op->result_begin(), op->result_end());
+    for (Region &region : op->getRegions())
+      for (Block &block : region)
+        valsToCheck.append(block.args_begin(), block.args_end());
+  });
+
+  // Check for aliasing behavior between each of the values.
+  for (auto &it : valsToCheck) {
+    op->walk([&](Operation *op) {
+      if (!op->getAttr("test.ptr"))
+        return;
+      printModRefResult(aliasAnalysis.getModRef(op, it), op, it);
+    });
+  }
+}
+
+} // namespace test
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Testing AliasResult
 //===----------------------------------------------------------------------===//
 
 namespace {
 struct TestAliasAnalysisPass
-    : public PassWrapper<TestAliasAnalysisPass, OperationPass<>> {
+    : public test::TestAliasAnalysisBase,
+      PassWrapper<TestAliasAnalysisPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAliasAnalysisPass)
 
   StringRef getArgument() const final { return "test-alias-analysis"; }
@@ -53,32 +121,8 @@ struct TestAliasAnalysisPass
     return "Test alias analysis results.";
   }
   void runOnOperation() override {
-    llvm::errs() << "Testing : " << getOperation()->getAttr("sym_name") << "\n";
-
-    // Collect all of the values to check for aliasing behavior.
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
-    SmallVector<Value, 32> valsToCheck;
-    getOperation()->walk([&](Operation *op) {
-      if (!op->getAttr("test.ptr"))
-        return;
-      valsToCheck.append(op->result_begin(), op->result_end());
-      for (Region &region : op->getRegions())
-        for (Block &block : region)
-          valsToCheck.append(block.args_begin(), block.args_end());
-    });
-
-    // Check for aliasing behavior between each of the values.
-    for (auto it = valsToCheck.begin(), e = valsToCheck.end(); it != e; ++it)
-      for (auto *innerIt = valsToCheck.begin(); innerIt != it; ++innerIt)
-        printAliasResult(aliasAnalysis.alias(*innerIt, *it), *innerIt, *it);
-  }
-
-  /// Print the result of an alias query.
-  void printAliasResult(AliasResult result, Value lhs, Value rhs) {
-    printAliasOperand(lhs);
-    llvm::errs() << " <-> ";
-    printAliasOperand(rhs);
-    llvm::errs() << ": " << result << "\n";
+    runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }
 };
 } // namespace
@@ -89,7 +133,8 @@ struct TestAliasAnalysisPass
 
 namespace {
 struct TestAliasAnalysisModRefPass
-    : public PassWrapper<TestAliasAnalysisModRefPass, OperationPass<>> {
+    : public test::TestAliasAnalysisModRefBase,
+      PassWrapper<TestAliasAnalysisModRefPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAliasAnalysisModRefPass)
 
   StringRef getArgument() const final { return "test-alias-analysis-modref"; }
@@ -97,36 +142,8 @@ struct TestAliasAnalysisModRefPass
     return "Test alias analysis ModRef results.";
   }
   void runOnOperation() override {
-    llvm::errs() << "Testing : " << getOperation()->getAttr("sym_name") << "\n";
-
-    // Collect all of the values to check for aliasing behavior.
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
-    SmallVector<Value, 32> valsToCheck;
-    getOperation()->walk([&](Operation *op) {
-      if (!op->getAttr("test.ptr"))
-        return;
-      valsToCheck.append(op->result_begin(), op->result_end());
-      for (Region &region : op->getRegions())
-        for (Block &block : region)
-          valsToCheck.append(block.args_begin(), block.args_end());
-    });
-
-    // Check for aliasing behavior between each of the values.
-    for (auto &it : valsToCheck) {
-      getOperation()->walk([&](Operation *op) {
-        if (!op->getAttr("test.ptr"))
-          return;
-        printModRefResult(aliasAnalysis.getModRef(op, it), op, it);
-      });
-    }
-  }
-
-  /// Print the result of an alias query.
-  void printModRefResult(ModRefResult result, Operation *op, Value location) {
-    printAliasOperand(op);
-    llvm::errs() << " -> ";
-    printAliasOperand(location);
-    llvm::errs() << ": " << result << "\n";
+    runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }
 };
 } // namespace

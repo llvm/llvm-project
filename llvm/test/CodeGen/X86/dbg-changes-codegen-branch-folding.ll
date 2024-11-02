@@ -54,62 +54,60 @@ entry:
   %var2 = alloca %struct.AAA3, align 1
   tail call void @llvm.dbg.value(metadata i32 %param1, i64 0, metadata !29, metadata !46), !dbg !47
   tail call void @llvm.dbg.value(metadata i32 %param2, i64 0, metadata !30, metadata !46), !dbg !48
-  tail call void @llvm.dbg.value(metadata i8* null, i64 0, metadata !31, metadata !46), !dbg !49
+  tail call void @llvm.dbg.value(metadata ptr null, i64 0, metadata !31, metadata !46), !dbg !49
   %tobool = icmp eq i32 %param2, 0, !dbg !50
   br i1 %tobool, label %if.end, label %if.then, !dbg !52
 
 if.then:                                          ; preds = %entry
-  %call = tail call i8* @_Z5i2stri(i32 %param2), !dbg !53
-  tail call void @llvm.dbg.value(metadata i8* %call, i64 0, metadata !31, metadata !46), !dbg !49
+  %call = tail call ptr @_Z5i2stri(i32 %param2), !dbg !53
+  tail call void @llvm.dbg.value(metadata ptr %call, i64 0, metadata !31, metadata !46), !dbg !49
   br label %if.end, !dbg !55
 
 if.end:                                           ; preds = %entry, %if.then
-  %0 = getelementptr inbounds %struct.AAA3, %struct.AAA3* %var1, i64 0, i32 0, i64 0, !dbg !56
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #4, !dbg !56
-  tail call void @llvm.dbg.value(metadata %struct.AAA3* %var1, i64 0, metadata !32, metadata !57), !dbg !58
-  tail call void @llvm.dbg.value(metadata %struct.AAA3* %var1, i64 0, metadata !36, metadata !46), !dbg !59
-  tail call void @llvm.dbg.value(metadata i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0), i64 0, metadata !38, metadata !46), !dbg !62
-  call void @_Z3fooPcjPKc(i8* %0, i32 4, i8* nonnull getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0)), !dbg !63
-  %1 = getelementptr inbounds %struct.AAA3, %struct.AAA3* %var2, i64 0, i32 0, i64 0, !dbg !65
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %1) #4, !dbg !65
-  call void @llvm.dbg.value(metadata %struct.AAA3* %var2, i64 0, metadata !33, metadata !57), !dbg !66
-  call void @llvm.dbg.value(metadata %struct.AAA3* %var2, i64 0, metadata !36, metadata !46), !dbg !67
-  call void @llvm.dbg.value(metadata i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0), i64 0, metadata !38, metadata !46), !dbg !69
-  call void @_Z3fooPcjPKc(i8* %1, i32 4, i8* nonnull getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0)), !dbg !70
+  call void @llvm.lifetime.start.p0(i64 4, ptr %var1) #4, !dbg !56
+  tail call void @llvm.dbg.value(metadata ptr %var1, i64 0, metadata !32, metadata !57), !dbg !58
+  tail call void @llvm.dbg.value(metadata ptr %var1, i64 0, metadata !36, metadata !46), !dbg !59
+  tail call void @llvm.dbg.value(metadata ptr @.str, i64 0, metadata !38, metadata !46), !dbg !62
+  call void @_Z3fooPcjPKc(ptr %var1, i32 4, ptr nonnull @.str), !dbg !63
+  call void @llvm.lifetime.start.p0(i64 4, ptr %var2) #4, !dbg !65
+  call void @llvm.dbg.value(metadata ptr %var2, i64 0, metadata !33, metadata !57), !dbg !66
+  call void @llvm.dbg.value(metadata ptr %var2, i64 0, metadata !36, metadata !46), !dbg !67
+  call void @llvm.dbg.value(metadata ptr @.str, i64 0, metadata !38, metadata !46), !dbg !69
+  call void @_Z3fooPcjPKc(ptr %var2, i32 4, ptr nonnull @.str), !dbg !70
   %tobool1 = icmp eq i32 %param1, 0, !dbg !71
-  call void @llvm.dbg.value(metadata %struct.AAA3* %var2, i64 0, metadata !33, metadata !57), !dbg !66
-  call void @llvm.dbg.value(metadata %struct.AAA3* %var2, i64 0, metadata !41, metadata !46), !dbg !73
+  call void @llvm.dbg.value(metadata ptr %var2, i64 0, metadata !33, metadata !57), !dbg !66
+  call void @llvm.dbg.value(metadata ptr %var2, i64 0, metadata !41, metadata !46), !dbg !73
   br i1 %tobool1, label %if.else, label %if.then2, !dbg !75
 
 if.then2:                                         ; preds = %if.end
-  call void @llvm.dbg.value(metadata i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0), i64 0, metadata !42, metadata !46), !dbg !76
-  call void @_Z3fooPcjPKc(i8* %1, i32 4, i8* nonnull getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0)), !dbg !78
+  call void @llvm.dbg.value(metadata ptr @.str.1, i64 0, metadata !42, metadata !46), !dbg !76
+  call void @_Z3fooPcjPKc(ptr %var2, i32 4, ptr nonnull @.str.1), !dbg !78
   br label %if.end3, !dbg !79
 
 if.else:                                          ; preds = %if.end
-  call void @llvm.dbg.value(metadata i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i64 0, i64 0), i64 0, metadata !42, metadata !46), !dbg !80
-  call void @_Z3fooPcjPKc(i8* %1, i32 4, i8* nonnull getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i64 0, i64 0)), !dbg !81
+  call void @llvm.dbg.value(metadata ptr @.str.2, i64 0, metadata !42, metadata !46), !dbg !80
+  call void @_Z3fooPcjPKc(ptr %var2, i32 4, ptr nonnull @.str.2), !dbg !81
   br label %if.end3
 
 if.end3:                                          ; preds = %if.else, %if.then2
-  call void @llvm.dbg.value(metadata %struct.AAA3* %var1, i64 0, metadata !32, metadata !57), !dbg !58
-  call void @llvm.dbg.value(metadata %struct.AAA3* %var1, i64 0, metadata !41, metadata !46), !dbg !82
-  call void @llvm.dbg.value(metadata i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0), i64 0, metadata !42, metadata !46), !dbg !84
-  call void @_Z3fooPcjPKc(i8* %0, i32 4, i8* nonnull getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0)), !dbg !85
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %1) #4, !dbg !86
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #4, !dbg !87
+  call void @llvm.dbg.value(metadata ptr %var1, i64 0, metadata !32, metadata !57), !dbg !58
+  call void @llvm.dbg.value(metadata ptr %var1, i64 0, metadata !41, metadata !46), !dbg !82
+  call void @llvm.dbg.value(metadata ptr @.str, i64 0, metadata !42, metadata !46), !dbg !84
+  call void @_Z3fooPcjPKc(ptr %var1, i32 4, ptr nonnull @.str), !dbg !85
+  call void @llvm.lifetime.end.p0(i64 4, ptr %var2) #4, !dbg !86
+  call void @llvm.lifetime.end.p0(i64 4, ptr %var1) #4, !dbg !87
   ret void, !dbg !86
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
-declare i8* @_Z5i2stri(i32) #2
+declare ptr @_Z5i2stri(i32) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
-declare void @_Z3fooPcjPKc(i8*, i32, i8*) #2
+declare void @_Z3fooPcjPKc(ptr, i32, ptr) #2
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3

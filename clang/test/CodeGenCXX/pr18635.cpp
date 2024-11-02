@@ -4,7 +4,9 @@
 // CHECK: [[X_GLOBAL:@[^ ]+]]{{.*}}thread_local global
 
 // returned somewhere in TLS wrapper:
-// CHECK: ret{{.*}}[[X_GLOBAL]]
+// CHECK: define {{.+}} ptr @_ZTW1x(
+// CHECK: [[X_GLOBAL_ADDR:%[^ ]+]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 [[X_GLOBAL]])
+// CHECK: ret{{.*}}[[X_GLOBAL_ADDR]]
 
 template <typename T> class unique_ptr {
   template <typename F, typename S> struct pair {
@@ -19,4 +21,3 @@ public:
 
 thread_local unique_ptr<int> x;
 int main() { x = unique_ptr<int>(new int(5)); }
-

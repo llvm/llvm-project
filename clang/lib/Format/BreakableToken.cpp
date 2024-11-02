@@ -49,10 +49,10 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   if (Style.Language == FormatStyle::LK_TextProto)
     KnownPrefixes = KnownTextProtoPrefixes;
 
-  assert(std::is_sorted(KnownPrefixes.begin(), KnownPrefixes.end(),
-                        [](StringRef Lhs, StringRef Rhs) noexcept {
-                          return Lhs.size() > Rhs.size();
-                        }));
+  assert(
+      llvm::is_sorted(KnownPrefixes, [](StringRef Lhs, StringRef Rhs) noexcept {
+        return Lhs.size() > Rhs.size();
+      }));
 
   for (StringRef KnownPrefix : KnownPrefixes) {
     if (Comment.startswith(KnownPrefix)) {
@@ -705,11 +705,9 @@ void BreakableBlockComment::adaptStartOfLine(
       // contain a trailing whitespace.
       Prefix = Prefix.substr(0, 1);
     }
-  } else {
-    if (ContentColumn[LineIndex] == 1) {
-      // This line starts immediately after the decorating *.
-      Prefix = Prefix.substr(0, 1);
-    }
+  } else if (ContentColumn[LineIndex] == 1) {
+    // This line starts immediately after the decorating *.
+    Prefix = Prefix.substr(0, 1);
   }
   // This is the offset of the end of the last line relative to the start of the
   // token text in the token.

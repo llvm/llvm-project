@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I, sentinel_for<I> S, weakly_incrementable O, class Proj = identity,
 //          indirect_unary_predicate<projected<I, Proj>> Pred>
@@ -206,6 +205,30 @@ constexpr bool test() {
       std::ranges::copy_if(a, b, pred, proj);
       assert(predicateCount == 5);
       assert(projectionCount == 5);
+    }
+  }
+
+  { // test proxy iterator
+    {
+      std::array in = {4, 6, 87, 3, 88, 44, 45, 9};
+      std::array<int, 4> out;
+
+      ProxyRange proxyIn{in};
+      ProxyRange proxyOut{out};
+
+      std::ranges::copy_if(proxyIn.begin(), proxyIn.end(), proxyOut.begin(),
+                          [](auto const& i) { return i.data % 2 == 0; });
+      assert((out == std::array{4, 6, 88, 44}));
+    }
+    {
+      std::array in = {4, 6, 87, 3, 88, 44, 45, 9};
+      std::array<int, 4> out;
+
+      ProxyRange proxyIn{in};
+      ProxyRange proxyOut{out};
+
+      std::ranges::copy_if(proxyIn, proxyOut.begin(), [](const auto& i) { return i.data % 2 == 0; });
+      assert((out == std::array{4, 6, 88, 44}));
     }
   }
 

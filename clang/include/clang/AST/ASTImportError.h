@@ -18,7 +18,7 @@
 
 namespace clang {
 
-class ImportError : public llvm::ErrorInfo<ImportError> {
+class ASTImportError : public llvm::ErrorInfo<ASTImportError> {
 public:
   /// \brief Kind of error when importing an AST component.
   enum ErrorKind {
@@ -31,13 +31,13 @@ public:
 
   static char ID;
 
-  ImportError() : Error(Unknown) {}
-  ImportError(const ImportError &Other) : Error(Other.Error) {}
-  ImportError &operator=(const ImportError &Other) {
+  ASTImportError() : Error(Unknown) {}
+  ASTImportError(const ASTImportError &Other) : Error(Other.Error) {}
+  ASTImportError &operator=(const ASTImportError &Other) {
     Error = Other.Error;
     return *this;
   }
-  ImportError(ErrorKind Error) : Error(Error) {}
+  ASTImportError(ErrorKind Error) : Error(Error) {}
 
   std::string toString() const;
 

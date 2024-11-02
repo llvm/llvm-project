@@ -364,10 +364,11 @@ body:             |
 # CHECK-NEXT: liveins: $x0, $x1, $x11, $x12, $x13
 
 # CHECK:         renamable $w10 = LDRWui renamable $x0, 0 :: (load (s64))
-# CHECK-NEXT:    $x18, renamable $x8 = LDPXi renamable $x0, 1 :: (load (s64))
+# CHECK-NEXT:    renamable $x9, renamable $x8 = LDPXi renamable $x0, 1 :: (load (s64))
+# CHECK-NEXT:    STRXui killed renamable $x9, renamable $x0, 11 :: (store (s64), align 4)
 # CHECK-NEXT:    renamable $x9 = LDRXui renamable $x0, 3 :: (load (s64))
 # CHECK-NEXT:    renamable $x14 = LDRXui renamable $x0, 5 :: (load (s64))
-# CHECK-NEXT:    STPXi renamable $x9, killed $x18, renamable $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:    STRXui renamable $x9, renamable $x0, 10 :: (store (s64), align 4)
 # CHECK-NEXT:    STRXui killed renamable $x14, renamable $x0, 200 :: (store (s64), align 4)
 # CHECK-NEXT:    renamable $w8 = ADDWrr $w10, $w10
 # CHECK-NEXT:    STRWui renamable $w8, renamable $x0, 100 :: (store (s64), align 4)
@@ -445,11 +446,12 @@ body:             |
 # CHECK-LABEL: name: test13
 # CHECK: bb.0:
 # CHECK-NEXT: liveins: $x0, $x1, $x10, $x11, $x12, $x13
-# CHECK:        $x18, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
+# CHECK:    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
 # CHECK-NEXT:    renamable $x14 = LDRXui renamable $x0, 4 :: (load (s64))
 # CHECK-NEXT:    STRXui killed renamable $x14, renamable $x0, 100 :: (store (s64), align 4)
+# CHECK-NEXT:    STRXui killed renamable $x9, renamable $x0, 11 :: (store (s64), align 4)
 # CHECK-NEXT:    renamable $x9 = LDRXui renamable $x0, 2 :: (load (s64))
-# CHECK-NEXT:    STPXi renamable $x9, killed $x18, renamable $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:    STRXui renamable $x9, renamable $x0, 10 :: (store (s64))
 # CHECK-NEXT:    RET undef $lr
 #
 name:            test13

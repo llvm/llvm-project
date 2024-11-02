@@ -435,17 +435,17 @@ public:
                             DiagnosticsEngine &Diags) override {
     auto TargetIDFeatures =
         getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
-    llvm::for_each(Features, [&](const auto &F) {
+    for (const auto &F : Features) {
       assert(F.front() == '+' || F.front() == '-');
       if (F == "+wavefrontsize64")
         WavefrontSize = 64;
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
       if (!llvm::is_contained(TargetIDFeatures, Name))
-        return;
+        continue;
       assert(OffloadArchFeatures.find(Name) == OffloadArchFeatures.end());
       OffloadArchFeatures[Name] = IsOn;
-    });
+    }
     return true;
   }
 

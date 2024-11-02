@@ -170,6 +170,62 @@ define double @fmul_X_1(double %a) {
   ret double %b
 }
 
+define half @fmul_nnan_ninf_nneg_0.0(i15 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_0.0(
+; CHECK-NEXT:    ret half 0xH0000
+;
+  %f = uitofp i15 %x to half
+  %r = fmul half %f, 0.0
+  ret half %r
+}
+
+define half @fmul_nnan_ninf_nneg_n0.0(i15 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_n0.0(
+; CHECK-NEXT:    ret half 0xH8000
+;
+  %f = uitofp i15 %x to half
+  %r = fmul half %f, -0.0
+  ret half %r
+}
+
+; negative test - the int could be big enough to round to INF
+
+define half @fmul_nnan_nneg_0.0(i16 %x) {
+; CHECK-LABEL: @fmul_nnan_nneg_0.0(
+; CHECK-NEXT:    [[F:%.*]] = uitofp i16 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fmul half [[F]], 0xH0000
+; CHECK-NEXT:    ret half [[R]]
+;
+  %f = uitofp i16 %x to half
+  %r = fmul half %f, 0.0
+  ret half %r
+}
+
+define double @fmul_nnan_ninf_nneg_n0.0_commute(i127 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_n0.0_commute(
+; CHECK-NEXT:    ret double -0.000000e+00
+;
+  %f = uitofp i127 %x to float
+  %e = fpext float %f to double
+  %r = fmul double -0.0, %e
+  ret double %r
+}
+
+; negative test - the int could be big enough to round to INF
+
+define double @fmul_nnan_ninf_nneg_0.0_commute(i128 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_0.0_commute(
+; CHECK-NEXT:    [[F:%.*]] = uitofp i128 [[X:%.*]] to float
+; CHECK-NEXT:    [[E:%.*]] = fpext float [[F]] to double
+; CHECK-NEXT:    [[R:%.*]] = fmul double 0.000000e+00, [[E]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %f = uitofp i128 %x to float
+  %e = fpext float %f to double
+  %r = fmul double 0.0, %e
+  ret double %r
+}
+
 ; PR2642
 define <4 x float> @fmul_X_1_vec(<4 x float> %x) {
 ; CHECK-LABEL: @fmul_X_1_vec(
@@ -758,4 +814,92 @@ define float @maxnum_with_pos_one_op(float %a) {
   %max = call float @llvm.maxnum.f32(float %a, float 1.0)
   %fabs = call float @llvm.fabs.f32(float %max)
   ret float %fabs
+}
+
+define double @fadd_nnan_inf_op0(double %x) {
+; CHECK-LABEL: @fadd_nnan_inf_op0(
+; CHECK-NEXT:    ret double 0x7FF0000000000000
+;
+  %r = fadd nnan double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fadd_nnan_inf_op1(double %x) {
+; CHECK-LABEL: @fadd_nnan_inf_op1(
+; CHECK-NEXT:    ret double 0x7FF0000000000000
+;
+  %r = fadd nnan double %x, 0x7ff0000000000000
+  ret double %r
+}
+
+define <2 x double> @fadd_nnan_neginf_op1(<2 x double> %x) {
+; CHECK-LABEL: @fadd_nnan_neginf_op1(
+; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000000, double poison>
+;
+  %r = fadd nnan <2 x double> %x, <double 0xfff0000000000000, double poison>
+  ret <2 x double> %r
+}
+
+define double @fadd_nnan_neginf_op0(double %x) {
+; CHECK-LABEL: @fadd_nnan_neginf_op0(
+; CHECK-NEXT:    ret double 0xFFF0000000000000
+;
+  %r = fadd nnan double 0xfff0000000000000, %x
+  ret double %r
+}
+
+; negative test - requires nnan
+
+define double @fadd_inf_op0(double %x) {
+; CHECK-LABEL: @fadd_inf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fadd double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fadd double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fsub_nnan_inf_op0(double %x) {
+; CHECK-LABEL: @fsub_nnan_inf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub nnan double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fsub_nnan_inf_op1(double %x) {
+; CHECK-LABEL: @fsub_nnan_inf_op1(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan double [[X:%.*]], 0x7FF0000000000000
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub nnan double %x, 0x7ff0000000000000
+  ret double %r
+}
+
+define <2 x double> @fsub_nnan_neginf_op0(<2 x double> %x) {
+; CHECK-LABEL: @fsub_nnan_neginf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan <2 x double> <double 0xFFF0000000000000, double poison>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %r = fsub nnan <2 x double> <double 0xfff0000000000000, double poison>, %x
+  ret <2 x double> %r
+}
+
+define double @fsub_nnan_neginf_op1(double %x) {
+; CHECK-LABEL: @fsub_nnan_neginf_op1(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan double [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub nnan double %x, 0xfff0000000000000
+  ret double %r
+}
+
+define double @fsub_inf_op0(double %x) {
+; CHECK-LABEL: @fsub_inf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fsub double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub double 0x7ff0000000000000, %x
+  ret double %r
 }

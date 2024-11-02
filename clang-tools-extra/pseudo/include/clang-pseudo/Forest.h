@@ -20,8 +20,8 @@
 #ifndef CLANG_PSEUDO_FOREST_H
 #define CLANG_PSEUDO_FOREST_H
 
-#include "clang-pseudo/Grammar.h"
 #include "clang-pseudo/Token.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"
@@ -43,6 +43,7 @@ namespace pseudo {
 // doesn't have parent pointers.
 class alignas(class ForestNode *) ForestNode {
 public:
+  class RecursiveIterator;
   enum Kind {
     // A Terminal node is a single terminal symbol bound to a token.
     Terminal,
@@ -78,7 +79,11 @@ public:
   llvm::ArrayRef<const ForestNode *> elements() const {
     assert(kind() == Sequence);
     return children(Data >> RuleBits);
-  };
+  }
+  llvm::MutableArrayRef<ForestNode *> elements() {
+    assert(kind() == Sequence);
+    return children(Data >> RuleBits);
+  }
 
   // Returns all possible interpretations of the code.
   // REQUIRES: this is an Ambiguous node.
@@ -86,6 +91,26 @@ public:
     assert(kind() == Ambiguous);
     return children(Data);
   }
+  llvm::MutableArrayRef<ForestNode *> alternatives() {
+    assert(kind() == Ambiguous);
+    return children(Data);
+  }
+
+  llvm::ArrayRef<const ForestNode *> children() const {
+    switch (kind()) {
+    case Sequence:
+      return elements();
+    case Ambiguous:
+      return alternatives();
+    case Terminal:
+    case Opaque:
+      return {};
+    }
+    llvm_unreachable("Bad kind");
+  }
+
+  // Iteration over all nodes in the forest, including this.
+  llvm::iterator_range<RecursiveIterator> descendants() const;
 
   std::string dump(const Grammar &) const;
   std::string dumpRecursive(const Grammar &, bool Abbreviated = false) const;
@@ -117,6 +142,10 @@ private:
     return llvm::makeArrayRef(reinterpret_cast<ForestNode *const *>(this + 1),
                               Num);
   }
+  llvm::MutableArrayRef<ForestNode *> children(uint16_t Num) {
+    return llvm::makeMutableArrayRef(reinterpret_cast<ForestNode **>(this + 1),
+                                     Num);
+  }
 
   Token::Index StartIndex;
   Kind K : 4;
@@ -128,7 +157,7 @@ private:
   // An array of ForestNode* following the object.
 };
 // ForestNode may not be destroyed (for BumpPtrAllocator).
-static_assert(std::is_trivially_destructible<ForestNode>(), "");
+static_assert(std::is_trivially_destructible<ForestNode>());
 
 // A memory arena for the parse forest.
 class ForestArena {
@@ -162,7 +191,7 @@ public:
   }
 
   size_t nodeCount() const { return NodeCount; }
-  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(this); }
+  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(*this); }
 
 private:
   ForestNode &create(ForestNode::Kind K, SymbolID SID, Token::Index Start,
@@ -179,6 +208,27 @@ private:
 
   llvm::BumpPtrAllocator Arena;
   uint32_t NodeCount = 0;
+};
+
+class ForestNode::RecursiveIterator
+    : public llvm::iterator_facade_base<ForestNode::RecursiveIterator,
+                                        std::input_iterator_tag,
+                                        const ForestNode> {
+  llvm::DenseSet<const ForestNode *> Seen;
+  struct StackFrame {
+    const ForestNode *Parent;
+    unsigned ChildIndex;
+  };
+  std::vector<StackFrame> Stack;
+  const ForestNode *Cur;
+
+public:
+  RecursiveIterator(const ForestNode *N = nullptr) : Cur(N) {}
+
+  const ForestNode &operator*() const { return *Cur; }
+  void operator++();
+  bool operator==(const RecursiveIterator &I) const { return Cur == I.Cur; }
+  bool operator!=(const RecursiveIterator &I) const { return !(*this == I); }
 };
 
 } // namespace pseudo

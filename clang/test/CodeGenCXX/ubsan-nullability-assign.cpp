@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=nullability-assign | FileCheck %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=nullability-assign | FileCheck %s
 
 struct S1 {
   int *_Nonnull p;
@@ -17,13 +17,13 @@ union U1 {
 void f1(int *p) {
   U1 u;
 
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
   // CHECK: store
   u.s1.p = p;
 
-  // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
+  // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
   // CHECK: store

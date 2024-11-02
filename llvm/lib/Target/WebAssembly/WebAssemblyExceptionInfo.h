@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYEXCEPTIONINFO_H
 
 #include "WebAssembly.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {

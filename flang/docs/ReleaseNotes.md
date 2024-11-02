@@ -1,15 +1,15 @@
-# Flang 12.0.0 (In-Progress) Release Notes
+# Flang 15.0.0 (In-Progress) Release Notes
 
 > **warning**
 >
-> These are in-progress notes for the upcoming LLVM 12.0.0 release.
+> These are in-progress notes for the upcoming LLVM 15.0.0 release.
 > Release notes for previous releases can be found on [the Download
 > Page](https://releases.llvm.org/download.html).
 
 ## Introduction
 
 This document contains the release notes for the Flang Fortran frontend,
-part of the LLVM Compiler Infrastructure, release 12.0.0. Here we
+part of the LLVM Compiler Infrastructure, release 15.0.0. Here we
 describe the status of Flang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see [the LLVM
@@ -22,60 +22,42 @@ document applies to the *next* release, not the current one. To see the
 release notes for a specific release, please see the [releases
 page](https://llvm.org/releases/).
 
-## Known Issues
+## Major New Features
 
-These are issues that couldn't be fixed before the release. See the bug
-reports for the latest status.
+* Flang now supports loading LLVM pass plugins with the `-fpass-plugin` option
+  which is also available in clang. The option mimics the behavior of the
+  corresponding option in clang and has the same capabilities and limitations.
+* Flang also supports statically linked LLVM pass extensions. Projects can be
+  linked statically into `flang-new` if the cmake command includes
+  `-DLLVM_${NAME}_LINK_INTO_TOOLS=ON`. This behavior is also similar to clang.
 
- *   ...
+## Bug Fixes
 
-## Introducing Flang
+## Non-comprehensive list of changes in this release
+* The bash wrapper script, `flang`, is renamed as `flang-to-external-fc`.
+* In contrast to Clang, Flang will not default to using `-fpie` when linking
+  executables. This is only a temporary solution and the goal is to align with
+  Clang in the near future. First, however, the frontend driver needs to be
+  extended so that it can generate position independent code (that requires
+  adding support for e.g. `-fpic` and `-mrelocation-model` in `flang-new
+  -fc1`). Once that is available, support for the `-fpie` can officially be
+  added and the default behaviour updated.
 
-Flang is LLVM's Fortran front end and is new for the LLVM 11 release.
+## New Compiler Flags
+* Refined how `-f{no-}color-diagnostics` is treated to better align with Clang.
+  In particular, both `-fcolor-diagnostics` and `-fno-color-diagnostics` are
+  now available in `flang-new` (the diagnostics are formatted by default). In
+  the frontend driver, `flang-new -fc1`, only `-fcolor-diagnostics` is
+  available (by default, the diagnostics are not formatted).
 
-Flang is still a work in progress for this release and is included for
-experimentation and feedback.
+## Windows Support
 
-Flang is able to parse a comprehensive subset of the Fortran language
-and check it for correctness. Flang is not yet able to generate LLVM IR
-for the source code and thus is unable to compile a running binary.
+## Fortran Language Changes in Flang
 
-Flang is able to unparse the input source code into a canonical form and
-emit it to allow testing. Flang can also invoke an external Fortran
-compiler on this canonical input.
+## Build System Changes
 
-Flang's parser has comprehensive support for:
- * Fortran 2018
- * OpenMP 4.5
- * OpenACC 3.0
+## New Issues Found
 
-Interested users are invited to try to compile their Fortran codes with
-flang in and report any issues in parsing or semantic checking in
-[bugzilla](https://bugs.llvm.org/enter_bug.cgi?product=flang).
-
-### Major missing features
-
- * Flang is not supported on Windows platforms.
-
-## Using Flang
-
-Usage: `flang hello.f90 -o hello.bin`
-
-By default, Flang will parse the Fortran file `hello.f90` then unparse it to a
-canonical Fortran source file. Flang will then invoke an external
-Fortran compiler to compile this source file and link it, placing the
-resulting executable in `hello.bin`.
-
-To specify the external Fortran compiler, set the `F18_FC` environment
-variable to the name of the compiler binary and ensure that it is on your
-`PATH`. The default value for `F18_FC` is `gfortran`.
-
-When invoked with no source input, Flang will wait for input on stdin.
-When invoked in this way, Flang performs the same actions as if
-called with `-fdebug-measure-parse-tree -funparse` and does not invoke
-`F18_FC`.
-
-For a full list of options that Flang supports, run `flang --help`.
 
 ## Additional Information
 
@@ -83,5 +65,5 @@ Flang's documentation is located in the `flang/docs/` directory in the
 LLVM monorepo.
 
 If you have any questions or comments about Flang, please feel free to
-contact us via the [mailing
-list](https://lists.llvm.org/mailman/listinfo/flang-dev).
+contact us on the [Discourse 
+forums](https://discourse.llvm.org/c/subprojects/flang/33).

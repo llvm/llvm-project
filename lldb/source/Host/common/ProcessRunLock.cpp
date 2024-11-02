@@ -24,6 +24,7 @@ ProcessRunLock::~ProcessRunLock() {
 bool ProcessRunLock::ReadTryLock() {
   ::pthread_rwlock_rdlock(&m_rwlock);
   if (!m_running) {
+    // coverity[missing_unlock]
     return true;
   }
   ::pthread_rwlock_unlock(&m_rwlock);

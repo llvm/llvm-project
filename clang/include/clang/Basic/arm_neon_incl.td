@@ -265,6 +265,7 @@ class Inst <string n, string p, string t, Operation o> {
   string Prototype = p;
   string Types = t;
   string ArchGuard = "";
+  string TargetGuard = "";
 
   Operation Operation = o;
   bit BigEndianSafe = 0;

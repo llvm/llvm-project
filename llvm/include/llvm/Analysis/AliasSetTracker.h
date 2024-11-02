@@ -37,6 +37,7 @@ class AliasSetTracker;
 class AnyMemSetInst;
 class AnyMemTransferInst;
 class BasicBlock;
+class BatchAAResults;
 class LoadInst;
 class raw_ostream;
 class StoreInst;
@@ -208,7 +209,7 @@ public:
   bool isForwardingAliasSet() const { return Forward; }
 
   /// Merge the specified alias set into this alias set.
-  void mergeSetIn(AliasSet &AS, AliasSetTracker &AST);
+  void mergeSetIn(AliasSet &AS, AliasSetTracker &AST, BatchAAResults &BatchAA);
 
   // Alias Set iteration - Allow access to all of the pointers which are part of
   // this alias set.
@@ -220,10 +221,6 @@ public:
   // Unfortunately, ilist::size() is linear, so we have to add code to keep
   // track of the list's exact size.
   unsigned size() { return SetSize; }
-
-  /// If this alias set is known to contain a single instruction and *only* a
-  /// single unique instruction, return it.  Otherwise, return nullptr.
-  Instruction* getUniqueInstruction();
 
   void print(raw_ostream &OS) const;
   void dump() const;
@@ -314,8 +311,8 @@ public:
   /// If the specified pointer "may" (or must) alias one of the members in the
   /// set return the appropriate AliasResult. Otherwise return NoAlias.
   AliasResult aliasesPointer(const Value *Ptr, LocationSize Size,
-                             const AAMDNodes &AAInfo, AAResults &AA) const;
-  bool aliasesUnknownInst(const Instruction *Inst, AAResults &AA) const;
+                             const AAMDNodes &AAInfo, BatchAAResults &AA) const;
+  bool aliasesUnknownInst(const Instruction *Inst, BatchAAResults &AA) const;
 };
 
 inline raw_ostream& operator<<(raw_ostream &OS, const AliasSet &AS) {

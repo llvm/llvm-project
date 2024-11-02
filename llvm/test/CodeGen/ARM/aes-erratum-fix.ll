@@ -1356,54 +1356,77 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-FIX-NOSCHED-NEXT:    push {r4, r5, r6, r7, r8, lr}
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB36_2
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB36_3
 ; CHECK-FIX-NOSCHED-NEXT:  @ %bb.1:
 ; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d16[0]}, [r1:16]
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r4, d17
-; CHECK-FIX-NOSCHED-NEXT:    vmov lr, r12, d16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s8, s6
-; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r4
-; CHECK-FIX-NOSCHED-NEXT:    lsr r4, r4, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s10, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r12
-; CHECK-FIX-NOSCHED-NEXT:    lsr r12, r12, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s6
+; CHECK-FIX-NOSCHED-NEXT:    vorr q9, q8, q8
+; CHECK-FIX-NOSCHED-NEXT:    vmov lr, r12, d17
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d16[1]
+; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d18[0]}, [r1:16]
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r4, d18[0]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s6, lr
+; CHECK-FIX-NOSCHED-NEXT:    lsr r5, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s8, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s6
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r12, #16
 ; CHECK-FIX-NOSCHED-NEXT:    lsr lr, lr, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r12
-; CHECK-FIX-NOSCHED-NEXT:    vmov s7, lr
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s6
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s10, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s10
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s14
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r4, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    bne .LBB36_3
-; CHECK-FIX-NOSCHED-NEXT:    b .LBB36_4
+; CHECK-FIX-NOSCHED-NEXT:    bne .LBB36_4
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB36_2:
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r2, #10]
-; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r2, #6]
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d0
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
+; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r0
+; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    b .LBB36_5
+; CHECK-FIX-NOSCHED-NEXT:  .LBB36_3:
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r2, #10]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r2, #6]
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r6, [r2, #2]
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r7, [r2, #14]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r5
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r3, [r2, #12]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, lr
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r2, #8]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r12
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r2, #8]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r6
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r2, #4]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r2, #4]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r8, [r2]
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s4
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s8
-; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s12
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
@@ -1411,44 +1434,46 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB36_4
-; CHECK-FIX-NOSCHED-NEXT:  .LBB36_3:
-; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d0[0]}, [r1:16]
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB36_2
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB36_4:
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d0
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s5
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d1
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
-; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
+; CHECK-FIX-NOSCHED-NEXT:    vorr q8, q0, q0
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d0[1]
+; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d16[0]}, [r1:16]
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d1
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r7, d16[0]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s1
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r1
+; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r1
-; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-FIX-NOSCHED-NEXT:  .LBB36_5:
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s7
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s15, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s9
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
-; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r1, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
@@ -1494,39 +1519,63 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX:       @ %bb.0:
 ; CHECK-CORTEX-FIX-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-CORTEX-FIX-NEXT:    push {r4, r5, r6, r7, r8, lr}
-; CHECK-CORTEX-FIX-NEXT:    .vsave {d8}
-; CHECK-CORTEX-FIX-NEXT:    vpush {d8}
+; CHECK-CORTEX-FIX-NEXT:    .vsave {d8, d9}
+; CHECK-CORTEX-FIX-NEXT:    vpush {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB36_2
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB36_3
 ; CHECK-CORTEX-FIX-NEXT:  @ %bb.1:
 ; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d16[0]}, [r1:16]
+; CHECK-CORTEX-FIX-NEXT:    vorr q9, q8, q8
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r3, d16[1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov r5, r6, d17
+; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d18[0]}, [r1:16]
 ; CHECK-CORTEX-FIX-NEXT:    lsr r7, r5, #16
 ; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s4, r6
 ; CHECK-CORTEX-FIX-NEXT:    vmov s6, r5
-; CHECK-CORTEX-FIX-NEXT:    vmov s14, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s7, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov r12, r3, d16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s7
-; CHECK-CORTEX-FIX-NEXT:    lsr lr, r12, #16
 ; CHECK-CORTEX-FIX-NEXT:    lsr r8, r3, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r12
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s5, r7
 ; CHECK-CORTEX-FIX-NEXT:    vmov s9, r8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s4
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s6
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 lr, d18[0]
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s9
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, lr, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s9
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s11
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s13
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    bne .LBB36_3
-; CHECK-CORTEX-FIX-NEXT:    b .LBB36_4
+; CHECK-CORTEX-FIX-NEXT:    bne .LBB36_4
 ; CHECK-CORTEX-FIX-NEXT:  .LBB36_2:
+; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d1
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, r1, d0
+; CHECK-CORTEX-FIX-NEXT:    lsr r7, r1, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s2, r6
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s3, r1
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s0
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s9
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
+; CHECK-CORTEX-FIX-NEXT:    b .LBB36_5
+; CHECK-CORTEX-FIX-NEXT:  .LBB36_3:
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r12, [r2]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh lr, [r2, #2]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r8, [r2, #4]
@@ -1535,84 +1584,86 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r3, [r2, #10]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r7, [r2, #12]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r6, [r2, #14]
+; CHECK-CORTEX-FIX-NEXT:    vmov s5, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s7, r8
 ; CHECK-CORTEX-FIX-NEXT:    vmov s4, r6
 ; CHECK-CORTEX-FIX-NEXT:    vmov s6, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov s5, r5
 ; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s9, r8
-; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, lr
+; CHECK-CORTEX-FIX-NEXT:    vmov s11, r12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s4
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s6
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s9
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s11
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s9
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s11
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB36_4
-; CHECK-CORTEX-FIX-NEXT:  .LBB36_3:
-; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d0[0]}, [r1:16]
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB36_2
 ; CHECK-CORTEX-FIX-NEXT:  .LBB36_4:
+; CHECK-CORTEX-FIX-NEXT:    vorr q8, q0, q0
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r3, d0[1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d1
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, r1, d0
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s4, s4
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s6, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
-; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
-; CHECK-CORTEX-FIX-NEXT:    lsr r7, r1, #16
+; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d16[0]}, [r1:16]
 ; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s1, r1
-; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, s12
-; CHECK-CORTEX-FIX-NEXT:    vmov r1, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s7
+; CHECK-CORTEX-FIX-NEXT:    lsr r1, r5, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s2, r6
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s6
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
+; CHECK-CORTEX-FIX-NEXT:    lsr r7, r3, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s3, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r1
 ; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
 ; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s0
-; CHECK-CORTEX-FIX-NEXT:    vmov s0, r12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s9
-; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r1, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r1, s5
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r0, d16[0]
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s9
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s3
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s3
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s11
-; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r1, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s18, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s18
+; CHECK-CORTEX-FIX-NEXT:  .LBB36_5:
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s6, s6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s4, s4
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s13
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s3
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r1, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s6
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s8
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s3
+; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r1, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r1, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s1
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s11
 ; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
+; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r1, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
 ; CHECK-CORTEX-FIX-NEXT:    vmov r1, s0
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r3, r3, r7, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s5
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r7, r7, r6, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s4
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r6, r6, r5, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s8
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s12
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r5, r5, r4, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r4, s2
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d18[0], r5
@@ -1620,7 +1671,7 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d18[1], lr
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d19[1], r12
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r0, r4, r0, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s1
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s3
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r1, r4, r1, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d16[0], r1
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d17[0], r0
@@ -1629,7 +1680,7 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX-NEXT:    aese.8 q9, q8
 ; CHECK-CORTEX-FIX-NEXT:    aesmc.8 q8, q9
 ; CHECK-CORTEX-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    vpop {d8}
+; CHECK-CORTEX-FIX-NEXT:    vpop {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    pop {r4, r5, r6, r7, r8, pc}
   br i1 %0, label %5, label %12
 
@@ -1680,56 +1731,78 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s0
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB37_2
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB37_3
 ; CHECK-FIX-NOSCHED-NEXT:  @ %bb.1:
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s9
 ; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s0
+; CHECK-FIX-NOSCHED-NEXT:    vmov lr, r12, d17
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d16[1]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.16 d16[0], r2
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, lr, d17
-; CHECK-FIX-NOSCHED-NEXT:    vmov r2, r12, d16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, lr
+; CHECK-FIX-NOSCHED-NEXT:    lsr lr, lr, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s8, s2
-; CHECK-FIX-NOSCHED-NEXT:    lsr r4, lr, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s0, lr
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r12
-; CHECK-FIX-NOSCHED-NEXT:    lsr r5, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r2, d16[0]
+; CHECK-FIX-NOSCHED-NEXT:    lsr r4, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r2
-; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r12, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s10, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r4
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r12, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s10, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r5
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s10
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s14
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r2
+; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s2
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    bne .LBB37_3
-; CHECK-FIX-NOSCHED-NEXT:    b .LBB37_4
+; CHECK-FIX-NOSCHED-NEXT:    bne .LBB37_4
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB37_2:
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d2
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d3
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
+; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r0
+; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    b .LBB37_5
+; CHECK-FIX-NOSCHED-NEXT:  .LBB37_3:
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r3, [r1, #10]
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r1, #6]
-; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r1, #2]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r1, #6]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r1, #2]
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r7, [r1, #14]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r3
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r2, [r1, #12]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r4
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r1, #8]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, lr
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r1, #4]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r12
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r1, #8]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r5
+; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r1, #4]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r6, [r1]
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r2
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s8
-; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s12
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r6
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
@@ -1737,47 +1810,48 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB37_4
-; CHECK-FIX-NOSCHED-NEXT:  .LBB37_3:
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s9
-; CHECK-FIX-NOSCHED-NEXT:    vmov.16 d2[0], r0
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB37_2
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB37_4:
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s1
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
-; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s9, s9
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d3
+; CHECK-FIX-NOSCHED-NEXT:    vmov r7, s9
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d2[1]
+; CHECK-FIX-NOSCHED-NEXT:    vmov.16 d2[0], r7
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r7, d2[0]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r3
+; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r2
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s5
-; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:  .LBB37_5:
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s15, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s9
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s6
-; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
-; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s4, s4
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r2, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
@@ -1822,42 +1896,65 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX:       @ %bb.0:
 ; CHECK-CORTEX-FIX-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-CORTEX-FIX-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-CORTEX-FIX-NEXT:    .vsave {d8}
-; CHECK-CORTEX-FIX-NEXT:    vpush {d8}
+; CHECK-CORTEX-FIX-NEXT:    .vsave {d8, d9}
+; CHECK-CORTEX-FIX-NEXT:    vpush {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s0
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB37_2
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB37_3
 ; CHECK-CORTEX-FIX-NEXT:  @ %bb.1:
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s9
 ; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov r2, s0
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r3, d16[1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov.16 d16[0], r2
 ; CHECK-CORTEX-FIX-NEXT:    vmov r4, r5, d17
+; CHECK-CORTEX-FIX-NEXT:    lsr lr, r3, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
 ; CHECK-CORTEX-FIX-NEXT:    lsr r6, r4, #16
 ; CHECK-CORTEX-FIX-NEXT:    lsr r7, r5, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
 ; CHECK-CORTEX-FIX-NEXT:    vmov s2, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s14, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov s3, r6
-; CHECK-CORTEX-FIX-NEXT:    vmov r2, r3, d16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s0
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r7
+; CHECK-CORTEX-FIX-NEXT:    vmov s1, r6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s8
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r2, d16[0]
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s11
 ; CHECK-CORTEX-FIX-NEXT:    lsr r12, r2, #16
-; CHECK-CORTEX-FIX-NEXT:    lsr lr, r3, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r2
-; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s11
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s13
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r2
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s15
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    bne .LBB37_3
-; CHECK-CORTEX-FIX-NEXT:    b .LBB37_4
+; CHECK-CORTEX-FIX-NEXT:    bne .LBB37_4
 ; CHECK-CORTEX-FIX-NEXT:  .LBB37_2:
+; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d3
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, r2, d2
+; CHECK-CORTEX-FIX-NEXT:    lsr r7, r2, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s6, r6
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s7, r2
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s4
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s9
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
+; CHECK-CORTEX-FIX-NEXT:    b .LBB37_5
+; CHECK-CORTEX-FIX-NEXT:  .LBB37_3:
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r12, [r1]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh lr, [r1, #2]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r7, [r1, #4]
@@ -1866,85 +1963,86 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r4, [r1, #10]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r2, [r1, #12]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r3, [r1, #14]
+; CHECK-CORTEX-FIX-NEXT:    vmov s1, r6
+; CHECK-CORTEX-FIX-NEXT:    vmov s3, r7
 ; CHECK-CORTEX-FIX-NEXT:    vmov s0, r3
 ; CHECK-CORTEX-FIX-NEXT:    vmov s2, r2
-; CHECK-CORTEX-FIX-NEXT:    vmov s1, r6
 ; CHECK-CORTEX-FIX-NEXT:    vmov s8, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r5
-; CHECK-CORTEX-FIX-NEXT:    vmov s11, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, lr
-; CHECK-CORTEX-FIX-NEXT:    vmov s15, r12
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s0
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s2
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s2
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s11
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s13
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s13
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB37_4
-; CHECK-CORTEX-FIX-NEXT:  .LBB37_3:
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov.16 d2[0], r0
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB37_2
 ; CHECK-CORTEX-FIX-NEXT:  .LBB37_4:
-; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d3
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, r2, d2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
-; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s4, r5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r2, d2[1]
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
 ; CHECK-CORTEX-FIX-NEXT:    lsr r7, r2, #16
-; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s5, r2
-; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, s12
-; CHECK-CORTEX-FIX-NEXT:    vmov r2, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s3
-; CHECK-CORTEX-FIX-NEXT:    vmov s6, r6
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s2
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
 ; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s4
-; CHECK-CORTEX-FIX-NEXT:    vmov s4, r12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s9
-; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r2, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r2, s1
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s12
+; CHECK-CORTEX-FIX-NEXT:    vmov.16 d2[0], r0
+; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d3
+; CHECK-CORTEX-FIX-NEXT:    vmov s7, r2
+; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s6, r6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r0, d2[0]
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r5
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s9
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s7
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s11
-; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r2, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s4
+; CHECK-CORTEX-FIX-NEXT:    vmov s18, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s18
+; CHECK-CORTEX-FIX-NEXT:  .LBB37_5:
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s2, s2
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s4
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s6, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s13
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r2, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s2
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s8
+; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r2, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r2, s3
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s1
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s11
 ; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
+; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r2, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r3, r3, r7, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s5
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r7, r7, r6, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r6, r6, r5, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s8
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s12
 ; CHECK-CORTEX-FIX-NEXT:    vmov r2, s0
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r5, r5, r4, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r4, s6
@@ -1953,7 +2051,7 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d18[1], lr
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d19[1], r12
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r0, r4, r0, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s5
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s7
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r2, r4, r2, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d16[0], r2
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d17[0], r0
@@ -1962,7 +2060,7 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX-NEXT:    aese.8 q9, q8
 ; CHECK-CORTEX-FIX-NEXT:    aesmc.8 q8, q9
 ; CHECK-CORTEX-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
-; CHECK-CORTEX-FIX-NEXT:    vpop {d8}
+; CHECK-CORTEX-FIX-NEXT:    vpop {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    pop {r4, r5, r6, r7, r11, pc}
   br i1 %0, label %5, label %11
 
@@ -3726,54 +3824,77 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-FIX-NOSCHED-NEXT:    push {r4, r5, r6, r7, r8, lr}
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB82_2
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB82_3
 ; CHECK-FIX-NOSCHED-NEXT:  @ %bb.1:
 ; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d16[0]}, [r1:16]
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r4, d17
-; CHECK-FIX-NOSCHED-NEXT:    vmov lr, r12, d16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s8, s6
-; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r4
-; CHECK-FIX-NOSCHED-NEXT:    lsr r4, r4, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s10, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r12
-; CHECK-FIX-NOSCHED-NEXT:    lsr r12, r12, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s6
+; CHECK-FIX-NOSCHED-NEXT:    vorr q9, q8, q8
+; CHECK-FIX-NOSCHED-NEXT:    vmov lr, r12, d17
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d16[1]
+; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d18[0]}, [r1:16]
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r4, d18[0]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s6, lr
+; CHECK-FIX-NOSCHED-NEXT:    lsr r5, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s8, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s6
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r12, #16
 ; CHECK-FIX-NOSCHED-NEXT:    lsr lr, lr, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r12
-; CHECK-FIX-NOSCHED-NEXT:    vmov s7, lr
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s6
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s10, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s10
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s14
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r4, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    bne .LBB82_3
-; CHECK-FIX-NOSCHED-NEXT:    b .LBB82_4
+; CHECK-FIX-NOSCHED-NEXT:    bne .LBB82_4
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB82_2:
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r2, #10]
-; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r2, #6]
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d0
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
+; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r0
+; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    b .LBB82_5
+; CHECK-FIX-NOSCHED-NEXT:  .LBB82_3:
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r2, #10]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r2, #6]
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r6, [r2, #2]
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r7, [r2, #14]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r5
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r3, [r2, #12]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, lr
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r2, #8]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r12
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r2, #8]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r6
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r2, #4]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r2, #4]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r8, [r2]
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s4
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s8
-; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s12
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
@@ -3781,44 +3902,46 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB82_4
-; CHECK-FIX-NOSCHED-NEXT:  .LBB82_3:
-; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d0[0]}, [r1:16]
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB82_2
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB82_4:
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d0
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s5
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d1
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
-; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
+; CHECK-FIX-NOSCHED-NEXT:    vorr q8, q0, q0
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d0[1]
+; CHECK-FIX-NOSCHED-NEXT:    vld1.16 {d16[0]}, [r1:16]
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d1
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r7, d16[0]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s1
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r1
+; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r1
-; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-FIX-NOSCHED-NEXT:  .LBB82_5:
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s7
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s15, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s9
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
-; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r1, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
@@ -3864,39 +3987,63 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX:       @ %bb.0:
 ; CHECK-CORTEX-FIX-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-CORTEX-FIX-NEXT:    push {r4, r5, r6, r7, r8, lr}
-; CHECK-CORTEX-FIX-NEXT:    .vsave {d8}
-; CHECK-CORTEX-FIX-NEXT:    vpush {d8}
+; CHECK-CORTEX-FIX-NEXT:    .vsave {d8, d9}
+; CHECK-CORTEX-FIX-NEXT:    vpush {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB82_2
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB82_3
 ; CHECK-CORTEX-FIX-NEXT:  @ %bb.1:
 ; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d16[0]}, [r1:16]
+; CHECK-CORTEX-FIX-NEXT:    vorr q9, q8, q8
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r3, d16[1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov r5, r6, d17
+; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d18[0]}, [r1:16]
 ; CHECK-CORTEX-FIX-NEXT:    lsr r7, r5, #16
 ; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s4, r6
 ; CHECK-CORTEX-FIX-NEXT:    vmov s6, r5
-; CHECK-CORTEX-FIX-NEXT:    vmov s14, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s7, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov r12, r3, d16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s4
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s7
-; CHECK-CORTEX-FIX-NEXT:    lsr lr, r12, #16
 ; CHECK-CORTEX-FIX-NEXT:    lsr r8, r3, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r12
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s5, r7
 ; CHECK-CORTEX-FIX-NEXT:    vmov s9, r8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s4
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s6
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 lr, d18[0]
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s9
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, lr, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s9
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s11
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s13
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    bne .LBB82_3
-; CHECK-CORTEX-FIX-NEXT:    b .LBB82_4
+; CHECK-CORTEX-FIX-NEXT:    bne .LBB82_4
 ; CHECK-CORTEX-FIX-NEXT:  .LBB82_2:
+; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d1
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, r1, d0
+; CHECK-CORTEX-FIX-NEXT:    lsr r7, r1, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s2, r6
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s3, r1
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s0
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s9
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
+; CHECK-CORTEX-FIX-NEXT:    b .LBB82_5
+; CHECK-CORTEX-FIX-NEXT:  .LBB82_3:
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r12, [r2]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh lr, [r2, #2]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r8, [r2, #4]
@@ -3905,84 +4052,86 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r3, [r2, #10]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r7, [r2, #12]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r6, [r2, #14]
+; CHECK-CORTEX-FIX-NEXT:    vmov s5, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s7, r8
 ; CHECK-CORTEX-FIX-NEXT:    vmov s4, r6
 ; CHECK-CORTEX-FIX-NEXT:    vmov s6, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov s5, r5
 ; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s9, r8
-; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, lr
+; CHECK-CORTEX-FIX-NEXT:    vmov s11, r12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s4
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s6
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s9
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s11
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s9
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s11
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB82_4
-; CHECK-CORTEX-FIX-NEXT:  .LBB82_3:
-; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d0[0]}, [r1:16]
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB82_2
 ; CHECK-CORTEX-FIX-NEXT:  .LBB82_4:
+; CHECK-CORTEX-FIX-NEXT:    vorr q8, q0, q0
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r3, d0[1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d1
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, r1, d0
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s4, s4
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s6, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
-; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
-; CHECK-CORTEX-FIX-NEXT:    lsr r7, r1, #16
+; CHECK-CORTEX-FIX-NEXT:    vld1.16 {d16[0]}, [r1:16]
 ; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s1, r1
-; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, s12
-; CHECK-CORTEX-FIX-NEXT:    vmov r1, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s7
+; CHECK-CORTEX-FIX-NEXT:    lsr r1, r5, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s2, r6
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s6
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
+; CHECK-CORTEX-FIX-NEXT:    lsr r7, r3, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s3, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r1
 ; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
 ; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s0
-; CHECK-CORTEX-FIX-NEXT:    vmov s0, r12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s9
-; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r1, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r1, s5
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r0, d16[0]
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s9
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s3
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s3
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s11
-; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r1, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s18, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s0, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s18
+; CHECK-CORTEX-FIX-NEXT:  .LBB82_5:
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s6, s6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s4, s4
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s13
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s3
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r1, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s6
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s8
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s3
+; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r1, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r1, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s1
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s11
 ; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
+; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r1, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
 ; CHECK-CORTEX-FIX-NEXT:    vmov r1, s0
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r3, r3, r7, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s5
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r7, r7, r6, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s4
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r6, r6, r5, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s8
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s12
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r5, r5, r4, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r4, s2
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d18[0], r5
@@ -3990,7 +4139,7 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d18[1], lr
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d19[1], r12
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r0, r4, r0, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s1
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s3
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r1, r4, r1, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d16[0], r1
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d17[0], r0
@@ -3999,7 +4148,7 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-CORTEX-FIX-NEXT:    aesd.8 q9, q8
 ; CHECK-CORTEX-FIX-NEXT:    aesimc.8 q8, q9
 ; CHECK-CORTEX-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
-; CHECK-CORTEX-FIX-NEXT:    vpop {d8}
+; CHECK-CORTEX-FIX-NEXT:    vpop {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    pop {r4, r5, r6, r7, r8, pc}
   br i1 %0, label %5, label %12
 
@@ -4050,56 +4199,78 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s0
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB83_2
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB83_3
 ; CHECK-FIX-NOSCHED-NEXT:  @ %bb.1:
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s9
 ; CHECK-FIX-NOSCHED-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s0
+; CHECK-FIX-NOSCHED-NEXT:    vmov lr, r12, d17
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d16[1]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.16 d16[0], r2
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, lr, d17
-; CHECK-FIX-NOSCHED-NEXT:    vmov r2, r12, d16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, lr
+; CHECK-FIX-NOSCHED-NEXT:    lsr lr, lr, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s8, s2
-; CHECK-FIX-NOSCHED-NEXT:    lsr r4, lr, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s0, lr
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r12
-; CHECK-FIX-NOSCHED-NEXT:    lsr r5, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r2, d16[0]
+; CHECK-FIX-NOSCHED-NEXT:    lsr r4, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r2
-; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r12, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s10, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r4
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r12, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s10, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r5
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-FIX-NOSCHED-NEXT:    vmov s14, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s10
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s14
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r2
+; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s2
+; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    bne .LBB83_3
-; CHECK-FIX-NOSCHED-NEXT:    b .LBB83_4
+; CHECK-FIX-NOSCHED-NEXT:    bne .LBB83_4
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB83_2:
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d2
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d3
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
+; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r0
+; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    b .LBB83_5
+; CHECK-FIX-NOSCHED-NEXT:  .LBB83_3:
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r3, [r1, #10]
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r1, #6]
-; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r1, #2]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r1, #6]
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r1, #2]
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r7, [r1, #14]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r3
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r2, [r1, #12]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r4
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r5, [r1, #8]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s1, lr
-; CHECK-FIX-NOSCHED-NEXT:    ldrh r12, [r1, #4]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r12
+; CHECK-FIX-NOSCHED-NEXT:    ldrh r4, [r1, #8]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r5
+; CHECK-FIX-NOSCHED-NEXT:    ldrh lr, [r1, #4]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
 ; CHECK-FIX-NOSCHED-NEXT:    ldrh r6, [r1]
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r2
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s10, s8
-; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s8, r4
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s14, s12
-; CHECK-FIX-NOSCHED-NEXT:    vmov s12, r12
+; CHECK-FIX-NOSCHED-NEXT:    vmov s12, lr
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r6
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
@@ -4107,47 +4278,48 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    cmp r0, #0
-; CHECK-FIX-NOSCHED-NEXT:    beq .LBB83_4
-; CHECK-FIX-NOSCHED-NEXT:  .LBB83_3:
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s9
-; CHECK-FIX-NOSCHED-NEXT:    vmov.16 d2[0], r0
+; CHECK-FIX-NOSCHED-NEXT:    beq .LBB83_2
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB83_4:
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s1
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
-; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s9, s9
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d3
+; CHECK-FIX-NOSCHED-NEXT:    vmov r7, s9
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r3, d2[1]
+; CHECK-FIX-NOSCHED-NEXT:    vmov.16 d2[0], r7
+; CHECK-FIX-NOSCHED-NEXT:    vmov.32 r7, d2[0]
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r3
+; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r2
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s5
-; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r2
-; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
+; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
+; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
+; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s11, s5
+; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:  .LBB83_5:
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s1
+; CHECK-FIX-NOSCHED-NEXT:    vmov s15, r0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s15, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
-; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
-; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s9
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s6
-; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
-; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s4, s4
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r2, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
@@ -4192,42 +4364,65 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX:       @ %bb.0:
 ; CHECK-CORTEX-FIX-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-CORTEX-FIX-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-CORTEX-FIX-NEXT:    .vsave {d8}
-; CHECK-CORTEX-FIX-NEXT:    vpush {d8}
+; CHECK-CORTEX-FIX-NEXT:    .vsave {d8, d9}
+; CHECK-CORTEX-FIX-NEXT:    vpush {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s0
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB83_2
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB83_3
 ; CHECK-CORTEX-FIX-NEXT:  @ %bb.1:
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s9
 ; CHECK-CORTEX-FIX-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov r2, s0
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r3, d16[1]
 ; CHECK-CORTEX-FIX-NEXT:    vmov.16 d16[0], r2
 ; CHECK-CORTEX-FIX-NEXT:    vmov r4, r5, d17
+; CHECK-CORTEX-FIX-NEXT:    lsr lr, r3, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
 ; CHECK-CORTEX-FIX-NEXT:    lsr r6, r4, #16
 ; CHECK-CORTEX-FIX-NEXT:    lsr r7, r5, #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov s0, r5
 ; CHECK-CORTEX-FIX-NEXT:    vmov s2, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s14, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov s3, r6
-; CHECK-CORTEX-FIX-NEXT:    vmov r2, r3, d16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s0
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r7
+; CHECK-CORTEX-FIX-NEXT:    vmov s1, r6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s8
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r2, d16[0]
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s11
 ; CHECK-CORTEX-FIX-NEXT:    lsr r12, r2, #16
-; CHECK-CORTEX-FIX-NEXT:    lsr lr, r3, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s8, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r2
-; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s11
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s13
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r2
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s15
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    bne .LBB83_3
-; CHECK-CORTEX-FIX-NEXT:    b .LBB83_4
+; CHECK-CORTEX-FIX-NEXT:    bne .LBB83_4
 ; CHECK-CORTEX-FIX-NEXT:  .LBB83_2:
+; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d3
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, r2, d2
+; CHECK-CORTEX-FIX-NEXT:    lsr r7, r2, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s6, r6
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s7, r2
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s4
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s7
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s9
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
+; CHECK-CORTEX-FIX-NEXT:    b .LBB83_5
+; CHECK-CORTEX-FIX-NEXT:  .LBB83_3:
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r12, [r1]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh lr, [r1, #2]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r7, [r1, #4]
@@ -4236,85 +4431,86 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r4, [r1, #10]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r2, [r1, #12]
 ; CHECK-CORTEX-FIX-NEXT:    ldrh r3, [r1, #14]
+; CHECK-CORTEX-FIX-NEXT:    vmov s1, r6
+; CHECK-CORTEX-FIX-NEXT:    vmov s3, r7
 ; CHECK-CORTEX-FIX-NEXT:    vmov s0, r3
 ; CHECK-CORTEX-FIX-NEXT:    vmov s2, r2
-; CHECK-CORTEX-FIX-NEXT:    vmov s1, r6
 ; CHECK-CORTEX-FIX-NEXT:    vmov s8, r4
-; CHECK-CORTEX-FIX-NEXT:    vmov s10, r5
-; CHECK-CORTEX-FIX-NEXT:    vmov s11, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, lr
-; CHECK-CORTEX-FIX-NEXT:    vmov s15, r12
+; CHECK-CORTEX-FIX-NEXT:    vmov s12, r5
+; CHECK-CORTEX-FIX-NEXT:    vmov s11, lr
+; CHECK-CORTEX-FIX-NEXT:    vmov s13, r12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s14, s0
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s2
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s2
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s2, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s11
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s10, s13
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s15
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s0, s12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s3, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s8, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s12, s13
 ; CHECK-CORTEX-FIX-NEXT:    cmp r0, #0
-; CHECK-CORTEX-FIX-NEXT:    beq .LBB83_4
-; CHECK-CORTEX-FIX-NEXT:  .LBB83_3:
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov.16 d2[0], r0
+; CHECK-CORTEX-FIX-NEXT:    beq .LBB83_2
 ; CHECK-CORTEX-FIX-NEXT:  .LBB83_4:
-; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d3
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, r2, d2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s1
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
-; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s4, r5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r2, d2[1]
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
 ; CHECK-CORTEX-FIX-NEXT:    lsr r7, r2, #16
-; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s5, r2
-; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
-; CHECK-CORTEX-FIX-NEXT:    vmov s9, r0
-; CHECK-CORTEX-FIX-NEXT:    vmov r0, s12
-; CHECK-CORTEX-FIX-NEXT:    vmov r2, s14
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s3
-; CHECK-CORTEX-FIX-NEXT:    vmov s6, r6
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s2
-; CHECK-CORTEX-FIX-NEXT:    vmov s13, r3
-; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
 ; CHECK-CORTEX-FIX-NEXT:    vmov s16, r7
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s10
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s4
-; CHECK-CORTEX-FIX-NEXT:    vmov s4, r12
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s9
-; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r2, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r2, s1
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s12
+; CHECK-CORTEX-FIX-NEXT:    vmov.16 d2[0], r0
+; CHECK-CORTEX-FIX-NEXT:    vmov r6, r5, d3
+; CHECK-CORTEX-FIX-NEXT:    vmov s7, r2
+; CHECK-CORTEX-FIX-NEXT:    lsr r4, r6, #16
+; CHECK-CORTEX-FIX-NEXT:    lsr r3, r5, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s6, r6
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s11, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov s9, r3
+; CHECK-CORTEX-FIX-NEXT:    vmov s15, r4
+; CHECK-CORTEX-FIX-NEXT:    vmov.32 r0, d2[0]
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r5
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s13, s9
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s9, s15
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s15, s16
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s7
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s11
-; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r2, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s5, s4
+; CHECK-CORTEX-FIX-NEXT:    vmov s18, r0
+; CHECK-CORTEX-FIX-NEXT:    lsr r12, r0, #16
+; CHECK-CORTEX-FIX-NEXT:    vmov s4, r12
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s7, s18
+; CHECK-CORTEX-FIX-NEXT:  .LBB83_5:
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s10
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s2, s2
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s8, s8
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f32.f16 s4, s4
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s6, s6
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s5
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s3, s13
-; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s9, s9
-; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s3
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s7, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r0, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r2, s14
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s10, s1
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s14, s5
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s1, s13
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s5, s11
+; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s11, s15
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s2
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s8
+; CHECK-CORTEX-FIX-NEXT:    pkhbt r12, r0, r2, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r2, s3
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s10
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s1
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s11
 ; CHECK-CORTEX-FIX-NEXT:    vmov r0, s9
+; CHECK-CORTEX-FIX-NEXT:    pkhbt lr, r2, r3, lsl #16
+; CHECK-CORTEX-FIX-NEXT:    vmov r3, s14
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r3, r3, r7, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r7, s7
+; CHECK-CORTEX-FIX-NEXT:    vmov r7, s5
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r7, r7, r6, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r6, s0
 ; CHECK-CORTEX-FIX-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r6, r6, r5, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r5, s8
+; CHECK-CORTEX-FIX-NEXT:    vmov r5, s12
 ; CHECK-CORTEX-FIX-NEXT:    vmov r2, s0
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r5, r5, r4, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov r4, s6
@@ -4323,7 +4519,7 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d18[1], lr
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d19[1], r12
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r0, r4, r0, lsl #16
-; CHECK-CORTEX-FIX-NEXT:    vmov r4, s5
+; CHECK-CORTEX-FIX-NEXT:    vmov r4, s7
 ; CHECK-CORTEX-FIX-NEXT:    pkhbt r2, r4, r2, lsl #16
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d16[0], r2
 ; CHECK-CORTEX-FIX-NEXT:    vmov.32 d17[0], r0
@@ -4332,7 +4528,7 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-CORTEX-FIX-NEXT:    aesd.8 q9, q8
 ; CHECK-CORTEX-FIX-NEXT:    aesimc.8 q8, q9
 ; CHECK-CORTEX-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
-; CHECK-CORTEX-FIX-NEXT:    vpop {d8}
+; CHECK-CORTEX-FIX-NEXT:    vpop {d8, d9}
 ; CHECK-CORTEX-FIX-NEXT:    pop {r4, r5, r6, r7, r11, pc}
   br i1 %0, label %5, label %11
 

@@ -18,7 +18,7 @@ namespace modernize {
 /// Check finds typedefs and replaces it with usings.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-using.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-using.html
 class UseUsingCheck : public ClangTidyCheck {
 
   const bool IgnoreMacros;

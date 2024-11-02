@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "e-p:32:32:32-n8:16:32:64"

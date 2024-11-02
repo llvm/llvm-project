@@ -25,7 +25,7 @@ entry:
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 100, i32* @val, align 4
+  store i32 100, ptr @val, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -52,7 +52,7 @@ entry:
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 100, i32* @val, align 4
+  store i32 100, ptr @val, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -79,7 +79,7 @@ entry:
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 100, i32* @val, align 4
+  store i32 100, ptr @val, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -106,7 +106,7 @@ entry:
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 100, i32* @val, align 4
+  store i32 100, ptr @val, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -133,7 +133,7 @@ entry:
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 100, i32* @val, align 4
+  store i32 100, ptr @val, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -169,7 +169,7 @@ entry:
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 100, i32* @val, align 4
+  store i32 100, ptr @val, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -196,7 +196,7 @@ entry:
   br i1 %cmp.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 100, i32* @val, align 4
+  store i32 100, ptr @val, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

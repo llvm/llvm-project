@@ -8,7 +8,7 @@
 
 ; These patterns are produced by LoopVectorizer for interleaved stores.
 
-define void @store_i64_stride3_vf2(<2 x i64>* %in.vecptr0, <2 x i64>* %in.vecptr1, <2 x i64>* %in.vecptr2, <6 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd (%rdi), %xmm0
@@ -64,21 +64,21 @@ define void @store_i64_stride3_vf2(<2 x i64>* %in.vecptr0, <2 x i64>* %in.vecptr
 ; AVX512-NEXT:    vmovaps %ymm0, (%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <2 x i64>, <2 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <2 x i64>, <2 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <2 x i64>, <2 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <2 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <2 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <2 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <2 x i64> %in.vec0, <2 x i64> %in.vec1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %concat2u = shufflevector <2 x i64> %in.vec2, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %concat012 = shufflevector <4 x i64> %concat01, <4 x i64> %concat2u, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
   %interleaved.vec = shufflevector <6 x i64> %concat012, <6 x i64> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
 
-  store <6 x i64> %interleaved.vec, <6 x i64>* %out.vec, align 32
+  store <6 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }
 
-define void @store_i64_stride3_vf4(<4 x i64>* %in.vecptr0, <4 x i64>* %in.vecptr1, <4 x i64>* %in.vecptr2, <12 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
@@ -162,63 +162,63 @@ define void @store_i64_stride3_vf4(<4 x i64>* %in.vecptr0, <4 x i64>* %in.vecptr
 ; AVX512-NEXT:    vmovdqa %ymm2, 64(%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <4 x i64>, <4 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <4 x i64>, <4 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <4 x i64>, <4 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <4 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <4 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <4 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <4 x i64> %in.vec0, <4 x i64> %in.vec1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %concat2u = shufflevector <4 x i64> %in.vec2, <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %concat012 = shufflevector <8 x i64> %concat01, <8 x i64> %concat2u, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %interleaved.vec = shufflevector <12 x i64> %concat012, <12 x i64> poison, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
 
-  store <12 x i64> %interleaved.vec, <12 x i64>* %out.vec, align 32
+  store <12 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }
 
-define void @store_i64_stride3_vf8(<8 x i64>* %in.vecptr0, <8 x i64>* %in.vecptr1, <8 x i64>* %in.vecptr2, <24 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm3
 ; SSE-NEXT:    movaps 16(%rdi), %xmm2
-; SSE-NEXT:    movaps 32(%rdi), %xmm13
-; SSE-NEXT:    movaps 48(%rdi), %xmm12
-; SSE-NEXT:    movaps (%rsi), %xmm8
-; SSE-NEXT:    movaps 16(%rsi), %xmm9
-; SSE-NEXT:    movaps 32(%rsi), %xmm11
-; SSE-NEXT:    movaps 48(%rsi), %xmm4
-; SSE-NEXT:    movaps (%rdx), %xmm7
-; SSE-NEXT:    movaps 16(%rdx), %xmm0
+; SSE-NEXT:    movaps 32(%rdi), %xmm1
+; SSE-NEXT:    movaps 48(%rdi), %xmm0
+; SSE-NEXT:    movaps (%rsi), %xmm7
+; SSE-NEXT:    movaps 16(%rsi), %xmm8
+; SSE-NEXT:    movaps 32(%rsi), %xmm9
+; SSE-NEXT:    movaps 48(%rsi), %xmm10
+; SSE-NEXT:    movaps (%rdx), %xmm11
+; SSE-NEXT:    movaps 16(%rdx), %xmm12
 ; SSE-NEXT:    movaps 32(%rdx), %xmm6
 ; SSE-NEXT:    movaps 48(%rdx), %xmm5
-; SSE-NEXT:    movaps %xmm4, %xmm10
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm10 = xmm10[1],xmm5[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm12[2,3]
-; SSE-NEXT:    movlhps {{.*#+}} xmm12 = xmm12[0],xmm4[0]
-; SSE-NEXT:    movaps %xmm11, %xmm14
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm14 = xmm14[1],xmm6[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm13[2,3]
-; SSE-NEXT:    movlhps {{.*#+}} xmm13 = xmm13[0],xmm11[0]
-; SSE-NEXT:    movaps %xmm9, %xmm1
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
-; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm9[0]
-; SSE-NEXT:    movaps %xmm8, %xmm4
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm7[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,1],xmm3[2,3]
-; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm8[0]
+; SSE-NEXT:    movaps %xmm10, %xmm4
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm5[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm0[2,3]
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm10[0]
+; SSE-NEXT:    movaps %xmm9, %xmm10
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm10 = xmm10[1],xmm6[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm1[2,3]
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm9[0]
+; SSE-NEXT:    movaps %xmm8, %xmm9
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm12[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[0,1],xmm2[2,3]
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm8[0]
+; SSE-NEXT:    movaps %xmm7, %xmm8
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm11[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[0,1],xmm3[2,3]
+; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm7[0]
 ; SSE-NEXT:    movaps %xmm3, (%rcx)
-; SSE-NEXT:    movaps %xmm7, 16(%rcx)
-; SSE-NEXT:    movaps %xmm4, 32(%rcx)
+; SSE-NEXT:    movaps %xmm11, 16(%rcx)
+; SSE-NEXT:    movaps %xmm8, 32(%rcx)
 ; SSE-NEXT:    movaps %xmm2, 48(%rcx)
-; SSE-NEXT:    movaps %xmm0, 64(%rcx)
-; SSE-NEXT:    movaps %xmm1, 80(%rcx)
-; SSE-NEXT:    movaps %xmm13, 96(%rcx)
+; SSE-NEXT:    movaps %xmm12, 64(%rcx)
+; SSE-NEXT:    movaps %xmm9, 80(%rcx)
+; SSE-NEXT:    movaps %xmm1, 96(%rcx)
 ; SSE-NEXT:    movaps %xmm6, 112(%rcx)
-; SSE-NEXT:    movaps %xmm14, 128(%rcx)
-; SSE-NEXT:    movaps %xmm12, 144(%rcx)
+; SSE-NEXT:    movaps %xmm10, 128(%rcx)
+; SSE-NEXT:    movaps %xmm0, 144(%rcx)
 ; SSE-NEXT:    movaps %xmm5, 160(%rcx)
-; SSE-NEXT:    movaps %xmm10, 176(%rcx)
+; SSE-NEXT:    movaps %xmm4, 176(%rcx)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: store_i64_stride3_vf8:
@@ -325,116 +325,117 @@ define void @store_i64_stride3_vf8(<8 x i64>* %in.vecptr0, <8 x i64>* %in.vecptr
 ; AVX512-NEXT:    vmovdqu64 %zmm4, (%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <8 x i64>, <8 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <8 x i64>, <8 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <8 x i64>, <8 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <8 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <8 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <8 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <8 x i64> %in.vec0, <8 x i64> %in.vec1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %concat2u = shufflevector <8 x i64> %in.vec2, <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %concat012 = shufflevector <16 x i64> %concat01, <16 x i64> %concat2u, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   %interleaved.vec = shufflevector <24 x i64> %concat012, <24 x i64> poison, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
 
-  store <24 x i64> %interleaved.vec, <24 x i64>* %out.vec, align 32
+  store <24 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }
 
-define void @store_i64_stride3_vf16(<16 x i64>* %in.vecptr0, <16 x i64>* %in.vecptr1, <16 x i64>* %in.vecptr2, <48 x i64>* %out.vec) nounwind {
+define void @store_i64_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i64_stride3_vf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
-; SSE-NEXT:    movapd 64(%rdi), %xmm9
-; SSE-NEXT:    movapd (%rdi), %xmm3
-; SSE-NEXT:    movapd 16(%rdi), %xmm13
-; SSE-NEXT:    movapd 32(%rdi), %xmm8
-; SSE-NEXT:    movapd 48(%rdi), %xmm10
-; SSE-NEXT:    movapd 64(%rsi), %xmm12
-; SSE-NEXT:    movapd (%rsi), %xmm7
-; SSE-NEXT:    movapd 16(%rsi), %xmm14
-; SSE-NEXT:    movapd 32(%rsi), %xmm15
-; SSE-NEXT:    movapd 48(%rsi), %xmm11
-; SSE-NEXT:    movapd 64(%rdx), %xmm6
-; SSE-NEXT:    movapd (%rdx), %xmm2
-; SSE-NEXT:    movapd 16(%rdx), %xmm4
-; SSE-NEXT:    movapd 32(%rdx), %xmm5
-; SSE-NEXT:    movapd 48(%rdx), %xmm0
-; SSE-NEXT:    movapd %xmm3, %xmm1
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm7[0]
-; SSE-NEXT:    movapd %xmm1, (%rsp) # 16-byte Spill
-; SSE-NEXT:    movsd {{.*#+}} xmm3 = xmm2[0],xmm3[1]
+; SSE-NEXT:    movapd 64(%rdi), %xmm4
+; SSE-NEXT:    movapd (%rdi), %xmm0
+; SSE-NEXT:    movapd 16(%rdi), %xmm1
+; SSE-NEXT:    movapd 32(%rdi), %xmm2
+; SSE-NEXT:    movapd 48(%rdi), %xmm5
+; SSE-NEXT:    movapd 64(%rsi), %xmm9
+; SSE-NEXT:    movapd (%rsi), %xmm3
+; SSE-NEXT:    movapd 16(%rsi), %xmm6
+; SSE-NEXT:    movapd 32(%rsi), %xmm7
+; SSE-NEXT:    movapd 48(%rsi), %xmm10
+; SSE-NEXT:    movapd 64(%rdx), %xmm15
+; SSE-NEXT:    movapd (%rdx), %xmm11
+; SSE-NEXT:    movapd 16(%rdx), %xmm12
+; SSE-NEXT:    movapd 32(%rdx), %xmm13
+; SSE-NEXT:    movapd 48(%rdx), %xmm14
+; SSE-NEXT:    movapd %xmm0, %xmm8
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm8 = xmm8[0],xmm3[0]
+; SSE-NEXT:    movapd %xmm8, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm11[0],xmm0[1]
+; SSE-NEXT:    movapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm11[1]
 ; SSE-NEXT:    movapd %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1],xmm2[1]
+; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movapd %xmm1, %xmm11
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm11 = xmm11[0],xmm6[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm12[0],xmm0[1]
+; SSE-NEXT:    movapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm12[1]
+; SSE-NEXT:    movapd %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movapd %xmm2, %xmm12
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm12 = xmm12[0],xmm7[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = xmm13[0],xmm2[1]
+; SSE-NEXT:    movapd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1],xmm13[1]
 ; SSE-NEXT:    movapd %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movapd %xmm13, %xmm3
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm14[0]
-; SSE-NEXT:    movapd %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movsd {{.*#+}} xmm13 = xmm4[0],xmm13[1]
-; SSE-NEXT:    movapd %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm14 = xmm14[1],xmm4[1]
-; SSE-NEXT:    movapd %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movapd %xmm8, %xmm13
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm13 = xmm13[0],xmm15[0]
-; SSE-NEXT:    movsd {{.*#+}} xmm8 = xmm5[0],xmm8[1]
-; SSE-NEXT:    movapd %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm15 = xmm15[1],xmm5[1]
-; SSE-NEXT:    movapd %xmm10, %xmm1
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm10 = xmm10[0],xmm11[0]
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE-NEXT:    movapd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm11 = xmm11[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm9, %xmm14
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm14 = xmm14[0],xmm12[0]
-; SSE-NEXT:    movsd {{.*#+}} xmm9 = xmm6[0],xmm9[1]
-; SSE-NEXT:    movapd %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1],xmm6[1]
-; SSE-NEXT:    movapd 80(%rdi), %xmm8
+; SSE-NEXT:    movapd %xmm5, %xmm13
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm13 = xmm13[0],xmm10[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm5 = xmm14[0],xmm5[1]
+; SSE-NEXT:    movapd %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm10 = xmm10[1],xmm14[1]
+; SSE-NEXT:    movapd %xmm4, %xmm14
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm14 = xmm14[0],xmm9[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm4 = xmm15[0],xmm4[1]
+; SSE-NEXT:    movapd %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm15[1]
+; SSE-NEXT:    movapd 80(%rdi), %xmm15
 ; SSE-NEXT:    movapd 80(%rsi), %xmm6
-; SSE-NEXT:    movapd %xmm8, %xmm9
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm9 = xmm9[0],xmm6[0]
+; SSE-NEXT:    movapd %xmm15, %xmm8
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm8 = xmm8[0],xmm6[0]
 ; SSE-NEXT:    movapd 80(%rdx), %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm8 = xmm0[0],xmm8[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm15 = xmm0[0],xmm15[1]
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm0[1]
-; SSE-NEXT:    movapd 96(%rdi), %xmm5
+; SSE-NEXT:    movapd 96(%rdi), %xmm4
 ; SSE-NEXT:    movapd 96(%rsi), %xmm1
-; SSE-NEXT:    movapd %xmm5, %xmm7
+; SSE-NEXT:    movapd %xmm4, %xmm7
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm7 = xmm7[0],xmm1[0]
 ; SSE-NEXT:    movapd 96(%rdx), %xmm2
-; SSE-NEXT:    movsd {{.*#+}} xmm5 = xmm2[0],xmm5[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm4 = xmm2[0],xmm4[1]
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; SSE-NEXT:    movapd 112(%rdi), %xmm2
 ; SSE-NEXT:    movapd 112(%rsi), %xmm0
 ; SSE-NEXT:    movapd %xmm2, %xmm3
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm0[0]
-; SSE-NEXT:    movapd 112(%rdx), %xmm4
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = xmm4[0],xmm2[1]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm4[1]
+; SSE-NEXT:    movapd 112(%rdx), %xmm5
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = xmm5[0],xmm2[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm5[1]
 ; SSE-NEXT:    movapd %xmm0, 368(%rcx)
 ; SSE-NEXT:    movapd %xmm2, 352(%rcx)
 ; SSE-NEXT:    movapd %xmm3, 336(%rcx)
 ; SSE-NEXT:    movapd %xmm1, 320(%rcx)
-; SSE-NEXT:    movapd %xmm5, 304(%rcx)
+; SSE-NEXT:    movapd %xmm4, 304(%rcx)
 ; SSE-NEXT:    movapd %xmm7, 288(%rcx)
 ; SSE-NEXT:    movapd %xmm6, 272(%rcx)
-; SSE-NEXT:    movapd %xmm8, 256(%rcx)
-; SSE-NEXT:    movapd %xmm9, 240(%rcx)
-; SSE-NEXT:    movapd %xmm12, 224(%rcx)
+; SSE-NEXT:    movapd %xmm15, 256(%rcx)
+; SSE-NEXT:    movapd %xmm8, 240(%rcx)
+; SSE-NEXT:    movapd %xmm9, 224(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 208(%rcx)
 ; SSE-NEXT:    movapd %xmm14, 192(%rcx)
-; SSE-NEXT:    movapd %xmm11, 176(%rcx)
+; SSE-NEXT:    movapd %xmm10, 176(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 160(%rcx)
-; SSE-NEXT:    movapd %xmm10, 144(%rcx)
-; SSE-NEXT:    movapd %xmm15, 128(%rcx)
+; SSE-NEXT:    movapd %xmm13, 144(%rcx)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 128(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 112(%rcx)
-; SSE-NEXT:    movapd %xmm13, 96(%rcx)
+; SSE-NEXT:    movapd %xmm12, 96(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 80(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 64(%rcx)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, 48(%rcx)
+; SSE-NEXT:    movapd %xmm11, 48(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 32(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -648,16 +649,16 @@ define void @store_i64_stride3_vf16(<16 x i64>* %in.vecptr0, <16 x i64>* %in.vec
 ; AVX512-NEXT:    vmovdqu64 %zmm7, (%rcx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.vec0 = load <16 x i64>, <16 x i64>* %in.vecptr0, align 32
-  %in.vec1 = load <16 x i64>, <16 x i64>* %in.vecptr1, align 32
-  %in.vec2 = load <16 x i64>, <16 x i64>* %in.vecptr2, align 32
+  %in.vec0 = load <16 x i64>, ptr %in.vecptr0, align 32
+  %in.vec1 = load <16 x i64>, ptr %in.vecptr1, align 32
+  %in.vec2 = load <16 x i64>, ptr %in.vecptr2, align 32
 
   %concat01 = shufflevector <16 x i64> %in.vec0, <16 x i64> %in.vec1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %concat2u = shufflevector <16 x i64> %in.vec2, <16 x i64> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %concat012 = shufflevector <32 x i64> %concat01, <32 x i64> %concat2u, <48 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
   %interleaved.vec = shufflevector <48 x i64> %concat012, <48 x i64> poison, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
 
-  store <48 x i64> %interleaved.vec, <48 x i64>* %out.vec, align 32
+  store <48 x i64> %interleaved.vec, ptr %out.vec, align 32
 
   ret void
 }

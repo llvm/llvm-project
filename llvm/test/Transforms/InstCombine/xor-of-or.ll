@@ -133,31 +133,31 @@ define <2 x i4> @t10(<2 x i4> %x) {
 define i4 @t11(i4 %x) {
 ; CHECK-LABEL: @t11(
 ; CHECK-NEXT:    [[I0:%.*]] = or i4 [[X:%.*]], -4
-; CHECK-NEXT:    [[I1:%.*]] = xor i4 [[I0]], ptrtoint (i32* @G2 to i4)
+; CHECK-NEXT:    [[I1:%.*]] = xor i4 [[I0]], ptrtoint (ptr @G2 to i4)
 ; CHECK-NEXT:    ret i4 [[I1]]
 ;
   %i0 = or i4 %x, 12
-  %i1 = xor i4 %i0, ptrtoint (i32* @G2 to i4)
+  %i1 = xor i4 %i0, ptrtoint (ptr @G2 to i4)
   ret i4 %i1
 }
 define i4 @t12(i4 %x) {
 ; CHECK-LABEL: @t12(
-; CHECK-NEXT:    [[I0:%.*]] = or i4 [[X:%.*]], ptrtoint (i32* @G to i4)
+; CHECK-NEXT:    [[I0:%.*]] = or i4 [[X:%.*]], ptrtoint (ptr @G to i4)
 ; CHECK-NEXT:    [[I1:%.*]] = xor i4 [[I0]], -6
 ; CHECK-NEXT:    ret i4 [[I1]]
 ;
-  %i0 = or i4 %x, ptrtoint (i32* @G to i4)
+  %i0 = or i4 %x, ptrtoint (ptr @G to i4)
   %i1 = xor i4 %i0, 10
   ret i4 %i1
 }
 define i4 @t13(i4 %x) {
 ; CHECK-LABEL: @t13(
-; CHECK-NEXT:    [[I0:%.*]] = or i4 [[X:%.*]], ptrtoint (i32* @G to i4)
-; CHECK-NEXT:    [[I1:%.*]] = xor i4 [[I0]], ptrtoint (i32* @G2 to i4)
+; CHECK-NEXT:    [[I0:%.*]] = or i4 [[X:%.*]], ptrtoint (ptr @G to i4)
+; CHECK-NEXT:    [[I1:%.*]] = xor i4 [[I0]], ptrtoint (ptr @G2 to i4)
 ; CHECK-NEXT:    ret i4 [[I1]]
 ;
-  %i0 = or i4 %x, ptrtoint (i32* @G to i4)
-  %i1 = xor i4 %i0, ptrtoint (i32* @G2 to i4)
+  %i0 = or i4 %x, ptrtoint (ptr @G to i4)
+  %i1 = xor i4 %i0, ptrtoint (ptr @G2 to i4)
   ret i4 %i1
 }
 

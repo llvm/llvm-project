@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -start-before=machine-scheduler -stop-after=virtregrewriter,1 -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -amdgpu-disable-unclustred-high-rp-reschedule -verify-machineinstrs -start-before=machine-scheduler -stop-after=virtregrewriter,1 -o - %s | FileCheck -check-prefix=GCN %s
 
 # Check that %3 was not rematerialized before the last store since its operand %1
 # is killed by that store.

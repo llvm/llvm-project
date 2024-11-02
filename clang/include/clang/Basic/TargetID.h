@@ -51,6 +51,10 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
 /// returns None.
 llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs);
+
+/// Check whether the provided target ID is compatible with the requested
+/// target ID.
+bool isCompatibleTargetID(llvm::StringRef Provided, llvm::StringRef Requested);
 } // namespace clang
 
 #endif

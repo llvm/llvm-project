@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCPPExceptionBreakpoint (TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     my_var = 10
 
     @add_test_categories(['pyapi'])

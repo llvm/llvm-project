@@ -28,6 +28,211 @@ exit:
   ret void
 }
 
+
+define void @test_trip_multiple_4_ugt_5(i32 %num) {
+; CHECK-LABEL: @test_trip_multiple_4_ugt_5
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 4
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp.1 = icmp ugt i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_ugt_5_order_swapped(i32 %num) {
+; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
+; CHECK-LABEL: @test_trip_multiple_4_ugt_5_order_swapped
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 2
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp.1 = icmp ugt i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_sgt_5(i32 %num) {
+; CHECK-LABEL: @test_trip_multiple_4_sgt_5
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 4
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp.1 = icmp sgt i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp slt i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_sgt_5_order_swapped(i32 %num) {
+; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
+; CHECK-LABEL: @test_trip_multiple_4_sgt_5_order_swapped
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 2
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp.1 = icmp sgt i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp slt i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_uge_5(i32 %num) {
+; CHECK-LABEL: @test_trip_multiple_4_uge_5
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 4
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp.1 = icmp uge i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_uge_5_order_swapped(i32 %num) {
+; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
+; CHECK-LABEL: @test_trip_multiple_4_uge_5_order_swapped
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 1
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  %cmp.1 = icmp uge i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  tail call void @llvm.assume(i1 %cmp)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp ult i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_sge_5(i32 %num) {
+; TODO: Trip multiple can be 4, it is missed due to the processing order of the assumes.
+; CHECK-LABEL: @test_trip_multiple_4_sge_5
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 4
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp.1 = icmp sge i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp slt i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trip_multiple_4_sge_5_order_swapped(i32 %num) {
+; CHECK-LABEL: @test_trip_multiple_4_sge_5_order_swapped
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
+; CHECK:       Loop %for.body: Trip multiple is 1
+;
+entry:
+  %u = urem i32 %num, 4
+  %cmp = icmp eq i32 %u, 0
+  %cmp.1 = icmp sge i32 %num, 5
+  tail call void @llvm.assume(i1 %cmp.1)
+  tail call void @llvm.assume(i1 %cmp)
+  br label %for.body
+
+for.body:
+  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nuw nsw i32 %i.010, 1
+  %cmp2 = icmp slt i32 %inc, %num
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
 ; Same as @test_trip_multiple_4 but with the icmp operands swapped.
 define void @test_trip_multiple_4_icmp_ops_swapped(i32 %num) {
 ; CHECK-LABEL: @test_trip_multiple_4_icmp_ops_swapped

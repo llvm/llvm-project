@@ -19,7 +19,7 @@ namespace performance {
 /// initializing a member or base class through a copy constructor instead of a
 /// move constructor.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/move-constructor-init.html
 class MoveConstructorInitCheck : public ClangTidyCheck {
 public:
   MoveConstructorInitCheck(StringRef Name, ClangTidyContext *Context);

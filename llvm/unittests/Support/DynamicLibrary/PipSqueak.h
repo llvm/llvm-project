@@ -24,6 +24,8 @@
 
 #ifdef _WIN32
 #define PIPSQUEAK_EXPORT __declspec(dllexport)
+#elif defined(__MVS__)
+#define PIPSQUEAK_EXPORT __attribute__((__visibility__("default")))
 #else
 #define PIPSQUEAK_EXPORT
 #endif

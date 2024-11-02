@@ -121,7 +121,7 @@ TEST(struct_1);
 // CHECK:   [[THIRD:%.*]] = load float, float* [[T0]], align
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 4
 // CHECK:   [[FOURTH:%.*]] = load float, float* [[T0]], align
-// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i16, float, float }]] undef, i32 [[FIRST]], 0
+// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i16, float, float }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i16 [[SECOND]], 1
 // CHECK:   [[T2:%.*]] = insertvalue [[UAGG]] [[T1]], float [[THIRD]], 2
 // CHECK:   [[T3:%.*]] = insertvalue [[UAGG]] [[T2]], float [[FOURTH]], 3
@@ -186,7 +186,7 @@ TEST(struct_2);
 // CHECK:   [[THIRD:%.*]] = load float, float* [[T0]], align
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 3
 // CHECK:   [[FOURTH:%.*]] = load float, float* [[T0]], align
-// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i32, float, float }]] undef, i32 [[FIRST]], 0
+// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i32, float, float }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i32 [[SECOND]], 1
 // CHECK:   [[T2:%.*]] = insertvalue [[UAGG]] [[T1]], float [[THIRD]], 2
 // CHECK:   [[T3:%.*]] = insertvalue [[UAGG]] [[T2]], float [[FOURTH]], 3
@@ -250,7 +250,7 @@ TEST(struct_misaligned_1)
 // CHECK:   [[FIRST:%.*]] = load i32, i32* [[T0]], align
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i8, i8* [[T0]], align
-// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i8 }]] undef, i32 [[FIRST]], 0
+// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i8 }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i8 [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_struct_misaligned_1(i32 %0, i8 %1)
@@ -290,7 +290,7 @@ TEST(union_het_fp)
 // CHECK:   [[FIRST:%.*]] = load i32, i32* [[T0]], align {{(4|8)}}
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, i32* [[T0]], align {{(4|8)}}
-// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i32 }]] undef, i32 [[FIRST]], 0
+// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i32 }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i32 [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_union_het_fp(i32 %0, i32 %1)
@@ -422,7 +422,7 @@ TEST(int8)
 // CHECK:   [[FIRST:%.*]] = load <4 x i32>, <4 x i32>* [[T0]], align
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load <4 x i32>, <4 x i32>* [[T0]], align
-// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ <4 x i32>, <4 x i32> }]] undef, <4 x i32> [[FIRST]], 0
+// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ <4 x i32>, <4 x i32> }]] poison, <4 x i32> [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], <4 x i32> [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_int8(<4 x i32> %0, <4 x i32> %1)
@@ -465,7 +465,7 @@ TEST(int5)
 // CHECK:   [[FIRST:%.*]] = load <4 x i32>, <4 x i32>* [[T0]], align
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 1
 // CHECK:   [[SECOND:%.*]] = load i32, i32* [[T0]], align
-// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ <4 x i32>, i32 }]] undef, <4 x i32> [[FIRST]], 0
+// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ <4 x i32>, i32 }]] poison, <4 x i32> [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i32 [[SECOND]], 1
 // CHECK:   ret [[UAGG]] [[T1]]
 // CHECK-LABEL: define{{.*}} @take_int5(<4 x i32> %0, i32 %1)

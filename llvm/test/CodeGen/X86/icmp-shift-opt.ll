@@ -25,12 +25,11 @@ define i128 @opt_setcc_lt_power_of_2(i128 %a) nounwind {
 ; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    shldl $4, %edx, %ebx
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    orl %ecx, %ebx
 ; X86-NEXT:    movl %esi, %ebp
-; X86-NEXT:    orl %ecx, %ebp
-; X86-NEXT:    shrdl $28, %edx, %ebp
 ; X86-NEXT:    orl %ebx, %ebp
+; X86-NEXT:    shrdl $28, %ebx, %ebp
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %exit
 ; X86-NEXT:    movl %edi, (%eax)
@@ -73,19 +72,15 @@ exit:
 define i1 @opt_setcc_srl_eq_zero(i128 %a) nounwind {
 ; X86-LABEL: opt_setcc_srl_eq_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shrdl $17, %ecx, %eax
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    shldl $15, %edx, %esi
-; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    shrdl $17, %edx, %ecx
-; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shldl $15, %edx, %eax
 ; X86-NEXT:    sete %al
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opt_setcc_srl_eq_zero:
@@ -102,19 +97,15 @@ define i1 @opt_setcc_srl_eq_zero(i128 %a) nounwind {
 define i1 @opt_setcc_srl_ne_zero(i128 %a) nounwind {
 ; X86-LABEL: opt_setcc_srl_ne_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shrdl $17, %ecx, %eax
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    shldl $15, %edx, %esi
-; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    shrdl $17, %edx, %ecx
-; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shldl $15, %edx, %eax
 ; X86-NEXT:    setne %al
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opt_setcc_srl_ne_zero:
@@ -131,19 +122,13 @@ define i1 @opt_setcc_srl_ne_zero(i128 %a) nounwind {
 define i1 @opt_setcc_shl_eq_zero(i128 %a) nounwind {
 ; X86-LABEL: opt_setcc_shl_eq_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shldl $17, %edx, %esi
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    shldl $17, %ecx, %edx
-; X86-NEXT:    shldl $17, %eax, %ecx
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    shll $17, %ecx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    sete %al
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opt_setcc_shl_eq_zero:
@@ -160,19 +145,13 @@ define i1 @opt_setcc_shl_eq_zero(i128 %a) nounwind {
 define i1 @opt_setcc_shl_ne_zero(i128 %a) nounwind {
 ; X86-LABEL: opt_setcc_shl_ne_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shldl $17, %edx, %esi
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    shldl $17, %ecx, %edx
-; X86-NEXT:    shldl $17, %eax, %ecx
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    shll $17, %ecx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    setne %al
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opt_setcc_shl_ne_zero:
@@ -243,13 +222,11 @@ define i1 @opt_setcc_expanded_shl_correct_shifts(i64 %a, i64 %b) nounwind {
 ; X86-LABEL: opt_setcc_expanded_shl_correct_shifts:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    shldl $17, %ecx, %edx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    shldl $17, %eax, %ecx
-; X86-NEXT:    orl %edx, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;

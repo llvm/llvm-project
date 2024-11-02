@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t2.o -soname=t2.so -o %t2.so
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t
 // RUN: llvm-readobj -S %t | FileCheck --check-prefix=ADDR %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 
 .global _start
 _start:

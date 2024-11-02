@@ -1,0 +1,117 @@
+# REQUIRES: system-linux
+# RUN: llvm-bolt  %S/../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin --print-pseudo-probes=all -o %t.bolt 2>&1 | FileCheck %s
+
+CHECK: Report of decoding input pseudo probe binaries
+
+CHECK-NEXT: Pseudo Probe Desc:
+CHECK-NEXT: GUID: 6699318081062747564 Name: foo
+CHECK-NEXT: Hash: 563088904013236
+CHECK-NEXT: GUID: 15822663052811949562 Name: main
+CHECK-NEXT: Hash: 281479271677951
+CHECK-NEXT: GUID: 16434608426314478903 Name: bar
+CHECK-NEXT: Hash: 72617220756
+
+CHECK:  [Probe]: FUNC: bar Index: 1  Type: Block
+CHECK:  [Probe]: FUNC: bar Index: 4  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 1  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 2  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 5  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 6  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 2  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 3  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 4  Type: Block
+CHECK:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ foo:8
+CHECK:  [Probe]: FUNC: bar Index: 4  Type: Block  Inlined: @ foo:8
+CHECK:  [Probe]: FUNC: foo Index: 6  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 2  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 7  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 9  Type: DirectCall
+CHECK:  [Probe]: FUNC: main Index: 1  Type: Block
+CHECK:  [Probe]: FUNC: foo Index: 1  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 5  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 3  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 4  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ main:2 @ foo:8
+CHECK:  [Probe]: FUNC: bar Index: 4  Type: Block  Inlined: @ main:2 @ foo:8
+CHECK:  [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 7  Type: Block  Inlined: @ main:2
+CHECK:  [Probe]: FUNC: foo Index: 9  Type: DirectCall  Inlined: @ main:2
+
+CHECK: Pseudo Probe Address Conversion results:
+
+CHECK: Address: 0x201750 FUNC: bar Index: 1  Type: Block
+CHECK: Address: 0x201750 FUNC: bar Index: 4  Type: Block
+CHECK: Address: 0x201770 FUNC: foo Index: 1  Type: Block
+CHECK: Address: 0x201770 FUNC: foo Index: 2  Type: Block
+CHECK: Address: 0x20177d FUNC: foo Index: 5  Type: Block
+CHECK: Address: 0x20177d FUNC: foo Index: 6  Type: Block
+CHECK: Address: 0x20177d FUNC: foo Index: 2  Type: Block
+CHECK: Address: 0x20178b FUNC: foo Index: 3  Type: Block
+CHECK: Address: 0x2017aa FUNC: foo Index: 4  Type: Block
+CHECK: Address: 0x2017aa FUNC: bar Index: 1  Type: Block  Inlined: @ foo:8
+CHECK: Address: 0x2017aa FUNC: bar Index: 4  Type: Block  Inlined: @ foo:8
+CHECK: Address: 0x2017aa FUNC: foo Index: 6  Type: Block
+CHECK: Address: 0x2017aa FUNC: foo Index: 2  Type: Block
+CHECK: Address: 0x2017d7 FUNC: foo Index: 7  Type: Block
+CHECK: Address: 0x2017e2 FUNC: foo Index: 9  Type: DirectCall
+CHECK: Address: 0x2017f0 FUNC: main Index: 1  Type: Block
+CHECK: Address: 0x2017f0 FUNC: foo Index: 1  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x2017f0 FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x2017fd FUNC: foo Index: 5  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x2017fd FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x2017fd FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x20180b FUNC: foo Index: 3  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x20182a FUNC: foo Index: 4  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x20182a FUNC: bar Index: 1  Type: Block  Inlined: @ main:2 @ foo:8
+CHECK: Address: 0x20182a FUNC: bar Index: 4  Type: Block  Inlined: @ main:2 @ foo:8
+CHECK: Address: 0x20182a FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x20182a FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x201857 FUNC: foo Index: 7  Type: Block  Inlined: @ main:2
+CHECK: Address: 0x201862 FUNC: foo Index: 9  Type: DirectCall  Inlined: @ main:2
+
+CHECK: 			Address:  2103120
+CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: bar Index: 4  Type: Block
+CHECK-NEXT: Address:  2103152
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 1  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
+CHECK-NEXT: Address:  2103165
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 5  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 6  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
+CHECK-NEXT: Address:  2103179
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 3  Type: Block
+CHECK-NEXT: Address:  2103210
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 4  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 6  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ foo:8
+CHECK-NEXT:  [Probe]: FUNC: bar Index: 4  Type: Block  Inlined: @ foo:8
+CHECK-NEXT: Address:  2103255
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 7  Type: Block
+CHECK-NEXT: Address:  2103266
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 9  Type: DirectCall
+CHECK-NEXT: Address:  2103280
+CHECK-NEXT:  [Probe]: FUNC: main Index: 1  Type: Block
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 1  Type: Block  Inlined: @ main:2
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK-NEXT: Address:  2103293
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 5  Type: Block  Inlined: @ main:2
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK-NEXT: Address:  2103307
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 3  Type: Block  Inlined: @ main:2
+CHECK-NEXT: Address:  2103338
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 4  Type: Block  Inlined: @ main:2
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ main:2 @ foo:8
+CHECK-NEXT:  [Probe]: FUNC: bar Index: 4  Type: Block  Inlined: @ main:2 @ foo:8
+CHECK-NEXT: Address:  2103383
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 7  Type: Block  Inlined: @ main:2
+CHECK-NEXT: Address:  2103394
+CHECK-NEXT:  [Probe]: FUNC: foo Index: 9  Type: DirectCall  Inlined: @ main:2

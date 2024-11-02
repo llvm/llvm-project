@@ -10,8 +10,10 @@
 #ifndef _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H
 #define _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H
 
+#include <__concepts/arithmetic.h>
 #include <__config>
-#include <concepts>
+#include <__type_traits/is_primary_template.h>
+#include <cstddef>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

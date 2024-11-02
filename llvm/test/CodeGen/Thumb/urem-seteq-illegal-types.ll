@@ -31,12 +31,12 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r1, .LCPI1_0
 ; CHECK-NEXT:    muls r1, r0, r1
-; CHECK-NEXT:    lsls r0, r1, #26
+; CHECK-NEXT:    lsls r0, r1, #31
 ; CHECK-NEXT:    ldr r2, .LCPI1_1
 ; CHECK-NEXT:    ands r2, r1
 ; CHECK-NEXT:    lsrs r1, r2, #1
-; CHECK-NEXT:    adds r0, r1, r0
-; CHECK-NEXT:    lsls r0, r0, #5
+; CHECK-NEXT:    lsls r1, r1, #5
+; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    ldr r1, .LCPI1_2
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    blo .LBB1_2

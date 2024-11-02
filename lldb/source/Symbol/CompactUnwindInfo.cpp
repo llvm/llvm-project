@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompactUnwindInfo.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -317,9 +318,8 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
             m_unwindinfo_data.GetByteSize() ||
         indexSectionOffset > m_unwindinfo_data.GetByteSize() ||
         offset > m_unwindinfo_data.GetByteSize()) {
-      Host::SystemLog(Host::eSystemLogError, "error: Invalid offset "
-                                             "encountered in compact unwind "
-                                             "info, skipping\n");
+      Debugger::ReportError(
+          "Invalid offset encountered in compact unwind info, skipping");
       // don't trust anything from this compact_unwind section if it looks
       // blatantly invalid data in the header.
       m_indexes_computed = eLazyBoolNo;
@@ -516,7 +516,7 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
   key.function_offset = function_offset;
 
   std::vector<UnwindIndex>::const_iterator it;
-  it = std::lower_bound(m_indexes.begin(), m_indexes.end(), key);
+  it = llvm::lower_bound(m_indexes, key);
   if (it == m_indexes.end()) {
     return false;
   }

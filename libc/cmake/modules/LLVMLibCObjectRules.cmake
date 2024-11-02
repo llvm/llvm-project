@@ -1,18 +1,54 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
 
-function(_get_common_compile_options output_var)
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
-  if(NOT ${LIBC_TARGET_OS} STREQUAL "windows")
-    set(compile_options ${compile_options} -fpie -ffreestanding -fno-builtin)
+function(_get_common_compile_options output_var flags)
+  list(FIND flags ${FMA_OPT_FLAG} fma)
+  if(${fma} LESS 0)
+    list(FIND flags "${FMA_OPT_FLAG}__ONLY" fma)
   endif()
+  if((${fma} GREATER -1) AND (LIBC_CPU_FEATURES MATCHES "FMA"))
+    set(ADD_FMA_FLAG TRUE)
+  endif()
+
+  list(FIND flags ${ROUND_OPT_FLAG} round)
+  if(${round} LESS 0)
+    list(FIND flags "${ROUND_OPT_FLAG}__ONLY" round)
+  endif()
+  if((${round} GREATER -1) AND (LIBC_CPU_FEATURES MATCHES "SSE4_2"))
+    set(ADD_SSE4_2_FLAG TRUE)
+  endif()
+
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+    list(APPEND compile_options "-fpie")
+    list(APPEND compile_options "-ffreestanding")
+    list(APPEND compile_options "-fno-builtin")
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-unwind-tables")
     list(APPEND compile_options "-fno-asynchronous-unwind-tables")
     list(APPEND compile_options "-fno-rtti")
+    list(APPEND compile_options "-Wall")
+    list(APPEND compile_options "-Wextra")
+    list(APPEND compile_options "-Wimplicit-fallthrough")
+    list(APPEND compile_options "-Wwrite-strings")
+    list(APPEND compile_options "-Wextra-semi")
+    list(APPEND compile_options "-Wstrict-prototypes")
+    if(NOT CMAKE_COMPILER_IS_GNUCXX)
+      list(APPEND compile_options "-Wnewline-eof")
+      list(APPEND compile_options "-Wnonportable-system-include-path")
+      list(APPEND compile_options "-Wthread-safety")
+    endif()
+    if(ADD_FMA_FLAG)
+      list(APPEND compile_options "-mfma")
+    endif()
+    if(ADD_SSE4_2_FLAG)
+      list(APPEND compile_options "-msse4.2")
+    endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")
     list(APPEND compile_options "/GR-")
+    if(ADD_FMA_FLAG)
+      list(APPEND compile_options "/arch:AVX2")
+    endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
@@ -54,7 +90,11 @@ function(create_object_library fq_target_name)
       ${LIBC_SOURCE_DIR}
       ${LIBC_BUILD_DIR}
   )
-  _get_common_compile_options(compile_options ${ADD_OBJECT_COMPILE_OPTIONS})
+  _get_common_compile_options(
+    compile_options
+    "${ADD_OBJECT_FLAGS}"
+    ${ADD_OBJECT_COMPILE_OPTIONS}
+  )
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
   get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
@@ -108,7 +148,8 @@ function(expand_flags_for_object_library target_name flags)
     return()
   endif()
 
-  list(POP_FRONT flags flag)
+  list(GET flags 0 flag)
+  list(REMOVE_AT flags 0)
   extract_flag_modifier(${flag} real_flag modifier)
 
   if(NOT "${modifier}" STREQUAL "NO")
@@ -131,7 +172,7 @@ function(expand_flags_for_object_library target_name flags)
 
   # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
   # `flag__ONLY` do not.
-  if(NOT "${modifier}")
+  if("${modifier}" STREQUAL "")
     set(TARGET_NAME "${target_name}.__NO_${flag}")
   else()
     set(TARGET_NAME "${target_name}")
@@ -276,7 +317,11 @@ function(create_entrypoint_object fq_target_name)
     set(ADD_ENTRYPOINT_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
 
-  _get_common_compile_options(common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
+  _get_common_compile_options(
+    common_compile_options
+    "${ADD_ENTRYPOINT_OBJ_FLAGS}"
+    ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
+  )
   set(internal_target_name ${fq_target_name}.__internal__)
   set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
@@ -419,7 +464,8 @@ function(expand_flags_for_entrypoint_object target_name flags)
     return()
   endif()
 
-  list(POP_FRONT flags flag)
+  list(GET flags 0 flag)
+  list(REMOVE_AT flags 0)
   extract_flag_modifier(${flag} real_flag modifier)
 
   if(NOT "${modifier}" STREQUAL "NO")
@@ -442,7 +488,7 @@ function(expand_flags_for_entrypoint_object target_name flags)
 
   # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
   # `flag__ONLY` do not.
-  if(NOT "${modifier}")
+  if("${modifier}" STREQUAL "")
     set(TARGET_NAME "${target_name}.__NO_${flag}")
   else()
     set(TARGET_NAME "${target_name}")
@@ -480,7 +526,7 @@ function(add_entrypoint_object target_name)
   list(SORT flags)
 
   if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Object library ${fq_target_name} has FLAGS: ${flags}")
+    message(STATUS "Entrypoint object ${fq_target_name} has FLAGS: ${flags}")
   endif()
 
   if(NOT ADD_TO_EXPAND_NAME)

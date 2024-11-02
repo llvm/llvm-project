@@ -7,21 +7,21 @@
 @global = internal local_unnamed_addr global i32 0, align 4
 @global.3 = internal local_unnamed_addr global i32 0, align 4
 
-define void @main(i8** %arg) {
+define void @main(ptr %arg) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i8*, i8** [[ARG:%.*]], i64 undef
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[TMP]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], i64 undef
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 45
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 2, i32 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = getelementptr inbounds i8*, i8** %arg, i64 undef
-  %tmp1 = load i8*, i8** %tmp, align 8
-  %tmp2 = load i8, i8* %tmp1, align 1
+  %tmp = getelementptr inbounds ptr, ptr %arg, i64 undef
+  %tmp1 = load ptr, ptr %tmp, align 8
+  %tmp2 = load i8, ptr %tmp1, align 1
   %tmp3 = sext i8 %tmp2 to i32
   %tmp4 = icmp ne i32 %tmp3, 45
   %tmp5 = select i1 %tmp4, i32 2, i32 4
@@ -41,7 +41,7 @@ define void @ham() local_unnamed_addr {
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ 0, [[BB1]] ], [ 15, [[BB3:%.*]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], add (i64 xor (i64 ptrtoint ([25 x i8]* @global.2 to i64), i64 -1), i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], add (i64 xor (i64 ptrtoint (ptr @global.2 to i64), i64 -1), i64 1)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[BB3]]
@@ -61,7 +61,7 @@ bb3:                                              ; preds = %bb7
 
 bb4:                                              ; preds = %bb3, %bb1
   %tmp5 = phi i64 [ 0, %bb1 ], [ %tmp10, %bb3 ]
-  %tmp6 = add i64 %tmp5, add (i64 xor (i64 ptrtoint ([25 x i8]* @global.2 to i64), i64 -1), i64 1)
+  %tmp6 = add i64 %tmp5, add (i64 xor (i64 ptrtoint (ptr @global.2 to i64), i64 -1), i64 1)
   unreachable
 
 bb7:                                              ; preds = %bb2
@@ -76,19 +76,19 @@ declare i32 @barney.4()
 define void @wobble() {
 ; CHECK-LABEL: @wobble(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* @global, align 4
-; CHECK-NEXT:    store i32 [[TMP]], i32* @global.3, align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @global, align 4
+; CHECK-NEXT:    store i32 [[TMP]], ptr @global.3, align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = load i32, i32* @global, align 4
-  store i32 %tmp, i32* @global.3, align 4
+  %tmp = load i32, ptr @global, align 4
+  store i32 %tmp, ptr @global.3, align 4
   ret void
 }
 
 define i32 @wobble.5(i32 %arg) {
 bb:
-  %tmp = load i32, i32* @global.3, align 4
+  %tmp = load i32, ptr @global.3, align 4
   %tmp1 = sdiv i32 0, %tmp
   ret i32 %tmp1
 }
@@ -104,7 +104,7 @@ define void @eggs() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[BB1]], label [[BB5:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    store i32 [[TMP2]], i32* @global, align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @global, align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -118,14 +118,14 @@ bb1:                                              ; preds = %bb1, %bb
   br i1 %tmp4, label %bb1, label %bb5
 
 bb5:                                              ; preds = %bb1
-  store i32 %tmp2, i32* @global, align 4
+  store i32 %tmp2, ptr @global, align 4
   ret void
 }
 
-declare i32* @bar(i32) local_unnamed_addr #3
+declare ptr @bar(i32) local_unnamed_addr #3
 
 ; Function Attrs: nounwind ssp uwtable
-define { i8, i32* } @struct_crash(i32 %BitWidth) local_unnamed_addr #0 align 2 {
+define { i8, ptr } @struct_crash(i32 %BitWidth) local_unnamed_addr #0 align 2 {
 ; CHECK-LABEL: @struct_crash(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[BITWIDTH:%.*]], label [[IF_END:%.*]] [
@@ -135,14 +135,14 @@ define { i8, i32* } @struct_crash(i32 %BitWidth) local_unnamed_addr #0 align 2 {
 ; CHECK:       sw.bb1.i:
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32* @bar(i32 [[BITWIDTH]])
+; CHECK-NEXT:    [[CALL_I:%.*]] = tail call ptr @bar(i32 [[BITWIDTH]])
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[V1:%.*]] = phi i32* [ [[CALL_I]], [[IF_END]] ], [ null, [[SW_BB1_I]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi ptr [ [[CALL_I]], [[IF_END]] ], [ null, [[SW_BB1_I]] ], [ null, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[V2:%.*]] = phi i8 [ 0, [[IF_END]] ], [ 3, [[SW_BB1_I]] ], [ 2, [[ENTRY]] ]
-; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i8, i32* } undef, i8 [[V2]], 0
-; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i8, i32* } [[DOTFCA_0_INSERT]], i32* [[V1]], 1
-; CHECK-NEXT:    ret { i8, i32* } [[DOTFCA_1_INSERT]]
+; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i8, ptr } undef, i8 [[V2]], 0
+; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i8, ptr } [[DOTFCA_0_INSERT]], ptr [[V1]], 1
+; CHECK-NEXT:    ret { i8, ptr } [[DOTFCA_1_INSERT]]
 ;
 entry:
   switch i32 %BitWidth, label %if.end [
@@ -154,25 +154,25 @@ sw.bb1.i:                                         ; preds = %entry
   br label %cleanup
 
 if.end:                                           ; preds = %entry
-  %call.i = tail call i32* @bar(i32 %BitWidth)
+  %call.i = tail call ptr @bar(i32 %BitWidth)
   br label %cleanup
 
 cleanup:                                          ; preds = %entry, %sw.bb1.i, %sw.bb2.i, %sw.bb3.i, %sw.bb4.i, %sw.bb5.i, %if.end
-  %v1 = phi i32* [ %call.i, %if.end ], [ null, %sw.bb1.i ], [ null, %entry ]
+  %v1 = phi ptr [ %call.i, %if.end ], [ null, %sw.bb1.i ], [ null, %entry ]
   %v2 = phi i8 [ 0, %if.end ], [ 3, %sw.bb1.i ], [ 2, %entry ]
-  %.fca.0.insert = insertvalue { i8, i32* } undef, i8 %v2, 0
-  %.fca.1.insert = insertvalue { i8, i32* } %.fca.0.insert, i32* %v1, 1
-  ret { i8, i32* } %.fca.1.insert
+  %.fca.0.insert = insertvalue { i8, ptr } undef, i8 %v2, 0
+  %.fca.1.insert = insertvalue { i8, ptr } %.fca.0.insert, ptr %v1, 1
+  ret { i8, ptr } %.fca.1.insert
 }
 
-define i64 @crash_ctpop(i1 %cond, i32* %addr) {
+define i64 @crash_ctpop(i1 %cond, ptr %addr) {
 ; CHECK-LABEL: @crash_ctpop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i64 0
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[ADDR:%.*]], align 8
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[ADDR:%.*]], align 8
 ; CHECK-NEXT:    [[ANDV:%.*]] = and i32 [[LV]], 16777215
 ; CHECK-NEXT:    [[TRUNCV:%.*]] = zext i32 [[ANDV]] to i64
 ; CHECK-NEXT:    [[RES:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TRUNCV]])
@@ -185,7 +185,7 @@ if.then:                                        ; preds = %entry
   ret i64 0
 
 if.else:                                        ; preds = %entry
-  %lv = load i32, i32* %addr, align 8
+  %lv = load i32, ptr %addr, align 8
   %andv = and i32 %lv, 16777215
   %truncv = zext i32 %andv to i64
   %res = tail call i64 @llvm.ctpop.i64(i64 %truncv)

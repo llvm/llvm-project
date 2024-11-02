@@ -16,10 +16,10 @@
 ; other than the LT bit. Hence this test case is rather complex.
 
 %0 = type { %1 }
-%1 = type { %0*, %0*, %0*, i32 }
+%1 = type { ptr, ptr, ptr, i32 }
 
 @call_1 = external dso_local unnamed_addr global i32, align 4
-declare %0* @call_2() local_unnamed_addr
+declare ptr @call_2() local_unnamed_addr
 declare i32 @call_3() local_unnamed_addr
 declare void @call_4() local_unnamed_addr
 
@@ -156,8 +156,8 @@ define dso_local void @P10_Spill_CR_LT() local_unnamed_addr {
 ; CHECK-BE-NEXT:  .LBB0_13: # %bb3
 ; CHECK-BE-NEXT:  .LBB0_14: # %bb2
 bb:
-  %tmp = tail call %0* @call_2()
-  %tmp1 = icmp ne %0* %tmp, null
+  %tmp = tail call ptr @call_2()
+  %tmp1 = icmp ne ptr %tmp, null
   switch i32 undef, label %bb4 [
     i32 3, label %bb2
     i32 2, label %bb3
@@ -170,13 +170,13 @@ bb3:                                              ; preds = %bb
   unreachable
 
 bb4:                                              ; preds = %bb
-  %tmp5 = load i64, i64* undef, align 8
+  %tmp5 = load i64, ptr undef, align 8
   %tmp6 = trunc i64 %tmp5 to i32
   %tmp7 = add i32 0, %tmp6
   %tmp8 = icmp sgt i32 %tmp7, 0
   %tmp9 = icmp eq i8 0, 0
   %tmp10 = zext i1 %tmp9 to i32
-  %tmp11 = icmp eq %0* %tmp, null
+  %tmp11 = icmp eq ptr %tmp, null
   br label %bb12
 
 bb12:                                             ; preds = %bb38, %bb4
@@ -200,7 +200,7 @@ bb23:                                             ; preds = %bb18
   br label %bb24
 
 bb24:                                             ; preds = %bb23
-  %tmp25 = load i32, i32* @call_1, align 4
+  %tmp25 = load i32, ptr @call_1, align 4
   %tmp26 = icmp eq i32 %tmp25, 0
   br i1 %tmp26, label %bb30, label %bb27
 

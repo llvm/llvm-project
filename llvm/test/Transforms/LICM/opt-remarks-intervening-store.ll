@@ -5,18 +5,18 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 ; Without the noalias on %p, we can't optmize this and the remark should tell
 ; us about it.
 
-define void @test(i32* %array, i32* %p) {
+define void @test(ptr %array, ptr %p) {
 Entry:
   br label %Loop
 
 Loop:
   %j = phi i32 [ 0, %Entry ], [ %Next, %Loop ]
-  %addr = getelementptr i32, i32* %array, i32 %j
-  %a = load i32, i32* %addr
+  %addr = getelementptr i32, ptr %array, i32 %j
+  %a = load i32, ptr %addr
 ; CHECK: remark: /tmp/kk.c:2:20: failed to move load with loop-invariant address because the loop may invalidate its value
-  %b = load i32, i32* %p, !dbg !8
+  %b = load i32, ptr %p, !dbg !8
   %a2 = add i32 %a, %b
-  store i32 %a2, i32* %addr
+  store i32 %a2, ptr %addr
   %Next = add i32 %j, 1
   %cond = icmp eq i32 %Next, 0
   br i1 %cond, label %Out, label %Loop
@@ -28,7 +28,7 @@ Out:
 ; This illustrates why we need to check loop-invariance before issuing this
 ; remark.
 
-define i32 @invalidated_load_with_non_loop_invariant_address(i32* %array, i32* %array2) {
+define i32 @invalidated_load_with_non_loop_invariant_address(ptr %array, ptr %array2) {
 Entry:
   br label %Loop
 
@@ -36,11 +36,11 @@ Loop:
   %j = phi i32 [ 0, %Entry ], [ %Next, %Loop ]
 
 ; CHECK-NOT: /tmp/kk.c:3:20: {{.*}} loop-invariant
-  %addr = getelementptr i32, i32* %array, i32 %j
-  %a = load i32, i32* %addr, !dbg !9
+  %addr = getelementptr i32, ptr %array, i32 %j
+  %a = load i32, ptr %addr, !dbg !9
 
-  %addr2 = getelementptr i32, i32* %array2, i32 %j
-  store i32 %j, i32* %addr2
+  %addr2 = getelementptr i32, ptr %array2, i32 %j
+  store i32 %j, ptr %addr2
 
   %Next = add i32 %j, 1
   %cond = icmp eq i32 %Next, 0

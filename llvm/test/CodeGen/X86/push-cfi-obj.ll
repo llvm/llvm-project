@@ -30,14 +30,14 @@
 declare i32 @__gxx_personality_v0(...)
 declare void @good(i32 %a, i32 %b, i32 %c, i32 %d)
 
-define void @test() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test() #0 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
           to label %continue unwind label %cleanup
 continue:
   ret void
 cleanup:
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
      cleanup
   ret void
 }

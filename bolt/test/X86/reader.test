@@ -1,7 +1,7 @@
 # This script checks that DataReader in llvm-bolt is reading data correctly
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
-RUN: llvm-bolt %t.exe -o /dev/null -data %p/Inputs/blarge.fdata --dump-data \
+RUN: llvm-bolt %t.exe -o /dev/null --data %p/Inputs/blarge.fdata --dump-data \
 RUN:   2>&1 | sort | FileCheck %s -check-prefix=CHECK
 
 CHECK:  main 1105 SolveCubic 0 0 151

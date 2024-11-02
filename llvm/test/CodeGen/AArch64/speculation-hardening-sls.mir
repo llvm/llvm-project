@@ -1,10 +1,10 @@
 # RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
 # RUN:     -start-before aarch64-sls-hardening -o - %s \
-# RUN:     -mattr=harden-sls-retbr \
+# RUN:     -mattr=+pauth,+harden-sls-retbr \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,ISBDSB
 # RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
 # RUN:     -start-before aarch64-sls-hardening -o - %s \
-# RUN:     -mattr=harden-sls-retbr -mattr=+sb \
+# RUN:     -mattr=+pauth,+harden-sls-retbr -mattr=+sb \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,SB
 
 # Check that the SLS hardening pass also protects BRA* indirect branches that
@@ -65,11 +65,11 @@ body:             |
   ; ISBDSB-NEXT: isb
   ; SB-NEXT:     {{ sb$}}
 
-  bb.1.l2 (address-taken):
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
     renamable $w0 = MOVZWi 1, 0
     RET undef $lr, implicit $w0
 
-  bb.2.return (address-taken):
+  bb.2.return (ir-block-address-taken %ir-block.return):
     $w0 = ORRWrs $wzr, $wzr, 0
     RET undef $lr, implicit $w0
 ...
@@ -90,11 +90,11 @@ body:             |
   ; ISBDSB-NEXT: isb
   ; SB-NEXT:     {{ sb$}}
 
-  bb.1.l2 (address-taken):
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
     renamable $w0 = MOVZWi 1, 0
     RET undef $lr, implicit $w0
 
-  bb.2.return (address-taken):
+  bb.2.return (ir-block-address-taken %ir-block.return):
     $w0 = ORRWrs $wzr, $wzr, 0
     RET undef $lr, implicit $w0
 ...
@@ -115,11 +115,11 @@ body:             |
   ; ISBDSB-NEXT: isb
   ; SB-NEXT:     {{ sb$}}
 
-  bb.1.l2 (address-taken):
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
     renamable $w0 = MOVZWi 1, 0
     RET undef $lr, implicit $w0
 
-  bb.2.return (address-taken):
+  bb.2.return (ir-block-address-taken %ir-block.return):
     $w0 = ORRWrs $wzr, $wzr, 0
     RET undef $lr, implicit $w0
 ...
@@ -140,11 +140,11 @@ body:             |
   ; ISBDSB-NEXT: isb
   ; SB-NEXT:     {{ sb$}}
 
-  bb.1.l2 (address-taken):
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
     renamable $w0 = MOVZWi 1, 0
     RET undef $lr, implicit $w0
 
-  bb.2.return (address-taken):
+  bb.2.return (ir-block-address-taken %ir-block.return):
     $w0 = ORRWrs $wzr, $wzr, 0
     RET undef $lr, implicit $w0
 ...

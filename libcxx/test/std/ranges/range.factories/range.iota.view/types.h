@@ -88,6 +88,8 @@ struct IntComparableWith {
   constexpr IntComparableWith  operator++(int) { auto tmp = *this; ++value_; return tmp; }
   constexpr IntComparableWith  operator--() { --value_; return *this; }
 };
+template <class T>
+IntComparableWith(T) -> IntComparableWith<T>;
 
 template<class T>
 struct IntSentinelWith {
@@ -123,6 +125,8 @@ struct IntSentinelWith {
   constexpr IntSentinelWith  operator++(int) { auto tmp = *this; ++value_; return tmp; }
   constexpr IntSentinelWith  operator--() { --value_; return *this; }
 };
+template <class T>
+IntSentinelWith(T) -> IntSentinelWith<T>;
 
 struct NotIncrementable {
   using difference_type = int;

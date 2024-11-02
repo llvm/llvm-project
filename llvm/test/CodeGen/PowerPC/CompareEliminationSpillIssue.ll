@@ -21,7 +21,7 @@
 ; Function Attrs: noinline nounwind
 define void @call(i64 %a) local_unnamed_addr #0 {
 entry:
-  store i64 %a, i64* @glob, align 8
+  store i64 %a, ptr @glob, align 8
   tail call void asm sideeffect "#Do Nothing", "~{memory}"()
   ret void
 }
@@ -63,9 +63,9 @@ entry:
 define signext i32 @main() local_unnamed_addr #1 {
 entry:
   %call = tail call signext i32 @test(i32 signext 10, i32 signext -15, i32 signext 0)
-  %call1 = tail call signext i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 signext %call)
+  %call1 = tail call signext i32 (ptr, ...) @printf(ptr @.str, i32 signext %call)
   ret i32 0
 }
 
 ; Function Attrs: nounwind
-declare signext i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr #2
+declare signext i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr #2

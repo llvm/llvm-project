@@ -17,6 +17,8 @@
 // ARM/AArch64 MinGW also has got long double equal to regular double, just
 // like MSVC (thus match both MinGW and MSVC here, for those architectures).
 // UNSUPPORTED: target={{aarch64|armv7}}-{{.*}}-windows-{{.+}}
+// Android's 32-bit x86 target has long double equal to regular double.
+// UNSUPPORTED: target=i686-{{.+}}-android{{.*}}
 
 // <compare>
 

@@ -10,22 +10,22 @@ define void @WhileWithLoopInvariantOperation.21() {
 ; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,0,0]
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm0, (%rax)
 while.1.body.preheader:
-  %0 = load i8*, i8** undef, align 8, !invariant.load !0, !dereferenceable !1, !align !2
-  %1 = getelementptr inbounds i8, i8* %0, i64 32
-  tail call void @llvm.memset.p0i8.i64(i8* nonnull align 16 dereferenceable(16) %1, i8 0, i64 16, i1 false)
-  %2 = tail call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* undef, i32 4, <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x float> <float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
-  %3 = tail call <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>* undef, i32 4, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x float> <float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
-  tail call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> undef, <16 x float>* nonnull undef, i32 4, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+  %0 = load ptr, ptr undef, align 8, !invariant.load !0, !dereferenceable !1, !align !2
+  %1 = getelementptr inbounds i8, ptr %0, i64 32
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 16 dereferenceable(16) %1, i8 0, i64 16, i1 false)
+  %2 = tail call <8 x float> @llvm.masked.load.v8f32.p0(ptr undef, i32 4, <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x float> <float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
+  %3 = tail call <16 x float> @llvm.masked.load.v16f32.p0(ptr undef, i32 4, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x float> <float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
+  tail call void @llvm.masked.store.v16f32.p0(<16 x float> undef, ptr nonnull undef, i32 4, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
   unreachable
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
-declare <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>*, i32 immarg, <8 x i1>, <8 x float>)
+declare <8 x float> @llvm.masked.load.v8f32.p0(ptr, i32 immarg, <8 x i1>, <8 x float>)
 
-declare <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>*, i32 immarg, <16 x i1>, <16 x float>)
+declare <16 x float> @llvm.masked.load.v16f32.p0(ptr, i32 immarg, <16 x i1>, <16 x float>)
 
-declare void @llvm.masked.store.v16f32.p0v16f32(<16 x float>, <16 x float>*, i32 immarg, <16 x i1>)
+declare void @llvm.masked.store.v16f32.p0(<16 x float>, ptr, i32 immarg, <16 x i1>)
 
 !0 = !{}
 !1 = !{i64 65}

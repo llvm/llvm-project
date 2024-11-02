@@ -20,7 +20,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
 define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl1(<vscale x 1 x i64> %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    ret
@@ -37,14 +37,14 @@ entry:
 define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl2(<vscale x 1 x i64> %0, i64 %1) nounwind {
 ; CHECK-128-65536-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl2:
 ; CHECK-128-65536:       # %bb.0: # %entry
-; CHECK-128-65536-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-128-65536-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-128-65536-NEXT:    ret
 ;
 ; CHECK-512-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl2:
 ; CHECK-512:       # %bb.0: # %entry
-; CHECK-512-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-512-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-512-NEXT:    ret
@@ -70,14 +70,14 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl3(<vsc
 ; CHECK-128-65536:       # %bb.0: # %entry
 ; CHECK-128-65536-NEXT:    vsetivli a2, 3, e64, m1, ta, mu
 ; CHECK-128-65536-NEXT:    slli a2, a2, 1
-; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-128-65536-NEXT:    ret
 ;
 ; CHECK-512-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl3:
 ; CHECK-512:       # %bb.0: # %entry
-; CHECK-512-NEXT:    vsetivli zero, 6, e32, m1, ta, mu
+; CHECK-512-NEXT:    vsetivli zero, 6, e32, m1, ta, ma
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-512-NEXT:    ret
@@ -103,14 +103,14 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl8(<vsc
 ; CHECK-128-65536:       # %bb.0: # %entry
 ; CHECK-128-65536-NEXT:    vsetivli a2, 8, e64, m1, ta, mu
 ; CHECK-128-65536-NEXT:    slli a2, a2, 1
-; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-128-65536-NEXT:    ret
 ;
 ; CHECK-512-LABEL: intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl8:
 ; CHECK-512:       # %bb.0: # %entry
-; CHECK-512-NEXT:    vsetivli zero, 16, e32, m1, ta, mu
+; CHECK-512-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-512-NEXT:    ret
@@ -136,7 +136,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl9(<vsc
 ; CHECK-128-65536:       # %bb.0: # %entry
 ; CHECK-128-65536-NEXT:    vsetivli a2, 9, e64, m1, ta, mu
 ; CHECK-128-65536-NEXT:    slli a2, a2, 1
-; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-128-65536-NEXT:    ret
@@ -145,7 +145,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl9(<vsc
 ; CHECK-512:       # %bb.0: # %entry
 ; CHECK-512-NEXT:    vsetivli a2, 9, e64, m1, ta, mu
 ; CHECK-512-NEXT:    slli a2, a2, 1
-; CHECK-512-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-512-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-512-NEXT:    ret
@@ -171,7 +171,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl15(<vs
 ; CHECK-128-65536:       # %bb.0: # %entry
 ; CHECK-128-65536-NEXT:    vsetivli a2, 15, e64, m1, ta, mu
 ; CHECK-128-65536-NEXT:    slli a2, a2, 1
-; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-128-65536-NEXT:    ret
@@ -180,7 +180,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl15(<vs
 ; CHECK-512:       # %bb.0: # %entry
 ; CHECK-512-NEXT:    vsetivli a2, 15, e64, m1, ta, mu
 ; CHECK-512-NEXT:    slli a2, a2, 1
-; CHECK-512-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-512-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-512-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-512-NEXT:    ret
@@ -206,7 +206,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl16(<vs
 ; CHECK-128-65536:       # %bb.0: # %entry
 ; CHECK-128-65536-NEXT:    vsetivli a2, 16, e64, m1, ta, mu
 ; CHECK-128-65536-NEXT:    slli a2, a2, 1
-; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-128-65536-NEXT:    ret
@@ -240,7 +240,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl2047(<
 ; CHECK-128-65536-NEXT:    li a2, 2047
 ; CHECK-128-65536-NEXT:    vsetvli a2, a2, e64, m1, ta, mu
 ; CHECK-128-65536-NEXT:    slli a2, a2, 1
-; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-128-65536-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-128-65536-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-128-65536-NEXT:    ret

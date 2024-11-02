@@ -21,6 +21,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
+include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
 
 def OpenMP_Dialect : Dialect {
   let name = "omp";
@@ -38,26 +39,8 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
 // Type which can be constraint accepting standard integers and indices.
 def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
 
-def OpenMP_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
-  let cppNamespace = "::mlir::omp";
-
-  let description = [{
-    An interface for pointer-like types suitable to contain a value that OpenMP
-    specification refers to as variable.
-  }];
-
-  let methods = [
-    InterfaceMethod<
-      /*description=*/"Returns the pointee type.",
-      /*retTy=*/"::mlir::Type",
-      /*methodName=*/"getElementType"
-    >,
-  ];
-}
-
-def OpenMP_PointerLikeType : Type<
-  CPred<"$_self.isa<::mlir::omp::PointerLikeType>()">,
-  "OpenMP-compatible variable type", "::mlir::omp::PointerLikeType">;
+def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
+	"OpenMP-compatible variable type">;
 
 //===----------------------------------------------------------------------===//
 // 2.6 parallel Construct
@@ -66,7 +49,7 @@ def OpenMP_PointerLikeType : Type<
 def ParallelOp : OpenMP_Op<"parallel", [
                  AutomaticAllocationScope, AttrSizedOperandSegments,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
-                 RecursiveSideEffects, ReductionClauseInterface]> {
+                 RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "parallel construct";
   let description = [{
     The parallel construct includes a region of code which is to be executed
@@ -128,15 +111,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
     ) $region attr-dict
   }];
   let hasVerifier = 1;
-  let extraClassDeclaration = [{
-    // TODO: remove this once emitAccessorPrefix is set to
-    // kEmitAccessorPrefix_Prefixed for the dialect.
-    /// Returns the reduction variables
-    operand_range getReductionVars() { return reduction_vars(); }
-  }];
 }
 
-def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
+def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
   let summary = "terminator for OpenMP regions";
   let description = [{
     A terminator operation for regions that appear in the body of OpenMP
@@ -232,13 +209,6 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
-
-  let extraClassDeclaration = [{
-    // TODO: remove this once emitAccessorPrefix is set to
-    // kEmitAccessorPrefix_Prefixed for the dialect.
-    /// Returns the reduction variables
-    operand_range getReductionVars() { return reduction_vars(); }
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -248,7 +218,7 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
 def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
   let summary = "single directive";
   let description = [{
-    The single construct specifies that the associated structured block is 
+    The single construct specifies that the associated structured block is
     executed by only one of the threads in the team (not necessarily the
     master thread), in the context of its implicit task. The other threads
     in the team, which do not execute the block, wait at an implicit barrier
@@ -259,7 +229,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
                        Variadic<AnyType>:$allocators_vars,
                        UnitAttr:$nowait);
 
-  let regions = (region SizedRegion<1>:$region);
+  let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     oilist(`allocate` `(`
@@ -279,7 +249,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 
 def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-                         RecursiveSideEffects, ReductionClauseInterface]> {
+                         RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "worksharing-loop construct";
   let description = [{
     The worksharing-loop construct specifies that the iterations of the loop(s)
@@ -308,7 +278,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     `linear_step_vars` variadic lists should contain the same number of
     elements.
 
-    Reductions can be performed in a workshare loop by specifying reduction
+    Reductions can be performed in a worksharing-loop by specifying reduction
     accumulator variables in `reduction_vars` and symbols referring to reduction
     declarations in the `reductions` attribute. Each reduction is identified
     by the accumulator it uses and accumulators must not be repeated in the same
@@ -325,8 +295,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     The optional `schedule_chunk_var` associated with this determines further
     controls this distribution.
 
-    The optional `collapse_val` attribute specifies the number of loops which
-    are collapsed to form the worksharing loop.
+    Collapsed loops are represented by the worksharing-loop having a list of
+    indices, bounds and steps where the size of the list is equal to the
+    collapse value.
 
     The `nowait` attribute, when present, signifies that there should be no
     implicit barrier at the end of the loop.
@@ -351,9 +322,8 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              Optional<AnyType>:$schedule_chunk_var,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
-             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
              UnitAttr:$nowait,
-             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val,
              UnitAttr:$inclusive);
 
@@ -366,16 +336,11 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    /// Returns the number of loops in the workshape loop nest.
-    unsigned getNumLoops() { return lowerBound().size(); }
+    /// Returns the number of loops in the worksharing-loop nest.
+    unsigned getNumLoops() { return getLowerBound().size(); }
 
     /// Returns the number of reduction variables.
-    unsigned getNumReductionVars() { return reduction_vars().size(); }
-
-    // TODO: remove this once emitAccessorPrefix is set to
-    // kEmitAccessorPrefix_Prefixed for the dialect.
-    /// Returns the reduction variables
-    operand_range getReductionVars() { return reduction_vars(); }
+    unsigned getNumReductionVars() { return getReductionVars().size(); }
   }];
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
@@ -386,7 +351,6 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
               custom<ScheduleClause>(
                 $schedule_val, $schedule_modifier, $simd_modifier,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
-          |`collapse` `(` $collapse_val `)`
           |`nowait` $nowait
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
@@ -394,58 +358,94 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
               custom<ReductionVarList>(
                 $reduction_vars, type($reduction_vars), $reductions
               ) `)`
-    ) `for` custom<WsLoopControl>($region, $lowerBound, $upperBound, $step,
+    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
                                   type($step), $inclusive) attr-dict
   }];
   let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// Simd construct [2.9.3.1] 
+// Simd construct [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
 def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>]> {
  let summary = "simd loop construct";
   let description = [{
-    The simd construct can be applied to a loop to indicate that the loop can be 
-    transformed into a SIMD loop (that is, multiple iterations of the loop can 
-    be executed concurrently using SIMD instructions).. The lower and upper 
-    bounds specify a half-open range: the range includes the lower bound but 
-    does not include the upper bound.
+    The simd construct can be applied to a loop to indicate that the loop can be
+    transformed into a SIMD loop (that is, multiple iterations of the loop can
+    be executed concurrently using SIMD instructions).. The lower and upper
+    bounds specify a half-open range: the range includes the lower bound but
+    does not include the upper bound. If the `inclusive` attribute is specified
+    then the upper bound is also included.
 
     The body region can contain any number of blocks. The region is terminated
     by "omp.yield" instruction without operands.
+
+    Collapsed loops are represented by the simd-loop having a list of indices,
+    bounds and steps where the size of the list is equal to the collapse value.
+
+    The `alignment_values` attribute additionally specifies alignment of each
+    corresponding aligned operand. Note that `$aligned_vars` and
+    `alignment_values` should contain the same number of elements.
+
+    When an if clause is present and evaluates to false, the preferred number of
+    iterations to be executed concurrently is one, regardless of whether
+    a simdlen clause is speciﬁed.
+
+    When a simdlen clause is present, the preferred number of iterations to be
+    executed concurrently is the value provided to the simdlen clause.
+
+    The safelen clause specifies that no two concurrent iterations within a
+    SIMD chunk can have a distance in the logical iteration space that is
+    greater than or equal to the value given in the clause.
     ```
-    omp.simdloop (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) 
-                                      step (%c1, %c1) {
+    omp.simdloop <clauses>
+    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
       // block operations
       omp.yield
     }
-    ``` 
+    ```
   }];
 
   // TODO: Add other clauses
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
              Variadic<IntLikeType>:$upperBound,
-             Variadic<IntLikeType>:$step);
- 
+             Variadic<IntLikeType>:$step,
+             Variadic<OpenMP_PointerLikeType>:$aligned_vars,
+             OptionalAttr<I64ArrayAttr>:$alignment_values,
+             Optional<I1>:$if_expr,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen,
+             UnitAttr:$inclusive
+     );
+
   let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    oilist(`aligned` `(`
+              custom<AlignedClause>($aligned_vars, type($aligned_vars),
+                                   $alignment_values) `)`
+          |`if` `(` $if_expr `)`
+          |`simdlen` `(` $simdlen  `)`
+          |`safelen` `(` $safelen  `)`
+    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
+                                  type($step), $inclusive) attr-dict
+  }];
 
   let extraClassDeclaration = [{
     /// Returns the number of loops in the simd loop nest.
-    unsigned getNumLoops() { return lowerBound().size(); }
+    unsigned getNumLoops() { return getLowerBound().size(); }
 
   }];
- 
+
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1; 
+  let hasVerifier = 1;
 }
 
 
 def YieldOp : OpenMP_Op<"yield",
-    [NoSideEffect, ReturnLike, Terminator,
-     ParentOneOf<["WsLoopOp", "ReductionDeclareOp", 
+    [Pure, ReturnLike, Terminator,
+     ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
      "AtomicUpdateOp", "SimdLoopOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
@@ -507,7 +507,7 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
     default priority-value when no priority clause is specified should be
     assumed to be zero (the lowest priority).
 
-    The `allocators_vars` and `allocate_vars` parameters are a variadic list of
+    The `allocators_vars` and `allocate_vars` arguments are a variadic list of
     values that specify the memory allocator to be used to obtain storage for
     private values.
 
@@ -543,9 +543,226 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
   }];
   let extraClassDeclaration = [{
     /// Returns the reduction variables
-    operand_range getReductionVars() { return in_reduction_vars(); }
+    SmallVector<Value> getReductionVars() {
+      return SmallVector<Value>(getInReductionVars().begin(),
+                                getInReductionVars().end());
+    }
   }];
   let hasVerifier = 1;
+}
+
+def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
+                           AutomaticAllocationScope, RecursiveMemoryEffects,
+                           AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                           ReductionClauseInterface]> {
+  let summary = "taskloop construct";
+  let description = [{
+    The taskloop construct specifies that the iterations of one or more
+    associated loops will be executed in parallel using explicit tasks. The
+    iterations are distributed across tasks generated by the construct and
+    scheduled to be executed.
+
+    The `lowerBound` and `upperBound` specify a half-open range: the range
+    includes the lower bound but does not include the upper bound. If the
+    `inclusive` attribute is specified then the upper bound is also included.
+    The `step` specifies the loop step.
+
+    The body region can contain any number of blocks.
+
+    ```
+    omp.taskloop <clauses>
+    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+      %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+      %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+      %sum = arith.addf %a, %b : f32
+      store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+      omp.terminator
+    }
+    ```
+
+    For definitions of "undeferred task", "included task", "final task" and
+    "mergeable task", please check OpenMP Specification.
+
+    When an `if` clause is present on a taskloop construct, and if the `if`
+    clause expression evaluates to `false`, undeferred tasks are generated. The
+    use of a variable in an `if` clause expression of a taskloop construct
+    causes an implicit reference to the variable in all enclosing constructs.
+
+    When a `final` clause is present on a taskloop construct and the `final`
+    clause expression evaluates to `true`, the generated tasks will be final
+    tasks. The use of a variable in a `final` clause expression of a taskloop
+    construct causes an implicit reference to the variable in all enclosing
+    constructs.
+
+    If the `untied` clause is specified, all tasks generated by the taskloop
+    construct are untied tasks.
+
+    When the `mergeable` clause is present on a taskloop construct, each
+    generated task is a mergeable task.
+
+    Reductions can be performed in a loop by specifying reduction accumulator
+    variables in `reduction_vars` or `in_reduction_vars` and symbols referring
+    to reduction declarations in the `reductions` or `in_reductions` attribute.
+    Each reduction is identified by the accumulator it uses and accumulators
+    must not be repeated in the same reduction. The `omp.reduction` operation
+    accepts the accumulator and a partial value which is considered to be
+    produced by the current loop iteration for the given reduction. If multiple
+    values are produced for the same accumulator, i.e. there are multiple
+    `omp.reduction`s, the last value is taken. The reduction declaration
+    specifies how to combine the values from each iteration into the final
+    value, which is available in the accumulator after the loop completes.
+
+    If an `in_reduction` clause is present on the taskloop construct, the
+    behavior is as if each generated task was defined by a task construct on
+    which an `in_reduction` clause with the same reduction operator and list
+    items is present. Thus, the generated tasks are participants of a reduction
+    previously defined by a reduction scoping clause.
+
+    If a `reduction` clause is present on the taskloop construct, the behavior
+    is as if a `task_reduction` clause with the same reduction operator and list
+    items was applied to the implicit taskgroup construct enclosing the taskloop
+    construct. The taskloop construct executes as if each generated task was
+    defined by a task construct on which an `in_reduction` clause with the same
+    reduction operator and list items is present. Thus, the generated tasks are
+    participants of the reduction defined by the `task_reduction` clause that
+    was applied to the implicit taskgroup construct.
+
+    When a `priority` clause is present on a taskloop construct, the generated
+    tasks use the `priority-value` as if it was specified for each individual
+    task. If the `priority` clause is not specified, tasks generated by the
+    taskloop construct have the default task priority (zero).
+
+    The `allocators_vars` and `allocate_vars` arguments are a variadic list of
+    values that specify the memory allocator to be used to obtain storage for
+    private values.
+
+    If a `grainsize` clause is present on the taskloop construct, the number of
+    logical loop iterations assigned to each generated task is greater than or
+    equal to the minimum of the value of the grain-size expression and the
+    number of logical loop iterations, but less than two times the value of the
+    grain-size expression.
+
+    If `num_tasks` is specified, the taskloop construct creates as many tasks as
+    the minimum of the num-tasks expression and the number of logical loop
+    iterations. Each task must have at least one logical loop iteration.
+
+    By default, the taskloop construct executes as if it was enclosed in a
+    taskgroup construct with no statements or directives outside of the taskloop
+    construct. Thus, the taskloop construct creates an implicit taskgroup
+    region. If the `nogroup` clause is present, no implicit taskgroup region is
+    created.
+  }];
+
+  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
+                       Variadic<IntLikeType>:$upperBound,
+                       Variadic<IntLikeType>:$step,
+                       UnitAttr:$inclusive,
+                       Optional<I1>:$if_expr,
+                       Optional<I1>:$final_expr,
+                       UnitAttr:$untied,
+                       UnitAttr:$mergeable,
+                       Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$in_reductions,
+                       Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$reductions,
+                       Optional<IntLikeType>:$priority,
+                       Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars,
+                       Optional<IntLikeType>: $grain_size,
+                       Optional<IntLikeType>: $num_tasks,
+                       UnitAttr: $nogroup);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `)`
+          |`final` `(` $final_expr `)`
+          |`untied` $untied
+          |`mergeable` $mergeable
+          |`in_reduction` `(`
+              custom<ReductionVarList>(
+                $in_reduction_vars, type($in_reduction_vars), $in_reductions
+              ) `)`
+          |`reduction` `(`
+              custom<ReductionVarList>(
+                $reduction_vars, type($reduction_vars), $reductions
+              ) `)`
+          |`priority` `(` $priority `:` type($priority) `)`
+          |`allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+          |`grain_size` `(` $grain_size `:` type($grain_size) `)`
+          |`num_tasks` `(` $num_tasks `:` type($num_tasks) `)`
+          |`nogroup` $nogroup
+    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
+                                  type($step), $inclusive) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the reduction variables
+    SmallVector<Value> getAllReductionVars();
+    void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+  }];
+
+  let hasVerifier = 1;
+}
+
+def TaskGroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
+                            ReductionClauseInterface,
+                            AutomaticAllocationScope]> {
+  let summary = "taskgroup construct";
+  let description = [{
+    The taskgroup construct specifies a wait on completion of child tasks of the
+    current task and their descendent tasks.
+
+    When a thread encounters a taskgroup construct, it starts executing the
+    region. All child tasks generated in the taskgroup region and all of their
+    descendants that bind to the same parallel region as the taskgroup region
+    are part of the taskgroup set associated with the taskgroup region. There is
+    an implicit task scheduling point at the end of the taskgroup region. The
+    current task is suspended at the task scheduling point until all tasks in
+    the taskgroup set complete execution.
+
+    The `task_reduction` clause specifies a reduction among tasks. For each list
+    item, the number of copies is unspecified. Any copies associated with the
+    reduction are initialized before they are accessed by the tasks
+    participating in the reduction. After the end of the region, the original
+    list item contains the result of the reduction.
+
+    The `allocators_vars` and `allocate_vars` arguments are a variadic list of
+    values that specify the memory allocator to be used to obtain storage for
+    private values.
+  }];
+
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$task_reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$task_reductions,
+                       Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(`task_reduction` `(`
+              custom<ReductionVarList>(
+                $task_reduction_vars, type($task_reduction_vars), $task_reductions
+              ) `)`
+          |`allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+    ) $region attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the reduction variables
+    operand_range getAllReductionVars() { return getTaskReductionVars(); }
+  }];
+
+  let hasVerifier = 1;
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -574,9 +791,19 @@ def FlushOp : OpenMP_Op<"flush"> {
     specified or implied.
   }];
 
-  let arguments = (ins Variadic<AnyType>:$varList);
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$varList);
 
   let assemblyFormat = [{ ( `(` $varList^ `:` type($varList) `)` )? attr-dict}];
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      return getOperation()->getNumOperands();
+    }
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      return getOperand(i);
+    }
+  }];
 }
 //===----------------------------------------------------------------------===//
 // 2.14.5 target construct
@@ -728,7 +955,7 @@ def OrderedOp : OpenMP_Op<"ordered"> {
   }];
 
   let arguments = (ins OptionalAttr<ClauseDependAttr>:$depend_type_val,
-             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
              Variadic<AnyType>:$depend_vec_vars);
 
   let assemblyFormat = [{
@@ -804,10 +1031,10 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
                        OpenMP_PointerLikeType:$v,
-                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
-    $v `=` $x 
+    $v `=` $x
     oilist( `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
           | `hint` `(` custom<SynchronizationHint>($hint_val) `)`)
     `:` type($x) attr-dict
@@ -816,15 +1043,15 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
   let extraClassDeclaration = [{
     /// The number of variable operands.
     unsigned getNumVariableOperands() {
-      assert(x() && "expected 'x' operand");
-      assert(v() && "expected 'v' operand");
+      assert(getX() && "expected 'x' operand");
+      assert(getV() && "expected 'v' operand");
       return 2;
     }
 
     /// The i-th variable operand passed.
     Value getVariableOperand(unsigned i) {
       assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? x() : v();
+      return i == 0 ? getX() : getV();
     }
   }];
 }
@@ -851,7 +1078,7 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
 
   let arguments = (ins OpenMP_PointerLikeType:$address,
                        AnyType:$value,
-                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
     $address `=` $value
@@ -864,21 +1091,22 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
   let extraClassDeclaration = [{
     /// The number of variable operands.
     unsigned getNumVariableOperands() {
-      assert(address() && "expected address operand");
-      assert(value() && "expected value operand");
+      assert(getAddress() && "expected address operand");
+      assert(getValue() && "expected value operand");
       return 2;
     }
 
     /// The i-th variable operand passed.
     Value getVariableOperand(unsigned i) {
       assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? address() : value();
+      return i == 0 ? getAddress() : getValue();
     }
   }];
 }
 
 def AtomicUpdateOp : OpenMP_Op<"atomic.update",
-                               [SingleBlockImplicitTerminator<"YieldOp">]> {
+                               [SingleBlockImplicitTerminator<"YieldOp">,
+                                RecursiveMemoryEffects]> {
 
   let summary = "performs an atomic update";
 
@@ -911,8 +1139,10 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
     operations.
   }];
 
-  let arguments = (ins OpenMP_PointerLikeType:$x,
-                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+  let arguments = (ins Arg<OpenMP_PointerLikeType,
+                           "Address of variable to be updated",
+                           [MemRead, MemWrite]>:$x,
+                       DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
@@ -922,10 +1152,19 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
   }];
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+  let hasCanonicalizeMethod = 1;
   let extraClassDeclaration = [{
     Operation* getFirstOp() {
       return &getRegion().front().getOperations().front();
     }
+
+    /// Returns true if the new value is same as old value and the operation is
+    /// a no-op, false otherwise.
+    bool isNoOp();
+
+    /// Returns the new value if the operation is equivalent to just a write
+    /// operation. Otherwise, returns nullptr.
+    Value getWriteOpVal();
   }];
 }
 
@@ -965,7 +1204,7 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
 
   }];
 
-  let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$hint_val,
+  let arguments = (ins DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
@@ -1000,7 +1239,8 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
 // [5.1] 2.21.2 threadprivate Directive
 //===----------------------------------------------------------------------===//
 
-def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
+def ThreadprivateOp : OpenMP_Op<"threadprivate",
+                                [AllTypesMatch<["sym_addr", "tls_addr"]>]> {
   let summary = "threadprivate directive";
   let description = [{
     The threadprivate directive specifies that variables are replicated, with
@@ -1027,14 +1267,14 @@ def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
   let extraClassDeclaration = [{
     /// The number of variable operands.
     unsigned getNumVariableOperands() {
-      assert(sym_addr() && "expected one variable operand");
+      assert(getSymAddr() && "expected one variable operand");
       return 1;
     }
 
     /// The i-th variable operand passed.
     Value getVariableOperand(unsigned i) {
       assert(i == 0 && "invalid index position for an operand");
-      return sym_addr();
+      return getSymAddr();
     }
   }];
 }
@@ -1077,7 +1317,8 @@ def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 
-def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
+def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
+                                                         IsolatedFromAbove]> {
   let summary = "declares a reduction kind";
 
   let description = [{
@@ -1118,10 +1359,10 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol]> {
 
   let extraClassDeclaration = [{
     PointerLikeType getAccumulatorType() {
-      if (atomicReductionRegion().empty())
+      if (getAtomicReductionRegion().empty())
         return {};
 
-      return atomicReductionRegion().front().getArgument(0).getType();
+      return getAtomicReductionRegion().front().getArgument(0).getType();
     }
   }];
   let hasRegionVerifier = 1;

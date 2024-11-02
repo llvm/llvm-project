@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 # RUN: %lld -lSystem -o %t %t.o
-# RUN: llvm-objdump --section-headers --syms -d %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --section-headers --syms -d %t | FileCheck %s
 
 # CHECK-LABEL: Sections:
 # CHECK:       __data {{[0-9a-z]+}} [[#%x, DATA_ADDR:]]

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -target-feature +f -target-abi ilp32f -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple riscv32 -target-feature +f -target-abi ilp32f -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
 #include <stdint.h>
@@ -23,10 +23,10 @@ struct double_s f_ret_double_s(void) {
 
 struct double_double_s { double d; double e; };
 
-// CHECK: define{{.*}} void @f_double_double_s_arg(%struct.double_double_s* noundef %a)
+// CHECK: define{{.*}} void @f_double_double_s_arg(ptr noundef %a)
 void f_double_double_s_arg(struct double_double_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_double_double_s(%struct.double_double_s* noalias sret(%struct.double_double_s) align 8 %agg.result)
+// CHECK: define{{.*}} void @f_ret_double_double_s(ptr noalias sret(%struct.double_double_s) align 8 %agg.result)
 struct double_double_s f_ret_double_double_s(void) {
   return (struct double_double_s){1.0, 2.0};
 }
@@ -35,10 +35,10 @@ struct double_int8_s { double d; int64_t i; };
 
 struct int_double_s { int a; double b; };
 
-// CHECK: define{{.*}} void @f_int_double_s_arg(%struct.int_double_s* noundef %a)
+// CHECK: define{{.*}} void @f_int_double_s_arg(ptr noundef %a)
 void f_int_double_s_arg(struct int_double_s a) {}
 
-// CHECK: define{{.*}} void @f_ret_int_double_s(%struct.int_double_s* noalias sret(%struct.int_double_s) align 8 %agg.result)
+// CHECK: define{{.*}} void @f_ret_int_double_s(ptr noalias sret(%struct.int_double_s) align 8 %agg.result)
 struct int_double_s f_ret_int_double_s(void) {
   return (struct int_double_s){1, 2.0};
 }

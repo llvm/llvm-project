@@ -528,7 +528,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
             RegisterValue reg_value;
             if (reg_ctx->ReadRegister(vec_reg, reg_value)) {
               Status error;
-              if (reg_value.GetAsMemoryData(vec_reg, heap_data_up->GetBytes(),
+              if (reg_value.GetAsMemoryData(*vec_reg, heap_data_up->GetBytes(),
                                             heap_data_up->GetByteSize(),
                                             byte_order, error)) {
                 DataExtractor data(DataBufferSP(heap_data_up.release()),
@@ -556,11 +556,12 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
                   reg_ctx->ReadRegister(vec_reg2, reg_value2)) {
 
                 Status error;
-                if (reg_value.GetAsMemoryData(vec_reg, heap_data_up->GetBytes(),
-                                              vec_reg->byte_size, byte_order,
-                                              error) &&
+                if (reg_value.GetAsMemoryData(
+                        *vec_reg, heap_data_up->GetBytes(), vec_reg->byte_size,
+                        byte_order, error) &&
                     reg_value2.GetAsMemoryData(
-                        vec_reg2, heap_data_up->GetBytes() + vec_reg->byte_size,
+                        *vec_reg2,
+                        heap_data_up->GetBytes() + vec_reg->byte_size,
                         heap_data_up->GetByteSize() - vec_reg->byte_size,
                         byte_order, error)) {
                   DataExtractor data(DataBufferSP(heap_data_up.release()),

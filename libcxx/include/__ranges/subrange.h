@@ -16,6 +16,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/different_from.h>
 #include <__config>
+#include <__fwd/get.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
@@ -26,7 +27,8 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <__tuple>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_size.h>
 #include <__utility/move.h>
 #include <type_traits>
 
@@ -36,7 +38,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 namespace ranges {
   template<class _From, class _To>
@@ -285,7 +287,7 @@ struct tuple_element<1, const ranges::subrange<_Ip, _Sp, _Kp>> {
   using type = _Sp;
 };
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

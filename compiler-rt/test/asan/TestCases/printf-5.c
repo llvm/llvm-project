@@ -14,8 +14,7 @@ int main() {
   volatile int x = 12;
   volatile float f = 1.239;
   volatile char s[] = "34";
-  volatile char fmt[2];
-  memcpy((char *)fmt, "%c %d %f %s\n", sizeof(fmt));
+  volatile char fmt[2] = "%c %d %f %s\n";
   printf((char *)fmt, c, x, f, s);
   return 0;
   // Check that format string is sanitized.

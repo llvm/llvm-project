@@ -963,7 +963,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind 
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-NEXT:    psrlw %xmm3, %xmm4
 ; SSE41-NEXT:    pandn %xmm2, %xmm1
-; SSE41-NEXT:    psllw $1, %xmm0
+; SSE41-NEXT:    paddw %xmm0, %xmm0
 ; SSE41-NEXT:    psllw %xmm1, %xmm0
 ; SSE41-NEXT:    por %xmm4, %xmm0
 ; SSE41-NEXT:    retq
@@ -974,7 +974,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind 
 ; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX-NEXT:    vpsrlw %xmm3, %xmm0, %xmm3
 ; AVX-NEXT:    vpandn %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpsllw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpor %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -985,7 +985,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind 
 ; AVX512F-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX512F-NEXT:    vpsrlw %xmm3, %xmm0, %xmm3
 ; AVX512F-NEXT:    vpandn %xmm2, %xmm1, %xmm1
-; AVX512F-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpsllw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpor %xmm3, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -996,7 +996,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind 
 ; AVX512VL-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX512VL-NEXT:    vpsrlw %xmm3, %xmm0, %xmm3
 ; AVX512VL-NEXT:    vpandn %xmm2, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpsllw %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpor %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
@@ -1007,7 +1007,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind 
 ; AVX512BW-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX512BW-NEXT:    vpsrlw %xmm3, %xmm0, %xmm3
 ; AVX512BW-NEXT:    vpandn %xmm2, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsllw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpor %xmm3, %xmm0, %xmm0
 ; AVX512BW-NEXT:    retq
@@ -1018,7 +1018,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind 
 ; AVX512VLBW-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX512VLBW-NEXT:    vpsrlw %xmm3, %xmm0, %xmm3
 ; AVX512VLBW-NEXT:    vpandn %xmm2, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    vpsllw %xmm1, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    vpor %xmm3, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq

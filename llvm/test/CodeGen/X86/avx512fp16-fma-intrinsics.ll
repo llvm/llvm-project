@@ -465,7 +465,7 @@ define <32 x half> @test_x86_fma_vfnmsub_ph_512(<32 x half> %a0, <32 x half> %a1
   ret <32 x half> %3
 }
 
-define <8 x half>@test_int_x86_avx512_mask3_vfmadd_sh(<8 x half> %x0, <8 x half> %x1, half *%ptr_b, i8 %x3, i32 %x4) {
+define <8 x half>@test_int_x86_avx512_mask3_vfmadd_sh(<8 x half> %x0, <8 x half> %x1, ptr%ptr_b, i8 %x3, i32 %x4) {
 ; X86-LABEL: test_int_x86_avx512_mask3_vfmadd_sh:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -480,7 +480,7 @@ define <8 x half>@test_int_x86_avx512_mask3_vfmadd_sh(<8 x half> %x0, <8 x half>
 ; X64-NEXT:    vfmadd231sh (%rdi), %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf6,0x7d,0x09,0xb9,0x0f]
 ; X64-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %q = load half, half* %ptr_b
+  %q = load half, ptr %ptr_b
   %vecinit.i = insertelement <8 x half> undef, half %q, i32 0
   %1 = extractelement <8 x half> %x0, i64 0
   %2 = extractelement <8 x half> %vecinit.i, i64 0
@@ -525,7 +525,7 @@ define <8 x half>@test_int_x86_avx512_maskz_vfmadd_sh(<8 x half> %x0, <8 x half>
   ret <8 x half> %8
 }
 
-define void @fmadd_sh_mask_memfold(half* %a, half* %b, i8 %c) {
+define void @fmadd_sh_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ; X86-LABEL: fmadd_sh_mask_memfold:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x0c]
@@ -547,7 +547,7 @@ define void @fmadd_sh_mask_memfold(half* %a, half* %b, i8 %c) {
 ; X64-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xc1]
 ; X64-NEXT:    vmovsh %xmm0, (%rdi) # encoding: [0x62,0xf5,0x7e,0x08,0x11,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %a.val = load half, half* %a
+  %a.val = load half, ptr %a
   %av0 = insertelement <8 x half> undef, half %a.val, i32 0
   %av1 = insertelement <8 x half> %av0, half 0.000000e+00, i32 1
   %av2 = insertelement <8 x half> %av1, half 0.000000e+00, i32 2
@@ -557,7 +557,7 @@ define void @fmadd_sh_mask_memfold(half* %a, half* %b, i8 %c) {
   %av6 = insertelement <8 x half> %av5, half 0.000000e+00, i32 6
   %av  = insertelement <8 x half> %av6, half 0.000000e+00, i32 7
 
-  %b.val = load half, half* %b
+  %b.val = load half, ptr %b
   %bv0 = insertelement <8 x half> undef, half %b.val, i32 0
   %bv1 = insertelement <8 x half> %bv0, half 0.000000e+00, i32 1
   %bv2 = insertelement <8 x half> %bv1, half 0.000000e+00, i32 2
@@ -575,7 +575,7 @@ define void @fmadd_sh_mask_memfold(half* %a, half* %b, i8 %c) {
   %7 = select i1 %6, half %4, half %1
   %8 = insertelement <8 x half> %av, half %7, i64 0
   %sr = extractelement <8 x half> %8, i32 0
-  store half %sr, half* %a
+  store half %sr, ptr %a
   ret void
 }
 

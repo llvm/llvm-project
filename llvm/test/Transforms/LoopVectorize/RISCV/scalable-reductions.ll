@@ -395,6 +395,41 @@ for.end:
   ret i32 %mul
 }
 
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 2, interleaved count: 2)
+define float @fmuladd(float* %a, float* %b, i64 %n) {
+; CHECK-LABEL: @fmuladd(
+; CHECK: vector.body:
+; CHECK: [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>
+; CHECK: [[WIDE_LOAD2:%.*]] = load <vscale x 2 x float>
+; CHECK: [[WIDE_LOAD3:%.*]] = load <vscale x 2 x float>
+; CHECK: [[WIDE_LOAD4:%.*]] = load <vscale x 2 x float>
+; CHECK: [[MULADD1:%.*]] = call reassoc <vscale x 2 x float> @llvm.fmuladd.nxv2f32(<vscale x 2 x float> [[WIDE_LOAD]], <vscale x 2 x float> [[WIDE_LOAD3]],
+; CHECK: [[MULADD2:%.*]] = call reassoc <vscale x 2 x float> @llvm.fmuladd.nxv2f32(<vscale x 2 x float> [[WIDE_LOAD2]], <vscale x 2 x float> [[WIDE_LOAD4]],
+; CHECK: middle.block:
+; CHECK: [[BIN_RDX:%.*]] = fadd reassoc <vscale x 2 x float> [[MULADD2]], [[MULADD1]]
+; CHECK: call reassoc float @llvm.vector.reduce.fadd.nxv2f32(float -0.000000e+00, <vscale x 2 x float> [[BIN_RDX]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi float [ 0.000000e+00, %entry ], [ %muladd, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %b, i64 %iv
+  %1 = load float, float* %arrayidx2, align 4
+  %muladd = tail call reassoc float @llvm.fmuladd.f32(float %0, float %1, float %sum.07)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
+
+for.end:
+  ret float %muladd
+}
+
+declare float @llvm.fmuladd.f32(float, float, float)
+
 attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 
 !0 = distinct !{!0, !1, !2, !3, !4}

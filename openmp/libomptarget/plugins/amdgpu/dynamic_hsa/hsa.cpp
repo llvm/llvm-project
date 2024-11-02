@@ -10,12 +10,14 @@
 // Does the dlopen/dlsym calls as part of the call to hsa_init
 //
 //===----------------------------------------------------------------------===//
-#include "hsa.h"
+
+#include "llvm/Support/DynamicLibrary.h"
+
 #include "Debug.h"
 #include "dlwrap.h"
+#include "hsa.h"
 #include "hsa_ext_amd.h"
-
-#include <dlfcn.h>
+#include <memory>
 
 DLWRAP_INITIALIZE();
 
@@ -23,8 +25,11 @@ DLWRAP_INTERNAL(hsa_init, 0);
 
 DLWRAP(hsa_status_string, 2);
 DLWRAP(hsa_shut_down, 0);
+DLWRAP(hsa_system_get_info, 2);
 DLWRAP(hsa_agent_get_info, 3);
+DLWRAP(hsa_isa_get_info_alt, 3);
 DLWRAP(hsa_iterate_agents, 2);
+DLWRAP(hsa_agent_iterate_isas, 3);
 DLWRAP(hsa_signal_create, 4);
 DLWRAP(hsa_signal_destroy, 1);
 DLWRAP(hsa_signal_store_relaxed, 2);
@@ -69,16 +74,18 @@ static bool checkForHSA() {
   // return true if dlopen succeeded and all functions found
 
   const char *HsaLib = DYNAMIC_HSA_PATH;
-  void *DynlibHandle = dlopen(HsaLib, RTLD_NOW);
-  if (!DynlibHandle) {
-    DP("Unable to load library '%s': %s!\n", HsaLib, dlerror());
+  std::string ErrMsg;
+  auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+      llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
+  if (!DynlibHandle->isValid()) {
+    DP("Unable to load library '%s': %s!\n", HsaLib, ErrMsg.c_str());
     return false;
   }
 
   for (size_t I = 0; I < dlwrap::size(); I++) {
     const char *Sym = dlwrap::symbol(I);
 
-    void *P = dlsym(DynlibHandle, Sym);
+    void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
       DP("Unable to find '%s' in '%s'!\n", Sym, HsaLib);
       return false;

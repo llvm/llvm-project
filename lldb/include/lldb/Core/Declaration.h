@@ -24,7 +24,7 @@ namespace lldb_private {
 class Declaration {
 public:
   /// Default constructor.
-  Declaration() {}
+  Declaration() = default;
 
   /// Construct with file specification, and optional line and column.
   ///

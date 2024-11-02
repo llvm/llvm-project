@@ -8,6 +8,7 @@
 
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "Lexer.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
@@ -43,12 +44,12 @@ namespace {
 class Parser {
 public:
   Parser(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
-         CodeCompleteContext *codeCompleteContext)
+         bool enableDocumentation, CodeCompleteContext *codeCompleteContext)
       : ctx(ctx), lexer(sourceMgr, ctx.getDiagEngine(), codeCompleteContext),
-        curToken(lexer.lexToken()), valueTy(ast::ValueType::get(ctx)),
-        valueRangeTy(ast::ValueRangeType::get(ctx)),
-        typeTy(ast::TypeType::get(ctx)),
+        curToken(lexer.lexToken()), enableDocumentation(enableDocumentation),
+        typeTy(ast::TypeType::get(ctx)), valueTy(ast::ValueType::get(ctx)),
         typeRangeTy(ast::TypeRangeType::get(ctx)),
+        valueRangeTy(ast::ValueRangeType::get(ctx)),
         attrTy(ast::AttributeType::get(ctx)),
         codeCompleteContext(codeCompleteContext) {}
 
@@ -114,6 +115,14 @@ private:
   LogicalResult convertExpressionTo(
       ast::Expr *&expr, ast::Type type,
       function_ref<void(ast::Diagnostic &diag)> noteAttachFn = {});
+  LogicalResult
+  convertOpExpressionTo(ast::Expr *&expr, ast::OperationType exprType,
+                        ast::Type type,
+                        function_ref<ast::InFlightDiagnostic()> emitErrorFn);
+  LogicalResult convertTupleExpressionTo(
+      ast::Expr *&expr, ast::TupleType exprType, ast::Type type,
+      function_ref<ast::InFlightDiagnostic()> emitErrorFn,
+      function_ref<void(ast::Diagnostic &diag)> noteAttachFn);
 
   /// Given an operation expression, convert it to a Value or ValueRange
   /// typed expression.
@@ -123,6 +132,27 @@ private:
   /// information is found.
   const ods::Operation *lookupODSOperation(Optional<StringRef> opName) {
     return opName ? ctx.getODSContext().lookupOperation(*opName) : nullptr;
+  }
+
+  /// Process the given documentation string, or return an empty string if
+  /// documentation isn't enabled.
+  StringRef processDoc(StringRef doc) {
+    return enableDocumentation ? doc : StringRef();
+  }
+
+  /// Process the given documentation string and format it, or return an empty
+  /// string if documentation isn't enabled.
+  std::string processAndFormatDoc(const Twine &doc) {
+    if (!enableDocumentation)
+      return "";
+    std::string docStr;
+    {
+      llvm::raw_string_ostream docOS(docStr);
+      std::string tmpDocStr = doc.str();
+      raw_indented_ostream(docOS).printReindented(
+          StringRef(tmpDocStr).rtrim(" \t"));
+    }
+    return docStr;
   }
 
   //===--------------------------------------------------------------------===//
@@ -140,10 +170,10 @@ private:
   /// Create a user defined native constraint for a constraint imported from
   /// ODS.
   template <typename ConstraintT>
-  ast::Decl *createODSNativePDLLConstraintDecl(StringRef name,
-                                               StringRef codeBlock, SMRange loc,
-                                               ast::Type type,
-                                               StringRef nativeType);
+  ast::Decl *
+  createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
+                                    SMRange loc, ast::Type type,
+                                    StringRef nativeType, StringRef docString);
   template <typename ConstraintT>
   ast::Decl *
   createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
@@ -267,13 +297,10 @@ private:
   /// existing constraints that have already been parsed for the same entity
   /// that will be constrained by this constraint. `allowInlineTypeConstraints`
   /// allows the use of inline Type constraints, e.g. `Value<valueType: Type>`.
-  /// If `allowNonCoreConstraints` is true, then complex (e.g. user defined
-  /// constraints) may be used with the variable.
   FailureOr<ast::ConstraintRef>
   parseConstraint(Optional<SMRange> &typeConstraint,
                   ArrayRef<ast::ConstraintRef> existingConstraints,
-                  bool allowInlineTypeConstraints,
-                  bool allowNonCoreConstraints);
+                  bool allowInlineTypeConstraints);
 
   /// Try to parse the constraint for a UserConstraintDecl/UserRewriteDecl
   /// argument or result variable. The constraints for these variables do not
@@ -359,20 +386,16 @@ private:
   /// `inferredType` is the type of the variable inferred by the constraints
   /// within the list, and is updated to the most refined type as determined by
   /// the constraints. Returns success if the constraint list is valid, failure
-  /// otherwise. If `allowNonCoreConstraints` is true, then complex (e.g. user
-  /// defined constraints) may be used with the variable.
+  /// otherwise.
   LogicalResult
   validateVariableConstraints(ArrayRef<ast::ConstraintRef> constraints,
-                              ast::Type &inferredType,
-                              bool allowNonCoreConstraints = true);
+                              ast::Type &inferredType);
   /// Validate a single reference to a constraint. `inferredType` contains the
   /// currently inferred variabled type and is refined within the type defined
   /// by the constraint. Returns success if the constraint is valid, failure
-  /// otherwise. If `allowNonCoreConstraints` is true, then complex (e.g. user
-  /// defined constraints) may be used with the variable.
+  /// otherwise.
   LogicalResult validateVariableConstraint(const ast::ConstraintRef &ref,
-                                           ast::Type &inferredType,
-                                           bool allowNonCoreConstraints = true);
+                                           ast::Type &inferredType);
   LogicalResult validateTypeConstraintExpr(const ast::Expr *typeExpr);
   LogicalResult validateTypeRangeConstraintExpr(const ast::Expr *typeExpr);
 
@@ -396,23 +419,23 @@ private:
   FailureOr<ast::OperationExpr *>
   createOperationExpr(SMRange loc, const ast::OpNameDecl *name,
                       OpResultTypeContext resultTypeContext,
-                      MutableArrayRef<ast::Expr *> operands,
+                      SmallVectorImpl<ast::Expr *> &operands,
                       MutableArrayRef<ast::NamedAttributeDecl *> attributes,
-                      MutableArrayRef<ast::Expr *> results);
+                      SmallVectorImpl<ast::Expr *> &results);
   LogicalResult
   validateOperationOperands(SMRange loc, Optional<StringRef> name,
                             const ods::Operation *odsOp,
-                            MutableArrayRef<ast::Expr *> operands);
+                            SmallVectorImpl<ast::Expr *> &operands);
   LogicalResult validateOperationResults(SMRange loc, Optional<StringRef> name,
                                          const ods::Operation *odsOp,
-                                         MutableArrayRef<ast::Expr *> results);
+                                         SmallVectorImpl<ast::Expr *> &results);
   void checkOperationResultTypeInferrence(SMRange loc, StringRef name,
                                           const ods::Operation *odsOp);
   LogicalResult validateOperationOperandsOrResults(
       StringRef groupName, SMRange loc, Optional<SMRange> odsOpLoc,
-      Optional<StringRef> name, MutableArrayRef<ast::Expr *> values,
+      Optional<StringRef> name, SmallVectorImpl<ast::Expr *> &values,
       ArrayRef<ods::OperandOrResult> odsValues, ast::Type singleTy,
-      ast::Type rangeTy);
+      ast::RangeType rangeTy);
   FailureOr<ast::TupleExpr *> createTupleExpr(SMRange loc,
                                               ArrayRef<ast::Expr *> elements,
                                               ArrayRef<StringRef> elementNames);
@@ -439,7 +462,6 @@ private:
   LogicalResult codeCompleteMemberAccess(ast::Expr *parentExpr);
   LogicalResult codeCompleteAttributeName(Optional<StringRef> opName);
   LogicalResult codeCompleteConstraintName(ast::Type inferredType,
-                                           bool allowNonCoreConstraints,
                                            bool allowInlineTypeConstraints);
   LogicalResult codeCompleteDialectName();
   LogicalResult codeCompleteOperationName(StringRef dialectName);
@@ -520,6 +542,10 @@ private:
   /// The current token within the lexer.
   Token curToken;
 
+  /// A flag indicating if the parser should add documentation to AST nodes when
+  /// viable.
+  bool enableDocumentation;
+
   /// The most recently defined decl scope.
   ast::DeclScope *curDeclScope = nullptr;
   llvm::SpecificBumpPtrAllocator<ast::DeclScope> scopeAllocator;
@@ -528,8 +554,8 @@ private:
   ParserContext parserContext = ParserContext::Global;
 
   /// Cached types to simplify verification and expression creation.
-  ast::Type valueTy, valueRangeTy;
-  ast::Type typeTy, typeRangeTy;
+  ast::Type typeTy, valueTy;
+  ast::RangeType typeRangeTy, valueRangeTy;
   ast::Type attrTy;
 
   /// A counter used when naming anonymous constraints and rewrites.
@@ -592,55 +618,8 @@ LogicalResult Parser::convertExpressionTo(
     return diag;
   };
 
-  if (auto exprOpType = exprType.dyn_cast<ast::OperationType>()) {
-    // Two operation types are compatible if they have the same name, or if the
-    // expected type is more general.
-    if (auto opType = type.dyn_cast<ast::OperationType>()) {
-      if (opType.getName())
-        return emitConvertError();
-      return success();
-    }
-
-    // An operation can always convert to a ValueRange.
-    if (type == valueRangeTy) {
-      expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
-                                                     valueRangeTy);
-      return success();
-    }
-
-    // Allow conversion to a single value by constraining the result range.
-    if (type == valueTy) {
-      // If the operation is registered, we can verify if it can ever have a
-      // single result.
-      if (const ods::Operation *odsOp = exprOpType.getODSOperation()) {
-        if (odsOp->getResults().empty()) {
-          return emitConvertError()->attachNote(
-              llvm::formatv("see the definition of `{0}`, which was defined "
-                            "with zero results",
-                            odsOp->getName()),
-              odsOp->getLoc());
-        }
-
-        unsigned numSingleResults = llvm::count_if(
-            odsOp->getResults(), [](const ods::OperandOrResult &result) {
-              return result.getVariableLengthKind() ==
-                     ods::VariableLengthKind::Single;
-            });
-        if (numSingleResults > 1) {
-          return emitConvertError()->attachNote(
-              llvm::formatv("see the definition of `{0}`, which was defined "
-                            "with at least {1} results",
-                            odsOp->getName(), numSingleResults),
-              odsOp->getLoc());
-        }
-      }
-
-      expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
-                                                     valueTy);
-      return success();
-    }
-    return emitConvertError();
-  }
+  if (auto exprOpType = exprType.dyn_cast<ast::OperationType>())
+    return convertOpExpressionTo(expr, exprOpType, type, emitConvertError);
 
   // FIXME: Decide how to allow/support converting a single result to multiple,
   // and multiple to a single result. For now, we just allow Single->Range,
@@ -654,22 +633,85 @@ LogicalResult Parser::convertExpressionTo(
     return success();
 
   // Handle tuple types.
-  if (auto exprTupleType = exprType.dyn_cast<ast::TupleType>()) {
-    auto tupleType = type.dyn_cast<ast::TupleType>();
-    if (!tupleType || tupleType.size() != exprTupleType.size())
-      return emitConvertError();
+  if (auto exprTupleType = exprType.dyn_cast<ast::TupleType>())
+    return convertTupleExpressionTo(expr, exprTupleType, type, emitConvertError,
+                                    noteAttachFn);
+
+  return emitConvertError();
+}
+
+LogicalResult Parser::convertOpExpressionTo(
+    ast::Expr *&expr, ast::OperationType exprType, ast::Type type,
+    function_ref<ast::InFlightDiagnostic()> emitErrorFn) {
+  // Two operation types are compatible if they have the same name, or if the
+  // expected type is more general.
+  if (auto opType = type.dyn_cast<ast::OperationType>()) {
+    if (opType.getName())
+      return emitErrorFn();
+    return success();
+  }
+
+  // An operation can always convert to a ValueRange.
+  if (type == valueRangeTy) {
+    expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
+                                                   valueRangeTy);
+    return success();
+  }
+
+  // Allow conversion to a single value by constraining the result range.
+  if (type == valueTy) {
+    // If the operation is registered, we can verify if it can ever have a
+    // single result.
+    if (const ods::Operation *odsOp = exprType.getODSOperation()) {
+      if (odsOp->getResults().empty()) {
+        return emitErrorFn()->attachNote(
+            llvm::formatv("see the definition of `{0}`, which was defined "
+                          "with zero results",
+                          odsOp->getName()),
+            odsOp->getLoc());
+      }
+
+      unsigned numSingleResults = llvm::count_if(
+          odsOp->getResults(), [](const ods::OperandOrResult &result) {
+            return result.getVariableLengthKind() ==
+                   ods::VariableLengthKind::Single;
+          });
+      if (numSingleResults > 1) {
+        return emitErrorFn()->attachNote(
+            llvm::formatv("see the definition of `{0}`, which was defined "
+                          "with at least {1} results",
+                          odsOp->getName(), numSingleResults),
+            odsOp->getLoc());
+      }
+    }
+
+    expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
+                                                   valueTy);
+    return success();
+  }
+  return emitErrorFn();
+}
+
+LogicalResult Parser::convertTupleExpressionTo(
+    ast::Expr *&expr, ast::TupleType exprType, ast::Type type,
+    function_ref<ast::InFlightDiagnostic()> emitErrorFn,
+    function_ref<void(ast::Diagnostic &diag)> noteAttachFn) {
+  // Handle conversions between tuples.
+  if (auto tupleType = type.dyn_cast<ast::TupleType>()) {
+    if (tupleType.size() != exprType.size())
+      return emitErrorFn();
 
     // Build a new tuple expression using each of the elements of the current
     // tuple.
     SmallVector<ast::Expr *> newExprs;
-    for (unsigned i = 0, e = exprTupleType.size(); i < e; ++i) {
+    for (unsigned i = 0, e = exprType.size(); i < e; ++i) {
       newExprs.push_back(ast::MemberAccessExpr::create(
           ctx, expr->getLoc(), expr, llvm::to_string(i),
-          exprTupleType.getElementTypes()[i]));
+          exprType.getElementTypes()[i]));
 
       auto diagFn = [&](ast::Diagnostic &diag) {
         diag.attachNote(llvm::formatv("when converting element #{0} of `{1}`",
-                                      i, exprTupleType));
+                                      i, exprType));
         if (noteAttachFn)
           noteAttachFn(diag);
       };
@@ -682,7 +724,37 @@ LogicalResult Parser::convertExpressionTo(
     return success();
   }
 
-  return emitConvertError();
+  // Handle conversion to a range.
+  auto convertToRange = [&](ArrayRef<ast::Type> allowedElementTypes,
+                            ast::RangeType resultTy) -> LogicalResult {
+    // TODO: We currently only allow range conversion within a rewrite context.
+    if (parserContext != ParserContext::Rewrite) {
+      return emitErrorFn()->attachNote("Tuple to Range conversion is currently "
+                                       "only allowed within a rewrite context");
+    }
+
+    // All of the tuple elements must be allowed types.
+    for (ast::Type elementType : exprType.getElementTypes())
+      if (!llvm::is_contained(allowedElementTypes, elementType))
+        return emitErrorFn();
+
+    // Build a new tuple expression using each of the elements of the current
+    // tuple.
+    SmallVector<ast::Expr *> newExprs;
+    for (unsigned i = 0, e = exprType.size(); i < e; ++i) {
+      newExprs.push_back(ast::MemberAccessExpr::create(
+          ctx, expr->getLoc(), expr, llvm::to_string(i),
+          exprType.getElementTypes()[i]));
+    }
+    expr = ast::RangeExpr::create(ctx, expr->getLoc(), newExprs, resultTy);
+    return success();
+  };
+  if (type == valueRangeTy)
+    return convertToRange({valueTy, valueRangeTy}, valueRangeTy);
+  if (type == typeRangeTy)
+    return convertToRange({typeTy, typeRangeTy}, typeRangeTy);
+
+  return emitErrorFn();
 }
 
 //===----------------------------------------------------------------------===//
@@ -801,9 +873,10 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
   ods::Context &odsContext = ctx.getODSContext();
   auto addTypeConstraint = [&](const tblgen::NamedTypeConstraint &cst)
       -> const ods::TypeConstraint & {
-    return odsContext.insertTypeConstraint(cst.constraint.getUniqueDefName(),
-                                           cst.constraint.getSummary(),
-                                           cst.constraint.getCPPClassName());
+    return odsContext.insertTypeConstraint(
+        cst.constraint.getUniqueDefName(),
+        processDoc(cst.constraint.getSummary()),
+        cst.constraint.getCPPClassName());
   };
   auto convertLocToRange = [&](llvm::SMLoc loc) -> llvm::SMRange {
     return {loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)};
@@ -818,23 +891,21 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     bool supportsResultTypeInferrence =
         op.getTrait("::mlir::InferTypeOpInterface::Trait");
 
-    bool inserted = false;
-    ods::Operation *odsOp = nullptr;
-    std::tie(odsOp, inserted) = odsContext.insertOperation(
-        op.getOperationName(), op.getSummary(), op.getDescription(),
-        op.getQualCppClassName(), supportsResultTypeInferrence,
-        op.getLoc().front());
+    auto [odsOp, inserted] = odsContext.insertOperation(
+        op.getOperationName(), processDoc(op.getSummary()),
+        processAndFormatDoc(op.getDescription()), op.getQualCppClassName(),
+        supportsResultTypeInferrence, op.getLoc().front());
 
     // Ignore operations that have already been added.
     if (!inserted)
       continue;
 
     for (const tblgen::NamedAttribute &attr : op.getAttributes()) {
-      odsOp->appendAttribute(
-          attr.name, attr.attr.isOptional(),
-          odsContext.insertAttributeConstraint(attr.attr.getUniqueDefName(),
-                                               attr.attr.getSummary(),
-                                               attr.attr.getStorageType()));
+      odsOp->appendAttribute(attr.name, attr.attr.isOptional(),
+                             odsContext.insertAttributeConstraint(
+                                 attr.attr.getUniqueDefName(),
+                                 processDoc(attr.attr.getSummary()),
+                                 attr.attr.getStorageType()));
     }
     for (const tblgen::NamedTypeConstraint &operand : op.getOperands()) {
       odsOp->appendOperand(operand.name, getLengthKind(operand),
@@ -845,64 +916,60 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
                           addTypeConstraint(result));
     }
   }
+
+  auto shouldBeSkipped = [this](llvm::Record *def) {
+    return def->isAnonymous() || curDeclScope->lookup(def->getName()) ||
+           def->isSubClassOf("DeclareInterfaceMethods");
+  };
+
   /// Attr constraints.
   for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Attr")) {
-    if (!def->isAnonymous() && !curDeclScope->lookup(def->getName())) {
-      tblgen::Attribute constraint(def);
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
-              constraint, convertLocToRange(def->getLoc().front()), attrTy,
-              constraint.getStorageType()));
-    }
+    if (shouldBeSkipped(def))
+      continue;
+
+    tblgen::Attribute constraint(def);
+    decls.push_back(createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
+        constraint, convertLocToRange(def->getLoc().front()), attrTy,
+        constraint.getStorageType()));
   }
   /// Type constraints.
   for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
-    if (!def->isAnonymous() && !curDeclScope->lookup(def->getName())) {
-      tblgen::TypeConstraint constraint(def);
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
-              constraint, convertLocToRange(def->getLoc().front()), typeTy,
-              constraint.getCPPClassName()));
-    }
-  }
-  /// Interfaces.
-  ast::Type opTy = ast::OperationType::get(ctx);
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Interface")) {
-    StringRef name = def->getName();
-    if (def->isAnonymous() || curDeclScope->lookup(name) ||
-        def->isSubClassOf("DeclareInterfaceMethods"))
+    if (shouldBeSkipped(def))
       continue;
+
+    tblgen::TypeConstraint constraint(def);
+    decls.push_back(createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
+        constraint, convertLocToRange(def->getLoc().front()), typeTy,
+        constraint.getCPPClassName()));
+  }
+  /// OpInterfaces.
+  ast::Type opTy = ast::OperationType::get(ctx);
+  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("OpInterface")) {
+    if (shouldBeSkipped(def))
+      continue;
+
     SMRange loc = convertLocToRange(def->getLoc().front());
 
     std::string cppClassName =
         llvm::formatv("{0}::{1}", def->getValueAsString("cppNamespace"),
-                      def->getValueAsString("cppClassName"))
+                      def->getValueAsString("cppInterfaceName"))
             .str();
     std::string codeBlock =
         llvm::formatv("return ::mlir::success(llvm::isa<{0}>(self));",
                       cppClassName)
             .str();
 
-    if (def->isSubClassOf("OpInterface")) {
-      decls.push_back(createODSNativePDLLConstraintDecl<ast::OpConstraintDecl>(
-          name, codeBlock, loc, opTy, cppClassName));
-    } else if (def->isSubClassOf("AttrInterface")) {
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
-              name, codeBlock, loc, attrTy, cppClassName));
-    } else if (def->isSubClassOf("TypeInterface")) {
-      decls.push_back(
-          createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
-              name, codeBlock, loc, typeTy, cppClassName));
-    }
+    std::string desc =
+        processAndFormatDoc(def->getValueAsString("description"));
+    decls.push_back(createODSNativePDLLConstraintDecl<ast::OpConstraintDecl>(
+        def->getName(), codeBlock, loc, opTy, cppClassName, desc));
   }
 }
 
 template <typename ConstraintT>
-ast::Decl *
-Parser::createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
-                                          SMRange loc, ast::Type type,
-                                          StringRef nativeType) {
+ast::Decl *Parser::createODSNativePDLLConstraintDecl(
+    StringRef name, StringRef codeBlock, SMRange loc, ast::Type type,
+    StringRef nativeType, StringRef docString) {
   // Build the single input parameter.
   ast::DeclScope *argScope = pushDeclScope();
   auto *paramVar = ast::VariableDecl::create(
@@ -915,6 +982,7 @@ Parser::createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
   auto *constraintDecl = ast::UserConstraintDecl::createNative(
       ctx, ast::Name::create(ctx, name, loc), paramVar,
       /*results=*/llvm::None, codeBlock, ast::TupleType::get(ctx), nativeType);
+  constraintDecl->setDocComment(ctx, docString);
   curDeclScope->add(constraintDecl);
   return constraintDecl;
 }
@@ -931,8 +999,20 @@ Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
       "return ::mlir::success(" + constraint.getConditionTemplate() + ");",
       &fmtContext);
 
+  // If documentation was enabled, build the doc string for the generated
+  // constraint. It would be nice to do this lazily, but TableGen information is
+  // destroyed after we finish parsing the file.
+  std::string docString;
+  if (enableDocumentation) {
+    StringRef desc = constraint.getDescription();
+    docString = processAndFormatDoc(
+        constraint.getSummary() +
+        (desc.empty() ? "" : ("\n\n" + constraint.getDescription())));
+  }
+
   return createODSNativePDLLConstraintDecl<ConstraintT>(
-      constraint.getUniqueDefName(), codeBlock, loc, type, nativeType);
+      constraint.getUniqueDefName(), codeBlock, loc, type, nativeType,
+      docString);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1041,18 +1121,7 @@ FailureOr<ast::VariableDecl *> Parser::parseResultDecl(unsigned resultNum) {
   // Check to see if this result is named.
   if (curToken.is(Token::identifier) || curToken.isDependentKeyword()) {
     // Check to see if this name actually refers to a Constraint.
-    ast::Decl *existingDecl = curDeclScope->lookup(curToken.getSpelling());
-    if (isa_and_nonnull<ast::ConstraintDecl>(existingDecl)) {
-      // If yes, and this is a Rewrite, give a nice error message as non-Core
-      // constraints are not supported on Rewrite results.
-      if (parserContext == ParserContext::Rewrite) {
-        return emitError(
-            "`Rewrite` results are only permitted to use core constraints, "
-            "such as `Attr`, `Op`, `Type`, `TypeRange`, `Value`, `ValueRange`");
-      }
-
-      // Otherwise, parse this as an unnamed result variable.
-    } else {
+    if (!curDeclScope->lookup<ast::ConstraintDecl>(curToken.getSpelling())) {
       // If it wasn't a constraint, parse the result similarly to a variable. If
       // there is already an existing decl, we will emit an error when defining
       // this variable later.
@@ -1574,8 +1643,7 @@ LogicalResult Parser::parseVariableDeclConstraintList(
   Optional<SMRange> typeConstraint;
   auto parseSingleConstraint = [&] {
     FailureOr<ast::ConstraintRef> constraint = parseConstraint(
-        typeConstraint, constraints, /*allowInlineTypeConstraints=*/true,
-        /*allowNonCoreConstraints=*/true);
+        typeConstraint, constraints, /*allowInlineTypeConstraints=*/true);
     if (failed(constraint))
       return failure();
     constraints.push_back(*constraint);
@@ -1596,8 +1664,7 @@ LogicalResult Parser::parseVariableDeclConstraintList(
 FailureOr<ast::ConstraintRef>
 Parser::parseConstraint(Optional<SMRange> &typeConstraint,
                         ArrayRef<ast::ConstraintRef> existingConstraints,
-                        bool allowInlineTypeConstraints,
-                        bool allowNonCoreConstraints) {
+                        bool allowInlineTypeConstraints) {
   auto parseTypeConstraint = [&](ast::Expr *&typeExpr) -> LogicalResult {
     if (!allowInlineTypeConstraints) {
       return emitError(
@@ -1703,12 +1770,10 @@ Parser::parseConstraint(Optional<SMRange> &typeConstraint,
   case Token::code_complete: {
     // Try to infer the current type for use by code completion.
     ast::Type inferredType;
-    if (failed(validateVariableConstraints(existingConstraints, inferredType,
-                                           allowNonCoreConstraints)))
+    if (failed(validateVariableConstraints(existingConstraints, inferredType)))
       return failure();
 
-    return codeCompleteConstraintName(inferredType, allowNonCoreConstraints,
-                                      allowInlineTypeConstraints);
+    return codeCompleteConstraintName(inferredType, allowInlineTypeConstraints);
   }
   default:
     break;
@@ -1717,13 +1782,9 @@ Parser::parseConstraint(Optional<SMRange> &typeConstraint,
 }
 
 FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
-  // Constraint arguments may apply more complex constraints via the arguments.
-  bool allowNonCoreConstraints = parserContext == ParserContext::Constraint;
-
   Optional<SMRange> typeConstraint;
   return parseConstraint(typeConstraint, /*existingConstraints=*/llvm::None,
-                         /*allowInlineTypeConstraints=*/false,
-                         allowNonCoreConstraints);
+                         /*allowInlineTypeConstraints=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2510,29 +2571,23 @@ Parser::createVariableDecl(StringRef name, SMRange loc, ast::Expr *initializer,
 FailureOr<ast::VariableDecl *>
 Parser::createArgOrResultVariableDecl(StringRef name, SMRange loc,
                                       const ast::ConstraintRef &constraint) {
-  // Constraint arguments may apply more complex constraints via the arguments.
-  bool allowNonCoreConstraints = parserContext == ParserContext::Constraint;
   ast::Type argType;
-  if (failed(validateVariableConstraint(constraint, argType,
-                                        allowNonCoreConstraints)))
+  if (failed(validateVariableConstraint(constraint, argType)))
     return failure();
   return defineVariableDecl(name, loc, argType, constraint);
 }
 
 LogicalResult
 Parser::validateVariableConstraints(ArrayRef<ast::ConstraintRef> constraints,
-                                    ast::Type &inferredType,
-                                    bool allowNonCoreConstraints) {
+                                    ast::Type &inferredType) {
   for (const ast::ConstraintRef &ref : constraints)
-    if (failed(validateVariableConstraint(ref, inferredType,
-                                          allowNonCoreConstraints)))
+    if (failed(validateVariableConstraint(ref, inferredType)))
       return failure();
   return success();
 }
 
 LogicalResult Parser::validateVariableConstraint(const ast::ConstraintRef &ref,
-                                                 ast::Type &inferredType,
-                                                 bool allowNonCoreConstraints) {
+                                                 ast::Type &inferredType) {
   ast::Type constraintType;
   if (const auto *cst = dyn_cast<ast::AttrConstraintDecl>(ref.constraint)) {
     if (const ast::Expr *typeExpr = cst->getTypeExpr()) {
@@ -2564,13 +2619,6 @@ LogicalResult Parser::validateVariableConstraint(const ast::ConstraintRef &ref,
     constraintType = valueRangeTy;
   } else if (const auto *cst =
                  dyn_cast<ast::UserConstraintDecl>(ref.constraint)) {
-    if (!allowNonCoreConstraints) {
-      return emitError(ref.referenceLoc,
-                       "`Rewrite` arguments and results are only permitted to "
-                       "use core constraints, such as `Attr`, `Op`, `Type`, "
-                       "`TypeRange`, `Value`, `ValueRange`");
-    }
-
     ArrayRef<ast::VariableDecl *> inputs = cst->getInputs();
     if (inputs.size() != 1) {
       return emitErrorAndNote(ref.referenceLoc,
@@ -2763,9 +2811,9 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
 FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
     SMRange loc, const ast::OpNameDecl *name,
     OpResultTypeContext resultTypeContext,
-    MutableArrayRef<ast::Expr *> operands,
+    SmallVectorImpl<ast::Expr *> &operands,
     MutableArrayRef<ast::NamedAttributeDecl *> attributes,
-    MutableArrayRef<ast::Expr *> results) {
+    SmallVectorImpl<ast::Expr *> &results) {
   Optional<StringRef> opNameRef = name->getName();
   const ods::Operation *odsOp = lookupODSOperation(opNameRef);
 
@@ -2808,7 +2856,7 @@ FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
 LogicalResult
 Parser::validateOperationOperands(SMRange loc, Optional<StringRef> name,
                                   const ods::Operation *odsOp,
-                                  MutableArrayRef<ast::Expr *> operands) {
+                                  SmallVectorImpl<ast::Expr *> &operands) {
   return validateOperationOperandsOrResults(
       "operand", loc, odsOp ? odsOp->getLoc() : Optional<SMRange>(), name,
       operands, odsOp ? odsOp->getOperands() : llvm::None, valueTy,
@@ -2818,7 +2866,7 @@ Parser::validateOperationOperands(SMRange loc, Optional<StringRef> name,
 LogicalResult
 Parser::validateOperationResults(SMRange loc, Optional<StringRef> name,
                                  const ods::Operation *odsOp,
-                                 MutableArrayRef<ast::Expr *> results) {
+                                 SmallVectorImpl<ast::Expr *> &results) {
   return validateOperationOperandsOrResults(
       "result", loc, odsOp ? odsOp->getLoc() : Optional<SMRange>(), name,
       results, odsOp ? odsOp->getResults() : llvm::None, typeTy, typeRangeTy);
@@ -2868,9 +2916,9 @@ void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,
 
 LogicalResult Parser::validateOperationOperandsOrResults(
     StringRef groupName, SMRange loc, Optional<SMRange> odsOpLoc,
-    Optional<StringRef> name, MutableArrayRef<ast::Expr *> values,
+    Optional<StringRef> name, SmallVectorImpl<ast::Expr *> &values,
     ArrayRef<ods::OperandOrResult> odsValues, ast::Type singleTy,
-    ast::Type rangeTy) {
+    ast::RangeType rangeTy) {
   // All operation types accept a single range parameter.
   if (values.size() == 1) {
     if (failed(convertExpressionTo(values[0], rangeTy)))
@@ -2881,14 +2929,56 @@ LogicalResult Parser::validateOperationOperandsOrResults(
   /// If the operation has ODS information, we can more accurately verify the
   /// values.
   if (odsOpLoc) {
-    if (odsValues.size() != values.size()) {
+    auto emitSizeMismatchError = [&] {
       return emitErrorAndNote(
           loc,
           llvm::formatv("invalid number of {0} groups for `{1}`; expected "
                         "{2}, but got {3}",
                         groupName, *name, odsValues.size(), values.size()),
           *odsOpLoc, llvm::formatv("see the definition of `{0}` here", *name));
+    };
+
+    // Handle the case where no values were provided.
+    if (values.empty()) {
+      // If we don't expect any on the ODS side, we are done.
+      if (odsValues.empty())
+        return success();
+
+      // If we do, check if we actually need to provide values (i.e. if any of
+      // the values are actually required).
+      unsigned numVariadic = 0;
+      for (const auto &odsValue : odsValues) {
+        if (!odsValue.isVariableLength())
+          return emitSizeMismatchError();
+        ++numVariadic;
+      }
+
+      // If we are in a non-rewrite context, we don't need to do anything more.
+      // Zero-values is a valid constraint on the operation.
+      if (parserContext != ParserContext::Rewrite)
+        return success();
+
+      // Otherwise, when in a rewrite we may need to provide values to match the
+      // ODS signature of the operation to create.
+
+      // If we only have one variadic value, just use an empty list.
+      if (numVariadic == 1)
+        return success();
+
+      // Otherwise, create dummy values for each of the entries so that we
+      // adhere to the ODS signature.
+      for (unsigned i = 0, e = odsValues.size(); i < e; ++i) {
+        values.push_back(
+            ast::RangeExpr::create(ctx, loc, /*elements=*/llvm::None, rangeTy));
+      }
+      return success();
     }
+
+    // Verify that the number of values provided matches the number of value
+    // groups ODS expects.
+    if (odsValues.size() != values.size())
+      return emitSizeMismatchError();
+
     auto diagFn = [&](ast::Diagnostic &diag) {
       diag.attachNote(llvm::formatv("see the definition of `{0}` here", *name),
                       *odsOpLoc);
@@ -2919,6 +3009,10 @@ LogicalResult Parser::validateOperationOperandsOrResults(
         continue;
       }
     }
+
+    // Otherwise, try to convert the expression to a range.
+    if (succeeded(convertExpressionTo(valueExpr, rangeTy)))
+      continue;
 
     return emitError(
         valueExpr->getLoc(),
@@ -3026,11 +3120,9 @@ LogicalResult Parser::codeCompleteAttributeName(Optional<StringRef> opName) {
 
 LogicalResult
 Parser::codeCompleteConstraintName(ast::Type inferredType,
-                                   bool allowNonCoreConstraints,
                                    bool allowInlineTypeConstraints) {
   codeCompleteContext->codeCompleteConstraintName(
-      inferredType, allowNonCoreConstraints, allowInlineTypeConstraints,
-      curDeclScope);
+      inferredType, allowInlineTypeConstraints, curDeclScope);
   return failure();
 }
 
@@ -3080,8 +3172,9 @@ void Parser::codeCompleteOperationResultsSignature(Optional<StringRef> opName,
 //===----------------------------------------------------------------------===//
 
 FailureOr<ast::Module *>
-mlir::pdll::parsePDLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
-                        CodeCompleteContext *codeCompleteContext) {
-  Parser parser(ctx, sourceMgr, codeCompleteContext);
+mlir::pdll::parsePDLLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
+                         bool enableDocumentation,
+                         CodeCompleteContext *codeCompleteContext) {
+  Parser parser(ctx, sourceMgr, enableDocumentation, codeCompleteContext);
   return parser.parseModule();
 }

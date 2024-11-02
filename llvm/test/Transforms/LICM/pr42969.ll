@@ -1,6 +1,6 @@
-; RUN: opt %s -S -scoped-noalias-aa -licm | FileCheck %s
+; RUN: opt %s -S -licm | FileCheck %s
 
-define i16 @main(i1 %a_b_mayalias, i16* %a, i16* %b) {
+define i16 @main(i1 %a_b_mayalias, ptr %a, ptr %b) {
 ; CHECK:       scalar.body:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16
@@ -17,10 +17,10 @@ outer:                                            ; preds = %scalar.cleanup, %en
 
 vector.ph:                                        ; preds = %outer
 ; MemoryUse(4) MayAlias
-  %tmp1 = load i16, i16* %a, align 1, !alias.scope !0, !tbaa !7
+  %tmp1 = load i16, ptr %a, align 1, !alias.scope !0, !tbaa !7
   %tmp2 = add i16 %tmp1, 1
 ; 1 = MemoryDef(4)
-  store i16 %tmp2, i16* %b, align 1, !alias.scope !3, !noalias !0, !tbaa !7
+  store i16 %tmp2, ptr %b, align 1, !alias.scope !3, !noalias !0, !tbaa !7
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -41,10 +41,10 @@ scalar.body:                                      ; preds = %scalar.body, %scala
 ; 3 = MemoryPhi({scalar.ph,5},{scalar.body,2})
   %j = phi i64 [ %j.next, %scalar.body ], [ %j.start, %scalar.ph ]
 ; MemoryUse(3) MayAlias
-  %tmp3 = load i16, i16* %a, align 1, !tbaa !7
+  %tmp3 = load i16, ptr %a, align 1, !tbaa !7
   %result = add i16 %tmp3, 1
 ; 2 = MemoryDef(3)
-  store i16 %result, i16* %b, align 1, !tbaa !7
+  store i16 %result, ptr %b, align 1, !tbaa !7
   %j.next = add nuw nsw i64 %j, 1
   %cmp2 = icmp ult i64 %j.next, 20
   br i1 %cmp2, label %scalar.body, label %scalar.cleanup

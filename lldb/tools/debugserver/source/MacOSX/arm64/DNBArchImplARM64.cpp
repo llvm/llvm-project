@@ -94,11 +94,35 @@ DNBArchMachARM64::SoftwareBreakpointOpcode(nub_size_t byte_size) {
 
 uint32_t DNBArchMachARM64::GetCPUType() { return CPU_TYPE_ARM64; }
 
+static uint64_t clear_pac_bits(uint64_t value) {
+  uint32_t addressing_bits = 0;
+  if (!DNBGetAddressingBits(addressing_bits))
+    return value;
+
+    // On arm64_32, no ptrauth bits to clear
+#if !defined(__LP64__)
+  return value;
+#endif
+
+  uint64_t mask = ((1ULL << addressing_bits) - 1);
+
+  // Normally PAC bit clearing needs to check b55 and either set the
+  // non-addressing bits, or clear them.  But the register values we
+  // get from thread_get_state on an arm64e process don't follow this
+  // convention?, at least when there's been a PAC auth failure in
+  // the inferior.
+  // Userland processes are always in low memory, so this
+  // hardcoding b55 == 0 PAC stripping behavior here.
+
+  return value & mask; // high bits cleared to 0
+}
+
 uint64_t DNBArchMachARM64::GetPC(uint64_t failValue) {
   // Get program counter
   if (GetGPRState(false) == KERN_SUCCESS)
-#if defined(__LP64__)
-    return arm_thread_state64_get_pc(m_state.context.gpr);
+#if __has_feature(ptrauth_calls) && defined(__LP64__)
+    return clear_pac_bits(
+        reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
     return m_state.context.gpr.__pc;
 #endif
@@ -128,8 +152,9 @@ kern_return_t DNBArchMachARM64::SetPC(uint64_t value) {
 uint64_t DNBArchMachARM64::GetSP(uint64_t failValue) {
   // Get stack pointer
   if (GetGPRState(false) == KERN_SUCCESS)
-#if defined(__LP64__)
-    return arm_thread_state64_get_sp(m_state.context.gpr);
+#if __has_feature(ptrauth_calls) && defined(__LP64__)
+    return clear_pac_bits(
+        reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
 #else
     return m_state.context.gpr.__sp;
 #endif
@@ -150,16 +175,20 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
   if (DNBLogEnabledForAny(LOG_THREAD)) {
     uint64_t *x = &m_state.context.gpr.__x[0];
 
-#if defined(__LP64__)
-        uint64_t log_fp = arm_thread_state64_get_fp(m_state.context.gpr);
-        uint64_t log_lr = arm_thread_state64_get_lr(m_state.context.gpr);
-        uint64_t log_sp = arm_thread_state64_get_sp(m_state.context.gpr);
-        uint64_t log_pc = arm_thread_state64_get_pc(m_state.context.gpr);
+#if __has_feature(ptrauth_calls) && defined(__LP64__)
+    uint64_t log_fp = clear_pac_bits(
+        reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp));
+    uint64_t log_lr = clear_pac_bits(
+        reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr));
+    uint64_t log_sp = clear_pac_bits(
+        reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
+    uint64_t log_pc = clear_pac_bits(
+        reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
-        uint64_t log_fp = m_state.context.gpr.__fp;
-        uint64_t log_lr = m_state.context.gpr.__lr;
-        uint64_t log_sp = m_state.context.gpr.__sp;
-        uint64_t log_pc = m_state.context.gpr.__pc;
+    uint64_t log_fp = m_state.context.gpr.__fp;
+    uint64_t log_lr = m_state.context.gpr.__lr;
+    uint64_t log_sp = m_state.context.gpr.__sp;
+    uint64_t log_pc = m_state.context.gpr.__pc;
 #endif
     DNBLogThreaded(
         "thread_get_state(0x%4.4x, %u, &gpr, %u) => 0x%8.8x (count = %u) regs"
@@ -617,8 +646,9 @@ kern_return_t DNBArchMachARM64::EnableHardwareSingleStep(bool enable) {
     return err.Status();
   }
 
-#if defined(__LP64__)
-  uint64_t pc = arm_thread_state64_get_pc (m_state.context.gpr);
+#if __has_feature(ptrauth_calls) && defined(__LP64__)
+  uint64_t pc = clear_pac_bits(
+      reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
   uint64_t pc = m_state.context.gpr.__pc;
 #endif
@@ -1992,20 +2022,10 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
     switch (set) {
     case e_regSetGPR:
       if (reg <= gpr_pc) {
-#if defined(__LP64__)
-        if (reg == gpr_pc)
-          value->value.uint64 = arm_thread_state64_get_pc (m_state.context.gpr);
-        else if (reg == gpr_lr)
-          value->value.uint64 = arm_thread_state64_get_lr (m_state.context.gpr);
-        else if (reg == gpr_sp)
-          value->value.uint64 = arm_thread_state64_get_sp (m_state.context.gpr);
-        else if (reg == gpr_fp)
-          value->value.uint64 = arm_thread_state64_get_fp (m_state.context.gpr);
+        if (reg == gpr_pc || reg == gpr_lr || reg == gpr_sp || reg == gpr_fp)
+          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__x[reg]);
         else
-        value->value.uint64 = m_state.context.gpr.__x[reg];
-#else
-        value->value.uint64 = m_state.context.gpr.__x[reg];
-#endif
+          value->value.uint64 = m_state.context.gpr.__x[reg];
         return true;
       } else if (reg == gpr_cpsr) {
         value->value.uint32 = m_state.context.gpr.__cpsr;

@@ -16,14 +16,14 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_reg_sequence_of_copy_from_physreg_0
     ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    ; CHECK: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; CHECK: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK: FLAT_STORE_DWORDX2 killed [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: FLAT_STORE_DWORDX2 killed [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    ; CHECK-NEXT: S_ENDPGM 0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
@@ -48,14 +48,14 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_reg_sequence_of_copy_from_physreg_1
     ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    ; CHECK: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; CHECK: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK: FLAT_STORE_DWORDX2 killed [[REG_SEQUENCE]], killed [[DEF]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: FLAT_STORE_DWORDX2 killed [[REG_SEQUENCE]], killed [[DEF]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    ; CHECK-NEXT: S_ENDPGM 0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
@@ -81,14 +81,14 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_reg_sequence_of_copy_from_physreg_2
     ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    ; CHECK: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
-    ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[COPY]], %subreg.sub1
-    ; CHECK: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK: FLAT_STORE_DWORDX2 killed [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
+    ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[COPY]], %subreg.sub1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: FLAT_STORE_DWORDX2 killed [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    ; CHECK-NEXT: S_ENDPGM 0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1
@@ -110,7 +110,7 @@ body:             |
 
     ; CHECK-LABEL: name: fold_inlineasm_def
     ; CHECK: INLINEASM &"s_waitcnt vmcnt($0)", 41 /* sideeffect mayload isconvergent attdialect */, 13 /* imm */, 0
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: S_ENDPGM 0
     INLINEASM &"s_waitcnt vmcnt($0)", 41 /* sideeffect mayload isconvergent attdialect */, 13 /* imm */, 0
     S_ENDPGM 0
 

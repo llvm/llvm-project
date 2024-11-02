@@ -16,8 +16,10 @@ set(HWASAN_RTL_SOURCES
   hwasan_poisoning.cpp
   hwasan_report.cpp
   hwasan_setjmp_aarch64.S
+  hwasan_setjmp_riscv64.S
   hwasan_setjmp_x86_64.S
   hwasan_tag_mismatch_aarch64.S
+  hwasan_tag_mismatch_riscv64.S
   hwasan_thread.cpp
   hwasan_thread_list.cpp
   hwasan_type_test.cpp
@@ -79,7 +81,10 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec HWASAN_DYNAMIC_CFLAGS)
 append_list_if(MSVC /DEBUG HWASAN_DYNAMIC_LINK_FLAGS)
 
-set(HWASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
+set(HWASAN_DYNAMIC_LIBS
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
+  ${SANITIZER_CXX_ABI_LIBRARIES}
+  ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt HWASAN_DYNAMIC_LIBS)

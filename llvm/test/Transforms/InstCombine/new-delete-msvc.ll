@@ -3,15 +3,15 @@
 ; REQUIRES: x86-registered-target
 ; PR1201
 
-declare noalias i8* @"\01??2@YAPEAX_K@Z"(i64) nobuiltin
-declare void @"\01??3@YAXPEAX@Z"(i8*) nobuiltin
+declare noalias ptr @"\01??2@YAPEAX_K@Z"(i64) nobuiltin
+declare void @"\01??3@YAXPEAX@Z"(ptr) nobuiltin
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    ret void
 ;
-  %new_long_long = call noalias i8* @"\01??2@YAPEAX_K@Z"(i64 32) builtin
-  call void @"\01??3@YAXPEAX@Z"(i8* %new_long_long) builtin
+  %new_long_long = call noalias ptr @"\01??2@YAPEAX_K@Z"(i64 32) builtin
+  call void @"\01??3@YAXPEAX@Z"(ptr %new_long_long) builtin
   ret void
 }
 

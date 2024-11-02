@@ -50,7 +50,7 @@ HELP: --ignore-case
 HELP: --lookup=<address>
 HELP: -n
 HELP: --name=<pattern>
-HELP: -o=<filename>
+HELP: -o <filename>
 HELP: -p
 HELP: --parent-recurse-depth=<N>
 HELP: --quiet

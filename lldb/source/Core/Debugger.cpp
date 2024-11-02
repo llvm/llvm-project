@@ -13,6 +13,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamFile.h"
@@ -43,15 +44,13 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Reproducer.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamCallback.h"
 #include "lldb/Utility/StreamString.h"
 
 #if defined(_WIN32)
@@ -105,6 +104,7 @@ static std::recursive_mutex *g_debugger_list_mutex_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
 static DebuggerList *g_debugger_list_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
+static llvm::ThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
@@ -202,7 +202,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
   }
 
   TargetSP target_sp;
-  LoadScriptFromSymFile load_script_old_value;
+  LoadScriptFromSymFile load_script_old_value = eLoadScriptFromSymFileFalse;
   if (is_load_script && exe_ctx->GetTargetSP()) {
     target_sp = exe_ctx->GetTargetSP();
     load_script_old_value =
@@ -299,11 +299,6 @@ void Debugger::SetPrompt(llvm::StringRef p) {
   if (str.length())
     new_prompt = str;
   GetCommandInterpreter().UpdatePrompt(new_prompt);
-}
-
-llvm::StringRef Debugger::GetReproducerPath() const {
-  auto &r = repro::Reproducer::Instance();
-  return r.GetReproducerPath().GetCString();
 }
 
 const FormatEntity::Entry *Debugger::GetThreadFormat() const {
@@ -539,12 +534,18 @@ void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
          "Debugger::Initialize called more than once!");
   g_debugger_list_mutex_ptr = new std::recursive_mutex();
   g_debugger_list_ptr = new DebuggerList();
+  g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());
   g_load_plugin_callback = load_plugin_callback;
 }
 
 void Debugger::Terminate() {
   assert(g_debugger_list_ptr &&
          "Debugger::Terminate called without a matching Debugger::Initialize!");
+
+  if (g_thread_pool) {
+    // The destructor will wait for all the threads to complete.
+    delete g_thread_pool;
+  }
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     // Clear our global list of debugger objects
@@ -758,8 +759,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_forward_listener_sp(), m_clear_once() {
   m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
   if (log_callback)
-    m_log_callback_stream_sp =
-        std::make_shared<StreamCallback>(log_callback, baton);
+    m_callback_handler_sp =
+        std::make_shared<CallbackLogHandler>(log_callback, baton);
   m_command_interpreter_up->Initialize();
   // Always add our default platform to the platform list
   PlatformSP default_platform_sp(Platform::GetHostPlatform());
@@ -917,42 +918,12 @@ Status Debugger::SetInputString(const char *data) {
     return result;
   }
 
-  return SetInputFile(
-      (FileSP)std::make_shared<NativeFile>(commands_file, true));
+  SetInputFile((FileSP)std::make_shared<NativeFile>(commands_file, true));
+  return result;
 }
 
-Status Debugger::SetInputFile(FileSP file_sp) {
-  Status error;
-  repro::DataRecorder *recorder = nullptr;
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
-    recorder = g->GetOrCreate<repro::CommandProvider>().GetNewRecorder();
-
-  static std::unique_ptr<repro::MultiLoader<repro::CommandProvider>> loader =
-      repro::MultiLoader<repro::CommandProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-  if (loader) {
-    llvm::Optional<std::string> nextfile = loader->GetNextFile();
-    FILE *fh = nextfile ? FileSystem::Instance().Fopen(nextfile->c_str(), "r")
-                        : nullptr;
-    // FIXME Jonas Devlieghere: shouldn't this error be propagated out to the
-    // reproducer somehow if fh is NULL?
-    if (fh) {
-      file_sp = std::make_shared<NativeFile>(fh, true);
-    }
-  }
-
-  if (!file_sp || !file_sp->IsValid()) {
-    error.SetErrorString("invalid file");
-    return error;
-  }
-
-  SetInputFile(file_sp, recorder);
-  return error;
-}
-
-void Debugger::SetInputFile(FileSP file_sp, repro::DataRecorder *recorder) {
+void Debugger::SetInputFile(FileSP file_sp) {
   assert(file_sp && file_sp->IsValid());
-  m_input_recorder = recorder;
   m_input_file_sp = std::move(file_sp);
   // Save away the terminal state if that is relevant, so that we can restore
   // it in RestoreInputState.
@@ -1292,8 +1263,8 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   // For simplicity's sake, I am not going to deal with how to close down any
   // open logging streams, I just redirect everything from here on out to the
   // callback.
-  m_log_callback_stream_sp =
-      std::make_shared<StreamCallback>(log_callback, baton);
+  m_callback_handler_sp =
+      std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
@@ -1314,7 +1285,7 @@ void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
                               uint64_t completed, uint64_t total,
                               llvm::Optional<lldb::user_id_t> debugger_id) {
   // Check if this progress is for a specific debugger.
-  if (debugger_id.hasValue()) {
+  if (debugger_id) {
     // It is debugger specific, grab it and deliver the event if the debugger
     // still exists.
     DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
@@ -1340,6 +1311,9 @@ static void PrivateReportDiagnostic(Debugger &debugger,
                                     bool debugger_specific) {
   uint32_t event_type = 0;
   switch (type) {
+  case DiagnosticEventData::Type::Info:
+    assert(false && "DiagnosticEventData::Type::Info should not be broadcast");
+    return;
   case DiagnosticEventData::Type::Warning:
     event_type = Debugger::eBroadcastBitWarning;
     break;
@@ -1368,7 +1342,16 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
                                     llvm::Optional<lldb::user_id_t> debugger_id,
                                     std::once_flag *once) {
   auto ReportDiagnosticLambda = [&]() {
-    // Check if this progress is for a specific debugger.
+    // The diagnostic subsystem is optional but we still want to broadcast
+    // events when it's disabled.
+    if (Diagnostics::Enabled())
+      Diagnostics::Instance().Report(message);
+
+    // We don't broadcast info events.
+    if (type == DiagnosticEventData::Type::Info)
+      return;
+
+    // Check if this diagnostic is for a specific debugger.
     if (debugger_id) {
       // It is debugger specific, grab it and deliver the event if the debugger
       // still exists.
@@ -1377,8 +1360,8 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
         PrivateReportDiagnostic(*debugger_sp, type, std::move(message), true);
       return;
     }
-    // The progress event is not debugger specific, iterate over all debuggers
-    // and deliver a progress event to each one.
+    // The diagnostic event is not debugger specific, iterate over all debuggers
+    // and deliver a diagnostic event to each one.
     if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
       std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
       for (const auto &debugger : *g_debugger_list_ptr)
@@ -1402,32 +1385,66 @@ void Debugger::ReportWarning(std::string message,
 void Debugger::ReportError(std::string message,
                            llvm::Optional<lldb::user_id_t> debugger_id,
                            std::once_flag *once) {
-
   ReportDiagnosticImpl(DiagnosticEventData::Type::Error, std::move(message),
                        debugger_id, once);
+}
+
+void Debugger::ReportInfo(std::string message,
+                          llvm::Optional<lldb::user_id_t> debugger_id,
+                          std::once_flag *once) {
+  ReportDiagnosticImpl(DiagnosticEventData::Type::Info, std::move(message),
+                       debugger_id, once);
+}
+
+void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
+      EventSP event_sp = std::make_shared<Event>(
+          Debugger::eBroadcastSymbolChange,
+          new SymbolChangeEventData(debugger_sp, module_spec));
+      debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
+    }
+  }
+}
+
+static std::shared_ptr<LogHandler>
+CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
+                 size_t buffer_size) {
+  switch (log_handler_kind) {
+  case eLogHandlerStream:
+    return std::make_shared<StreamLogHandler>(fd, should_close, buffer_size);
+  case eLogHandlerCircular:
+    return std::make_shared<RotatingLogHandler>(buffer_size);
+  case eLogHandlerSystem:
+    return std::make_shared<SystemLogHandler>();
+  case eLogHandlerCallback:
+    return {};
+  }
+  return {};
 }
 
 bool Debugger::EnableLog(llvm::StringRef channel,
                          llvm::ArrayRef<const char *> categories,
                          llvm::StringRef log_file, uint32_t log_options,
+                         size_t buffer_size, LogHandlerKind log_handler_kind,
                          llvm::raw_ostream &error_stream) {
-  const bool should_close = true;
-  const bool unbuffered = true;
 
-  std::shared_ptr<llvm::raw_ostream> log_stream_sp;
-  if (m_log_callback_stream_sp) {
-    log_stream_sp = m_log_callback_stream_sp;
+  std::shared_ptr<LogHandler> log_handler_sp;
+  if (m_callback_handler_sp) {
+    log_handler_sp = m_callback_handler_sp;
     // For now when using the callback mode you always get thread & timestamp.
     log_options |=
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file.empty()) {
-    log_stream_sp = std::make_shared<llvm::raw_fd_ostream>(
-        GetOutputFile().GetDescriptor(), !should_close, unbuffered);
+    log_handler_sp =
+        CreateLogHandler(log_handler_kind, GetOutputFile().GetDescriptor(),
+                         /*should_close=*/false, buffer_size);
   } else {
-    auto pos = m_log_streams.find(log_file);
-    if (pos != m_log_streams.end())
-      log_stream_sp = pos->second.lock();
-    if (!log_stream_sp) {
+    auto pos = m_stream_handlers.find(log_file);
+    if (pos != m_stream_handlers.end())
+      log_handler_sp = pos->second.lock();
+    if (!log_handler_sp) {
       File::OpenOptions flags =
           File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate;
       if (log_options & LLDB_LOG_OPTION_APPEND)
@@ -1442,18 +1459,18 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         return false;
       }
 
-      log_stream_sp = std::make_shared<llvm::raw_fd_ostream>(
-          (*file)->GetDescriptor(), should_close, unbuffered);
-      m_log_streams[log_file] = log_stream_sp;
+      log_handler_sp =
+          CreateLogHandler(log_handler_kind, (*file)->GetDescriptor(),
+                           /*should_close=*/true, buffer_size);
+      m_stream_handlers[log_file] = log_handler_sp;
     }
   }
-  assert(log_stream_sp);
+  assert(log_handler_sp);
 
   if (log_options == 0)
-    log_options =
-        LLDB_LOG_OPTION_PREPEND_THREAD_NAME | LLDB_LOG_OPTION_THREADSAFE;
+    log_options = LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
 
-  return Log::EnableLogChannel(log_stream_sp, log_options, channel, categories,
+  return Log::EnableLogChannel(log_handler_sp, log_options, channel, categories,
                                error_stream);
 }
 
@@ -1687,8 +1704,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
   listener_sp->StartListeningForEvents(
-      &m_broadcaster,
-      eBroadcastBitProgress | eBroadcastBitWarning | eBroadcastBitError);
+      &m_broadcaster, eBroadcastBitProgress | eBroadcastBitWarning |
+                          eBroadcastBitError | eBroadcastSymbolChange);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed
@@ -1820,9 +1837,20 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // going to show the progress.
   const uint64_t id = data->GetID();
   if (m_current_event_id) {
+    Log *log = GetLog(LLDBLog::Events);
+    if (log && log->GetVerbose()) {
+      StreamString log_stream;
+      log_stream.AsRawOstream()
+          << static_cast<void *>(this) << " Debugger(" << GetID()
+          << ")::HandleProgressEvent( m_current_event_id = "
+          << *m_current_event_id << ", data = { ";
+      data->Dump(&log_stream);
+      log_stream << " } )";
+      log->PutString(log_stream.GetString());
+    }
     if (id != *m_current_event_id)
       return;
-    if (data->GetCompleted())
+    if (data->GetCompleted() == data->GetTotal())
       m_current_event_id.reset();
   } else {
     m_current_event_id = id;
@@ -1845,7 +1873,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // Print over previous line, if any.
   output->Printf("\r");
 
-  if (data->GetCompleted()) {
+  if (data->GetCompleted() == data->GetTotal()) {
     // Clear the current line.
     output->Printf("\x1B[2K");
     output->Flush();
@@ -1979,11 +2007,7 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
 }
 
 llvm::ThreadPool &Debugger::GetThreadPool() {
-  // NOTE: intentional leak to avoid issues with C++ destructor chain
-  static llvm::ThreadPool *g_thread_pool = nullptr;
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());
-  });
+  assert(g_thread_pool &&
+         "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
 }

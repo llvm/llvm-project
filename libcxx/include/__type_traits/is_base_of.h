@@ -24,7 +24,7 @@ struct _LIBCPP_TEMPLATE_VIS is_base_of
 
 #if _LIBCPP_STD_VER > 14
 template <class _Bp, class _Dp>
-inline constexpr bool is_base_of_v = is_base_of<_Bp, _Dp>::value;
+inline constexpr bool is_base_of_v = __is_base_of(_Bp, _Dp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

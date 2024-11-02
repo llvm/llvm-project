@@ -36,12 +36,12 @@ void t2(X *x) {
   // [x setBlk: operator+([x blk], [] {})]
 
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}
-  // CHECK: [[PLUS:%.*]] = call void ()* @"_ZplIZ2t2P1XE3$_2EU13block_pointerFvvES4_T_"
+  // CHECK: [[PLUS:%.*]] = call void ()* @"_ZplIZ2t2P1XE3$_0EU13block_pointerFvvES4_T_"
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} [[PLUS]])
   x.blk += [] {};
 
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}
-  // CHECK: [[PLUS:%.*]] = call void ()* @"_ZplIZ2t2P1XE3$_3EPFvvES4_T_"
+  // CHECK: [[PLUS:%.*]] = call void ()* @"_ZplIZ2t2P1XE3$_1EPFvvES4_T_"
   // CHECK: call void{{.*}}@objc_msgSend{{.*}}({{.*}} [[PLUS]])
   x.fnptr += [] {};
 }

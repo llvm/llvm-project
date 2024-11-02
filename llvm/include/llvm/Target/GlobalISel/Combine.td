@@ -61,6 +61,11 @@ class GICombineRule<dag defs, dag match, dag apply> : GICombine {
   /// combine rule.
   /// See GIApplyKind for details.
   dag Apply = apply;
+
+  /// Defines the predicates that are checked before the match function
+  /// is called. Targets can use this to, for instance, check Subtarget
+  /// features.
+  list<Predicate> Predicates = [];
 }
 
 /// The operator at the root of a GICombineRule.Defs dag.
@@ -231,7 +236,7 @@ def undef_to_negative_one: GICombineRule<
 
 def binop_left_undef_to_zero: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SHL):$root,
+  (match (wip_match_opcode G_SHL, G_UDIV, G_UREM):$root,
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
@@ -240,6 +245,12 @@ def binop_right_undef_to_undef: GICombineRule<
   (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
          [{ return Helper.matchOperandIsUndef(*${root}, 2); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
+def unary_undef_to_zero: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_ABS):$root,
+         [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
@@ -262,6 +273,13 @@ def propagate_undef_shuffle_mask: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return Helper.matchUndefShuffleVectorMask(*${root}); }]),
+  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
+  // Replace an insert/extract element of an out of bounds index with undef.
+  def insert_extract_vec_elt_out_of_bounds : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT):$root,
+         [{ return Helper.matchInsertExtractVecEltOutOfBounds(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
 // Fold (cond ? x : x) -> x
@@ -409,10 +427,11 @@ def p2i_to_i2p: GICombineRule<
 
 // Fold ptr2int(int2ptr(x)) -> x
 def i2p_to_p2i: GICombineRule<
-  (defs root:$root, register_matchinfo:$info),
-  (match (wip_match_opcode G_PTRTOINT):$root,
-    [{ return Helper.matchCombineP2IToI2P(*${root}, ${info}); }]),
-  (apply [{ Helper.applyCombineP2IToI2P(*${root}, ${info}); }])
+  (defs root:$dst, register_matchinfo:$info),
+  (match (G_INTTOPTR $t, $ptr),
+         (G_PTRTOINT $dst, $t):$mi,
+    [{ ${info} = ${ptr}.getReg(); }]),
+  (apply [{ Helper.applyCombineP2IToI2P(*${mi}, ${info}); }])
 >;
 
 // Fold add ptrtoint(x), y -> ptrtoint (ptr_add x), y
@@ -522,10 +541,11 @@ def not_cmp_fold : GICombineRule<
 
 // Fold (fneg (fneg x)) -> x.
 def fneg_fneg_fold: GICombineRule <
-  (defs root:$root, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FNEG):$root,
-         [{ return Helper.matchCombineFNegOfFNeg(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (defs root:$dst, register_matchinfo:$matchinfo),
+  (match (G_FNEG $t, $src),
+         (G_FNEG $dst, $t):$mi,
+         [{ ${matchinfo} = ${src}.getReg(); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
 >;
 
 // Fold (unmerge(merge x, y, z)) -> z, y, z.
@@ -547,10 +567,11 @@ def merge_unmerge : GICombineRule<
 
 // Fold (fabs (fabs x)) -> (fabs x).
 def fabs_fabs_fold: GICombineRule<
-  (defs root:$root, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FABS):$root,
-         [{ return Helper.matchCombineFAbsOfFAbs(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (defs root:$dst, register_matchinfo:$matchinfo),
+  (match (G_FABS $abs, $src),
+         (G_FABS $dst, $abs):$mi,
+         [{ ${matchinfo} = ${abs}.getReg(); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
 >;
 
 // Fold (fabs (fneg x)) -> (fabs x).
@@ -720,6 +741,12 @@ def icmp_to_lhs_known_bits : GICombineRule<
          [{ return Helper.matchICmpToLHSKnownBits(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+def redundant_binop_in_equality : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_ICMP):$root,
+         [{ return Helper.matchRedundantBinOpInEquality(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
+
 def and_or_disjoint_mask : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -764,7 +791,13 @@ def udiv_by_const : GICombineRule<
    [{ return Helper.matchUDivByConst(*${root}); }]),
   (apply [{ Helper.applyUDivByConst(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_const]>;
+def sdiv_by_const : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SDIV):$root,
+   [{ return Helper.matchSDivByConst(*${root}); }]),
+  (apply [{ Helper.applySDivByConst(*${root}); }])>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -799,6 +832,16 @@ def addo_by_0: GICombineRule<
          [{ return Helper.matchAddOBy0(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// Transform (uadde x, y, 0) -> (uaddo x, y)
+//           (sadde x, y, 0) -> (saddo x, y)
+//           (usube x, y, 0) -> (usubo x, y)
+//           (ssube x, y, 0) -> (ssubo x, y)
+def adde_to_addo: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_UADDE, G_SADDE, G_USUBE, G_SSUBE):$root,
+         [{ return Helper.matchAddEToAddO(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 def mulh_to_lshr : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_UMULH):$root,
@@ -812,6 +855,13 @@ def redundant_neg_operands: GICombineRule<
   (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMAD, G_FMA):$root,
     [{ return Helper.matchRedundantNegOperands(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
+// Transform (fsub +-0.0, X) -> (fneg X)
+def fsub_to_fneg: GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FSUB):$root,
+    [{ return Helper.matchFsubToFneg(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyFsubToFneg(*${root}, ${matchinfo}); }])>;
 
 // Transform (fadd x, (fmul y, z)) -> (fma y, z, x)
 //           (fadd x, (fmul y, z)) -> (fmad y, z, x)
@@ -891,33 +941,89 @@ def combine_fsub_fpext_fneg_fmul_to_fmad_or_fma: GICombineRule<
                                             *${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
-def combine_minmax_nan_matchinfo: GIDefMatchData<"unsigned">;
 def combine_minmax_nan: GICombineRule<
-  (defs root:$root, combine_minmax_nan_matchinfo:$info),
+  (defs root:$root, unsigned_matchinfo:$info),
   (match (wip_match_opcode G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
          [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
+
+// Transform (add x, (sub y, x)) -> y
+// Transform (add (sub y, x), x) -> y
+def add_sub_reg: GICombineRule <
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ADD):$root,
+         [{ return Helper.matchAddSubSameReg(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root},
+                                                      ${matchinfo}); }])>;
+
+def buildvector_identity_fold : GICombineRule<
+  (defs root:$build_vector, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_BUILD_VECTOR_TRUNC, G_BUILD_VECTOR):$build_vector,
+         [{ return Helper.matchBuildVectorIdentityFold(*${build_vector}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${build_vector}, ${matchinfo}); }])>;
+
+def trunc_buildvector_fold : GICombineRule<
+  (defs root:$op, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$op,
+      [{ return Helper.matchTruncBuildVectorFold(*${op}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${matchinfo}); }])>;
+
+def trunc_lshr_buildvector_fold : GICombineRule<
+  (defs root:$op, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$op,
+      [{ return Helper.matchTruncLshrBuildVectorFold(*${op}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${matchinfo}); }])>;
+
+// Transform:
+//   (x + y) - y -> x
+//   (x + y) - x -> y
+//   x - (y + x) -> 0 - y
+//   x - (x + z) -> 0 - z
+def sub_add_reg: GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SUB):$root,
+         [{ return Helper.matchSubAddSameReg(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def bitcast_bitcast_fold : GICombineRule<
+  (defs root:$dst),
+  (match (G_BITCAST $dst, $src1):$op, (G_BITCAST $src1, $src0),
+      [{ return MRI.getType(${src0}.getReg()) == MRI.getType(${dst}.getReg()); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${src0}.getReg()); }])>;
+
+def select_to_minmax: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_SELECT):$root,
+         [{ return Helper.matchSimplifySelectToMinMax(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
                                      binop_left_undef_to_zero,
                                      binop_right_undef_to_undef,
+                                     unary_undef_to_zero,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,
                                      erase_undef_store,
-                                     unmerge_undef]>;
+                                     unmerge_undef,
+                                     insert_extract_vec_elt_out_of_bounds]>;
 
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i, anyext_trunc_fold,
-                                        fneg_fneg_fold, right_identity_one]>;
+                                        fneg_fneg_fold, right_identity_one,
+                                        add_sub_reg, buildvector_identity_fold,
+                                        trunc_buildvector_fold,
+                                        trunc_lshr_buildvector_fold,
+                                        bitcast_bitcast_fold]>;
 
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
-                                     addo_by_0, combine_minmax_nan]>;
+                                     addo_by_0, adde_to_addo,
+                                     combine_minmax_nan]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
@@ -956,7 +1062,9 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
-    and_or_disjoint_mask, fma_combines, fold_binop_into_select]>;
+    and_or_disjoint_mask, fma_combines, fold_binop_into_select,
+    sub_add_reg, select_to_minmax, redundant_binop_in_equality,
+    fsub_to_fneg]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

@@ -1,13 +1,6 @@
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
-//
-// Do the same run, but now with SIMDization as well. This should not change the outcome.
-//
-// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=2 vl=8" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 #SM = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
@@ -50,8 +43,8 @@ module {
   // (with dense result).
   //
   func.func @sampled_dd(%args: tensor<8x8xf64, #SM>,
-                   %arga: tensor<8x8xf64>,
-                   %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
+                        %arga: tensor<8x8xf64>,
+                        %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     %1 = arith.constant dense<0.0> : tensor<8x8xf64>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,
@@ -71,8 +64,8 @@ module {
   // (with dense result).
   //
   func.func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
-                           %arga: tensor<8x8xf64>,
-                           %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
+                                %arga: tensor<8x8xf64>,
+                                %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     // Perform dense-dense matrix matrix multiplication.
     %1 = arith.constant dense<0.0> : tensor<8x8xf64>
     %2 = linalg.generic #trait_matmul
@@ -99,8 +92,8 @@ module {
   // (with sparse result).
   //
   func.func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
-                          %arga: tensor<8x8xf64>,
-                          %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
+                               %arga: tensor<8x8xf64>,
+                               %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
     %1 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,
@@ -190,14 +183,12 @@ module {
     //
     // CHECK-NEXT: ( 96, 192, 0, 0 )
     //
-    %m0 = bufferization.to_memref %0 : memref<8x8xf64>
-    %m1 = bufferization.to_memref %1 : memref<8x8xf64>
     %m2 = sparse_tensor.values %2 : tensor<8x8xf64, #SM> to memref<?xf64>
     %m3 = sparse_tensor.values %3 : tensor<8x8xf64, #SM> to memref<?xf64>
-    %v0 = vector.transfer_read %m0[%c0, %c0], %d0
-        : memref<8x8xf64>, vector<8x8xf64>
-    %v1 = vector.transfer_read %m1[%c0, %c0], %d0
-        : memref<8x8xf64>, vector<8x8xf64>
+    %v0 = vector.transfer_read %0[%c0, %c0], %d0
+        : tensor<8x8xf64>, vector<8x8xf64>
+    %v1 = vector.transfer_read %1[%c0, %c0], %d0
+        : tensor<8x8xf64>, vector<8x8xf64>
     %v2 = vector.transfer_read %m2[%c0], %d0 : memref<?xf64>, vector<4xf64>
     %v3 = vector.transfer_read %m3[%c0], %d0 : memref<?xf64>, vector<4xf64>
     vector.print %v0 : vector<8x8xf64>
@@ -206,11 +197,11 @@ module {
     vector.print %v3 : vector<4xf64>
 
     // Release the resources.
-    sparse_tensor.release %s : tensor<8x8xf64, #SM>
-    memref.dealloc %m0 : memref<8x8xf64>
-    memref.dealloc %m1 : memref<8x8xf64>
-    sparse_tensor.release %2 : tensor<8x8xf64, #SM>
-    sparse_tensor.release %3 : tensor<8x8xf64, #SM>
+    bufferization.dealloc_tensor %s : tensor<8x8xf64, #SM>
+    bufferization.dealloc_tensor %0 : tensor<8x8xf64>
+    bufferization.dealloc_tensor %1 : tensor<8x8xf64>
+    bufferization.dealloc_tensor %2 : tensor<8x8xf64, #SM>
+    bufferization.dealloc_tensor %3 : tensor<8x8xf64, #SM>
 
     return
   }

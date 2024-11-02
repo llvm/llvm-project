@@ -50,7 +50,6 @@ public:
   // Whether the checker should model for null dereferences of smart pointers.
   bool ModelSmartPtrDereference = false;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
   ProgramStateRef
   checkRegionChanges(ProgramStateRef State,

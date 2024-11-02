@@ -167,7 +167,7 @@ void RTNAME(Cshift)(Descriptor &result, const Descriptor &source,
     }
     SubscriptValue &sourceDim{sourceAt[dim - 1]};
     sourceDim = dimLB + shiftCount % dimExtent;
-    if (shiftCount < 0) {
+    if (sourceDim < dimLB) {
       sourceDim += dimExtent;
     }
     for (resDim = 1; resDim <= dimExtent; ++resDim) {

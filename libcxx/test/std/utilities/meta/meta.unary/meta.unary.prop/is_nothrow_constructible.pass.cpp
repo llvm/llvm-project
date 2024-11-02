@@ -14,6 +14,8 @@
 #include <type_traits>
 #include "test_macros.h"
 
+#include "common.h"
+
 template <class T>
 void test_is_nothrow_constructible()
 {
@@ -58,32 +60,6 @@ void test_is_not_nothrow_constructible()
     static_assert((!std::is_nothrow_constructible_v<T, A0, A1>), "");
 #endif
 }
-
-class Empty
-{
-};
-
-class NotEmpty
-{
-    virtual ~NotEmpty();
-};
-
-union Union {};
-
-struct bit_zero
-{
-    int :  0;
-};
-
-class Abstract
-{
-    virtual ~Abstract() = 0;
-};
-
-struct A
-{
-    A(const A&);
-};
 
 struct C
 {

@@ -81,7 +81,6 @@ struct FlagEntry {
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
-std::string to_hexString(uint64_t Value, bool UpperCase = true);
 
 template <class T> std::string to_string(const T &Value) {
   std::string number;
@@ -95,7 +94,7 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   for (const EnumEntry<TEnum> &EnumItem : EnumValues)
     if (EnumItem.Value == Value)
       return std::string(EnumItem.AltName);
-  return to_hexString(Value, false);
+  return utohexstr(Value, true);
 }
 
 class ScopedPrinter {
@@ -345,6 +344,10 @@ public:
     startLine() << Label << ": " << Value << "\n";
   }
 
+  void printStringEscaped(StringRef Label, StringRef Value) {
+    printStringEscapedImpl(Label, Value);
+  }
+
   void printBinary(StringRef Label, StringRef Str, ArrayRef<uint8_t> Value) {
     printBinaryImpl(Label, Str, Value, false);
   }
@@ -477,6 +480,12 @@ private:
   virtual void printNumberImpl(StringRef Label, StringRef Str,
                                StringRef Value) {
     startLine() << Label << ": " << Str << " (" << Value << ")\n";
+  }
+
+  virtual void printStringEscapedImpl(StringRef Label, StringRef Value) {
+    startLine() << Label << ": ";
+    OS.write_escaped(Value);
+    OS << '\n';
   }
 
   void scopedBegin(char Symbol) {

@@ -547,7 +547,7 @@ struct IRInstructionMapper {
       // an outlined function. Also, assume-like intrinsics could be removed
       // from the region, removing arguments, causing discrepencies in the
       // number of inputs between different regions.
-      if (II.isLifetimeStartOrEnd() || II.isAssumeLikeIntrinsic())
+      if (II.isAssumeLikeIntrinsic())
         return Illegal;
       return EnableIntrinsics ? Legal : Illegal;
     }
@@ -831,8 +831,6 @@ public:
   void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {
     for (IRInstructionData &ID : *this) {
       BasicBlock *BB = ID.Inst->getParent();
-      if (BBSet.contains(BB))
-        continue;
       BBSet.insert(BB);
     }
   }
@@ -843,10 +841,8 @@ public:
                       SmallVector<BasicBlock *> &BBList) const {
     for (IRInstructionData &ID : *this) {
       BasicBlock *BB = ID.Inst->getParent();
-      if (BBSet.contains(BB))
-        continue;
-      BBSet.insert(BB);
-      BBList.push_back(BB);
+      if (BBSet.insert(BB).second)
+        BBList.push_back(BB);
     }
   }
 
@@ -1043,7 +1039,7 @@ public:
     // If we've already analyzed a Module or set of Modules, so we must clear
     // the SimilarityCandidates to make sure we do not have only old values
     // hanging around.
-    if (SimilarityCandidates.hasValue())
+    if (SimilarityCandidates)
       SimilarityCandidates->clear();
     else
       SimilarityCandidates = SimilarityGroupList();

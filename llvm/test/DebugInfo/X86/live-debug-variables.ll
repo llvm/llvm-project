@@ -27,7 +27,7 @@
 ; CHECK: DW_TAG_formal_parameter
 ; Check concrete entry has a single location.
 ; CHECK:      DW_TAG_formal_parameter
-; CHECK-NEXT:   DW_AT_location (DW_OP_reg3 RBX)
+; CHECK-NEXT:   DW_AT_location (DW_OP_reg6 RBP)
 ; CHECK-NEXT:   DW_AT_abstract_origin
 ; CHECK-NOT:  DW_TAG_formal_parameter
 

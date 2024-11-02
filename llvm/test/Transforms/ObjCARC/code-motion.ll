@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
 declare void @alterRefCount()
 declare void @use(i8*)

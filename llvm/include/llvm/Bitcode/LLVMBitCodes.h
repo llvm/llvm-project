@@ -349,7 +349,8 @@ enum MetadataCodes {
   // info.
   METADATA_COMMON_BLOCK = 44,     // [distinct, scope, name, variable,...]
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
-  METADATA_ARG_LIST = 46          // [n x [type num, value num]]
+  METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
+  METADATA_ASSIGN_ID = 47,        // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -458,7 +459,9 @@ enum RMWOperations {
   RMW_UMAX = 9,
   RMW_UMIN = 10,
   RMW_FADD = 11,
-  RMW_FSUB = 12
+  RMW_FSUB = 12,
+  RMW_FMAX = 13,
+  RMW_FMIN = 14
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -685,6 +688,10 @@ enum AttributeKindCodes {
   ATTR_KIND_ALLOC_ALIGN = 80,
   ATTR_KIND_ALLOCATED_POINTER = 81,
   ATTR_KIND_ALLOC_KIND = 82,
+  ATTR_KIND_PRESPLIT_COROUTINE = 83,
+  ATTR_KIND_FNRETTHUNK_EXTERN = 84,
+  ATTR_KIND_SKIP_PROFILE = 85,
+  ATTR_KIND_MEMORY = 86,
 };
 
 enum ComdatSelectionKindCodes {

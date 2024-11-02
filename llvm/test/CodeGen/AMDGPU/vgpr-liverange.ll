@@ -9,17 +9,23 @@ define amdgpu_ps float @else1(i32 %z, float %v) #0 {
 ; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; SI-NEXT:    s_xor_b32 s0, exec_lo, s0
-; SI-NEXT:  ; %bb.1: ; %else
+; SI-NEXT:    s_cbranch_execnz .LBB0_3
+; SI-NEXT:  ; %bb.1: ; %Flow
+; SI-NEXT:    s_andn2_saveexec_b32 s0, s0
+; SI-NEXT:    s_cbranch_execnz .LBB0_4
+; SI-NEXT:  .LBB0_2: ; %end
+; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; SI-NEXT:    s_branch .LBB0_5
+; SI-NEXT:  .LBB0_3: ; %else
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x40400000, v1
 ; SI-NEXT:    ; implicit-def: $vgpr1
-; SI-NEXT:  ; %bb.2: ; %Flow
-; SI-NEXT:    s_or_saveexec_b32 s0, s0
-; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; SI-NEXT:  ; %bb.3: ; %if
+; SI-NEXT:    s_andn2_saveexec_b32 s0, s0
+; SI-NEXT:    s_cbranch_execz .LBB0_2
+; SI-NEXT:  .LBB0_4: ; %if
 ; SI-NEXT:    v_add_f32_e32 v0, v1, v1
-; SI-NEXT:  ; %bb.4: ; %end
 ; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; SI-NEXT:    ; return to shader part epilog
+; SI-NEXT:    s_branch .LBB0_5
+; SI-NEXT:  .LBB0_5:
 main_body:
   %cc = icmp sgt i32 %z, 5
   br i1 %cc, label %if, label %else
@@ -49,8 +55,7 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x40400000, v1
 ; SI-NEXT:  ; %bb.2: ; %Flow
-; SI-NEXT:    s_or_saveexec_b32 s0, s0
-; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; SI-NEXT:    s_andn2_saveexec_b32 s0, s0
 ; SI-NEXT:  ; %bb.3: ; %if
 ; SI-NEXT:    v_add_f32_e32 v1, v1, v1
 ; SI-NEXT:    v_mov_b32_e32 v0, v1
@@ -104,8 +109,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:  ; %bb.4: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; SI-NEXT:    s_or_saveexec_b32 s2, s2
-; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; SI-NEXT:    s_andn2_saveexec_b32 s2, s2
 ; SI-NEXT:    s_cbranch_execz .LBB2_1
 ; SI-NEXT:  ; %bb.5: ; %if
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
@@ -191,8 +195,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, float(float)* %
 ; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:  .LBB3_4: ; %Flow
-; SI-NEXT:    s_or_saveexec_b32 s6, s6
-; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s6
+; SI-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; SI-NEXT:    s_cbranch_execz .LBB3_8
 ; SI-NEXT:  ; %bb.5: ; %if
 ; SI-NEXT:    s_mov_b32 s7, exec_lo
@@ -267,8 +270,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, float(
 ; SI-NEXT:    s_mov_b32 exec_lo, s7
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:  .LBB4_4: ; %Flow
-; SI-NEXT:    s_or_saveexec_b32 s6, s6
-; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s6
+; SI-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; SI-NEXT:    s_cbranch_execz .LBB4_8
 ; SI-NEXT:  ; %bb.5: ; %if
 ; SI-NEXT:    s_mov_b32 s7, exec_lo

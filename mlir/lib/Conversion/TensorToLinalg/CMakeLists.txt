@@ -12,9 +12,9 @@ add_mlir_conversion_library(MLIRTensorToLinalg
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRPass
-  MLIRLinalg
+  MLIRLinalgDialect
   MLIRLinalgTransforms
   MLIRSupport
   MLIRTransformUtils
-  MLIRTensor
+  MLIRTensorDialect
   )

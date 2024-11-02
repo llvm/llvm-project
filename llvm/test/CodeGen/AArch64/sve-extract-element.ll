@@ -292,8 +292,7 @@ define double @test_lane2_2xf64(<vscale x 2 x double> %a) #0 {
 define i8 @test_lanex_16xi8(<vscale x 16 x i8> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_16xi8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.b, xzr, x8
 ; CHECK-NEXT:    lastb w0, p0, z0.b
 ; CHECK-NEXT:    ret
@@ -304,8 +303,7 @@ define i8 @test_lanex_16xi8(<vscale x 16 x i8> %a, i32 %x) #0 {
 define i16 @test_lanex_8xi16(<vscale x 8 x i16> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_8xi16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.h, xzr, x8
 ; CHECK-NEXT:    lastb w0, p0, z0.h
 ; CHECK-NEXT:    ret
@@ -316,8 +314,7 @@ define i16 @test_lanex_8xi16(<vscale x 8 x i16> %a, i32 %x) #0 {
 define i32 @test_lanex_4xi32(<vscale x 4 x i32> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_4xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.s, xzr, x8
 ; CHECK-NEXT:    lastb w0, p0, z0.s
 ; CHECK-NEXT:    ret
@@ -328,8 +325,7 @@ define i32 @test_lanex_4xi32(<vscale x 4 x i32> %a, i32 %x) #0 {
 define i64 @test_lanex_2xi64(<vscale x 2 x i64> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_2xi64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb x0, p0, z0.d
 ; CHECK-NEXT:    ret
@@ -340,8 +336,7 @@ define i64 @test_lanex_2xi64(<vscale x 2 x i64> %a, i32 %x) #0 {
 define half @test_lanex_8xf16(<vscale x 8 x half> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_8xf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.h, xzr, x8
 ; CHECK-NEXT:    lastb h0, p0, z0.h
 ; CHECK-NEXT:    ret
@@ -352,8 +347,7 @@ define half @test_lanex_8xf16(<vscale x 8 x half> %a, i32 %x) #0 {
 define half @test_lanex_4xf16(<vscale x 4 x half> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_4xf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.s, xzr, x8
 ; CHECK-NEXT:    lastb h0, p0, z0.h
 ; CHECK-NEXT:    ret
@@ -364,8 +358,7 @@ define half @test_lanex_4xf16(<vscale x 4 x half> %a, i32 %x) #0 {
 define half @test_lanex_2xf16(<vscale x 2 x half> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_2xf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb h0, p0, z0.h
 ; CHECK-NEXT:    ret
@@ -376,8 +369,7 @@ define half @test_lanex_2xf16(<vscale x 2 x half> %a, i32 %x) #0 {
 define float @test_lanex_4xf32(<vscale x 4 x float> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_4xf32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.s, xzr, x8
 ; CHECK-NEXT:    lastb s0, p0, z0.s
 ; CHECK-NEXT:    ret
@@ -388,8 +380,7 @@ define float @test_lanex_4xf32(<vscale x 4 x float> %a, i32 %x) #0 {
 define float @test_lanex_2xf32(<vscale x 2 x float> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_2xf32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb s0, p0, z0.s
 ; CHECK-NEXT:    ret
@@ -400,8 +391,7 @@ define float @test_lanex_2xf32(<vscale x 2 x float> %a, i32 %x) #0 {
 define double @test_lanex_2xf64(<vscale x 2 x double> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_2xf64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb d0, p0, z0.d
 ; CHECK-NEXT:    ret
@@ -518,8 +508,7 @@ define i1 @test_last_8xi1(<vscale x 8 x i1> %a) #0 {
 define i1 @test_lanex_4xi1(<vscale x 4 x i1> %a, i32 %x) #0 {
 ; CHECK-LABEL: test_lanex_4xi1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
 ; CHECK-NEXT:    whilels p0.s, xzr, x8
 ; CHECK-NEXT:    lastb w8, p0, z0.s

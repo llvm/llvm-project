@@ -14,6 +14,7 @@
 #include "ReduceInstructionsMIR.h"
 #include "Delta.h"
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -32,7 +33,7 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
     auto &MI = *RI;
     // All Def operands explicit and implicit.
     for (auto &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isDef())
+      if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       auto Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg))
@@ -88,7 +89,7 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
   // some other dominating definition (that is not to be deleted).
   for (auto *MI : ToDelete) {
     for (auto &MO : MI->operands()) {
-      if (!MO.isReg() || !MO.isDef())
+      if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       auto Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg))
@@ -105,14 +106,17 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
         MachineBasicBlock::reverse_iterator RI(*MI);
         MachineBasicBlock *BB = MI->getParent();
         ++RI;
-        while (NewReg == 0 && BB) {
-          NewReg = getPrevDefOfRCInMBB(*BB, RI, RegRC, RegTy, ToDelete);
-          // Prepare for idom(BB).
-          if (auto *IDM = MDT.getNode(BB)->getIDom()) {
-            BB = IDM->getBlock();
-            RI = BB->rbegin();
-          } else {
-            BB = nullptr;
+
+        if (MDT.isReachableFromEntry(BB)) {
+          while (NewReg == 0 && BB) {
+            NewReg = getPrevDefOfRCInMBB(*BB, RI, RegRC, RegTy, ToDelete);
+            // Prepare for idom(BB).
+            if (auto *IDM = MDT.getNode(BB)->getIDom()) {
+              BB = IDM->getBlock();
+              RI = BB->rbegin();
+            } else {
+              BB = nullptr;
+            }
           }
         }
       }
@@ -124,8 +128,13 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
         bool IsGeneric = MRI->getRegClassOrNull(Reg) == nullptr;
         unsigned ImpDef = IsGeneric ? TargetOpcode::G_IMPLICIT_DEF
                                     : TargetOpcode::IMPLICIT_DEF;
+
+        unsigned State = getRegState(MO);
+        if (MO.getSubReg())
+          State |= RegState::Undef;
+
         BuildMI(*EntryMBB, EntryInsPt, DebugLoc(), TII->get(ImpDef))
-          .addReg(NewReg, getRegState(MO), MO.getSubReg());
+          .addReg(NewReg, State, MO.getSubReg());
       }
 
       // Update all uses.
@@ -149,6 +158,5 @@ static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceInstructionsMIRDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Instructions...\n";
-  runDeltaPass(Test, extractInstrFromModule);
+  runDeltaPass(Test, extractInstrFromModule, "Reducing Instructions");
 }

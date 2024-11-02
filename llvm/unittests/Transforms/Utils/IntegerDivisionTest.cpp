@@ -43,7 +43,7 @@ TEST(IntegerDivision, SDiv) {
   Value *Ret = Builder.CreateRet(Div);
 
   expandDivision(cast<BinaryOperator>(Div));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::AShr);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Quotient = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Quotient && Quotient->getOpcode() == Instruction::Sub);
@@ -73,7 +73,7 @@ TEST(IntegerDivision, UDiv) {
   Value *Ret = Builder.CreateRet(Div);
 
   expandDivision(cast<BinaryOperator>(Div));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::ICmp);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Quotient = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Quotient && Quotient->getOpcode() == Instruction::PHI);
@@ -103,7 +103,7 @@ TEST(IntegerDivision, SRem) {
   Value *Ret = Builder.CreateRet(Rem);
 
   expandRemainder(cast<BinaryOperator>(Rem));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::AShr);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Remainder = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Remainder && Remainder->getOpcode() == Instruction::Sub);
@@ -133,7 +133,7 @@ TEST(IntegerDivision, URem) {
   Value *Ret = Builder.CreateRet(Rem);
 
   expandRemainder(cast<BinaryOperator>(Rem));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::ICmp);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Remainder = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Remainder && Remainder->getOpcode() == Instruction::Sub);
@@ -164,7 +164,7 @@ TEST(IntegerDivision, SDiv64) {
   Value *Ret = Builder.CreateRet(Div);
 
   expandDivision(cast<BinaryOperator>(Div));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::AShr);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Quotient = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Quotient && Quotient->getOpcode() == Instruction::Sub);
@@ -194,7 +194,7 @@ TEST(IntegerDivision, UDiv64) {
   Value *Ret = Builder.CreateRet(Div);
 
   expandDivision(cast<BinaryOperator>(Div));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::ICmp);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Quotient = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Quotient && Quotient->getOpcode() == Instruction::PHI);
@@ -224,7 +224,7 @@ TEST(IntegerDivision, SRem64) {
   Value *Ret = Builder.CreateRet(Rem);
 
   expandRemainder(cast<BinaryOperator>(Rem));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::AShr);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Remainder = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Remainder && Remainder->getOpcode() == Instruction::Sub);
@@ -254,7 +254,7 @@ TEST(IntegerDivision, URem64) {
   Value *Ret = Builder.CreateRet(Rem);
 
   expandRemainder(cast<BinaryOperator>(Rem));
-  EXPECT_TRUE(BB->front().getOpcode() == Instruction::ICmp);
+  EXPECT_TRUE(BB->front().getOpcode() == Instruction::Freeze);
 
   Instruction* Remainder = dyn_cast<Instruction>(cast<User>(Ret)->getOperand(0));
   EXPECT_TRUE(Remainder && Remainder->getOpcode() == Instruction::Sub);

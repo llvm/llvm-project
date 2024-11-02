@@ -33,8 +33,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
 
-  bool isConstantPhysReg(MCRegister PhysReg) const override;
-
   const uint32_t *getNoPreservedMask() const override;
 
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,

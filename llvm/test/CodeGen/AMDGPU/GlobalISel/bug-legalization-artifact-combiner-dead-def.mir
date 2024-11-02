@@ -25,7 +25,9 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GFX10-LABEL: name: value_finder_bug
-    ; GFX10: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
@@ -59,7 +61,9 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; GFX10-LABEL: name: value_finder_bug_before_artifact_combine
-    ; GFX10: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+    ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX10-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)

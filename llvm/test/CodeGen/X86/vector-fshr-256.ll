@@ -37,17 +37,17 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
 ; AVX1-NEXT:    vandnps %ymm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX1-NEXT:    vpsllq $1, %xmm4, %xmm4
-; AVX1-NEXT:    vpsllq %xmm3, %xmm4, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; AVX1-NEXT:    vpsllq %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm5[0,1,2,3],xmm3[4,5,6,7]
-; AVX1-NEXT:    vpsllq $1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllq %xmm2, %xmm0, %xmm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpaddq %xmm5, %xmm5, %xmm5
+; AVX1-NEXT:    vpsllq %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpsllq %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm4[4,5,6,7]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm4 = xmm2[2,3,2,3]
+; AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllq %xmm4, %xmm0, %xmm4
 ; AVX1-NEXT:    vpsllq %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm4[0,1,2,3],xmm0[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm4[4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -58,7 +58,7 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX2-NEXT:    vpsrlvq %ymm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -69,7 +69,7 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX512F-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512F-NEXT:    vpsrlvq %ymm4, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -80,7 +80,7 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX512VL-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512VL-NEXT:    vpsrlvq %ymm4, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512VL-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -91,7 +91,7 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX512BW-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512BW-NEXT:    vpsrlvq %ymm4, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512BW-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
@@ -111,7 +111,7 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX512VLBW-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512VLBW-NEXT:    vpsrlvq %ymm4, %ymm1, %ymm1
 ; AVX512VLBW-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512VLBW-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
@@ -125,23 +125,23 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; XOPAVX1-LABEL: var_funnnel_v4i64:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [63,63,63,63]
-; XOPAVX1-NEXT:    vandnps %ymm3, %ymm2, %ymm4
+; XOPAVX1-NEXT:    vandps %ymm3, %ymm2, %ymm4
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; XOPAVX1-NEXT:    vpsllq $1, %xmm6, %xmm6
-; XOPAVX1-NEXT:    vpshlq %xmm5, %xmm6, %xmm5
-; XOPAVX1-NEXT:    vpsllq $1, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpshlq %xmm4, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vandps %ymm3, %ymm2, %ymm2
+; XOPAVX1-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; XOPAVX1-NEXT:    vpsubq %xmm5, %xmm6, %xmm5
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm7
+; XOPAVX1-NEXT:    vpshlq %xmm5, %xmm7, %xmm5
+; XOPAVX1-NEXT:    vpsubq %xmm4, %xmm6, %xmm4
+; XOPAVX1-NEXT:    vpshlq %xmm4, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
+; XOPAVX1-NEXT:    vandnps %ymm3, %ymm2, %ymm2
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; XOPAVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOPAVX1-NEXT:    vpsubq %xmm3, %xmm4, %xmm3
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; XOPAVX1-NEXT:    vpshlq %xmm3, %xmm5, %xmm3
-; XOPAVX1-NEXT:    vpsubq %xmm2, %xmm4, %xmm2
-; XOPAVX1-NEXT:    vpshlq %xmm2, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; XOPAVX1-NEXT:    vpaddq %xmm4, %xmm4, %xmm4
+; XOPAVX1-NEXT:    vpshlq %xmm3, %xmm4, %xmm3
+; XOPAVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpshlq %xmm2, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
@@ -151,7 +151,7 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; XOPAVX2-NEXT:    vpsrlvq %ymm4, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; XOPAVX2-NEXT:    vpsllq $1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpsllvq %ymm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -170,39 +170,39 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; AVX1-NEXT:    vpsrlq $32, %xmm4, %xmm6
 ; AVX1-NEXT:    vpsrld %xmm6, %xmm3, %xmm6
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm6[0,1,2,3],xmm5[4,5,6,7]
-; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
-; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm7 = xmm4[2],xmm8[2],xmm4[3],xmm8[3]
+; AVX1-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm7 = xmm4[2],xmm6[2],xmm4[3],xmm6[3]
 ; AVX1-NEXT:    vpsrld %xmm7, %xmm3, %xmm7
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm6 = xmm4[0],zero,xmm4[1],zero
-; AVX1-NEXT:    vpsrld %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm8 = xmm4[0],zero,xmm4[1],zero
+; AVX1-NEXT:    vpsrld %xmm8, %xmm3, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm7[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1],xmm5[2,3],xmm3[4,5],xmm5[6,7]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [31,31,31,31]
-; AVX1-NEXT:    vpxor %xmm4, %xmm9, %xmm4
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [31,31,31,31]
+; AVX1-NEXT:    vpxor %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpslld $23, %xmm4, %xmm4
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [1065353216,1065353216,1065353216,1065353216]
-; AVX1-NEXT:    vpaddd %xmm6, %xmm4, %xmm4
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm7 = [1065353216,1065353216,1065353216,1065353216]
+; AVX1-NEXT:    vpaddd %xmm7, %xmm4, %xmm4
 ; AVX1-NEXT:    vcvttps2dq %xmm4, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm7
-; AVX1-NEXT:    vpslld $1, %xmm7, %xmm7
-; AVX1-NEXT:    vpmulld %xmm4, %xmm7, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm8
+; AVX1-NEXT:    vpaddd %xmm8, %xmm8, %xmm8
+; AVX1-NEXT:    vpmulld %xmm4, %xmm8, %xmm4
 ; AVX1-NEXT:    vpor %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm2[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX1-NEXT:    vpsrld %xmm4, %xmm1, %xmm4
-; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm7
-; AVX1-NEXT:    vpsrld %xmm7, %xmm1, %xmm7
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm7[0,1,2,3],xmm4[4,5,6,7]
-; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm7 = xmm2[2],xmm8[2],xmm2[3],xmm8[3]
-; AVX1-NEXT:    vpsrld %xmm7, %xmm1, %xmm7
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm5 = xmm2[0],zero,xmm2[1],zero
-; AVX1-NEXT:    vpsrld %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm7[4,5,6,7]
+; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm8
+; AVX1-NEXT:    vpsrld %xmm8, %xmm1, %xmm8
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm8[0,1,2,3],xmm4[4,5,6,7]
+; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm6 = xmm2[2],xmm6[2],xmm2[3],xmm6[3]
+; AVX1-NEXT:    vpsrld %xmm6, %xmm1, %xmm6
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm8 = xmm2[0],zero,xmm2[1],zero
+; AVX1-NEXT:    vpsrld %xmm8, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm6[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3],xmm1[4,5],xmm4[6,7]
-; AVX1-NEXT:    vpxor %xmm2, %xmm9, %xmm2
+; AVX1-NEXT:    vpxor %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm7, %xmm2, %xmm2
 ; AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
-; AVX1-NEXT:    vpslld $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
@@ -214,7 +214,7 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX2-NEXT:    vpsrlvd %ymm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpslld $1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -225,7 +225,7 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; AVX512F-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512F-NEXT:    vpsrlvd %ymm4, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpslld $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -236,7 +236,7 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; AVX512VL-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512VL-NEXT:    vpsrlvd %ymm4, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512VL-NEXT:    vpslld $1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -247,7 +247,7 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; AVX512BW-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512BW-NEXT:    vpsrlvd %ymm4, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512BW-NEXT:    vpslld $1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
@@ -267,7 +267,7 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; AVX512VLBW-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512VLBW-NEXT:    vpsrlvd %ymm4, %ymm1, %ymm1
 ; AVX512VLBW-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512VLBW-NEXT:    vpslld $1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
@@ -289,13 +289,13 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [31,31,31,31]
 ; XOPAVX1-NEXT:    vpxor %xmm6, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm7
-; XOPAVX1-NEXT:    vpslld $1, %xmm7, %xmm7
+; XOPAVX1-NEXT:    vpaddd %xmm7, %xmm7, %xmm7
 ; XOPAVX1-NEXT:    vpshld %xmm3, %xmm7, %xmm3
 ; XOPAVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpsubd %xmm2, %xmm4, %xmm4
 ; XOPAVX1-NEXT:    vpshld %xmm4, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpxor %xmm6, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpslld $1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpshld %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
@@ -307,7 +307,7 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; XOPAVX2-NEXT:    vpsrlvd %ymm4, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; XOPAVX2-NEXT:    vpslld $1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -335,8 +335,8 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; AVX1-NEXT:    vpsrlw $1, %xmm4, %xmm6
 ; AVX1-NEXT:    vpaddw %xmm5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vpxor %xmm3, %xmm8, %xmm6
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpxor %xmm5, %xmm3, %xmm6
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm6[4,4,5,5,6,6,7,7]
 ; AVX1-NEXT:    vpslld $23, %xmm3, %xmm7
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
@@ -348,24 +348,24 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; AVX1-NEXT:    vcvttps2dq %xmm6, %xmm6
 ; AVX1-NEXT:    vpackusdw %xmm7, %xmm6, %xmm6
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm7
-; AVX1-NEXT:    vpsllw $1, %xmm7, %xmm7
+; AVX1-NEXT:    vpaddw %xmm7, %xmm7, %xmm7
 ; AVX1-NEXT:    vpmullw %xmm6, %xmm7, %xmm6
 ; AVX1-NEXT:    vpor %xmm4, %xmm6, %xmm4
 ; AVX1-NEXT:    vpsllw $12, %xmm2, %xmm6
 ; AVX1-NEXT:    vpsllw $4, %xmm2, %xmm7
 ; AVX1-NEXT:    vpor %xmm6, %xmm7, %xmm6
 ; AVX1-NEXT:    vpaddw %xmm6, %xmm6, %xmm7
-; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm5
-; AVX1-NEXT:    vpblendvb %xmm6, %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm5
-; AVX1-NEXT:    vpblendvb %xmm7, %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm5
-; AVX1-NEXT:    vpaddw %xmm7, %xmm7, %xmm6
-; AVX1-NEXT:    vpblendvb %xmm6, %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm5
-; AVX1-NEXT:    vpaddw %xmm6, %xmm6, %xmm6
-; AVX1-NEXT:    vpblendvb %xmm6, %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vpxor %xmm2, %xmm8, %xmm2
+; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm8
+; AVX1-NEXT:    vpblendvb %xmm6, %xmm8, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm6
+; AVX1-NEXT:    vpblendvb %xmm7, %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm6
+; AVX1-NEXT:    vpaddw %xmm7, %xmm7, %xmm7
+; AVX1-NEXT:    vpblendvb %xmm7, %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm6
+; AVX1-NEXT:    vpaddw %xmm7, %xmm7, %xmm7
+; AVX1-NEXT:    vpblendvb %xmm7, %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm5 = xmm2[4,4,5,5,6,6,7,7]
 ; AVX1-NEXT:    vpslld $23, %xmm5, %xmm5
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm5, %xmm5
@@ -375,7 +375,7 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm5, %xmm2, %xmm2
-; AVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
@@ -427,7 +427,7 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; AVX512BW-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512BW-NEXT:    vpsrlvw %zmm4, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512BW-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpsllvw %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
@@ -447,7 +447,7 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; AVX512VLBW-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; AVX512VLBW-NEXT:    vpsrlvw %ymm4, %ymm1, %ymm1
 ; AVX512VLBW-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; AVX512VLBW-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpsllvw %ymm2, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
@@ -469,13 +469,13 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [15,15,15,15,15,15,15,15]
 ; XOPAVX1-NEXT:    vpxor %xmm6, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm7
-; XOPAVX1-NEXT:    vpsllw $1, %xmm7, %xmm7
+; XOPAVX1-NEXT:    vpaddw %xmm7, %xmm7, %xmm7
 ; XOPAVX1-NEXT:    vpshlw %xmm3, %xmm7, %xmm3
 ; XOPAVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpsubw %xmm2, %xmm4, %xmm4
 ; XOPAVX1-NEXT:    vpshlw %xmm4, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpxor %xmm6, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpshlw %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
@@ -484,22 +484,22 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; XOPAVX2-LABEL: var_funnnel_v16i16:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm4
+; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
-; XOPAVX2-NEXT:    vpsllw $1, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm6
-; XOPAVX2-NEXT:    vpshlw %xmm5, %xmm6, %xmm5
-; XOPAVX2-NEXT:    vpshlw %xmm4, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; XOPAVX2-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; XOPAVX2-NEXT:    vpsubw %xmm5, %xmm6, %xmm5
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm7
+; XOPAVX2-NEXT:    vpshlw %xmm5, %xmm7, %xmm5
+; XOPAVX2-NEXT:    vpsubw %xmm4, %xmm6, %xmm4
+; XOPAVX2-NEXT:    vpshlw %xmm4, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; XOPAVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOPAVX2-NEXT:    vpsubw %xmm3, %xmm4, %xmm3
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; XOPAVX2-NEXT:    vpshlw %xmm3, %xmm5, %xmm3
-; XOPAVX2-NEXT:    vpsubw %xmm2, %xmm4, %xmm2
-; XOPAVX2-NEXT:    vpshlw %xmm2, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; XOPAVX2-NEXT:    vpshlw %xmm3, %xmm4, %xmm3
+; XOPAVX2-NEXT:    vpshlw %xmm2, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
   %res = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %amt)
@@ -512,66 +512,66 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm5
 ; AVX1-NEXT:    vpsllw $4, %xmm5, %xmm4
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX1-NEXT:    vpand %xmm4, %xmm8, %xmm6
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX1-NEXT:    vpand %xmm3, %xmm4, %xmm6
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm7
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; AVX1-NEXT:    vpxor %xmm7, %xmm9, %xmm3
-; AVX1-NEXT:    vpsllw $5, %xmm3, %xmm3
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm6, %xmm5, %xmm6
-; AVX1-NEXT:    vpsllw $2, %xmm6, %xmm4
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm10 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; AVX1-NEXT:    vpand %xmm4, %xmm10, %xmm4
-; AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm6
-; AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm6, %xmm4, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpsrlw $4, %xmm4, %xmm6
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm11 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vpand %xmm6, %xmm11, %xmm6
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; AVX1-NEXT:    vpxor %xmm4, %xmm7, %xmm8
+; AVX1-NEXT:    vpsllw $5, %xmm8, %xmm8
+; AVX1-NEXT:    vpblendvb %xmm8, %xmm6, %xmm5, %xmm6
+; AVX1-NEXT:    vpsllw $2, %xmm6, %xmm9
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; AVX1-NEXT:    vpand %xmm5, %xmm9, %xmm9
+; AVX1-NEXT:    vpaddb %xmm8, %xmm8, %xmm8
+; AVX1-NEXT:    vpblendvb %xmm8, %xmm9, %xmm6, %xmm6
+; AVX1-NEXT:    vpaddb %xmm6, %xmm6, %xmm9
+; AVX1-NEXT:    vpaddb %xmm8, %xmm8, %xmm8
+; AVX1-NEXT:    vpblendvb %xmm8, %xmm9, %xmm6, %xmm6
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm8
+; AVX1-NEXT:    vpsrlw $4, %xmm8, %xmm9
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm10 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm10, %xmm9, %xmm9
 ; AVX1-NEXT:    vpsllw $5, %xmm7, %xmm7
-; AVX1-NEXT:    vpblendvb %xmm7, %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vpsrlw $2, %xmm4, %xmm6
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm12 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
-; AVX1-NEXT:    vpand %xmm6, %xmm12, %xmm6
+; AVX1-NEXT:    vpblendvb %xmm7, %xmm9, %xmm8, %xmm8
+; AVX1-NEXT:    vpsrlw $2, %xmm8, %xmm9
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm11 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; AVX1-NEXT:    vpand %xmm11, %xmm9, %xmm9
 ; AVX1-NEXT:    vpaddb %xmm7, %xmm7, %xmm7
-; AVX1-NEXT:    vpblendvb %xmm7, %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vpsrlw $1, %xmm4, %xmm6
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
-; AVX1-NEXT:    vpand %xmm5, %xmm6, %xmm6
+; AVX1-NEXT:    vpblendvb %xmm7, %xmm9, %xmm8, %xmm8
+; AVX1-NEXT:    vpsrlw $1, %xmm8, %xmm9
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm12 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vpand %xmm12, %xmm9, %xmm9
 ; AVX1-NEXT:    vpaddb %xmm7, %xmm7, %xmm7
-; AVX1-NEXT:    vpblendvb %xmm7, %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vpor %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpblendvb %xmm7, %xmm9, %xmm8, %xmm7
+; AVX1-NEXT:    vpor %xmm7, %xmm6, %xmm6
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm4
-; AVX1-NEXT:    vpand %xmm4, %xmm8, %xmm4
-; AVX1-NEXT:    vpxor %xmm2, %xmm9, %xmm6
-; AVX1-NEXT:    vpsllw $5, %xmm6, %xmm6
-; AVX1-NEXT:    vpblendvb %xmm6, %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm4
-; AVX1-NEXT:    vpand %xmm4, %xmm10, %xmm4
-; AVX1-NEXT:    vpaddb %xmm6, %xmm6, %xmm6
-; AVX1-NEXT:    vpblendvb %xmm6, %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm4
-; AVX1-NEXT:    vpaddb %xmm6, %xmm6, %xmm6
-; AVX1-NEXT:    vpblendvb %xmm6, %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm4
-; AVX1-NEXT:    vpand %xmm4, %xmm11, %xmm4
+; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm7
+; AVX1-NEXT:    vpand %xmm3, %xmm7, %xmm3
+; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm4
+; AVX1-NEXT:    vpsllw $5, %xmm4, %xmm4
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
+; AVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm10, %xmm3
 ; AVX1-NEXT:    vpsllw $5, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm4
-; AVX1-NEXT:    vpand %xmm4, %xmm12, %xmm4
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm11, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm4
-; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm12, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: var_funnnel_v32i8:
@@ -782,9 +782,9 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
 ; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpsllq $1, %xmm3, %xmm3
+; AVX1-NEXT:    vpaddq %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsllq %xmm2, %xmm3, %xmm3
-; AVX1-NEXT:    vpsllq $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllq %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -796,7 +796,7 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX2-NEXT:    vpsrlq %xmm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllq %xmm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -807,7 +807,7 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; AVX512F-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512F-NEXT:    vpsrlq %xmm4, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512F-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpsllq %xmm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -818,7 +818,7 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; AVX512VL-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512VL-NEXT:    vpsrlq %xmm4, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsllq %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -829,7 +829,7 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; AVX512BW-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512BW-NEXT:    vpsrlq %xmm4, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpsllq %xmm2, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
@@ -849,7 +849,7 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; AVX512VLBW-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512VLBW-NEXT:    vpsrlq %xmm4, %ymm1, %ymm1
 ; AVX512VLBW-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vpsllq $1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpsllq %xmm2, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
@@ -871,9 +871,9 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
 ; XOPAVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOPAVX1-NEXT:    vpsllq $1, %xmm3, %xmm3
+; XOPAVX1-NEXT:    vpaddq %xmm3, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpsllq %xmm2, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpsllq $1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpsllq %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -885,7 +885,7 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %
 ; XOPAVX2-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; XOPAVX2-NEXT:    vpsrlq %xmm4, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; XOPAVX2-NEXT:    vpsllq $1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpsllq %xmm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -1020,11 +1020,11 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX1-NEXT:    vpsrlw %xmm4, %xmm5, %xmm5
 ; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpsllw $1, %xmm3, %xmm3
+; AVX1-NEXT:    vpaddw %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
 ; AVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
@@ -1036,7 +1036,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX2-NEXT:    vpsrlw %xmm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -1047,7 +1047,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX512F-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512F-NEXT:    vpsrlw %xmm4, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512F-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -1058,7 +1058,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX512VL-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512VL-NEXT:    vpsrlw %xmm4, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -1069,7 +1069,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX512BW-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512BW-NEXT:    vpsrlw %xmm4, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
@@ -1089,7 +1089,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX512VLBW-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX512VLBW-NEXT:    vpsrlw %xmm4, %ymm1, %ymm1
 ; AVX512VLBW-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
@@ -1109,11 +1109,11 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; XOPAVX1-NEXT:    vpsrlw %xmm4, %xmm5, %xmm5
 ; XOPAVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOPAVX1-NEXT:    vpsllw $1, %xmm3, %xmm3
+; XOPAVX1-NEXT:    vpaddw %xmm3, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
@@ -1125,7 +1125,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; XOPAVX2-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; XOPAVX2-NEXT:    vpsrlw %xmm4, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    vpandn %xmm3, %xmm2, %xmm2
-; XOPAVX2-NEXT:    vpsllw $1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -1494,10 +1494,10 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; AVX1-NEXT:    vpsllw $1, %xmm0, %xmm2
+; AVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -1508,7 +1508,7 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; AVX2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm2
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
-; AVX2-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -1518,7 +1518,7 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; AVX512F-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm2
 ; AVX512F-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
-; AVX512F-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -1528,7 +1528,7 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; AVX512VL-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm2
 ; AVX512VL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
 ; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
-; AVX512VL-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -1539,7 +1539,7 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; AVX512BW-NEXT:    vpsrlvw %zmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; AVX512BW-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpsllvw %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
@@ -1556,7 +1556,7 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; AVX512VLBW-LABEL: constant_funnnel_v16i16:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLBW-NEXT:    vpsllw $1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpsllvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
@@ -1573,10 +1573,10 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; XOPAVX1-NEXT:    vpshlw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; XOPAVX1-NEXT:    vpsllw $1, %xmm0, %xmm2
+; XOPAVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm2
 ; XOPAVX1-NEXT:    vpshlw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; XOPAVX1-NEXT:    vpsllw $1, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpshlw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; XOPAVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -1587,7 +1587,7 @@ define <16 x i16> @constant_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y) nounwin
 ; XOPAVX2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm2
 ; XOPAVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
 ; XOPAVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
-; XOPAVX2-NEXT:    vpsllw $1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -1599,43 +1599,43 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX1-LABEL: constant_funnnel_v32i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8],xmm8[8],xmm2[9],xmm8[9],xmm2[10],xmm8[10],xmm2[11],xmm8[11],xmm2[12],xmm8[12],xmm2[13],xmm8[13],xmm2[14],xmm8[14],xmm2[15],xmm8[15]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [256,2,4,8,16,32,64,128]
-; AVX1-NEXT:    vpmullw %xmm4, %xmm9, %xmm4
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8],xmm3[8],xmm2[9],xmm3[9],xmm2[10],xmm3[10],xmm2[11],xmm3[11],xmm2[12],xmm3[12],xmm2[13],xmm3[13],xmm2[14],xmm3[14],xmm2[15],xmm3[15]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [256,2,4,8,16,32,64,128]
+; AVX1-NEXT:    vpmullw %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm4
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm10 = [256,128,64,32,16,8,4,2]
-; AVX1-NEXT:    vpmullw %xmm2, %xmm10, %xmm2
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [256,128,64,32,16,8,4,2]
+; AVX1-NEXT:    vpmullw %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm7 = xmm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [128,1,2,4,8,16,32,64]
-; AVX1-NEXT:    vpmullw %xmm3, %xmm7, %xmm7
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm5, %xmm7, %xmm7
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [128,1,2,4,8,16,32,64]
+; AVX1-NEXT:    vpmullw %xmm7, %xmm8, %xmm7
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm7, %xmm9, %xmm7
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [128,64,32,16,8,4,2,1]
-; AVX1-NEXT:    vpmullw %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm10 = [128,64,32,16,8,4,2,1]
+; AVX1-NEXT:    vpmullw %xmm4, %xmm10, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm9, %xmm4
 ; AVX1-NEXT:    vpackuswb %xmm7, %xmm4, %xmm4
 ; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm1[8],xmm8[8],xmm1[9],xmm8[9],xmm1[10],xmm8[10],xmm1[11],xmm8[11],xmm1[12],xmm8[12],xmm1[13],xmm8[13],xmm1[14],xmm8[14],xmm1[15],xmm8[15]
-; AVX1-NEXT:    vpmullw %xmm4, %xmm9, %xmm4
-; AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm4
+; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm3[8],xmm1[9],xmm3[9],xmm1[10],xmm3[10],xmm1[11],xmm3[11],xmm1[12],xmm3[12],xmm1[13],xmm3[13],xmm1[14],xmm3[14],xmm1[15],xmm3[15]
+; AVX1-NEXT:    vpmullw %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX1-NEXT:    vpmullw %xmm1, %xmm10, %xmm1
+; AVX1-NEXT:    vpmullw %xmm6, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpmullw %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; AVX1-NEXT:    vpmullw %xmm3, %xmm8, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm9, %xmm3
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX1-NEXT:    vpmullw %xmm6, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpmullw %xmm0, %xmm10, %xmm0
+; AVX1-NEXT:    vpand %xmm0, %xmm9, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0

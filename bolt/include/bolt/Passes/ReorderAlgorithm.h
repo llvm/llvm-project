@@ -39,7 +39,7 @@ public:
   /// Clusters vector. Also encode relative weights between two clusters in
   /// the ClusterEdges vector if requested. This vector is indexed by
   /// the clusters indices in the Clusters vector.
-  virtual void clusterBasicBlocks(const BinaryFunction &BF,
+  virtual void clusterBasicBlocks(BinaryFunction &BF,
                                   bool ComputeEdges = false) = 0;
 
   /// Compute for each cluster its averagae execution frequency, that is
@@ -98,7 +98,7 @@ protected:
   BBToClusterMapTy BBToClusterMap;
 
 public:
-  void clusterBasicBlocks(const BinaryFunction &BF,
+  void clusterBasicBlocks(BinaryFunction &BF,
                           bool ComputeEdges = false) override;
   void reset() override;
 };
@@ -167,7 +167,7 @@ public:
 
   /// Reorder the basic blocks of the given function and store the new order in
   /// the new Clusters vector.
-  virtual void reorderBasicBlocks(const BinaryFunction &BF,
+  virtual void reorderBasicBlocks(BinaryFunction &BF,
                                   BasicBlockOrder &Order) const = 0;
 
   void setClusterAlgorithm(ClusterAlgorithm *CAlgo) {
@@ -185,7 +185,7 @@ public:
 /// only be used for small functions.
 class TSPReorderAlgorithm : public ReorderAlgorithm {
 public:
-  void reorderBasicBlocks(const BinaryFunction &BF,
+  void reorderBasicBlocks(BinaryFunction &BF,
                           BasicBlockOrder &Order) const override;
 };
 
@@ -196,7 +196,7 @@ public:
   explicit OptimizeReorderAlgorithm(std::unique_ptr<ClusterAlgorithm> CAlgo)
       : ReorderAlgorithm(std::move(CAlgo)) {}
 
-  void reorderBasicBlocks(const BinaryFunction &BF,
+  void reorderBasicBlocks(BinaryFunction &BF,
                           BasicBlockOrder &Order) const override;
 };
 
@@ -209,7 +209,7 @@ public:
       std::unique_ptr<ClusterAlgorithm> CAlgo)
       : ReorderAlgorithm(std::move(CAlgo)) {}
 
-  void reorderBasicBlocks(const BinaryFunction &BF,
+  void reorderBasicBlocks(BinaryFunction &BF,
                           BasicBlockOrder &Order) const override;
 };
 
@@ -222,21 +222,21 @@ public:
       std::unique_ptr<ClusterAlgorithm> CAlgo)
       : ReorderAlgorithm(std::move(CAlgo)) {}
 
-  void reorderBasicBlocks(const BinaryFunction &BF,
+  void reorderBasicBlocks(BinaryFunction &BF,
                           BasicBlockOrder &Order) const override;
 };
 
 /// A new reordering algorithm for basic blocks, ext-tsp
 class ExtTSPReorderAlgorithm : public ReorderAlgorithm {
 public:
-  void reorderBasicBlocks(const BinaryFunction &BF,
+  void reorderBasicBlocks(BinaryFunction &BF,
                           BasicBlockOrder &Order) const override;
 };
 
 /// Toy example that simply reverses the original basic block order.
 class ReverseReorderAlgorithm : public ReorderAlgorithm {
 public:
-  void reorderBasicBlocks(const BinaryFunction &BF,
+  void reorderBasicBlocks(BinaryFunction &BF,
                           BasicBlockOrder &Order) const override;
 };
 
@@ -247,7 +247,7 @@ public:
       std::unique_ptr<ClusterAlgorithm> CAlgo)
       : ReorderAlgorithm(std::move(CAlgo)) {}
 
-  void reorderBasicBlocks(const BinaryFunction &BF,
+  void reorderBasicBlocks(BinaryFunction &BF,
                           BasicBlockOrder &Order) const override;
 };
 

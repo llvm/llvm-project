@@ -47,12 +47,12 @@ public:
   static char ID;
   explicit FlattenSchedule() : ScopPass(ID) {}
 
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredTransitive<ScopInfoRegionPass>();
     AU.setPreservesAll();
   }
 
-  virtual bool runOnScop(Scop &S) override {
+  bool runOnScop(Scop &S) override {
     // Keep a reference to isl_ctx to ensure that it is not freed before we free
     // OldSchedule.
     IslCtx = S.getSharedIslCtx();
@@ -79,7 +79,7 @@ public:
     return false;
   }
 
-  virtual void printScop(raw_ostream &OS, Scop &S) const override {
+  void printScop(raw_ostream &OS, Scop &S) const override {
     OS << "Schedule before flattening {\n";
     printSchedule(OS, OldSchedule, 4);
     OS << "}\n\n";
@@ -89,7 +89,7 @@ public:
     OS << "}\n";
   }
 
-  virtual void releaseMemory() override {
+  void releaseMemory() override {
     OldSchedule = {};
     IslCtx.reset();
   }

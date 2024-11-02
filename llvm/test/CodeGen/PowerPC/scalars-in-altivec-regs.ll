@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=powerpc64le-- -verify-machineinstrs \
 ; RUN:   -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck --check-prefix=LE %s
 
-define dso_local void @test1(<2 x double>* %v, i64 %a) local_unnamed_addr #0 {
+define dso_local void @test1(ptr %v, i64 %a) local_unnamed_addr #0 {
 ; AIX64-LABEL: test1:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mtvsrd vs34, r4
@@ -36,11 +36,11 @@ define dso_local void @test1(<2 x double>* %v, i64 %a) local_unnamed_addr #0 {
 ; LE-NEXT:    #NO_APP
 ; LE-NEXT:    blr
 entry:
-  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i64 %a, <2 x double>* %v)
+  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i64 %a, ptr %v)
   ret void
 }
 
-define dso_local void @test2(<2 x double>* %v, i32 signext %a) local_unnamed_addr #0 {
+define dso_local void @test2(ptr %v, i32 signext %a) local_unnamed_addr #0 {
 ; AIX64-LABEL: test2:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    clrldi r4, r4, 32
@@ -71,11 +71,11 @@ define dso_local void @test2(<2 x double>* %v, i32 signext %a) local_unnamed_add
 ; LE-NEXT:    #NO_APP
 ; LE-NEXT:    blr
 entry:
-  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i32 %a, <2 x double>* %v)
+  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i32 %a, ptr %v)
   ret void
 }
 
-define dso_local void @test3(<2 x double>* %v, i16 signext %a) local_unnamed_addr #0 {
+define dso_local void @test3(ptr %v, i16 signext %a) local_unnamed_addr #0 {
 ; AIX64-LABEL: test3:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    clrldi r4, r4, 48
@@ -107,11 +107,11 @@ define dso_local void @test3(<2 x double>* %v, i16 signext %a) local_unnamed_add
 ; LE-NEXT:    #NO_APP
 ; LE-NEXT:    blr
 entry:
-  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i16 %a, <2 x double>* %v)
+  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i16 %a, ptr %v)
   ret void
 }
 
-define dso_local void @test4(<2 x double>* %v, i8 signext %a) local_unnamed_addr #0 {
+define dso_local void @test4(ptr %v, i8 signext %a) local_unnamed_addr #0 {
 ; AIX64-LABEL: test4:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    clrldi r4, r4, 56
@@ -143,11 +143,11 @@ define dso_local void @test4(<2 x double>* %v, i8 signext %a) local_unnamed_addr
 ; LE-NEXT:    #NO_APP
 ; LE-NEXT:    blr
 entry:
-  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i8 %a, <2 x double>* %v)
+  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i8 %a, ptr %v)
   ret void
 }
 
-define dso_local void @test6(<2 x double>* %v, i32 zeroext %a) local_unnamed_addr #0 {
+define dso_local void @test6(ptr %v, i32 zeroext %a) local_unnamed_addr #0 {
 ; AIX64-LABEL: test6:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mtvsrd vs34, r4
@@ -176,11 +176,11 @@ define dso_local void @test6(<2 x double>* %v, i32 zeroext %a) local_unnamed_add
 ; LE-NEXT:    #NO_APP
 ; LE-NEXT:    blr
 entry:
-  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i32 %a, <2 x double>* %v)
+  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i32 %a, ptr %v)
   ret void
 }
 
-define dso_local void @test7(<2 x double>* %v, i16 zeroext %a) local_unnamed_addr #0 {
+define dso_local void @test7(ptr %v, i16 zeroext %a) local_unnamed_addr #0 {
 ; AIX64-LABEL: test7:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mtvsrd vs34, r4
@@ -209,11 +209,11 @@ define dso_local void @test7(<2 x double>* %v, i16 zeroext %a) local_unnamed_add
 ; LE-NEXT:    #NO_APP
 ; LE-NEXT:    blr
 entry:
-  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i16 %a, <2 x double>* %v)
+  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i16 %a, ptr %v)
   ret void
 }
 
-define dso_local void @test8(<2 x double>* %v, i8 zeroext %a) local_unnamed_addr #0 {
+define dso_local void @test8(ptr %v, i8 zeroext %a) local_unnamed_addr #0 {
 ; AIX64-LABEL: test8:
 ; AIX64:       # %bb.0: # %entry
 ; AIX64-NEXT:    mtvsrd vs34, r4
@@ -242,7 +242,7 @@ define dso_local void @test8(<2 x double>* %v, i8 zeroext %a) local_unnamed_addr
 ; LE-NEXT:    #NO_APP
 ; LE-NEXT:    blr
 entry:
-  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i8 %a, <2 x double>* %v)
+  tail call void asm sideeffect "stvx $0,0,$1", "v,r,~{memory}"(i8 %a, ptr %v)
   ret void
 }
 

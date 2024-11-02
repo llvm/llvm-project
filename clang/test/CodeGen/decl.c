@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c89 -w -fmerge-all-constants -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -std=c89 -w -fmerge-all-constants -emit-llvm < %s | FileCheck %s
 
 // CHECK: @test1.x = internal constant [12 x i32] [i32 1
 // CHECK: @__const.test2.x = private unnamed_addr constant [13 x i32] [i32 1,
@@ -28,7 +28,7 @@ void test2(void) {
   // CHECK: @test2()
   // CHECK: %x = alloca [13 x i32]
   // CHECK: call void @llvm.memcpy
-  // CHECK: call{{.*}}@foo{{.*}}i32* noundef %
+  // CHECK: call{{.*}}@foo{{.*}}ptr noundef %
 }
 
 

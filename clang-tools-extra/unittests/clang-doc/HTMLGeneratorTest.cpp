@@ -43,15 +43,15 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   I.Name = "Namespace";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.ChildNamespaces.emplace_back(EmptySID, "ChildNamespace",
-                                 InfoType::IT_namespace, "Namespace");
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                              "Namespace");
-  I.ChildFunctions.emplace_back();
-  I.ChildFunctions.back().Access = AccessSpecifier::AS_none;
-  I.ChildFunctions.back().Name = "OneFunction";
-  I.ChildEnums.emplace_back();
-  I.ChildEnums.back().Name = "OneEnum";
+  I.Children.Namespaces.emplace_back(EmptySID, "ChildNamespace",
+                                     InfoType::IT_namespace, "Namespace");
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                                  "Namespace");
+  I.Children.Functions.emplace_back();
+  I.Children.Functions.back().Access = AccessSpecifier::AS_none;
+  I.Children.Functions.back().Name = "OneFunction";
+  I.Children.Enums.emplace_back();
+  I.Children.Enums.back().Name = "OneEnum";
 
   auto G = getHTMLGenerator();
   assert(G);
@@ -152,17 +152,18 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
 
   SmallString<16> PathTo;
   llvm::sys::path::native("path/to", PathTo);
-  I.Members.emplace_back("int", "X/Y", "X", AccessSpecifier::AS_private);
+  I.Members.emplace_back(TypeInfo("int", "X/Y"), "X",
+                         AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, PathTo);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                              "X/Y/Z/r");
-  I.ChildFunctions.emplace_back();
-  I.ChildFunctions.back().Name = "OneFunction";
-  I.ChildEnums.emplace_back();
-  I.ChildEnums.back().Name = "OneEnum";
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                                  "X/Y/Z/r");
+  I.Children.Functions.emplace_back();
+  I.Children.Functions.back().Name = "OneFunction";
+  I.Children.Enums.emplace_back();
+  I.Children.Enums.back().Name = "OneEnum";
 
   auto G = getHTMLGenerator();
   assert(G);
@@ -276,8 +277,9 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
 
   SmallString<16> PathTo;
   llvm::sys::path::native("path/to", PathTo);
-  I.ReturnType = TypeInfo(EmptySID, "float", InfoType::IT_default, PathTo);
-  I.Params.emplace_back("int", PathTo, "P");
+  I.ReturnType =
+      TypeInfo(Reference(EmptySID, "float", InfoType::IT_default, PathTo));
+  I.Params.emplace_back(TypeInfo("int", PathTo), "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -370,9 +372,9 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "I");
-  I.Params.emplace_back("int", "J");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "I");
+  I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;

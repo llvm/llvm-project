@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsycl-is-device -triple spir64 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsycl-is-device -triple spir64 -fsyntax-only -verify -std=c++14 %s
 //
 // This test checks if compiler reports compilation error on an attempt to use
 // a zero-length array inside device code.

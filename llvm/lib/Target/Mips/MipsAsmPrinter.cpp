@@ -181,6 +181,10 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
 }
 
 void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  // FIXME: Enable feature predicate checks once all the test pass.
+  // Mips_MC::verifyInstructionPredicates(MI->getOpcode(),
+  //                                      getSubtargetInfo().getFeatureBits());
+
   MipsTargetStreamer &TS = getTargetStreamer();
   unsigned Opc = MI->getOpcode();
   TS.forbidModuleDirective();
@@ -522,27 +526,27 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
     case 'X': // hex const int
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << "0x" << Twine::utohexstr(MO.getImm());
       return false;
     case 'x': // hex const int (low 16 bits)
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << "0x" << Twine::utohexstr(MO.getImm() & 0xffff);
       return false;
     case 'd': // decimal const int
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << MO.getImm();
       return false;
     case 'm': // decimal const int minus 1
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << MO.getImm() - 1;
       return false;
     case 'y': // exact log2
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       if (!isPowerOf2_64(MO.getImm()))
         return true;
@@ -550,7 +554,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       return false;
     case 'z':
       // $0 if zero, regular printing otherwise
-      if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm() == 0) {
+      if (MO.isImm() && MO.getImm() == 0) {
         O << "$0";
         return false;
       }
@@ -798,7 +802,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
 
   // Tell the assembler which ABI we are using
   std::string SectionName = std::string(".mdebug.") + getCurrentABIString();
-  OutStreamer->SwitchSection(
+  OutStreamer->switchSection(
       OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, 0));
 
   // NaN: At the moment we only support:
@@ -825,7 +829,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     TS.emitDirectiveModuleOddSPReg();
 
   // Switch to the .text section.
-  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
 }
 
 void MipsAsmPrinter::emitInlineAsmStart() const {
@@ -841,12 +845,12 @@ void MipsAsmPrinter::emitInlineAsmStart() const {
   TS.emitDirectiveSetAt();
   TS.emitDirectiveSetMacro();
   TS.emitDirectiveSetReorder();
-  OutStreamer->AddBlankLine();
+  OutStreamer->addBlankLine();
 }
 
 void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                                       const MCSubtargetInfo *EndInfo) const {
-  OutStreamer->AddBlankLine();
+  OutStreamer->addBlankLine();
   getTargetStreamer().emitDirectiveSetPop();
 }
 
@@ -1038,14 +1042,14 @@ void MipsAsmPrinter::EmitFPCallStub(
   //
   // probably not necessary but we save and restore the current section state
   //
-  OutStreamer->PushSection();
+  OutStreamer->pushSection();
   //
   // .section mips16.call.fpxxxx,"ax",@progbits
   //
   MCSectionELF *M = OutContext.getELFSection(
       ".mips16.call.fp." + std::string(Symbol), ELF::SHT_PROGBITS,
       ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
-  OutStreamer->SwitchSection(M, nullptr);
+  OutStreamer->switchSection(M, nullptr);
   //
   // .align 2
   //
@@ -1114,7 +1118,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   const MCExpr *T_min_E = MCBinaryExpr::createSub(T, E, OutContext);
   OutStreamer->emitELFSize(Stub, T_min_E);
   TS.emitDirectiveEnd(x);
-  OutStreamer->PopSection();
+  OutStreamer->popSection();
 }
 
 void MipsAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -1130,7 +1134,7 @@ void MipsAsmPrinter::emitEndOfAsmFile(Module &M) {
     EmitFPCallStub(Symbol, Signature);
   }
   // return to the text section
-  OutStreamer->SwitchSection(OutContext.getObjectFileInfo()->getTextSection());
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
 }
 
 void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {

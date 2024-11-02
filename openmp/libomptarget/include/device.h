@@ -22,11 +22,11 @@
 #include <mutex>
 #include <set>
 #include <thread>
-#include <vector>
 
 #include "ExclusiveAccess.h"
 #include "omptarget.h"
 #include "rtl.h"
+#include "llvm/ADT/SmallVector.h"
 
 // Forward declarations.
 struct RTLInfoTy;
@@ -247,17 +247,17 @@ struct HostDataToTargetMapKeyTy {
       : KeyValue(HDTT->HstPtrBegin), HDTT(HDTT) {}
   HostDataToTargetTy *HDTT;
 };
-inline bool operator<(const HostDataToTargetMapKeyTy &lhs,
-                      const uintptr_t &rhs) {
-  return lhs.KeyValue < rhs;
+inline bool operator<(const HostDataToTargetMapKeyTy &LHS,
+                      const uintptr_t &RHS) {
+  return LHS.KeyValue < RHS;
 }
-inline bool operator<(const uintptr_t &lhs,
-                      const HostDataToTargetMapKeyTy &rhs) {
-  return lhs < rhs.KeyValue;
+inline bool operator<(const uintptr_t &LHS,
+                      const HostDataToTargetMapKeyTy &RHS) {
+  return LHS < RHS.KeyValue;
 }
-inline bool operator<(const HostDataToTargetMapKeyTy &lhs,
-                      const HostDataToTargetMapKeyTy &rhs) {
-  return lhs.KeyValue < rhs.KeyValue;
+inline bool operator<(const HostDataToTargetMapKeyTy &LHS,
+                      const HostDataToTargetMapKeyTy &RHS) {
+  return LHS.KeyValue < RHS.KeyValue;
 }
 
 struct LookupResult {
@@ -281,7 +281,13 @@ struct TargetPointerResultTy {
     unsigned IsNewEntry : 1;
     /// If the pointer is actually a host pointer (when unified memory enabled)
     unsigned IsHostPointer : 1;
-  } Flags = {0, 0};
+    /// If the pointer is present in the mapping table.
+    unsigned IsPresent : 1;
+  } Flags = {0, 0, 0};
+
+  bool isPresent() const { return Flags.IsPresent; }
+
+  bool isHostPointer() const { return Flags.IsHostPointer; }
 
   /// The corresponding map table entry which is stable.
   HostDataToTargetTy *Entry = nullptr;
@@ -333,10 +339,6 @@ struct DeviceTy {
   ShadowPtrListTy ShadowPtrMap;
 
   std::mutex PendingGlobalsMtx, ShadowMtx;
-
-  // NOTE: Once libomp gains full target-task support, this state should be
-  // moved into the target task in libomp.
-  std::map<int32_t, uint64_t> LoopTripCnt;
 
   DeviceTy(RTLInfoTy *RTL);
   // DeviceTy is not copyable
@@ -395,7 +397,7 @@ struct DeviceTy {
 
   // calls to RTL
   int32_t initOnce();
-  __tgt_target_table *load_binary(void *Img);
+  __tgt_target_table *loadBinary(void *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -409,8 +411,9 @@ struct DeviceTy {
   void *allocData(int64_t Size, void *HstPtr = nullptr,
                   int32_t Kind = TARGET_ALLOC_DEFAULT);
   /// Deallocates memory which \p TgtPtrBegin points at and returns
-  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
-  int32_t deleteData(void *TgtPtrBegin);
+  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. p Kind dictates what
+  /// allocator should be used (host, shared, device).
+  int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
 
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
@@ -469,7 +472,7 @@ private:
   void deinit();
 };
 
-extern bool device_is_ready(int device_num);
+extern bool deviceIsReady(int DeviceNum);
 
 /// Struct for the data required to handle plugins
 struct PluginManager {
@@ -479,15 +482,19 @@ struct PluginManager {
   /// RTLs identified on the host
   RTLsTy RTLs;
 
+  /// Executable images and information extracted from the input images passed
+  /// to the runtime.
+  std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
+
   /// Devices associated with RTLs
-  std::vector<std::unique_ptr<DeviceTy>> Devices;
+  llvm::SmallVector<std::unique_ptr<DeviceTy>> Devices;
   std::mutex RTLsMtx; ///< For RTLs and Devices
 
   /// Translation table retreived from the binary
   HostEntriesBeginToTransTableTy HostEntriesBeginToTransTable;
   std::mutex TrlTblMtx; ///< For Translation Table
   /// Host offload entries in order of image registration
-  std::vector<__tgt_offload_entry *> HostEntriesBeginRegistrationOrder;
+  llvm::SmallVector<__tgt_offload_entry *> HostEntriesBeginRegistrationOrder;
 
   /// Map from ptrs on the host to an entry in the Translation Table
   HostPtrToTableMapTy HostPtrToTableMap;

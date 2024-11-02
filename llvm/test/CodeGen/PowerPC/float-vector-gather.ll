@@ -12,11 +12,11 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-vsr-nums-as-vr \
 ; RUN: -ppc-asm-full-reg-names -mtriple=powerpc-ibm-aix-xcoff < %s \
 ; RUN: | FileCheck %s -check-prefix=CHECK-BE-AIX-32
-define dso_local <4 x float> @vector_gatherf(float* nocapture readonly %a,
-float* nocapture readonly %b, float* nocapture readonly %c,
-float* nocapture readonly %d) {
+define dso_local <4 x float> @vector_gatherf(ptr nocapture readonly %a,
+ptr nocapture readonly %b, ptr nocapture readonly %c,
+ptr nocapture readonly %d) {
 ; C code from which this IR test case was generated:
-; vector float test(float *a, float *b, float *c, float *d) {
+; vector float test(ptr a, ptr b, ptr c, ptr d) {
 ;  return (vector float) { *a, *b, *c, *d };
 ; }
 ; CHECK-LE-LABEL: vector_gatherf:
@@ -52,13 +52,13 @@ float* nocapture readonly %d) {
 ; CHECK-BE-AIX-32-NEXT: xxmrghd v[[REG0]], v[[REG3]], v[[REG0]]
 ; CHECK-BE-AIX-32-NEXT: blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %vecinit = insertelement <4 x float> undef, float %0, i32 0
-  %1 = load float, float* %b, align 4
+  %1 = load float, ptr %b, align 4
   %vecinit1 = insertelement <4 x float> %vecinit, float %1, i32 1
-  %2 = load float, float* %c, align 4
+  %2 = load float, ptr %c, align 4
   %vecinit2 = insertelement <4 x float> %vecinit1, float %2, i32 2
-  %3 = load float, float* %d, align 4
+  %3 = load float, ptr %d, align 4
   %vecinit3 = insertelement <4 x float> %vecinit2, float %3, i32 3
   ret <4 x float> %vecinit3
 }

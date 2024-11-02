@@ -18,7 +18,6 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -81,7 +80,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(std::string("-out:") + Output.getFilename()));
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
-      !C.getDriver().IsCLMode()) {
+      !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
     CmdArgs.push_back("-defaultlib:libcmt");
     CmdArgs.push_back("-defaultlib:oldnames");
   }
@@ -128,6 +127,16 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.getWindowsSDKLibraryPath(Args, WindowsSdkLibPath))
       CmdArgs.push_back(
           Args.MakeArgString(std::string("-libpath:") + WindowsSdkLibPath));
+  }
+
+  if (C.getDriver().IsFlangMode()) {
+    addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
+    addFortranRuntimeLibs(TC, CmdArgs);
+
+    // Inform the MSVC linker that we're generating a console application, i.e.
+    // one with `main` as the "user-defined" entry point. The `main` function is
+    // defined in flang's runtime libraries.
+    CmdArgs.push_back("/subsystem:console");
   }
 
   // Add the compiler-rt library directories to libpath if they exist to help
@@ -441,16 +450,20 @@ bool MSVCToolChain::IsIntegratedAssemblerDefault() const {
   return true;
 }
 
-bool MSVCToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
+ToolChain::UnwindTableLevel
+MSVCToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   // Don't emit unwind tables by default for MachO targets.
   if (getTriple().isOSBinFormatMachO())
-    return false;
+    return UnwindTableLevel::None;
 
   // All non-x86_32 Windows targets require unwind tables. However, LLVM
   // doesn't know how to generate them for all targets, so only enable
   // the ones that are actually implemented.
-  return getArch() == llvm::Triple::x86_64 ||
-         getArch() == llvm::Triple::aarch64;
+  if (getArch() == llvm::Triple::x86_64 || getArch() == llvm::Triple::arm ||
+      getArch() == llvm::Triple::thumb || getArch() == llvm::Triple::aarch64)
+    return UnwindTableLevel::Asynchronous;
+
+  return UnwindTableLevel::None;
 }
 
 bool MSVCToolChain::isPICDefault() const {
@@ -700,7 +713,7 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
         if (major >= 10) {
           llvm::VersionTuple Tuple;
           if (!Tuple.tryParse(windowsSDKIncludeVersion) &&
-              Tuple.getSubminor().getValueOr(0) >= 17134) {
+              Tuple.getSubminor().value_or(0) >= 17134) {
             AddSystemIncludeWithSubfolder(DriverArgs, CC1Args, WindowsSDKDir,
                                           "Include", windowsSDKIncludeVersion,
                                           "cppwinrt");
@@ -758,8 +771,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
-  MSVT = VersionTuple(MSVT.getMajor(), MSVT.getMinor().getValueOr(0),
-                      MSVT.getSubminor().getValueOr(0));
+  MSVT = VersionTuple(MSVT.getMajor(), MSVT.getMinor().value_or(0),
+                      MSVT.getSubminor().value_or(0));
 
   // For the rest of the triple, however, a computed architecture name may
   // be needed.

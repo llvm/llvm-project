@@ -17,9 +17,10 @@
 
 #include "llvm/MCA/View.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+class MCInstPrinter;
+
 namespace mca {
 
 // The base class for views that deal with individual machine instructions.

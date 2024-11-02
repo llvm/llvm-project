@@ -22,8 +22,8 @@ define float @test(float* nocapture readonly %pA, float* nocapture readonly %pB,
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -4
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr float, float* [[PA:%.*]], i32 [[N_VEC]]
-; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr float, float* [[PB:%.*]], i32 [[N_VEC]]
-; CHECK-NEXT:    [[IND_END4:%.*]] = and i32 [[BLOCKSIZE]], 3
+; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr float, float* [[PB:%.*]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END3:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -54,14 +54,14 @@ define float @test(float* nocapture readonly %pA, float* nocapture readonly %pB,
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi float* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PA]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi float* [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[PB]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END4]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi float* [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[PB]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[IND_END3]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP13]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PA_ADDR_020:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[IF_END:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PB_ADDR_019:%.*]] = phi float* [ [[INCDEC_PTR1:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[BLOCKSIZE_ADDR_018:%.*]] = phi i32 [ [[DEC:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL3]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PB_ADDR_019:%.*]] = phi float* [ [[INCDEC_PTR1:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[BLOCKSIZE_ADDR_018:%.*]] = phi i32 [ [[DEC:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ACCUM_017:%.*]] = phi float [ [[ACCUM_1:%.*]], [[IF_END]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[PA_ADDR_020]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = load float, float* [[PA_ADDR_020]], align 4

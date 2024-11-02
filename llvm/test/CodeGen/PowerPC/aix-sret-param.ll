@@ -18,19 +18,19 @@
 define void @test1() {
 entry:
   %s = alloca %struct.S, align 4
-  call void @foo(%struct.S* sret(%struct.S) %s)
+  call void @foo(ptr sret(%struct.S) %s)
   ret void
 }
 
 define void @test2() {
 entry:
   %t = alloca %struct.T, align 8
-  call void @bar(%struct.T* sret(%struct.T) %t)
+  call void @bar(ptr sret(%struct.T) %t)
   ret void
 }
 
-declare void @foo(%struct.S* sret(%struct.S))
-declare void @bar(%struct.T* sret(%struct.T))
+declare void @foo(ptr sret(%struct.S))
+declare void @bar(ptr sret(%struct.T))
 
 ; MIR:      name:            test1
 ; MIR:      stack:

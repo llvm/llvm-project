@@ -14,13 +14,13 @@ define i128 @f1(i64 %a, i64 %b) {
   ret i128 %r
 }
 
-define i128 @f2(i64 %a, i64* %p) {
+define i128 @f2(i64 %a, ptr %p) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    mulxq (%rsi), %rax, %rdx
 ; CHECK-NEXT:    retq
-  %b = load i64, i64* %p
+  %b = load i64, ptr %p
   %x = zext i64 %a to i128
   %y = zext i64 %b to i128
   %r = mul i128 %x, %y

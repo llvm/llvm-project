@@ -29,7 +29,7 @@ struct TestPDLLPass : public PassWrapper<TestPDLLPass, OperationPass<>> {
   LogicalResult initialize(MLIRContext *ctx) override {
     // Build the pattern set within the `initialize` to avoid recompiling PDL
     // patterns during each `runOnOperation` invocation.
-    RewritePatternSet patternList(&getContext());
+    RewritePatternSet patternList(ctx);
     populateGeneratedPDLLPatterns(patternList);
     patterns = std::move(patternList);
     return success();

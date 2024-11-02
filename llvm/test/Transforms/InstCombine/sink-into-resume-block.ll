@@ -3,7 +3,7 @@
 
 ; Check that InstCombine can sink instructions to the landingpad of the invoke.
 
-define void @t0_noop(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t0_noop(i32 %arg) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t0_noop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
@@ -14,12 +14,12 @@ define void @t0_noop(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_person
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    [[V0:%.*]] = add i32 [[ARG:%.*]], 42
 ; CHECK-NEXT:    call void @consume(i32 [[V0]])
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[V1:%.*]] = add i32 [[ARG]], 24
 ; CHECK-NEXT:    call void @consume(i32 [[V1]])
@@ -39,10 +39,10 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @consume(i32 %v0)
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.end:
   call void @consume(i32 %v1)

@@ -148,9 +148,6 @@ protected:
   /// Run or not the local reassignment heuristic. This information is
   /// obtained from the TargetSubtargetInfo.
   const bool EnableLocalReassign;
-
-private:
-  unsigned NextCascade = 1;
 };
 
 /// ImmutableAnalysis abstraction for fetching the Eviction Advisor. We model it
@@ -180,6 +177,8 @@ public:
   virtual std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
   AdvisorMode getAdvisorMode() const { return Mode; }
+  virtual void logRewardIfNeeded(const MachineFunction &MF,
+                                 llvm::function_ref<float()> GetReward){};
 
 protected:
   // This analysis preserves everything, and subclasses may have additional

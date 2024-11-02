@@ -102,23 +102,23 @@ TEST_F(FIRBuilderTest, genIfWithThenAndElse) {
 // Helper functions tests
 //===----------------------------------------------------------------------===//
 
-TEST_F(FIRBuilderTest, genIsNotNull) {
+TEST_F(FIRBuilderTest, genIsNotNullAddr) {
   auto builder = getBuilder();
   auto loc = builder.getUnknownLoc();
   auto dummyValue =
       builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  auto res = builder.genIsNotNull(loc, dummyValue);
+  auto res = builder.genIsNotNullAddr(loc, dummyValue);
   EXPECT_TRUE(mlir::isa<arith::CmpIOp>(res.getDefiningOp()));
   auto cmpOp = dyn_cast<arith::CmpIOp>(res.getDefiningOp());
   EXPECT_EQ(arith::CmpIPredicate::ne, cmpOp.getPredicate());
 }
 
-TEST_F(FIRBuilderTest, genIsNull) {
+TEST_F(FIRBuilderTest, genIsNullAddr) {
   auto builder = getBuilder();
   auto loc = builder.getUnknownLoc();
   auto dummyValue =
       builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  auto res = builder.genIsNull(loc, dummyValue);
+  auto res = builder.genIsNullAddr(loc, dummyValue);
   EXPECT_TRUE(mlir::isa<arith::CmpIOp>(res.getDefiningOp()));
   auto cmpOp = dyn_cast<arith::CmpIOp>(res.getDefiningOp());
   EXPECT_EQ(arith::CmpIPredicate::eq, cmpOp.getPredicate());
@@ -189,12 +189,12 @@ TEST_F(FIRBuilderTest, createGlobal1) {
       loc, i64Type, "global1", builder.createInternalLinkage(), {}, true);
   EXPECT_TRUE(mlir::isa<fir::GlobalOp>(global));
   EXPECT_EQ("global1", global.getSymName());
-  EXPECT_TRUE(global.getConstant().hasValue());
+  EXPECT_TRUE(global.getConstant().has_value());
   EXPECT_EQ(i64Type, global.getType());
-  EXPECT_TRUE(global.getLinkName().hasValue());
-  EXPECT_EQ(builder.createInternalLinkage().getValue(),
-      global.getLinkName().getValue());
-  EXPECT_FALSE(global.getInitVal().hasValue());
+  EXPECT_TRUE(global.getLinkName().has_value());
+  EXPECT_EQ(
+      builder.createInternalLinkage().getValue(), global.getLinkName().value());
+  EXPECT_FALSE(global.getInitVal().has_value());
 
   auto g1 = builder.getNamedGlobal("global1");
   EXPECT_EQ(global, g1);
@@ -213,15 +213,15 @@ TEST_F(FIRBuilderTest, createGlobal2) {
       loc, i32Type, "global2", builder.createLinkOnceLinkage(), attr, false);
   EXPECT_TRUE(mlir::isa<fir::GlobalOp>(global));
   EXPECT_EQ("global2", global.getSymName());
-  EXPECT_FALSE(global.getConstant().hasValue());
+  EXPECT_FALSE(global.getConstant().has_value());
   EXPECT_EQ(i32Type, global.getType());
-  EXPECT_TRUE(global.getInitVal().hasValue());
-  EXPECT_TRUE(global.getInitVal().getValue().isa<mlir::IntegerAttr>());
+  EXPECT_TRUE(global.getInitVal().has_value());
+  EXPECT_TRUE(global.getInitVal().value().isa<mlir::IntegerAttr>());
   EXPECT_EQ(
-      16, global.getInitVal().getValue().cast<mlir::IntegerAttr>().getValue());
-  EXPECT_TRUE(global.getLinkName().hasValue());
-  EXPECT_EQ(builder.createLinkOnceLinkage().getValue(),
-      global.getLinkName().getValue());
+      16, global.getInitVal().value().cast<mlir::IntegerAttr>().getValue());
+  EXPECT_TRUE(global.getLinkName().has_value());
+  EXPECT_EQ(
+      builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
 }
 
 TEST_F(FIRBuilderTest, uniqueCFIdent) {
@@ -310,8 +310,8 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
   auto addrOp = dyn_cast<fir::AddrOfOp>(addr.getDefiningOp());
   auto symbol = addrOp.getSymbol().getRootReference().getValue();
   auto global = builder.getNamedGlobal(symbol);
-  EXPECT_EQ(builder.createLinkOnceLinkage().getValue(),
-      global.getLinkName().getValue());
+  EXPECT_EQ(
+      builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
   EXPECT_EQ(fir::CharacterType::get(builder.getContext(), 1, strValue.size()),
       global.getType());
 
@@ -333,9 +333,9 @@ TEST_F(FIRBuilderTest, allocateLocal) {
   EXPECT_TRUE(mlir::isa<fir::AllocaOp>(var.getDefiningOp()));
   auto allocaOp = dyn_cast<fir::AllocaOp>(var.getDefiningOp());
   EXPECT_EQ(builder.getI64Type(), allocaOp.getInType());
-  EXPECT_TRUE(allocaOp.getBindcName().hasValue());
-  EXPECT_EQ(varName, allocaOp.getBindcName().getValue());
-  EXPECT_FALSE(allocaOp.getUniqName().hasValue());
+  EXPECT_TRUE(allocaOp.getBindcName().has_value());
+  EXPECT_EQ(varName, allocaOp.getBindcName().value());
+  EXPECT_FALSE(allocaOp.getUniqName().has_value());
   EXPECT_FALSE(allocaOp.getPinned());
   EXPECT_EQ(0u, allocaOp.getTypeparams().size());
   EXPECT_EQ(0u, allocaOp.getShape().size());
@@ -527,4 +527,59 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
     EXPECT_EQ(fir::getElementTypeOf(array), derivedWithLengthTy);
     EXPECT_TRUE(fir::isDerivedWithLenParameters(array));
   }
+}
+
+TEST_F(FIRBuilderTest, genArithFastMath) {
+  auto builder = getBuilder();
+  auto ctx = builder.getContext();
+  auto loc = builder.getUnknownLoc();
+
+  auto realTy = mlir::FloatType::getF32(ctx);
+  auto arg = builder.create<fir::UndefOp>(loc, realTy);
+
+  // Test that FastMathFlags is 'none' by default.
+  mlir::Operation *op1 = builder.create<mlir::arith::AddFOp>(loc, arg, arg);
+  auto op1_fmi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op1);
+  EXPECT_TRUE(op1_fmi);
+  auto op1_fmf = op1_fmi.getFastMathFlagsAttr().getValue();
+  EXPECT_EQ(op1_fmf, arith::FastMathFlags::none);
+
+  // Test that the builder is copied properly.
+  fir::FirOpBuilder builder_copy(builder);
+
+  arith::FastMathFlags FMF1 =
+      arith::FastMathFlags::contract | arith::FastMathFlags::reassoc;
+  builder.setFastMathFlags(FMF1);
+  arith::FastMathFlags FMF2 =
+      arith::FastMathFlags::nnan | arith::FastMathFlags::ninf;
+  builder_copy.setFastMathFlags(FMF2);
+
+  // Modifying FastMathFlags for the copy must not affect the original builder.
+  mlir::Operation *op2 = builder.create<mlir::arith::AddFOp>(loc, arg, arg);
+  auto op2_fmi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op2);
+  EXPECT_TRUE(op2_fmi);
+  auto op2_fmf = op2_fmi.getFastMathFlagsAttr().getValue();
+  EXPECT_EQ(op2_fmf, FMF1);
+
+  // Modifying FastMathFlags for the original builder must not affect the copy.
+  mlir::Operation *op3 =
+      builder_copy.create<mlir::arith::AddFOp>(loc, arg, arg);
+  auto op3_fmi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op3);
+  EXPECT_TRUE(op3_fmi);
+  auto op3_fmf = op3_fmi.getFastMathFlagsAttr().getValue();
+  EXPECT_EQ(op3_fmf, FMF2);
+
+  // Test that the builder copy inherits FastMathFlags from the original.
+  fir::FirOpBuilder builder_copy2(builder);
+
+  mlir::Operation *op4 =
+      builder_copy2.create<mlir::arith::AddFOp>(loc, arg, arg);
+  auto op4_fmi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op4);
+  EXPECT_TRUE(op4_fmi);
+  auto op4_fmf = op4_fmi.getFastMathFlagsAttr().getValue();
+  EXPECT_EQ(op4_fmf, FMF1);
 }

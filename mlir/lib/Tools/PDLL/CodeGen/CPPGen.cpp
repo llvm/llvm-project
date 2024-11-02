@@ -79,7 +79,7 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
   int patternIndex = 0;
   for (pdl::PatternOp pattern : module.getOps<pdl::PatternOp>()) {
     // If the pattern has a name, use that. Otherwise, generate a unique name.
-    if (Optional<StringRef> patternName = pattern.sym_name()) {
+    if (Optional<StringRef> patternName = pattern.getSymName()) {
       patternNames.insert(patternName->str());
     } else {
       std::string name;
@@ -93,10 +93,12 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
   os << "} // end namespace\n\n";
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns("
-        "::mlir::RewritePatternSet &patterns) {\n";
+  os << "template <typename... ConfigsT>\n"
+        "static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns("
+        "::mlir::RewritePatternSet &patterns, ConfigsT &&...configs) {\n";
   for (const auto &name : patternNames)
-    os << "  patterns.add<" << name << ">(patterns.getContext());\n";
+    os << "  patterns.add<" << name
+       << ">(patterns.getContext(), configs...);\n";
   os << "}\n";
 }
 
@@ -104,14 +106,15 @@ void CodeGen::generate(pdl::PatternOp pattern, StringRef patternName,
                        StringSet<> &nativeFunctions) {
   const char *patternClassStartStr = R"(
 struct {0} : ::mlir::PDLPatternModule {{
-  {0}(::mlir::MLIRContext *context)
+  template <typename... ConfigsT>
+  {0}(::mlir::MLIRContext *context, ConfigsT &&...configs)
     : ::mlir::PDLPatternModule(::mlir::parseSourceString<::mlir::ModuleOp>(
 )";
   os << llvm::formatv(patternClassStartStr, patternName);
 
   os << "R\"mlir(";
   pattern->print(os, OpPrintingFlags().enableDebugInfo());
-  os << "\n    )mlir\", context)) {\n";
+  os << "\n    )mlir\", context), std::forward<ConfigsT>(configs)...) {\n";
 
   // Register any native functions used within the pattern.
   StringSet<> registeredNativeFunctions;
@@ -124,9 +127,9 @@ struct {0} : ::mlir::PDLPatternModule {{
   };
   pattern.walk([&](Operation *op) {
     if (auto constraintOp = dyn_cast<pdl::ApplyNativeConstraintOp>(op))
-      checkRegisterNativeFn(constraintOp.name(), "Constraint");
+      checkRegisterNativeFn(constraintOp.getName(), "Constraint");
     else if (auto rewriteOp = dyn_cast<pdl::ApplyNativeRewriteOp>(op))
-      checkRegisterNativeFn(rewriteOp.name(), "Rewrite");
+      checkRegisterNativeFn(rewriteOp.getName(), "Rewrite");
   });
   os << "  }\n};\n\n";
 }
@@ -140,7 +143,7 @@ void CodeGen::generateConstraintAndRewrites(const ast::Module &astModule,
   module.walk([&](Operation *op) {
     TypeSwitch<Operation *>(op)
         .Case<pdl::ApplyNativeConstraintOp, pdl::ApplyNativeRewriteOp>(
-            [&](auto op) { usedFns.insert(op.name()); });
+            [&](auto op) { usedFns.insert(op.getName()); });
   });
 
   for (const ast::Decl *decl : astModule.getChildren()) {

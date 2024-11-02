@@ -120,8 +120,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
     }
   }
 
-  const size_t Index = std::find(Function->parameters().begin(),
-                                 Function->parameters().end(), Param) -
+  const size_t Index = llvm::find(Function->parameters(), Param) -
                        Function->parameters().begin();
 
   auto Diag =

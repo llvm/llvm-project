@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+prefer-256-bit | FileCheck %s --check-prefix=AVX256
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,-prefer-256-bit | FileCheck %s --check-prefix=AVX512
 
-define <16 x i1> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nounwind {
+define <16 x i1> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX256-LABEL: smulo_v16i8:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vpmovsxbw %xmm1, %ymm1
@@ -53,12 +53,12 @@ define <16 x i1> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) noun
   %t = call {<16 x i8>, <16 x i1>} @llvm.smul.with.overflow.v16i8(<16 x i8> %a0, <16 x i8> %a1)
   %val = extractvalue {<16 x i8>, <16 x i1>} %t, 0
   %obit = extractvalue {<16 x i8>, <16 x i1>} %t, 1
-  store <16 x i8> %val, <16 x i8>* %p2
+  store <16 x i8> %val, ptr %p2
   ret <16 x i1> %obit
 }
 declare {<16 x i8>, <16 x i1>} @llvm.smul.with.overflow.v16i8(<16 x i8>, <16 x i8>)
 
-define <16 x i1> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nounwind {
+define <16 x i1> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX256-LABEL: umulo_v16i8:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
@@ -105,7 +105,7 @@ define <16 x i1> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) noun
   %t = call {<16 x i8>, <16 x i1>} @llvm.umul.with.overflow.v16i8(<16 x i8> %a0, <16 x i8> %a1)
   %val = extractvalue {<16 x i8>, <16 x i1>} %t, 0
   %obit = extractvalue {<16 x i8>, <16 x i1>} %t, 1
-  store <16 x i8> %val, <16 x i8>* %p2
+  store <16 x i8> %val, ptr %p2
   ret <16 x i1> %obit
 }
 declare {<16 x i8>, <16 x i1>} @llvm.umul.with.overflow.v16i8(<16 x i8>, <16 x i8>)

@@ -12,7 +12,7 @@ define void @foo(i64 %b) {
 ; CHECK-MEDIUM: cmpq  %rax, %rdi
 ; CHECK-SMALL: cmpq $a, %rdi
 entry:
-  %cmp = icmp eq i64 %b, ptrtoint (i32* @a to i64)
+  %cmp = icmp eq i64 %b, ptrtoint (ptr @a to i64)
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry

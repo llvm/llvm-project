@@ -282,10 +282,19 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
   // parent process
 
   pipe.CloseWriteFileDescriptor();
-  char buf[1000];
-  int r = read(pipe.GetReadFileDescriptor(), buf, sizeof buf);
+  llvm::SmallString<0> buf;
+  size_t pos = 0;
+  ssize_t r = 0;
+  do {
+    pos += r;
+    buf.resize_for_overwrite(pos + 100);
+    r = llvm::sys::RetryAfterSignal(-1, read, pipe.GetReadFileDescriptor(),
+                                    buf.begin() + pos, buf.size() - pos);
+  } while (r > 0);
+  assert(r != -1);
 
-  if (r == 0)
+  buf.resize(pos);
+  if (buf.empty())
     return HostProcess(pid); // No error. We're done.
 
   error.SetErrorString(buf);

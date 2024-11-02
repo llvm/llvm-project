@@ -5,7 +5,7 @@
 declare i64 @foo(i64, i64, i64)
 
 ; Check SLGRK.
-define i64 @f1(i64 %dummy, i64 %a, i64 %b, i64 *%flag) {
+define i64 @f1(i64 %dummy, i64 %a, i64 %b, ptr %flag) {
 ; CHECK-LABEL: f1:
 ; CHECK: slgrk %r2, %r3, %r4
 ; CHECK: ipm [[REG1:%r[0-5]]]
@@ -17,7 +17,7 @@ define i64 @f1(i64 %dummy, i64 %a, i64 %b, i64 *%flag) {
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
   %ext = zext i1 %obit to i64
-  store i64 %ext, i64 *%flag
+  store i64 %ext, ptr %flag
   ret i64 %val
 }
 
@@ -62,7 +62,7 @@ exit:
 }
 
 ; Check that we can still use SLGR in obvious cases.
-define i64 @f4(i64 %a, i64 %b, i64 *%flag) {
+define i64 @f4(i64 %a, i64 %b, ptr %flag) {
 ; CHECK-LABEL: f4:
 ; CHECK: slgr %r2, %r3
 ; CHECK: ipm [[REG1:%r[0-5]]]
@@ -74,7 +74,7 @@ define i64 @f4(i64 %a, i64 %b, i64 *%flag) {
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
   %ext = zext i1 %obit to i64
-  store i64 %ext, i64 *%flag
+  store i64 %ext, ptr %flag
   ret i64 %val
 }
 

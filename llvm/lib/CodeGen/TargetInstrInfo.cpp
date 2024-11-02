@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -916,7 +917,7 @@ void TargetInstrInfo::genAlternativeCodeSequence(
 }
 
 bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
-    const MachineInstr &MI, AAResults *AA) const {
+    const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -952,7 +953,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
     return false;
 
   // Avoid instructions which load from potentially varying memory.
-  if (MI.mayLoad() && !MI.isDereferenceableInvariantLoad(AA))
+  if (MI.mayLoad() && !MI.isDereferenceableInvariantLoad())
     return false;
 
   // If any of the registers accessed are non-constant, conservatively assume
@@ -1411,6 +1412,8 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
   const Function &ParentFn = FirstCand.getMF()->getFunction();
   if (ParentFn.hasFnAttribute("target-features"))
     F.addFnAttr(ParentFn.getFnAttribute("target-features"));
+  if (ParentFn.hasFnAttribute("target-cpu"))
+    F.addFnAttr(ParentFn.getFnAttribute("target-cpu"));
 
   // Set nounwind, so we don't generate eh_frame.
   if (llvm::all_of(Candidates, [](const outliner::Candidate &C) {

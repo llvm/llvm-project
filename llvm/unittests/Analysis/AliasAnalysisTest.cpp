@@ -74,9 +74,7 @@ namespace {
 /// A test customizable AA result. It merely accepts a callback to run whenever
 /// it receives an alias query. Useful for testing that a particular AA result
 /// is reached.
-struct TestCustomAAResult : AAResultBase<TestCustomAAResult> {
-  friend AAResultBase<TestCustomAAResult>;
-
+struct TestCustomAAResult : AAResultBase {
   std::function<void()> CB;
 
   explicit TestCustomAAResult(std::function<void()> CB)

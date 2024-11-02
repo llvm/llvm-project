@@ -84,7 +84,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
-// CHECK-NEXT:    , State(2),
+// CHECK-NEXT:    , State(3),
 // CHECK-NEXT:    ISelInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 

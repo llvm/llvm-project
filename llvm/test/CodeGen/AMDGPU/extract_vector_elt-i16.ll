@@ -61,8 +61,7 @@ define amdgpu_kernel void @extract_vector_elt_v2i16_dynamic_vgpr(i16 addrspace(1
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v3i16:
-; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2
+; GCN: s_load_dwordx4
 
 ; GCN-NOT: {{buffer|flat|global}}_load
 
@@ -78,14 +77,14 @@ define amdgpu_kernel void @extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v4i16:
-; SI: s_load_dwordx2
+; SI: s_load_dwordx4
 ; SI: buffer_store_short
 ; SI: buffer_store_short
 
-; GFX89-DAG: s_load_dwordx2 s[[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]], s[0:1], 0x2c
-; GFX89-DAG: v_mov_b32_e32 [[VLOAD0:v[0-9]+]], s[[LOAD0]]
+; GFX89-DAG: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], s[0:1], 0x24
+; GFX89-DAG: v_mov_b32_e32 [[VLOAD0:v[0-9]+]], s[[#LOAD + 2]]
 ; GFX89-DAG: buffer_store_short [[VLOAD0]], off
-; GFX89-DAG: v_mov_b32_e32 [[VLOAD1:v[0-9]+]], s[[LOAD1]]
+; GFX89-DAG: v_mov_b32_e32 [[VLOAD1:v[0-9]+]], s[[#LOAD + 3]]
 ; GFX89-DAG: buffer_store_short [[VLOAD1]], off
 define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x i16> %foo) #0 {
   %p0 = extractelement <4 x i16> %foo, i32 0
@@ -211,6 +210,55 @@ define amdgpu_kernel void @v_extractelement_v8i16_dynamic_sgpr(i16 addrspace(1)*
   %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
   %vec = load <8 x i16>, <8 x i16> addrspace(1)* %in.gep
   %vec.extract = extractelement <8 x i16> %vec, i32 %n
+  store i16 %vec.extract, i16 addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extractelement_v16i16_2:
+; SI: buffer_load_dword [[RES:v[0-9]+]], v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0 addr64 offset:4
+; SI: buffer_store_short [[RES]]
+; VI: flat_load_dword [[RES:v[0-9]+]]
+; VI: flat_store_short v[{{[0-9:]+}}], [[RES]]
+; GFX9: global_load_dword [[RES:v[0-9]+]], v{{[0-9]+}}, s[{{[0-9:]+}}] offset:4
+; GFX9: global_store_short v{{[0-9]+}}, [[RES]]
+define amdgpu_kernel void @v_extractelement_v16i16_2(i16 addrspace(1)* %out, <16 x i16> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <16 x i16>, <16 x i16> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
+  %vec = load <16 x i16>, <16 x i16> addrspace(1)* %in.gep
+  %vec.extract = extractelement <16 x i16> %vec, i32 2
+  store i16 %vec.extract, i16 addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extractelement_v16i16_6:
+; SI: buffer_load_dword [[RES:v[0-9]+]], v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0 addr64 offset:12
+; SI: buffer_store_short [[RES]]
+; VI: flat_load_dword [[RES:v[0-9]+]]
+; VI: flat_store_short v[{{[0-9:]+}}], [[RES]]
+; GFX9: global_load_dword [[RES:v[0-9]+]], v{{[0-9]+}}, s[{{[0-9:]+}}] offset:12
+; GFX9: global_store_short v{{[0-9]+}}, [[RES]]
+define amdgpu_kernel void @v_extractelement_v16i16_6(i16 addrspace(1)* %out, <16 x i16> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <16 x i16>, <16 x i16> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
+  %vec = load <16 x i16>, <16 x i16> addrspace(1)* %in.gep
+  %vec.extract = extractelement <16 x i16> %vec, i32 6
+  store i16 %vec.extract, i16 addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extractelement_v16i16_dynamic_sgpr:
+; GCN-COUNT-15: v_cndmask_b32_e32
+define amdgpu_kernel void @v_extractelement_v16i16_dynamic_sgpr(i16 addrspace(1)* %out, <16 x i16> addrspace(1)* %in, i32 %n) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <16 x i16>, <16 x i16> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
+  %vec = load <16 x i16>, <16 x i16> addrspace(1)* %in.gep
+  %vec.extract = extractelement <16 x i16> %vec, i32 %n
   store i16 %vec.extract, i16 addrspace(1)* %out.gep
   ret void
 }

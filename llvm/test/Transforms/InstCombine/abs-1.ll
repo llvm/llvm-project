@@ -576,11 +576,11 @@ define i8 @nabs_different_constants(i8 %a) {
 
 define i64 @infinite_loop_constant_expression_abs(i64 %arg) {
 ; CHECK-LABEL: @infinite_loop_constant_expression_abs(
-; CHECK-NEXT:    [[T:%.*]] = sub i64 ptrtoint (i64* @g to i64), [[ARG:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = sub i64 ptrtoint (ptr @g to i64), [[ARG:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.abs.i64(i64 [[T]], i1 true)
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
-  %t = sub i64 ptrtoint (i64* @g to i64), %arg
+  %t = sub i64 ptrtoint (ptr @g to i64), %arg
   %t1 = icmp slt i64 %t, 0
   %t2 = sub nsw i64 0, %t
   %t3 = select i1 %t1, i64 %t2, i64 %t

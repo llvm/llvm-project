@@ -197,6 +197,7 @@ struct FragmentCompiler {
     compile(std::move(F.Completion));
     compile(std::move(F.Hover));
     compile(std::move(F.InlayHints));
+    compile(std::move(F.Style));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -357,8 +358,8 @@ struct FragmentCompiler {
     }
 #endif
     // Make sure exactly one of the Sources is set.
-    unsigned SourceCount = External.File.hasValue() +
-                           External.Server.hasValue() + *External.IsNone;
+    unsigned SourceCount = External.File.has_value() +
+                           External.Server.has_value() + *External.IsNone;
     if (SourceCount != 1) {
       diag(Error, "Exactly one of File, Server or None must be set.",
            BlockRange);

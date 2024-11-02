@@ -64,110 +64,126 @@ struct CC {
     // define {{.*}}void [[OUTCALL]]
     #pragma omp parallel firstprivate(fA,fB) private(pA,pB)
     {
-      // Region 00
-      // CK26-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
-      // CK26-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-      // CK26-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 00
+// CK26-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK26-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK26-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK26-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK26-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK26-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK26-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-      // CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-      // CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-      // CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-      // CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+// CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
+// CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
 
-      // CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
-      // CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-      // CK26-DAG: store i32* [[VAR1:%.+]], i32** [[CBP1]]
-      // CK26-DAG: store i32* [[SEC1:%.+]], i32** [[CP1]]
-      // CK26-DAG: [[VAR1]] = load i32*, i32** [[PVT:%.+]],
-      // CK26-DAG: [[SEC1]] = load i32*, i32** [[PVT]],
+// CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
+// CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK26-DAG: store i32* [[VAR1:%.+]], i32** [[CBP1]]
+// CK26-DAG: store i32* [[SEC1:%.+]], i32** [[CP1]]
+// CK26-DAG: [[VAR1]] = load i32*, i32** [[PVT:%.+]],
+// CK26-DAG: [[SEC1]] = load i32*, i32** [[PVT]],
 
-      // CK26: call void [[CALL00:@.+]]([[ST]]* {{[^,]+}}, i32* {{[^,]+}})
-      #pragma omp target map(fA)
+// CK26: call void [[CALL00:@.+]]([[ST]]* {{[^,]+}}, i32* {{[^,]+}})
+#pragma omp target map(fA)
       {
         ++fA;
       }
 
-      // Region 01
-      // CK26-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
-      // CK26-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-      // CK26-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 01
+// CK26-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK26-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK26-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK26-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK26-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK26-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK26-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-      // CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-      // CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-      // CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-      // CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+// CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
+// CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
 
-      // CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
-      // CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
-      // CK26-DAG: store float* [[VAR1:%.+]], float** [[CBP1]]
-      // CK26-DAG: store float* [[SEC1:%.+]], float** [[CP1]]
-      // CK26-DAG: [[VAR1]] = load float*, float** [[PVT:%.+]],
-      // CK26-DAG: [[SEC1]] = load float*, float** [[PVT]],
+// CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
+// CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
+// CK26-DAG: store float* [[VAR1:%.+]], float** [[CBP1]]
+// CK26-DAG: store float* [[SEC1:%.+]], float** [[CP1]]
+// CK26-DAG: [[VAR1]] = load float*, float** [[PVT:%.+]],
+// CK26-DAG: [[SEC1]] = load float*, float** [[PVT]],
 
-      // CK26: call void [[CALL01:@.+]]([[ST]]* {{[^,]+}}, float* {{[^,]+}})
-      #pragma omp target map(fB)
+// CK26: call void [[CALL01:@.+]]([[ST]]* {{[^,]+}}, float* {{[^,]+}})
+#pragma omp target map(fB)
       {
         fB += 1.0;
       }
 
-      // Region 02
-      // CK26-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null, i8** null)
-      // CK26-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-      // CK26-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 02
+// CK26-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK26-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK26-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK26-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK26-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK26-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK26-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-      // CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-      // CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-      // CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-      // CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+// CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
+// CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
 
-      // CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
-      // CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
-      // CK26-DAG: store i32* [[VAR1:%.+]], i32** [[CBP1]]
-      // CK26-DAG: store i32* [[SEC1:%.+]], i32** [[CP1]]
-      // CK26-DAG: [[VAR1]] = load i32*, i32** [[PVT:%.+]],
-      // CK26-DAG: [[SEC1]] = load i32*, i32** [[PVT]],
+// CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to i32**
+// CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to i32**
+// CK26-DAG: store i32* [[VAR1:%.+]], i32** [[CBP1]]
+// CK26-DAG: store i32* [[SEC1:%.+]], i32** [[CP1]]
+// CK26-DAG: [[VAR1]] = load i32*, i32** [[PVT:%.+]],
+// CK26-DAG: [[SEC1]] = load i32*, i32** [[PVT]],
 
-      // CK26: call void [[CALL02:@.+]]([[ST]]* {{[^,]+}}, i32* {{[^,]+}})
-      #pragma omp target map(pA)
+// CK26: call void [[CALL02:@.+]]([[ST]]* {{[^,]+}}, i32* {{[^,]+}})
+#pragma omp target map(pA)
       {
         ++pA;
       }
 
-      // Region 01
-      // CK26-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE03]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** null, i8** null)
-      // CK26-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
-      // CK26-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+// Region 01
+// CK26-DAG: call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
+// CK26-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
+// CK26-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
+// CK26-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
+// CK26-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK26-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+// CK26-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
-      // CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-      // CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-      // CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-      // CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-      // CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+// CK26-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+// CK26-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK26-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
+// CK26-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
+// CK26-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
 
-      // CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-      // CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
-      // CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
-      // CK26-DAG: store float* [[VAR1:%.+]], float** [[CBP1]]
-      // CK26-DAG: store float* [[SEC1:%.+]], float** [[CP1]]
-      // CK26-DAG: [[VAR1]] = load float*, float** [[PVT:%.+]],
-      // CK26-DAG: [[SEC1]] = load float*, float** [[PVT]],
+// CK26-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK26-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to float**
+// CK26-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to float**
+// CK26-DAG: store float* [[VAR1:%.+]], float** [[CBP1]]
+// CK26-DAG: store float* [[SEC1:%.+]], float** [[CP1]]
+// CK26-DAG: [[VAR1]] = load float*, float** [[PVT:%.+]],
+// CK26-DAG: [[SEC1]] = load float*, float** [[PVT]],
 
-      // CK26: call void [[CALL03:@.+]]([[ST]]* {{[^,]+}}, float* {{[^,]+}})
-      #pragma omp target map(pB)
+// CK26: call void [[CALL03:@.+]]([[ST]]* {{[^,]+}}, float* {{[^,]+}})
+#pragma omp target map(pB)
       {
         pB += 1.0;
       }

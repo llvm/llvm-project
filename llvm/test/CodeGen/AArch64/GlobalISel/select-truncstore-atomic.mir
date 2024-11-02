@@ -36,10 +36,7 @@ body:             |
 
     %0:gpr(p0) = COPY $x0
     %3:gpr(s32) = COPY $w1
-    %2:gpr(s8) = G_TRUNC %3(s32)
-    %4:gpr(s8) = G_ASSERT_ZEXT %2, 1
-    %1:gpr(s1) = G_TRUNC %4(s8)
-    G_BRCOND %1(s1), %bb.3
+    G_BRCOND %3, %bb.3
     G_BR %bb.2
 
   bb.2:
@@ -85,10 +82,7 @@ body:             |
 
     %0:gpr(p0) = COPY $x0
     %3:gpr(s32) = COPY $w1
-    %2:gpr(s8) = G_TRUNC %3(s32)
-    %4:gpr(s8) = G_ASSERT_ZEXT %2, 1
-    %1:gpr(s1) = G_TRUNC %4(s8)
-    G_BRCOND %1(s1), %bb.3
+    G_BRCOND %3, %bb.3
     G_BR %bb.2
 
   bb.2:
@@ -134,10 +128,7 @@ body:             |
 
     %0:gpr(p0) = COPY $x0
     %3:gpr(s32) = COPY $w1
-    %2:gpr(s8) = G_TRUNC %3(s32)
-    %4:gpr(s8) = G_ASSERT_ZEXT %2, 1
-    %1:gpr(s1) = G_TRUNC %4(s8)
-    G_BRCOND %1(s1), %bb.3
+    G_BRCOND %3, %bb.3
     G_BR %bb.2
 
   bb.2:

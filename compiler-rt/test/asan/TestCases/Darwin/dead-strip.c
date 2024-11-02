@@ -18,6 +18,6 @@ int dead[1] = {};
 
 int main(int argc, char *argv[]) {
   alive[argc] = 0;
-  // ASAN-CHECK: {{0x.* is located 0 bytes to the right of global variable}}
+  // ASAN-CHECK: {{0x.* is located 0 bytes after global variable}}
   return 0;
 }

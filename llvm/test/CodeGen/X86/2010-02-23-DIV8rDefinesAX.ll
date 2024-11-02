@@ -9,11 +9,11 @@ target triple = "x86_64-apple-darwin10.0.0"
 %struct._i386_state = type { %union.anon }
 %union.anon = type { [0 x i8] }
 
-define void @i386_aam(%struct._i386_state* nocapture %cpustate) nounwind ssp {
+define void @i386_aam(ptr nocapture %cpustate) nounwind ssp {
 entry:
   %call = tail call fastcc signext i8 @FETCH()    ; <i8> [#uses=1]
   %rem = urem i8 0, %call                         ; <i8> [#uses=1]
-  store i8 %rem, i8* undef
+  store i8 %rem, ptr undef
   ret void
 }
 

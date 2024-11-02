@@ -69,7 +69,7 @@ public:
     if (shouldSkipDecl(RD))
       return;
 
-    for (auto Member : RD->fields()) {
+    for (auto *Member : RD->fields()) {
       const Type *MemberType = Member->getType().getTypePtrOrNull();
       if (!MemberType)
         continue;

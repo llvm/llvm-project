@@ -353,7 +353,7 @@ define <8 x half> @f64to8f16(<8 x double> %b) {
   ret <8 x half> %a
 }
 
-define float @extload_f16_f32(half* %x) {
+define float @extload_f16_f32(ptr %x) {
 ; X64-LABEL: extload_f16_f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovsh (%rdi), %xmm0
@@ -372,12 +372,12 @@ define float @extload_f16_f32(half* %x) {
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-  %a = load half, half* %x
+  %a = load half, ptr %x
   %b = fpext half %a to float
   ret float %b
 }
 
-define double @extload_f16_f64(half* %x) {
+define double @extload_f16_f64(ptr %x) {
 ; X64-LABEL: extload_f16_f64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovsh (%rdi), %xmm0
@@ -402,12 +402,12 @@ define double @extload_f16_f64(half* %x) {
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
-  %a = load half, half* %x
+  %a = load half, ptr %x
   %b = fpext half %a to double
   ret double %b
 }
 
-define float @extload_f16_f32_optsize(half* %x) optsize {
+define float @extload_f16_f32_optsize(ptr %x) optsize {
 ; X64-LABEL: extload_f16_f32_optsize:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtsh2ss (%rdi), %xmm0, %xmm0
@@ -424,12 +424,12 @@ define float @extload_f16_f32_optsize(half* %x) optsize {
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
-  %a = load half, half* %x
+  %a = load half, ptr %x
   %b = fpext half %a to float
   ret float %b
 }
 
-define double @extload_f16_f64_optsize(half* %x) optsize {
+define double @extload_f16_f64_optsize(ptr %x) optsize {
 ; X64-LABEL: extload_f16_f64_optsize:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtsh2sd (%rdi), %xmm0, %xmm0
@@ -452,12 +452,12 @@ define double @extload_f16_f64_optsize(half* %x) optsize {
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
-  %a = load half, half* %x
+  %a = load half, ptr %x
   %b = fpext half %a to double
   ret double %b
 }
 
-define <16 x float> @extload_v16f16_v16f32(<16 x half>* %x) {
+define <16 x float> @extload_v16f16_v16f32(ptr %x) {
 ; X64-LABEL: extload_v16f16_v16f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2psx (%rdi), %zmm0
@@ -468,12 +468,12 @@ define <16 x float> @extload_v16f16_v16f32(<16 x half>* %x) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtph2psx (%eax), %zmm0
 ; X86-NEXT:    retl
-  %a = load <16 x half>, <16 x half>* %x
+  %a = load <16 x half>, ptr %x
   %b = fpext <16 x half> %a to <16 x float>
   ret <16 x float> %b
 }
 
-define <8 x float> @extload_v8f16_v8f32(<8 x half>* %x) {
+define <8 x float> @extload_v8f16_v8f32(ptr %x) {
 ; X64-LABEL: extload_v8f16_v8f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2psx (%rdi), %ymm0
@@ -484,12 +484,12 @@ define <8 x float> @extload_v8f16_v8f32(<8 x half>* %x) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtph2psx (%eax), %ymm0
 ; X86-NEXT:    retl
-  %a = load <8 x half>, <8 x half>* %x
+  %a = load <8 x half>, ptr %x
   %b = fpext <8 x half> %a to <8 x float>
   ret <8 x float> %b
 }
 
-define <4 x float> @extload_v4f16_v4f32(<4 x half>* %x) {
+define <4 x float> @extload_v4f16_v4f32(ptr %x) {
 ; X64-LABEL: extload_v4f16_v4f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2psx (%rdi), %xmm0
@@ -500,12 +500,12 @@ define <4 x float> @extload_v4f16_v4f32(<4 x half>* %x) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtph2psx (%eax), %xmm0
 ; X86-NEXT:    retl
-  %a = load <4 x half>, <4 x half>* %x
+  %a = load <4 x half>, ptr %x
   %b = fpext <4 x half> %a to <4 x float>
   ret <4 x float> %b
 }
 
-define <8 x double> @extload_v8f16_v8f64(<8 x half>* %x) {
+define <8 x double> @extload_v8f16_v8f64(ptr %x) {
 ; X64-LABEL: extload_v8f16_v8f64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2pd (%rdi), %zmm0
@@ -516,12 +516,12 @@ define <8 x double> @extload_v8f16_v8f64(<8 x half>* %x) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtph2pd (%eax), %zmm0
 ; X86-NEXT:    retl
-  %a = load <8 x half>, <8 x half>* %x
+  %a = load <8 x half>, ptr %x
   %b = fpext <8 x half> %a to <8 x double>
   ret <8 x double> %b
 }
 
-define <4 x double> @extload_v4f16_v4f64(<4 x half>* %x) {
+define <4 x double> @extload_v4f16_v4f64(ptr %x) {
 ; X64-LABEL: extload_v4f16_v4f64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2pd (%rdi), %ymm0
@@ -532,12 +532,12 @@ define <4 x double> @extload_v4f16_v4f64(<4 x half>* %x) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtph2pd (%eax), %ymm0
 ; X86-NEXT:    retl
-  %a = load <4 x half>, <4 x half>* %x
+  %a = load <4 x half>, ptr %x
   %b = fpext <4 x half> %a to <4 x double>
   ret <4 x double> %b
 }
 
-define <2 x double> @extload_v2f16_v2f64(<2 x half>* %x) {
+define <2 x double> @extload_v2f16_v2f64(ptr %x) {
 ; X64-LABEL: extload_v2f16_v2f64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2pd (%rdi), %xmm0
@@ -548,7 +548,7 @@ define <2 x double> @extload_v2f16_v2f64(<2 x half>* %x) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtph2pd (%eax), %xmm0
 ; X86-NEXT:    retl
-  %a = load <2 x half>, <2 x half>* %x
+  %a = load <2 x half>, ptr %x
   %b = fpext <2 x half> %a to <2 x double>
   ret <2 x double> %b
 }

@@ -53,28 +53,21 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   }
 
   if (debug_aranges->GetNumRanges() == num_debug_aranges) {
-    // We got nothing from the debug info, maybe we have a line tables only
-    // situation. Check the line tables and build the arange table from this.
+    // We got nothing from the debug info, try to build the arange table from
+    // the debug map OSO aranges.
     SymbolContext sc;
     sc.comp_unit = m_dwarf.GetCompUnitForDWARFCompUnit(*this);
     if (sc.comp_unit) {
       SymbolFileDWARFDebugMap *debug_map_sym_file =
           m_dwarf.GetDebugMapSymfile();
-      if (debug_map_sym_file == nullptr) {
-        if (LineTable *line_table = sc.comp_unit->GetLineTable()) {
-          LineTable::FileAddressRanges file_ranges;
-          const bool append = true;
-          const size_t num_ranges =
-              line_table->GetContiguousFileAddressRanges(file_ranges, append);
-          for (uint32_t idx = 0; idx < num_ranges; ++idx) {
-            const LineTable::FileAddressRanges::Entry &range =
-                file_ranges.GetEntryRef(idx);
-            debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
-                                       range.GetRangeEnd());
-          }
-        }
-      } else
-        debug_map_sym_file->AddOSOARanges(&m_dwarf, debug_aranges);
+      if (debug_map_sym_file) {
+        auto *cu_info =
+            debug_map_sym_file->GetCompileUnitInfo(&GetSymbolFileDWARF());
+        // If there are extra compile units the OSO entries aren't a reliable
+        // source of information.
+        if (cu_info->compile_units_sps.empty())
+          debug_map_sym_file->AddOSOARanges(&m_dwarf, debug_aranges);
+      }
     }
   }
 

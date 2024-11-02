@@ -55,13 +55,13 @@ define double @f4(double %a, double %b, i64 %i1, i32 %unext) {
 }
 
 ; Check signed comparison with memory.
-define double @f5(double %a, double %b, i64 %i1, i32 *%ptr) {
+define double @f5(double %a, double %b, i64 %i1, ptr %ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK: cgf %r2, 0(%r3)
 ; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %unext = load i32, i32 *%ptr
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -69,11 +69,11 @@ define double @f5(double %a, double %b, i64 %i1, i32 *%ptr) {
 }
 
 ; Check unsigned comparison with memory.
-define double @f6(double %a, double %b, i64 %i1, i32 *%ptr) {
+define double @f6(double %a, double %b, i64 %i1, ptr %ptr) {
 ; CHECK-LABEL: f6:
 ; CHECK-NOT: cgf
 ; CHECK: br %r14
-  %unext = load i32, i32 *%ptr
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp ult i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -81,13 +81,13 @@ define double @f6(double %a, double %b, i64 %i1, i32 *%ptr) {
 }
 
 ; Check memory equality.
-define double @f7(double %a, double %b, i64 %i1, i32 *%ptr) {
+define double @f7(double %a, double %b, i64 %i1, ptr %ptr) {
 ; CHECK-LABEL: f7:
 ; CHECK: cgf %r2, 0(%r3)
 ; CHECK-NEXT: ber %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %unext = load i32, i32 *%ptr
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp eq i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -95,13 +95,13 @@ define double @f7(double %a, double %b, i64 %i1, i32 *%ptr) {
 }
 
 ; Check memory inequality.
-define double @f8(double %a, double %b, i64 %i1, i32 *%ptr) {
+define double @f8(double %a, double %b, i64 %i1, ptr %ptr) {
 ; CHECK-LABEL: f8:
 ; CHECK: cgf %r2, 0(%r3)
 ; CHECK-NEXT: blhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %unext = load i32, i32 *%ptr
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp ne i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -109,14 +109,14 @@ define double @f8(double %a, double %b, i64 %i1, i32 *%ptr) {
 }
 
 ; Check the high end of the aligned CGF range.
-define double @f9(double %a, double %b, i64 %i1, i32 *%base) {
+define double @f9(double %a, double %b, i64 %i1, ptr %base) {
 ; CHECK-LABEL: f9:
 ; CHECK: cgf %r2, 524284(%r3)
 ; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 131071
-  %unext = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 131071
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -125,15 +125,15 @@ define double @f9(double %a, double %b, i64 %i1, i32 *%base) {
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define double @f10(double %a, double %b, i64 %i1, i32 *%base) {
+define double @f10(double %a, double %b, i64 %i1, ptr %base) {
 ; CHECK-LABEL: f10:
 ; CHECK: agfi %r3, 524288
 ; CHECK: cgf %r2, 0(%r3)
 ; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 131072
-  %unext = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 131072
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -141,14 +141,14 @@ define double @f10(double %a, double %b, i64 %i1, i32 *%base) {
 }
 
 ; Check the high end of the negative aligned CGF range.
-define double @f11(double %a, double %b, i64 %i1, i32 *%base) {
+define double @f11(double %a, double %b, i64 %i1, ptr %base) {
 ; CHECK-LABEL: f11:
 ; CHECK: cgf %r2, -4(%r3)
 ; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 -1
-  %unext = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 -1
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -156,14 +156,14 @@ define double @f11(double %a, double %b, i64 %i1, i32 *%base) {
 }
 
 ; Check the low end of the CGF range.
-define double @f12(double %a, double %b, i64 %i1, i32 *%base) {
+define double @f12(double %a, double %b, i64 %i1, ptr %base) {
 ; CHECK-LABEL: f12:
 ; CHECK: cgf %r2, -524288(%r3)
 ; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 -131072
-  %unext = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 -131072
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -172,15 +172,15 @@ define double @f12(double %a, double %b, i64 %i1, i32 *%base) {
 
 ; Check the next word down, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define double @f13(double %a, double %b, i64 %i1, i32 *%base) {
+define double @f13(double %a, double %b, i64 %i1, ptr %base) {
 ; CHECK-LABEL: f13:
 ; CHECK: agfi %r3, -524292
 ; CHECK: cgf %r2, 0(%r3)
 ; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 -131073
-  %unext = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 -131073
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -196,8 +196,8 @@ define double @f14(double %a, double %b, i64 %i1, i64 %base, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 524284
-  %ptr = inttoptr i64 %add2 to i32 *
-  %unext = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %unext = load i32, ptr %ptr
   %i2 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b
@@ -205,31 +205,31 @@ define double @f14(double %a, double %b, i64 %i1, i64 %base, i64 %index) {
 }
 
 ; Check that comparisons of spilled values can use CGF rather than CGFR.
-define i64 @f15(i32 *%ptr0) {
+define i64 @f15(ptr %ptr0) {
 ; CHECK-LABEL: f15:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: cgf {{%r[0-9]+}}, 16{{[04]}}(%r15)
 ; CHECK: br %r14
-  %ptr1 = getelementptr i32, i32 *%ptr0, i64 2
-  %ptr2 = getelementptr i32, i32 *%ptr0, i64 4
-  %ptr3 = getelementptr i32, i32 *%ptr0, i64 6
-  %ptr4 = getelementptr i32, i32 *%ptr0, i64 8
-  %ptr5 = getelementptr i32, i32 *%ptr0, i64 10
-  %ptr6 = getelementptr i32, i32 *%ptr0, i64 12
-  %ptr7 = getelementptr i32, i32 *%ptr0, i64 14
-  %ptr8 = getelementptr i32, i32 *%ptr0, i64 16
-  %ptr9 = getelementptr i32, i32 *%ptr0, i64 18
+  %ptr1 = getelementptr i32, ptr %ptr0, i64 2
+  %ptr2 = getelementptr i32, ptr %ptr0, i64 4
+  %ptr3 = getelementptr i32, ptr %ptr0, i64 6
+  %ptr4 = getelementptr i32, ptr %ptr0, i64 8
+  %ptr5 = getelementptr i32, ptr %ptr0, i64 10
+  %ptr6 = getelementptr i32, ptr %ptr0, i64 12
+  %ptr7 = getelementptr i32, ptr %ptr0, i64 14
+  %ptr8 = getelementptr i32, ptr %ptr0, i64 16
+  %ptr9 = getelementptr i32, ptr %ptr0, i64 18
 
-  %val0 = load i32, i32 *%ptr0
-  %val1 = load i32, i32 *%ptr1
-  %val2 = load i32, i32 *%ptr2
-  %val3 = load i32, i32 *%ptr3
-  %val4 = load i32, i32 *%ptr4
-  %val5 = load i32, i32 *%ptr5
-  %val6 = load i32, i32 *%ptr6
-  %val7 = load i32, i32 *%ptr7
-  %val8 = load i32, i32 *%ptr8
-  %val9 = load i32, i32 *%ptr9
+  %val0 = load i32, ptr %ptr0
+  %val1 = load i32, ptr %ptr1
+  %val2 = load i32, ptr %ptr2
+  %val3 = load i32, ptr %ptr3
+  %val4 = load i32, ptr %ptr4
+  %val5 = load i32, ptr %ptr5
+  %val6 = load i32, ptr %ptr6
+  %val7 = load i32, ptr %ptr7
+  %val8 = load i32, ptr %ptr8
+  %val9 = load i32, ptr %ptr9
 
   %frob0 = add i32 %val0, 100
   %frob1 = add i32 %val1, 100
@@ -242,16 +242,16 @@ define i64 @f15(i32 *%ptr0) {
   %frob8 = add i32 %val8, 100
   %frob9 = add i32 %val9, 100
 
-  store i32 %frob0, i32 *%ptr0
-  store i32 %frob1, i32 *%ptr1
-  store i32 %frob2, i32 *%ptr2
-  store i32 %frob3, i32 *%ptr3
-  store i32 %frob4, i32 *%ptr4
-  store i32 %frob5, i32 *%ptr5
-  store i32 %frob6, i32 *%ptr6
-  store i32 %frob7, i32 *%ptr7
-  store i32 %frob8, i32 *%ptr8
-  store i32 %frob9, i32 *%ptr9
+  store i32 %frob0, ptr %ptr0
+  store i32 %frob1, ptr %ptr1
+  store i32 %frob2, ptr %ptr2
+  store i32 %frob3, ptr %ptr3
+  store i32 %frob4, ptr %ptr4
+  store i32 %frob5, ptr %ptr5
+  store i32 %frob6, ptr %ptr6
+  store i32 %frob7, ptr %ptr7
+  store i32 %frob8, ptr %ptr8
+  store i32 %frob9, ptr %ptr9
 
   %ret = call i64 @foo()
 
@@ -305,13 +305,13 @@ define double @f16(double %a, double %b, i64 %i1, i32 %unext) {
 }
 
 ; Likewise CGF.
-define double @f17(double %a, double %b, i64 %i2, i32 *%ptr) {
+define double @f17(double %a, double %b, i64 %i2, ptr %ptr) {
 ; CHECK-LABEL: f17:
 ; CHECK: cgf %r2, 0(%r3)
 ; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
-  %unext = load i32, i32 *%ptr
+  %unext = load i32, ptr %ptr
   %i1 = sext i32 %unext to i64
   %cond = icmp slt i64 %i1, %i2
   %res = select i1 %cond, double %a, double %b

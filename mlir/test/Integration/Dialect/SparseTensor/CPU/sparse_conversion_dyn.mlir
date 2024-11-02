@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 #DCSR  = #sparse_tensor.encoding<{
@@ -72,12 +72,12 @@ module {
     call @dump(%m6) : (memref<?xf64>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %1 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %2 : tensor<?x?xf64, #DCSC>
-    sparse_tensor.release %3 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %4 : tensor<?x?xf64, #DCSC>
-    sparse_tensor.release %5 : tensor<?x?xf64, #DCSC>
-    sparse_tensor.release %6 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %1 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %2 : tensor<?x?xf64, #DCSC>
+    bufferization.dealloc_tensor %3 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %4 : tensor<?x?xf64, #DCSC>
+    bufferization.dealloc_tensor %5 : tensor<?x?xf64, #DCSC>
+    bufferization.dealloc_tensor %6 : tensor<?x?xf64, #DCSR>
 
     return
   }

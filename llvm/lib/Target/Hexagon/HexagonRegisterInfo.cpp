@@ -255,7 +255,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       case Hexagon::PS_vstorerw_ai:
       case Hexagon::PS_vstorerw_nt_ai:
         IsPair = true;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Hexagon::PS_vloadrv_ai:
       case Hexagon::PS_vloadrv_nt_ai:
       case Hexagon::PS_vstorerv_ai:

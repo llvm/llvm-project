@@ -47,9 +47,9 @@ define void @basic(i32 %v) {
   ret void
 }
 
-define void @nonnull(i32* %v) {
+define void @nonnull(ptr %v) {
 ; CHECK-LABEL: @nonnull(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32* [[V:%.*]], null
+; CHECK-NEXT:    [[A:%.*]] = icmp ne ptr [[V:%.*]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
@@ -57,15 +57,15 @@ define void @nonnull(i32* %v) {
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
-  %a = icmp ne i32* %v, null
+  %a = icmp ne ptr %v, null
   call void @llvm.assume(i1 %a)
-  %c1 = icmp eq i32* %v, null
+  %c1 = icmp eq ptr %v, null
   call void @use(i1 %c1)
-  %c2 = icmp ne i32* %v, null
+  %c2 = icmp ne ptr %v, null
   call void @use(i1 %c2)
-  %c3 = icmp eq i32* null, %v
+  %c3 = icmp eq ptr null, %v
   call void @use(i1 %c3)
-  %c4 = icmp ne i32* null, %v
+  %c4 = icmp ne ptr null, %v
   call void @use(i1 %c4)
   ret void
 }

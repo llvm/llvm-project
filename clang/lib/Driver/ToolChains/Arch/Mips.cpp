@@ -306,7 +306,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       }
     } else
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mabs_EQ)) {
@@ -327,7 +327,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       }
     } else {
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
     }
   }
 

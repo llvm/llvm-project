@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 {
   unsigned r = 0;
 
-  uint64_t limit = (argc >= 2 ? 10 : 500000000);
+  uint64_t limit = (argc >= 2 ? 10 : 5000);
   for (uint64_t i = 0; i < limit; ++i) {
     i += foo();
     try  {

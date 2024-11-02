@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H
 #define LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 
 #include "utils/UnitTest/Test.h"
 
@@ -17,11 +17,13 @@ namespace __llvm_libc {
 namespace memory {
 namespace testing {
 
-using MemoryView = __llvm_libc::cpp::ArrayRef<char>;
+using MemoryView = __llvm_libc::cpp::span<const char>;
 
 class MemoryMatcher : public __llvm_libc::testing::Matcher<MemoryView> {
   MemoryView expected;
   MemoryView actual;
+  bool mismatch_size = false;
+  size_t mismatch_index = -1;
 
 public:
   MemoryMatcher(MemoryView expectedValue) : expected(expectedValue) {}
@@ -37,5 +39,7 @@ public:
 
 #define EXPECT_MEM_EQ(expected, actual)                                        \
   EXPECT_THAT(actual, __llvm_libc::memory::testing::MemoryMatcher(expected))
+#define ASSERT_MEM_EQ(expected, actual)                                        \
+  ASSERT_THAT(actual, __llvm_libc::memory::testing::MemoryMatcher(expected))
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H

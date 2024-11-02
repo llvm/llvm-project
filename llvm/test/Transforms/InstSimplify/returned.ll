@@ -7,10 +7,8 @@ define i1 @bitcast() {
 ;
   %a = alloca i32
   %b = alloca i64
-  %x = bitcast i32* %a to i8*
-  %z = bitcast i64* %b to i8*
-  %y = call i8* @func1(i8* %z)
-  %cmp = icmp eq i8* %x, %y
+  %y = call ptr @func1(ptr %b)
+  %cmp = icmp eq ptr %a, %y
   ret i1 %cmp
 }
 
@@ -21,13 +19,12 @@ define i1 @gep3() {
 ; CHECK-NEXT:    ret i1 false
 ;
   %x = alloca %gept, align 8
-  %a = getelementptr %gept, %gept* %x, i64 0, i32 0
-  %y = call %gept* @func2(%gept* %x)
-  %b = getelementptr %gept, %gept* %y, i64 0, i32 1
-  %equal = icmp eq i32* %a, %b
+  %y = call ptr @func2(ptr %x)
+  %b = getelementptr %gept, ptr %y, i64 0, i32 1
+  %equal = icmp eq ptr %x, %b
   ret i1 %equal
 }
 
-declare i8* @func1(i8* returned) nounwind readnone willreturn
-declare %gept* @func2(%gept* returned) nounwind readnone willreturn
+declare ptr @func1(ptr returned) nounwind readnone willreturn
+declare ptr @func2(ptr returned) nounwind readnone willreturn
 

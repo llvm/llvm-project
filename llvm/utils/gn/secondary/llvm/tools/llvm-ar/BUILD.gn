@@ -1,4 +1,5 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 symlinks = [
@@ -29,7 +30,7 @@ group("symlinks") {
   }
 }
 
-executable("llvm-ar") {
+driver_executable("llvm-ar") {
   deps = [
     "//llvm/lib/IR",
     "//llvm/lib/Object",

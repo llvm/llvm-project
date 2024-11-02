@@ -4,7 +4,7 @@
 ; Ensure PSRAD is generated as the condition is consumed by both PADD and
 ; BLENDVPS. PADD requires all bits setting properly.
 
-define <4 x i32> @foo(<4 x i32>* %p, <4 x i1> %cond, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
+define <4 x i32> @foo(ptr %p, <4 x i1> %cond, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $31, %xmm0
@@ -18,7 +18,7 @@ define <4 x i32> @foo(<4 x i32>* %p, <4 x i1> %cond, <4 x i32> %v1, <4 x i32> %v
   %sext_cond = sext <4 x i1> %cond to <4 x i32>
   %t1 = add <4 x i32> %v1, %sext_cond
   %t2 = select <4 x i1> %cond, <4 x i32> %v1, <4 x i32> %v2
-  store <4 x i32> %t2, <4 x i32>* %p
+  store <4 x i32> %t2, ptr %p
   ret <4 x i32> %t1
 }
 

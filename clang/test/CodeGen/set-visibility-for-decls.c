@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility hidden -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-HIDDEN %s
-// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility protected -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-PROTECTED %s
-// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility default -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-DEFAULT %s
+// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility=hidden -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-HIDDEN %s
+// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility=protected -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-PROTECTED %s
+// RUN: %clang_cc1 %s -std=c11 -triple=x86_64-pc-linux -fvisibility=default -fapply-global-visibility-to-externs -emit-llvm -o - | FileCheck --check-prefix=CHECK-DEFAULT %s
 
 // CHECK-HIDDEN: @var_hidden = external hidden global
 // CHECK-PROTECTED: @var_hidden = external hidden global

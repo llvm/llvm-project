@@ -12,6 +12,7 @@
 #include "../cppcoreguidelines/NarrowingConversionsCheck.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
+#include "AssignmentInIfConditionCheck.h"
 #include "BadSignalToKillThreadCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
@@ -57,6 +58,7 @@
 #include "SuspiciousMemoryComparisonCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
+#include "SuspiciousReallocUsageCheck.h"
 #include "SuspiciousSemicolonCheck.h"
 #include "SuspiciousStringCompareCheck.h"
 #include "SwappedArgumentsCheck.h"
@@ -84,12 +86,13 @@ public:
         "bugprone-argument-comment");
     CheckFactories.registerCheck<AssertSideEffectCheck>(
         "bugprone-assert-side-effect");
+    CheckFactories.registerCheck<AssignmentInIfConditionCheck>(
+        "bugprone-assignment-in-if-condition");
     CheckFactories.registerCheck<BadSignalToKillThreadCheck>(
         "bugprone-bad-signal-to-kill-thread");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
-    CheckFactories.registerCheck<BranchCloneCheck>(
-        "bugprone-branch-clone");
+    CheckFactories.registerCheck<BranchCloneCheck>("bugprone-branch-clone");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
@@ -100,8 +103,7 @@ public:
         "bugprone-easily-swappable-parameters");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
         "bugprone-exception-escape");
-    CheckFactories.registerCheck<FoldInitTypeCheck>(
-        "bugprone-fold-init-type");
+    CheckFactories.registerCheck<FoldInitTypeCheck>("bugprone-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
         "bugprone-forward-declaration-namespace");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
@@ -112,8 +114,7 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectRoundingsCheck>(
         "bugprone-incorrect-roundings");
-    CheckFactories.registerCheck<InfiniteLoopCheck>(
-        "bugprone-infinite-loop");
+    CheckFactories.registerCheck<InfiniteLoopCheck>("bugprone-infinite-loop");
     CheckFactories.registerCheck<IntegerDivisionCheck>(
         "bugprone-integer-division");
     CheckFactories.registerCheck<LambdaFunctionNameCheck>(
@@ -141,8 +142,7 @@ public:
         "bugprone-not-null-terminated-result");
     CheckFactories.registerCheck<ParentVirtualCallCheck>(
         "bugprone-parent-virtual-call");
-    CheckFactories.registerCheck<PosixReturnCheck>(
-        "bugprone-posix-return");
+    CheckFactories.registerCheck<PosixReturnCheck>("bugprone-posix-return");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
@@ -174,6 +174,8 @@ public:
         "bugprone-suspicious-memset-usage");
     CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
         "bugprone-suspicious-missing-comma");
+    CheckFactories.registerCheck<SuspiciousReallocUsageCheck>(
+        "bugprone-suspicious-realloc-usage");
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "bugprone-suspicious-semicolon");
     CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
@@ -196,12 +198,10 @@ public:
         "bugprone-unhandled-self-assignment");
     CheckFactories.registerCheck<UnhandledExceptionAtNewCheck>(
         "bugprone-unhandled-exception-at-new");
-    CheckFactories.registerCheck<UnusedRaiiCheck>(
-        "bugprone-unused-raii");
+    CheckFactories.registerCheck<UnusedRaiiCheck>("bugprone-unused-raii");
     CheckFactories.registerCheck<UnusedReturnValueCheck>(
         "bugprone-unused-return-value");
-    CheckFactories.registerCheck<UseAfterMoveCheck>(
-        "bugprone-use-after-move");
+    CheckFactories.registerCheck<UseAfterMoveCheck>("bugprone-use-after-move");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
         "bugprone-virtual-near-miss");
   }

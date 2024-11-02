@@ -114,8 +114,12 @@ if (LLVM_ENABLE_SPHINX)
       # directory before we run sphinx.
       add_custom_target(copy-clang-rst-docs
         COMMAND "${CMAKE_COMMAND}" -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_CURRENT_BINARY_DIR}")
+        "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/../CodeOwners.rst"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+      )
       add_dependencies(docs-clang-html copy-clang-rst-docs)
 
       add_custom_command(TARGET docs-clang-html POST_BUILD

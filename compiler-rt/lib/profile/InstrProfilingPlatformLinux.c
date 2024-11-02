@@ -250,23 +250,21 @@ void __llvm_profile_register_names_function(void *NamesStart,
 // section exists. So for the scenario where the user objects have no such
 // section (i.e. when they are compiled with -fno-profile-generate), we always
 // define these zero length variables in each of the above 4 sections.
-COMPILER_RT_VISIBILITY int dummy_cnts[0] COMPILER_RT_SECTION(
+static int dummy_cnts[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_CNTS_SECT_NAME);
-COMPILER_RT_VISIBILITY int dummy_data[0] COMPILER_RT_SECTION(
+static int dummy_data[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_DATA_SECT_NAME);
-COMPILER_RT_VISIBILITY const int dummy_name[0] COMPILER_RT_SECTION(
+static const int dummy_name[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_NAME_SECT_NAME);
-COMPILER_RT_VISIBILITY int dummy_vnds[0] COMPILER_RT_SECTION(
+static int dummy_vnds[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_VNODES_SECT_NAME);
 
-// Create a fake reference to avoid GC'ing of the dummy variables by the linker.
-// Ideally, we create a ".ref" of each variable inside the function
-// __llvm_profile_begin_counters(), but there's no source level construct
-// that allows us to generate that.
-__attribute__((destructor)) void keep() {
-  int volatile use = &dummy_cnts < &dummy_data && &dummy_name < &dummy_vnds;
-  (void)use;
-}
+// To avoid GC'ing of the dummy variables by the linker, reference them in an
+// array and reference the array in the runtime registration code
+// (InstrProfilingRuntime.cpp)
+COMPILER_RT_VISIBILITY
+void *__llvm_profile_keep[] = {(void *)&dummy_cnts, (void *)&dummy_data,
+                               (void *)&dummy_name, (void *)&dummy_vnds};
 #endif
 
 #endif

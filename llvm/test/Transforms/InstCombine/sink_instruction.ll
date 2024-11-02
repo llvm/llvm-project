@@ -78,7 +78,7 @@ bb4:                                              ; preds = %bb2
 
 declare i32 @bar()
 
-define i32 @test3(i32* nocapture readonly %P, i32 %i) {
+define i32 @test3(ptr nocapture readonly %P, i32 %i) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[SW_EPILOG:%.*]] [
@@ -87,8 +87,8 @@ define i32 @test3(i32* nocapture readonly %P, i32 %i) {
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[I]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
@@ -97,8 +97,8 @@ define i32 @test3(i32* nocapture readonly %P, i32 %i) {
 ;
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32, i32* %P, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %P, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   switch i32 %i, label %sw.epilog [
   i32 5, label %sw.bb
   i32 2, label %sw.bb
@@ -141,12 +141,12 @@ endif:          ; preds = %entry
 }
 
 ; Two uses in a single user (phi node). We just bail out.
-define i32 @test5(i32* nocapture readonly %P, i32 %i, i1 %cond) {
+define i32 @test5(ptr nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[DISPATCHBB:%.*]], label [[SW_EPILOG:%.*]]
 ; CHECK:       dispatchBB:
 ; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[I]], 1
@@ -159,8 +159,8 @@ define i32 @test5(i32* nocapture readonly %P, i32 %i, i1 %cond) {
 ;
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32, i32* %P, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %P, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   br i1 %cond, label %dispatchBB, label %sw.epilog
 
 dispatchBB:
@@ -176,15 +176,15 @@ sw.epilog:                                        ; preds = %entry, %sw.bb
 }
 
 ; Multiple uses but from same BB. We can sink.
-define i32 @test6(i32* nocapture readonly %P, i32 %i, i1 %cond) {
+define i32 @test6(ptr nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[I]], 1
 ; CHECK-NEXT:    br label [[DISPATCHBB:%.*]]
 ; CHECK:       dispatchBB:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    switch i32 [[I]], label [[SW_BB:%.*]] [
 ; CHECK-NEXT:    i32 5, label [[SW_EPILOG:%.*]]
 ; CHECK-NEXT:    i32 2, label [[SW_EPILOG]]
@@ -197,8 +197,8 @@ define i32 @test6(i32* nocapture readonly %P, i32 %i, i1 %cond) {
 ;
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32, i32* %P, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %P, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %i, %i
   br label %dispatchBB
 

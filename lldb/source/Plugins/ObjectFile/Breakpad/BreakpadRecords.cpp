@@ -99,7 +99,7 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
     uuid_t uuid;
     llvm::support::ubig32_t age;
   } data;
-  static_assert(sizeof(data) == 20, "");
+  static_assert(sizeof(data) == 20);
   // The textual module id encoding should be between 33 and 40 bytes long,
   // depending on the size of the age field, which is of variable length.
   // The first three chunks of the id are encoded in big endian, so we need to
@@ -122,8 +122,8 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
 
   // On non-windows, the age field should always be zero, so we don't include to
   // match the native uuid format of these platforms.
-  return UUID::fromData(&data, os == llvm::Triple::Win32 ? sizeof(data)
-                                                         : sizeof(data.uuid));
+  return UUID(&data, os == llvm::Triple::Win32 ? sizeof(data)
+                                               : sizeof(data.uuid));
 }
 
 llvm::Optional<Record::Kind> Record::classify(llvm::StringRef Line) {

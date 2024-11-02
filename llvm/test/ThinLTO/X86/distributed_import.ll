@@ -1,7 +1,6 @@
 ; Test distributed build thin link output from llvm-lto2
 
-; Generate bitcode files with summary, as well as minimized bitcode without
-; the debug metadata for the thin link.
+; Generate bitcode files with summary, as well as minimized bitcode containing just the summary
 ; RUN: opt -thinlto-bc %s -thin-link-bitcode-file=%t1.thinlink.bc -o %t1.bc
 ; RUN: opt -thinlto-bc %p/Inputs/distributed_import.ll -thin-link-bitcode-file=%t2.thinlink.bc -o %t2.bc
 ; RUN: llvm-bcanalyzer -dump %t1.thinlink.bc | FileCheck --check-prefix=THINLINKBITCODE %s
@@ -15,8 +14,8 @@
 ; RUN:     -r=%t2.bc,g,px \
 ; RUN:     -r=%t2.bc,analias,px \
 ; RUN:     -r=%t2.bc,aliasee,px
-; RUN: opt -function-import -import-all-index -enable-import-metadata -summary-file %t1.bc.thinlto.bc %t1.bc -o %t1.out
-; RUN: opt -function-import -import-all-index -summary-file %t2.bc.thinlto.bc %t2.bc -o %t2.out
+; RUN: opt -passes=function-import -import-all-index -enable-import-metadata -summary-file %t1.bc.thinlto.bc %t1.bc -o %t1.out
+; RUN: opt -passes=function-import -import-all-index -summary-file %t2.bc.thinlto.bc %t2.bc -o %t2.out
 ; RUN: llvm-dis -o - %t1.out | FileCheck %s --check-prefix=IMPORT
 ; RUN: llvm-dis -o - %t2.out | FileCheck %s --check-prefix=EXPORT
 
@@ -49,8 +48,8 @@
 ; Make sure importing occurs as expected
 ; RUN: cp %t1.bc.sv %t1.bc
 ; RUN: cp %t2.bc.sv %t2.bc
-; RUN: opt -function-import -import-all-index -enable-import-metadata -summary-file %t1.bc.thinlto.bc %t1.bc -o %t1.out
-; RUN: opt -function-import -import-all-index -summary-file %t2.bc.thinlto.bc %t2.bc -o %t2.out
+; RUN: opt -passes=function-import -import-all-index -enable-import-metadata -summary-file %t1.bc.thinlto.bc %t1.bc -o %t1.out
+; RUN: opt -passes=function-import -import-all-index -summary-file %t2.bc.thinlto.bc %t2.bc -o %t2.out
 ; RUN: llvm-dis -o - %t1.out | FileCheck %s --check-prefix=IMPORT
 ; RUN: llvm-dis -o - %t2.out | FileCheck %s --check-prefix=EXPORT
 

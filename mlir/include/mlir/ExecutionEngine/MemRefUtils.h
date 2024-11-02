@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <climits>
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -101,9 +102,9 @@ template <typename T>
 std::pair<T *, T *>
 allocAligned(size_t nElements, AllocFunType allocFun = &::malloc,
              llvm::Optional<uint64_t> alignment = llvm::Optional<uint64_t>()) {
-  assert(sizeof(T) < (1ul << 32) && "Elemental type overflows");
+  assert(sizeof(T) <= UINT_MAX && "Elemental type overflows");
   auto size = nElements * sizeof(T);
-  auto desiredAlignment = alignment.getValueOr(nextPowerOf2(sizeof(T)));
+  auto desiredAlignment = alignment.value_or(nextPowerOf2(sizeof(T)));
   assert((desiredAlignment & (desiredAlignment - 1)) == 0);
   assert(desiredAlignment >= sizeof(T));
   T *data = reinterpret_cast<T *>(allocFun(size + desiredAlignment));
@@ -162,8 +163,7 @@ public:
     int64_t nElements = 1;
     for (int64_t s : shapeAlloc)
       nElements *= s;
-    T *data, *alignedData;
-    std::tie(data, alignedData) =
+    auto [data, alignedData] =
         detail::allocAligned<T>(nElements, allocFun, alignment);
     descriptor = detail::makeStridedMemRefDescriptor<Rank>(data, alignedData,
                                                            shape, shapeAlloc);
@@ -175,7 +175,7 @@ public:
     } else {
       memset(descriptor.data, 0,
              nElements * sizeof(T) +
-                 alignment.getValueOr(detail::nextPowerOf2(sizeof(T))));
+                 alignment.value_or(detail::nextPowerOf2(sizeof(T))));
     }
   }
   /// Take ownership of an existing descriptor with a custom deleter.

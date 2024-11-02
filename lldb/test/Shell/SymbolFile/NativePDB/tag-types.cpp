@@ -242,6 +242,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) type lookup -- Derived
 // CHECK-NEXT: class Derived : public Class {
 // CHECK-NEXT: public:
+// CHECK-NEXT:     Derived();
 // CHECK-NEXT:     Derived &Reference;
 // CHECK-NEXT:     OneMember Member;
 // CHECK-NEXT:     const OneMember ConstMember;

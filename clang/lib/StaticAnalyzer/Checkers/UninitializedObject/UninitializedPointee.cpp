@@ -34,20 +34,20 @@ public:
   LocField(const FieldRegion *FR, const bool IsDereferenced = true)
       : FieldNode(FR), IsDereferenced(IsDereferenced) {}
 
-  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+  void printNoteMsg(llvm::raw_ostream &Out) const override {
     if (IsDereferenced)
       Out << "uninitialized pointee ";
     else
       Out << "uninitialized pointer ";
   }
 
-  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+  void printPrefix(llvm::raw_ostream &Out) const override {}
 
-  virtual void printNode(llvm::raw_ostream &Out) const override {
+  void printNode(llvm::raw_ostream &Out) const override {
     Out << getVariableName(getDecl());
   }
 
-  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+  void printSeparator(llvm::raw_ostream &Out) const override {
     if (getDecl()->getType()->isPointerType())
       Out << "->";
     else
@@ -64,11 +64,11 @@ public:
   NeedsCastLocField(const FieldRegion *FR, const QualType &T)
       : FieldNode(FR), CastBackType(T) {}
 
-  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+  void printNoteMsg(llvm::raw_ostream &Out) const override {
     Out << "uninitialized pointee ";
   }
 
-  virtual void printPrefix(llvm::raw_ostream &Out) const override {
+  void printPrefix(llvm::raw_ostream &Out) const override {
     // If this object is a nonloc::LocAsInteger.
     if (getDecl()->getType()->isIntegerType())
       Out << "reinterpret_cast";
@@ -78,13 +78,11 @@ public:
     Out << '<' << CastBackType.getAsString() << ">(";
   }
 
-  virtual void printNode(llvm::raw_ostream &Out) const override {
+  void printNode(llvm::raw_ostream &Out) const override {
     Out << getVariableName(getDecl()) << ')';
   }
 
-  virtual void printSeparator(llvm::raw_ostream &Out) const override {
-    Out << "->";
-  }
+  void printSeparator(llvm::raw_ostream &Out) const override { Out << "->"; }
 };
 
 /// Represents a Loc field that points to itself.
@@ -93,17 +91,17 @@ class CyclicLocField final : public FieldNode {
 public:
   CyclicLocField(const FieldRegion *FR) : FieldNode(FR) {}
 
-  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+  void printNoteMsg(llvm::raw_ostream &Out) const override {
     Out << "object references itself ";
   }
 
-  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+  void printPrefix(llvm::raw_ostream &Out) const override {}
 
-  virtual void printNode(llvm::raw_ostream &Out) const override {
+  void printNode(llvm::raw_ostream &Out) const override {
     Out << getVariableName(getDecl());
   }
 
-  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+  void printSeparator(llvm::raw_ostream &Out) const override {
     llvm_unreachable("CyclicLocField objects must be the last node of the "
                      "fieldchain!");
   }
@@ -141,10 +139,10 @@ bool FindUninitializedFields::isDereferencableUninit(
   SVal V = State->getSVal(FR);
 
   assert((isDereferencableType(FR->getDecl()->getType()) ||
-          V.getAs<nonloc::LocAsInteger>()) &&
+          isa<nonloc::LocAsInteger>(V)) &&
          "This method only checks dereferenceable objects!");
 
-  if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
+  if (V.isUnknown() || isa<loc::ConcreteInt>(V)) {
     IsAnyFieldInitialized = true;
     return false;
   }
@@ -230,8 +228,8 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
   // If the static type of the field is a void pointer, or it is a
   // nonloc::LocAsInteger, we need to cast it back to the dynamic type before
   // dereferencing.
-  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType()) ||
-                       V.getAs<nonloc::LocAsInteger>();
+  bool NeedsCastBack =
+      isVoidPointer(FR->getDecl()->getType()) || isa<nonloc::LocAsInteger>(V);
 
   // The region we'd like to acquire.
   const auto *R = V.getAsRegion()->getAs<TypedValueRegion>();

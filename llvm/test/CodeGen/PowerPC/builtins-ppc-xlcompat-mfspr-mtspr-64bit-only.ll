@@ -102,7 +102,7 @@ define dso_local void @test_mtxer() {
 ; CHECK-AIX64-NEXT:    mtxer 3
 ; CHECK-AIX64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @ula, align 8
+  %0 = load i64, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i64(i32 1, i64 %0)
   ret void
 }
@@ -123,7 +123,7 @@ define dso_local void @test_mtlr() {
 ; CHECK-AIX64-NEXT:    mtspr 8, 3
 ; CHECK-AIX64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @ula, align 8
+  %0 = load i64, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i64(i32 8, i64 %0)
   ret void
 }
@@ -144,7 +144,7 @@ define dso_local void @test_mtctr() {
 ; CHECK-AIX64-NEXT:    mtspr 9, 3
 ; CHECK-AIX64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @ula, align 8
+  %0 = load i64, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i64(i32 9, i64 %0)
   ret void
 }
@@ -165,7 +165,7 @@ define dso_local void @test_mtppr() {
 ; CHECK-AIX64-NEXT:    mtspr 896, 3
 ; CHECK-AIX64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @ula, align 8
+  %0 = load i64, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i64(i32 896, i64 %0)
   ret void
 }
@@ -186,7 +186,7 @@ define dso_local void @test_mtppr32() {
 ; CHECK-AIX64-NEXT:    mtspr 898, 3
 ; CHECK-AIX64-NEXT:    blr
 entry:
-  %0 = load i64, i64* @ula, align 8
+  %0 = load i64, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i64(i32 898, i64 %0)
   ret void
 }

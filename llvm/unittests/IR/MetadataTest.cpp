@@ -917,31 +917,6 @@ TEST_F(MDNodeTest, deleteTemporaryWithTrackingRef) {
 
 typedef MetadataTest DILocationTest;
 
-TEST_F(DILocationTest, Overflow) {
-  DISubprogram *N = getSubprogram();
-  {
-    DILocation *L = DILocation::get(Context, 2, 7, N);
-    EXPECT_EQ(2u, L->getLine());
-    EXPECT_EQ(7u, L->getColumn());
-  }
-  unsigned U16 = 1u << 16;
-  {
-    DILocation *L = DILocation::get(Context, UINT32_MAX, U16 - 1, N);
-    EXPECT_EQ(UINT32_MAX, L->getLine());
-    EXPECT_EQ(U16 - 1, L->getColumn());
-  }
-  {
-    DILocation *L = DILocation::get(Context, UINT32_MAX, U16, N);
-    EXPECT_EQ(UINT32_MAX, L->getLine());
-    EXPECT_EQ(0u, L->getColumn());
-  }
-  {
-    DILocation *L = DILocation::get(Context, UINT32_MAX, U16 + 1, N);
-    EXPECT_EQ(UINT32_MAX, L->getLine());
-    EXPECT_EQ(0u, L->getColumn());
-  }
-}
-
 TEST_F(DILocationTest, Merge) {
   DISubprogram *N = getSubprogram();
   DIScope *S = DILexicalBlock::get(Context, N, getFile(), 3, 4);
@@ -961,9 +936,22 @@ TEST_F(DILocationTest, Merge) {
     auto *A = DILocation::get(Context, 2, 7, N);
     auto *B = DILocation::get(Context, 2, 7, S);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_EQ(0u, M->getLine()); // FIXME: Should this be 2?
-    EXPECT_EQ(0u, M->getColumn()); // FIXME: Should this be 7?
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(7u, M->getColumn());
     EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Same line, different column.
+    auto *A = DILocation::get(Context, 2, 7, N);
+    auto *B = DILocation::get(Context, 2, 10, S);
+    auto *M0 = DILocation::getMergedLocation(A, B);
+    auto *M1 = DILocation::getMergedLocation(B, A);
+    for (auto *M : {M0, M1}) {
+      EXPECT_EQ(2u, M->getLine());
+      EXPECT_EQ(0u, M->getColumn());
+      EXPECT_EQ(N, M->getScope());
+    }
   }
 
   {
@@ -998,15 +986,36 @@ TEST_F(DILocationTest, Merge) {
 
     auto *I = DILocation::get(Context, 2, 7, N);
     auto *A = DILocation::get(Context, 1, 6, SP1, I);
-    auto *B = DILocation::get(Context, 2, 7, SP2, I);
+    auto *B = DILocation::get(Context, 3, 8, SP2, I);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_EQ(0u, M->getLine());
-    EXPECT_EQ(0u, M->getColumn());
-    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
-    EXPECT_EQ(I, M->getInlinedAt());
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(7u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
   }
 
-   {
+  {
+    // Different function, inlined-at same line, but different column.
+    auto *F = getFile();
+    auto *SP1 = DISubprogram::getDistinct(Context, F, "a", "a", F, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+    auto *SP2 = DISubprogram::getDistinct(Context, F, "b", "b", F, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *IA = DILocation::get(Context, 2, 7, N);
+    auto *IB = DILocation::get(Context, 2, 8, N);
+    auto *A = DILocation::get(Context, 1, 6, SP1, IA);
+    auto *B = DILocation::get(Context, 3, 8, SP2, IB);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  {
     // Completely different.
     auto *I = DILocation::get(Context, 2, 7, N);
     auto *A = DILocation::get(Context, 1, 6, S, I);
@@ -1016,6 +1025,67 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(0u, M->getColumn());
     EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
     EXPECT_EQ(S, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  // Two locations, same line/column different file, inlined at the same place.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *I = DILocation::get(Context, 3, 8, SPI);
+    auto *A = DILocation::get(Context, 2, 7, SPA, I);
+    auto *B = DILocation::get(Context, 2, 7, SPB, I);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(3u, M->getLine());
+    EXPECT_EQ(8u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPI, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  // Two locations, same line/column different file, one location with 2 scopes,
+  // inlined at the same place.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPAScope = DILexicalBlock::getDistinct(Context, SPA, FA, 4, 9);
+
+    auto *I = DILocation::get(Context, 3, 8, SPI);
+    auto *A = DILocation::get(Context, 2, 7, SPAScope, I);
+    auto *B = DILocation::get(Context, 2, 7, SPB, I);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(3u, M->getLine());
+    EXPECT_EQ(8u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPI, M->getScope());
     EXPECT_EQ(nullptr, M->getInlinedAt());
   }
 }
@@ -1045,52 +1115,51 @@ TEST_F(DILocationTest, cloneTemporary) {
 }
 
 TEST_F(DILocationTest, discriminatorEncoding) {
-  EXPECT_EQ(0U, DILocation::encodeDiscriminator(0, 0, 0).getValue());
+  EXPECT_EQ(0U, DILocation::encodeDiscriminator(0, 0, 0).value());
 
   // Encode base discriminator as a component: lsb is 0, then the value.
   // The other components are all absent, so we leave all the other bits 0.
-  EXPECT_EQ(2U, DILocation::encodeDiscriminator(1, 0, 0).getValue());
+  EXPECT_EQ(2U, DILocation::encodeDiscriminator(1, 0, 0).value());
 
   // Base discriminator component is empty, so lsb is 1. Next component is not
   // empty, so its lsb is 0, then its value (1). Next component is empty.
   // So the bit pattern is 101.
-  EXPECT_EQ(5U, DILocation::encodeDiscriminator(0, 1, 0).getValue());
+  EXPECT_EQ(5U, DILocation::encodeDiscriminator(0, 1, 0).value());
 
   // First 2 components are empty, so the bit pattern is 11. Then the
   // next component - ending up with 1011.
-  EXPECT_EQ(0xbU, DILocation::encodeDiscriminator(0, 0, 1).getValue());
+  EXPECT_EQ(0xbU, DILocation::encodeDiscriminator(0, 0, 1).value());
 
   // The bit pattern for the first 2 components is 11. The next bit is 0,
   // because the last component is not empty. We have 29 bits usable for
   // encoding, but we cap it at 12 bits uniformously for all components. We
   // encode the last component over 14 bits.
-  EXPECT_EQ(0xfffbU, DILocation::encodeDiscriminator(0, 0, 0xfff).getValue());
+  EXPECT_EQ(0xfffbU, DILocation::encodeDiscriminator(0, 0, 0xfff).value());
 
-  EXPECT_EQ(0x102U, DILocation::encodeDiscriminator(1, 1, 0).getValue());
+  EXPECT_EQ(0x102U, DILocation::encodeDiscriminator(1, 1, 0).value());
 
-  EXPECT_EQ(0x13eU, DILocation::encodeDiscriminator(0x1f, 1, 0).getValue());
+  EXPECT_EQ(0x13eU, DILocation::encodeDiscriminator(0x1f, 1, 0).value());
 
-  EXPECT_EQ(0x87feU, DILocation::encodeDiscriminator(0x1ff, 1, 0).getValue());
+  EXPECT_EQ(0x87feU, DILocation::encodeDiscriminator(0x1ff, 1, 0).value());
 
-  EXPECT_EQ(0x1f3eU, DILocation::encodeDiscriminator(0x1f, 0x1f, 0).getValue());
+  EXPECT_EQ(0x1f3eU, DILocation::encodeDiscriminator(0x1f, 0x1f, 0).value());
 
-  EXPECT_EQ(0x3ff3eU,
-            DILocation::encodeDiscriminator(0x1f, 0x1ff, 0).getValue());
+  EXPECT_EQ(0x3ff3eU, DILocation::encodeDiscriminator(0x1f, 0x1ff, 0).value());
 
   EXPECT_EQ(0x1ff87feU,
-            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 0).getValue());
+            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 0).value());
 
   EXPECT_EQ(0xfff9f3eU,
-            DILocation::encodeDiscriminator(0x1f, 0x1f, 0xfff).getValue());
+            DILocation::encodeDiscriminator(0x1f, 0x1f, 0xfff).value());
 
   EXPECT_EQ(0xffc3ff3eU,
-            DILocation::encodeDiscriminator(0x1f, 0x1ff, 0x1ff).getValue());
+            DILocation::encodeDiscriminator(0x1f, 0x1ff, 0x1ff).value());
 
   EXPECT_EQ(0xffcf87feU,
-            DILocation::encodeDiscriminator(0x1ff, 0x1f, 0x1ff).getValue());
+            DILocation::encodeDiscriminator(0x1ff, 0x1f, 0x1ff).value());
 
   EXPECT_EQ(0xe1ff87feU,
-            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 7).getValue());
+            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 7).value());
 }
 
 TEST_F(DILocationTest, discriminatorEncodingNegativeTests) {
@@ -1113,36 +1182,36 @@ TEST_F(DILocationTest, discriminatorSpecialCases) {
   EXPECT_EQ(0U, L1->getBaseDiscriminator());
   EXPECT_EQ(1U, L1->getDuplicationFactor());
 
-  EXPECT_EQ(L1, L1->cloneWithBaseDiscriminator(0).getValue());
-  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(0).getValue());
-  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(1).getValue());
+  EXPECT_EQ(L1, L1->cloneWithBaseDiscriminator(0).value());
+  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(0).value());
+  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(1).value());
 
-  auto L2 = L1->cloneWithBaseDiscriminator(1).getValue();
+  auto L2 = L1->cloneWithBaseDiscriminator(1).value();
   EXPECT_EQ(0U, L1->getBaseDiscriminator());
   EXPECT_EQ(1U, L1->getDuplicationFactor());
 
   EXPECT_EQ(1U, L2->getBaseDiscriminator());
   EXPECT_EQ(1U, L2->getDuplicationFactor());
 
-  auto L3 = L2->cloneByMultiplyingDuplicationFactor(2).getValue();
+  auto L3 = L2->cloneByMultiplyingDuplicationFactor(2).value();
   EXPECT_EQ(1U, L3->getBaseDiscriminator());
   EXPECT_EQ(2U, L3->getDuplicationFactor());
 
-  EXPECT_EQ(L2, L2->cloneByMultiplyingDuplicationFactor(1).getValue());
+  EXPECT_EQ(L2, L2->cloneByMultiplyingDuplicationFactor(1).value());
 
-  auto L4 = L3->cloneByMultiplyingDuplicationFactor(4).getValue();
+  auto L4 = L3->cloneByMultiplyingDuplicationFactor(4).value();
   EXPECT_EQ(1U, L4->getBaseDiscriminator());
   EXPECT_EQ(8U, L4->getDuplicationFactor());
 
-  auto L5 = L4->cloneWithBaseDiscriminator(2).getValue();
+  auto L5 = L4->cloneWithBaseDiscriminator(2).value();
   EXPECT_EQ(2U, L5->getBaseDiscriminator());
   EXPECT_EQ(8U, L5->getDuplicationFactor());
 
   // Check extreme cases
-  auto L6 = L1->cloneWithBaseDiscriminator(0xfff).getValue();
+  auto L6 = L1->cloneWithBaseDiscriminator(0xfff).value();
   EXPECT_EQ(0xfffU, L6->getBaseDiscriminator());
   EXPECT_EQ(0xfffU, L6->cloneByMultiplyingDuplicationFactor(0xfff)
-                        .getValue()
+                        .value()
                         ->getDuplicationFactor());
 
   // Check we return None for unencodable cases.
@@ -1664,7 +1733,7 @@ TEST_F(DIDerivedTypeTest, get) {
   EXPECT_EQ(2u, N->getSizeInBits());
   EXPECT_EQ(3u, N->getAlignInBits());
   EXPECT_EQ(4u, N->getOffsetInBits());
-  EXPECT_EQ(DWARFAddressSpace, N->getDWARFAddressSpace().getValue());
+  EXPECT_EQ(DWARFAddressSpace, *N->getDWARFAddressSpace());
   EXPECT_EQ(5u, N->getFlags());
   EXPECT_EQ(ExtraData, N->getExtraData());
   EXPECT_EQ(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
@@ -1728,7 +1797,7 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
   EXPECT_EQ(UINT64_MAX - 2, N->getOffsetInBits());
-  EXPECT_EQ(UINT32_MAX - 3, N->getDWARFAddressSpace().getValue());
+  EXPECT_EQ(UINT32_MAX - 3, *N->getDWARFAddressSpace());
 }
 
 typedef MetadataTest DICompositeTypeTest;
@@ -2933,22 +3002,24 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 #define EXPECT_VALID_FRAGMENT(Offset, Size, ...)                               \
   do {                                                                         \
     uint64_t Elements[] = {__VA_ARGS__};                                       \
-    DIExpression* Expression = DIExpression::get(Context, Elements);           \
-    EXPECT_TRUE(DIExpression::createFragmentExpression(                        \
-      Expression, Offset, Size).hasValue());                                   \
+    DIExpression *Expression = DIExpression::get(Context, Elements);           \
+    EXPECT_TRUE(                                                               \
+        DIExpression::createFragmentExpression(Expression, Offset, Size)       \
+            .has_value());                                                     \
   } while (false)
 #define EXPECT_INVALID_FRAGMENT(Offset, Size, ...)                             \
   do {                                                                         \
     uint64_t Elements[] = {__VA_ARGS__};                                       \
-    DIExpression* Expression = DIExpression::get(Context, Elements);           \
-    EXPECT_FALSE(DIExpression::createFragmentExpression(                       \
-      Expression, Offset, Size).hasValue());                                   \
+    DIExpression *Expression = DIExpression::get(Context, Elements);           \
+    EXPECT_FALSE(                                                              \
+        DIExpression::createFragmentExpression(Expression, Offset, Size)       \
+            .has_value());                                                     \
   } while (false)
 
   // createFragmentExpression adds correct ops.
   Optional<DIExpression*> R = DIExpression::createFragmentExpression(
     DIExpression::get(Context, {}), 0, 32);
-  EXPECT_EQ(R.hasValue(), true);
+  EXPECT_EQ(R.has_value(), true);
   EXPECT_EQ(3u, (*R)->getNumElements());
   EXPECT_EQ(dwarf::DW_OP_LLVM_fragment, (*R)->getElement(0));
   EXPECT_EQ(0u, (*R)->getElement(1));
@@ -2961,12 +3032,43 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
   EXPECT_VALID_FRAGMENT(16, 16, dwarf::DW_OP_LLVM_fragment, 0, 32);
 
   // Invalid fragment expressions (incompatible ops).
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 14, dwarf::DW_OP_minus);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shr);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shl);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shra);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 14, dwarf::DW_OP_minus,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shr,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shl,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shra,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                          dwarf::DW_OP_stack_value);
+
+  // Fragments can be created for expressions using DW_OP_plus to compute an
+  // address.
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref,
+                        dwarf::DW_OP_stack_value);
+
+  // Check the other deref operations work in the same way.
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_deref_size, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_deref_type, 1, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef_size, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef_type, 1, 1);
+
+  // Fragments cannot be created for expressions using DW_OP_plus to compute an
+  // implicit value (check that this correctly fails even though there is a
+  // deref in the expression).
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst,
+                          2, dwarf::DW_OP_stack_value);
 
 #undef EXPECT_VALID_FRAGMENT
 #undef EXPECT_INVALID_FRAGMENT
@@ -3455,20 +3557,20 @@ TEST_F(FunctionAttachmentTest, Verifier) {
 
 TEST_F(FunctionAttachmentTest, RealEntryCount) {
   Function *F = getFunction("foo");
-  EXPECT_FALSE(F->getEntryCount().hasValue());
+  EXPECT_FALSE(F->getEntryCount().has_value());
   F->setEntryCount(12304, Function::PCT_Real);
   auto Count = F->getEntryCount();
-  EXPECT_TRUE(Count.hasValue());
+  EXPECT_TRUE(Count.has_value());
   EXPECT_EQ(12304u, Count->getCount());
   EXPECT_EQ(Function::PCT_Real, Count->getType());
 }
 
 TEST_F(FunctionAttachmentTest, SyntheticEntryCount) {
   Function *F = getFunction("bar");
-  EXPECT_FALSE(F->getEntryCount().hasValue());
+  EXPECT_FALSE(F->getEntryCount().has_value());
   F->setEntryCount(123, Function::PCT_Synthetic);
   auto Count = F->getEntryCount(true /*allow synthetic*/);
-  EXPECT_TRUE(Count.hasValue());
+  EXPECT_TRUE(Count.has_value());
   EXPECT_EQ(123u, Count->getCount());
   EXPECT_EQ(Function::PCT_Synthetic, Count->getType());
 }
@@ -3630,5 +3732,129 @@ TEST_F(MDTupleAllocationTest, Tracking) {
   EXPECT_EQ(NewOps1.get(), static_cast<Metadata *>(Value2));
   EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value2));
 }
+
+TEST_F(MDTupleAllocationTest, Resize) {
+  MDTuple *A = getTuple();
+  Metadata *Value1 = getConstantAsMetadata();
+  Metadata *Value2 = getConstantAsMetadata();
+  Metadata *Value3 = getConstantAsMetadata();
+
+  EXPECT_EQ(A->getNumOperands(), 0u);
+
+  // Add a couple of elements to it, which resizes the node.
+  A->push_back(Value1);
+  EXPECT_EQ(A->getNumOperands(), 1u);
+  EXPECT_EQ(A->getOperand(0), Value1);
+
+  A->push_back(Value2);
+  EXPECT_EQ(A->getNumOperands(), 2u);
+  EXPECT_EQ(A->getOperand(0), Value1);
+  EXPECT_EQ(A->getOperand(1), Value2);
+
+  // Append another element, which should resize the node
+  // to a "large" node, though not detectable by the user.
+  A->push_back(Value3);
+  EXPECT_EQ(A->getNumOperands(), 3u);
+  EXPECT_EQ(A->getOperand(0), Value1);
+  EXPECT_EQ(A->getOperand(1), Value2);
+  EXPECT_EQ(A->getOperand(2), Value3);
+
+  // Remove the last element
+  A->pop_back();
+  EXPECT_EQ(A->getNumOperands(), 2u);
+  EXPECT_EQ(A->getOperand(1), Value2);
+
+  // Allocate a node with 4 operands.
+  Metadata *Value4 = getConstantAsMetadata();
+  Metadata *Value5 = getConstantAsMetadata();
+
+  Metadata *Ops[] = {Value1, Value2, Value3, Value4};
+  MDTuple *B = MDTuple::getDistinct(Context, Ops);
+
+  EXPECT_EQ(B->getNumOperands(), 4u);
+  B->pop_back();
+  EXPECT_EQ(B->getNumOperands(), 3u);
+  B->push_back(Value5);
+  EXPECT_EQ(B->getNumOperands(), 4u);
+  EXPECT_EQ(B->getOperand(0), Value1);
+  EXPECT_EQ(B->getOperand(1), Value2);
+  EXPECT_EQ(B->getOperand(2), Value3);
+  EXPECT_EQ(B->getOperand(3), Value5);
+
+  // Check that we can resize temporary nodes as well.
+  auto Temp1 = MDTuple::getTemporary(Context, None);
+  EXPECT_EQ(Temp1->getNumOperands(), 0u);
+
+  Temp1->push_back(Value1);
+  EXPECT_EQ(Temp1->getNumOperands(), 1u);
+  EXPECT_EQ(Temp1->getOperand(0), Value1);
+
+  for (int i = 0; i < 11; i++)
+    Temp1->push_back(Value2);
+  EXPECT_EQ(Temp1->getNumOperands(), 12u);
+  EXPECT_EQ(Temp1->getOperand(2), Value2);
+  EXPECT_EQ(Temp1->getOperand(11), Value2);
+
+  // Allocate a node that starts off as a large one.
+  Metadata *OpsLarge[] = {Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4,
+                          Value1, Value2, Value3, Value4};
+  MDTuple *C = MDTuple::getDistinct(Context, OpsLarge);
+  EXPECT_EQ(C->getNumOperands(), 20u);
+  EXPECT_EQ(C->getOperand(7), Value4);
+  EXPECT_EQ(C->getOperand(13), Value2);
+
+  C->push_back(Value1);
+  C->push_back(Value2);
+  EXPECT_EQ(C->getNumOperands(), 22u);
+  EXPECT_EQ(C->getOperand(21), Value2);
+  C->pop_back();
+  EXPECT_EQ(C->getNumOperands(), 21u);
+  EXPECT_EQ(C->getOperand(20), Value1);
+}
+
+TEST_F(MDTupleAllocationTest, Tracking2) {
+  // Resize a tuple and check that we can still RAUW one of its operands.
+  auto *Value1 = getConstantAsMetadata();
+  MDTuple *A = getTuple();
+  A->push_back(Value1);
+  A->push_back(Value1);
+  A->push_back(Value1); // Causes a resize to large.
+  EXPECT_EQ(A->getOperand(0), Value1);
+  EXPECT_EQ(A->getOperand(1), Value1);
+  EXPECT_EQ(A->getOperand(2), Value1);
+
+  auto *Value2 = getConstantAsMetadata();
+  Value *V1 = Value1->getValue();
+  Value *V2 = Value2->getValue();
+  ValueAsMetadata::handleRAUW(V1, V2);
+
+  EXPECT_EQ(A->getOperand(0), Value2);
+  EXPECT_EQ(A->getOperand(1), Value2);
+  EXPECT_EQ(A->getOperand(2), Value2);
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
+typedef MetadataTest MDTupleAllocationDeathTest;
+TEST_F(MDTupleAllocationDeathTest, ResizeRejected) {
+  MDTuple *A = MDTuple::get(Context, None);
+  auto *Value1 = getConstantAsMetadata();
+  EXPECT_DEATH(A->push_back(Value1),
+               "Resizing is not supported for uniqued nodes");
+
+  // Check that a node, which has been allocated as a temporary,
+  // cannot be resized after it has been uniqued.
+  auto *Value2 = getConstantAsMetadata();
+  auto B = MDTuple::getTemporary(Context, {Value2});
+  B->push_back(Value2);
+  MDTuple *BUniqued = MDNode::replaceWithUniqued(std::move(B));
+  EXPECT_EQ(BUniqued->getNumOperands(), 2u);
+  EXPECT_EQ(BUniqued->getOperand(1), Value2);
+  EXPECT_DEATH(BUniqued->push_back(Value2),
+               "Resizing is not supported for uniqued nodes");
+}
+#endif
 
 } // end namespace

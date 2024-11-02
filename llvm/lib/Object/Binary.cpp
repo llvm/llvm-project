@@ -67,6 +67,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::macho_dsym_companion:
   case file_magic::macho_kext_bundle:
+  case file_magic::macho_file_set:
   case file_magic::coff_object:
   case file_magic::coff_import_library:
   case file_magic::pecoff_executable:

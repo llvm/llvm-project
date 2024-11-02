@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 class CPPAcceleratorTableTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @skipIf(debug_info=no_match(["dwarf"]))
     def test(self):

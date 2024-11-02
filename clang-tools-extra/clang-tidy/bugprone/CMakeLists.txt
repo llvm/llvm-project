@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyBugproneModule
   ArgumentCommentCheck.cpp
   AssertSideEffectCheck.cpp
+  AssignmentInIfConditionCheck.cpp
   BadSignalToKillThreadCheck.cpp
   BoolPointerImplicitConversionCheck.cpp
   BranchCloneCheck.cpp
@@ -53,6 +54,7 @@ add_clang_library(clangTidyBugproneModule
   SuspiciousMemoryComparisonCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
   SuspiciousMissingCommaCheck.cpp
+  SuspiciousReallocUsageCheck.cpp
   SuspiciousSemicolonCheck.cpp
   SuspiciousStringCompareCheck.cpp
   SwappedArgumentsCheck.cpp

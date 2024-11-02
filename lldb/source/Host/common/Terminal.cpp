@@ -281,11 +281,11 @@ llvm::Error Terminal::SetBaudRate(unsigned int baud_rate) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "baud rate %d unsupported by the platform",
                                    baud_rate);
-  if (::cfsetispeed(&fd_termios, val.getValue()) != 0)
+  if (::cfsetispeed(&fd_termios, val.value()) != 0)
     return llvm::createStringError(
         std::error_code(errno, std::generic_category()),
         "setting input baud rate failed");
-  if (::cfsetospeed(&fd_termios, val.getValue()) != 0)
+  if (::cfsetospeed(&fd_termios, val.value()) != 0)
     return llvm::createStringError(
         std::error_code(errno, std::generic_category()),
         "setting output baud rate failed");

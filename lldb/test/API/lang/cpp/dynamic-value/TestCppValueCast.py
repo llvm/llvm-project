@@ -2,10 +2,6 @@
 Test lldb Python API SBValue::Cast(SBType) for C++ types.
 """
 
-from __future__ import print_function
-
-
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class CppValueCastTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(bugnumber="llvm.org/PR36714")
     @add_test_categories(['pyapi'])
@@ -63,8 +57,8 @@ class CppValueCastTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         # Find DerivedA and DerivedB types.
         typeA = target.FindFirstType('DerivedA')

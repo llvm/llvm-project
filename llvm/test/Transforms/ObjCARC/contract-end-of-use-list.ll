@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -objc-arc-expand -objc-arc-contract | FileCheck %s
+; RUN: opt -S < %s -passes=objc-arc-expand,objc-arc-contract | FileCheck %s
 ; Don't crash.  Reproducer for a use_iterator bug from r203364.
 ; rdar://problem/16333235
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

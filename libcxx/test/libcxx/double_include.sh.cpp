@@ -138,6 +138,7 @@ END-SCRIPT
 #include <map>
 #include <math.h>
 #include <memory>
+#include <memory_resource>
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <mutex>
 #endif

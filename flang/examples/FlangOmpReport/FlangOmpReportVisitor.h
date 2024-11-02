@@ -80,7 +80,7 @@ struct OpenMPCounterVisitor {
   void Post(const OmpClause &c);
   void PostClauseCommon(const ClauseInfo &ci);
 
-  std::string clauseDetails{""};
+  std::string clauseDetails;
   llvm::SmallVector<LogRecord> constructClauses;
   llvm::SmallVector<OmpWrapperType *> ompWrapperStack;
   llvm::DenseMap<OmpWrapperType *, llvm::SmallVector<ClauseInfo>> clauseStrings;

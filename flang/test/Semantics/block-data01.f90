@@ -11,7 +11,7 @@ block data foo
   procedure(sin), pointer :: q => cos
   !ERROR: 'p' may not be a procedure as it is in a COMMON block
   procedure(sin), pointer :: p => cos
-  common /block/ pi, p
+  common /block/ p, pi
   !ERROR: An initialized variable in BLOCK DATA must be in a COMMON block
   integer :: inDataButNotCommon
   data inDataButNotCommon /1/

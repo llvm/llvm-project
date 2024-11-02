@@ -1,17 +1,16 @@
 ; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
 
-declare dso_local i32 @bar(i8*)
+declare dso_local i32 @bar(ptr)
 
 ; Function Attrs: nounwind
 define internal i32 @foo() #0 !dbg !1 {
 ; CHECK:  %[[VLA:.*]] = alloca [2 x i32]
-; CHECK:  call void @llvm.dbg.declare(metadata [2 x i32]* %[[VLA]], {{.*}}, metadata !DIExpression())
+; CHECK:  call void @llvm.dbg.declare(metadata ptr %[[VLA]], {{.*}}, metadata !DIExpression())
 
 entry:
   %vla = alloca i32, i64 2, align 4, !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %vla, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = bitcast i32* %vla to i8*, !dbg !21
-  %call = call i32 @bar(i8* %0), !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %vla, metadata !19, metadata !DIExpression()), !dbg !20
+  %call = call i32 @bar(ptr %vla), !dbg !22
   unreachable
 }
 

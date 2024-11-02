@@ -38,7 +38,7 @@ static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
 static llvm::cl::list<int> clTestVectorShapeRatio(
     "vector-shape-ratio",
     llvm::cl::desc("Specify the HW vector size for vectorization"),
-    llvm::cl::ZeroOrMore, llvm::cl::cat(clOptionsCategory));
+    llvm::cl::cat(clOptionsCategory));
 static llvm::cl::opt<bool> clTestForwardSlicingAnalysis(
     "forward-slicing",
     llvm::cl::desc("Enable testing forward static slicing and topological sort "
@@ -127,7 +127,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
     // future we can always extend.
     auto superVectorType = opInst->getResult(0).getType().cast<VectorType>();
     auto ratio = shapeRatio(superVectorType, subVectorType);
-    if (!ratio.hasValue()) {
+    if (!ratio) {
       opInst->emitRemark("NOT MATCHED");
     } else {
       outs << "\nmatched: " << *opInst << " with shape ratio: ";

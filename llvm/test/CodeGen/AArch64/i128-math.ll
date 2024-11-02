@@ -68,10 +68,8 @@ define i128 @u128_saturating_add(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x0, x2
 ; CHECK-NEXT:    adcs x9, x1, x3
-; CHECK-NEXT:    cset w10, hs
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    csinv x0, x8, xzr, eq
-; CHECK-NEXT:    csinv x1, x9, xzr, eq
+; CHECK-NEXT:    csinv x0, x8, xzr, lo
+; CHECK-NEXT:    csinv x1, x9, xzr, lo
 ; CHECK-NEXT:    ret
   %1 = tail call i128 @llvm.uadd.sat.i128(i128 %x, i128 %y)
   ret i128 %1
@@ -126,10 +124,8 @@ define i128 @u128_saturating_sub(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbcs x9, x1, x3
-; CHECK-NEXT:    cset w10, lo
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    csel x0, xzr, x8, ne
-; CHECK-NEXT:    csel x1, xzr, x9, ne
+; CHECK-NEXT:    csel x0, xzr, x8, lo
+; CHECK-NEXT:    csel x1, xzr, x9, lo
 ; CHECK-NEXT:    ret
   %1 = tail call i128 @llvm.usub.sat.i128(i128 %x, i128 %y)
   ret i128 %1
@@ -185,11 +181,9 @@ define i128 @i128_saturating_add(i128 %x, i128 %y) {
 ; CHECK-NEXT:    adds x8, x0, x2
 ; CHECK-NEXT:    adcs x9, x1, x3
 ; CHECK-NEXT:    asr x10, x9, #63
-; CHECK-NEXT:    cset w11, vs
-; CHECK-NEXT:    cmp w11, #0
 ; CHECK-NEXT:    eor x11, x10, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x10, x8, ne
-; CHECK-NEXT:    csel x1, x11, x9, ne
+; CHECK-NEXT:    csel x0, x10, x8, vs
+; CHECK-NEXT:    csel x1, x11, x9, vs
 ; CHECK-NEXT:    ret
   %1 = tail call i128 @llvm.sadd.sat.i128(i128 %x, i128 %y)
   ret i128 %1
@@ -245,11 +239,9 @@ define i128 @i128_saturating_sub(i128 %x, i128 %y) {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbcs x9, x1, x3
 ; CHECK-NEXT:    asr x10, x9, #63
-; CHECK-NEXT:    cset w11, vs
-; CHECK-NEXT:    cmp w11, #0
 ; CHECK-NEXT:    eor x11, x10, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x10, x8, ne
-; CHECK-NEXT:    csel x1, x11, x9, ne
+; CHECK-NEXT:    csel x0, x10, x8, vs
+; CHECK-NEXT:    csel x1, x11, x9, vs
 ; CHECK-NEXT:    ret
   %1 = tail call i128 @llvm.ssub.sat.i128(i128 %x, i128 %y)
   ret i128 %1

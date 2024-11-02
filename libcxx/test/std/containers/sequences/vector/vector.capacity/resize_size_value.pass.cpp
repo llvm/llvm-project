@@ -17,8 +17,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     {
         std::vector<int> v(100);
         v.resize(50, 1);
@@ -75,5 +74,14 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

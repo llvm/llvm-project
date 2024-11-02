@@ -10,12 +10,14 @@ struct coroutine_traits { using promise_type = typename Ret::promise_type; };
 template <class Promise = void>
 struct coroutine_handle {
   static coroutine_handle from_address(void *) noexcept;
+  constexpr void* address() const noexcept;
 };
 template <>
 struct coroutine_handle<void> {
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) noexcept;
   static coroutine_handle from_address(void *);
+  constexpr void* address() const noexcept;
 };
 
 struct suspend_always {

@@ -547,6 +547,7 @@ static Value *operandWithNewAddressSpaceOrCreateUndef(
         cast<PointerType>(Operand->getType()), NewAS);
     auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
     NewI->insertBefore(Inst);
+    NewI->setDebugLoc(Inst->getDebugLoc());
     return NewI;
   }
 
@@ -774,6 +775,7 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
       if (NewI->getParent() == nullptr) {
         NewI->insertBefore(I);
         NewI->takeName(I);
+        NewI->setDebugLoc(I->getDebugLoc());
       }
     }
     return NewV;
@@ -1021,8 +1023,7 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
   MDNode *NoAliasMD = MI->getMetadata(LLVMContext::MD_noalias);
 
   if (auto *MSI = dyn_cast<MemSetInst>(MI)) {
-    B.CreateMemSet(NewV, MSI->getValue(), MSI->getLength(),
-                   MaybeAlign(MSI->getDestAlignment()),
+    B.CreateMemSet(NewV, MSI->getValue(), MSI->getLength(), MSI->getDestAlign(),
                    false, // isVolatile
                    TBAA, ScopeMD, NoAliasMD);
   } else if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {

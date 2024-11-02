@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // P2251 was voted into C++23, but is supported even in C++17 mode by all vendors.
 
 // <string_view>

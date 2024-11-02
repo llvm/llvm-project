@@ -166,7 +166,7 @@ public:
                            lldb::user_id_t watch_id);
 
   struct CommandData {
-    CommandData() {}
+    CommandData() = default;
 
     ~CommandData() = default;
 

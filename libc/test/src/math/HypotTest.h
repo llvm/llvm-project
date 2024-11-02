@@ -24,24 +24,38 @@ private:
   using Func = T (*)(T, T);
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_nan(1));
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
+  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = T(FPBits::inf());
+  const T neg_inf = T(FPBits::neg_inf());
+  const T zero = T(FPBits::zero());
+  const T neg_zero = T(FPBits::neg_zero());
+  const T max_normal = T(FPBits(FPBits::MAX_NORMAL));
+  const T min_normal = T(FPBits(FPBits::MIN_NORMAL));
+  const T max_subnormal = T(FPBits(FPBits::MAX_SUBNORMAL));
+  const T min_subnormal = T(FPBits(FPBits::MIN_SUBNORMAL));
 
 public:
   void test_special_numbers(Func func) {
+    constexpr int N = 13;
+    const T SpecialInputs[N] = {inf,           neg_inf,        zero,
+                                neg_zero,      max_normal,     min_normal,
+                                max_subnormal, min_subnormal,  -max_normal,
+                                -min_normal,   -max_subnormal, -min_subnormal};
+
     EXPECT_FP_EQ(func(inf, nan), inf);
     EXPECT_FP_EQ(func(nan, neg_inf), inf);
-    EXPECT_FP_EQ(func(zero, inf), inf);
-    EXPECT_FP_EQ(func(neg_inf, neg_zero), inf);
-
     EXPECT_FP_EQ(func(nan, nan), nan);
     EXPECT_FP_EQ(func(nan, zero), nan);
     EXPECT_FP_EQ(func(neg_zero, nan), nan);
 
-    EXPECT_FP_EQ(func(neg_zero, zero), zero);
+    for (int i = 0; i < N; ++i) {
+      for (int j = 0; j < N; ++j) {
+        mpfr::BinaryInput<T> input{SpecialInputs[i], SpecialInputs[j]};
+        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                       func(SpecialInputs[i], SpecialInputs[j]),
+                                       0.5);
+      }
+    }
   }
 
   void test_subnormal_range(Func func) {

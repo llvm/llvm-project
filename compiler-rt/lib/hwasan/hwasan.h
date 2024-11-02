@@ -167,8 +167,8 @@ void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame, void *uc,
 
 // This dispatches to HandleTagMismatch but sets up the AccessInfo, program
 // counter, and frame pointer.
-void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
-                       size_t outsize);
+void HwasanTagMismatch(uptr addr, uptr pc, uptr frame, uptr access_info,
+                       uptr *registers_frame, size_t outsize);
 
 }  // namespace __hwasan
 
@@ -181,6 +181,13 @@ typedef unsigned long __hw_sigset_t;
 constexpr size_t kHwRegisterBufSize = 22;
 #  elif defined(__x86_64__)
 constexpr size_t kHwRegisterBufSize = 8;
+#  elif SANITIZER_RISCV64
+// saving PC, 12 int regs, sp, 12 fp regs
+#    ifndef __riscv_float_abi_soft
+constexpr size_t kHwRegisterBufSize = 1 + 12 + 1 + 12;
+#    else
+constexpr size_t kHwRegisterBufSize = 1 + 12 + 1;
+#    endif
 #  endif
 typedef unsigned long long __hw_register_buf[kHwRegisterBufSize];
 struct __hw_jmp_buf_struct {

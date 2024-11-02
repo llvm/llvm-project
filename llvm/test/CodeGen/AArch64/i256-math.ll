@@ -70,12 +70,10 @@ define i256 @u256_saturating_add(i256 %x, i256 %y) {
 ; CHECK-NEXT:    adcs x9, x1, x5
 ; CHECK-NEXT:    adcs x10, x2, x6
 ; CHECK-NEXT:    adcs x11, x3, x7
-; CHECK-NEXT:    cset w12, hs
-; CHECK-NEXT:    cmp w12, #0
-; CHECK-NEXT:    csinv x0, x8, xzr, eq
-; CHECK-NEXT:    csinv x1, x9, xzr, eq
-; CHECK-NEXT:    csinv x2, x10, xzr, eq
-; CHECK-NEXT:    csinv x3, x11, xzr, eq
+; CHECK-NEXT:    csinv x0, x8, xzr, lo
+; CHECK-NEXT:    csinv x1, x9, xzr, lo
+; CHECK-NEXT:    csinv x2, x10, xzr, lo
+; CHECK-NEXT:    csinv x3, x11, xzr, lo
 ; CHECK-NEXT:    ret
   %1 = tail call i256 @llvm.uadd.sat.i256(i256 %x, i256 %y)
   ret i256 %1
@@ -98,11 +96,7 @@ define { i256, i8 } @u256_checked_sub(i256 %x, i256 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x4
 ; CHECK-NEXT:    sbcs x1, x1, x5
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x2, x2, x6
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x3, x3, x7
 ; CHECK-NEXT:    cset w8, lo
 ; CHECK-NEXT:    eor w4, w8, #0x1
@@ -122,11 +116,7 @@ define { i256, i8 } @u256_overflowing_sub(i256 %x, i256 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x4
 ; CHECK-NEXT:    sbcs x1, x1, x5
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x2, x2, x6
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x3, x3, x7
 ; CHECK-NEXT:    cset w4, lo
 ; CHECK-NEXT:    ret
@@ -146,12 +136,10 @@ define i256 @u256_saturating_sub(i256 %x, i256 %y) {
 ; CHECK-NEXT:    sbcs x9, x1, x5
 ; CHECK-NEXT:    sbcs x10, x2, x6
 ; CHECK-NEXT:    sbcs x11, x3, x7
-; CHECK-NEXT:    cset w12, lo
-; CHECK-NEXT:    cmp w12, #0
-; CHECK-NEXT:    csel x0, xzr, x8, ne
-; CHECK-NEXT:    csel x1, xzr, x9, ne
-; CHECK-NEXT:    csel x2, xzr, x10, ne
-; CHECK-NEXT:    csel x3, xzr, x11, ne
+; CHECK-NEXT:    csel x0, xzr, x8, lo
+; CHECK-NEXT:    csel x1, xzr, x9, lo
+; CHECK-NEXT:    csel x2, xzr, x10, lo
+; CHECK-NEXT:    csel x3, xzr, x11, lo
 ; CHECK-NEXT:    ret
   %1 = tail call i256 @llvm.usub.sat.i256(i256 %x, i256 %y)
   ret i256 %1
@@ -214,14 +202,12 @@ define i256 @i256_saturating_add(i256 %x, i256 %y) {
 ; CHECK-NEXT:    adcs x9, x1, x5
 ; CHECK-NEXT:    adcs x10, x2, x6
 ; CHECK-NEXT:    adcs x11, x3, x7
-; CHECK-NEXT:    cset w12, vs
-; CHECK-NEXT:    asr x13, x11, #63
-; CHECK-NEXT:    cmp w12, #0
-; CHECK-NEXT:    csel x0, x13, x8, ne
-; CHECK-NEXT:    eor x8, x13, #0x8000000000000000
-; CHECK-NEXT:    csel x1, x13, x9, ne
-; CHECK-NEXT:    csel x2, x13, x10, ne
-; CHECK-NEXT:    csel x3, x8, x11, ne
+; CHECK-NEXT:    asr x12, x11, #63
+; CHECK-NEXT:    csel x0, x12, x8, vs
+; CHECK-NEXT:    eor x8, x12, #0x8000000000000000
+; CHECK-NEXT:    csel x1, x12, x9, vs
+; CHECK-NEXT:    csel x2, x12, x10, vs
+; CHECK-NEXT:    csel x3, x8, x11, vs
 ; CHECK-NEXT:    ret
   %1 = tail call i256 @llvm.sadd.sat.i256(i256 %x, i256 %y)
   ret i256 %1
@@ -244,11 +230,7 @@ define { i256, i8 } @i256_checked_sub(i256 %x, i256 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x4
 ; CHECK-NEXT:    sbcs x1, x1, x5
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x2, x2, x6
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x3, x3, x7
 ; CHECK-NEXT:    cset w8, vs
 ; CHECK-NEXT:    eor w4, w8, #0x1
@@ -268,11 +250,7 @@ define { i256, i8 } @i256_overflowing_sub(i256 %x, i256 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x4
 ; CHECK-NEXT:    sbcs x1, x1, x5
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x2, x2, x6
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp wzr, w8
 ; CHECK-NEXT:    sbcs x3, x3, x7
 ; CHECK-NEXT:    cset w4, vs
 ; CHECK-NEXT:    ret
@@ -292,14 +270,12 @@ define i256 @i256_saturating_sub(i256 %x, i256 %y) {
 ; CHECK-NEXT:    sbcs x9, x1, x5
 ; CHECK-NEXT:    sbcs x10, x2, x6
 ; CHECK-NEXT:    sbcs x11, x3, x7
-; CHECK-NEXT:    cset w12, vs
-; CHECK-NEXT:    asr x13, x11, #63
-; CHECK-NEXT:    cmp w12, #0
-; CHECK-NEXT:    csel x0, x13, x8, ne
-; CHECK-NEXT:    eor x8, x13, #0x8000000000000000
-; CHECK-NEXT:    csel x1, x13, x9, ne
-; CHECK-NEXT:    csel x2, x13, x10, ne
-; CHECK-NEXT:    csel x3, x8, x11, ne
+; CHECK-NEXT:    asr x12, x11, #63
+; CHECK-NEXT:    csel x0, x12, x8, vs
+; CHECK-NEXT:    eor x8, x12, #0x8000000000000000
+; CHECK-NEXT:    csel x1, x12, x9, vs
+; CHECK-NEXT:    csel x2, x12, x10, vs
+; CHECK-NEXT:    csel x3, x8, x11, vs
 ; CHECK-NEXT:    ret
   %1 = tail call i256 @llvm.ssub.sat.i256(i256 %x, i256 %y)
   ret i256 %1

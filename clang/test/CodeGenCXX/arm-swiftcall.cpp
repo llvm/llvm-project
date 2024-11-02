@@ -58,7 +58,7 @@ TEST(struct_1);
 // CHECK:   [[THIRD:%.*]] = load float, float* [[T0]], align 4
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 5
 // CHECK:   [[FOURTH:%.*]] = load float, float* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i8, float, float }]] undef, i32 [[FIRST]], 0
+// CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i8, float, float }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i8 [[SECOND]], 1
 // CHECK:   [[T2:%.*]] = insertvalue [[UAGG]] [[T1]], float [[THIRD]], 2
 // CHECK:   [[T3:%.*]] = insertvalue [[UAGG]] [[T2]], float [[FOURTH]], 3

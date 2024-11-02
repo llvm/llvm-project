@@ -1,17 +1,19 @@
 ; Test -hwasan-with-ifunc flag.
 ;
 ; RUN: opt -passes=hwasan -S < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT
-; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT
-; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT,CHECK-HISTORY-TLS
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=instr < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT,CHECK-HISTORY-TLS
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=none < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
 ; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-GLOBAL,CHECK-NOHISTORY
 ; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC,CHECK-NOHISTORY
 ; RUN: opt -passes=hwasan -S -mtriple=aarch64-fuchsia < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-ZERO-OFFSET,CHECK-SHORT-GRANULES,CHECK-HISTORY,CHECK-HWASAN-TLS,CHECK-HISTORY-HWASAN-TLS
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-ZERO-OFFSET,CHECK-SHORT-GRANULES,CHECK-HISTORY,CHECK-HWASAN-TLS,CHECK-HISTORY-HWASAN-TLS,CHECK-HISTORY-TLS
+; RUN: opt -passes=hwasan -S -mtriple=aarch64-fuchsia -hwasan-record-stack-history=libcall < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-HISTORY,CHECK-HISTORY-LIBCALL
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android22"
@@ -66,20 +68,28 @@ define void @test_alloca() sanitize_hwaddress {
 
 ; CHECK-NOHISTORY-NOT: store i64
 
-; CHECK-HISTORY: call i64 @llvm.read_register.i64(metadata [[MD:![0-9]*]])
-; CHECK-HISTORY: %[[PTR:[^ ]*]] = inttoptr i64 %[[D]] to i64*
-; CHECK-HISTORY: store i64 %{{.*}}, i64* %[[PTR]]
-; CHECK-HISTORY: %[[D1:[^ ]*]] = ashr i64 %[[D]], 56
-; CHECK-HISTORY: %[[D2:[^ ]*]] = shl nuw nsw i64 %[[D1]], 12
-; CHECK-HISTORY: %[[D3:[^ ]*]] = xor i64 %[[D2]], -1
-; CHECK-HISTORY: %[[D4:[^ ]*]] = add i64 %[[D]], 8
-; CHECK-HISTORY: %[[D5:[^ ]*]] = and i64 %[[D4]], %[[D3]]
+; When watching stack history, all code paths attempt to get PC and SP and mix them together.
+; CHECK-HISTORY: %[[PC:[^ ]*]] = call i64 @llvm.read_register.i64(metadata [[MD:![0-9]*]])
+; CHECK-HISTORY: %[[SP0:[^ ]*]] = call i8* @llvm.frameaddress.p0i8(i32 0)
+; CHECK-HISTORY: %[[SP1:[^ ]*]] = ptrtoint i8* %[[SP0]] to i64
+; CHECK-HISTORY: %[[SP2:[^ ]*]] = shl i64 %[[SP1]], 44
+
+; CHECK-HISTORY: %[[MIX:[^ ]*]] = or i64 %[[PC]], %[[SP2]]
+; CHECK-HISTORY-TLS: %[[PTR:[^ ]*]] = inttoptr i64 %[[D]] to i64*
+; CHECK-HISTORY-TLS: store i64 %[[MIX]], i64* %[[PTR]]
+; CHECK-HISTORY-TLS: %[[D1:[^ ]*]] = ashr i64 %[[D]], 56
+; CHECK-HISTORY-TLS: %[[D2:[^ ]*]] = shl nuw nsw i64 %[[D1]], 12
+; CHECK-HISTORY-TLS: %[[D3:[^ ]*]] = xor i64 %[[D2]], -1
+; CHECK-HISTORY-TLS: %[[D4:[^ ]*]] = add i64 %[[D]], 8
+; CHECK-HISTORY-TLS: %[[D5:[^ ]*]] = and i64 %[[D4]], %[[D3]]
 ; CHECK-HISTORY-TLS-SLOT: store i64 %[[D5]], i64* %[[C]]
 ; CHECK-HISTORY-HWASAN-TLS: store i64 %[[D5]], i64* @__hwasan_tls
+; CHECK-HISTORY-LIBCALL: call void @__hwasan_add_frame_record(i64 %[[MIX]])
 
 ; CHECK-TLS:   %[[F:[^ ]*]] = or i64 %[[D]], 4294967295
 ; CHECK-TLS:   = add i64 %[[F]], 1
 
+; CHECK-HISTORY-LIBCALL: %[[E:hwasan.stack.base.tag]] = xor
 ; CHECK-HISTORY: = xor i64 %[[E]], 0
 
 ; CHECK-NOHISTORY-NOT: store i64

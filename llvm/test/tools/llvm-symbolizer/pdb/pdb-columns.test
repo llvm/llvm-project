@@ -1,11 +1,11 @@
-RUN: echo 0x140006BA0 > %t.input
-RUN: echo 0x140006C00 >> %t.input
-RUN: echo 0x140006BB0 >> %t.input
-RUN: echo 0x140006C10 >> %t.input
-RUN: echo 0x140006C20 >> %t.input
-RUN: echo 0x140006C30 >> %t.input
-RUN: echo 0x140006C40 >> %t.input
-RUN: echo 0x140006C70 >> %t.input
+RUN: echo 0x140001000 > %t.input
+RUN: echo 0x140001030 >> %t.input
+RUN: echo 0x140001010 >> %t.input
+RUN: echo 0x140001040 >> %t.input
+RUN: echo 0x140001050 >> %t.input
+RUN: echo 0x140001060 >> %t.input
+RUN: echo 0x140001070 >> %t.input
+RUN: echo 0x140001080 >> %t.input
 RUN:    llvm-symbolizer --obj="%p/Inputs/test-columns.exe" < %t.input \
 RUN:    | FileCheck %s
 

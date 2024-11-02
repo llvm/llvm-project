@@ -384,6 +384,8 @@ public:
   virtual void SetStopOthers(bool new_value);
 
   virtual bool StopOthers();
+  
+  virtual bool ShouldRunBeforePublicStop() { return false; }
 
   // This is the wrapper for DoWillResume that does generic ThreadPlan logic,
   // then calls DoWillResume.

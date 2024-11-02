@@ -1,9 +1,9 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+#include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
-#include <cinttypes>
 
 // Data structure definitions copied from OpenMP RTL.
 struct MapComponentInfoTy {
@@ -13,7 +13,8 @@ struct MapComponentInfoTy {
   int64_t Type;
   void *Name;
   MapComponentInfoTy() = default;
-  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type, void *Name)
+  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type,
+                     void *Name)
       : Base(Base), Begin(Begin), Size(Size), Type(Type), Name(Name) {}
 };
 
@@ -27,7 +28,7 @@ extern "C" {
 #endif
 int64_t __tgt_mapper_num_components(void *rt_mapper_handle);
 void __tgt_push_mapper_component(void *rt_mapper_handle, void *base,
-                                 void *begin, int64_t size, int64_t type, 
+                                 void *begin, int64_t size, int64_t type,
                                  void *name);
 #ifdef __cplusplus
 }

@@ -2,48 +2,48 @@
 ; RUN: opt -S -inline -instcombine %s | FileCheck %s --check-prefixes=CHECK,CHECK-INLINE
 ; RUN: opt -S -instcombine %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOINLINE
 
-define i8* @widen_align_from_allocalign_callsite() {
+define ptr @widen_align_from_allocalign_callsite() {
 ; CHECK-LABEL: @widen_align_from_allocalign_callsite(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 64 i8* @my_aligned_alloc_2(i32 noundef 320, i32 allocalign noundef 64)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 64 ptr @my_aligned_alloc_2(i32 noundef 320, i32 allocalign noundef 64)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
 
-  %call = tail call align 16 i8* @my_aligned_alloc_2(i32 noundef 320, i32 allocalign noundef 64)
-  ret i8* %call
+  %call = tail call align 16 ptr @my_aligned_alloc_2(i32 noundef 320, i32 allocalign noundef 64)
+  ret ptr %call
 }
 
-define i8* @widen_align_from_allocalign() {
+define ptr @widen_align_from_allocalign() {
 ; CHECK-LABEL: @widen_align_from_allocalign(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 64 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 64)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 64 ptr @my_aligned_alloc(i32 noundef 320, i32 noundef 64)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
 
-  %call = tail call align 16 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 64)
-  ret i8* %call
+  %call = tail call align 16 ptr @my_aligned_alloc(i32 noundef 320, i32 noundef 64)
+  ret ptr %call
 }
 
-define i8* @dont_narrow_align_from_allocalign() {
+define ptr @dont_narrow_align_from_allocalign() {
 ; CHECK-LABEL: @dont_narrow_align_from_allocalign(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 16 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 16 ptr @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
-  %call = tail call align 16 i8* @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
-  ret i8* %call
+  %call = tail call align 16 ptr @my_aligned_alloc(i32 noundef 320, i32 noundef 8)
+  ret ptr %call
 }
 
-define i8* @my_aligned_alloc_3(i32 noundef %foo, i32 allocalign %alignment) {
+define ptr @my_aligned_alloc_3(i32 noundef %foo, i32 allocalign %alignment) {
 ; CHECK-LABEL: @my_aligned_alloc_3(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @my_aligned_alloc_2(i32 noundef [[FOO:%.*]], i32 noundef [[ALIGNMENT:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @my_aligned_alloc_2(i32 noundef [[FOO:%.*]], i32 noundef [[ALIGNMENT:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call i8* @my_aligned_alloc_2(i32 noundef %foo, i32 noundef %alignment)
-  ret i8* %call
+  %call = tail call ptr @my_aligned_alloc_2(i32 noundef %foo, i32 noundef %alignment)
+  ret ptr %call
 }
 
 ; -inline is able to make my_aligned_alloc_3's arguments disappear and directly
@@ -52,18 +52,18 @@ define i8* @my_aligned_alloc_3(i32 noundef %foo, i32 allocalign %alignment) {
 ; figure out the `align 128` on the return value once the call is directly on
 ; my_aligned_alloc_2. Note that this is a simplified version of what happens
 ; with _mm_malloc which calls posix_memalign.
-define i8* @allocalign_disappears() {
+define ptr @allocalign_disappears() {
 ; CHECK-INLINE-LABEL: @allocalign_disappears(
-; CHECK-INLINE-NEXT:    [[CALL_I:%.*]] = tail call i8* @my_aligned_alloc_2(i32 noundef 42, i32 noundef 128)
-; CHECK-INLINE-NEXT:    ret i8* [[CALL_I]]
+; CHECK-INLINE-NEXT:    [[CALL_I:%.*]] = tail call ptr @my_aligned_alloc_2(i32 noundef 42, i32 noundef 128)
+; CHECK-INLINE-NEXT:    ret ptr [[CALL_I]]
 ;
 ; CHECK-NOINLINE-LABEL: @allocalign_disappears(
-; CHECK-NOINLINE-NEXT:    [[CALL:%.*]] = tail call align 128 i8* @my_aligned_alloc_3(i32 42, i32 128)
-; CHECK-NOINLINE-NEXT:    ret i8* [[CALL]]
+; CHECK-NOINLINE-NEXT:    [[CALL:%.*]] = tail call align 128 ptr @my_aligned_alloc_3(i32 42, i32 128)
+; CHECK-NOINLINE-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call i8* @my_aligned_alloc_3(i32 42, i32 128)
-  ret i8* %call
+  %call = tail call ptr @my_aligned_alloc_3(i32 42, i32 128)
+  ret ptr %call
 }
 
-declare i8* @my_aligned_alloc(i32 noundef, i32 allocalign noundef)
-declare i8* @my_aligned_alloc_2(i32 noundef, i32 noundef)
+declare ptr @my_aligned_alloc(i32 noundef, i32 allocalign noundef)
+declare ptr @my_aligned_alloc_2(i32 noundef, i32 noundef)

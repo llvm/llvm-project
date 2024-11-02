@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: define dso_local noundef i32 @"?bar@@YAHHVB1@@VB2@@@Z"
 // CHECK: %coerce.dive1 = getelementptr inbounds %class.B2
@@ -12,21 +12,21 @@
 // CHECK: call void @"??1B2@@QEAA@XZ"
 
 // CHECK: define linkonce_odr dso_local void @"??1B2@@QEAA@XZ"
-// CHECK: %this.addr = alloca %class.B2*
+// CHECK: %this.addr = alloca ptr
 // -----  B1 scope begin without base ctor
 // CHECK: invoke void @llvm.seh.scope.begin()
 // CHECK: invoke void @llvm.seh.scope.end()
 // CHECK: call void @"??1B1@@QEAA@XZ"
 
 // CHECK: define dso_local void @"?goo@@YA?AVB1@@H@Z"
-// CHECK: call noundef %class.B2* @"??0B2@@QEAA@XZ"(%class.B2*
+// CHECK: call noundef ptr @"??0B2@@QEAA@XZ"(ptr
 // CHECK: invoke void @llvm.seh.scope.begin()
 // check: call void @llvm.memcpy
 // CHECK: invoke void @llvm.seh.scope.end()
-// CHECK: call void @"??1B2@@QEAA@XZ"(%class.B2*
+// CHECK: call void @"??1B2@@QEAA@XZ"(ptr
 
-// CHECK: define linkonce_odr dso_local noundef %class.B2* @"??0B2@@QEAA@XZ"
-// CHECK: call noundef %class.B1* @"??0B1@@QEAA@XZ"(%class.B1*
+// CHECK: define linkonce_odr dso_local noundef ptr @"??0B2@@QEAA@XZ"
+// CHECK: call noundef ptr @"??0B1@@QEAA@XZ"(ptr
 // -----  scope begin of base ctor 
 // CHECK: invoke void @llvm.seh.scope.begin()
 // CHECK: invoke void @llvm.seh.scope.end()
@@ -82,9 +82,9 @@ class B1 goo(int w)
 // CHECK: define dso_local noundef i32 @main()
 // CHECK: invoke void @llvm.seh.scope.begin()
 // ---   beginning of conditional temp test
-// CHECK: invoke noundef %class.B2* @"??0B2@@QEAA@XZ"
+// CHECK: invoke noundef ptr @"??0B2@@QEAA@XZ"
 // CHECK: invoke void @llvm.seh.scope.begin()
-// CHECK: invoke noundef %class.B3* @"??0B3@@QEAA@XZ"
+// CHECK: invoke noundef ptr @"??0B3@@QEAA@XZ"
 // CHECK: invoke void @llvm.seh.scope.begin()
 // CHECK: invoke void @llvm.seh.scope.end()
 // CHECK: call void @"??1B3@@QEAA@XZ"
@@ -94,9 +94,9 @@ class B1 goo(int w)
 
 // -----  testing caller's passed-by-value temps
 //        setting scope in case exception occurs before the call
-// check: invoke %class.B2* @"??0B2@@QEAA@XZ"
+// check: invoke ptr @"??0B2@@QEAA@XZ"
 // CHECK: invoke void @llvm.seh.scope.begin()
-// CHECK: invoke noundef %class.B1* @"??0B1@@QEAA@XZ"
+// CHECK: invoke noundef ptr @"??0B1@@QEAA@XZ"
 // CHECK: invoke void @llvm.seh.scope.begin()
 // -----   end of temps' scope right before callee
 // CHECK: invoke void @llvm.seh.scope.end()

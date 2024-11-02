@@ -16,14 +16,16 @@
 // Test that the __convert_to_integral functions properly converts Tp to the
 // correct type and value for integral, enum and user defined types.
 
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
+#include <__utility/convert_to_integral.h>
 #include <limits>
 #include <type_traits>
 #include <cstdint>
 #include <cassert>
 
 #include "user_defined_integral.h"
-
-#include "test_macros.h"
 
 template <class T>
 struct EnumType

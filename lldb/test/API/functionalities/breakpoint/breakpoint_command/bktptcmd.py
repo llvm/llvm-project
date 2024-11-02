@@ -1,4 +1,3 @@
-from __future__ import print_function
 import side_effect
 
 def useless_function(first, second):

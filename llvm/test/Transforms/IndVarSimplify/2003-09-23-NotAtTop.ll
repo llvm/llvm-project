@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; The indvar simplification code should ensure that the first PHI in the block 
 ; is the canonical one!

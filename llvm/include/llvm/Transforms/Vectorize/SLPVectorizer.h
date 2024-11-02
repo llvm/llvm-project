@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 
@@ -44,6 +45,7 @@ class StoreInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Value;
+class WeakTrackingVH;
 
 /// A private "module" namespace for types and utilities used by this pass.
 /// These are implementation details and should not be used by clients.
@@ -58,6 +60,7 @@ struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   using StoreListMap = MapVector<Value *, StoreList>;
   using GEPList = SmallVector<GetElementPtrInst *, 8>;
   using GEPListMap = MapVector<Value *, GEPList>;
+  using InstSetVector = SmallSetVector<Instruction *, 8>;
 
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
@@ -101,6 +104,11 @@ private:
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R);
 
+  /// Try to vectorize chains that may start at the operands of
+  /// instructions in \p Insts.
+  bool tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
+                      slpvectorizer::BoUpSLP &R);
+
   /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
 
@@ -108,8 +116,22 @@ private:
   /// collected in GEPs.
   bool vectorizeGEPIndices(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
-  /// Try to find horizontal reduction or otherwise vectorize a chain of binary
-  /// operators.
+  /// Try to find horizontal reduction or otherwise, collect instructions
+  /// for postponed vectorization attempts.
+  /// \a P if not null designates phi node the reduction is fed into
+  /// (with reduction operators \a V or one of its operands, in a basic block
+  /// \a BB).
+  /// \returns true if a horizontal reduction was matched and reduced.
+  /// \returns false if \a V is null or not an instruction,
+  /// or a horizontal reduction was not matched or not possible.
+  bool vectorizeHorReduction(PHINode *P, Value *V, BasicBlock *BB,
+                             slpvectorizer::BoUpSLP &R,
+                             TargetTransformInfo *TTI,
+                             SmallVectorImpl<WeakTrackingVH> &PostponedInsts);
+
+  /// Make an attempt to vectorize reduction and then try to vectorize
+  /// postponed binary operations.
+  /// \returns true on any successfull vectorization.
   bool vectorizeRootInstruction(PHINode *P, Value *V, BasicBlock *BB,
                                 slpvectorizer::BoUpSLP &R,
                                 TargetTransformInfo *TTI);
@@ -124,8 +146,8 @@ private:
 
   /// Tries to vectorize constructs started from CmpInst, InsertValueInst or
   /// InsertElementInst instructions.
-  bool vectorizeSimpleInstructions(SmallVectorImpl<Instruction *> &Instructions,
-                                   BasicBlock *BB, slpvectorizer::BoUpSLP &R,
+  bool vectorizeSimpleInstructions(InstSetVector &Instructions, BasicBlock *BB,
+                                   slpvectorizer::BoUpSLP &R,
                                    bool AtTerminator);
 
   /// Scan the basic block and look for patterns that are likely to start

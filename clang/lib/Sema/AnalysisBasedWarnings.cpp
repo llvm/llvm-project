@@ -1575,8 +1575,7 @@ public:
         // Sort the uses by their SourceLocations.  While not strictly
         // guaranteed to produce them in line/column order, this will provide
         // a stable ordering.
-        llvm::sort(vec->begin(), vec->end(),
-                   [](const UninitUse &a, const UninitUse &b) {
+        llvm::sort(*vec, [](const UninitUse &a, const UninitUse &b) {
           // Prefer a more confident report over a less confident one.
           if (a.getKind() != b.getKind())
             return a.getKind() > b.getKind();

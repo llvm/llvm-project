@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu \
 // RUN:            -target-feature +altivec -fsyntax-only -ast-dump \
-// RUN:            -xc++ < %s 2>&1 \
+// RUN:            -xc++ < %s \
 // RUN:   | FileCheck %s
 
 // Ensures that casts to AltiVec type with a dependent expression operand does

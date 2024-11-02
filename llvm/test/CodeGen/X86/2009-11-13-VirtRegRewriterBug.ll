@@ -3,7 +3,7 @@
 
 %struct.JVTLib_100487 = type <{ i8 }>
 
-define i32 @_Z13JVTLib_10335613JVTLib_10266513JVTLib_100579S_S_S_jPhj(i16* nocapture %ResidualX_Array.0, %struct.JVTLib_100487* nocapture byval(%struct.JVTLib_100487) align 4 %xqp, i16* nocapture %ResidualL_Array.0, i16* %ResidualDCZ_Array.0, i16* nocapture %ResidualACZ_FOArray.0, i32 %useFRextDequant, i8* nocapture %JVTLib_103357, i32 %use_field_scan) ssp {
+define i32 @_Z13JVTLib_10335613JVTLib_10266513JVTLib_100579S_S_S_jPhj(ptr nocapture %ResidualX_Array.0, ptr nocapture byval(%struct.JVTLib_100487) align 4 %xqp, ptr nocapture %ResidualL_Array.0, ptr %ResidualDCZ_Array.0, ptr nocapture %ResidualACZ_FOArray.0, i32 %useFRextDequant, ptr nocapture %JVTLib_103357, i32 %use_field_scan) ssp {
 bb.nph:
   %0 = shl i32 undef, 1                           ; <i32> [#uses=2]
   %mask133.masked.masked.masked.masked.masked.masked = or i640 undef, undef ; <i640> [#uses=1]
@@ -128,6 +128,6 @@ bb129.i:                                          ; preds = %bb10
 _ZL13JVTLib_105207PKsPK13JVTLib_105184Psj.exit:   ; preds = %bb129.i, %bb10
   %58 = phi i16 [ %vs16Out0_4.0.i, %bb129.i ], [ undef, %bb10 ] ; <i16> [#uses=0]
   %59 = phi i16 [ undef, %bb129.i ], [ %vs16Out1_0.0.i, %bb10 ] ; <i16> [#uses=0]
-  store i16 %vs16Out0_0.0.i, i16* %ResidualDCZ_Array.0, align 2
+  store i16 %vs16Out0_0.0.i, ptr %ResidualDCZ_Array.0, align 2
   unreachable
 }

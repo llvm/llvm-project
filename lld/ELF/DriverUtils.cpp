@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utility functions for the driver. Because there
+// This file contains utility functions for the ctx.driver. Because there
 // are so many small functions, we created this separate file to make
 // Driver.cpp less cluttered.
 //
@@ -52,23 +52,16 @@ ELFOptTable::ELFOptTable() : OptTable(optInfo) {}
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
 static void handleColorDiagnostics(opt::InputArgList &args) {
-  auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
-                              OPT_no_color_diagnostics);
+  auto *arg = args.getLastArg(OPT_color_diagnostics);
   if (!arg)
     return;
-  if (arg->getOption().getID() == OPT_color_diagnostics) {
+  StringRef s = arg->getValue();
+  if (s == "always")
     lld::errs().enable_colors(true);
-  } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
+  else if (s == "never")
     lld::errs().enable_colors(false);
-  } else {
-    StringRef s = arg->getValue();
-    if (s == "always")
-      lld::errs().enable_colors(true);
-    else if (s == "never")
-      lld::errs().enable_colors(false);
-    else if (s != "auto")
-      error("unknown option: --color-diagnostics=" + s);
-  }
+  else if (s != "auto")
+    error("unknown option: --color-diagnostics=" + s);
 }
 
 static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
@@ -176,17 +169,24 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_o:
-      // If -o path contains directories, "lld @response.txt" will likely
-      // fail because the archive we are creating doesn't contain empty
+    case OPT_Map:
+    case OPT_print_archive_stats:
+    case OPT_why_extract:
+      // If an output path contains directories, "lld @response.txt" will
+      // likely fail because the archive we are creating doesn't contain empty
       // directories for the output path (-o doesn't create directories).
       // Strip directories to prevent the issue.
-      os << "-o " << quote(path::filename(arg->getValue())) << "\n";
+      os << arg->getSpelling();
+      if (arg->getOption().getRenderStyle() == opt::Option::RenderSeparateStyle)
+        os << ' ';
+      os << quote(path::filename(arg->getValue())) << '\n';
       break;
     case OPT_lto_sample_profile:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_call_graph_ordering_file:
     case OPT_dynamic_list:
+    case OPT_export_dynamic_symbol_list:
     case OPT_just_symbols:
     case OPT_library_path:
     case OPT_retain_symbols_file:

@@ -4,74 +4,72 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 %class.function = type { i8 }
-%class.BPLFunctionWriter = type { %struct.BPLModuleWriter* }
+%class.BPLFunctionWriter = type { ptr }
 %struct.BPLModuleWriter = type { i8 }
 %class.anon = type { i8 }
 %class.anon.0 = type { i8 }
 
-@"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_" = internal alias void (%class.function*), void (%class.function*)* @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_"
-@"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_0EET_" = internal alias void (%class.function*), void (%class.function*)* @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_0EET_"
+@"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_" = internal alias void (ptr), ptr @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_"
+@"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_0EET_" = internal alias void (ptr), ptr @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_0EET_"
 
-define void @_ZN17BPLFunctionWriter9writeExprEv(%class.BPLFunctionWriter* %this) nounwind uwtable align 2 !dbg !5 {
+define void @_ZN17BPLFunctionWriter9writeExprEv(ptr %this) nounwind uwtable align 2 !dbg !5 {
 entry:
-  %this.addr = alloca %class.BPLFunctionWriter*, align 8
+  %this.addr = alloca ptr, align 8
   %agg.tmp = alloca %class.function, align 1
   %agg.tmp2 = alloca %class.anon, align 1
   %agg.tmp4 = alloca %class.function, align 1
   %agg.tmp5 = alloca %class.anon.0, align 1
-  store %class.BPLFunctionWriter* %this, %class.BPLFunctionWriter** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.BPLFunctionWriter** %this.addr, metadata !133, metadata !DIExpression()), !dbg !135
-  %this1 = load %class.BPLFunctionWriter*, %class.BPLFunctionWriter** %this.addr
-  %MW = getelementptr inbounds %class.BPLFunctionWriter, %class.BPLFunctionWriter* %this1, i32 0, i32 0, !dbg !136
-  %0 = load %struct.BPLModuleWriter*, %struct.BPLModuleWriter** %MW, align 8, !dbg !136
-  call void @"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_0EET_"(%class.function* %agg.tmp), !dbg !136
-  call void @_ZN15BPLModuleWriter14writeIntrinsicE8functionIFvvEE(%struct.BPLModuleWriter* %0), !dbg !136
-  %MW3 = getelementptr inbounds %class.BPLFunctionWriter, %class.BPLFunctionWriter* %this1, i32 0, i32 0, !dbg !138
-  %1 = load %struct.BPLModuleWriter*, %struct.BPLModuleWriter** %MW3, align 8, !dbg !138
-  call void @"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_"(%class.function* %agg.tmp4), !dbg !138
-  call void @_ZN15BPLModuleWriter14writeIntrinsicE8functionIFvvEE(%struct.BPLModuleWriter* %1), !dbg !138
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !133, metadata !DIExpression()), !dbg !135
+  %this1 = load ptr, ptr %this.addr
+  %0 = load ptr, ptr %this1, align 8, !dbg !136
+  call void @"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_0EET_"(ptr %agg.tmp), !dbg !136
+  call void @_ZN15BPLModuleWriter14writeIntrinsicE8functionIFvvEE(ptr %0), !dbg !136
+  %1 = load ptr, ptr %this1, align 8, !dbg !138
+  call void @"_ZN8functionIFvvEEC1IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_"(ptr %agg.tmp4), !dbg !138
+  call void @_ZN15BPLModuleWriter14writeIntrinsicE8functionIFvvEE(ptr %1), !dbg !138
   ret void, !dbg !139
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare void @_ZN15BPLModuleWriter14writeIntrinsicE8functionIFvvEE(%struct.BPLModuleWriter*)
+declare void @_ZN15BPLModuleWriter14writeIntrinsicE8functionIFvvEE(ptr)
 
-define internal void @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_"(%class.function* %this) unnamed_addr nounwind uwtable align 2 {
+define internal void @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_1_0EET_"(ptr %this) unnamed_addr nounwind uwtable align 2 {
 entry:
-  %this.addr = alloca %class.function*, align 8
+  %this.addr = alloca ptr, align 8
   %__f = alloca %class.anon.0, align 1
-  store %class.function* %this, %class.function** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.function** %this.addr, metadata !140, metadata !DIExpression()), !dbg !142
-  call void @llvm.dbg.declare(metadata %class.anon.0* %__f, metadata !143, metadata !DIExpression()), !dbg !144
-  %this1 = load %class.function*, %class.function** %this.addr
-  call void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_1_0EEvRKT_"(%class.anon.0* %__f), !dbg !145
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !140, metadata !DIExpression()), !dbg !142
+  call void @llvm.dbg.declare(metadata ptr %__f, metadata !143, metadata !DIExpression()), !dbg !144
+  %this1 = load ptr, ptr %this.addr
+  call void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_1_0EEvRKT_"(ptr %__f), !dbg !145
   ret void, !dbg !147
 }
 
-define internal void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_1_0EEvRKT_"(%class.anon.0*) nounwind uwtable align 2 {
+define internal void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_1_0EEvRKT_"(ptr) nounwind uwtable align 2 {
 entry:
-  %.addr = alloca %class.anon.0*, align 8
-  store %class.anon.0* %0, %class.anon.0** %.addr, align 8
+  %.addr = alloca ptr, align 8
+  store ptr %0, ptr %.addr, align 8
   ret void, !dbg !148
 }
 
-define internal void @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_0EET_"(%class.function* %this) unnamed_addr nounwind uwtable align 2 {
+define internal void @"_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_0EET_"(ptr %this) unnamed_addr nounwind uwtable align 2 {
 entry:
-  %this.addr = alloca %class.function*, align 8
+  %this.addr = alloca ptr, align 8
   %__f = alloca %class.anon, align 1
-  store %class.function* %this, %class.function** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.function** %this.addr, metadata !150, metadata !DIExpression()), !dbg !151
-  call void @llvm.dbg.declare(metadata %class.anon* %__f, metadata !152, metadata !DIExpression()), !dbg !153
-  %this1 = load %class.function*, %class.function** %this.addr
-  call void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_0EEvRKT_"(%class.anon* %__f), !dbg !154
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !150, metadata !DIExpression()), !dbg !151
+  call void @llvm.dbg.declare(metadata ptr %__f, metadata !152, metadata !DIExpression()), !dbg !153
+  %this1 = load ptr, ptr %this.addr
+  call void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_0EEvRKT_"(ptr %__f), !dbg !154
   ret void, !dbg !156
 }
 
-define internal void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_0EEvRKT_"(%class.anon*) nounwind uwtable align 2 {
+define internal void @"_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_0EEvRKT_"(ptr) nounwind uwtable align 2 {
 entry:
-  %.addr = alloca %class.anon*, align 8
-  store %class.anon* %0, %class.anon** %.addr, align 8
+  %.addr = alloca ptr, align 8
+  store ptr %0, ptr %.addr, align 8
   ret void, !dbg !157
 }
 

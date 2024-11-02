@@ -35,16 +35,15 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
     SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
     NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
     const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    ArrayRef<TemplateArgument> ConvertedArgs,
+    ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
       ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo, FoundDecl,
                        NamedConcept, ArgsAsWritten),
-      NumTemplateArgs(ConvertedArgs.size()),
+      SpecDecl(SpecDecl),
       Satisfaction(Satisfaction
                        ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
                        : nullptr) {
-  setTemplateArguments(ConvertedArgs);
   setDependence(computeDependence(this, /*ValueDependent=*/!Satisfaction));
 
   // Currently guaranteed by the fact concepts can only be at namespace-scope.
@@ -56,50 +55,34 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
          "should not be value-dependent");
 }
 
-ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty,
-                                                     unsigned NumTemplateArgs)
-    : Expr(ConceptSpecializationExprClass, Empty),
-      NumTemplateArgs(NumTemplateArgs) {}
+ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty)
+    : Expr(ConceptSpecializationExprClass, Empty) {}
 
-void ConceptSpecializationExpr::setTemplateArguments(
-    ArrayRef<TemplateArgument> Converted) {
-  assert(Converted.size() == NumTemplateArgs);
-  std::uninitialized_copy(Converted.begin(), Converted.end(),
-                          getTrailingObjects<TemplateArgument>());
-}
-
-ConceptSpecializationExpr *
-ConceptSpecializationExpr::Create(const ASTContext &C,
-                                  NestedNameSpecifierLoc NNS,
-                                  SourceLocation TemplateKWLoc,
-                                  DeclarationNameInfo ConceptNameInfo,
-                                  NamedDecl *FoundDecl,
-                                  ConceptDecl *NamedConcept,
-                               const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                                  ArrayRef<TemplateArgument> ConvertedArgs,
-                                  const ConstraintSatisfaction *Satisfaction) {
-  void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
-                                ConvertedArgs.size()));
-  return new (Buffer) ConceptSpecializationExpr(C, NNS, TemplateKWLoc,
-                                                ConceptNameInfo, FoundDecl,
-                                                NamedConcept, ArgsAsWritten,
-                                                ConvertedArgs, Satisfaction);
+ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
+    const ASTContext &C, NestedNameSpecifierLoc NNS,
+    SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
+    NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
+    ImplicitConceptSpecializationDecl *SpecDecl,
+    const ConstraintSatisfaction *Satisfaction) {
+  return new (C) ConceptSpecializationExpr(
+      C, NNS, TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
+      ArgsAsWritten, SpecDecl, Satisfaction);
 }
 
 ConceptSpecializationExpr::ConceptSpecializationExpr(
     const ASTContext &C, ConceptDecl *NamedConcept,
-    ArrayRef<TemplateArgument> ConvertedArgs,
+    ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
       ConceptReference(NestedNameSpecifierLoc(), SourceLocation(),
                        DeclarationNameInfo(), NamedConcept, NamedConcept,
                        nullptr),
-      NumTemplateArgs(ConvertedArgs.size()),
+      SpecDecl(SpecDecl),
       Satisfaction(Satisfaction
                        ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
                        : nullptr) {
-  setTemplateArguments(ConvertedArgs);
   ExprDependence D = ExprDependence::None;
   if (!Satisfaction)
     D |= ExprDependence::Value;
@@ -110,26 +93,14 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
   setDependence(D);
 }
 
-ConceptSpecializationExpr *
-ConceptSpecializationExpr::Create(const ASTContext &C,
-                                  ConceptDecl *NamedConcept,
-                                  ArrayRef<TemplateArgument> ConvertedArgs,
-                                  const ConstraintSatisfaction *Satisfaction,
-                                  bool Dependent,
-                                  bool ContainsUnexpandedParameterPack) {
-  void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
-                                ConvertedArgs.size()));
-  return new (Buffer) ConceptSpecializationExpr(
-      C, NamedConcept, ConvertedArgs, Satisfaction, Dependent,
-      ContainsUnexpandedParameterPack);
-}
-
-ConceptSpecializationExpr *
-ConceptSpecializationExpr::Create(ASTContext &C, EmptyShell Empty,
-                                  unsigned NumTemplateArgs) {
-  void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
-                                NumTemplateArgs));
-  return new (Buffer) ConceptSpecializationExpr(Empty, NumTemplateArgs);
+ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
+    const ASTContext &C, ConceptDecl *NamedConcept,
+    ImplicitConceptSpecializationDecl *SpecDecl,
+    const ConstraintSatisfaction *Satisfaction, bool Dependent,
+    bool ContainsUnexpandedParameterPack) {
+  return new (C)
+      ConceptSpecializationExpr(C, NamedConcept, SpecDecl, Satisfaction,
+                                Dependent, ContainsUnexpandedParameterPack);
 }
 
 const TypeConstraint *

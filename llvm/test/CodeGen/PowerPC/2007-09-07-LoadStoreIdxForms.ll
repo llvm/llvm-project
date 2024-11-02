@@ -7,9 +7,9 @@
 
 define void @foo() {
 entry:
-        %ttype = alloca i32, align 4            ; <i32*> [#uses=1]
-        %regs = alloca [1024 x %struct.__db_region], align 16           ; <[1024 x %struct.__db_region]*> [#uses=0]
-        %tmp = load i32, i32* %ttype, align 4                ; <i32> [#uses=1]
+        %ttype = alloca i32, align 4            ; <ptr> [#uses=1]
+        %regs = alloca [1024 x %struct.__db_region], align 16           ; <ptr> [#uses=0]
+        %tmp = load i32, ptr %ttype, align 4                ; <i32> [#uses=1]
         %tmp1 = call i32 (...) @bork( i32 %tmp )               ; <i32> [#uses=0]
         ret void
 
@@ -21,11 +21,11 @@ entry:
 ; CHECK-OPT: blr
 }
 
-define signext i32 @test(i32* noalias nocapture readonly %b, i32 signext %n)  {
+define signext i32 @test(ptr noalias nocapture readonly %b, i32 signext %n)  {
 entry:
   %idxprom = sext i32 %n to i64
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %mul = mul nsw i32 %0, 7
   ret i32 %mul
 

@@ -344,7 +344,7 @@ class Symbolizer:
           continue
         self.print('')
         self.print('Potentially referenced stack object:')
-        self.print('  %d bytes inside variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
+        self.print('  %d bytes inside a variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
         self.print('  at %s' % (local[1],))
       return True
     return False

@@ -4,7 +4,6 @@ Test thread states.
 
 
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ThreadStateTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(
         oslist=["linux"],
@@ -228,7 +225,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         # Get the inferior out of its loop
         self.runCmd("expression g_test = 1")
@@ -284,7 +281,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
 
         # Check the thread state
         self.assertTrue(
@@ -304,12 +301,12 @@ class ThreadStateTestCase(TestBase):
             thread.IsSuspended(),
             "Thread state is \'suspended\' after expression evaluation.")
 
-        self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
 
         # Run to breakpoint 2
         self.runCmd("continue")
 
-        self.assertEqual(thread.GetState(), lldb.eStopReasonBreakpoint)
+        self.assertStopReason(thread.GetState(), lldb.eStopReasonBreakpoint)
 
         # Make sure both threads are stopped
         self.assertTrue(
@@ -322,4 +319,4 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
+        self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

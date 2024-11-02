@@ -20,7 +20,6 @@
 #ifndef LLVM_TOOLS_OPT_NEWPMDRIVER_H
 #define LLVM_TOOLS_OPT_NEWPMDRIVER_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
@@ -33,6 +32,9 @@ class TargetLibraryInfoImpl;
 
 extern cl::opt<bool> DebugifyEach;
 extern cl::opt<std::string> DebugifyExport;
+
+extern cl::opt<bool> VerifyEachDebugInfoPreserve;
+extern cl::opt<std::string> VerifyDIPreserveExport;
 
 namespace opt_tool {
 enum OutputKind {
@@ -75,7 +77,7 @@ bool runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                      bool ShouldPreserveAssemblyUseListOrder,
                      bool ShouldPreserveBitcodeUseListOrder,
                      bool EmitSummaryIndex, bool EmitModuleHash,
-                     bool EnableDebugify);
+                     bool EnableDebugify, bool VerifyDIPreserve);
 } // namespace llvm
 
 #endif

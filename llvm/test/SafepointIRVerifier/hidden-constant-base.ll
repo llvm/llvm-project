@@ -1,8 +1,8 @@
-; RUN: opt -safepoint-ir-verifier-print-only -verify-safepoint-ir -S %s 2>&1 | FileCheck %s
+; RUN: opt -safepoint-ir-verifier-print-only -passes='verify<safepoint-ir>' -S %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Verifying gc pointers in function: test
-; CHECK: No illegal uses found by SafepointIRVerifier in: test
-define i8 addrspace(1)* @test(i1 %arg) gc "statepoint-example" {
+; CHECK: No illegal uses found by SafepointIRVerifier in: test_gc_relocate
+define i8 addrspace(1)* @test_gc_relocate(i1 %arg) gc "statepoint-example" {
 bb:
   br label %bb2
 
@@ -23,6 +23,20 @@ bb6:                                              ; preds = %bb4
 
 bb8:                                              ; preds = %bb4
   br i1 %arg, label %bb4, label %bb2
+}
+
+; CHECK-LABEL: Verifying gc pointers in function: test
+; CHECK: No illegal uses found by SafepointIRVerifier in: test_freeze_inst
+define void @test_freeze_inst(i32* %ptr) gc "statepoint-example" {
+entry:
+  br label %loop
+
+loop:
+  %vptr = phi i8 addrspace(1)* [ %fptr, %loop ], [ undef, %entry ]
+  %fptr = freeze i8 addrspace(1)* %vptr
+  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %fptr), "gc-live"(i8 addrspace(1)* %fptr) ]
+  %fptr.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 0, i32 0) ; (%fptr, %fptr)
+  br label %loop
 }
 
 declare void @widget()

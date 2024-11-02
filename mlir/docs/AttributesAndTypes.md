@@ -14,8 +14,8 @@ from the [MLIR LangRef](LangRef.md).
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`arith.cmpi` operation](Dialects/ArithmeticOps.md#arithcmpi-mlirarithcmpiop), or
-the underlying value of a [`arith.constant` operation](Dialects/ArithmeticOps.md#arithconstant-mlirarithconstantop).
+[`arith.cmpi` operation](Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop), or
+the underlying value of a [`arith.constant` operation](Dialects/ArithOps.md#arithconstant-mlirarithconstantop).
 Each operation has an attribute dictionary, which associates a set of attribute
 names to attribute values.
 
@@ -24,7 +24,7 @@ names to attribute values.
 Every SSA value, such as operation results or block arguments, in MLIR has a type
 defined by the type system. MLIR has an open type system with no fixed list of types,
 and there are no restrictions on the abstractions they represent. For example, take
-the following [Arithemetic AddI operation](Dialects/ArithmeticOps.md#arithaddi-mlirarithaddiop):
+the following [Arithmetic AddI operation](Dialects/ArithOps.md#arithaddi-mlirarithaddiop):
 
 ```mlir
   %result = arith.addi %lhs, %rhs : i64
@@ -71,7 +71,7 @@ Operations, etc.
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
-// our types. 
+// our types.
 include "mlir/IR/AttrTypeBase.td"
 
 // It's common to define a base classes for types in the same dialect. This
@@ -108,7 +108,7 @@ Below is an example of an Attribute:
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
-// our attributes. 
+// our attributes.
 include "mlir/IR/AttrTypeBase.td"
 
 // It's common to define a base classes for attributes in the same dialect. This
@@ -126,13 +126,13 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
     An integer attribute is a literal attribute that represents an integral
     value of the specified integer type.
   }];
-  /// Here we've defined two parameters, one is the `self` type of the attribute
-  /// (i.e. the type of the Attribute itself), and the other is the integer value
-  /// of the attribute. 
+  /// Here we've defined two parameters, one is a "self" type parameter, and the
+  /// other is the integer value of the attribute. The self type parameter is
+  /// specially handled by the assembly format.
   let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
-  
+
   /// Here we've defined a custom builder for the type, that removes the need to pass
-  /// in an MLIRContext instance; as it can be infered from the `type`. 
+  /// in an MLIRContext instance; as it can be infered from the `type`.
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
                                         "const APInt &":$value), [{
@@ -146,8 +146,10 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   ///
   ///    #my.int<50> : !my.int<32> // a 32-bit integer of value 50.
   ///
+  /// Note that the self type parameter is not included in the assembly format.
+  /// Its value is derived from the optional trailing type on all attributes.
   let assemblyFormat = "`<` $value `>`";
-  
+
   /// Indicate that our attribute will add additional verification to the parameters.
   let genVerifyDecl = 1;
 
@@ -271,9 +273,8 @@ MLIR includes several specialized classes for common situations:
 - `ArrayRefOfSelfAllocationParameter<arrayOf, descriptionOfParam>` for arrays of
   objects which self-allocate as per the last specialization.
 
-- `AttributeSelfTypeParameter` is a special AttrParameter that corresponds to
-  the `Type` of the attribute. Only one parameter of the attribute may be of
-  this parameter type.
+- `AttributeSelfTypeParameter` is a special `AttrParameter` that represents
+  parameters derived from the optional trailing type on attributes.
 
 ### Traits
 
@@ -295,7 +296,7 @@ documentation for more information on defining and using interfaces.
 
 For each attribute or type, there are a few builders(`get`/`getChecked`)
 automatically generated based on the parameters of the type. These are used to
-construct instances of the correpsonding attribute or type. For example, given
+construct instances of the corresponding attribute or type. For example, given
 the following definition:
 
 ```tablegen
@@ -347,6 +348,7 @@ def MyType : ... {
       // its arguments.
       return Base::get(typeParam.getContext(), ...);
     }]>,
+    TypeBuilder<(ins "int":$intParam), [{}], "IntegerType">,
   ];
 }
 ```
@@ -461,6 +463,28 @@ the builder used `TypeBuilderWithInferredContext` implies that the context
 parameter is not necessary as it can be inferred from the arguments to the
 builder.
 
+The fifth builder will generate the declaration of a builder method with a
+custom return type, like:
+
+```tablegen
+  let builders = [
+    TypeBuilder<(ins "int":$intParam), [{}], "IntegerType">,
+  ]
+```
+
+```c++
+class MyType : /*...*/ {
+  /*...*/
+  static IntegerType get(::mlir::MLIRContext *context, int intParam);
+
+};
+```
+
+This generates a builder declaration the same as the first three examples, but
+the return type of the builder is user-specified instead of the attribute or
+type class. This is useful for defining builders of attributes and types that
+may fold or canonicalize on construction.
+
 ### Parsing and Printing
 
 If a mnemonic was specified, the `hasCustomAssemblyFormat` and `assemblyFormat`
@@ -473,10 +497,10 @@ one for printing. These static functions placed alongside the class definitions
 and have the following function signatures:
 
 ```c++
-static ParseResult generatedAttributeParser(DialectAsmParser& parser, StringRef mnemonic, Type attrType, Attribute &result);
+static ParseResult generatedAttributeParser(DialectAsmParser& parser, StringRef *mnemonic, Type attrType, Attribute &result);
 static LogicalResult generatedAttributePrinter(Attribute attr, DialectAsmPrinter& printer);
 
-static ParseResult generatedTypeParser(DialectAsmParser& parser, StringRef mnemonic, Type &result);
+static ParseResult generatedTypeParser(DialectAsmParser& parser, StringRef *mnemonic, Type &result);
 static LogicalResult generatedTypePrinter(Type type, DialectAsmPrinter& printer);
 ```
 
@@ -519,7 +543,7 @@ assembly format consists of literals, variables, and directives.
 
 - A literal is a keyword or valid punctuation enclosed in backticks, e.g.
   `` `keyword` `` or `` `<` ``.
-- A variable is a parameter name preceeded by a dollar sign, e.g. `$param0`,
+- A variable is a parameter name preceded by a dollar sign, e.g. `$param0`,
   which captures one attribute or type parameter.
 - A directive is a keyword followed by an optional argument list that defines
   special parser and printer behaviour.
@@ -612,28 +636,36 @@ example, `StringRefParameter` uses `std::string` as its storage type, whereas
 `ArrayRefParameter` uses `SmallVector` as its storage type. The parsers for
 these parameters are expected to return `FailureOr<$cppStorageType>`.
 
-###### Optional Parameters
+To add a custom conversion between the `cppStorageType` and the C++ type of the
+parameter, parameters can override `convertFromStorage`, which by default is
+`"$_self"` (i.e., it attempts an implicit conversion from `cppStorageType`).
 
+###### Optional and Default-Valued Parameters
+
+An optional parameter can be omitted from the assembly format of an attribute or
+a type. An optional parameter is omitted when it is equal to its default value.
 Optional parameters in the assembly format can be indicated by setting
-`isOptional`. The C++ type of an optional parameter is required to satisfy the
-following requirements:
+`defaultValue`, a string of the C++ default value. If a value for the parameter
+was not encountered during parsing, it is set to this default value. If a
+parameter is equal to its default value, it is not printed. The `comparator`
+field of the parameter is used, but if one is not specified, the equality
+operator is used.
 
-- is default-constructible
-- is contextually convertible to `bool`
-- only the default-constructed value is `false`
+When using `OptionalParameter`, the default value is set to the C++
+default-constructed value for the C++ storage type. For example, `Optional<int>`
+will be set to `llvm::None` and `Attribute` will be set to `nullptr`. The
+presence of these parameters is tested by comparing them to their "null" values.
 
-The parameter parser should return the default-constructed value to indicate "no
-value present". The printer will guard on the presence of a value to print the
-parameter.
+An optional group is a set of elements optionally printed based on the presence
+of an anchor. Only optional parameters or directives that only capture optional
+parameters can be used in optional groups. The group in which the anchor is
+placed is printed if it is present, otherwise the other one is printed. If a
+directive that captures more than one optional parameter is used as the anchor,
+the optional group is printed if any of the captured parameters is present. For
+example, a `custom` directive may only be used as an optional group anchor if it
+captures at least one optional parameter.
 
-If a value was not parsed for an optional parameter, then the parameter will be
-set to its default-constructed C++ value. For example, `Optional<int>` will be
-set to `llvm::None` and `Attribute` will be set to `nullptr`.
-
-Only optional parameters or directives that only capture optional parameters can
-be used in optional groups. An optional group is a set of elements optionally
-printed based on the presence of an anchor. Suppose parameter `a` is an
-`IntegerAttr`.
+Suppose parameter `a` is an `IntegerAttr`.
 
 ```
 ( `(` $a^ `)` ) : (`x`)?
@@ -644,16 +676,9 @@ printed as `(5 : i32)`. If it is not present, it will be `x`. Directives that
 are used inside optional groups are allowed only if all captured parameters are
 also optional.
 
-###### Default-Valued Parameters
-
-Optional parameters can be given default values by setting `defaultValue`, a
-string of the C++ default value, or by using `DefaultValuedParameter`. If a
-value for the parameter was not encountered during parsing, it is set to this
-default value. If a parameter is equal to its default value, it is not printed.
-The `comparator` field of the parameter is used, but if one is not specified,
-the equality operator is used.
-
-For example:
+An optional parameter can also be specified with `DefaultValuedParameter`, which
+specifies that a parameter should be omitted when it is equal to some given
+value.
 
 ```tablegen
 let parameters = (ins DefaultValuedParameter<"Optional<int>", "5">:$a)
@@ -669,10 +694,58 @@ Which will look like:
 ```
 
 For optional `Attribute` or `Type` parameters, the current MLIR context is
-available through `$_ctx`. E.g.
+available through `$_ctxt`. E.g.
 
 ```tablegen
-DefaultValuedParameter<"IntegerType", "IntegerType::get($_ctx, 32)">
+DefaultValuedParameter<"IntegerType", "IntegerType::get($_ctxt, 32)">
+```
+
+The value of parameters that appear __before__ the default-valued parameter in
+the parameter declaration list are available as substitutions. E.g.
+
+```tablegen
+let parameters = (ins
+  "IntegerAttr":$value,
+  DefaultValuedParameter<"Type", "$value.getType()">:$type
+);
+```
+
+###### Attribute Self Type Parameter
+
+An attribute optionally has a trailing type after the assembly format of the
+attribute value itself. MLIR parses over the attribute value and optionally
+parses a colon-type before passing the `Type` into the dialect parser hook.
+
+```
+dialect-attribute  ::= `#` dialect-namespace `<` attr-data `>`
+                       (`:` type)?
+                     | `#` alias-name pretty-dialect-sym-body? (`:` type)?
+```
+
+`AttributeSelfTypeParameter` is an attribute parameter specially handled by the
+assembly format generator. Only one such parameter can be specified, and its
+value is derived from the trailing type. This parameter's default value is
+`NoneType::get($_ctxt)`.
+
+In order for the type to be printed by
+MLIR, however, the attribute must implement `TypedAttrInterface`. For example,
+
+```tablegen
+// This attribute has only a self type parameter.
+def MyExternAttr : AttrDef<MyDialect, "MyExtern", [TypedAttrInterface]> {
+  let parameters = (AttributeSelfTypeParameter<"">:$type);
+  let mnemonic = "extern";
+  let assemblyFormat = "";
+}
+```
+
+This attribute can look like:
+
+```mlir
+#my_dialect.extern // none
+#my_dialect.extern : i32
+#my_dialect.extern : tensor<4xi32>
+#my_dialect.extern : !my_dialect.my_type
 ```
 
 ##### Assembly Format Directives
@@ -819,6 +892,19 @@ void printStringParam(AsmPrinter &printer, StringRef value);
 The custom parser is considered to have failed if it returns failure or if any
 bound parameters have failure values afterwards.
 
+A string of C++ code can be used as a `custom` directive argument. When
+generating the custom parser and printer call, the string is pasted as a
+function argument. For example, `parseBar` and `printBar` can be re-used with
+a constant integer:
+
+```tablegen
+let parameters = (ins "int":$bar);
+let assemblyFormat = [{ custom<Bar>($foo, "1") }];
+```
+
+The string is pasted verbatim but with substitutions for `$_builder` and
+`$_ctxt`. String literals can be used to parameterize custom directives.
+
 ### Verification
 
 If the `genVerifyDecl` field is set, additional verification methods are
@@ -873,6 +959,8 @@ User defined storage classes must adhere to the following:
 - Provide a method to hash an instance of the `KeyTy`. (Note: This is not
   necessary if an `llvm::DenseMapInfo<KeyTy>` specialization exists)
   - `static llvm::hash_code hashKey(const KeyTy &)`
+- Provide a method to generate the `KeyTy` from an instance of the storage class.
+  - `static KeyTy getAsKey()`
 
 Let's look at an example:
 
@@ -909,6 +997,11 @@ struct ComplexTypeStorage : public TypeStorage {
   static ComplexTypeStorage *construct(StorageAllocator &allocator, const KeyTy &key) {
     return new (allocator.allocate<ComplexTypeStorage>())
         ComplexTypeStorage(key.first, key.second);
+  }
+
+  /// Construct an instance of the key from this storage class.
+  KeyTy getAsKey() const {
+    return KeyTy(nonZeroParam, integerType);
   }
 
   /// The parametric data held by the storage class.
@@ -1038,13 +1131,16 @@ public:
 
 The declarative Attribute and Type definitions try to auto-generate as much
 logic and methods as possible. With that said, there will always be long-tail
-cases that won't be covered. For such cases, `extraClassDeclaration` can be
-used. Code within the `extraClassDeclaration` field will be copied literally to
-the generated C++ Attribute or Type class.
+cases that won't be covered. For such cases, `extraClassDeclaration` and
+`extraClassDefinition` can be used. Code within the `extraClassDeclaration`
+field will be copied literally to the generated C++ Attribute or Type class.
+Code within `extraClassDefinition` will be added to the generated source file
+inside the class's C++ namespace. The substitution `$cppClass` will be replaced
+by the Attribute or Type's C++ class name.
 
-Note that `extraClassDeclaration` is a mechanism intended for long-tail cases by
-power users; for not-yet-implemented widely-applicable cases, improving the
-infrastructure is preferable.
+Note that these are mechanisms intended for long-tail cases by power users; for
+not-yet-implemented widely-applicable cases, improving the infrastructure is
+preferable.
 
 ### Registering with the Dialect
 
@@ -1060,7 +1156,7 @@ void MyDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "MyDialect/Attributes.cpp.inc"
   >();
-  
+
     /// Add the defined types to the dialect.
   addTypes<
 #define GET_TYPEDEF_LIST

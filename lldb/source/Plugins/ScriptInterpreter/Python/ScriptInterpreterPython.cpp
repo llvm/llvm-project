@@ -25,9 +25,9 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/WatchpointOptions.h"
-#include "lldb/Core/Communication.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/FileSystem.h"
@@ -96,7 +96,7 @@ public:
     // Python's readline is incompatible with libedit being linked into lldb.
     // Provide a patched version local to the embedded interpreter.
     bool ReadlinePatched = false;
-    for (auto *p = PyImport_Inittab; p->name != NULL; p++) {
+    for (auto *p = PyImport_Inittab; p->name != nullptr; p++) {
       if (strcmp(p->name, "readline") == 0) {
         p->initfunc = initlldb_readline;
         break;
@@ -241,7 +241,7 @@ void ScriptInterpreterPython::ComputePythonDir(
   llvm::sys::path::append(path, LLDB_PYTHON_RELATIVE_LIBDIR);
 
 #if defined(_WIN32)
-  // This will be injected directly through FileSpec.GetDirectory().SetString(),
+  // This will be injected directly through FileSpec.SetDirectory(),
   // so we need to normalize manually.
   std::replace(path.begin(), path.end(), '\\', '/');
 #endif
@@ -260,7 +260,7 @@ FileSpec ScriptInterpreterPython::GetPythonDir() {
 #else
     ComputePythonDir(path);
 #endif
-    spec.GetDirectory().SetString(path);
+    spec.SetDirectory(path);
     return spec;
   }();
   return g_spec;
@@ -429,7 +429,7 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   // Reloading modules requires a different syntax in Python 2 and Python 3.
   // This provides a consistent syntax no matter what version of Python.
   run_string.Clear();
-  run_string.Printf("run_one_line (%s, 'from six.moves import reload_module')",
+  run_string.Printf("run_one_line (%s, 'from importlib import reload as reload_module')",
                     m_dictionary_name.c_str());
   PyRun_SimpleString(run_string.GetData());
 
@@ -1259,8 +1259,6 @@ void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     wp_options->SetCallback(
         ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
   }
-
-  return;
 }
 
 Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
@@ -2156,6 +2154,14 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
   return ret_val;
 }
 
+bool ScriptInterpreterPythonImpl::FormatterCallbackFunction(
+    const char *python_function_name, TypeImplSP type_impl_sp) {
+  Locker py_lock(this,
+                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+  return LLDBSwigPythonFormatterCallbackFunction(
+      python_function_name, m_dictionary_name.c_str(), type_impl_sp);
+}
+
 bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
@@ -2637,7 +2643,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                                          .SetSetLLDBGlobals(false);
 
   if (!pathname || !pathname[0]) {
-    error.SetErrorString("invalid pathname");
+    error.SetErrorString("empty path");
     return false;
   }
 
@@ -2707,14 +2713,14 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       // if not a valid file of any sort, check if it might be a filename still
       // dot can't be used but / and \ can, and if either is found, reject
       if (strchr(pathname, '\\') || strchr(pathname, '/')) {
-        error.SetErrorString("invalid pathname");
+        error.SetErrorStringWithFormatv("invalid pathname '{0}'", pathname);
         return false;
       }
       // Not a filename, probably a package of some sort, let it go through.
       possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
       if (module_file.GetDirectory().IsEmpty()) {
-        error.SetErrorString("invalid directory name");
+        error.SetErrorStringWithFormatv("invalid directory name '{0}'", pathname);
         return false;
       }
       if (llvm::Error e =
@@ -2888,9 +2894,10 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
 
   if (!ret_val)
     error.SetErrorString("unable to execute script function");
-  else
-    error.Clear();
+  else if (cmd_retobj.GetStatus() == eReturnStatusFailed)
+    return false;
 
+  error.Clear();
   return ret_val;
 }
 
@@ -2932,9 +2939,10 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
 
   if (!ret_val)
     error.SetErrorString("unable to execute script function");
-  else
-    error.Clear();
+  else if (cmd_retobj.GetStatus() == eReturnStatusFailed)
+    return false;
 
+  error.Clear();
   return ret_val;
 }
 

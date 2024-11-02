@@ -736,7 +736,7 @@ end:
   ret i8 %r
 }
 
-define { i64, i32 } @ParseRetVal(i1 %b, { i64, i32 } ()* %x) {
+define { i64, i32 } @ParseRetVal(i1 %b, ptr %x) {
 ; CHECK-LABEL: @ParseRetVal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[T:%.*]], label [[F:%.*]]

@@ -80,7 +80,9 @@ protected:
 /// an action on multiple threads at once instead of iterating over each thread.
 class CommandObjectMultipleThreads : public CommandObjectParsed {
 public:
-  using CommandObjectParsed::CommandObjectParsed;
+  CommandObjectMultipleThreads(CommandInterpreter &interpreter,
+                               const char *name, const char *help,
+                               const char *syntax, uint32_t flags);
 
   bool DoExecute(Args &command, CommandReturnObject &result) override;
 

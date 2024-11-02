@@ -8,9 +8,9 @@ target triple = "i386-unknown-linux-gnu"
 
 declare ptr @foo()
 declare i32 @memcmp(ptr inreg nocapture noundef, ptr inreg nocapture noundef, i32 inreg noundef)
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 declare double @exp2(double)
-declare i32 @__sprintf_chk(i8*, i32, i32, i8*, ...)
+declare i32 @__sprintf_chk(ptr, i32, i32, ptr, ...)
 @a = common global [60 x i8] zeroinitializer, align 1
 @b = common global [60 x i8] zeroinitializer, align 1
 @h = constant [2 x i8] c"h\00"
@@ -30,8 +30,7 @@ define i32 @baz(ptr inreg noundef %s2, i32 inreg noundef %n){
 ; CHECK-NOT: declare noundef i32 @putchar(i32 noundef)
 
 define void @test_fewer_params_than_num_register_parameters() {
-  %fmt = getelementptr [2 x i8], [2 x i8]* @h, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt)
+  call i32 (ptr, ...) @printf(ptr @h)
   ret void
 }
 
@@ -47,9 +46,7 @@ define double @test_non_int_params(i16 signext %x) {
 ; CHECK:     declare noundef i32 @sprintf(ptr noalias nocapture noundef writeonly, ptr nocapture noundef readonly, ...)
 ; CHECK-NOT: declare noundef i32 @sprintf(ptr inreg noalias nocapture noundef writeonly, ptr inreg nocapture noundef readonly, ...)
 define i32 @test_variadic() {
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %fmt = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
-  %ret = call i32 (i8*, i32, i32, i8*, ...) @__sprintf_chk(i8* %dst, i32 0, i32 -1, i8* %fmt)
+  %ret = call i32 (ptr, i32, i32, ptr, ...) @__sprintf_chk(ptr @a, i32 0, i32 -1, ptr @b)
   ret i32 %ret
 }
 

@@ -34,6 +34,7 @@
 namespace llvm {
 
 class AllocaInst;
+class AssumptionCache;
 class BasicBlock;
 class CallInst;
 class CallLowering;
@@ -47,6 +48,7 @@ class MachineInstr;
 class MachineRegisterInfo;
 class OptimizationRemarkEmitter;
 class PHINode;
+class TargetLibraryInfo;
 class TargetPassConfig;
 class User;
 class Value;
@@ -246,12 +248,6 @@ private:
                                MachineIRBuilder &MIRBuilder);
 
   bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);
-
-  /// Returns true if the value should be split into multiple LLTs.
-  /// If \p Offsets is given then the split type's offsets will be stored in it.
-  /// If \p Offsets is not empty it will be cleared first.
-  bool valueIsSplit(const Value &V,
-                    SmallVectorImpl<uint64_t> *Offsets = nullptr);
 
   /// Common code for translating normal calls or invokes.
   bool translateCallBase(const CallBase &CB, MachineIRBuilder &MIRBuilder);
@@ -575,6 +571,9 @@ private:
   /// Current optimization remark emitter. Used to report failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
+  AAResults *AA;
+  AssumptionCache *AC;
+  const TargetLibraryInfo *LibInfo;
   FunctionLoweringInfo FuncInfo;
 
   // True when either the Target Machine specifies no optimizations or the
@@ -595,7 +594,7 @@ private:
       assert(irt && "irt is null!");
     }
 
-    virtual void addSuccessorWithProb(
+    void addSuccessorWithProb(
         MachineBasicBlock *Src, MachineBasicBlock *Dst,
         BranchProbability Prob = BranchProbability::getUnknown()) override {
       IRT->addSuccessorWithProb(Src, Dst, Prob);

@@ -178,6 +178,11 @@ TEST_F(FrontendActionTest, EmitLLVM) {
   compInst.getInvocation().getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
+  // Initialise LLVM backend
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+
   // Set-up the output stream. We are using output buffer wrapped as an output
   // stream, as opposed to an actual file (or a file descriptor).
   llvm::SmallVector<char> outputFileBuffer;

@@ -53,18 +53,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "uselistorder"
 
+static cl::OptionCategory Cat("verify-uselistorder Options");
+
 static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::desc("<input bitcode file>"),
                                           cl::init("-"),
                                           cl::value_desc("filename"));
 
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temp files"),
-                               cl::init(false));
+                               cl::cat(Cat));
 
 static cl::opt<unsigned>
     NumShuffles("num-shuffles",
                 cl::desc("Number of times to shuffle and verify use-lists"),
-                cl::init(1));
+                cl::init(1), cl::cat(Cat));
 
 namespace {
 
@@ -396,7 +398,7 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
     return;
 
   // Generate random numbers between 10 and 99, which will line up nicely in
-  // debug output.  We're not worried about collisons here.
+  // debug output.  We're not worried about collisions here.
   LLVM_DEBUG(dbgs() << "V = "; V->dump());
   std::uniform_int_distribution<short> Dist(10, 99);
   SmallDenseMap<const Use *, short, 16> Order;
@@ -530,6 +532,7 @@ int main(int argc, char **argv) {
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
+  cl::HideUnrelatedOptions(Cat);
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm tool to verify use-list order\n");
 

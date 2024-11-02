@@ -19,7 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
@@ -48,6 +48,13 @@ enum class SkipPast {
   ReferenceThenPointer,
 };
 
+/// Indicates the result of a tentative comparison.
+enum class ComparisonResult {
+  Same,
+  Different,
+  Unknown,
+};
+
 /// Holds the state of the program (store and heap) at a given program point.
 ///
 /// WARNING: Symbolic values that are created by the environment for static
@@ -62,7 +69,11 @@ public:
   public:
     virtual ~ValueModel() = default;
 
-    /// Returns true if and only if `Val1` is equivalent to `Val2`.
+    /// Returns:
+    ///   `Same`: `Val1` is equivalent to `Val2`, according to the model.
+    ///   `Different`: `Val1` is distinct from `Val2`, according to the model.
+    ///   `Unknown`: The model can't determine a relationship between `Val1` and
+    ///    `Val2`.
     ///
     /// Requirements:
     ///
@@ -72,16 +83,16 @@ public:
     ///
     ///  `Val1` and `Val2` must be assigned to the same storage location in
     ///  `Env1` and `Env2` respectively.
-    virtual bool compareEquivalent(QualType Type, const Value &Val1,
-                                   const Environment &Env1, const Value &Val2,
-                                   const Environment &Env2) {
+    virtual ComparisonResult compare(QualType Type, const Value &Val1,
+                                     const Environment &Env1, const Value &Val2,
+                                     const Environment &Env2) {
       // FIXME: Consider adding QualType to StructValue and removing the Type
       // argument here.
       //
-      // FIXME: default to a sound comparison and/or expand the comparison logic
-      // built into the framework to support broader forms of equivalence than
-      // strict pointer equality.
-      return true;
+      // FIXME: default to a sound comparison (`Unknown`) and/or expand the
+      // comparison logic built into the framework to support broader forms of
+      // equivalence than strict pointer equality.
+      return ComparisonResult::Same;
     }
 
     /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
@@ -128,6 +139,24 @@ public:
   /// If `DeclCtx` is a non-static member function, initializes the environment
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
+
+  /// Creates and returns an environment to use for an inline analysis  of the
+  /// callee. Uses the storage location from each argument in the `Call` as the
+  /// storage location for the corresponding parameter in the callee.
+  ///
+  /// Requirements:
+  ///
+  ///  The callee of `Call` must be a `FunctionDecl`.
+  ///
+  ///  The body of the callee must not reference globals.
+  ///
+  ///  The arguments of `Call` must map 1:1 to the callee's parameters.
+  Environment pushCall(const CallExpr *Call) const;
+  Environment pushCall(const CXXConstructExpr *Call) const;
+
+  /// Moves gathered information back into `this` from a `CalleeEnv` created via
+  /// `pushCall`.
+  void popCall(const Environment &CalleeEnv);
 
   /// Returns true if and only if the environment is equivalent to `Other`, i.e
   /// the two environments:
@@ -203,6 +232,13 @@ public:
   /// in the environment.
   StorageLocation *getThisPointeeStorageLocation() const;
 
+  /// Returns the storage location of the return value or null, if unset.
+  StorageLocation *getReturnStorageLocation() const;
+
+  /// Returns a pointer value that represents a null pointer. Calls with
+  /// `PointeeType` that are canonically equivalent will return the same result.
+  PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
+
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null. If `Type` is a pointer or reference type, creates all the
   /// necessary storage locations and values for indirections until it finds a
@@ -235,7 +271,7 @@ public:
   ///
   ///  `Loc` must not be null.
   template <typename T>
-  typename std::enable_if<std::is_base_of<StorageLocation, T>::value, T &>::type
+  std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
   takeOwnership(std::unique_ptr<T> Loc) {
     return DACtx->takeOwnership(std::move(Loc));
   }
@@ -247,7 +283,7 @@ public:
   ///
   ///  `Val` must not be null.
   template <typename T>
-  typename std::enable_if<std::is_base_of<Value, T>::value, T &>::type
+  std::enable_if_t<std::is_base_of<Value, T>::value, T &>
   takeOwnership(std::unique_ptr<T> Val) {
     return DACtx->takeOwnership(std::move(Val));
   }
@@ -263,12 +299,17 @@ public:
     return DACtx->createAtomicBoolValue();
   }
 
+  /// Returns a unique instance of boolean Top.
+  BoolValue &makeTopBoolValue() const {
+    return DACtx->createTopBoolValue();
+  }
+
   /// Returns a boolean value that represents the conjunction of `LHS` and
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateConjunctionValue(LHS, RHS);
+    return DACtx->getOrCreateConjunction(LHS, RHS);
   }
 
   /// Returns a boolean value that represents the disjunction of `LHS` and
@@ -276,21 +317,21 @@ public:
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateDisjunctionValue(LHS, RHS);
+    return DACtx->getOrCreateDisjunction(LHS, RHS);
   }
 
   /// Returns a boolean value that represents the negation of `Val`. Subsequent
   /// calls with the same argument will return the same result.
   BoolValue &makeNot(BoolValue &Val) const {
-    return DACtx->getOrCreateNegationValue(Val);
+    return DACtx->getOrCreateNegation(Val);
   }
 
   /// Returns a boolean value represents `LHS` => `RHS`. Subsequent calls with
-  /// the same arguments, regardless of their order, will return the same
-  /// result. If the given boolean values represent the same value, the result
-  /// will be a value that represents the true boolean literal.
+  /// the same arguments, will return the same result. If the given boolean
+  /// values represent the same value, the result will be a value that
+  /// represents the true boolean literal.
   BoolValue &makeImplication(BoolValue &LHS, BoolValue &RHS) const {
-    return &LHS == &RHS ? getBoolLiteralValue(true) : makeOr(makeNot(LHS), RHS);
+    return DACtx->getOrCreateImplication(LHS, RHS);
   }
 
   /// Returns a boolean value represents `LHS` <=> `RHS`. Subsequent calls with
@@ -298,13 +339,21 @@ public:
   /// result. If the given boolean values represent the same value, the result
   /// will be a value that represents the true boolean literal.
   BoolValue &makeIff(BoolValue &LHS, BoolValue &RHS) const {
-    return &LHS == &RHS
-               ? getBoolLiteralValue(true)
-               : makeAnd(makeImplication(LHS, RHS), makeImplication(RHS, LHS));
+    return DACtx->getOrCreateIff(LHS, RHS);
   }
 
   /// Returns the token that identifies the flow condition of the environment.
   AtomicBoolValue &getFlowConditionToken() const { return *FlowConditionToken; }
+
+  /// Builds and returns the logical formula defining the flow condition
+  /// identified by `Token`. If a value in the formula is present as a key in
+  /// `Substitutions`, it will be substituted with the value it maps to.
+  BoolValue &buildAndSubstituteFlowCondition(
+      AtomicBoolValue &Token,
+      llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions) {
+    return DACtx->buildAndSubstituteFlowCondition(Token,
+                                                  std::move(Substitutions));
+  }
 
   /// Adds `Val` to the set of clauses that constitute the flow condition.
   void addToFlowCondition(BoolValue &Val);
@@ -312,6 +361,23 @@ public:
   /// Returns true if and only if the clauses that constitute the flow condition
   /// imply that `Val` is true.
   bool flowConditionImplies(BoolValue &Val) const;
+
+  /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
+  /// returns null.
+  const DeclContext *getDeclCtx() const { return CallStack.back(); }
+
+  /// Returns whether this `Environment` can be extended to analyze the given
+  /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
+  /// given `MaxDepth`.
+  bool canDescend(unsigned MaxDepth, const DeclContext *Callee) const;
+
+  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// returns null.
+  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F) {
+    return DACtx->getControlFlowContext(F);
+  }
+
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
@@ -332,8 +398,24 @@ private:
   StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
   const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
 
+  /// Shared implementation of `pushCall` overloads. Note that unlike
+  /// `pushCall`, this member is invoked on the environment of the callee, not
+  /// of the caller.
+  void pushCallInternal(const FunctionDecl *FuncDecl,
+                        ArrayRef<const Expr *> Args);
+
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
+
+  // `DeclContext` of the block being analysed if provided.
+  std::vector<const DeclContext *> CallStack;
+
+  // In a properly initialized `Environment`, `ReturnLoc` should only be null if
+  // its `DeclContext` could not be cast to a `FunctionDecl`.
+  StorageLocation *ReturnLoc = nullptr;
+  // The storage location of the `this` pointee. Should only be null if the
+  // function being analyzed is only a function and not a method.
+  StorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these

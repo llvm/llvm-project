@@ -49,7 +49,7 @@ static bool registerRSDefaultTargetOpts(clang::TargetOptions &proto,
     proto.CPU = "atom";
     proto.Features.push_back("+long64");
     // Fallthrough for common x86 family features
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case llvm::Triple::ArchType::x86_64:
     proto.Features.push_back("+mmx");
     proto.Features.push_back("+sse");
@@ -92,7 +92,7 @@ bool RenderScriptRuntimeModulePass::runOnModule(llvm::Module &module) {
     return false;
   }
 
-  llvm::Optional<llvm::Reloc::Model> reloc_model = llvm::None;
+  llvm::Optional<llvm::Reloc::Model> reloc_model;
   assert(m_process_ptr && "no available lldb process");
   switch (m_process_ptr->GetTarget().GetArchitecture().GetMachine()) {
   case llvm::Triple::ArchType::x86:

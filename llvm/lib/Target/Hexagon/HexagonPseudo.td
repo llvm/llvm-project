@@ -427,6 +427,22 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
   def SAVE_REGISTERS_CALL_V4STK_EXT_PIC : T_Call<"">, PredRel;
 }
 
+let Predicates = [UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+                 hasSideEffects = 0, hasPostISelHook = 1 in
+class Vsplatr_template : InstHexagon<(outs HvxVR:$Vd), (ins IntRegs:$Rs),
+                         "", [], "", V6_lvsplatw.Itinerary, V6_lvsplatw.Type>;
+def PS_vsplatrb: Vsplatr_template;
+def PS_vsplatrh: Vsplatr_template;
+def PS_vsplatrw: Vsplatr_template;
+
+let Predicates = [UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+                 hasSideEffects = 0, hasPostISelHook = 1 in
+class Vsplati_template : InstHexagon<(outs HvxVR:$Vd), (ins s32_0Imm:$Val),
+                         "", [], "", V6_lvsplatw.Itinerary, V6_lvsplatw.Type>;
+def PS_vsplatib: Vsplati_template;
+def PS_vsplatih: Vsplati_template;
+def PS_vsplatiw: Vsplati_template;
+
 // Vector store pseudos
 let Predicates = [HasV60,UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayStore = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in

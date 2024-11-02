@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - | opt -instnamer -S | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - | opt -passes=instnamer -S | FileCheck -enable-var-scope %s
 
 // This is initially assumed convergent, but can be deduced to not require it.
 

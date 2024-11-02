@@ -76,7 +76,7 @@ public:
   // Removes an observer from the list and does nothing if observer is not
   // present.
   void removeObserver(GISelChangeObserver *O) {
-    auto It = std::find(Observers.begin(), Observers.end(), O);
+    auto It = llvm::find(Observers, O);
     if (It != Observers.end())
       Observers.erase(It);
   }

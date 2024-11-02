@@ -2,9 +2,6 @@
 Test lldb-vscode variables/stackTrace request for optimized code
 """
 
-from __future__ import print_function
-
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,7 +10,6 @@ import lldbvscode_testcase
 
 
 class TestVSCode_optimized(lldbvscode_testcase.VSCodeTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
     @skipIfRemote

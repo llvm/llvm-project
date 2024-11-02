@@ -88,23 +88,23 @@ define void @foo() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @cb0(i32 0)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @cb3(i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb0, i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb0, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb2, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb3, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb3, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb4, i32 (i32)* nonnull @cb4, i32 (i32)* nonnull @cb4, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(ptr nonnull @cb0, ptr nonnull @cb1, ptr nonnull @cb0, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(ptr nonnull @cb1, ptr nonnull @cb2, ptr nonnull @cb2, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(ptr nonnull @cb3, ptr nonnull @cb2, ptr nonnull @cb3, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(ptr nonnull @cb4, ptr nonnull @cb4, ptr nonnull @cb4, i32 0, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %call = call i32 @cb0(i32 0)
   %call1 = call i32 @cb3(i32 1)
-  call void @broker(i32 (i32)* nonnull @cb0, i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb0, i32 0, i32 1)
-  call void @broker(i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb2, i32 0, i32 1)
-  call void @broker(i32 (i32)* nonnull @cb3, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb3, i32 0, i32 1)
-  call void @broker(i32 (i32)* nonnull @cb4, i32 (i32)* nonnull @cb4, i32 (i32)* nonnull @cb4, i32 0, i32 1)
+  call void @broker(ptr nonnull @cb0, ptr nonnull @cb1, ptr nonnull @cb0, i32 0, i32 1)
+  call void @broker(ptr nonnull @cb1, ptr nonnull @cb2, ptr nonnull @cb2, i32 0, i32 1)
+  call void @broker(ptr nonnull @cb3, ptr nonnull @cb2, ptr nonnull @cb3, i32 0, i32 1)
+  call void @broker(ptr nonnull @cb4, ptr nonnull @cb4, ptr nonnull @cb4, i32 0, i32 1)
   ret void
 }
 
-declare !callback !3 void @broker(i32 (i32)*, i32 (i32)*, i32 (i32)*, i32, i32)
+declare !callback !3 void @broker(ptr, ptr, ptr, i32, i32)
 
 !0 = !{i64 0, i64 3, i1 false}
 !1 = !{i64 1, i64 4, i1 false}

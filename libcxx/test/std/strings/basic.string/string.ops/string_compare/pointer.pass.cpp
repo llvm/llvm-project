@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // int compare(const charT *s) const; // constexpr since C++20

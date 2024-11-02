@@ -5,14 +5,14 @@
 ; that the result is non-zero. This can be simplified just to a comparison
 ; between the base and offset.
 
-define i1 @t0(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t0(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   %no_underflow = icmp uge i64 %adjusted, %base
@@ -21,14 +21,14 @@ define i1 @t0(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t1(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t1(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   %no_underflow = icmp ult i64 %adjusted, %base
@@ -37,14 +37,14 @@ define i1 @t1(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t2_commutative(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t2_commutative(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t2_commutative(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i64 [[BASE]], [[ADJUSTED]]
 ; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   %no_underflow = icmp ule i64 %base, %adjusted
@@ -53,14 +53,14 @@ define i1 @t2_commutative(i64 %base, i64* nonnull %offsetptr) {
   ret i1 %r
 }
 
-define i1 @t3_commutative(i64 %base, i64* nonnull %offsetptr) {
+define i1 @t3_commutative(i64 %base, ptr nonnull %offsetptr) {
 ; CHECK-LABEL: @t3_commutative(
-; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint ptr [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i64 [[BASE]], [[ADJUSTED]]
 ; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
-  %offset = ptrtoint i64* %offsetptr to i64
+  %offset = ptrtoint ptr %offsetptr to i64
 
   %adjusted = sub i64 %base, %offset
   %no_underflow = icmp ugt i64 %base, %adjusted

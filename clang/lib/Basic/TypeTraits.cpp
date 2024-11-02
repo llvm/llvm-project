@@ -55,6 +55,15 @@ static constexpr const char *UnaryExprOrTypeTraitSpellings[] = {
 #include "clang/Basic/TokenKinds.def"
 };
 
+static constexpr const unsigned TypeTraitArities[] = {
+#define TYPE_TRAIT_1(Spelling, Name, Key) 1,
+#include "clang/Basic/TokenKinds.def"
+#define TYPE_TRAIT_2(Spelling, Name, Key) 2,
+#include "clang/Basic/TokenKinds.def"
+#define TYPE_TRAIT_N(Spelling, Name, Key) 0,
+#include "clang/Basic/TokenKinds.def"
+};
+
 const char *clang::getTraitName(TypeTrait T) {
   assert(T <= TT_Last && "invalid enum value!");
   return TypeTraitNames[T];
@@ -83,4 +92,9 @@ const char *clang::getTraitSpelling(ArrayTypeTrait T) {
 const char *clang::getTraitSpelling(UnaryExprOrTypeTrait T) {
   assert(T <= UETT_Last && "invalid enum value!");
   return UnaryExprOrTypeTraitSpellings[T];
+}
+
+unsigned clang::getTypeTraitArity(TypeTrait T) {
+  assert(T <= TT_Last && "invalid enum value!");
+  return TypeTraitArities[T];
 }

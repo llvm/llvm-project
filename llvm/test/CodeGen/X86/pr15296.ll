@@ -36,12 +36,11 @@ allocas:
 define <8 x i32> @shiftInput___canonical(<8 x i32> %input, i32 %shiftval, <8 x i32> %__mask) nounwind {
 ; X86-LABEL: shiftInput___canonical:
 ; X86:       # %bb.0: # %allocas
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X86-NEXT:    vpsrld %xmm1, %xmm2, %xmm2
-; X86-NEXT:    vpsrld %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vpsrld %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vpsrld %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shiftInput___canonical:

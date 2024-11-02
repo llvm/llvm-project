@@ -8,8 +8,8 @@
 
 int main() {
   int arr[4] = {0, 1, 2, 3};
-#pragma omp target data map(alloc: arr[0:2])
-#pragma omp target data map(alloc: arr[1:2])
+#pragma omp target data map(alloc : arr[0 : 2])
+#pragma omp target data map(alloc : arr[1 : 2])
   ;
   return 0;
 }

@@ -18,7 +18,7 @@ namespace readability {
 /// Finds static function and variable definitions in anonymous namespace.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/static-definition-in-anonymous-namespace.html
 class StaticDefinitionInAnonymousNamespaceCheck : public ClangTidyCheck {
 public:
   StaticDefinitionInAnonymousNamespaceCheck(StringRef Name,

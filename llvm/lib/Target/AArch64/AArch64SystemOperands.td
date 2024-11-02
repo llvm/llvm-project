@@ -18,23 +18,23 @@ include "llvm/TableGen/SearchableTable.td"
 //===----------------------------------------------------------------------===//
 
 def HasCCPP    : Predicate<"Subtarget->hasCCPP()">,
-                 AssemblerPredicate<(all_of FeatureCCPP), "ccpp">;
+                 AssemblerPredicateWithAll<(all_of FeatureCCPP), "ccpp">;
 
 def HasPAN     : Predicate<"Subtarget->hasPAN()">,
-                 AssemblerPredicate<(all_of FeaturePAN),
+                 AssemblerPredicateWithAll<(all_of FeaturePAN),
                  "ARM v8.1  Privileged Access-Never extension">;
 
 def HasPsUAO   : Predicate<"Subtarget->hasPsUAO()">,
-                 AssemblerPredicate<(all_of FeaturePsUAO),
+                 AssemblerPredicateWithAll<(all_of FeaturePsUAO),
                  "ARM v8.2 UAO PState extension (psuao)">;
 
 def HasPAN_RWV : Predicate<"Subtarget->hasPAN_RWV()">,
-                 AssemblerPredicate<(all_of FeaturePAN_RWV),
+                 AssemblerPredicateWithAll<(all_of FeaturePAN_RWV),
                  "ARM v8.2 PAN AT S1E1R and AT S1E1W Variation">;
 
 def HasCONTEXTIDREL2
                : Predicate<"Subtarget->hasCONTEXTIDREL2()">,
-                 AssemblerPredicate<(all_of FeatureCONTEXTIDREL2),
+                 AssemblerPredicateWithAll<(all_of FeatureCONTEXTIDREL2),
                  "Target contains CONTEXTIDR_EL2 RW operand">;
 
 //===----------------------------------------------------------------------===//
@@ -165,6 +165,11 @@ def : DC<"CGDVAP",  0b011, 0b0111, 0b1100, 0b101>;
 def : DC<"CGDVADP", 0b011, 0b0111, 0b1101, 0b101>;
 def : DC<"CIGDVAC", 0b011, 0b0111, 0b1110, 0b101>;
 def : DC<"GZVA",    0b011, 0b0111, 0b0100, 0b100>;
+}
+
+let Requires = [{ {AArch64::FeatureMEC} }] in {
+def : DC<"CIGDPAE", 0b100, 0b0111, 0b1110, 0b000>;
+def : DC<"CIPAE",   0b100, 0b0111, 0b1110, 0b111>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -312,6 +317,22 @@ def : SVEPREDPAT<"vl256", 0x0d>;
 def : SVEPREDPAT<"mul4",  0x1d>;
 def : SVEPREDPAT<"mul3",  0x1e>;
 def : SVEPREDPAT<"all",   0x1f>;
+
+//===----------------------------------------------------------------------===//
+// SVE Predicate-as-counter patterns
+//===----------------------------------------------------------------------===//
+
+class SVEVECLENSPECIFIER<string name, bits<1> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<1> Encoding;
+  let Encoding = encoding;
+}
+
+def : SVEVECLENSPECIFIER<"vlx2", 0x0>;
+def : SVEVECLENSPECIFIER<"vlx4", 0x1>;
 
 //===----------------------------------------------------------------------===//
 // Exact FP Immediates.
@@ -778,6 +799,18 @@ let Requires = [{ {AArch64::FeatureRME} }] in {
 def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
 def : RWSysReg<"GPCCR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b110>;
 def : RWSysReg<"GPTBR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b100>;
+}
+
+// v9a Memory Encryption Contexts Extension registers
+let Requires = [{ {AArch64::FeatureMEC} }] in {
+def : ROSysReg<"MECIDR_EL2",     0b11, 0b100, 0b1010, 0b1000, 0b111>;
+def : RWSysReg<"MECID_P0_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b000>;
+def : RWSysReg<"MECID_A0_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b001>;
+def : RWSysReg<"MECID_P1_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b010>;
+def : RWSysReg<"MECID_A1_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b011>;
+def : RWSysReg<"VMECID_P_EL2",   0b11, 0b100, 0b1010, 0b1001, 0b000>;
+def : RWSysReg<"VMECID_A_EL2",   0b11, 0b100, 0b1010, 0b1001, 0b001>;
+def : RWSysReg<"MECID_RL_A_EL3", 0b11, 0b110, 0b1010, 0b1010, 0b001>;
 }
 
 // v9-a Scalable Matrix Extension (SME) registers

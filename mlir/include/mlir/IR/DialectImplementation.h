@@ -118,12 +118,23 @@ struct FieldParser<
       auto element = FieldParser<ElementT>::parse(parser);
       if (failed(element))
         return failure();
-      elements.push_back(element.getValue());
+      elements.push_back(*element);
       return success();
     };
     if (parser.parseCommaSeparatedList(elementParser))
       return failure();
     return elements;
+  }
+};
+
+/// Parse an affine map.
+template <>
+struct FieldParser<AffineMap> {
+  static FailureOr<AffineMap> parse(AsmParser &parser) {
+    AffineMap map;
+    if (failed(parser.parseAffineMap(map)))
+      return failure();
+    return map;
   }
 };
 

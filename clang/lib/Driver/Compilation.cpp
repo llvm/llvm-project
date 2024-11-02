@@ -102,7 +102,7 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
     }
 
     // Add allocated arguments to the final DAL.
-    for (auto ArgPtr : AllocatedArgs)
+    for (auto *ArgPtr : AllocatedArgs)
       Entry->AddSynthesizedArg(ArgPtr);
   }
 
@@ -162,7 +162,8 @@ bool Compilation::CleanupFileMap(const ArgStringMap &Files,
 }
 
 int Compilation::ExecuteCommand(const Command &C,
-                                const Command *&FailingCommand) const {
+                                const Command *&FailingCommand,
+                                bool LogOnly) const {
   if ((getDriver().CCPrintOptions ||
        getArgs().hasArg(options::OPT_v)) && !getDriver().CCGenDiagnostics) {
     raw_ostream *OS = &llvm::errs();
@@ -190,6 +191,9 @@ int Compilation::ExecuteCommand(const Command &C,
 
     C.Print(*OS, "\n", /*Quote=*/getDriver().CCPrintOptions);
   }
+
+  if (LogOnly)
+    return 0;
 
   std::string Error;
   bool ExecutionFailed;
@@ -237,7 +241,8 @@ static bool InputsOk(const Command &C,
 }
 
 void Compilation::ExecuteJobs(const JobList &Jobs,
-                              FailingCommandList &FailingCommands) const {
+                              FailingCommandList &FailingCommands,
+                              bool LogOnly) const {
   // According to UNIX standard, driver need to continue compiling all the
   // inputs on the command line even one of them failed.
   // In all but CLMode, execute all the jobs unless the necessary inputs for the
@@ -246,7 +251,7 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
     if (!InputsOk(Job, FailingCommands))
       continue;
     const Command *FailingCommand = nullptr;
-    if (int Res = ExecuteCommand(Job, FailingCommand)) {
+    if (int Res = ExecuteCommand(Job, FailingCommand, LogOnly)) {
       FailingCommands.push_back(std::make_pair(Res, FailingCommand));
       // Bail as soon as one command fails in cl driver mode.
       if (TheDriver.IsCLMode())
@@ -278,9 +283,9 @@ void Compilation::initCompilationForDiagnostics() {
       options::OPT_o,  options::OPT_MD, options::OPT_MMD, options::OPT_M,
       options::OPT_MM, options::OPT_MF, options::OPT_MG,  options::OPT_MJ,
       options::OPT_MQ, options::OPT_MT, options::OPT_MV};
-  for (unsigned i = 0, e = llvm::array_lengthof(OutputOpts); i != e; ++i) {
-    if (TranslatedArgs->hasArg(OutputOpts[i]))
-      TranslatedArgs->eraseArg(OutputOpts[i]);
+  for (const auto &Opt : OutputOpts) {
+    if (TranslatedArgs->hasArg(Opt))
+      TranslatedArgs->eraseArg(Opt);
   }
   TranslatedArgs->ClaimAllArgs();
 

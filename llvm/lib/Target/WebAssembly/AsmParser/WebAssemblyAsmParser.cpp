@@ -375,7 +375,7 @@ public:
       auto Type = WebAssembly::parseType(Lexer.getTok().getString());
       if (!Type)
         return error("unknown type: ", Lexer.getTok());
-      Types.push_back(Type.getValue());
+      Types.push_back(*Type);
       Parser.Lex();
       if (!isNext(AsmToken::Comma))
         break;
@@ -817,8 +817,7 @@ public:
       // Now set this symbol with the correct type.
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-      WasmSym->setGlobalType(
-          wasm::WasmGlobalType{uint8_t(Type.getValue()), Mutable});
+      WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(*Type), Mutable});
       // And emit the directive again.
       TOut.emitGlobalType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -848,7 +847,7 @@ public:
       // symbol
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-      wasm::WasmTableType Type = {uint8_t(ElemType.getValue()), Limits};
+      wasm::WasmTableType Type = {uint8_t(*ElemType), Limits};
       WasmSym->setTableType(Type);
       TOut.emitTableType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1058,7 +1057,7 @@ public:
     llvm_unreachable("Implement any new match types added!");
   }
 
-  void doBeforeLabelEmit(MCSymbol *Symbol) override {
+  void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
     auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
     if (!CWS || !CWS->getKind().isText())
@@ -1068,7 +1067,7 @@ public:
     // Unlike other targets, we don't allow data in text sections (labels
     // declared with .type @object).
     if (WasmSym->getType() == wasm::WASM_SYMBOL_TYPE_DATA) {
-      Parser.Error(Parser.getTok().getLoc(),
+      Parser.Error(IDLoc,
                    "Wasm doesn\'t support data symbols in text sections");
       return;
     }
@@ -1096,7 +1095,7 @@ public:
     auto *WS =
         getContext().getWasmSection(SecName, SectionKind::getText(), 0, Group,
                                     MCContext::GenericSectionID, nullptr);
-    getStreamer().SwitchSection(WS);
+    getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())
       getContext().addGenDwarfSection(WS);
@@ -1107,17 +1106,6 @@ public:
       TC.endOfFunction(ErrorLoc);
     // Reset the type checker state.
     TC.Clear();
-
-    // Automatically output a .size directive, so it becomes optional for the
-    // user.
-    if (!LastFunctionLabel) return;
-    auto TempSym = getContext().createLinkerPrivateTempSymbol();
-    getStreamer().emitLabel(TempSym);
-    auto Start = MCSymbolRefExpr::create(LastFunctionLabel, getContext());
-    auto End = MCSymbolRefExpr::create(TempSym, getContext());
-    auto Expr =
-        MCBinaryExpr::create(MCBinaryExpr::Sub, End, Start, getContext());
-    getStreamer().emitELFSize(LastFunctionLabel, Expr);
   }
 
   void onEndOfFile() override { ensureEmptyNestingStack(); }

@@ -15,11 +15,11 @@ define void @foo2() {
 ; CHECK-NEXT:    movaps %xmm0, ms(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @f, i64 0, i64 2) to <2 x float>*), align 8
+  %0 = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @f, i64 0, i64 2), align 8
   %shuffle.i10 = shufflevector <2 x float> %0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  %1 = load <2 x float>, <2 x float>* bitcast ([4 x float]* @f to <2 x float>*), align 16
+  %1 = load <2 x float>, ptr @f, align 16
   %shuffle.i7 = shufflevector <2 x float> %1, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %shuffle.i = shufflevector <4 x float> %shuffle.i7, <4 x float> %shuffle.i10, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  store <4 x float> %shuffle.i, <4 x float>* @ms, align 16
+  store <4 x float> %shuffle.i, ptr @ms, align 16
   ret void
 }

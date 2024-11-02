@@ -411,7 +411,7 @@ define i32 @ossfuzz6883() {
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %B17 = or i32 0, 2147483647
-  %L6 = load i32, i32* undef
+  %L6 = load i32, ptr undef
   %B11 = sdiv i32 %B17, %L6
   %B13 = udiv i32 %B17, %L6
   %B14 = srem i32 %B11, %B13

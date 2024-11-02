@@ -14,6 +14,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -33,6 +34,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   VLASupported = true;
   NoAsmVariants = false;
   HasLegalHalfType = false;
+  HalfArgsAndReturns = false;
   HasFloat128 = false;
   HasIbm128 = false;
   HasFloat16 = false;
@@ -45,6 +47,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   IntWidth = IntAlign = 32;
   LongWidth = LongAlign = 32;
   LongLongWidth = LongLongAlign = 64;
+  Int128Align = 128;
 
   // Fixed point default bit widths
   ShortAccumWidth = ShortAccumAlign = 16;
@@ -131,7 +134,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.
-  RealTypeUsesObjCFPRet = 0;
+  RealTypeUsesObjCFPRetMask = 0;
 
   // Default to not using fp2ret for __Complex long double
   ComplexLongDoubleUsesFP2Ret = false;
@@ -150,6 +153,9 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   PlatformMinVersion = VersionTuple();
 
   MaxOpenCLWorkGroupSize = 1024;
+
+  MaxBitIntWidth.reset();
+
   ProgramAddrSpace = 0;
 }
 
@@ -204,11 +210,11 @@ const char *TargetInfo::getTypeConstantSuffix(IntType T) const {
   case UnsignedChar:
     if (getCharWidth() < getIntWidth())
       return "";
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case UnsignedShort:
     if (getShortWidth() < getIntWidth())
       return "";
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case UnsignedInt:      return "U";
   case UnsignedLong:     return "UL";
   case UnsignedLongLong: return "ULL";
@@ -284,6 +290,8 @@ TargetInfo::IntType TargetInfo::getLeastIntTypeByWidth(unsigned BitWidth,
 
 FloatModeKind TargetInfo::getRealTypeByWidth(unsigned BitWidth,
                                              FloatModeKind ExplicitType) const {
+  if (getHalfWidth() == BitWidth)
+    return FloatModeKind::Half;
   if (getFloatWidth() == BitWidth)
     return FloatModeKind::Float;
   if (getDoubleWidth() == BitWidth)
@@ -478,6 +486,9 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     Diags.Report(diag::err_opt_not_valid_on_target) << "-fprotect-parens";
     Opts.ProtectParens = false;
   }
+
+  if (Opts.MaxBitIntWidth)
+    MaxBitIntWidth = Opts.MaxBitIntWidth;
 }
 
 bool TargetInfo::initFeatureMap(
@@ -485,19 +496,71 @@ bool TargetInfo::initFeatureMap(
     const std::vector<std::string> &FeatureVec) const {
   for (const auto &F : FeatureVec) {
     StringRef Name = F;
+    if (Name.empty())
+      continue;
     // Apply the feature via the target.
-    bool Enabled = Name[0] == '+';
-    setFeatureEnabled(Features, Name.substr(1), Enabled);
+    if (Name[0] != '+' && Name[0] != '-')
+      Diags.Report(diag::warn_fe_backend_invalid_feature_flag) << Name;
+    else
+      setFeatureEnabled(Features, Name.substr(1), Name[0] == '+');
   }
   return true;
+}
+
+ParsedTargetAttr TargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  // Grab the various features and prepend a "+" to turn on the feature to
+  // the backend and add them to our existing set of features.
+  for (auto &Feature : AttrFeatures) {
+    // Go ahead and trim whitespace rather than either erroring or
+    // accepting it weirdly.
+    Feature = Feature.trim();
+
+    // TODO: Support the fpmath option. It will require checking
+    // overall feature validity for the function with the rest of the
+    // attributes on the function.
+    if (Feature.startswith("fpmath="))
+      continue;
+
+    if (Feature.startswith("branch-protection=")) {
+      Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    // While we're here iterating check for a different target cpu.
+    if (Feature.startswith("arch=")) {
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "arch=";
+      else
+        Ret.CPU = Feature.split("=").second.trim();
+    } else if (Feature.startswith("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.startswith("no-"))
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    else
+      Ret.Features.push_back("+" + Feature.str());
+  }
+  return Ret;
 }
 
 TargetInfo::CallingConvKind
 TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   if (getCXXABI() != TargetCXXABI::Microsoft &&
-      (ClangABICompat4 || getTriple().getOS() == llvm::Triple::PS4))
+      (ClangABICompat4 || getTriple().isPS4()))
     return CCK_ClangABI4OrPS4;
   return CCK_Default;
+}
+
+bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
+  return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
 }
 
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {

@@ -28,7 +28,7 @@ s_set_gpr_idx_on s0, gpr_idx(SRC0,
 // VI: error: expected a VGPR index mode
 
 s_cmp_eq_i32 0x12345678, 0x12345679
-// GCN: error: only one literal operand is allowed
+// GCN: error: only one unique literal operand is allowed
 
 s_cmp_eq_u64 0x12345678, 0x12345679
-// GCN: error: only one literal operand is allowed
+// GCN: error: only one unique literal operand is allowed

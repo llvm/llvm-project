@@ -3,7 +3,7 @@
 // RUN: ld.lld %t1.o --shared -soname=t.so -o %t.so
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf %s -o %t.o
 // RUN: ld.lld %t.so %t.o -o %tout
-// RUN: llvm-objdump --triple=armv7a-linux-gnueabihf -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-linux-gnueabihf -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
 // RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 

@@ -6,7 +6,7 @@
 ;     http://llvm.org/docs/DeveloperPolicy.html#ir-backwards-compatibility
 
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
-; RUN-PR24755: verify-uselistorder < %s
+; RUN: verify-uselistorder < %s
 
 target datalayout = "E"
 ; CHECK: target datalayout = "E"
@@ -202,6 +202,20 @@ declare void @g.f1()
 ; CHECK: @llvm.global_ctors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
 @llvm.global_dtors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
 ; CHECK: @llvm.global_dtors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
+
+; Global Variables -- sanitizers
+@g.no_sanitize_address = global i32 0, no_sanitize_address
+@g.no_sanitize_hwaddress = global i32 0, no_sanitize_hwaddress
+@g.sanitize_memtag = global i32 0, sanitize_memtag
+@g.no_sanitize_multiple = global i32 0, no_sanitize_address, no_sanitize_hwaddress
+@g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
+@g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
+; CHECK: @g.no_sanitize_address = global i32 0, no_sanitize_address
+; CHECK: @g.no_sanitize_hwaddress = global i32 0, no_sanitize_hwaddress
+; CHECK: @g.sanitize_memtag = global i32 0, sanitize_memtag
+; CHECK: @g.no_sanitize_multiple = global i32 0, no_sanitize_address, no_sanitize_hwaddress
+; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
+; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -850,6 +864,12 @@ define void @fp_atomics(float* %word) {
 
 ; CHECK: %atomicrmw.fsub = atomicrmw fsub float* %word, float 1.000000e+00 monotonic
   %atomicrmw.fsub = atomicrmw fsub float* %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fmax = atomicrmw fmax float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmax = atomicrmw fmax float* %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fmin = atomicrmw fmin float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmin = atomicrmw fmin float* %word, float 1.0 monotonic
 
   ret void
 }
@@ -1965,8 +1985,8 @@ declare void @f.allockind() allockind("alloc,uninitialized")
 ; CHECK: attributes #16 = { nounwind }
 ; CHECK: attributes #17 = { noinline optnone }
 ; CHECK: attributes #18 = { optsize }
-; CHECK: attributes #19 = { readnone }
-; CHECK: attributes #20 = { readonly }
+; CHECK: attributes #19 = { memory(none) }
+; CHECK: attributes #20 = { memory(read) }
 ; CHECK: attributes #21 = { returns_twice }
 ; CHECK: attributes #22 = { safestack }
 ; CHECK: attributes #23 = { sanitize_address }
@@ -1979,15 +1999,15 @@ declare void @f.allockind() allockind("alloc,uninitialized")
 ; CHECK: attributes #30 = { uwtable }
 ; CHECK: attributes #31 = { "cpu"="cortex-a8" }
 ; CHECK: attributes #32 = { norecurse }
-; CHECK: attributes #33 = { inaccessiblememonly }
-; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly }
-; CHECK: attributes #35 = { nocallback nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #33 = { memory(inaccessiblemem: readwrite) }
+; CHECK: attributes #34 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #37 = { argmemonly nounwind readonly }
-; CHECK: attributes #38 = { argmemonly nounwind }
-; CHECK: attributes #39 = { nounwind readonly }
-; CHECK: attributes #40 = { inaccessiblemem_or_argmemonly nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #41 = { writeonly }
+; CHECK: attributes #37 = { nounwind memory(argmem: read) }
+; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #39 = { nounwind memory(read) }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #41 = { memory(write) }
 ; CHECK: attributes #42 = { speculatable }
 ; CHECK: attributes #43 = { strictfp }
 ; CHECK: attributes #44 = { nosanitize_coverage }

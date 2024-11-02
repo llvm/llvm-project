@@ -93,6 +93,7 @@ define void @a__ZN4_OMP_noinline() noinline nounwind {
   ret void
 }
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1}
 
 !0 = !{i32 7, !"openmp", i32 50}
+!1 = !{i32 7, !"openmp-device", i32 50}

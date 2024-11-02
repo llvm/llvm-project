@@ -215,6 +215,8 @@ private:
   MachineInstr *lowerKillI1(MachineBasicBlock &MBB, MachineInstr &MI,
                             bool IsWQM);
   MachineInstr *lowerKillF32(MachineBasicBlock &MBB, MachineInstr &MI);
+  void lowerPseudoStrictMode(MachineBasicBlock &MBB, MachineInstr *Entry,
+                             MachineInstr *Exit);
 
   void lowerBlock(MachineBasicBlock &MBB);
   void processBlock(MachineBasicBlock &MBB, bool IsEntry);
@@ -349,8 +351,7 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
     const VNInfo *NextValue = nullptr;
     const VisitKey Key(Value, DefinedLanes);
 
-    if (!Visited.count(Key)) {
-      Visited.insert(Key);
+    if (Visited.insert(Key).second) {
       // On first visit to a phi then start processing first predecessor
       NextPredIdx = 0;
     }
@@ -535,13 +536,36 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         GlobalFlags |= StateStrictWWM;
         LowerToMovInstrs.push_back(&MI);
         continue;
-      } else if (Opcode == AMDGPU::STRICT_WQM) {
+      } else if (Opcode == AMDGPU::STRICT_WQM ||
+                 TII->isDualSourceBlendEXP(MI)) {
         // STRICT_WQM is similar to STRICTWWM, but instead of enabling all
         // threads of the wave like STRICTWWM, STRICT_WQM enables all threads in
         // quads that have at least one active thread.
         markInstructionUses(MI, StateStrictWQM, Worklist);
         GlobalFlags |= StateStrictWQM;
-        LowerToMovInstrs.push_back(&MI);
+
+        if (Opcode == AMDGPU::STRICT_WQM) {
+          LowerToMovInstrs.push_back(&MI);
+        } else {
+          // Dual source blend export acts as implicit strict-wqm, its sources
+          // need to be shuffled in strict wqm, but the export itself needs to
+          // run in exact mode.
+          BBI.Needs |= StateExact;
+          if (!(BBI.InNeeds & StateExact)) {
+            BBI.InNeeds |= StateExact;
+            Worklist.push_back(MBB);
+          }
+          GlobalFlags |= StateExact;
+          III.Disabled = StateWQM | StateStrict;
+        }
+        continue;
+      } else if (Opcode == AMDGPU::LDS_PARAM_LOAD ||
+                 Opcode == AMDGPU::LDS_DIRECT_LOAD) {
+        // Mark these STRICTWQM, but only for the instruction, not its operands.
+        // This avoid unnecessarily marking M0 as requiring WQM.
+        InstrInfo &II = Instructions[&MI];
+        II.Needs |= StateStrictWQM;
+        GlobalFlags |= StateStrictWQM;
         continue;
       } else if (Opcode == AMDGPU::V_SET_INACTIVE_B32 ||
                  Opcode == AMDGPU::V_SET_INACTIVE_B64) {
@@ -1018,6 +1042,31 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
   return NewTerm;
 }
 
+// Convert a strict mode transition to a pseudo transition.
+// This still pre-allocates registers to prevent clobbering,
+// but avoids any EXEC mask changes.
+void SIWholeQuadMode::lowerPseudoStrictMode(MachineBasicBlock &MBB,
+                                            MachineInstr *Entry,
+                                            MachineInstr *Exit) {
+  assert(Entry->getOpcode() == AMDGPU::ENTER_STRICT_WQM);
+  assert(Exit->getOpcode() == AMDGPU::EXIT_STRICT_WQM);
+
+  Register SaveOrig = Entry->getOperand(0).getReg();
+
+  MachineInstr *NewEntry =
+    BuildMI(MBB, Entry, DebugLoc(), TII->get(AMDGPU::ENTER_PSEUDO_WM));
+  MachineInstr *NewExit =
+    BuildMI(MBB, Exit, DebugLoc(), TII->get(AMDGPU::EXIT_PSEUDO_WM));
+
+  LIS->ReplaceMachineInstrInMaps(*Exit, *NewExit);
+  Exit->eraseFromParent();
+
+  LIS->ReplaceMachineInstrInMaps(*Entry, *NewEntry);
+  Entry->eraseFromParent();
+
+  LIS->removeInterval(SaveOrig);
+}
+
 // Replace (or supplement) instructions accessing live mask.
 // This can only happen once all the live mask registers have been created
 // and the execute state (WQM/StrictWWM/Exact) of instructions is known.
@@ -1034,9 +1083,12 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
 
   SmallVector<MachineInstr *, 4> SplitPoints;
   char State = BI.InitialState;
+  MachineInstr *StrictEntry = nullptr;
 
   for (MachineInstr &MI : llvm::make_early_inc_range(
            llvm::make_range(MBB.getFirstNonPHI(), MBB.end()))) {
+    char PreviousState = State;
+
     if (StateTransition.count(&MI))
       State = StateTransition[&MI];
 
@@ -1048,6 +1100,20 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
       break;
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
       SplitPoint = lowerKillF32(MBB, MI);
+      break;
+    case AMDGPU::ENTER_STRICT_WQM:
+      StrictEntry = PreviousState == StateWQM ? &MI : nullptr;
+      break;
+    case AMDGPU::EXIT_STRICT_WQM:
+      if (State == StateWQM && StrictEntry) {
+        // Transition WQM -> StrictWQM -> WQM detected.
+        lowerPseudoStrictMode(MBB, StrictEntry, &MI);
+      }
+      StrictEntry = nullptr;
+      break;
+    case AMDGPU::ENTER_STRICT_WWM:
+    case AMDGPU::EXIT_STRICT_WWM:
+      StrictEntry = nullptr;
       break;
     default:
       break;
@@ -1191,7 +1257,12 @@ void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
              .addImm(-1);
   }
   LIS->InsertMachineInstrInMaps(*MI);
-  StateTransition[MI] = StateStrictWWM;
+  StateTransition[MI] = StrictStateNeeded;
+
+  // Mark block as needing lower so it will be checked for unnecessary transitions.
+  auto BII = Blocks.find(&MBB);
+  if (BII != Blocks.end())
+    BII->second.NeedsLowering = true;
 }
 
 void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
@@ -1426,14 +1497,10 @@ void SIWholeQuadMode::lowerCopyInstrs() {
     assert(MI->getNumExplicitOperands() == 2);
 
     const Register Reg = MI->getOperand(0).getReg();
-    const unsigned SubReg = MI->getOperand(0).getSubReg();
 
-    if (TRI->isVGPR(*MRI, Reg)) {
-      const TargetRegisterClass *regClass =
-          Reg.isVirtual() ? MRI->getRegClass(Reg) : TRI->getPhysRegClass(Reg);
-      if (SubReg)
-        regClass = TRI->getSubRegClass(regClass, SubReg);
-
+    const TargetRegisterClass *regClass =
+        TRI->getRegClassForOperandReg(*MRI, MI->getOperand(0));
+    if (TRI->isVGPRClass(regClass)) {
       const unsigned MovOp = TII->getMovOpcode(regClass);
       MI->setDesc(TII->get(MovOp));
 

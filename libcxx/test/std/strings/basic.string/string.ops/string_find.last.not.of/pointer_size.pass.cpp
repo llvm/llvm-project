@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // size_type find_last_not_of(const charT* s, size_type pos = npos) const; // constexpr since C++20

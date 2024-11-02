@@ -59,7 +59,7 @@ define <4 x i16> @concat_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 16, 17, 18, 19, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
   %v = shufflevector <2 x i16> %a, <2 x i16> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i16> %v

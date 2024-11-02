@@ -7,43 +7,43 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @main(i32 %argc, i8** %argv) #0 {
+define i32 @main(i32 %argc, ptr %argv) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@main
-; CHECK-SAME: (i32 [[ARGC:%.*]], i8** nocapture readnone [[ARGV:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i32 [[ARGC:%.*]], ptr nocapture readonly [[ARGV:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[ARGC]], 2
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP0]], i32 0, i32 [[ARGC]]
 ; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
-  %0 = getelementptr inbounds i8*, i8** %argv, i32 0
-  %ptr = load i8*, i8** %0
-  %1 = call i32 @compute(i8* %ptr, i32 %argc)
-  %2 = icmp slt i32 %argc, 2
-  br i1 %2, label %done, label %do_work
+  %ptr = load ptr, ptr %argv
+  %0 = call i32 @compute(ptr %ptr, i32 %argc)
+  %1 = icmp slt i32 %argc, 2
+  br i1 %1, label %done, label %do_work
 
 do_work:
-  %3 = icmp eq i8* %ptr, null
-  br i1 %3, label %null, label %done
+  %2 = icmp eq ptr %ptr, null
+  br i1 %2, label %null, label %done
 
 null:
-  call void @call_if_null(i8* %ptr)
+  call void @call_if_null(ptr %ptr)
   br label %done
 
 done:
-  %retval = phi i32 [0, %entry], [%1, %do_work], [%1, %null]
+  %retval = phi i32 [0, %entry], [%0, %do_work], [%0, %null]
   ret i32 %retval
 }
 
-define i32 @compute(i8* noundef nonnull %ptr, i32 %x) #1 {
+define i32 @compute(ptr noundef nonnull %ptr, i32 %x) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@compute
-; CHECK-SAME: (i8* nocapture nonnull readnone [[PTR:%.*]], i32 returned [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture noundef nonnull readnone [[PTR:%.*]], i32 returned [[X:%.*]])
+; CHECK-SAME:  local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   ret i32 %x
 }
 
-declare void @call_if_null(i8* %ptr) #0
+declare void @call_if_null(ptr %ptr) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { noinline nounwind readonly }

@@ -63,6 +63,10 @@ def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {
   let HasOpSel = 0;
   let HasModifiers = 1;
 
+  let Src0Mod = FPVRegInputMods;
+  let Src1Mod = FPVRegInputMods;
+  let Src2Mod = FPVRegInputMods;
+
   let Outs64 = (outs VGPR_32:$vdst);
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Src1Mod:$src1_modifiers, VRegSrc_32:$src1,
@@ -76,6 +80,10 @@ def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {
 class VOP3_VINTERP_F16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let HasOpSel = 1;
   let HasModifiers = 1;
+
+  let Src0Mod = FPVRegInputMods;
+  let Src1Mod = FPVRegInputMods;
+  let Src2Mod = FPVRegInputMods;
 
   let Outs64 = (outs VGPR_32:$vdst);
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
@@ -111,10 +119,55 @@ def V_INTERP_P2_RTZ_F16_F32_inreg :
 
 } // SubtargetPredicate = isGFX11Plus
 
+class VInterpF32Pat <SDPatternOperator op, Instruction inst> : GCNPat <
+   (f32 (op
+      (VINTERPMods f32:$src0, i32:$src0_modifiers),
+      (VINTERPMods f32:$src1, i32:$src1_modifiers),
+      (VINTERPMods f32:$src2, i32:$src2_modifiers))),
+    (inst $src0_modifiers, $src0,
+          $src1_modifiers, $src1,
+          $src2_modifiers, $src2,
+          0, /* clamp */
+          7) /* wait_exp */
+>;
+
 def VINTERP_OPSEL {
   int LOW = 0;
   int HIGH = 0xa;
 }
+
+class VInterpF16Pat <SDPatternOperator op, Instruction inst,
+                     ValueType dst_type, bit high,
+                     list<ComplexPattern> pat> : GCNPat <
+   (dst_type (op
+      (pat[0] f32:$src0, i32:$src0_modifiers),
+      (pat[1] f32:$src1, i32:$src1_modifiers),
+      (pat[2] f32:$src2, i32:$src2_modifiers),
+      !if(high, (i1 -1), (i1 0)))),
+    (inst $src0_modifiers, $src0,
+          $src1_modifiers, $src1,
+          $src2_modifiers, $src2,
+          0, /* clamp */
+          /* op_sel = 0 */
+          7) /* wait_exp */
+>;
+
+multiclass VInterpF16Pat <SDPatternOperator op, Instruction inst,
+                          ValueType dst_type, list<ComplexPattern> high_pat> {
+  def : VInterpF16Pat<op, inst, dst_type, 0,
+                      [VINTERPMods, VINTERPMods, VINTERPMods]>;
+  def : VInterpF16Pat<op, inst, dst_type, 1, high_pat>;
+}
+
+def : VInterpF32Pat<int_amdgcn_interp_inreg_p10, V_INTERP_P10_F32_inreg>;
+def : VInterpF32Pat<int_amdgcn_interp_inreg_p2, V_INTERP_P2_F32_inreg>;
+defm : VInterpF16Pat<int_amdgcn_interp_inreg_p10_f16,
+                     V_INTERP_P10_F16_F32_inreg, f32,
+                     [VINTERPModsHi, VINTERPMods, VINTERPModsHi]>;
+defm : VInterpF16Pat<int_amdgcn_interp_inreg_p2_f16,
+                     V_INTERP_P2_F16_F32_inreg, f16,
+                     [VINTERPModsHi, VINTERPMods, VINTERPMods]>;
+
 //===----------------------------------------------------------------------===//
 // VINTERP Real Instructions
 //===----------------------------------------------------------------------===//

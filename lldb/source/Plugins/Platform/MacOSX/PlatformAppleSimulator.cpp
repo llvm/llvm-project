@@ -104,7 +104,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
       strm << "   " << device.GetUDID() << ": " << device.GetName() << "\n";
     }
 
-    if (m_device.hasValue() && m_device->operator bool()) {
+    if (m_device.has_value() && m_device->operator bool()) {
       strm << "Current device: " << m_device->GetUDID() << ": "
            << m_device->GetName();
       if (m_device->GetState() == CoreSimulatorSupport::Device::State::Booted) {
@@ -226,13 +226,13 @@ PlatformAppleSimulator::DebugProcess(ProcessLaunchInfo &launch_info,
 FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
 #if defined(__APPLE__)
   std::lock_guard<std::mutex> guard(m_core_sim_path_mutex);
-  if (!m_core_simulator_framework_path.hasValue()) {
+  if (!m_core_simulator_framework_path.has_value()) {
     m_core_simulator_framework_path =
         FileSpec("/Library/Developer/PrivateFrameworks/CoreSimulator.framework/"
                  "CoreSimulator");
     FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
   }
-  return m_core_simulator_framework_path.getValue();
+  return m_core_simulator_framework_path.value();
 #else
   return FileSpec();
 #endif
@@ -251,16 +251,17 @@ void PlatformAppleSimulator::LoadCoreSimulator() {
 
 #if defined(__APPLE__)
 CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
-  if (!m_device.hasValue()) {
+  if (!m_device.has_value()) {
     const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id = m_kind;
-    std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
+    std::string developer_dir =
+        HostInfo::GetXcodeDeveloperDirectory().GetPath();
     m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
                    developer_dir.c_str())
                    .GetFanciest(dev_id);
   }
 
-  if (m_device.hasValue())
-    return m_device.getValue();
+  if (m_device.has_value())
+    return m_device.value();
   else
     return CoreSimulatorSupport::Device();
 }
@@ -331,7 +332,7 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
       }
 
       if (create) {
-        if (std::count(supported_os.begin(), supported_os.end(), triple.getOS()))
+        if (llvm::is_contained(supported_os, triple.getOS()))
           create = true;
 #if defined(__APPLE__)
         // Only accept "unknown" for the OS if the host is Apple and it

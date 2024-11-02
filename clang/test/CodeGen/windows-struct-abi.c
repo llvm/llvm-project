@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-itanium -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-windows-itanium -emit-llvm -o - %s | FileCheck %s
 
 struct f1 {
   float f;
@@ -34,7 +34,7 @@ struct f4 {
 
 struct f4 return_f4(void) { while (1); }
 
-// CHECK: define dso_local void @return_f4(%struct.f4* noalias sret(%struct.f4) align 4 %agg.result)
+// CHECK: define dso_local void @return_f4(ptr noalias sret(%struct.f4) align 4 %agg.result)
 
 void receive_f4(struct f4 a0) { }
 

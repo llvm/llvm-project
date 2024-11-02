@@ -168,6 +168,11 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
     return SymbolTypeOrErr.takeError();
   SymbolRef::Type SymbolType = *SymbolTypeOrErr;
   if (Obj.isELF()) {
+    // Ignore any symbols coming from sections that don't have runtime
+    // allocated memory.
+    if ((elf_section_iterator(*Sec)->getFlags() & ELF::SHF_ALLOC) == 0)
+      return Error::success();
+
     // Allow function and data symbols. Additionally allow STT_NONE, which are
     // common for functions defined in assembly.
     uint8_t Type = ELFSymbolRef(Symbol).getELFType();

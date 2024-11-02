@@ -118,7 +118,7 @@ void CFErrorFunctionChecker::checkASTDecl(const FunctionDecl *D,
     II = &D->getASTContext().Idents.get("CFErrorRef");
 
   bool hasCFError = false;
-  for (auto I : D->parameters())  {
+  for (auto *I : D->parameters())  {
     if (IsCFError(I->getType(), II)) {
       hasCFError = true;
       break;
@@ -214,7 +214,7 @@ void NSOrCFErrorDerefChecker::checkLocation(SVal loc, bool isLoad,
                                             CheckerContext &C) const {
   if (!isLoad)
     return;
-  if (loc.isUndef() || !loc.getAs<Loc>())
+  if (loc.isUndef() || !isa<Loc>(loc))
     return;
 
   ASTContext &Ctx = C.getASTContext();

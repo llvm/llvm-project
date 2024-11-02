@@ -15,13 +15,16 @@
 #ifndef LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 #define LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 
-#include "clang/AST/Decl.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace clang {
+class Decl;
+class NamespaceDecl;
+class DeclContext;
 namespace tooling {
 namespace stdlib {
 

@@ -157,7 +157,7 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       getRelevantOperands(I, Operands);
       // Add only operands not in Stack to prevent cycle
       for (auto *Op : Operands)
-        if (all_of(Stack, [Op](Value *V) { return Op != V; }))
+        if (!llvm::is_contained(Stack, Op))
           Worklist.push_back(Op);
       break;
     }

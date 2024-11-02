@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple i686-win32             -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DMS %s
-// RUN: %clang_cc1 -triple x86_64-win32           -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DMS %s
-// RUN: %clang_cc1 -triple i686-mingw32           -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template %s
-// RUN: %clang_cc1 -triple x86_64-mingw32         -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template %s
-// RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI %s
-// RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI %s
-// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI %s
-// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fdeclspec      -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI %s
+// RUN: %clang_cc1 -triple i686-win32             -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DMS  %s
+// RUN: %clang_cc1 -triple x86_64-win32           -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DMS  %s
+// RUN: %clang_cc1 -triple i686-mingw32           -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DGNU %s
+// RUN: %clang_cc1 -triple x86_64-mingw32         -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DGNU %s
+// RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI  %s
+// RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI  %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI  %s
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fdeclspec      -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI  %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Exported {};
@@ -1087,6 +1087,13 @@ template<typename T> __declspec(dllexport) const  int  CTMR<T>::StaticConstField
 #endif
 template<typename T> __declspec(dllexport) constexpr int CTMR<T>::ConstexprField;
 
+// MSVC exports explicit specialization of exported class template member
+// function, and errors on such definitions. MinGW does not treat them as
+// dllexport.
+#if !defined(GNU)
+// expected-error@+2{{attribute 'dllexport' cannot be applied to a deleted function}}
+#endif
+template <> void ExportClassTmplMembers<int>::normalDecl() = delete;
 
 
 //===----------------------------------------------------------------------===//

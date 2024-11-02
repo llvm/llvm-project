@@ -85,6 +85,8 @@ static cl::opt<std::string> PassPipeline(
     cl::desc(
         "A textual description of the pass pipeline. To have analysis passes "
         "available before a certain pass, add 'require<foo-analysis>'."));
+static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
+                                   cl::desc("Alias for -passes"));
 
 static cl::opt<bool> PrintPasses("print-passes",
                                  cl::desc("Print available passes that can be "
@@ -192,10 +194,9 @@ static cl::opt<bool>
 DisableSimplifyLibCalls("disable-simplify-libcalls",
                         cl::desc("Disable simplify-libcalls"));
 
-static cl::list<std::string>
-DisableBuiltins("disable-builtin",
-                cl::desc("Disable specific target library builtin function"),
-                cl::ZeroOrMore);
+static cl::list<std::string> DisableBuiltins(
+    "disable-builtin",
+    cl::desc("Disable specific target library builtin function"));
 
 static cl::opt<bool> EnableDebugify(
     "enable-debugify",
@@ -206,18 +207,6 @@ static cl::opt<bool> VerifyDebugInfoPreserve(
     "verify-debuginfo-preserve",
     cl::desc("Start the pipeline with collecting and end it with checking of "
              "debug info preservation."));
-
-static cl::opt<bool> VerifyEachDebugInfoPreserve(
-    "verify-each-debuginfo-preserve",
-    cl::desc("Start each pass with collecting and end it with checking of "
-             "debug info preservation."));
-
-static cl::opt<std::string>
-    VerifyDIPreserveExport("verify-di-preserve-export",
-                   cl::desc("Export debug info preservation failures into "
-                            "specified (JSON) file (should be abs path as we use"
-                            " append mode to insert new JSON objects)"),
-                   cl::value_desc("filename"), cl::init(""));
 
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
@@ -365,32 +354,6 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   if (TM)
     TM->adjustPassManager(Builder);
 
-  switch (PGOKindFlag) {
-  case InstrGen:
-    Builder.EnablePGOInstrGen = true;
-    Builder.PGOInstrGen = ProfileFile;
-    break;
-  case InstrUse:
-    Builder.PGOInstrUse = ProfileFile;
-    break;
-  case SampleUse:
-    Builder.PGOSampleUse = ProfileFile;
-    break;
-  default:
-    break;
-  }
-
-  switch (CSPGOKindFlag) {
-  case CSInstrGen:
-    Builder.EnablePGOCSInstrGen = true;
-    break;
-  case CSInstrUse:
-    Builder.EnablePGOCSInstrUse = true;
-    break;
-  default:
-    break;
-  }
-
   Builder.populateFunctionPassManager(FPM);
   Builder.populateModulePassManager(MPM);
 }
@@ -494,7 +457,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "replace-with-veclib",  "jmc-instrument",
       "dot-regions",          "dot-regions-only",
       "view-regions",         "view-regions-only",
-      "select-optimize"};
+      "select-optimize",      "expand-large-div-rem",
+      "structurizecfg",       "fix-irreducible"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
@@ -532,17 +496,16 @@ int main(int argc, char **argv) {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeCore(Registry);
   initializeScalarOpts(Registry);
-  initializeObjCARCOpts(Registry);
   initializeVectorization(Registry);
   initializeIPO(Registry);
   initializeAnalysis(Registry);
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
   initializeAggressiveInstCombine(Registry);
-  initializeInstrumentation(Registry);
   initializeTarget(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
+  initializeExpandLargeDivRemLegacyPassPass(Registry);
   initializeExpandMemCmpPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
@@ -558,8 +521,6 @@ int main(int argc, char **argv) {
   initializeIndirectBrExpandPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
-  initializeEntryExitInstrumenterPass(Registry);
-  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeExpandVectorPredicationPass(Registry);
@@ -824,7 +785,8 @@ int main(int argc, char **argv) {
                            ThinLinkOut.get(), RemarksFile.get(), Pipeline,
                            Passes, PluginList, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
-                           EmitModuleHash, EnableDebugify)
+                           EmitModuleHash, EnableDebugify,
+                           VerifyDebugInfoPreserve)
                ? 0
                : 1;
   }
@@ -1010,8 +972,8 @@ int main(int argc, char **argv) {
         report_fatal_error("Text output is incompatible with -module-hash");
       Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
     } else if (OutputThinLTOBC)
-      Passes.add(createWriteThinLTOBitcodePass(
-          *OS, ThinLinkOut ? &ThinLinkOut->os() : nullptr));
+      report_fatal_error(
+          "Use the new pass manager for printing ThinLTO bitcode");
     else
       Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder,
                                          EmitSummaryIndex, EmitModuleHash));

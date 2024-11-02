@@ -67,6 +67,10 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
   setDLLStorageClass(Src->getDLLStorageClass());
   setDSOLocal(Src->isDSOLocal());
   setPartition(Src->getPartition());
+  if (Src->hasSanitizerMetadata())
+    setSanitizerMetadata(Src->getSanitizerMetadata());
+  else
+    removeSanitizerMetadata();
 }
 
 void GlobalValue::removeFromParent() {
@@ -217,6 +221,25 @@ void GlobalValue::setPartition(StringRef S) {
   HasPartition = !S.empty();
 }
 
+using SanitizerMetadata = GlobalValue::SanitizerMetadata;
+const SanitizerMetadata &GlobalValue::getSanitizerMetadata() const {
+  assert(hasSanitizerMetadata());
+  assert(getContext().pImpl->GlobalValueSanitizerMetadata.count(this));
+  return getContext().pImpl->GlobalValueSanitizerMetadata[this];
+}
+
+void GlobalValue::setSanitizerMetadata(SanitizerMetadata Meta) {
+  getContext().pImpl->GlobalValueSanitizerMetadata[this] = Meta;
+  HasSanitizerMetadata = true;
+}
+
+void GlobalValue::removeSanitizerMetadata() {
+  DenseMap<const GlobalValue *, SanitizerMetadata> &MetadataMap =
+      getContext().pImpl->GlobalValueSanitizerMetadata;
+  MetadataMap.erase(this);
+  HasSanitizerMetadata = false;
+}
+
 StringRef GlobalObject::getSectionImpl() const {
   assert(hasSection());
   return getContext().pImpl->GlobalObjectSections[this];
@@ -236,6 +259,13 @@ void GlobalObject::setSection(StringRef S) {
   // Update the HasSectionHashEntryBit. Setting the section to the empty string
   // means this global no longer has a section.
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
+}
+
+bool GlobalValue::isNobuiltinFnDef() const {
+  const Function *F = dyn_cast<Function>(this);
+  if (!F || F->empty())
+    return false;
+  return F->hasFnAttribute(Attribute::NoBuiltin);
 }
 
 bool GlobalValue::isDeclaration() const {
@@ -262,7 +292,7 @@ bool GlobalObject::canIncreaseAlignment() const {
   // alignment specified. (If it is assigned a section, the global
   // could be densely packed with other objects in the section, and
   // increasing the alignment could cause padding issues.)
-  if (hasSection() && getAlign().hasValue())
+  if (hasSection() && getAlign())
     return false;
 
   // On ELF platforms, we're further restricted in that we can't
@@ -293,32 +323,38 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
+template <typename Operation>
 static const GlobalObject *
-findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases) {
-  if (auto *GO = dyn_cast<GlobalObject>(C))
+findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
+               const Operation &Op) {
+  if (auto *GO = dyn_cast<GlobalObject>(C)) {
+    Op(*GO);
     return GO;
-  if (auto *GA = dyn_cast<GlobalAlias>(C))
+  }
+  if (auto *GA = dyn_cast<GlobalAlias>(C)) {
+    Op(*GA);
     if (Aliases.insert(GA).second)
-      return findBaseObject(GA->getOperand(0), Aliases);
+      return findBaseObject(GA->getOperand(0), Aliases, Op);
+  }
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     switch (CE->getOpcode()) {
     case Instruction::Add: {
-      auto *LHS = findBaseObject(CE->getOperand(0), Aliases);
-      auto *RHS = findBaseObject(CE->getOperand(1), Aliases);
+      auto *LHS = findBaseObject(CE->getOperand(0), Aliases, Op);
+      auto *RHS = findBaseObject(CE->getOperand(1), Aliases, Op);
       if (LHS && RHS)
         return nullptr;
       return LHS ? LHS : RHS;
     }
     case Instruction::Sub: {
-      if (findBaseObject(CE->getOperand(1), Aliases))
+      if (findBaseObject(CE->getOperand(1), Aliases, Op))
         return nullptr;
-      return findBaseObject(CE->getOperand(0), Aliases);
+      return findBaseObject(CE->getOperand(0), Aliases, Op);
     }
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
     case Instruction::BitCast:
     case Instruction::GetElementPtr:
-      return findBaseObject(CE->getOperand(0), Aliases);
+      return findBaseObject(CE->getOperand(0), Aliases, Op);
     default:
       break;
     }
@@ -328,7 +364,7 @@ findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases) {
 
 const GlobalObject *GlobalValue::getAliaseeObject() const {
   DenseSet<const GlobalAlias *> Aliases;
-  return findBaseObject(this, Aliases);
+  return findBaseObject(this, Aliases, [](const GlobalValue &) {});
 }
 
 bool GlobalValue::isAbsoluteSymbolRef() const {
@@ -521,7 +557,7 @@ void GlobalAlias::setAliasee(Constant *Aliasee) {
 
 const GlobalObject *GlobalAlias::getAliaseeObject() const {
   DenseSet<const GlobalAlias *> Aliases;
-  return findBaseObject(getOperand(0), Aliases);
+  return findBaseObject(getOperand(0), Aliases, [](const GlobalValue &) {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -554,5 +590,12 @@ void GlobalIFunc::eraseFromParent() {
 
 const Function *GlobalIFunc::getResolverFunction() const {
   DenseSet<const GlobalAlias *> Aliases;
-  return dyn_cast<Function>(findBaseObject(getResolver(), Aliases));
+  return dyn_cast<Function>(
+      findBaseObject(getResolver(), Aliases, [](const GlobalValue &) {}));
+}
+
+void GlobalIFunc::applyAlongResolverPath(
+    function_ref<void(const GlobalValue &)> Op) const {
+  DenseSet<const GlobalAlias *> Aliases;
+  findBaseObject(getResolver(), Aliases, Op);
 }

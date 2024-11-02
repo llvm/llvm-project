@@ -15,9 +15,11 @@
 #ifndef AARCH64_ARCH
 #define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)
 #endif
+// NOTE: The order and the grouping of the elements matter to make ArchKind iterable.
+// List is organised as armv8a -> armv8n-a, armv9a -> armv9m-a and armv8-r.
 AARCH64_ARCH("invalid", INVALID, "", "",
              ARMBuildAttrs::CPUArch::v8_A, FK_NONE, AArch64::AEK_NONE)
-AARCH64_ARCH("armv8-a", ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
+AARCH64_ARCH("armv8-a", ARMV8A, "8-A", "v8a", ARMBuildAttrs::CPUArch::v8_A,
              FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD))
 AARCH64_ARCH("armv8.1-a", ARMV8_1A, "8.1-A", "v8.1a",
@@ -76,19 +78,19 @@ AARCH64_ARCH("armv9.1-a", ARMV9_1A, "9.1-A", "v9.1a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_SVE2))
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
 AARCH64_ARCH("armv9.2-a", ARMV9_2A, "9.2-A", "v9.2a",
              ARMBuildAttrs::CPUArch::v8_A, FK_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_SVE2))
-AARCH64_ARCH("armv9.3-a", ARMV9_3A, "9.3-A", "v9.3",
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
+AARCH64_ARCH("armv9.3-a", ARMV9_3A, "9.3-A", "v9.3a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-              AArch64::AEK_SVE2))
+              AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
 // For v8-R, we do not enable crypto and align with GCC that enables a more
 // minimal set of optional architecture extensions.
 AARCH64_ARCH("armv8-r", ARMV8R, "8-R", "v8r",
@@ -126,6 +128,8 @@ AARCH64_ARCH_EXT_NAME("sve2-aes",     AArch64::AEK_SVE2AES,     "+sve2-aes",    
 AARCH64_ARCH_EXT_NAME("sve2-sm4",     AArch64::AEK_SVE2SM4,     "+sve2-sm4",     "-sve2-sm4")
 AARCH64_ARCH_EXT_NAME("sve2-sha3",    AArch64::AEK_SVE2SHA3,    "+sve2-sha3",    "-sve2-sha3")
 AARCH64_ARCH_EXT_NAME("sve2-bitperm", AArch64::AEK_SVE2BITPERM, "+sve2-bitperm", "-sve2-bitperm")
+AARCH64_ARCH_EXT_NAME("sve2p1",       AArch64::AEK_SVE2p1,      "+sve2p1",       "-sve2p1")
+AARCH64_ARCH_EXT_NAME("b16b16",       AArch64::AEK_B16B16,      "+b16b16",       "-b16b16")
 AARCH64_ARCH_EXT_NAME("rcpc",         AArch64::AEK_RCPC,        "+rcpc",         "-rcpc")
 AARCH64_ARCH_EXT_NAME("rng",          AArch64::AEK_RAND,        "+rand",         "-rand")
 AARCH64_ARCH_EXT_NAME("memtag",       AArch64::AEK_MTE,         "+mte",          "-mte")
@@ -142,8 +146,10 @@ AARCH64_ARCH_EXT_NAME("brbe",         AArch64::AEK_BRBE,        "+brbe",        
 AARCH64_ARCH_EXT_NAME("pauth",        AArch64::AEK_PAUTH,       "+pauth",        "-pauth")
 AARCH64_ARCH_EXT_NAME("flagm",        AArch64::AEK_FLAGM,       "+flagm",        "-flagm")
 AARCH64_ARCH_EXT_NAME("sme",          AArch64::AEK_SME,         "+sme",          "-sme")
-AARCH64_ARCH_EXT_NAME("sme-f64",      AArch64::AEK_SMEF64,      "+sme-f64",      "-sme-f64")
-AARCH64_ARCH_EXT_NAME("sme-i64",      AArch64::AEK_SMEI64,      "+sme-i64",      "-sme-i64")
+AARCH64_ARCH_EXT_NAME("sme-f64f64",   AArch64::AEK_SMEF64F64,   "+sme-f64f64",   "-sme-f64f64")
+AARCH64_ARCH_EXT_NAME("sme-i16i64",   AArch64::AEK_SMEI16I64,   "+sme-i16i64",   "-sme-i16i64")
+AARCH64_ARCH_EXT_NAME("sme2",         AArch64::AEK_SME2,        "+sme2",         "-sme2")
+AARCH64_ARCH_EXT_NAME("sme2p1",       AArch64::AEK_SME2p1,      "+sme2p1",       "-sme2p1")
 AARCH64_ARCH_EXT_NAME("hbc",          AArch64::AEK_HBC,         "+hbc",          "-hbc")
 AARCH64_ARCH_EXT_NAME("mops",         AArch64::AEK_MOPS,        "+mops",         "-mops")
 AARCH64_ARCH_EXT_NAME("pmuv3",        AArch64::AEK_PERFMON,     "+perfmon",      "-perfmon")
@@ -200,6 +206,12 @@ AARCH64_CPU_NAME("cortex-a710", ARMV9A, FK_NEON_FP_ARMV8, false,
                   AArch64::AEK_SB | AArch64::AEK_I8MM | AArch64::AEK_FP16FML |
                   AArch64::AEK_SVE | AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
                   AArch64::AEK_BF16))
+AARCH64_CPU_NAME("cortex-a715", ARMV9A, FK_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_SB | AArch64::AEK_SSBS | AArch64::AEK_MTE |
+                  AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_PAUTH |
+                  AArch64::AEK_I8MM | AArch64::AEK_PREDRES | AArch64::AEK_PERFMON |
+                  AArch64::AEK_PROFILE | AArch64::AEK_SVE | AArch64::AEK_SVE2BITPERM |
+                  AArch64::AEK_BF16 | AArch64::AEK_FLAGM))
 AARCH64_CPU_NAME("cortex-r82", ARMV8R, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_LSE))
 AARCH64_CPU_NAME("cortex-x1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
@@ -213,6 +225,12 @@ AARCH64_CPU_NAME("cortex-x2", ARMV9A, FK_NEON_FP_ARMV8, false,
                   AArch64::AEK_PAUTH | AArch64::AEK_SSBS | AArch64::AEK_SB |
                   AArch64::AEK_SVE | AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
                   AArch64::AEK_FP16FML))
+AARCH64_CPU_NAME("cortex-x3", ARMV9A, FK_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_SVE | AArch64::AEK_PERFMON | AArch64::AEK_PROFILE |
+                  AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_MTE |
+                  AArch64::AEK_SVE2BITPERM | AArch64::AEK_SB | AArch64::AEK_PAUTH |
+                  AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_PREDRES |
+                  AArch64::AEK_FLAGM | AArch64::AEK_SSBS))
 AARCH64_CPU_NAME("neoverse-e1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
                   AArch64::AEK_RCPC | AArch64::AEK_SSBS))
@@ -235,6 +253,12 @@ AARCH64_CPU_NAME("neoverse-v1", ARMV8_4A, FK_CRYPTO_NEON_FP_ARMV8, false,
                   AArch64::AEK_FP16 | AArch64::AEK_BF16 |
                   AArch64::AEK_DOTPROD | AArch64::AEK_PROFILE |
                   AArch64::AEK_RAND | AArch64::AEK_FP16FML | AArch64::AEK_I8MM))
+AARCH64_CPU_NAME("neoverse-v2", ARMV9A, FK_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_SVE | AArch64::AEK_SVE2 | AArch64::AEK_SSBS |
+                  AArch64::AEK_FP16 | AArch64::AEK_BF16 | AArch64::AEK_RAND |
+                  AArch64::AEK_DOTPROD | AArch64::AEK_PROFILE |
+                  AArch64::AEK_SVE2BITPERM | AArch64::AEK_FP16FML |
+                  AArch64::AEK_I8MM | AArch64::AEK_MTE))
 AARCH64_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_NONE))
 AARCH64_CPU_NAME("apple-a7", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
@@ -253,8 +277,17 @@ AARCH64_CPU_NAME("apple-a13", ARMV8_4A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3))
 AARCH64_CPU_NAME("apple-a14", ARMV8_5A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3))
+AARCH64_CPU_NAME("apple-a15", ARMV8_5A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                  AArch64::AEK_BF16 | AArch64::AEK_I8MM))
+AARCH64_CPU_NAME("apple-a16", ARMV8_5A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                  AArch64::AEK_BF16 | AArch64::AEK_I8MM))
 AARCH64_CPU_NAME("apple-m1", ARMV8_5A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3))
+AARCH64_CPU_NAME("apple-m2", ARMV8_5A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                  AArch64::AEK_BF16 | AArch64::AEK_I8MM))
 AARCH64_CPU_NAME("apple-s4", ARMV8_3A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_FP16))
 AARCH64_CPU_NAME("apple-s5", ARMV8_3A, FK_CRYPTO_NEON_FP_ARMV8, false,
@@ -296,3 +329,9 @@ AARCH64_CPU_NAME("ampere1", ARMV8_6A, FK_CRYPTO_NEON_FP_ARMV8, false,
 // Invalid CPU
 AARCH64_CPU_NAME("invalid", INVALID, FK_INVALID, true, AArch64::AEK_INVALID)
 #undef AARCH64_CPU_NAME
+
+#ifndef AARCH64_CPU_ALIAS
+#define AARCH64_CPU_ALIAS(ALIAS,NAME)
+#endif
+AARCH64_CPU_ALIAS("grace", "neoverse-v2")
+#undef AARCH64_CPU_ALIAS

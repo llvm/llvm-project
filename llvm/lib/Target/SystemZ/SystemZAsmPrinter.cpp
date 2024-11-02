@@ -143,6 +143,9 @@ void SystemZAsmPrinter::emitCallInformation(CallType CT) {
 }
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  SystemZ_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                          getSubtargetInfo().getFeatureBits());
+
   SystemZMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
@@ -641,11 +644,11 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   MCContext &Ctx = MF->getContext();
   if (MF->getFunction().hasFnAttribute("mrecord-mcount")) {
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->PushSection();
-    OutStreamer->SwitchSection(
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(
         Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
     OutStreamer->emitSymbolValue(DotSym, 8);
-    OutStreamer->PopSection();
+    OutStreamer->popSection();
     OutStreamer->emitLabel(DotSym);
   }
 
@@ -663,8 +666,7 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 }
 
 void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
-  const SystemZInstrInfo *TII =
-    static_cast<const SystemZInstrInfo *>(MF->getSubtarget().getInstrInfo());
+  auto *TII = MF->getSubtarget<SystemZSubtarget>().getInstrInfo();
 
   unsigned NumNOPBytes = MI.getOperand(1).getImm();
 
@@ -783,6 +785,49 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
+static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
+                                  raw_ostream &OS) {
+  const char *RegName = SystemZInstPrinter::getRegisterName(RegNo);
+  if (MAI->getAssemblerDialect() == AD_HLASM) {
+    // Skip register prefix so that only register number is left
+    assert(isalpha(RegName[0]) && isdigit(RegName[1]));
+    OS << (RegName + 1);
+  } else
+    OS << '%' << RegName;
+}
+
+static void printOperand(const MCOperand &MCOp, const MCAsmInfo *MAI,
+                         raw_ostream &OS) {
+  if (MCOp.isReg()) {
+    if (!MCOp.getReg())
+      OS << '0';
+    else
+      printFormattedRegName(MAI, MCOp.getReg(), OS);
+  } else if (MCOp.isImm())
+    OS << MCOp.getImm();
+  else if (MCOp.isExpr())
+    MCOp.getExpr()->print(OS, MAI);
+  else
+    llvm_unreachable("Invalid operand");
+}
+
+static void printAddress(const MCAsmInfo *MAI, unsigned Base,
+                         const MCOperand &DispMO, unsigned Index,
+                         raw_ostream &OS) {
+  printOperand(DispMO, MAI, OS);
+  if (Base || Index) {
+    OS << '(';
+    if (Index) {
+      printFormattedRegName(MAI, Index, OS);
+      if (Base)
+        OS << ',';
+    }
+    if (Base)
+      printFormattedRegName(MAI, Base, OS);
+    OS << ')';
+  }
+}
+
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
@@ -800,7 +845,7 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     SystemZMCInstLower Lower(MF->getContext(), *this);
     MCOp = Lower.lowerOperand(MO);
   }
-  SystemZInstPrinter::printOperand(MCOp, MAI, OS);
+  printOperand(MCOp, MAI, OS);
   return false;
 }
 
@@ -808,15 +853,10 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
-  SystemZInstPrinter::
-    printAddress(MAI, MI->getOperand(OpNo).getReg(),
-                 MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
-                 MI->getOperand(OpNo + 2).getReg(), OS);
+  printAddress(MAI, MI->getOperand(OpNo).getReg(),
+               MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
+               MI->getOperand(OpNo + 2).getReg(), OS);
   return false;
-}
-
-void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
-  emitStackMaps(SM);
 }
 
 void SystemZAsmPrinter::emitFunctionBodyEnd() {
@@ -826,10 +866,10 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
     MCSymbol *FnEndSym = createTempSymbol("func_end");
     OutStreamer->emitLabel(FnEndSym);
 
-    OutStreamer->PushSection();
-    OutStreamer->SwitchSection(getObjFileLowering().getPPA1Section());
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(getObjFileLowering().getPPA1Section());
     emitPPA1(FnEndSym);
-    OutStreamer->PopSection();
+    OutStreamer->popSection();
 
     CurrentFnPPA1Sym = nullptr;
     CurrentFnEPMarkerSym = nullptr;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
 struct S { S(); ~S(); S(const S &); void operator()(int); };
 using size_t = decltype(sizeof(int));
@@ -16,8 +16,8 @@ template<char...Cs> S operator"" _t() { return S(); }
 // CHECK: @[[s_0xffffeeee:.*]] = {{.*}} constant [11 x i8] c"0xffffeeee\00"
 
 void f() {
-  // CHECK: call void @_Zli2_xPKcm({{.*}}, i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @[[s_foo]], i64 0, i64 0), i64 noundef 3)
-  // CHECK: call void @_Zli2_xPKcm({{.*}}, i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @[[s_bar]], i64 0, i64 0), i64 noundef 3)
+  // CHECK: call void @_Zli2_xPKcm({{.*}}, ptr noundef @[[s_foo]], i64 noundef 3)
+  // CHECK: call void @_Zli2_xPKcm({{.*}}, ptr noundef @[[s_bar]], i64 noundef 3)
   // CHECK: call void @_Zli2_yw({{.*}} 97)
   // CHECK: call void @_Zli2_zy({{.*}} 42)
   // CHECK: call void @_Zli2_fe({{.*}} x86_fp80 noundef 0xK3FFF8000000000000000)
@@ -28,9 +28,9 @@ void f() {
   // CHECK: call void @_ZN1SD1Ev({{.*}})
   "foo"_x, "bar"_x, L'a'_y, 42_z, 1.0_f;
 
-  // CHECK: call void @_Zli2_rPKc({{.*}}, i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @[[s_123]], i64 0, i64 0))
-  // CHECK: call void @_Zli2_rPKc({{.*}}, i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @[[s_4_9]], i64 0, i64 0))
-  // CHECK: call void @_Zli2_rPKc({{.*}}, i8* noundef getelementptr inbounds ([11 x i8], [11 x i8]* @[[s_0xffffeeee]], i64 0, i64 0))
+  // CHECK: call void @_Zli2_rPKc({{.*}}, ptr noundef @[[s_123]])
+  // CHECK: call void @_Zli2_rPKc({{.*}}, ptr noundef @[[s_4_9]])
+  // CHECK: call void @_Zli2_rPKc({{.*}}, ptr noundef @[[s_0xffffeeee]])
   // CHECK: call void @_ZN1SD1Ev({{.*}})
   // CHECK: call void @_ZN1SD1Ev({{.*}})
   // CHECK: call void @_ZN1SD1Ev({{.*}})
@@ -59,11 +59,11 @@ void h() {
 // CHECK:   call void @_Z1iIiEDTclclL_Zli2_xPKcmELA4_S0_ELi3EEfp_EET_(i32 noundef 42)
 
 // CHECK: define {{.*}} @_Z1gIiEDTclclL_Zli2_xPKcmELA4_S0_ELm3EEfp_EET_(i32
-// CHECK:   call void @_Zli2_xPKcm({{.*}}, i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @{{.*}}, i64 0, i64 0), i64 noundef 3)
+// CHECK:   call void @_Zli2_xPKcm({{.*}}, ptr noundef @{{.*}}, i64 noundef 3)
 // CHECK:   call void @_ZN1SclEi
 // CHECK:   call void @_ZN1SD1Ev
 
 // CHECK: define {{.*}} @_Z1iIiEDTclclL_Zli2_xPKcmELA4_S0_ELi3EEfp_EET_(i32
-// CHECK:   call void @_Zli2_xPKcm({{.*}}, i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @{{.*}}, i64 0, i64 0), i64 noundef 3)
+// CHECK:   call void @_Zli2_xPKcm({{.*}}, ptr noundef @{{.*}}, i64 noundef 3)
 // CHECK:   call void @_ZN1SclEi
 // CHECK:   call void @_ZN1SD1Ev

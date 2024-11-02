@@ -1,10 +1,10 @@
-; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
+; RUN: opt < %s -licm -S | FileCheck %s
 
 ; Test moved from sinking.ll, as it tests sinking of a store who alone touches
 ; a memory location in a loop.
 ; Store can be sunk out of exit block containing indirectbr instructions after
 ; D50925. Updated to use an argument instead of undef, due to PR38989.
-define void @test12(i32* %ptr) {
+define void @test12(ptr %ptr) {
 ; CHECK-LABEL: @test12
 ; CHECK: store
 ; CHECK-NEXT: br label %lab4
@@ -38,13 +38,13 @@ lab21:
 ; CHECK: lab21:
 ; CHECK-NOT: store
 ; CHECK: br i1 false, label %lab21, label %lab22
-  store i32 36127957, i32* %ptr, align 4
+  store i32 36127957, ptr %ptr, align 4
   br i1 undef, label %lab21, label %lab22
 
 lab22:
 ; CHECK: lab22:
 ; CHECK-NOT: store
-; CHECK-NEXT: indirectbr i8* undef
-  indirectbr i8* undef, [label %lab5, label %lab6, label %lab7]
+; CHECK-NEXT: indirectbr ptr undef
+  indirectbr ptr undef, [label %lab5, label %lab6, label %lab7]
 }
 

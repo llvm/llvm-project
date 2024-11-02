@@ -48,15 +48,15 @@ struct no_move {
 
 int main(int, char**) {
     std::any a;
-    // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be an lvalue reference or a CopyConstructible type"}}
+    // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be an lvalue reference or a CopyConstructible type}}
     std::any_cast<no_copy>(static_cast<std::any&>(a)); // expected-note {{requested here}}
 
-    // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
+    // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
     std::any_cast<no_copy>(static_cast<std::any const&>(a)); // expected-note {{requested here}}
 
     std::any_cast<no_copy>(static_cast<std::any &&>(a)); // OK
 
-    // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be an rvalue reference or a CopyConstructible type"}}
+    // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
     std::any_cast<no_move>(static_cast<std::any &&>(a));
 
   return 0;

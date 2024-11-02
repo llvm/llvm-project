@@ -4,7 +4,7 @@
 ; than the expanded cost if it is not.  Currently, this target does not have
 ; that expansion.
 
-; RUN: opt -passes='print<cost-model>' -cost-kind=code-size 2>&1 -disable-output -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK
 
 ; Check that cost is 1 for unusual load to register sized load.
 define i32 @loadUnusualIntegerWithTrunc(i128* %ptr) {

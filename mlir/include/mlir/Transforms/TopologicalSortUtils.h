@@ -90,9 +90,18 @@ bool sortTopologically(
     function_ref<bool(Value, Operation *)> isOperandReady = nullptr);
 
 /// Given a block, sort its operations in topological order, excluding its
-/// terminator if it has one.
+/// terminator if it has one. This sort is stable.
 bool sortTopologically(
     Block *block,
+    function_ref<bool(Value, Operation *)> isOperandReady = nullptr);
+
+/// Compute a topological ordering of the given ops. This sort is not stable.
+///
+/// Note: If the specified ops contain incomplete/interrupted SSA use-def
+/// chains, the result may not actually be a topological sorting with respect to
+/// the entire program.
+bool computeTopologicalSorting(
+    MutableArrayRef<Operation *> ops,
     function_ref<bool(Value, Operation *)> isOperandReady = nullptr);
 
 } // end namespace mlir

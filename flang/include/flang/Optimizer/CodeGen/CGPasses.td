@@ -44,7 +44,7 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   ];
 }
 
-def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
+def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
   let summary = "Rewrite some FIR dialect into target specific forms.";
   let description = [{
       Certain abstractions in the FIR dialect need to be rewritten to reflect

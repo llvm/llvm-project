@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -O2 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple riscv32 -O2 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple riscv64 -O2 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple riscv64 -O2 -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
 // Test RISC-V specific inline assembly constraints.
@@ -31,22 +31,22 @@ float f;
 double d;
 void test_f(void) {
 // CHECK-LABEL: define{{.*}} void @test_f()
-// CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load float, float* @f
+// CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load float, ptr @f
 // CHECK: call void asm sideeffect "", "f"(float [[FLT_ARG]])
   asm volatile ("" :: "f"(f));
-// CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load double, double* @d
+// CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load double, ptr @d
 // CHECK: call void asm sideeffect "", "f"(double [[FLT_ARG]])
   asm volatile ("" :: "f"(d));
 }
 
 void test_A(int *p) {
-// CHECK-LABEL: define{{.*}} void @test_A(i32* noundef %p)
-// CHECK: call void asm sideeffect "", "*A"(i32* elementtype(i32) %p)
+// CHECK-LABEL: define{{.*}} void @test_A(ptr noundef %p)
+// CHECK: call void asm sideeffect "", "*A"(ptr elementtype(i32) %p)
   asm volatile("" :: "A"(*p));
 }
 
 void test_S(void) {
 // CHECK-LABEL: define{{.*}} void @test_S()
-// CHECK: call void asm sideeffect "", "S"(float* nonnull @f)
+// CHECK: call void asm sideeffect "", "S"(ptr nonnull @f)
   asm volatile("" :: "S"(&f));
 }

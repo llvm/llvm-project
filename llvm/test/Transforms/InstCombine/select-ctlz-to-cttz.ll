@@ -60,8 +60,7 @@ define i32 @select_clz_to_ctz_extra_use(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_extra_use(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[A]]
-; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[AND]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[SUB1:%.*]] = xor i32 [[LZ]], 31
+; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    call void @use(i32 [[SUB1]])
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[COND]]

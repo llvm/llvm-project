@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr decltype(auto) iter_move(const iterator& i)
 //    noexcept(noexcept(invoke(i.parent_->fun_, *i.current_)))

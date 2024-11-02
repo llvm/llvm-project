@@ -1,0 +1,10 @@
+# RUN: llvm-mc --mdis %s -triple=mips-unknown-linux 2>&1 | FileCheck %s
+
+# CHECK: j	<imm:80478376>
+0x09 0x33 0x00 0x2a
+# CHECK: addi	<reg:$13>, <reg:$9>, <imm:26322>
+0x21 0x2d 0x66 0xd2
+# CHECK: xor	<reg:$18>, <reg:$4>, <reg:$fp>
+0x00 0x9e 0x90 0x26
+# CHECK: lwr	<reg:$zero>, <mem:<imm:-19147>(<reg:$gp>)>
+0x9b 0x80 0xb5 0x35

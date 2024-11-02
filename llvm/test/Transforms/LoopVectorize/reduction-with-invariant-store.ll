@@ -513,3 +513,50 @@ body:
 exit:
   ret void
 }
+
+define void @reduc_store_invariant_addr_not_hoisted(i32* %dst, i32* readonly %src) {
+; CHECK-LABEL: @reduc_store_invariant_addr_not_hoisted
+; CHECK-NOT: vector.body:
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, i32* %src, i64 %iv
+  %0 = load i32, i32* %gep.src, align 4
+  %add = add nsw i32 %sum, %0
+  %gep.dst = getelementptr inbounds i32, i32* %dst, i64 42
+  store i32 %add, i32* %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Make sure we can vectorize loop with a non-reduction value stored to an
+; invariant address that is calculated inside loop.
+define i32 @non_reduc_store_invariant_addr_not_hoisted(i32* %dst, i32* readonly %src) {
+; CHECK-LABEL: @non_reduc_store_invariant_addr_not_hoisted
+; CHECK: vector.body:
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, i32* %src, i64 %iv
+  %0 = load i32, i32* %gep.src, align 4
+  %add = add nsw i32 %sum, %0
+  %gep.dst = getelementptr inbounds i32, i32* %dst, i64 42
+  store i32 0, i32* %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:                                             ; preds = %for.body
+  %add.lcssa = phi i32 [ %add, %for.body ]
+  ret i32 %add.lcssa
+}

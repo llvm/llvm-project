@@ -1,6 +1,6 @@
 # RUN: %{python} %s
 
-# Verify that each list of private submodules in libcxx/include/module.modulemap
+# Verify that each list of private submodules in libcxx/include/module.modulemap.in
 # is maintained in alphabetical order.
 
 import os
@@ -10,7 +10,7 @@ import re
 if __name__ == '__main__':
     libcxx_test_libcxx_lint = os.path.dirname(os.path.abspath(__file__))
     libcxx = os.path.abspath(os.path.join(libcxx_test_libcxx_lint, '../../..'))
-    modulemap_name = os.path.join(libcxx, 'include/module.modulemap')
+    modulemap_name = os.path.join(libcxx, 'include/module.modulemap.in')
     assert os.path.isfile(modulemap_name)
 
     okay = True
@@ -31,12 +31,12 @@ if __name__ == '__main__':
                     pass
                 else:
                     okay = False
-                    print("LINE DOESN'T MATCH REGEX in libcxx/include/module.modulemap!")
+                    print("LINE DOESN'T MATCH REGEX in libcxx/include/module.modulemap.in!")
                     print(line)
                 # Check that these lines are alphabetized.
                 if (prevline is not None) and (line < prevline):
                     okay = False
-                    print('LINES OUT OF ORDER in libcxx/include/module.modulemap!')
+                    print('LINES OUT OF ORDER in libcxx/include/module.modulemap.in!')
                     print(prevline)
                     print(line)
                 prevline = line

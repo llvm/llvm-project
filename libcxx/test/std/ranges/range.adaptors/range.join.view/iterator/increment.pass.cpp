@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr iterator& operator++();
 // constexpr void operator++(int);
 // constexpr iterator operator++(int)
-//            requires ref-is-glvalue && forward_­range<Base> &&
+//            requires ref-is-glvalue && forward_range<Base> &&
 //                     forward_range<range_reference_t<Base>>;
 
 #include <cassert>
@@ -38,8 +37,9 @@ constexpr bool test() {
   }
 
   {
-    ValueView<int> children[4] = {ValueView(buffer1[0]), ValueView(buffer1[1]), ValueView(buffer2[0]), ValueView(buffer2[1])};
-    std::ranges::join_view jv(ValueView<ValueView<int>>{children});
+    using IntView = ValueView<int>;
+    IntView children[4] = {IntView(buffer1[0]), IntView(buffer1[1]), IntView(buffer2[0]), IntView(buffer2[1])};
+    std::ranges::join_view jv(ValueView<IntView>{children});
     auto iter = jv.begin();
     for (int i = 1; i < 17; ++i) {
       assert(*iter == i);
@@ -153,8 +153,9 @@ constexpr bool test() {
   }
 
   {
-    ValueView<int> children[4] = {ValueView(buffer1[0]), ValueView(buffer1[1]), ValueView(buffer2[0]), ValueView(buffer2[1])};
-    std::ranges::join_view jv(ValueView<ValueView<int>>{children});
+    using IntView = ValueView<int>;
+    IntView children[4] = {IntView(buffer1[0]), IntView(buffer1[1]), IntView(buffer2[0]), IntView(buffer2[1])};
+    std::ranges::join_view jv(ValueView<IntView>{children});
     auto iter = jv.begin();
     for (int i = 2; i < 17; ++i) {
       assert(*++iter == i);
@@ -187,7 +188,7 @@ constexpr bool test() {
   }
 
   {
-    // !forward_­range<Base>
+    // !forward_range<Base>
     BufferView<int*> inners[2] = {buffer1[0], buffer1[1]};
     using Outer = SimpleInputCommonOuter<BufferView<int*>>;
     std::ranges::join_view jv{Outer(inners)};

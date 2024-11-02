@@ -44,7 +44,6 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB1_1: # %for_loop599
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    cmpq $65536, %rdi # imm = 0x10000
 ; AVX-NEXT:    setl %al
 ; AVX-NEXT:    vmovd %eax, %xmm2

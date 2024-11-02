@@ -110,7 +110,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vcmp_ulez_v4i32(<4 x i32> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_ulez_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u32 cs, q0, zr
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.u32 cs, q3, q0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -229,7 +230,8 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vcmp_ulez_v8i16(<8 x i16> %src, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vcmp_ulez_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u16 cs, q0, zr
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.u16 cs, q3, q0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -348,7 +350,8 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vcmp_ulez_v16i8(<16 x i8> %src, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vcmp_ulez_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u8 cs, q0, zr
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.u8 cs, q3, q0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -489,7 +492,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vcmp_r_ugez_v4i32(<4 x i32> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_r_ugez_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u32 cs, q0, zr
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.u32 cs, q3, q0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -608,7 +612,8 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vcmp_r_ugez_v8i16(<8 x i16> %src, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vcmp_r_ugez_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u16 cs, q0, zr
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.u16 cs, q3, q0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -727,7 +732,8 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vcmp_r_ugez_v16i8(<16 x i8> %src, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vcmp_r_ugez_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.u8 cs, q0, zr
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vcmp.u8 cs, q3, q0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:

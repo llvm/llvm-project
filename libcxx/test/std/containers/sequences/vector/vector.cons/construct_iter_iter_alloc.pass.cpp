@@ -26,7 +26,7 @@
 #endif
 
 template <class C, class Iterator, class A>
-void test(Iterator first, Iterator last, const A& a) {
+TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last, const A& a) {
   C c(first, last, a);
   LIBCPP_ASSERT(c.__invariants());
   assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
@@ -40,16 +40,16 @@ void test(Iterator first, Iterator last, const A& a) {
 
 template <class T>
 struct implicit_conv_allocator : min_allocator<T> {
-  implicit_conv_allocator(void*) {}
-  implicit_conv_allocator(const implicit_conv_allocator&) = default;
+  TEST_CONSTEXPR implicit_conv_allocator(void*) {}
+  TEST_CONSTEXPR implicit_conv_allocator(const implicit_conv_allocator&) = default;
 
   template <class U>
-  implicit_conv_allocator(implicit_conv_allocator<U>) {}
+  TEST_CONSTEXPR implicit_conv_allocator(implicit_conv_allocator<U>) {}
 };
 
 #endif
 
-void basic_tests() {
+TEST_CONSTEXPR_CXX20 void basic_tests() {
   {
     int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
     int* an = a + sizeof(a) / sizeof(a[0]);
@@ -86,7 +86,7 @@ void basic_tests() {
 #endif
 }
 
-void emplaceable_concept_tests() {
+TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -162,9 +162,18 @@ void test_ctor_under_alloc() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
   basic_tests();
   emplaceable_concept_tests(); // See PR34898
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
   test_ctor_under_alloc();
 
   return 0;

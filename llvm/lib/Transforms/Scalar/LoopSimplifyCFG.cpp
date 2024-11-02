@@ -371,7 +371,8 @@ private:
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {
-        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+        SE.forgetBlockAndLoopDispositions(I);
+        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
         I->eraseFromParent();
       }
 
@@ -416,6 +417,7 @@ private:
           DTU.applyUpdates(DTUpdates);
         DTUpdates.clear();
         formLCSSARecursively(*FixLCSSALoop, DT, &LI, &SE);
+        SE.forgetBlockAndLoopDispositions();
       }
     }
 
@@ -474,7 +476,7 @@ private:
     NumLoopBlocksDeleted += DeadLoopBlocks.size();
   }
 
-  /// Constant-fold terminators of blocks acculumated in FoldCandidates into the
+  /// Constant-fold terminators of blocks accumulated in FoldCandidates into the
   /// unconditional branches.
   void foldTerminators() {
     for (BasicBlock *BB : FoldCandidates) {
@@ -576,12 +578,27 @@ public:
       return false;
     }
 
+    // TODO: Tokens may breach LCSSA form by default. However, the transform for
+    // dead exit blocks requires LCSSA form to be maintained for all values,
+    // tokens included, otherwise it may break use-def dominance (see PR56243).
+    if (!DeadExitBlocks.empty() && !L.isLCSSAForm(DT, /*IgnoreTokens*/ false)) {
+      assert(L.isLCSSAForm(DT, /*IgnoreTokens*/ true) &&
+             "LCSSA broken not by tokens?");
+      LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
+                        << Header->getName()
+                        << ": tokens uses potentially break LCSSA form.\n");
+      return false;
+    }
+
     SE.forgetTopmostLoop(&L);
     // Dump analysis results.
     LLVM_DEBUG(dump());
 
     LLVM_DEBUG(dbgs() << "Constant-folding " << FoldCandidates.size()
                       << " terminators in loop " << Header->getName() << "\n");
+
+    if (!DeadLoopBlocks.empty())
+      SE.forgetBlockAndLoopDispositions();
 
     // Make the actual transforms.
     handleDeadExits();
@@ -643,7 +660,8 @@ static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI,
 }
 
 static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
-                                        LoopInfo &LI, MemorySSAUpdater *MSSAU) {
+                                        LoopInfo &LI, MemorySSAUpdater *MSSAU,
+                                        ScalarEvolution &SE) {
   bool Changed = false;
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   // Copy blocks into a temporary array to avoid iterator invalidation issues
@@ -670,6 +688,9 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
     Changed = true;
   }
 
+  if (Changed)
+    SE.forgetBlockAndLoopDispositions();
+
   return Changed;
 }
 
@@ -685,7 +706,7 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
     return true;
 
   // Eliminate unconditional branches by merging blocks into their predecessors.
-  Changed |= mergeBlocksIntoPredecessors(L, DT, LI, MSSAU);
+  Changed |= mergeBlocksIntoPredecessors(L, DT, LI, MSSAU, SE);
 
   if (Changed)
     SE.forgetTopmostLoop(&L);
@@ -701,8 +722,7 @@ PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
     MSSAU = MemorySSAUpdater(AR.MSSA);
   bool DeleteCurrentLoop = false;
   if (!simplifyLoopCFG(L, AR.DT, AR.LI, AR.SE,
-                       MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-                       DeleteCurrentLoop))
+                       MSSAU ? MSSAU.getPointer() : nullptr, DeleteCurrentLoop))
     return PreservedAnalyses::all();
 
   if (DeleteCurrentLoop)
@@ -736,9 +756,9 @@ public:
     if (MSSAA && VerifyMemorySSA)
       MSSAU->getMemorySSA()->verifyMemorySSA();
     bool DeleteCurrentLoop = false;
-    bool Changed = simplifyLoopCFG(
-        *L, DT, LI, SE, MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-        DeleteCurrentLoop);
+    bool Changed =
+        simplifyLoopCFG(*L, DT, LI, SE, MSSAU ? MSSAU.getPointer() : nullptr,
+                        DeleteCurrentLoop);
     if (DeleteCurrentLoop)
       LPM.markLoopAsDeleted(*L);
     return Changed;

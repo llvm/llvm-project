@@ -139,9 +139,9 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
     }
     if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return *s;
+    if (Optional<std::string> s = findFile(dir, name + ".lib"))
+       return *s;
     if (!bStatic) {
-      if (Optional<std::string> s = findFile(dir, name + ".lib"))
-        return *s;
       if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll"))
         return *s;
       if (Optional<std::string> s = findFile(dir, name + ".dll"))
@@ -323,6 +323,9 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (args.hasFlag(OPT_disable_tsaware, OPT_tsaware, false))
     add("-tsaware:no");
 
+  if (args.hasFlag(OPT_disable_reloc_section, OPT_enable_reloc_section, false))
+    add("-fixed");
+
   if (args.hasFlag(OPT_no_insert_timestamp, OPT_insert_timestamp, false))
     add("-timestamp:0");
 
@@ -376,6 +379,26 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       error("unknown parameter: -m" + s);
   }
 
+  if (args.hasFlag(OPT_guard_cf, OPT_no_guard_cf, false)) {
+    if (args.hasFlag(OPT_guard_longjmp, OPT_no_guard_longjmp, true))
+      add("-guard:cf,longjmp");
+    else
+      add("-guard:cf,nolongjmp");
+  } else if (args.hasFlag(OPT_guard_longjmp, OPT_no_guard_longjmp, false)) {
+    auto *a = args.getLastArg(OPT_guard_longjmp);
+    warn("parameter " + a->getSpelling() +
+         " only takes effect when used with --guard-cf");
+  }
+
+  if (auto *a = args.getLastArg(OPT_error_limit)) {
+    int n;
+    StringRef s = a->getValue();
+    if (s.getAsInteger(10, n))
+      error(a->getSpelling() + ": number expected, but got " + s);
+    else
+      add("-errorlimit:" + s);
+  }
+
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
 
@@ -395,6 +418,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-delayload:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_wrap))
     add("-wrap:" + StringRef(a->getValue()));
+  for (auto *a : args.filtered(OPT_exclude_symbols))
+    add("-exclude-symbols:" + StringRef(a->getValue()));
 
   std::vector<StringRef> searchPaths;
   for (auto *a : args.filtered(OPT_L)) {

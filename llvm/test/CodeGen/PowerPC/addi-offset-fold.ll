@@ -10,14 +10,12 @@ entry:
   %a = alloca %struct.S0, align 8
   %a.coerce.fca.0.extract = extractvalue [2 x i64] %a.coerce, 0
   %a.coerce.fca.1.extract = extractvalue [2 x i64] %a.coerce, 1
-  %a.0.a.0..sroa_cast = bitcast %struct.S0* %a to i64*
-  store i64 %a.coerce.fca.0.extract, i64* %a.0.a.0..sroa_cast, align 8
+  store i64 %a.coerce.fca.0.extract, ptr %a, align 8
   %tmp.sroa.2.0.extract.trunc = trunc i64 %a.coerce.fca.1.extract to i8
-  %a.8.a.8..sroa_idx = getelementptr inbounds %struct.S0, %struct.S0* %a, i64 0, i32 1, i64 4
-  store i8 %tmp.sroa.2.0.extract.trunc, i8* %a.8.a.8..sroa_idx, align 8
-  %a.4.a.4..sroa_idx = getelementptr inbounds %struct.S0, %struct.S0* %a, i64 0, i32 1
-  %a.4.a.4..sroa_cast = bitcast [5 x i8]* %a.4.a.4..sroa_idx to i40*
-  %a.4.a.4.bf.load = load i40, i40* %a.4.a.4..sroa_cast, align 4
+  %a.8.a.8..sroa_idx = getelementptr inbounds %struct.S0, ptr %a, i64 0, i32 1, i64 4
+  store i8 %tmp.sroa.2.0.extract.trunc, ptr %a.8.a.8..sroa_idx, align 8
+  %a.4.a.4..sroa_idx = getelementptr inbounds %struct.S0, ptr %a, i64 0, i32 1
+  %a.4.a.4.bf.load = load i40, ptr %a.4.a.4..sroa_idx, align 4
   %bf.lshr = lshr i40 %a.4.a.4.bf.load, 31
   %bf.lshr.tr = trunc i40 %bf.lshr to i32
   %bf.cast = and i32 %bf.lshr.tr, 127

@@ -64,8 +64,7 @@ using namespace llvm;
 #define DEBUG_TYPE "memcpyopt"
 
 static cl::opt<bool> EnableMemCpyOptWithoutLibcalls(
-    "enable-memcpyopt-without-libcalls", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore,
+    "enable-memcpyopt-without-libcalls", cl::Hidden,
     cl::desc("Enable memcpyopt even when libcalls are disabled"));
 
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");
@@ -96,7 +95,7 @@ struct MemsetRange {
   Value *StartPtr;
 
   /// Alignment - The known alignment of the first store.
-  unsigned Alignment;
+  MaybeAlign Alignment;
 
   /// TheStores - The actual stores that make up this range.
   SmallVector<Instruction*, 16> TheStores;
@@ -178,16 +177,16 @@ public:
     TypeSize StoreSize = DL.getTypeStoreSize(SI->getOperand(0)->getType());
     assert(!StoreSize.isScalable() && "Can't track scalable-typed stores");
     addRange(OffsetFromFirst, StoreSize.getFixedSize(), SI->getPointerOperand(),
-             SI->getAlign().value(), SI);
+             SI->getAlign(), SI);
   }
 
   void addMemSet(int64_t OffsetFromFirst, MemSetInst *MSI) {
     int64_t Size = cast<ConstantInt>(MSI->getLength())->getZExtValue();
-    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getDestAlignment(), MSI);
+    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getDestAlign(), MSI);
   }
 
-  void addRange(int64_t Start, int64_t Size, Value *Ptr,
-                unsigned Alignment, Instruction *Inst);
+  void addRange(int64_t Start, int64_t Size, Value *Ptr, MaybeAlign Alignment,
+                Instruction *Inst);
 };
 
 } // end anonymous namespace
@@ -196,7 +195,7 @@ public:
 /// new range for the specified store at the specified offset, merging into
 /// existing ranges as appropriate.
 void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
-                            unsigned Alignment, Instruction *Inst) {
+                            MaybeAlign Alignment, Instruction *Inst) {
   int64_t End = Start+Size;
 
   range_iterator I = partition_point(
@@ -332,16 +331,27 @@ void MemCpyOptPass::eraseInstruction(Instruction *I) {
 }
 
 // Check for mod or ref of Loc between Start and End, excluding both boundaries.
-// Start and End must be in the same block
+// Start and End must be in the same block.
+// If SkippedLifetimeStart is provided, skip over one clobbering lifetime.start
+// intrinsic and store it inside SkippedLifetimeStart.
 static bool accessedBetween(AliasAnalysis &AA, MemoryLocation Loc,
                             const MemoryUseOrDef *Start,
-                            const MemoryUseOrDef *End) {
+                            const MemoryUseOrDef *End,
+                            Instruction **SkippedLifetimeStart = nullptr) {
   assert(Start->getBlock() == End->getBlock() && "Only local supported");
   for (const MemoryAccess &MA :
        make_range(++Start->getIterator(), End->getIterator())) {
-    if (isModOrRefSet(AA.getModRefInfo(cast<MemoryUseOrDef>(MA).getMemoryInst(),
-                                       Loc)))
+    Instruction *I = cast<MemoryUseOrDef>(MA).getMemoryInst();
+    if (isModOrRefSet(AA.getModRefInfo(I, Loc))) {
+      auto *II = dyn_cast<IntrinsicInst>(I);
+      if (II && II->getIntrinsicID() == Intrinsic::lifetime_start &&
+          SkippedLifetimeStart && !*SkippedLifetimeStart) {
+        *SkippedLifetimeStart = I;
+        continue;
+      }
+
       return true;
+    }
   }
   return false;
 }
@@ -504,7 +514,7 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     StartPtr = Range.StartPtr;
 
     AMemSet = Builder.CreateMemSet(StartPtr, ByteVal, Range.End - Range.Start,
-                                   MaybeAlign(Range.Alignment));
+                                   Range.Alignment);
     LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
                                                    : Range.TheStores) dbgs()
                                               << *SI << '\n';
@@ -547,9 +557,17 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // Keep track of the arguments of all instruction we plan to lift
   // so we can make sure to lift them as well if appropriate.
   DenseSet<Instruction*> Args;
-  if (auto *Ptr = dyn_cast<Instruction>(SI->getPointerOperand()))
-    if (Ptr->getParent() == SI->getParent())
-      Args.insert(Ptr);
+  auto AddArg = [&](Value *Arg) {
+    auto *I = dyn_cast<Instruction>(Arg);
+    if (I && I->getParent() == SI->getParent()) {
+      // Cannot hoist user of P above P
+      if (I == P) return false;
+      Args.insert(I);
+    }
+    return true;
+  };
+  if (!AddArg(SI->getPointerOperand()))
+    return false;
 
   // Instruction to lift before P.
   SmallVector<Instruction *, 8> ToLift{SI};
@@ -613,14 +631,9 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
     }
 
     ToLift.push_back(C);
-    for (unsigned k = 0, e = C->getNumOperands(); k != e; ++k)
-      if (auto *A = dyn_cast<Instruction>(C->getOperand(k))) {
-        if (A->getParent() == SI->getParent()) {
-          // Cannot hoist user of P above P
-          if(A == P) return false;
-          Args.insert(A);
-        }
-      }
+    for (Value *Op : C->operands())
+      if (!AddArg(Op))
+        return false;
   }
 
   // Find MSSA insertion point. Normally P will always have a corresponding
@@ -774,7 +787,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           LI, SI, SI->getPointerOperand()->stripPointerCasts(),
           LI->getPointerOperand()->stripPointerCasts(),
           DL.getTypeStoreSize(SI->getOperand(0)->getType()),
-          commonAlignment(SI->getAlign(), LI->getAlign()), GetCall);
+          std::min(SI->getAlign(), LI->getAlign()), GetCall);
       if (changed) {
         eraseInstruction(SI);
         eraseInstruction(LI);
@@ -911,8 +924,9 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Check that nothing touches the dest of the copy between
   // the call and the store/memcpy.
+  Instruction *SkippedLifetimeStart = nullptr;
   if (accessedBetween(*AA, DestLoc, MSSA->getMemoryAccess(C),
-                      MSSA->getMemoryAccess(cpyStore))) {
+                      MSSA->getMemoryAccess(cpyStore), &SkippedLifetimeStart)) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer modified after call\n");
     return false;
   }
@@ -921,11 +935,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // trap.  Otherwise the transform is invalid since it might cause a trap
   // to occur earlier than it otherwise would.
   if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
-                                          DL, C, DT)) {
+                                          DL, C, AC, DT)) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
   }
-
 
   // Make sure that nothing can observe cpyDest being written early. There are
   // a number of cases to consider:
@@ -942,7 +955,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   //     renders accesses from other threads undefined.
   //     TODO: This is currently not checked.
   if (mayBeVisibleThroughUnwinding(cpyDest, C, cpyStore)) {
-    LLVM_DEBUG(dbgs() << "Call Slot: Dest may be visible through unwinding");
+    LLVM_DEBUG(dbgs() << "Call Slot: Dest may be visible through unwinding\n");
     return false;
   }
 
@@ -951,8 +964,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   bool isDestSufficientlyAligned = srcAlign <= cpyAlign;
   // If dest is not aligned enough and we can't increase its alignment then
   // bail out.
-  if (!isDestSufficientlyAligned && !isa<AllocaInst>(cpyDest))
+  if (!isDestSufficientlyAligned && !isa<AllocaInst>(cpyDest)) {
+    LLVM_DEBUG(dbgs() << "Call Slot: Dest not sufficiently aligned\n");
     return false;
+  }
 
   // Check that src is not accessed except via the call and the memcpy.  This
   // guarantees that it holds only undefined values when passed in (so the final
@@ -1089,6 +1104,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
     cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+  }
+
+  if (SkippedLifetimeStart) {
+    SkippedLifetimeStart->moveBefore(C);
+    MSSAU->moveBefore(MSSA->getMemoryAccess(SkippedLifetimeStart),
+                      MSSA->getMemoryAccess(C));
   }
 
   // Update AA metadata
@@ -1240,14 +1261,14 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   }
 
   // By default, create an unaligned memset.
-  unsigned Align = 1;
+  Align Alignment = Align(1);
   // If Dest is aligned, and SrcSize is constant, use the minimum alignment
   // of the sum.
-  const unsigned DestAlign =
-      std::max(MemSet->getDestAlignment(), MemCpy->getDestAlignment());
+  const Align DestAlign = std::max(MemSet->getDestAlign().valueOrOne(),
+                                   MemCpy->getDestAlign().valueOrOne());
   if (DestAlign > 1)
     if (auto *SrcSizeC = dyn_cast<ConstantInt>(SrcSize))
-      Align = MinAlign(SrcSizeC->getZExtValue(), DestAlign);
+      Alignment = commonAlignment(DestAlign, SrcSizeC->getZExtValue());
 
   IRBuilder<> Builder(MemCpy);
 
@@ -1266,11 +1287,11 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
   unsigned DestAS = Dest->getType()->getPointerAddressSpace();
   Instruction *NewMemSet = Builder.CreateMemSet(
-      Builder.CreateGEP(Builder.getInt8Ty(),
-                        Builder.CreatePointerCast(Dest,
-                                                  Builder.getInt8PtrTy(DestAS)),
-                        SrcSize),
-      MemSet->getOperand(1), MemsetLen, MaybeAlign(Align));
+      Builder.CreateGEP(
+          Builder.getInt8Ty(),
+          Builder.CreatePointerCast(Dest, Builder.getInt8PtrTy(DestAS)),
+          SrcSize),
+      MemSet->getOperand(1), MemsetLen, Alignment);
 
   assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy)) &&
          "MemCpy must be a MemoryDef");

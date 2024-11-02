@@ -226,6 +226,7 @@ private:
   const object::MachOObjectFile &Obj;
   std::unique_ptr<LinkGraph> G;
 
+  bool SubsectionsViaSymbols = false;
   DenseMap<unsigned, NormalizedSection> IndexToSection;
   Section *CommonSection = nullptr;
 

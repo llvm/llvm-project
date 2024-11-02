@@ -31,7 +31,7 @@ public:
 
   virtual ~MLInlineAdvisor() = default;
 
-  void onPassEntry() override;
+  void onPassEntry(LazyCallGraph::SCC *SCC) override;
   void onPassExit(LazyCallGraph::SCC *SCC) override;
 
   int64_t getIRSize(Function &F) const {
@@ -44,7 +44,6 @@ public:
   int64_t getLocalCalls(Function &F);
   const MLModelRunner &getModelRunner() const { return *ModelRunner.get(); }
   FunctionPropertiesInfo &getCachedFPI(Function &) const;
-  const LoopInfo &getLoopInfo(Function &F) const;
 
 protected:
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
@@ -66,13 +65,14 @@ protected:
 
 private:
   int64_t getModuleIRSize() const;
+  std::unique_ptr<InlineAdvice>
+  getSkipAdviceIfUnreachableCallsite(CallBase &CB);
+  void print(raw_ostream &OS) const override;
 
-  void print(raw_ostream &OS) const override {
-    OS << "[MLInlineAdvisor] Nodes: " << NodeCount << " Edges: " << EdgeCount
-       << "\n";
-  }
-
-  mutable DenseMap<const Function *, FunctionPropertiesInfo> FPICache;
+  // Using std::map to benefit from its iterator / reference non-invalidating
+  // semantics, which make it easy to use `getCachedFPI` results from multiple
+  // calls without needing to copy to avoid invalidation effects.
+  mutable std::map<const Function *, FunctionPropertiesInfo> FPICache;
 
   LazyCallGraph &CG;
 
@@ -83,7 +83,7 @@ private:
   std::map<const LazyCallGraph::Node *, unsigned> FunctionLevels;
   const int32_t InitialIRSize = 0;
   int32_t CurrentIRSize = 0;
-  std::deque<const LazyCallGraph::Node *> NodesInLastSCC;
+  llvm::SmallPtrSet<const LazyCallGraph::Node *, 1> NodesInLastSCC;
   DenseSet<const LazyCallGraph::Node *> AllNodes;
   bool ForceStop = false;
 };
@@ -107,10 +107,10 @@ public:
   const int64_t CallerIRSize;
   const int64_t CalleeIRSize;
   const int64_t CallerAndCalleeEdges;
+  void updateCachedCallerFPI(FunctionAnalysisManager &FAM) const;
 
 private:
   void reportContextForRemark(DiagnosticInfoOptimizationBase &OR);
-  void updateCachedCallerFPI();
   MLInlineAdvisor *getAdvisor() const {
     return static_cast<MLInlineAdvisor *>(Advisor);
   };

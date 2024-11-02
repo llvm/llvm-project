@@ -17,8 +17,7 @@ namespace {
 
 class TestClient : public GDBRemoteCommunication {
 public:
-  TestClient()
-      : GDBRemoteCommunication("test.client", "test.client.listener") {}
+  TestClient() : GDBRemoteCommunication() {}
 
   PacketResult ReadPacket(StringExtractorGDBRemote &response) {
     return GDBRemoteCommunication::ReadPacket(response, std::chrono::seconds(1),
@@ -39,7 +38,7 @@ protected:
 
   bool Write(llvm::StringRef packet) {
     ConnectionStatus status;
-    return server.Write(packet.data(), packet.size(), status, nullptr) ==
+    return server.WriteAll(packet.data(), packet.size(), status, nullptr) ==
            packet.size();
   }
 };

@@ -98,7 +98,7 @@ module asm "\09.previous\09\09\09\09\09"
 ; Function Attrs: nounwind
 define void @__alloc_pages_nodemask() #0 {
 entry:
-  %0 = call i64 asm sideeffect "ld${1:U}${1:X} $0,$1", "=r,*m"(i64* elementtype(i64) undef)
+  %0 = call i64 asm sideeffect "ld${1:U}${1:X} $0,$1", "=r,*m"(ptr elementtype(i64) undef)
   br i1 undef, label %do.body.lr.ph.i.i.i, label %zone_page_state_snapshot.exit.i.i
 ; CHECK: ld 3, 0(3)
 
@@ -107,10 +107,10 @@ do.body.lr.ph.i.i.i:                              ; preds = %entry
 
 do.body.i.i.i:                                    ; preds = %do.body.i.i.i, %do.body.lr.ph.i.i.i
   %x.022.i.i.i = phi i64 [ %0, %do.body.lr.ph.i.i.i ], [ %add7.i.i.i, %do.body.i.i.i ]
-  %1 = load i8, i8* undef, align 1
+  %1 = load i8, ptr undef, align 1
   %conv.i.i458.i = sext i8 %1 to i64
   %add7.i.i.i = add i64 %x.022.i.i.i, %conv.i.i458.i
-  %2 = load i32, i32* @nr_cpu_ids, align 4
+  %2 = load i32, ptr @nr_cpu_ids, align 4
   %cmp.i1.i.i = icmp ult i32 0, %2
   br i1 %cmp.i1.i.i, label %do.body.i.i.i, label %zone_page_state_snapshot.exit.i.i
 

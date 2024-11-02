@@ -24,7 +24,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
 is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
 
 template <class _Tp>
-inline constexpr bool is_aggregate_v = is_aggregate<_Tp>::value;
+inline constexpr bool is_aggregate_v = __is_aggregate(_Tp);
 
 #endif // _LIBCPP_STD_VER > 14
 

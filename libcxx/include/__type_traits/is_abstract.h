@@ -23,7 +23,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_abstract
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-inline constexpr bool is_abstract_v = is_abstract<_Tp>::value;
+inline constexpr bool is_abstract_v = __is_abstract(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

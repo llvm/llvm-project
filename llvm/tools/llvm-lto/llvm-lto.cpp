@@ -71,7 +71,7 @@ static cl::opt<char>
     OptLevel("O",
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
                       "(default = '-O2')"),
-             cl::Prefix, cl::ZeroOrMore, cl::init('2'), cl::cat(LTOCategory));
+             cl::Prefix, cl::init('2'), cl::cat(LTOCategory));
 
 static cl::opt<bool>
     IndexStats("thinlto-index-stats",
@@ -210,12 +210,12 @@ static cl::opt<std::string> OutputFilename("o", cl::init(""),
 static cl::list<std::string> ExportedSymbols(
     "exported-symbol",
     cl::desc("List of symbols to export from the resulting object file"),
-    cl::ZeroOrMore, cl::cat(LTOCategory));
+    cl::cat(LTOCategory));
 
 static cl::list<std::string>
     DSOSymbols("dso-symbol",
                cl::desc("Symbol to put in the symtab in the resulting dso"),
-               cl::ZeroOrMore, cl::cat(LTOCategory));
+               cl::cat(LTOCategory));
 
 static cl::opt<bool> ListSymbolsOnly(
     "list-symbols-only", cl::init(false),
@@ -260,6 +260,10 @@ static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
                      cl::desc("Print pass management debugging information"),
                      cl::cat(LTOCategory));
+
+static cl::opt<bool>
+    LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
+                     cl::desc("Save the IR before running optimizations"));
 
 namespace {
 
@@ -1066,9 +1070,12 @@ int main(int argc, char **argv) {
   CodeGen.setAttrs(codegen::getMAttrs());
 
   if (auto FT = codegen::getExplicitFileType())
-    CodeGen.setFileType(FT.getValue());
+    CodeGen.setFileType(*FT);
 
   if (!OutputFilename.empty()) {
+    if (LTOSaveBeforeOpt)
+      CodeGen.setSaveIRBeforeOptPath(OutputFilename + ".0.preopt.bc");
+
     if (SaveLinkedModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".linked.bc";

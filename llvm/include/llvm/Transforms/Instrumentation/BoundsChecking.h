@@ -22,10 +22,6 @@ struct BoundsCheckingPass : PassInfoMixin<BoundsCheckingPass> {
   static bool isRequired() { return true; }
 };
 
-
-/// Legacy pass creation function for the above pass.
-FunctionPass *createBoundsCheckingLegacyPass();
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_INSTRUMENTATION_BOUNDSCHECKING_H

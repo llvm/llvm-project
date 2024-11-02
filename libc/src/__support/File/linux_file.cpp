@@ -11,7 +11,8 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 
 #include <errno.h>
-#include <fcntl.h>       // For mode_t and other flags to the open syscall
+#include <fcntl.h> // For mode_t and other flags to the open syscall
+#include <stdio.h>
 #include <stdlib.h>      // For malloc
 #include <sys/syscall.h> // For syscall numbers
 
@@ -21,7 +22,7 @@ namespace {
 
 size_t write_func(File *, const void *, size_t);
 size_t read_func(File *, void *, size_t);
-int seek_func(File *, long, int);
+long seek_func(File *, long, int);
 int close_func(File *);
 int flush_func(File *);
 
@@ -52,7 +53,7 @@ namespace {
 
 size_t write_func(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_write, lf->get_fd(), data, size);
+  long ret = __llvm_libc::syscall_impl(SYS_write, lf->get_fd(), data, size);
   if (ret < 0) {
     errno = -ret;
     return 0;
@@ -62,7 +63,7 @@ size_t write_func(File *f, const void *data, size_t size) {
 
 size_t read_func(File *f, void *buf, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_read, lf->get_fd(), buf, size);
+  long ret = __llvm_libc::syscall_impl(SYS_read, lf->get_fd(), buf, size);
   if (ret < 0) {
     errno = -ret;
     return 0;
@@ -70,14 +71,16 @@ size_t read_func(File *f, void *buf, size_t size) {
   return ret;
 }
 
-int seek_func(File *f, long offset, int whence) {
+long seek_func(File *f, long offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
+  long result;
 #ifdef SYS_lseek
-  long ret = __llvm_libc::syscall(SYS_lseek, lf->get_fd(), offset, whence);
+  long ret = __llvm_libc::syscall_impl(SYS_lseek, lf->get_fd(), offset, whence);
+  result = ret;
 #elif defined(SYS__llseek)
   long result;
-  long ret = __llvm_libc::syscall(SYS__lseek, lf->get_fd(), offset >> 32,
-                                  offset, &result, whence);
+  long ret = __llvm_libc::syscall_impl(SYS__llseek, lf->get_fd(), offset >> 32,
+                                       offset, &result, whence);
 #else
 #error "lseek and _llseek syscalls not available to perform a seek operation."
 #endif
@@ -86,12 +89,12 @@ int seek_func(File *f, long offset, int whence) {
     errno = -ret;
     return -1;
   }
-  return 0;
+  return result;
 }
 
 int close_func(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_close, lf->get_fd());
+  long ret = __llvm_libc::syscall_impl(SYS_close, lf->get_fd());
   if (ret < 0) {
     errno = -ret;
     return -1;
@@ -101,7 +104,7 @@ int close_func(File *f) {
 
 int flush_func(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_fsync, lf->get_fd());
+  long ret = __llvm_libc::syscall_impl(SYS_fsync, lf->get_fd());
   if (ret < 0) {
     errno = -ret;
     return -1;
@@ -143,10 +146,10 @@ File *openfile(const char *path, const char *mode) {
       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall(SYS_open, path, open_flags, OPEN_MODE);
+  int fd = __llvm_libc::syscall_impl(SYS_open, path, open_flags, OPEN_MODE);
 #elif defined(SYS_openat)
-  int fd =
-      __llvm_libc::syscall(SYS_openat, AT_FDCWD, path, open_flags, OPEN_MODE);
+  int fd = __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, path, open_flags,
+                                     OPEN_MODE);
 #else
 #error "SYS_open and SYS_openat syscalls not available to perform a file open."
 #endif
@@ -158,24 +161,30 @@ File *openfile(const char *path, const char *mode) {
 
   void *buffer = malloc(File::DEFAULT_BUFFER_SIZE);
   auto *file = reinterpret_cast<LinuxFile *>(malloc(sizeof(LinuxFile)));
-  LinuxFile::init(
-      file, fd, buffer, File::DEFAULT_BUFFER_SIZE,
-      0, // TODO: Set the correct buffer mode when buffer mode is available.
-      true, modeflags);
+  LinuxFile::init(file, fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true,
+                  modeflags);
   return file;
 }
 
-// TODO: Use the appropriate buffering modes for the standard streams below
-// the different buffering modes are available.
+int get_fileno(File *f) {
+  auto *lf = reinterpret_cast<LinuxFile *>(f);
+  return lf->get_fd();
+}
+
+constexpr size_t STDIN_BUFFER_SIZE = 512;
+char stdin_buffer[STDIN_BUFFER_SIZE];
+static LinuxFile StdIn(0, stdin_buffer, STDIN_BUFFER_SIZE, _IOFBF, false,
+                       File::ModeFlags(File::OpenMode::READ));
+File *stdin = &StdIn;
+
 constexpr size_t STDOUT_BUFFER_SIZE = 1024;
 char stdout_buffer[STDOUT_BUFFER_SIZE];
-static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, 0, false,
+static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, _IOLBF, false,
                         File::ModeFlags(File::OpenMode::APPEND));
 File *stdout = &StdOut;
 
-constexpr size_t STDERR_BUFFER_SIZE = 1024;
-char stderr_buffer[STDERR_BUFFER_SIZE];
-static LinuxFile StdErr(2, stderr_buffer, STDERR_BUFFER_SIZE, 0, false,
+constexpr size_t STDERR_BUFFER_SIZE = 0;
+static LinuxFile StdErr(2, nullptr, STDERR_BUFFER_SIZE, _IONBF, false,
                         File::ModeFlags(File::OpenMode::APPEND));
 File *stderr = &StdErr;
 

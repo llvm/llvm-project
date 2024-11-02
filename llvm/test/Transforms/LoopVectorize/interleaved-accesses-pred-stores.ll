@@ -38,8 +38,9 @@ define void @interleaved_with_cond_store_0(%pair *%p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP2_1:%.*]] = getelementptr inbounds [[PAIR:%.*]], %pair* [[P:%.*]], i64 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
-; CHECK-NEXT:    store i64 [[TMP6]], i64* [[TMP2]], align 8
+; CHECK-NEXT:    store i64 [[TMP6]], i64* [[TMP2_1]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
@@ -136,8 +137,9 @@ define void @interleaved_with_cond_store_1(%pair *%p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [[PAIR:%.*]], %pair* [[P:%.*]], i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
-; CHECK-NEXT:    store i64 [[TMP9]], i64* [[TMP3]], align 8
+; CHECK-NEXT:    store i64 [[TMP9]], i64* [[PTR0]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1
@@ -246,8 +248,9 @@ define void @interleaved_with_cond_store_2(%pair *%p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[PAIR]], %pair* [[P]], i64 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
-; CHECK-NEXT:    store i64 [[TMP9]], i64* [[TMP5]], align 8
+; CHECK-NEXT:    store i64 [[TMP9]], i64* [[PTR1]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP7]], i64 1

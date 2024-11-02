@@ -9,6 +9,8 @@
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "VPlanTestBase.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -45,12 +47,11 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   EXPECT_EQ(0u, Entry->getNumPredecessors());
   EXPECT_EQ(1u, Entry->getNumSuccessors());
-  EXPECT_EQ(nullptr, Entry->getCondBit());
 
   // Check that the region following the preheader is a single basic-block
   // region (loop).
   VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
+  EXPECT_EQ(8u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -91,7 +92,6 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(Instruction::ICmp, ICmp->getOpcode());
   EXPECT_EQ(2u, ICmp->getNumOperands());
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
-  EXPECT_EQ(VecBB->getCondBit(), ICmp);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
@@ -122,8 +122,8 @@ compound=true
       "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
-      "No successors\l" +
-      "CondBit: ir\<%exitcond\> (vector.body)\l"
+      "  EMIT branch-on-cond ir\<%exitcond\>\l" +
+      "No successors\l"
     ]
   }
   N1 -> N3 [ label="" ltail=cluster_N2]
@@ -135,11 +135,12 @@ compound=true
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
 #endif
-
+  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfo TLI(TLII);
   SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanTransforms::VPInstructionsToVPRecipes(
       LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
-      DeadInstructions, *SE);
+      DeadInstructions, *SE, TLI);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -167,9 +168,11 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   auto Plan = buildHCFG(LoopHeader);
 
   SmallPtrSet<Instruction *, 1> DeadInstructions;
+  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfo TLI(TLII);
   VPlanTransforms::VPInstructionsToVPRecipes(
       LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
-      DeadInstructions, *SE);
+      DeadInstructions, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -179,7 +182,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   // Check that the region following the preheader is a single basic-block
   // region (loop).
   VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
+  EXPECT_EQ(8u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -193,6 +196,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_EQ(VecBB->end(), Iter);
 }
 

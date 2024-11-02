@@ -278,8 +278,7 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   if (!State)
     return;
 
-  auto ArraySizeNL = ArraySize.getAs<NonLoc>();
-  if (!ArraySizeNL) {
+  if (!isa<NonLoc>(ArraySize)) {
     // Array size could not be determined but state may contain new assumptions.
     C.addTransition(State);
     return;
@@ -289,7 +288,7 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   if (VD) {
     State =
         setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
-                         ArraySize.castAs<DefinedOrUnknownSVal>(), SVB);
+                         ArraySize.castAs<NonLoc>(), SVB);
   }
 
   // Remember our assumptions!

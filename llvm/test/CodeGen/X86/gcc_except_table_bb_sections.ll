@@ -6,9 +6,9 @@
 ; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnux32 -relocation-model=pic -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-PIC,CHECK-PIC-SMALL,CHECK-PIC-X32
 ; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=medium < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MEDIUM,CHECK-PIC,CHECK-PIC-MEDIUM,CHECK-PIC-X64
 ; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PIC,CHECK-PIC-LARGE,CHECK-PIC-X64
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
-define i32 @main() uwtable optsize ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 ; Verify that each basic block section gets its own LSDA exception symbol.
 ;
 ; CHECK-LABEL:        main:
@@ -97,16 +97,16 @@ entry:
           to label %try.cont unwind label %lpad
 
 lpad:
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-          catch i8* bitcast (i8** @_ZTIi to i8*)
+          catch ptr @_ZTIi
   br label %eh.resume
 
 try.cont:
   ret i32 0
 
 eh.resume:
-  resume { i8*, i32 } %0
+  resume { ptr, i32 } %0
 }
 
 declare void @_Z1fv() optsize

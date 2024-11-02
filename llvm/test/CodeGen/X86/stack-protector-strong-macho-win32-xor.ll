@@ -6,7 +6,7 @@ target triple = "x86_64-pc-windows-macho"
 ; This test checks that on Win32 MachO targets we don't xor the cookie with rbp before checking.
 
 @.str = private unnamed_addr constant [15 x i8] c"Hello World!\0A \00", align 1
-define dso_local i32 @main(i32 %argc, i8** %argv, ...) #0 {
+define dso_local i32 @main(i32 %argc, ptr %argv, ...) #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -32,18 +32,18 @@ define dso_local i32 @main(i32 %argc, i8** %argv, ...) #0 {
 ; CHECK-NEXT:    retq
 entry:
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
+  %argv.addr = alloca ptr, align 8
   %Buffer = alloca [256 x i8], align 16
-  store i32 %argc, i32* %argc.addr, align 4
-  store i8** %argv, i8*** %argv.addr, align 8
-  %0 = load i32, i32* %argc.addr, align 4
+  store i32 %argc, ptr %argc.addr, align 4
+  store ptr %argv, ptr %argv.addr, align 8
+  %0 = load i32, ptr %argc.addr, align 4
   %idxprom = sext i32 %0 to i64
-  %arrayidx = getelementptr inbounds [256 x i8], [256 x i8]* %Buffer, i64 0, i64 %idxprom
-  store i8 1, i8* %arrayidx, align 1
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str, i64 0, i64 0))
+  %arrayidx = getelementptr inbounds [256 x i8], ptr %Buffer, i64 0, i64 %idxprom
+  store i8 1, ptr %arrayidx, align 1
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
   ret i32 0
 }
-declare dso_local i32 @printf(i8*, ...) #1
+declare dso_local i32 @printf(ptr, ...) #1
 
 attributes #0 = { sspstrong "frame-pointer"="all" "stack-protector-buffer-size"="8"}
 attributes #1 = { "frame-pointer"="all" "stack-protector-buffer-size"="8" }

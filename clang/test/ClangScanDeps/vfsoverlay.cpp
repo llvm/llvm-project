@@ -8,8 +8,8 @@
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/vfsoverlay_cdb.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | \
-// RUN:   FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -mode preprocess-dependency-directives -j 1 | FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -mode preprocess                       -j 1 | FileCheck %s
 
 #include "not_real.h"
 

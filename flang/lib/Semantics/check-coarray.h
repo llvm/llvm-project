@@ -19,6 +19,9 @@ struct ChangeTeamStmt;
 struct CoarrayAssociation;
 struct FormTeamStmt;
 struct ImageSelector;
+struct SyncAllStmt;
+struct SyncImagesStmt;
+struct SyncMemoryStmt;
 struct SyncTeamStmt;
 } // namespace Fortran::parser
 
@@ -28,6 +31,9 @@ class CoarrayChecker : public virtual BaseChecker {
 public:
   CoarrayChecker(SemanticsContext &context) : context_{context} {}
   void Leave(const parser::ChangeTeamStmt &);
+  void Leave(const parser::SyncAllStmt &);
+  void Leave(const parser::SyncImagesStmt &);
+  void Leave(const parser::SyncMemoryStmt &);
   void Leave(const parser::SyncTeamStmt &);
   void Leave(const parser::ImageSelector &);
   void Leave(const parser::FormTeamStmt &);

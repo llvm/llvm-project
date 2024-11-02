@@ -11,7 +11,7 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_by_mod_name.json > %t.cdb
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl_by_mod_name.json > %t_clangcl.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
 // RUN:   -mode preprocess-dependency-directives -module-name=header1 > %t.result
 // RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK %s
 //

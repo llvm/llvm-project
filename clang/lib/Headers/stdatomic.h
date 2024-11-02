@@ -17,7 +17,8 @@
  * explicitly disallows `stdatomic.h` in the C mode via an `#error`.  Fallback
  * to the clang resource header until that is fully supported.
  */
-#if __STDC_HOSTED__ && __has_include_next(<stdatomic.h>) && !defined(_MSC_VER)
+#if __STDC_HOSTED__ &&                                                         \
+    __has_include_next(<stdatomic.h>) && !(defined(_MSC_VER) && !defined(__cplusplus))
 # include_next <stdatomic.h>
 #else
 
@@ -44,7 +45,8 @@ extern "C" {
 /* 7.17.2 Initialization */
 
 #define ATOMIC_VAR_INIT(value) (value)
-#if (__STDC_VERSION__ >= 201710L || __cplusplus >= 202002L) &&                 \
+#if ((defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201710L) ||             \
+     (defined(__cplusplus) && __cplusplus >= 202002L)) &&                      \
     !defined(_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS)
 /* ATOMIC_VAR_INIT was deprecated in C17 and C++20. */
 #pragma clang deprecated(ATOMIC_VAR_INIT)
@@ -158,10 +160,6 @@ typedef _Atomic(uintmax_t)          atomic_uintmax_t;
 typedef struct atomic_flag { atomic_bool _Value; } atomic_flag;
 
 #define ATOMIC_FLAG_INIT { 0 }
-#if __cplusplus >= 202002L && !defined(_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS)
-/* ATOMIC_FLAG_INIT was deprecated in C++20 but is not deprecated in C. */
-#pragma clang deprecated(ATOMIC_FLAG_INIT)
-#endif
 
 /* These should be provided by the libc implementation. */
 #ifdef __cplusplus

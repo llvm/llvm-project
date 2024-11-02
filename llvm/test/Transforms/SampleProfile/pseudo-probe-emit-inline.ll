@@ -10,17 +10,18 @@
 ; RUN: llvm-mc -filetype=obj <%t1 -o %t4
 ; RUN: llvm-objdump --section-headers  %t4 | FileCheck %s --check-prefix=CHECK-OBJ
 
+
 define dso_local void @foo2() !dbg !7 {
 ; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1:]], i64 1, i32 0, i64 -1), !dbg ![[#]]
-; CHECK-ASM: .pseudoprobe	[[#GUID1:]] 1 0 0
+; CHECK-ASM: .pseudoprobe	[[#GUID1:]] 1 0 0 foo2
   ret void, !dbg !10
 }
 
 define dso_local void @foo() #0 !dbg !11 {
 ; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0, i64 -1), !dbg ![[#]]
 ; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1]], i64 1, i32 0, i64 -1), !dbg ![[#DL1:]]
-; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0
-; CHECK-ASM: .pseudoprobe	[[#GUID1]] 1 0 0 @ [[#GUID2]]:2
+; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0 foo
+; CHECK-ASM: .pseudoprobe	[[#GUID1]] 1 0 0 @ [[#GUID2]]:2 foo
   call void @foo2(), !dbg !12
   ret void, !dbg !13
 }
@@ -29,9 +30,9 @@ define dso_local i32 @entry() !dbg !14 {
 ; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID3:]], i64 1, i32 0, i64 -1), !dbg ![[#]]
 ; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 1, i32 0, i64 -1), !dbg ![[#DL2:]]
 ; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1]], i64 1, i32 0, i64 -1), !dbg ![[#DL3:]]
-; CHECK-ASM: .pseudoprobe	[[#GUID3:]] 1 0 0
-; CHECK-ASM: .pseudoprobe	[[#GUID2]] 1 0 0 @ [[#GUID3]]:2
-; CHECK-ASM: .pseudoprobe	[[#GUID1]] 1 0 0 @ [[#GUID3]]:2 @ [[#GUID2]]:2
+; CHECK-ASM: .pseudoprobe	[[#GUID3:]] 1 0 0 entry
+; CHECK-ASM: .pseudoprobe	[[#GUID2]] 1 0 0 @ [[#GUID3]]:2 entry
+; CHECK-ASM: .pseudoprobe	[[#GUID1]] 1 0 0 @ [[#GUID3]]:2 @ [[#GUID2]]:2 entry
   call void @foo(), !dbg !18
   ret i32 0, !dbg !19
 }
@@ -71,6 +72,7 @@ define dso_local i32 @entry() !dbg !14 {
 
 ; CHECK-OBJ: .pseudo_probe_desc
 ; CHECK-OBJ: .pseudo_probe
+; CHECK-OBJ-NOT: .rela.pseudo_probe
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

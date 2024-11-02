@@ -94,7 +94,7 @@ declare i8 @switch_result()
 declare i8* @g()
 declare i8* @h()
 
-attributes #0 = { "coroutine.presplit"="1" }
+attributes #0 = { presplitcoroutine }
 attributes #1 = { argmemonly nounwind readonly }
 attributes #2 = { nounwind }
 attributes #3 = { nounwind readnone }

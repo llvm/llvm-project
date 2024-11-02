@@ -5,7 +5,7 @@
 define i32 @t1(i32 %t, i32 %val) nounwind {
 ; X32-LABEL: t1:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shll %cl, %eax
 ; X32-NEXT:    retl
@@ -25,7 +25,7 @@ define i32 @t1(i32 %t, i32 %val) nounwind {
 define i32 @t2(i32 %t, i32 %val) nounwind {
 ; X32-LABEL: t2:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shll %cl, %eax
 ; X32-NEXT:    retl
@@ -47,7 +47,7 @@ define i32 @t2(i32 %t, i32 %val) nounwind {
 define void @t3(i16 %t) nounwind {
 ; X32-LABEL: t3:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    sarw %cl, X
 ; X32-NEXT:    retl
 ;
@@ -58,9 +58,9 @@ define void @t3(i16 %t) nounwind {
 ; X64-NEXT:    sarw %cl, X(%rip)
 ; X64-NEXT:    retq
        %shamt = and i16 %t, 31
-       %tmp = load i16, i16* @X
+       %tmp = load i16, ptr @X
        %tmp1 = ashr i16 %tmp, %shamt
-       store i16 %tmp1, i16* @X
+       store i16 %tmp1, ptr @X
        ret void
 }
 
@@ -68,7 +68,7 @@ define i64 @t4(i64 %t, i64 %val) nounwind {
 ; X32-LABEL: t4:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl %esi, %edx
@@ -99,7 +99,7 @@ define i64 @t5(i64 %t, i64 %val) nounwind {
 ; X32-LABEL: t5:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl %esi, %edx
@@ -126,12 +126,12 @@ define i64 @t5(i64 %t, i64 %val) nounwind {
        ret i64 %res
 }
 
-define void @t5ptr(i64 %t, i64* %ptr) nounwind {
+define void @t5ptr(i64 %t, ptr %ptr) nounwind {
 ; X32-LABEL: t5ptr:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl (%eax), %edx
 ; X32-NEXT:    movl 4(%eax), %edi
@@ -157,15 +157,15 @@ define void @t5ptr(i64 %t, i64* %ptr) nounwind {
 ; X64-NEXT:    shrq %cl, (%rsi)
 ; X64-NEXT:    retq
        %shamt = and i64 %t, 191
-       %tmp = load i64, i64* %ptr
+       %tmp = load i64, ptr %ptr
        %tmp1 = lshr i64 %tmp, %shamt
-       store i64 %tmp1, i64* %ptr
+       store i64 %tmp1, ptr %ptr
        ret void
 }
 
 
 ; rdar://11866926
-define i64 @t6(i64 %key, i64* nocapture %val) nounwind {
+define i64 @t6(i64 %key, ptr nocapture %val) nounwind {
 ; X32-LABEL: t6:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %edi
@@ -194,7 +194,7 @@ define i64 @t6(i64 %key, i64* nocapture %val) nounwind {
 ; X64-NEXT:    andq %rdi, %rax
 ; X64-NEXT:    retq
   %shr = lshr i64 %key, 3
-  %1 = load i64, i64* %val, align 8
+  %1 = load i64, ptr %val, align 8
   %sub = add i64 %1, 2305843009213693951
   %and = and i64 %sub, %shr
   ret i64 %and

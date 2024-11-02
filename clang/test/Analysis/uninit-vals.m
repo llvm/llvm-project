@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-store=region -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-output=text -verify %s
 
 typedef unsigned int NSUInteger;
 typedef __typeof__(sizeof(int)) size_t;

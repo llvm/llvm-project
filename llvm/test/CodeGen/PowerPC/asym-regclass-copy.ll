@@ -10,9 +10,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 declare double @gen_random(double) #0
 
-declare void @benchmark_heapsort(i32 signext, double* nocapture) #0
+declare void @benchmark_heapsort(i32 signext, ptr nocapture) #0
 
-define signext i32 @main(i32 signext %argc, i8** nocapture %argv) #0 {
+define signext i32 @main(i32 signext %argc, ptr nocapture %argv) #0 {
 entry:
   br i1 undef, label %cond.true, label %cond.end
 
@@ -24,7 +24,7 @@ cond.end:                                         ; preds = %cond.true, %entry
   %add = add i32 %cond, 1
   %conv = sext i32 %add to i64
   %mul = shl nsw i64 %conv, 3
-  %call1 = tail call noalias i8* @malloc(i64 %mul) #1
+  %call1 = tail call noalias ptr @malloc(i64 %mul) #1
   br i1 undef, label %for.end, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %cond.end
@@ -44,13 +44,13 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   ret i32 0
 }
 
-declare noalias i8* @malloc(i64) #0
+declare noalias ptr @malloc(i64) #0
 
-declare signext i32 @printf(i8* nocapture, ...) #0
+declare signext i32 @printf(ptr nocapture, ...) #0
 
-declare void @free(i8* nocapture) #0
+declare void @free(ptr nocapture) #0
 
-declare i64 @strtol(i8*, i8** nocapture, i32 signext) #0
+declare i64 @strtol(ptr, ptr nocapture, i32 signext) #0
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }

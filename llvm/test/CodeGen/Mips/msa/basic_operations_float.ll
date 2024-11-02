@@ -193,10 +193,9 @@ define float @extract_v4f32_vidx() nounwind {
   ; O32-DAG: lw [[PTR_I:\$[0-9]+]], %got(i32)(
   ; N32-DAG: lw [[PTR_I:\$[0-9]+]], %got_disp(i32)(
   ; N64-DAG: ld [[PTR_I:\$[0-9]+]], %got_disp(i32)(
-  ; ALL-DAG: lw [[IDX:\$[0-9]+]], 0([[PTR_I]])
 
   %4 = extractelement <4 x float> %2, i32 %3
-  ; ALL-DAG: splat.w $w0, [[R1]][[[IDX]]]
+  ; ALL-DAG: splat.w $w0, [[R1]][[[PTR_I]]]
 
   ret float %4
 }
@@ -259,10 +258,9 @@ define double @extract_v2f64_vidx() nounwind {
   ; O32-DAG: lw [[PTR_I:\$[0-9]+]], %got(i32)(
   ; N32-DAG: lw [[PTR_I:\$[0-9]+]], %got_disp(i32)(
   ; N64-DAG: ld [[PTR_I:\$[0-9]+]], %got_disp(i32)(
-  ; ALL-DAG: lw [[IDX:\$[0-9]+]], 0([[PTR_I]])
 
   %4 = extractelement <2 x double> %2, i32 %3
-  ; ALL-DAG: splat.d $w0, [[R1]][[[IDX]]]
+  ; ALL-DAG: splat.d $w0, [[R1]][[[PTR_I]]]
 
   ret double %4
 }
@@ -312,11 +310,10 @@ define void @insert_v4f32_vidx(float %a) nounwind {
   ; O32-DAG: lw [[PTR_I:\$[0-9]+]], %got(i32)(
   ; N32-DAG: lw [[PTR_I:\$[0-9]+]], %got_disp(i32)(
   ; N64-DAG: ld [[PTR_I:\$[0-9]+]], %got_disp(i32)(
-  ; ALL-DAG: lw [[IDX:\$[0-9]+]], 0([[PTR_I]])
 
   %3 = insertelement <4 x float> %1, float %a, i32 %2
   ; float argument passed in $f12
-  ; ALL-DAG: sll [[BIDX:\$[0-9]+]], [[IDX]], 2
+  ; ALL-DAG: sll [[BIDX:\$[0-9]+]], [[PTR_I]], 2
   ; ALL-DAG: sld.b [[R1]], [[R1]][[[BIDX]]]
   ; ALL-DAG: insve.w [[R1]][0], $w12[0]
   ; ALL-DAG: neg [[NIDX:\$[0-9]+]], [[BIDX]]
@@ -341,11 +338,10 @@ define void @insert_v2f64_vidx(double %a) nounwind {
   ; O32-DAG: lw [[PTR_I:\$[0-9]+]], %got(i32)(
   ; N32-DAG: lw [[PTR_I:\$[0-9]+]], %got_disp(i32)(
   ; N64-DAG: ld [[PTR_I:\$[0-9]+]], %got_disp(i32)(
-  ; ALL-DAG: lw [[IDX:\$[0-9]+]], 0([[PTR_I]])
 
   %3 = insertelement <2 x double> %1, double %a, i32 %2
   ; double argument passed in $f12
-  ; ALL-DAG: sll [[BIDX:\$[0-9]+]], [[IDX]], 3
+  ; ALL-DAG: sll [[BIDX:\$[0-9]+]], [[PTR_I]], 3
   ; ALL-DAG: sld.b [[R1]], [[R1]][[[BIDX]]]
   ; ALL-DAG: insve.d [[R1]][0], $w12[0]
   ; ALL-DAG: neg [[NIDX:\$[0-9]+]], [[BIDX]]

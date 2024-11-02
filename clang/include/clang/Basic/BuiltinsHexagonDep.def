@@ -1720,6 +1720,8 @@ TARGET_BUILTIN(__builtin_HEXAGON_V6_vscattermwq_128B, "vV128biiV32iV32i", "", HV
 
 // V66 HVX Instructions.
 
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vaddcarryo, "V16iV16iV16iv*", "", HVXV66)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vaddcarryo_128B, "V32iV32iV32iv*", "", HVXV66)
 TARGET_BUILTIN(__builtin_HEXAGON_V6_vaddcarrysat, "V16iV16iV16iV64b", "", HVXV66)
 TARGET_BUILTIN(__builtin_HEXAGON_V6_vaddcarrysat_128B, "V32iV32iV32iV128b", "", HVXV66)
 TARGET_BUILTIN(__builtin_HEXAGON_V6_vasr_into, "V32iV32iV16iV16i", "", HVXV66)
@@ -1728,6 +1730,8 @@ TARGET_BUILTIN(__builtin_HEXAGON_V6_vrotr, "V16iV16iV16i", "", HVXV66)
 TARGET_BUILTIN(__builtin_HEXAGON_V6_vrotr_128B, "V32iV32iV32i", "", HVXV66)
 TARGET_BUILTIN(__builtin_HEXAGON_V6_vsatdw, "V16iV16iV16i", "", HVXV66)
 TARGET_BUILTIN(__builtin_HEXAGON_V6_vsatdw_128B, "V32iV32iV32i", "", HVXV66)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vsubcarryo, "V16iV16iV16iv*", "", HVXV66)
+TARGET_BUILTIN(__builtin_HEXAGON_V6_vsubcarryo_128B, "V32iV32iV32iv*", "", HVXV66)
 
 // V68 HVX Instructions.
 

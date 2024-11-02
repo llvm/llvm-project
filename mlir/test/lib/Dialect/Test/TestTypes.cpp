@@ -408,21 +408,18 @@ void TestDialect::registerTypes() {
 Type TestDialect::parseTestType(AsmParser &parser,
                                 SetVector<Type> &stack) const {
   StringRef typeTag;
-  if (failed(parser.parseKeyword(&typeTag)))
-    return Type();
-
   {
     Type genType;
-    auto parseResult = generatedTypeParser(parser, typeTag, genType);
-    if (parseResult.hasValue())
+    auto parseResult = generatedTypeParser(parser, &typeTag, genType);
+    if (parseResult.has_value())
       return genType;
   }
 
   {
     Type dynType;
     auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
-    if (parseResult.hasValue()) {
-      if (succeeded(parseResult.getValue()))
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
         return dynType;
       return Type();
     }

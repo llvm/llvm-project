@@ -25,14 +25,14 @@ define i64 @f1(i64 %a, i64 %b, float %f1, float %f2) #0 {
 }
 
 ; Check the low end of the KEB range.
-define i64 @f2(i64 %a, i64 %b, float %f1, float *%ptr) #0 {
+define i64 @f2(i64 %a, i64 %b, float %f1, ptr %ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
-  %f2 = load float, float *%ptr
+  %f2 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"oeq",
@@ -42,15 +42,15 @@ define i64 @f2(i64 %a, i64 %b, float %f1, float *%ptr) #0 {
 }
 
 ; Check the high end of the aligned KEB range.
-define i64 @f3(i64 %a, i64 %b, float %f1, float *%base) #0 {
+define i64 @f3(i64 %a, i64 %b, float %f1, ptr %base) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: keb %f0, 4092(%r4)
 ; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 1023
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 1023
+  %f2 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"oeq",
@@ -61,7 +61,7 @@ define i64 @f3(i64 %a, i64 %b, float %f1, float *%base) #0 {
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define i64 @f4(i64 %a, i64 %b, float %f1, float *%base) #0 {
+define i64 @f4(i64 %a, i64 %b, float %f1, ptr %base) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r4, 4096
 ; CHECK: keb %f0, 0(%r4)
@@ -69,8 +69,8 @@ define i64 @f4(i64 %a, i64 %b, float %f1, float *%base) #0 {
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 1024
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 1024
+  %f2 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"oeq",
@@ -80,7 +80,7 @@ define i64 @f4(i64 %a, i64 %b, float %f1, float *%base) #0 {
 }
 
 ; Check negative displacements, which also need separate address logic.
-define i64 @f5(i64 %a, i64 %b, float %f1, float *%base) #0 {
+define i64 @f5(i64 %a, i64 %b, float %f1, ptr %base) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r4, -4
 ; CHECK: keb %f0, 0(%r4)
@@ -88,8 +88,8 @@ define i64 @f5(i64 %a, i64 %b, float %f1, float *%base) #0 {
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 -1
-  %f2 = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 -1
+  %f2 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"oeq",
@@ -99,7 +99,7 @@ define i64 @f5(i64 %a, i64 %b, float %f1, float *%base) #0 {
 }
 
 ; Check that KEB allows indices.
-define i64 @f6(i64 %a, i64 %b, float %f1, float *%base, i64 %index) #0 {
+define i64 @f6(i64 %a, i64 %b, float %f1, ptr %base, i64 %index) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r5, 2
 ; CHECK: keb %f0, 400(%r1,%r4)
@@ -107,9 +107,9 @@ define i64 @f6(i64 %a, i64 %b, float %f1, float *%base, i64 %index) #0 {
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
-  %ptr1 = getelementptr float, float *%base, i64 %index
-  %ptr2 = getelementptr float, float *%ptr1, i64 100
-  %f2 = load float, float *%ptr2
+  %ptr1 = getelementptr float, ptr %base, i64 %index
+  %ptr2 = getelementptr float, ptr %ptr1, i64 100
+  %f2 = load float, ptr %ptr2
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"oeq",
@@ -119,33 +119,33 @@ define i64 @f6(i64 %a, i64 %b, float %f1, float *%base, i64 %index) #0 {
 }
 
 ; Check that comparisons of spilled values can use KEB rather than KEBR.
-define float @f7(float *%ptr0) #0 {
+define float @f7(ptr %ptr0) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK-SCALAR: keb {{%f[0-9]+}}, 16{{[04]}}(%r15)
 ; CHECK: br %r14
-  %ptr1 = getelementptr float, float *%ptr0, i64 2
-  %ptr2 = getelementptr float, float *%ptr0, i64 4
-  %ptr3 = getelementptr float, float *%ptr0, i64 6
-  %ptr4 = getelementptr float, float *%ptr0, i64 8
-  %ptr5 = getelementptr float, float *%ptr0, i64 10
-  %ptr6 = getelementptr float, float *%ptr0, i64 12
-  %ptr7 = getelementptr float, float *%ptr0, i64 14
-  %ptr8 = getelementptr float, float *%ptr0, i64 16
-  %ptr9 = getelementptr float, float *%ptr0, i64 18
-  %ptr10 = getelementptr float, float *%ptr0, i64 20
+  %ptr1 = getelementptr float, ptr %ptr0, i64 2
+  %ptr2 = getelementptr float, ptr %ptr0, i64 4
+  %ptr3 = getelementptr float, ptr %ptr0, i64 6
+  %ptr4 = getelementptr float, ptr %ptr0, i64 8
+  %ptr5 = getelementptr float, ptr %ptr0, i64 10
+  %ptr6 = getelementptr float, ptr %ptr0, i64 12
+  %ptr7 = getelementptr float, ptr %ptr0, i64 14
+  %ptr8 = getelementptr float, ptr %ptr0, i64 16
+  %ptr9 = getelementptr float, ptr %ptr0, i64 18
+  %ptr10 = getelementptr float, ptr %ptr0, i64 20
 
-  %val0 = load float, float *%ptr0
-  %val1 = load float, float *%ptr1
-  %val2 = load float, float *%ptr2
-  %val3 = load float, float *%ptr3
-  %val4 = load float, float *%ptr4
-  %val5 = load float, float *%ptr5
-  %val6 = load float, float *%ptr6
-  %val7 = load float, float *%ptr7
-  %val8 = load float, float *%ptr8
-  %val9 = load float, float *%ptr9
-  %val10 = load float, float *%ptr10
+  %val0 = load float, ptr %ptr0
+  %val1 = load float, ptr %ptr1
+  %val2 = load float, ptr %ptr2
+  %val3 = load float, ptr %ptr3
+  %val4 = load float, ptr %ptr4
+  %val5 = load float, ptr %ptr5
+  %val6 = load float, ptr %ptr6
+  %val7 = load float, ptr %ptr7
+  %val8 = load float, ptr %ptr8
+  %val9 = load float, ptr %ptr9
+  %val10 = load float, ptr %ptr10
 
   %ret = call float @foo() #0
 
@@ -228,14 +228,14 @@ define i64 @f8(i64 %a, i64 %b, float %f) #0 {
 
 ; Check the comparison can be reversed if that allows KEB to be used,
 ; first with oeq.
-define i64 @f9(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f9(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f9:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"oeq",
@@ -245,14 +245,14 @@ define i64 @f9(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then one.
-define i64 @f10(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f10(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f10:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: blhr %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrnlh %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"one",
@@ -262,14 +262,14 @@ define i64 @f10(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then olt.
-define i64 @f11(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f11(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f11:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bhr %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrnh %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"olt",
@@ -279,14 +279,14 @@ define i64 @f11(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then ole.
-define i64 @f12(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f12(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f12:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bher %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrnhe %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"ole",
@@ -296,14 +296,14 @@ define i64 @f12(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then oge.
-define i64 @f13(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f13(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f13:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bler %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrnle %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"oge",
@@ -313,14 +313,14 @@ define i64 @f13(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then ogt.
-define i64 @f14(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f14(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f14:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: blr %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrnl %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"ogt",
@@ -330,14 +330,14 @@ define i64 @f14(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then ueq.
-define i64 @f15(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f15(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f15:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bnlhr %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrlh %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"ueq",
@@ -347,14 +347,14 @@ define i64 @f15(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then une.
-define i64 @f16(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f16(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f16:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bner %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgre %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"une",
@@ -364,14 +364,14 @@ define i64 @f16(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then ult.
-define i64 @f17(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f17(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f17:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bnler %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrle %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"ult",
@@ -381,14 +381,14 @@ define i64 @f17(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then ule.
-define i64 @f18(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f18(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f18:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bnlr %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrl %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"ule",
@@ -398,14 +398,14 @@ define i64 @f18(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then uge.
-define i64 @f19(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f19(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f19:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bnhr %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrh %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"uge",
@@ -415,14 +415,14 @@ define i64 @f19(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
 }
 
 ; ...then ugt.
-define i64 @f20(i64 %a, i64 %b, float %f2, float *%ptr) #0 {
+define i64 @f20(i64 %a, i64 %b, float %f2, ptr %ptr) #0 {
 ; CHECK-LABEL: f20:
 ; CHECK: keb %f0, 0(%r4)
 ; CHECK-SCALAR-NEXT: bnher %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrhe %r2, %r3
 ; CHECK: br %r14
-  %f1 = load float, float *%ptr
+  %f1 = load float, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2,
                                                metadata !"ugt",

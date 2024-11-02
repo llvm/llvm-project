@@ -6,8 +6,8 @@ target datalayout = "e-p:32:32"
 declare void @foo(...)
 
 define void @test(i64 %X) {
-        %Y = inttoptr i64 %X to i32*            ; <i32*> [#uses=1]
-        call void (...) @foo( i32* %Y )
+        %Y = inttoptr i64 %X to ptr            ; <ptr> [#uses=1]
+        call void (...) @foo( ptr %Y )
         ret void
 }
 

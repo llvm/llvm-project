@@ -45,17 +45,17 @@ static cl::opt<int> OptComputeOut(
     "polly-dependences-computeout",
     cl::desc("Bound the dependence analysis by a maximal amount of "
              "computational steps (0 means no bound)"),
-    cl::Hidden, cl::init(500000), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(500000), cl::cat(PollyCategory));
 
-static cl::opt<bool> LegalityCheckDisabled(
-    "disable-polly-legality", cl::desc("Disable polly legality check"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+static cl::opt<bool>
+    LegalityCheckDisabled("disable-polly-legality",
+                          cl::desc("Disable polly legality check"), cl::Hidden,
+                          cl::cat(PollyCategory));
 
 static cl::opt<bool>
     UseReductions("polly-dependences-use-reductions",
                   cl::desc("Exploit reductions in dependence analysis"),
-                  cl::Hidden, cl::init(true), cl::ZeroOrMore,
-                  cl::cat(PollyCategory));
+                  cl::Hidden, cl::init(true), cl::cat(PollyCategory));
 
 enum AnalysisType { VALUE_BASED_ANALYSIS, MEMORY_BASED_ANALYSIS };
 
@@ -66,8 +66,7 @@ static cl::opt<enum AnalysisType> OptAnalysisType(
                           "Exact dependences without transitive dependences"),
                clEnumValN(MEMORY_BASED_ANALYSIS, "memory-based",
                           "Overapproximation of dependences")),
-    cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+    cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::cat(PollyCategory));
 
 static cl::opt<Dependences::AnalysisLevel> OptAnalysisLevel(
     "polly-dependences-analysis-level",
@@ -80,8 +79,7 @@ static cl::opt<Dependences::AnalysisLevel> OptAnalysisLevel(
                clEnumValN(Dependences::AL_Access, "access-wise",
                           "Memory reference level analysis that distinguish"
                           " access instructions in the same statement")),
-    cl::Hidden, cl::init(Dependences::AL_Statement), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+    cl::Hidden, cl::init(Dependences::AL_Statement), cl::cat(PollyCategory));
 
 //===----------------------------------------------------------------------===//
 
@@ -850,6 +848,11 @@ const Dependences &DependenceAnalysis::Result::recomputeDependences(
   return *D[Level];
 }
 
+void DependenceAnalysis::Result::abandonDependences() {
+  for (std::unique_ptr<Dependences> &Deps : D)
+    Deps.release();
+}
+
 DependenceAnalysis::Result
 DependenceAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
                         ScopStandardAnalysisResults &SAR) {
@@ -890,6 +893,11 @@ DependenceInfo::recomputeDependences(Dependences::AnalysisLevel Level) {
   D[Level].reset(new Dependences(S->getSharedIslCtx(), Level));
   D[Level]->calculateDependences(*S);
   return *D[Level];
+}
+
+void DependenceInfo::abandonDependences() {
+  for (std::unique_ptr<Dependences> &Deps : D)
+    Deps.release();
 }
 
 bool DependenceInfo::runOnScop(Scop &ScopVar) {

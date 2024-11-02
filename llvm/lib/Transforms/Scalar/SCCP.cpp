@@ -91,6 +91,18 @@ static bool isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !isConstant(LV);
 }
 
+static bool canRemoveInstruction(Instruction *I) {
+  if (wouldInstructionBeTriviallyDead(I))
+    return true;
+
+  // Some instructions can be handled but are rejected above. Catch
+  // those cases by falling through to here.
+  // TODO: Mark globals as being constant earlier, so
+  // TODO: wouldInstructionBeTriviallyDead() knows that atomic loads
+  // TODO: are safe to remove.
+  return isa<LoadInst>(I);
+}
+
 static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
@@ -121,7 +133,8 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   // Calls with "clang.arc.attachedcall" implicitly use the return value and
   // those uses cannot be updated with a constant.
   CallBase *CB = dyn_cast<CallBase>(V);
-  if (CB && ((CB->isMustTailCall() && !CB->isSafeToRemove()) ||
+  if (CB && ((CB->isMustTailCall() &&
+              !canRemoveInstruction(CB)) ||
              CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall))) {
     Function *F = CB->getCalledFunction();
 
@@ -141,6 +154,69 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   return true;
 }
 
+/// Try to replace signed instructions with their unsigned equivalent.
+static bool replaceSignedInst(SCCPSolver &Solver,
+                              SmallPtrSetImpl<Value *> &InsertedValues,
+                              Instruction &Inst) {
+  // Determine if a signed value is known to be >= 0.
+  auto isNonNegative = [&Solver](Value *V) {
+    // If this value was constant-folded, it may not have a solver entry.
+    // Handle integers. Otherwise, return false.
+    if (auto *C = dyn_cast<Constant>(V)) {
+      auto *CInt = dyn_cast<ConstantInt>(C);
+      return CInt && !CInt->isNegative();
+    }
+    const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
+    return IV.isConstantRange(/*UndefAllowed=*/false) &&
+           IV.getConstantRange().isAllNonNegative();
+  };
+
+  Instruction *NewInst = nullptr;
+  switch (Inst.getOpcode()) {
+  // Note: We do not fold sitofp -> uitofp here because that could be more
+  // expensive in codegen and may not be reversible in the backend.
+  case Instruction::SExt: {
+    // If the source value is not negative, this is a zext.
+    Value *Op0 = Inst.getOperand(0);
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    break;
+  }
+  case Instruction::AShr: {
+    // If the shifted value is not negative, this is a logical shift right.
+    Value *Op0 = Inst.getOperand(0);
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    break;
+  }
+  case Instruction::SDiv:
+  case Instruction::SRem: {
+    // If both operands are not negative, this is the same as udiv/urem.
+    Value *Op0 = Inst.getOperand(0), *Op1 = Inst.getOperand(1);
+    if (InsertedValues.count(Op0) || InsertedValues.count(Op1) ||
+        !isNonNegative(Op0) || !isNonNegative(Op1))
+      return false;
+    auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
+                                                           : Instruction::URem;
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  // Wire up the new instruction and update state.
+  assert(NewInst && "Expected replacement instruction");
+  NewInst->takeName(&Inst);
+  InsertedValues.insert(NewInst);
+  Inst.replaceAllUsesWith(NewInst);
+  Solver.removeLatticeValueFor(&Inst);
+  Inst.eraseFromParent();
+  return true;
+}
+
 static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
                                  SmallPtrSetImpl<Value *> &InsertedValues,
                                  Statistic &InstRemovedStat,
@@ -150,37 +226,27 @@ static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(Solver, &Inst)) {
-      if (Inst.isSafeToRemove())
+      if (canRemoveInstruction(&Inst))
         Inst.eraseFromParent();
 
       MadeChanges = true;
       ++InstRemovedStat;
-    } else if (isa<SExtInst>(&Inst)) {
-      Value *ExtOp = Inst.getOperand(0);
-      if (isa<Constant>(ExtOp) || InsertedValues.count(ExtOp))
-        continue;
-      const ValueLatticeElement &IV = Solver.getLatticeValueFor(ExtOp);
-      if (!IV.isConstantRange(/*UndefAllowed=*/false))
-        continue;
-      if (IV.getConstantRange().isAllNonNegative()) {
-        auto *ZExt = new ZExtInst(ExtOp, Inst.getType(), "", &Inst);
-        ZExt->takeName(&Inst);
-        InsertedValues.insert(ZExt);
-        Inst.replaceAllUsesWith(ZExt);
-        Solver.removeLatticeValueFor(&Inst);
-        Inst.eraseFromParent();
-        InstReplacedStat++;
-        MadeChanges = true;
-      }
+    } else if (replaceSignedInst(Solver, InsertedValues, Inst)) {
+      MadeChanges = true;
+      ++InstReplacedStat;
     }
   }
   return MadeChanges;
 }
 
+static bool removeNonFeasibleEdges(const SCCPSolver &Solver, BasicBlock *BB,
+                                   DomTreeUpdater &DTU,
+                                   BasicBlock *&NewUnreachableBB);
+
 // runSCCP() - Run the Sparse Conditional Constant Propagation algorithm,
 // and return true if the function was modified.
 static bool runSCCP(Function &F, const DataLayout &DL,
-                    const TargetLibraryInfo *TLI) {
+                    const TargetLibraryInfo *TLI, DomTreeUpdater &DTU) {
   LLVM_DEBUG(dbgs() << "SCCP on function '" << F.getName() << "'\n");
   SCCPSolver Solver(
       DL, [TLI](Function &F) -> const TargetLibraryInfo & { return *TLI; },
@@ -208,13 +274,12 @@ static bool runSCCP(Function &F, const DataLayout &DL,
   // as we cannot modify the CFG of the function.
 
   SmallPtrSet<Value *, 32> InsertedValues;
+  SmallVector<BasicBlock *, 8> BlocksToErase;
   for (BasicBlock &BB : F) {
     if (!Solver.isBlockExecutable(&BB)) {
       LLVM_DEBUG(dbgs() << "  BasicBlock Dead:" << BB);
-
       ++NumDeadBlocks;
-      NumInstRemoved += removeAllNonTerminatorAndEHPadInstructions(&BB).first;
-
+      BlocksToErase.push_back(&BB);
       MadeChanges = true;
       continue;
     }
@@ -223,17 +288,32 @@ static bool runSCCP(Function &F, const DataLayout &DL,
                                         NumInstRemoved, NumInstReplaced);
   }
 
+  // Remove unreachable blocks and non-feasible edges.
+  for (BasicBlock *DeadBB : BlocksToErase)
+    NumInstRemoved += changeToUnreachable(DeadBB->getFirstNonPHI(),
+                                          /*PreserveLCSSA=*/false, &DTU);
+
+  BasicBlock *NewUnreachableBB = nullptr;
+  for (BasicBlock &BB : F)
+    MadeChanges |= removeNonFeasibleEdges(Solver, &BB, DTU, NewUnreachableBB);
+
+  for (BasicBlock *DeadBB : BlocksToErase)
+    if (!DeadBB->hasAddressTaken())
+      DTU.deleteBB(DeadBB);
+
   return MadeChanges;
 }
 
 PreservedAnalyses SCCPPass::run(Function &F, FunctionAnalysisManager &AM) {
   const DataLayout &DL = F.getParent()->getDataLayout();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  if (!runSCCP(F, DL, &TLI))
+  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  if (!runSCCP(F, DL, &TLI, DTU))
     return PreservedAnalyses::all();
 
   auto PA = PreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
 
@@ -256,7 +336,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.setPreservesCFG();
+    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
   // runOnFunction - Run the Sparse Conditional Constant Propagation
@@ -267,7 +347,10 @@ public:
     const DataLayout &DL = F.getParent()->getDataLayout();
     const TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    return runSCCP(F, DL, TLI);
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    DomTreeUpdater DTU(DTWP ? &DTWP->getDomTree() : nullptr,
+                       DomTreeUpdater::UpdateStrategy::Lazy);
+    return runSCCP(F, DL, TLI, DTU);
   }
 };
 
@@ -358,7 +441,19 @@ static bool removeNonFeasibleEdges(const SCCPSolver &Solver, BasicBlock *BB,
           isa<IndirectBrInst>(TI)) &&
          "Terminator must be a br, switch or indirectbr");
 
-  if (FeasibleSuccessors.size() == 1) {
+  if (FeasibleSuccessors.size() == 0) {
+    // Branch on undef/poison, replace with unreachable.
+    SmallPtrSet<BasicBlock *, 8> SeenSuccs;
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    for (BasicBlock *Succ : successors(BB)) {
+      Succ->removePredecessor(BB);
+      if (SeenSuccs.insert(Succ).second)
+        Updates.push_back({DominatorTree::Delete, BB, Succ});
+    }
+    TI->eraseFromParent();
+    new UnreachableInst(BB->getContext(), BB);
+    DTU.applyUpdatesPermissive(Updates);
+  } else if (FeasibleSuccessors.size() == 1) {
     // Replace with an unconditional branch to the only feasible successor.
     BasicBlock *OnlyFeasibleSuccessor = *FeasibleSuccessors.begin();
     SmallVector<DominatorTree::UpdateType, 8> Updates;
@@ -495,21 +590,28 @@ bool llvm::runIPSCCP(
         }
       }
 
-      // If we replaced an argument, the argmemonly and
-      // inaccessiblemem_or_argmemonly attributes do not hold any longer. Remove
-      // them from both the function and callsites.
+      // If we replaced an argument, we may now also access a global (currently
+      // classified as "other" memory). Update memory attribute to reflect this.
       if (ReplacedPointerArg) {
-        AttributeMask AttributesToRemove;
-        AttributesToRemove.addAttribute(Attribute::ArgMemOnly);
-        AttributesToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-        F.removeFnAttrs(AttributesToRemove);
+        auto UpdateAttrs = [&](AttributeList AL) {
+          MemoryEffects ME = AL.getMemoryEffects();
+          if (ME == MemoryEffects::unknown())
+            return AL;
 
+          ME |= MemoryEffects(MemoryEffects::Other,
+                              ME.getModRef(MemoryEffects::ArgMem));
+          return AL.addFnAttribute(
+              F.getContext(),
+              Attribute::getWithMemoryEffects(F.getContext(), ME));
+        };
+
+        F.setAttributes(UpdateAttrs(F.getAttributes()));
         for (User *U : F.users()) {
           auto *CB = dyn_cast<CallBase>(U);
           if (!CB || CB->getCalledFunction() != &F)
             continue;
 
-          CB->removeFnAttrs(AttributesToRemove);
+          CB->setAttributes(UpdateAttrs(CB->getAttributes()));
         }
       }
       MadeChanges |= ReplacedPointerArg;
@@ -625,7 +727,7 @@ bool llvm::runIPSCCP(
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
-  for (auto F : Solver.getMRVFunctionsTracked()) {
+  for (auto *F : Solver.getMRVFunctionsTracked()) {
     assert(F->getReturnType()->isStructTy() &&
            "The return type should be a struct");
     StructType *STy = cast<StructType>(F->getReturnType());
@@ -635,9 +737,9 @@ bool llvm::runIPSCCP(
 
   // Zap all returns which we've identified as zap to change.
   SmallSetVector<Function *, 8> FuncZappedReturn;
-  for (unsigned i = 0, e = ReturnsToZap.size(); i != e; ++i) {
-    Function *F = ReturnsToZap[i]->getParent()->getParent();
-    ReturnsToZap[i]->setOperand(0, UndefValue::get(F->getReturnType()));
+  for (ReturnInst *RI : ReturnsToZap) {
+    Function *F = RI->getParent()->getParent();
+    RI->setOperand(0, UndefValue::get(F->getReturnType()));
     // Record all functions that are zapped.
     FuncZappedReturn.insert(F);
   }
@@ -659,7 +761,7 @@ bool llvm::runIPSCCP(
 
   // If we inferred constant or undef values for globals variables, we can
   // delete the global and any stores that remain to it.
-  for (auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
+  for (const auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
     GlobalVariable *GV = I.first;
     if (isOverdefined(I.second))
       continue;

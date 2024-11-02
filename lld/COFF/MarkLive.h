@@ -11,14 +11,12 @@
 
 #include "lld/Common/LLVM.h"
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 class COFFLinkerContext;
 
 void markLive(COFFLinkerContext &ctx);
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif // LLD_COFF_MARKLIVE_H

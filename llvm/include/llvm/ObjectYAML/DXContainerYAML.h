@@ -16,6 +16,7 @@
 #define LLVM_OBJECTYAML_DXCONTAINERYAML_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
@@ -41,9 +42,42 @@ struct FileHeader {
   Optional<std::vector<uint32_t>> PartOffsets;
 };
 
+struct DXILProgram {
+  uint8_t MajorVersion;
+  uint8_t MinorVersion;
+  uint16_t ShaderKind;
+  Optional<uint32_t> Size;
+  uint16_t DXILMajorVersion;
+  uint16_t DXILMinorVersion;
+  Optional<uint32_t> DXILOffset;
+  Optional<uint32_t> DXILSize;
+  Optional<std::vector<llvm::yaml::Hex8>> DXIL;
+};
+
+#define SHADER_FLAG(Num, Val, Str) bool Val = false;
+struct ShaderFlags {
+  ShaderFlags() = default;
+  ShaderFlags(uint64_t FlagData);
+  uint64_t getEncodedFlags();
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+struct ShaderHash {
+  ShaderHash() = default;
+  ShaderHash(const dxbc::ShaderHash &Data);
+
+  bool IncludesSource;
+  std::vector<llvm::yaml::Hex8> Digest;
+};
+
 struct Part {
+  Part() = default;
+  Part(std::string N, uint32_t S) : Name(N), Size(S) {}
   std::string Name;
   uint32_t Size;
+  Optional<DXILProgram> Program;
+  Optional<ShaderFlags> Flags;
+  Optional<ShaderHash> Hash;
 };
 
 struct Object {
@@ -67,6 +101,18 @@ template <> struct MappingTraits<DXContainerYAML::VersionTuple> {
 
 template <> struct MappingTraits<DXContainerYAML::FileHeader> {
   static void mapping(IO &IO, DXContainerYAML::FileHeader &Header);
+};
+
+template <> struct MappingTraits<DXContainerYAML::DXILProgram> {
+  static void mapping(IO &IO, DXContainerYAML::DXILProgram &Program);
+};
+
+template <> struct MappingTraits<DXContainerYAML::ShaderFlags> {
+  static void mapping(IO &IO, DXContainerYAML::ShaderFlags &Flags);
+};
+
+template <> struct MappingTraits<DXContainerYAML::ShaderHash> {
+  static void mapping(IO &IO, DXContainerYAML::ShaderHash &Hash);
 };
 
 template <> struct MappingTraits<DXContainerYAML::Part> {

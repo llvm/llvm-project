@@ -13,8 +13,8 @@
 
 #include "X86InstrFMA3Info.h"
 #include "X86InstrInfo.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 #include <cassert>
 #include <cstdint>
 

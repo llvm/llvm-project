@@ -41,7 +41,9 @@ subroutine omp_parallel_sections_allocate(x, y)
   !FIRDialect: %[[allocator:.*]] = arith.constant 1 : i32
   !LLVMDialect: %[[allocator:.*]] = llvm.mlir.constant(1 : i32) : i32
   !OMPDialect: omp.parallel {
-  !OMPDialect: omp.sections allocate(%[[allocator]] : i32 -> %{{.*}} : !fir.ref<i32>) {
+  !OMPDialect: omp.sections allocate(
+  !FIRDialect: %[[allocator]] : i32 -> %{{.*}} : !fir.ref<i32>) {
+  !LLVMDialect: %[[allocator]] : i32 -> %{{.*}} : !llvm.ptr<i32>) {
   !$omp parallel sections allocate(omp_high_bw_mem_alloc: x)
     !OMPDialect: omp.section {
     !$omp section

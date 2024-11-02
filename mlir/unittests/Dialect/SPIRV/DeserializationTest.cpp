@@ -43,7 +43,7 @@ protected:
     });
   }
 
-  /// Performs deserialization and returns the constructed spv.module op.
+  /// Performs deserialization and returns the constructed spirv.module op.
   OwningOpRef<spirv::ModuleOp> deserialize() {
     return spirv::deserialize(binary, &context);
   }

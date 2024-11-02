@@ -10,15 +10,15 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: popq %rbp
 ; CHECK: movq %rcx, %rsp
 ; CHECK: retq # eh_return, addr: %rcx
-define i8* @test(i64 %a, i8* %b)  {
+define ptr @test(i64 %a, ptr %b)  {
 entry:
   call void @llvm.eh.unwind.init()
   %foo   = alloca i32
-  call void @llvm.eh.return.i64(i64 %a, i8* %b)
+  call void @llvm.eh.return.i64(i64 %a, ptr %b)
   unreachable
 }
 
-declare void @llvm.eh.return.i64(i64, i8*)
+declare void @llvm.eh.return.i64(i64, ptr)
 declare void @llvm.eh.unwind.init()
 
 @b = common global i32 0, align 4
@@ -29,7 +29,7 @@ declare void @llvm.eh.unwind.init()
 ; CHECK: _Unwind_Resume_or_Rethrow
 define i32 @_Unwind_Resume_or_Rethrow() nounwind uwtable ssp {
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %if.then
 
@@ -38,7 +38,7 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry
   %call = tail call i32 (...) @_Unwind_ForcedUnwind_Phase2() nounwind
-  store i32 %call, i32* @a, align 4
+  store i32 %call, ptr @a, align 4
   %tobool1 = icmp eq i32 %call, 0
   br i1 %tobool1, label %cond.end, label %cond.true
 
@@ -47,7 +47,7 @@ cond.true:                                        ; preds = %if.end
   unreachable
 
 cond.end:                                         ; preds = %if.end
-  tail call void @llvm.eh.return.i64(i64 0, i8* null)
+  tail call void @llvm.eh.return.i64(i64 0, ptr null)
   unreachable
 }
 

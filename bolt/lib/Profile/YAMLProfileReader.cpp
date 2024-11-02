@@ -22,13 +22,9 @@ extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
 
 static llvm::cl::opt<bool>
-IgnoreHash("profile-ignore-hash",
-  cl::desc("ignore hash while reading function profile"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
-
+    IgnoreHash("profile-ignore-hash",
+               cl::desc("ignore hash while reading function profile"),
+               cl::Hidden, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {

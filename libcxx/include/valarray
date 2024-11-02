@@ -357,9 +357,13 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__utility/swap.h>
 #include <cmath>
 #include <cstddef>
-#include <initializer_list>
 #include <new>
 #include <version>
+
+// standard-mandated includes
+
+// [valarray.syn]
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -682,7 +686,7 @@ struct __tanh_expr
 template <class _ValExpr>
 class __slice_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -722,7 +726,7 @@ class __indirect_expr;
 template <class _ValExpr>
 class __shift_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -765,7 +769,7 @@ public:
 template <class _ValExpr>
 class __cshift_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -923,10 +927,14 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 
     // unary operators:
-    valarray       operator+() const;
-    valarray       operator-() const;
-    valarray       operator~() const;
-    valarray<bool> operator!() const;
+    _LIBCPP_INLINE_VISIBILITY
+    __val_expr<_UnaryOp<__unary_plus<_Tp>, const valarray&> >   operator+() const;
+    _LIBCPP_INLINE_VISIBILITY
+    __val_expr<_UnaryOp<negate<_Tp>, const valarray&> >         operator-() const;
+    _LIBCPP_INLINE_VISIBILITY
+    __val_expr<_UnaryOp<__bit_not<_Tp>, const valarray&> >      operator~() const;
+    _LIBCPP_INLINE_VISIBILITY
+    __val_expr<_UnaryOp<logical_not<_Tp>, const valarray&> >    operator!() const;
 
     // computed assignment:
     _LIBCPP_INLINE_VISIBILITY
@@ -1100,7 +1108,7 @@ template<class _Tp, size_t _Size>
 valarray(const _Tp(&)[_Size], size_t) -> valarray<_Tp>;
 #endif
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void valarray<size_t>::resize(size_t, size_t))
+extern template _LIBCPP_FUNC_VIS void valarray<size_t>::resize(size_t, size_t);
 
 template <class _Op, class _Tp>
 struct _UnaryOp<_Op, valarray<_Tp> >
@@ -2236,7 +2244,7 @@ mask_array<_Tp>::operator=(const value_type& __x) const
 template <class _ValExpr>
 class __mask_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -2599,7 +2607,7 @@ indirect_array<_Tp>::operator=(const value_type& __x) const
 template <class _ValExpr>
 class __indirect_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -2639,7 +2647,7 @@ public:
 template<class _ValExpr>
 class __val_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 
     _ValExpr __expr_;
 public:
@@ -3300,63 +3308,39 @@ valarray<_Tp>::operator[](valarray<size_t>&& __vs)
 #endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp>
-valarray<_Tp>
+inline
+__val_expr<_UnaryOp<__unary_plus<_Tp>, const valarray<_Tp>&> >
 valarray<_Tp>::operator+() const
 {
-    valarray<value_type> __r;
-    size_t __n = size();
-    if (__n)
-    {
-        __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
-        for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new ((void*)__r.__end_) value_type(+*__p);
-    }
-    return __r;
+    using _Op = _UnaryOp<__unary_plus<_Tp>, const valarray<_Tp>&>;
+    return __val_expr<_Op>(_Op(__unary_plus<_Tp>(), *this));
 }
 
 template <class _Tp>
-valarray<_Tp>
+inline
+__val_expr<_UnaryOp<negate<_Tp>, const valarray<_Tp>&> >
 valarray<_Tp>::operator-() const
 {
-    valarray<value_type> __r;
-    size_t __n = size();
-    if (__n)
-    {
-        __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
-        for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new ((void*)__r.__end_) value_type(-*__p);
-    }
-    return __r;
+    using _Op = _UnaryOp<negate<_Tp>, const valarray<_Tp>&>;
+    return __val_expr<_Op>(_Op(negate<_Tp>(), *this));
 }
 
 template <class _Tp>
-valarray<_Tp>
+inline
+__val_expr<_UnaryOp<__bit_not<_Tp>, const valarray<_Tp>&> >
 valarray<_Tp>::operator~() const
 {
-    valarray<value_type> __r;
-    size_t __n = size();
-    if (__n)
-    {
-        __r.__begin_ = __r.__end_ = allocator<value_type>().allocate(__n);
-        for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new ((void*)__r.__end_) value_type(~*__p);
-    }
-    return __r;
+    using _Op = _UnaryOp<__bit_not<_Tp>, const valarray<_Tp>&>;
+    return __val_expr<_Op>(_Op(__bit_not<_Tp>(), *this));
 }
 
 template <class _Tp>
-valarray<bool>
+inline
+__val_expr<_UnaryOp<logical_not<_Tp>, const valarray<_Tp>&> >
 valarray<_Tp>::operator!() const
 {
-    valarray<bool> __r;
-    size_t __n = size();
-    if (__n)
-    {
-        __r.__begin_ = __r.__end_ = allocator<bool>().allocate(__n);
-        for (const value_type* __p = __begin_; __n; ++__r.__end_, ++__p, --__n)
-            ::new ((void*)__r.__end_) bool(!*__p);
-    }
-    return __r;
+    using _Op = _UnaryOp<logical_not<_Tp>, const valarray<_Tp>&>;
+    return __val_expr<_Op>(_Op(logical_not<_Tp>(), *this));
 }
 
 template <class _Tp>
@@ -4944,5 +4928,11 @@ end(const valarray<_Tp>& __v)
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <algorithm>
+#  include <concepts>
+#  include <functional>
+#endif
 
 #endif // _LIBCPP_VALARRAY

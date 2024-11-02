@@ -121,6 +121,14 @@ Status TargetList::CreateTargetInternal(
   if (!user_exe_path.empty()) {
     ModuleSpec module_spec(FileSpec(user_exe_path, FileSpec::Style::native));
     FileSystem::Instance().Resolve(module_spec.GetFileSpec());
+
+    // Try to resolve the exe based on PATH and/or platform-specific suffixes,
+    // but only if using the host platform.
+    if (platform_sp->IsHost() &&
+        !FileSystem::Instance().Exists(module_spec.GetFileSpec()))
+      FileSystem::Instance().ResolveExecutableLocation(
+          module_spec.GetFileSpec());
+
     // Resolve the executable in case we are given a path to a application
     // bundle like a .app bundle on MacOSX.
     Host::ResolveExecutableInBundle(module_spec.GetFileSpec());
@@ -208,7 +216,8 @@ Status TargetList::CreateTargetInternal(
   // If we have a valid architecture, make sure the current platform is
   // compatible with that architecture.
   if (!prefer_platform_arch && arch.IsValid()) {
-    if (!platform_sp->IsCompatibleArchitecture(arch, {}, false, nullptr)) {
+    if (!platform_sp->IsCompatibleArchitecture(
+            arch, {}, ArchSpec::CompatibleMatch, nullptr)) {
       platform_sp = platform_list.GetOrCreate(arch, {}, &platform_arch);
       if (platform_sp)
         platform_list.SetSelectedPlatform(platform_sp);
@@ -217,7 +226,8 @@ Status TargetList::CreateTargetInternal(
     // If "arch" isn't valid, yet "platform_arch" is, it means we have an
     // executable file with a single architecture which should be used.
     ArchSpec fixed_platform_arch;
-    if (!platform_sp->IsCompatibleArchitecture(platform_arch, {}, false, nullptr)) {
+    if (!platform_sp->IsCompatibleArchitecture(
+            platform_arch, {}, ArchSpec::CompatibleMatch, nullptr)) {
       platform_sp =
           platform_list.GetOrCreate(platform_arch, {}, &fixed_platform_arch);
       if (platform_sp)
@@ -248,8 +258,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
   ArchSpec arch(specified_arch);
 
   if (arch.IsValid()) {
-    if (!platform_sp ||
-        !platform_sp->IsCompatibleArchitecture(arch, {}, false, nullptr))
+    if (!platform_sp || !platform_sp->IsCompatibleArchitecture(
+                            arch, {}, ArchSpec::CompatibleMatch, nullptr))
       platform_sp =
           debugger.GetPlatformList().GetOrCreate(specified_arch, {}, &arch);
   }
@@ -346,7 +356,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
   }
   if (file.GetDirectory()) {
     FileSpec file_dir;
-    file_dir.GetDirectory() = file.GetDirectory();
+    file_dir.SetDirectory(file.GetDirectory());
     target_sp->AppendExecutableSearchPaths(file_dir);
   }
 
@@ -501,8 +511,7 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
 }
 
 void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
-  lldbassert(std::find(m_target_list.begin(), m_target_list.end(), target_sp) ==
-                 m_target_list.end() &&
+  lldbassert(!llvm::is_contained(m_target_list, target_sp) &&
              "target already exists it the list");
   m_target_list.push_back(std::move(target_sp));
   if (do_select)

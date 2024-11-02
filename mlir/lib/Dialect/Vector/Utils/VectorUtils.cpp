@@ -14,7 +14,7 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -41,56 +41,6 @@ Value mlir::vector::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
   if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
     return b.createOrFold<tensor::DimOp>(loc, source, dim);
   llvm_unreachable("Expected MemRefType or TensorType");
-}
-
-Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
-                                       CombiningKind kind, Value v1, Value v2) {
-  Type t1 = getElementTypeOrSelf(v1.getType());
-  Type t2 = getElementTypeOrSelf(v2.getType());
-  switch (kind) {
-  case CombiningKind::ADD:
-    if (t1.isIntOrIndex() && t2.isIntOrIndex())
-      return b.createOrFold<arith::AddIOp>(loc, v1, v2);
-    else if (t1.isa<FloatType>() && t2.isa<FloatType>())
-      return b.createOrFold<arith::AddFOp>(loc, v1, v2);
-    llvm_unreachable("invalid value types for ADD reduction");
-  case CombiningKind::AND:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::AndIOp>(loc, v1, v2);
-  case CombiningKind::MAXF:
-    assert(t1.isa<FloatType>() && t2.isa<FloatType>() &&
-           "expected float values");
-    return b.createOrFold<arith::MaxFOp>(loc, v1, v2);
-  case CombiningKind::MINF:
-    assert(t1.isa<FloatType>() && t2.isa<FloatType>() &&
-           "expected float values");
-    return b.createOrFold<arith::MinFOp>(loc, v1, v2);
-  case CombiningKind::MAXSI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MaxSIOp>(loc, v1, v2);
-  case CombiningKind::MINSI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MinSIOp>(loc, v1, v2);
-  case CombiningKind::MAXUI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MaxUIOp>(loc, v1, v2);
-  case CombiningKind::MINUI:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::MinUIOp>(loc, v1, v2);
-  case CombiningKind::MUL:
-    if (t1.isIntOrIndex() && t2.isIntOrIndex())
-      return b.createOrFold<arith::MulIOp>(loc, v1, v2);
-    else if (t1.isa<FloatType>() && t2.isa<FloatType>())
-      return b.createOrFold<arith::MulFOp>(loc, v1, v2);
-    llvm_unreachable("invalid value types for MUL reduction");
-  case CombiningKind::OR:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::OrIOp>(loc, v1, v2);
-  case CombiningKind::XOR:
-    assert(t1.isIntOrIndex() && t2.isIntOrIndex() && "expected int values");
-    return b.createOrFold<arith::XOrIOp>(loc, v1, v2);
-  };
-  llvm_unreachable("unknown CombiningKind");
 }
 
 /// Return the number of elements of basis, `0` if empty.
@@ -133,10 +83,8 @@ Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(ArrayRef<int64_t> superShape,
   // Starting from the end, compute the integer divisors.
   std::vector<int64_t> result;
   result.reserve(superShape.size());
-  int64_t superSize = 0, subSize = 0;
-  for (auto it :
+  for (auto [superSize, subSize] :
        llvm::zip(llvm::reverse(superShape), llvm::reverse(subShape))) {
-    std::tie(superSize, subSize) = it;
     assert(superSize > 0 && "superSize must be > 0");
     assert(subSize > 0 && "subSize must be > 0");
 
@@ -218,6 +166,7 @@ static AffineMap makePermutationMap(
             countInvariantIndices == numIndices - 1) &&
            "Vectorization prerequisite violated: at most 1 index may be "
            "invariant wrt a vectorized loop");
+    (void)countInvariantIndices;
   }
   return AffineMap::get(indices.size(), 0, perm, context);
 }
@@ -306,7 +255,7 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   auto ratio = shapeRatio(superVectorType, subVectorType);
 
   // Sanity check.
-  assert((ratio.hasValue() || !mustDivide) &&
+  assert((ratio || !mustDivide) &&
          "vector.transfer operation in which super-vector size is not an"
          " integer multiple of sub-vector size");
 
@@ -315,5 +264,5 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // This could be useful information if we wanted to reshape at the level of
   // the vector type (but we would have to look at the compute and distinguish
   // between parallel, reduction and possibly other cases.
-  return ratio.hasValue();
+  return ratio.has_value();
 }

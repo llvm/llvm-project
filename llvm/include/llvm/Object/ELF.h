@@ -14,6 +14,7 @@
 #define LLVM_OBJECT_ELF_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -181,6 +182,8 @@ public:
 
 private:
   StringRef Buf;
+  std::vector<Elf_Shdr> FakeSections;
+  SmallString<0> FakeSectionStrings;
 
   ELFFile(StringRef Object);
 
@@ -389,6 +392,8 @@ public:
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr &Phdr) const;
   Expected<std::vector<BBAddrMap>> decodeBBAddrMap(const Elf_Shdr &Sec) const;
+
+  void createFakeSections();
 };
 
 using ELF32LEFile = ELFFile<ELF32LE>;
@@ -645,8 +650,11 @@ ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections,
     Index = Sections[0].sh_link;
   }
 
-  if (!Index) // no section string table.
-    return "";
+  // There is no section name string table. Return FakeSectionStrings which
+  // is non-empty if we have created fake sections.
+  if (!Index)
+    return FakeSectionStrings;
+
   if (Index >= Sections.size())
     return createError("section header string table index " + Twine(Index) +
                        " does not exist");
@@ -757,11 +765,42 @@ Expected<ELFFile<ELFT>> ELFFile<ELFT>::create(StringRef Object) {
   return ELFFile(Object);
 }
 
+/// Used by llvm-objdump -d (which needs sections for disassembly) to
+/// disassemble objects without a section header table (e.g. ET_CORE objects
+/// analyzed by linux perf or ET_EXEC with llvm-strip --strip-sections).
+template <class ELFT> void ELFFile<ELFT>::createFakeSections() {
+  if (!FakeSections.empty())
+    return;
+  auto PhdrsOrErr = program_headers();
+  if (!PhdrsOrErr)
+    return;
+
+  FakeSectionStrings += '\0';
+  for (auto [Idx, Phdr] : llvm::enumerate(*PhdrsOrErr)) {
+    if (Phdr.p_type != ELF::PT_LOAD || !(Phdr.p_flags & ELF::PF_X))
+      continue;
+    Elf_Shdr FakeShdr = {};
+    FakeShdr.sh_type = ELF::SHT_PROGBITS;
+    FakeShdr.sh_flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+    FakeShdr.sh_addr = Phdr.p_vaddr;
+    FakeShdr.sh_size = Phdr.p_memsz;
+    FakeShdr.sh_offset = Phdr.p_offset;
+    // Create a section name based on the p_type and index.
+    FakeShdr.sh_name = FakeSectionStrings.size();
+    FakeSectionStrings += ("PT_LOAD#" + Twine(Idx)).str();
+    FakeSectionStrings += '\0';
+    FakeSections.push_back(FakeShdr);
+  }
+}
+
 template <class ELFT>
 Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const uintX_t SectionTableOffset = getHeader().e_shoff;
-  if (SectionTableOffset == 0)
+  if (SectionTableOffset == 0) {
+    if (!FakeSections.empty())
+      return makeArrayRef(FakeSections.data(), FakeSections.size());
     return ArrayRef<Elf_Shdr>();
+  }
 
   if (getHeader().e_shentsize != sizeof(Elf_Shdr))
     return createError("invalid e_shentsize in ELF header: " +
@@ -855,7 +894,7 @@ Expected<StringRef> ELFFile<ELFT>::getSymbolVersionByIndex(
 
   const VersionEntry &Entry = *VersionMap[VersionIndex];
   // A default version (@@) is only available for defined symbols.
-  if (!Entry.IsVerDef || IsSymHidden.getValueOr(false))
+  if (!Entry.IsVerDef || IsSymHidden.value_or(false))
     IsDefault = false;
   else
     IsDefault = !(SymbolVersionIndex & llvm::ELF::VERSYM_HIDDEN);
@@ -999,7 +1038,7 @@ ELFFile<ELFT>::getVersionDependencies(const Elf_Shdr &Sec,
     VN.Offset = VerneedBuf - Start;
 
     if (Verneed->vn_file < StrTab.size())
-      VN.File = std::string(StrTab.drop_front(Verneed->vn_file));
+      VN.File = std::string(StrTab.data() + Verneed->vn_file);
     else
       VN.File = ("<corrupt vn_file: " + Twine(Verneed->vn_file) + ">").str();
 
@@ -1192,6 +1231,16 @@ inline unsigned hashSysV(StringRef SymbolName) {
     h &= ~g;
   }
   return h;
+}
+
+/// This function returns the hash value for a symbol in the .dynsym section
+/// for the GNU hash table. The implementation is defined in the GNU hash ABI.
+/// REF : https://sourceware.org/git/?p=binutils-gdb.git;a=blob;f=bfd/elf.c#l222
+inline uint32_t hashGnu(StringRef Name) {
+  uint32_t H = 5381;
+  for (uint8_t C : Name)
+    H = (H << 5) + H + C;
+  return H;
 }
 
 } // end namespace object

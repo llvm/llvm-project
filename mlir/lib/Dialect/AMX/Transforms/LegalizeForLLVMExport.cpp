@@ -112,10 +112,10 @@ struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
     if (failed(verifyStride(mType)))
       return failure();
     Value stride = getStride(rewriter, *getTypeConverter(), mType,
-                             adaptor.base(), op.getLoc());
+                             adaptor.getBase(), op.getLoc());
     // Replace operation with intrinsic.
-    Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.base(),
-                                     adaptor.indices(), rewriter);
+    Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
+                                     adaptor.getIndices(), rewriter);
     ptr = castPtr(rewriter, op.getLoc(), ptr);
     Type resType = typeConverter->convertType(vType);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tileloadd64>(
@@ -139,13 +139,13 @@ struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
     if (failed(verifyStride(mType)))
       return failure();
     Value stride = getStride(rewriter, *getTypeConverter(), mType,
-                             adaptor.base(), op.getLoc());
+                             adaptor.getBase(), op.getLoc());
     // Replace operation with intrinsic.
-    Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.base(),
-                                     adaptor.indices(), rewriter);
+    Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
+                                     adaptor.getIndices(), rewriter);
     ptr = castPtr(rewriter, op.getLoc(), ptr);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tilestored64>(
-        op, tsz.first, tsz.second, ptr, stride, adaptor.val());
+        op, tsz.first, tsz.second, ptr, stride, adaptor.getVal());
     return success();
   }
 };
@@ -166,8 +166,8 @@ struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
     // Replace operation with intrinsic.
     Type resType = typeConverter->convertType(cType);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbf16ps>(
-        op, resType, tsza.first, tszb.second, tsza.second, adaptor.acc(),
-        adaptor.lhs(), adaptor.rhs());
+        op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
+        adaptor.getLhs(), adaptor.getRhs());
     return success();
   }
 };
@@ -187,24 +187,24 @@ struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
         getTileSizes(rewriter, *getTypeConverter(), bType, op.getLoc());
     // Replace operation with intrinsic.
     Type resType = typeConverter->convertType(cType);
-    bool zexta = op.isZextLhs();
-    bool zextb = op.isZextRhs();
+    bool zexta = op.getIsZextLhs();
+    bool zextb = op.getIsZextRhs();
     if (zexta && zextb)
       rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbuud>(
-          op, resType, tsza.first, tszb.second, tsza.second, adaptor.acc(),
-          adaptor.lhs(), adaptor.rhs());
+          op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
+          adaptor.getLhs(), adaptor.getRhs());
     else if (zexta && !zextb)
       rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbusd>(
-          op, resType, tsza.first, tszb.second, tsza.second, adaptor.acc(),
-          adaptor.lhs(), adaptor.rhs());
+          op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
+          adaptor.getLhs(), adaptor.getRhs());
     else if (!zexta && zextb)
       rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbsud>(
-          op, resType, tsza.first, tszb.second, tsza.second, adaptor.acc(),
-          adaptor.lhs(), adaptor.rhs());
+          op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
+          adaptor.getLhs(), adaptor.getRhs());
     else
       rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbssd>(
-          op, resType, tsza.first, tszb.second, tsza.second, adaptor.acc(),
-          adaptor.lhs(), adaptor.rhs());
+          op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
+          adaptor.getLhs(), adaptor.getRhs());
     return success();
   }
 };

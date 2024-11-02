@@ -6,7 +6,7 @@
 ; CHECK:   ret i32 %Q
 ; CHECK: }
 
-target triple = "dxil-unknown-unknown"
+target triple = "dxil-unknown-shadermodel6.7-library"
 
 define i32 @foo(i32 %X, i32 %Y) {
   %Z = sub i32 %X, %Y

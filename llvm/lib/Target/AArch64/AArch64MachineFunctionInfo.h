@@ -37,7 +37,7 @@ class MachineInstr;
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Backreference to the machine function.
-  MachineFunction &MF;
+  MachineFunction *MF;
 
   /// Number of bytes of arguments this function has on the stack. If the callee
   /// is expected to restore the argument stack this should be a multiple of 16,
@@ -84,6 +84,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// FrameIndex for start of varargs area for arguments passed on the
   /// stack.
   int VarArgsStackIndex = 0;
+
+  /// Offset of start of varargs area for arguments passed on the stack.
+  unsigned VarArgsStackOffset = 0;
 
   /// FrameIndex for start of varargs area for arguments passed in
   /// general purpose registers.
@@ -175,6 +178,16 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
+  bool IsMTETagged = false;
+
+  /// The function has Scalable Vector or Scalable Predicate register argument
+  /// or return type
+  bool IsSVECC = false;
+
+  /// The frame-index for the TPIDR2 object used for lazy saves.
+  Register LazySaveTPIDR2Obj = 0;
+
+
   /// True if the function need unwind information.
   mutable Optional<bool> NeedsDwarfUnwindInfo;
 
@@ -183,6 +196,17 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
 public:
   explicit AArch64FunctionInfo(MachineFunction &MF);
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
+
+  bool isSVECC() const { return IsSVECC; };
+  void setIsSVECC(bool s) { IsSVECC = s; };
+
+  unsigned getLazySaveTPIDR2Obj() const { return LazySaveTPIDR2Obj; }
+  void setLazySaveTPIDR2Obj(unsigned Reg) { LazySaveTPIDR2Obj = Reg; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -315,6 +339,9 @@ public:
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
   void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
 
+  unsigned getVarArgsStackOffset() const { return VarArgsStackOffset; }
+  void setVarArgsStackOffset(unsigned Offset) { VarArgsStackOffset = Offset; }
+
   int getVarArgsGPRIndex() const { return VarArgsGPRIndex; }
   void setVarArgsGPRIndex(int Index) { VarArgsGPRIndex = Index; }
 
@@ -403,6 +430,7 @@ public:
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
+  bool isMTETagged() const { return IsMTETagged; }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 

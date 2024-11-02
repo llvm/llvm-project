@@ -230,7 +230,7 @@ class MemorySection : public SyntheticSection {
 public:
   MemorySection() : SyntheticSection(llvm::wasm::WASM_SEC_MEMORY) {}
 
-  bool isNeeded() const override { return !config->importMemory; }
+  bool isNeeded() const override { return !config->memoryImport.has_value(); }
   void writeBody() override;
 
   uint64_t numMemoryPages = 0;
@@ -290,14 +290,12 @@ public:
   bool needsRelocations() {
     if (config->extendedConst)
       return false;
-    return llvm::find_if(internalGotSymbols, [=](Symbol *sym) {
-             return !sym->isTLS();
-           }) != internalGotSymbols.end();
+    return llvm::any_of(internalGotSymbols,
+                        [=](Symbol *sym) { return !sym->isTLS(); });
   }
   bool needsTLSRelocations() {
-    return llvm::find_if(internalGotSymbols, [=](Symbol *sym) {
-             return sym->isTLS();
-           }) != internalGotSymbols.end();
+    return llvm::any_of(internalGotSymbols,
+                        [=](Symbol *sym) { return sym->isTLS(); });
   }
   void generateRelocationCode(raw_ostream &os, bool TLS) const;
 

@@ -1,10 +1,5 @@
 ## Test that we report warnings or dump raw data when symbols are invalid.
 
-# RUN: yaml2obj %s --docnum=1 -o %t1
-# RUN: llvm-readobj --syms %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=CASE1
-
-# CASE1: warning: '[[FILE]]': the non-function C_EXT symbol at index 1 should have only 1 auxiliary entry, i.e. the CSECT auxiliary entry
-
 --- !XCOFF
 FileHeader:
   MagicNumber: 0x1DF
@@ -14,55 +9,45 @@ Symbols:
     StorageClass:       [[STORAGECLASS='C_EXT']]
     NumberOfAuxEntries: 2
 
-# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_WEAKEXT' -o %t2
+# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_STAT' -o %t1
+# RUN: llvm-readobj --syms %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=CASE1
+
+# CASE1: warning: '[[FILE]]': the C_STAT symbol at index 1 should not have more than 1 auxiliary entry
+
+# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_DWARF' -o %t2
 # RUN: llvm-readobj --syms %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=CASE2
 
-# CASE2: warning: '[[FILE]]': the non-function C_WEAKEXT symbol at index 1 should have only 1 auxiliary entry, i.e. the CSECT auxiliary entry
+# CASE2: warning: '[[FILE]]': the C_DWARF symbol at index 1 should not have more than 1 auxiliary entry
 
-# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_HIDEXT' -o %t3
+# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_BLOCK' -o %t3
 # RUN: llvm-readobj --syms %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=CASE3
 
-# CASE3: warning: '[[FILE]]': the non-function C_HIDEXT symbol at index 1 should have only 1 auxiliary entry, i.e. the CSECT auxiliary entry
+# CASE3: warning: '[[FILE]]': the C_BLOCK symbol at index 1 should not have more than 1 auxiliary entry
 
-# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_STAT' -o %t4
+# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_FCN' -o %t4
 # RUN: llvm-readobj --syms %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=CASE4
 
-# CASE4: warning: '[[FILE]]': the C_STAT symbol at index 1 should not have more than 1 auxiliary entry
-
-# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_DWARF' -o %t5
-# RUN: llvm-readobj --syms %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=CASE5
-
-# CASE5: warning: '[[FILE]]': the C_DWARF symbol at index 1 should not have more than 1 auxiliary entry
-
-# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_BLOCK' -o %t6
-# RUN: llvm-readobj --syms %t6 2>&1 | FileCheck %s -DFILE=%t6 --check-prefix=CASE6
-
-# CASE6: warning: '[[FILE]]': the C_BLOCK symbol at index 1 should not have more than 1 auxiliary entry
-
-# RUN: yaml2obj %s --docnum=1 -DSTORAGECLASS='C_FCN' -o %t7
-# RUN: llvm-readobj --syms %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=CASE7
-
-# CASE7: warning: '[[FILE]]': the C_FCN symbol at index 1 should not have more than 1 auxiliary entry
+# CASE4: warning: '[[FILE]]': the C_FCN symbol at index 1 should not have more than 1 auxiliary entry
 
 ## This case tests the raw data output ability when a file auxiliary entry does
 ## not have the matching auxiliary type.
-# RUN: yaml2obj %s --docnum=2 -o %t8
-# RUN: llvm-readobj --syms %t8 | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=CASE8
+# RUN: yaml2obj %s --docnum=2 -o %t5
+# RUN: llvm-readobj --syms %t5 | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=CASE5
 
-#      CASE8:Symbols [
-# CASE8-NEXT:  Symbol {
-# CASE8-NEXT:    Index: 0
-# CASE8-NEXT:    Name: .fun
-# CASE8-NEXT:    Value (SymbolTableIndex): 0x0
-# CASE8-NEXT:    Section: N_UNDEF
-# CASE8-NEXT:    Source Language ID: TB_C (0x0)
-# CASE8-NEXT:    CPU Version ID: 0x0
-# CASE8-NEXT:    StorageClass: C_FILE (0x67)
-# CASE8-NEXT:    NumberOfAuxEntries: 1
-# CASE8-NEXT:    !Unexpected raw auxiliary entry data:
-# CASE8-NEXT:    00000000 00000001 00020300 00000000 00fb
-# CASE8-NEXT:  }
-# CASE8-NEXT:]
+#      CASE5:Symbols [
+# CASE5-NEXT:  Symbol {
+# CASE5-NEXT:    Index: 0
+# CASE5-NEXT:    Name: .fun
+# CASE5-NEXT:    Value (SymbolTableIndex): 0x0
+# CASE5-NEXT:    Section: N_UNDEF
+# CASE5-NEXT:    Source Language ID: TB_C (0x0)
+# CASE5-NEXT:    CPU Version ID: 0x0
+# CASE5-NEXT:    StorageClass: C_FILE (0x67)
+# CASE5-NEXT:    NumberOfAuxEntries: 1
+# CASE5-NEXT:    !Unexpected raw auxiliary entry data:
+# CASE5-NEXT:    00000000 00000001 00020300 00000000 00fb
+# CASE5-NEXT:  }
+# CASE5-NEXT:]
 
 --- !XCOFF
 FileHeader:

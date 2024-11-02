@@ -1,12 +1,13 @@
 ; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
-; RUN: -debug < %s 2>&1 | FileCheck %s
-; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
+; RUN: -debug -polly-tc-opt=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
+; RUN: -polly-target-2nd-cache-level-size=262144 -polly-print-ast \
+; RUN: -polly-tc-opt=true -disable-output -polly-opt-isl < %s |  \
+; RUN: FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
 ; REQUIRES: asserts
 ;
 ;    C := A * B + C
@@ -20,6 +21,7 @@
 ;        for (j = 0; j < _PB_NJ; j++)
 ;	   C[i][j] += A[i][k] * B[k][j];
 ;
+; CHECK: The tensor contraction pattern was detected
 ; CHECK: The matrix multiplication pattern was detected
 ;
 ; PATTERN-MATCHING-OPTS:    // 1st level tiling - Tiles

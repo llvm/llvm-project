@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld -z retpolineplt -z now %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 
 #0x2011a9+5 + 34 = 0x2011d0 (foo@plt)
 # CHECK:      <_start>:

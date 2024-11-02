@@ -1,13 +1,16 @@
-/* RUN: %clang_cc1 -std=c89 -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c89 -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions -fno-signed-char %s
-   RUN: %clang_cc1 -std=c99 -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c17 -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c2x -verify=expected,c2xandup -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions -fno-signed-char %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
+   RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=expected,c2xandup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate
  * conformance or nonconformance.
+ *
+ * WG14 DR001: yes
+ * Do functions return values by copying?
  *
  * WG14 DR005: yes
  * May a conforming implementation define and recognize a pragma which would
@@ -157,7 +160,8 @@ void dr011(void) {
  */
 void dr012(void *p) {
   /* The behavior changed between C89 and C99. */
-  (void)&*p; /* c89only-warning {{ISO C forbids taking the address of an expression of type 'void'}} */
+  (void)&*p; /* c89only-warning {{ISO C forbids taking the address of an expression of type 'void'}}
+                c89only-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
 }
 
 /* WG14 DR013: yes
@@ -200,7 +204,7 @@ _Static_assert(THIS$AND$THAT(1, 1) == 2, "fail"); /* expected-warning 2 {{'$' in
  * Note: the rule changed in C99 to be different than the resolution to DR029,
  * so it's not clear there's value in implementing this DR.
  */
-_Static_assert(__builtin_types_compatible_p(struct S { int a; }, union U { int a; }), "fail"); /* expected-error {{static_assert failed due to requirement '__builtin_types_compatible_p(struct S, union U)' "fail"}} */
+_Static_assert(__builtin_types_compatible_p(struct S { int a; }, union U { int a; }), "fail"); /* expected-error {{static assertion failed due to requirement '__builtin_types_compatible_p(struct S, union U)': fail}} */
 
 /* WG14 DR031: yes
  * Can constant expressions overflow?
@@ -360,7 +364,7 @@ char *dr064_1(int i, int *pi) {
 }
 
 char *dr064_2(int i, int *pi) {
-  return (*pi = i, 0); /* expected-warning {{incompatible integer to pointer conversion returning 'int' from a function with result type 'char *'}} */
+  return (*pi = i, 0); /* expected-error {{incompatible integer to pointer conversion returning 'int' from a function with result type 'char *'}} */
 }
 
 /* WG14 DR068: yes

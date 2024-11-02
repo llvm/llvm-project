@@ -41,12 +41,10 @@ define i8 @extractelement_bitcast_to_trunc(<vscale x 2 x i32> %a, i32 %x) {
   ret i8 %r
 }
 
-; TODO: Instcombine could remove the insert.
-define i8 @extractelement_bitcast_wrong_insert(<vscale x 2 x i32> %a, i32 %x) {
-; CHECK-LABEL: @extractelement_bitcast_wrong_insert(
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <vscale x 2 x i32> [[A:%.*]], i32 [[X:%.*]], i64 1
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <vscale x 2 x i32> [[VEC]] to <vscale x 8 x i8>
-; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 8 x i8> [[VEC_CAST]], i64 2
+define i8 @extractelement_bitcast_useless_insert(<vscale x 2 x i32> %a, i32 %x) {
+; CHECK-LABEL: @extractelement_bitcast_useless_insert(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i32> [[A:%.*]] to <vscale x 8 x i8>
+; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 8 x i8> [[TMP1]], i64 2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %vec = insertelement <vscale x 2 x i32> %a, i32 %x, i32 1 ; <- This insert could be removed.
@@ -271,18 +269,17 @@ define i1 @ext_lane1_from_cmp_with_stepvec(i64 %i) {
   ret i1 %res
 }
 
-define i64* @ext_lane_from_bitcast_of_splat(i32* %v) {
+define ptr @ext_lane_from_bitcast_of_splat(ptr %v) {
 ; CHECK-LABEL: @ext_lane_from_bitcast_of_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = bitcast i32* [[V:%.*]] to i64*
-; CHECK-NEXT:    ret i64* [[R]]
+; CHECK-NEXT:    ret ptr [[V:%.*]]
 ;
 entry:
-  %in = insertelement <vscale x 4 x i32*> poison, i32* %v, i32 0
-  %splat = shufflevector <vscale x 4 x i32*> %in, <vscale x 4 x i32*> poison, <vscale x 4 x i32> zeroinitializer
-  %bc = bitcast <vscale x 4 x i32*> %splat to <vscale x 4 x i64*>
-  %r = extractelement <vscale x 4 x i64*> %bc, i32 3
-  ret i64* %r
+  %in = insertelement <vscale x 4 x ptr> poison, ptr %v, i32 0
+  %splat = shufflevector <vscale x 4 x ptr> %in, <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
+  %bc = bitcast <vscale x 4 x ptr> %splat to <vscale x 4 x ptr>
+  %r = extractelement <vscale x 4 x ptr> %bc, i32 3
+  ret ptr %r
 }
 
 declare <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()

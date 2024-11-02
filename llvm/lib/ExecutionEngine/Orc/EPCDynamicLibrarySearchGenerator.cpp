@@ -54,7 +54,7 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
   for (auto &KV : LookupSymbols) {
     if (*ResultI)
       NewSymbols[KV.first] =
-          JITEvaluatedSymbol(*ResultI, JITSymbolFlags::Exported);
+          JITEvaluatedSymbol(ResultI->getValue(), JITSymbolFlags::Exported);
     ++ResultI;
   }
 

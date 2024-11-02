@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-
 /// (Essentially identical to ps4-sdk-root.c except for the target.)
 
 /// Check that PS5 clang doesn't report a warning message when locating

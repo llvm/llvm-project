@@ -31,9 +31,9 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-    size_t m_trace_buffer_size;
+    uint64_t m_ipt_trace_size;
     bool m_enable_tsc;
-    llvm::Optional<size_t> m_psb_period;
+    llvm::Optional<uint64_t> m_psb_period;
   };
 
   CommandObjectThreadTraceStartIntelPT(TraceIntelPT &trace,
@@ -74,11 +74,12 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-    size_t m_trace_buffer_size;
-    size_t m_process_buffer_size_limit;
+    uint64_t m_ipt_trace_size;
+    uint64_t m_process_buffer_size_limit;
     bool m_enable_tsc;
-    llvm::Optional<size_t> m_psb_period;
-    bool m_per_core_tracing;
+    llvm::Optional<uint64_t> m_psb_period;
+    bool m_per_cpu_tracing;
+    bool m_disable_cgroup_filtering;
   };
 
   CommandObjectProcessTraceStartIntelPT(TraceIntelPT &trace,
@@ -86,11 +87,11 @@ public:
       : CommandObjectParsed(
             interpreter, "process trace start",
             "Start tracing this process with intel-pt, including future "
-            "threads. If --per-core-tracing is not provided, this traces each "
+            "threads. If --per-cpu-tracing is not provided, this traces each "
             "thread independently, thus using a trace buffer per thread. "
             "Threads traced with the \"thread trace start\" command are left "
             "unaffected ant not retraced. This is the recommended option "
-            "unless the number of threads is huge. If --per-core-tracing is "
+            "unless the number of threads is huge. If --per-cpu-tracing is "
             "passed, each cpu core is traced instead of each thread, which "
             "uses a fixed number of trace buffers, but might result in less "
             "data available for less frequent threads.",
@@ -108,6 +109,23 @@ protected:
   TraceIntelPT &m_trace;
   CommandOptions m_options;
 };
+
+namespace ParsingUtils {
+/// Convert an integral size expression like 12KiB or 4MB into bytes. The units
+/// are taken loosely to help users input sizes into LLDB, e.g. KiB and KB are
+/// considered the same (2^20 bytes) for simplicity.
+///
+/// \param[in] size_expression
+///     String expression which is an integral number plus a unit that can be
+///     lower or upper case. Supported units: K, KB and KiB for 2^10 bytes; M,
+///     MB and MiB for 2^20 bytes; and B for bytes. A single integral number is
+///     considered bytes.
+/// \return
+///   The converted number of bytes or \a llvm::None if the expression is
+///   invalid.
+llvm::Optional<uint64_t>
+ParseUserFriendlySizeExpression(llvm::StringRef size_expression);
+} // namespace ParsingUtils
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

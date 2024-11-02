@@ -2,10 +2,6 @@
 Use lldb Python SBValue.WatchPointee() API to create a watchpoint for write of '*g_char_ptr'.
 """
 
-from __future__ import print_function
-
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class SetWatchlocationAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -50,8 +44,8 @@ class SetWatchlocationAPITestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)

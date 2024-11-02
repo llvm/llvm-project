@@ -806,6 +806,49 @@ namespace {
     }
   };
 
+  class VariadicOMPInteropInfoArgument : public VariadicArgument {
+  public:
+    VariadicOMPInteropInfoArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "OMPInteropInfo") {}
+
+    void writeDump(raw_ostream &OS) const override {
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I) {\n";
+      OS << "      if (I->IsTarget && I->IsTargetSync)\n";
+      OS << "        OS << \" Target_TargetSync\";\n";
+      OS << "      else if (I->IsTarget)\n";
+      OS << "        OS << \" Target\";\n";
+      OS << "      else\n";
+      OS << "        OS << \" TargetSync\";\n";
+      OS << "    }\n";
+    }
+
+    void writePCHReadDecls(raw_ostream &OS) const override {
+      OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
+      OS << "    SmallVector<OMPInteropInfo, 4> " << getLowerName() << ";\n";
+      OS << "    " << getLowerName() << ".reserve(" << getLowerName()
+         << "Size);\n";
+      OS << "    for (unsigned I = 0, E = " << getLowerName() << "Size; ";
+      OS << "I != E; ++I) {\n";
+      OS << "      bool IsTarget = Record.readBool();\n";
+      OS << "      bool IsTargetSync = Record.readBool();\n";
+      OS << "      " << getLowerName()
+         << ".emplace_back(IsTarget, IsTargetSync);\n";
+      OS << "    }\n";
+    }
+
+    void writePCHWrite(raw_ostream &OS) const override {
+      OS << "    Record.push_back(SA->" << getLowerName() << "_size());\n";
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I) {\n";
+      OS << "      Record.writeBool(I->IsTarget);\n";
+      OS << "      Record.writeBool(I->IsTargetSync);\n";
+      OS << "    }\n";
+    }
+  };
+
   class VariadicParamIdxArgument : public VariadicArgument {
   public:
     VariadicParamIdxArgument(const Record &Arg, StringRef Attr)
@@ -1173,6 +1216,13 @@ namespace {
       OS << "      }\n";
     }
 
+    void writeValue(raw_ostream &OS) const override {
+      OS << "\";\n";
+      OS << "    get" << getUpperName()
+         << "()->printPretty(OS, nullptr, Policy);\n";
+      OS << "    OS << \"";
+    }
+
     void writeDump(raw_ostream &OS) const override {}
 
     void writeDumpChildren(raw_ostream &OS) const override {
@@ -1374,6 +1424,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<VersionArgument>(Arg, Attr);
   else if (ArgName == "OMPTraitInfoArgument")
     Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
+  else if (ArgName == "VariadicOMPInteropInfoArgument")
+    Ptr = std::make_unique<VariadicOMPInteropInfoArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
@@ -2681,8 +2733,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 
     // Emit constructors that takes no arguments if none already exists.
     // This is used for delaying arguments.
-    bool HasRequiredArgs = std::count_if(
-        Args.begin(), Args.end(), [=](const std::unique_ptr<Argument> &arg) {
+    bool HasRequiredArgs =
+        llvm::count_if(Args, [=](const std::unique_ptr<Argument> &arg) {
           return !arg->isFake() && !arg->isOptional();
         });
     if (DelayedArgs && HasRequiredArgs)
@@ -2852,7 +2904,8 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
   { "INHERITABLE_ATTR", "InheritableAttr" },
   { "DECL_OR_TYPE_ATTR", "DeclOrTypeAttr" },
   { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" },
-  { "PARAMETER_ABI_ATTR", "ParameterABIAttr" }
+  { "PARAMETER_ABI_ATTR", "ParameterABIAttr" },
+  { "HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"}
 };
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,
@@ -3331,24 +3384,24 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "const llvm::Triple &T = Target.getTriple();\n";
   OS << "switch (Syntax) {\n";
-  OS << "case AttrSyntax::GNU:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_GNU:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(GNU, OS, "GNU");
-  OS << "case AttrSyntax::Declspec:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_Declspec:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(Declspec, OS, "Declspec");
-  OS << "case AttrSyntax::Microsoft:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_Microsoft:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(Microsoft, OS, "Microsoft");
-  OS << "case AttrSyntax::Pragma:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_Pragma:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(Pragma, OS, "Pragma");
-  OS << "case AttrSyntax::HLSLSemantic:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_HLSLSemantic:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(HLSLSemantic, OS, "HLSLSemantic");
-  auto fn = [&OS](const char *Spelling, const char *Variety,
+  auto fn = [&OS](const char *Spelling,
                   const std::map<std::string, std::vector<Record *>> &List) {
-    OS << "case AttrSyntax::" << Variety << ": {\n";
+    OS << "case AttributeCommonInfo::Syntax::AS_" << Spelling << ": {\n";
     // C++11-style attributes are further split out based on the Scope.
     for (auto I = List.cbegin(), E = List.cend(); I != E; ++I) {
       if (I != List.cbegin())
@@ -3363,8 +3416,13 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     }
     OS << "\n} break;\n";
   };
-  fn("CXX11", "CXX", CXX);
-  fn("C2x", "C", C2x);
+  fn("CXX11", CXX);
+  fn("C2x", C2x);
+  OS << "case AttributeCommonInfo::Syntax::AS_Keyword:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_ContextSensitiveKeyword:\n";
+  OS << "  llvm_unreachable(\"hasAttribute not supported for keyword\");\n";
+  OS << "  return 0;\n";
+
   OS << "}\n";
 }
 
@@ -3734,7 +3792,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
     if (!StmtSubjects.empty()) {
       OS << "bool diagAppertainsToDecl(Sema &S, const ParsedAttr &AL, ";
       OS << "const Decl *D) const override {\n";
-      OS << "  S.Diag(AL.getLoc(), diag::err_stmt_attribute_invalid_on_decl)\n";
+      OS << "  S.Diag(AL.getLoc(), diag::err_attribute_invalid_on_decl)\n";
       OS << "    << AL << D->getLocation();\n";
       OS << "  return false;\n";
       OS << "}\n\n";
@@ -4316,9 +4374,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
       if (Attr.isSubClassOf("TargetSpecificAttr") &&
           !Attr.isValueUnset("ParseKind")) {
         AttrName = std::string(Attr.getValueAsString("ParseKind"));
-        if (Seen.find(AttrName) != Seen.end())
+        if (!Seen.insert(AttrName).second)
           continue;
-        Seen.insert(AttrName);
       } else
         AttrName = NormalizeAttrName(StringRef(Attr.getName())).str();
 
@@ -4488,7 +4545,7 @@ void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
     // Only look at the first documentation if there are several.
     // (Currently there's only one such attr, revisit if this becomes common).
     StringRef Text =
-        Docs.front()->getValueAsOptionalString("Content").getValueOr("");
+        Docs.front()->getValueAsOptionalString("Content").value_or("");
     OS << "\nstatic const char AttrDoc_" << A->getName() << "[] = "
        << "R\"reST(" << Text.trim() << ")reST\";\n";
   }
@@ -4574,7 +4631,8 @@ static void WriteCategoryHeader(const Record *DocCategory,
 
 static std::pair<std::string, SpellingList>
 GetAttributeHeadingAndSpellings(const Record &Documentation,
-                                const Record &Attribute) {
+                                const Record &Attribute,
+                                StringRef Cat) {
   // FIXME: there is no way to have a per-spelling category for the attribute
   // documentation. This may not be a limiting factor since the spellings
   // should generally be consistently applied across the category.
@@ -4594,7 +4652,7 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
     else {
       std::set<std::string> Uniques;
       for (auto I = Spellings.begin(), E = Spellings.end();
-           I != E && Uniques.size() <= 1; ++I) {
+           I != E; ++I) {
         std::string Spelling =
             std::string(NormalizeNameForSpellingComparison(I->name()));
         Uniques.insert(Spelling);
@@ -4603,6 +4661,11 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
       // needs.
       if (Uniques.size() == 1)
         Heading = *Uniques.begin();
+      // If it's in the undocumented category, just construct a header by
+      // concatenating all the spellings. Might not be great, but better than
+      // nothing.
+      else if (Cat == "Undocumented")
+        Heading = llvm::join(Uniques.begin(), Uniques.end(), ", ");
     }
   }
 
@@ -4623,10 +4686,12 @@ static void WriteDocumentation(RecordKeeper &Records,
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
   // List what spelling syntaxes the attribute supports.
+  // Note: "#pragma clang attribute" is handled outside the spelling kinds loop
+  // so it must be last.
   OS << ".. csv-table:: Supported Syntaxes\n";
   OS << "   :header: \"GNU\", \"C++11\", \"C2x\", \"``__declspec``\",";
-  OS << " \"Keyword\", \"``#pragma``\", \"``#pragma clang attribute``\",";
-  OS << " \"HLSL Semantic\"\n\n   \"";
+  OS << " \"Keyword\", \"``#pragma``\", \"HLSL Semantic\", \"``#pragma clang ";
+  OS << "attribute``\"\n\n   \"";
   for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
     SpellingKind K = (SpellingKind)Kind;
     // TODO: List Microsoft (IDL-style attribute) spellings once we fully
@@ -4697,19 +4762,19 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto *D : Docs) {
       const Record &Doc = *D;
       const Record *Category = Doc.getValueAsDef("Category");
-      // If the category is "undocumented", then there cannot be any other
-      // documentation categories (otherwise, the attribute would become
-      // documented).
+      // If the category is "InternalOnly", then there cannot be any other
+      // documentation categories (otherwise, the attribute would be
+      // emitted into the docs).
       const StringRef Cat = Category->getValueAsString("Name");
-      bool Undocumented = Cat == "Undocumented";
-      if (Undocumented && Docs.size() > 1)
+      bool InternalOnly = Cat == "InternalOnly";
+      if (InternalOnly && Docs.size() > 1)
         PrintFatalError(Doc.getLoc(),
-                        "Attribute is \"Undocumented\", but has multiple "
+                        "Attribute is \"InternalOnly\", but has multiple "
                         "documentation categories");
 
-      if (!Undocumented)
+      if (!InternalOnly)
         SplitDocs[Category].push_back(DocumentationData(
-            Doc, Attr, GetAttributeHeadingAndSpellings(Doc, Attr)));
+            Doc, Attr, GetAttributeHeadingAndSpellings(Doc, Attr, Cat)));
     }
   }
 

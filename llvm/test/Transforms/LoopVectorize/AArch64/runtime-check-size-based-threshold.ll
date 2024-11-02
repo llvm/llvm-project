@@ -1,4 +1,5 @@
-; RUN: opt -loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 -S %s | FileCheck %s
+; RUN: opt -loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 -S %s | FileCheck --check-prefixes=CHECK,DEFAULT %s
+; RUN: opt -loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 -vectorize-memory-check-threshold=1 -S %s | FileCheck --check-prefixes=CHECK,THRESHOLD %s
 
 ; Tests for loops with large numbers of runtime checks. Check that loops are
 ; vectorized, if the loop trip counts are large and the impact of the runtime
@@ -57,11 +58,13 @@ exit:
   ret void
 }
 
-; FIXME
 ; The trip count in the loop in this function high enough to warrant large runtime checks.
 ; CHECK-LABEL: define {{.*}} @test_tc_big_enough
-; CHECK-NOT: vector.memcheck
-; CHECK-NOT: vector.body
+; DEFAULT: vector.memcheck
+; DEFAULT: vector.body
+; THRESHOLD-NOT: vector.memcheck
+; THRESHOLD-NOT: vector.body
+;
 define void @test_tc_big_enough(i16* %ptr.1, i16* %ptr.2, i16* %ptr.3, i16* %ptr.4, i64 %off.1, i64 %off.2) {
 entry:
   br label %loop
@@ -112,8 +115,11 @@ exit:
 
 define void @test_tc_unknown(i16* %ptr.1, i16* %ptr.2, i16* %ptr.3, i16* %ptr.4, i64 %off.1, i64 %off.2, i64 %N) {
 ; CHECK-LABEL: define void @test_tc_unknown
-; CHECK-NOT: vector.memcheck
-; CHECK-NOT: vector.body
+; DEFAULT:       [[ADD:%.+]] = add i64 %N, 1
+; DEFAULT-NEXT:  [[C:%.+]] = icmp ult i64 [[ADD]], 16
+; DEFAULT-NEXT:  br i1 [[C]], label %scalar.ph, label %vector.memcheck
+; THRESHOLD-NOT: vector.memcheck
+; THRESHOLD-NOT: vector.body
 ;
 entry:
   br label %loop

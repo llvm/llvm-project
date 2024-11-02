@@ -8,7 +8,7 @@
 ; versions of the instructions.
 
 ; Indexed version of loads
-define i8 @load_x_i8_seq_cst([100000 x i8]* %mem) {
+define i8 @load_x_i8_seq_cst(ptr %mem) {
 ; PPC32-LABEL: load_x_i8_seq_cst:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    lis r4, 1
@@ -28,11 +28,11 @@ define i8 @load_x_i8_seq_cst([100000 x i8]* %mem) {
 ; PPC64-NEXT:    bne- cr7, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i8], [100000 x i8]* %mem, i64 0, i64 90000
-  %val = load atomic i8, i8* %ptr seq_cst, align 1
+  %ptr = getelementptr inbounds [100000 x i8], ptr %mem, i64 0, i64 90000
+  %val = load atomic i8, ptr %ptr seq_cst, align 1
   ret i8 %val
 }
-define i16 @load_x_i16_acquire([100000 x i16]* %mem) {
+define i16 @load_x_i16_acquire(ptr %mem) {
 ; PPC32-LABEL: load_x_i16_acquire:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    lis r4, 2
@@ -50,22 +50,22 @@ define i16 @load_x_i16_acquire([100000 x i16]* %mem) {
 ; PPC64-NEXT:    bne- cr7, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i16], [100000 x i16]* %mem, i64 0, i64 90000
-  %val = load atomic i16, i16* %ptr acquire, align 2
+  %ptr = getelementptr inbounds [100000 x i16], ptr %mem, i64 0, i64 90000
+  %val = load atomic i16, ptr %ptr acquire, align 2
   ret i16 %val
 }
-define i32 @load_x_i32_monotonic([100000 x i32]* %mem) {
+define i32 @load_x_i32_monotonic(ptr %mem) {
 ; CHECK-LABEL: load_x_i32_monotonic:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis r4, 5
 ; CHECK-NEXT:    ori r4, r4, 32320
 ; CHECK-NEXT:    lwzx r3, r3, r4
 ; CHECK-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i32], [100000 x i32]* %mem, i64 0, i64 90000
-  %val = load atomic i32, i32* %ptr monotonic, align 4
+  %ptr = getelementptr inbounds [100000 x i32], ptr %mem, i64 0, i64 90000
+  %val = load atomic i32, ptr %ptr monotonic, align 4
   ret i32 %val
 }
-define i64 @load_x_i64_unordered([100000 x i64]* %mem) {
+define i64 @load_x_i64_unordered(ptr %mem) {
 ; PPC32-LABEL: load_x_i64_unordered:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
@@ -88,13 +88,13 @@ define i64 @load_x_i64_unordered([100000 x i64]* %mem) {
 ; PPC64-NEXT:    ori r4, r4, 64640
 ; PPC64-NEXT:    ldx r3, r3, r4
 ; PPC64-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i64], [100000 x i64]* %mem, i64 0, i64 90000
-  %val = load atomic i64, i64* %ptr unordered, align 8
+  %ptr = getelementptr inbounds [100000 x i64], ptr %mem, i64 0, i64 90000
+  %val = load atomic i64, ptr %ptr unordered, align 8
   ret i64 %val
 }
 
 ; Indexed version of stores
-define void @store_x_i8_seq_cst([100000 x i8]* %mem) {
+define void @store_x_i8_seq_cst(ptr %mem) {
 ; CHECK-LABEL: store_x_i8_seq_cst:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis r4, 1
@@ -103,11 +103,11 @@ define void @store_x_i8_seq_cst([100000 x i8]* %mem) {
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:    stbx r5, r3, r4
 ; CHECK-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i8], [100000 x i8]* %mem, i64 0, i64 90000
-  store atomic i8 42, i8* %ptr seq_cst, align 1
+  %ptr = getelementptr inbounds [100000 x i8], ptr %mem, i64 0, i64 90000
+  store atomic i8 42, ptr %ptr seq_cst, align 1
   ret void
 }
-define void @store_x_i16_release([100000 x i16]* %mem) {
+define void @store_x_i16_release(ptr %mem) {
 ; CHECK-LABEL: store_x_i16_release:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis r4, 2
@@ -116,11 +116,11 @@ define void @store_x_i16_release([100000 x i16]* %mem) {
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    sthx r5, r3, r4
 ; CHECK-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i16], [100000 x i16]* %mem, i64 0, i64 90000
-  store atomic i16 42, i16* %ptr release, align 2
+  %ptr = getelementptr inbounds [100000 x i16], ptr %mem, i64 0, i64 90000
+  store atomic i16 42, ptr %ptr release, align 2
   ret void
 }
-define void @store_x_i32_monotonic([100000 x i32]* %mem) {
+define void @store_x_i32_monotonic(ptr %mem) {
 ; CHECK-LABEL: store_x_i32_monotonic:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis r4, 5
@@ -128,11 +128,11 @@ define void @store_x_i32_monotonic([100000 x i32]* %mem) {
 ; CHECK-NEXT:    li r5, 42
 ; CHECK-NEXT:    stwx r5, r3, r4
 ; CHECK-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i32], [100000 x i32]* %mem, i64 0, i64 90000
-  store atomic i32 42, i32* %ptr monotonic, align 4
+  %ptr = getelementptr inbounds [100000 x i32], ptr %mem, i64 0, i64 90000
+  store atomic i32 42, ptr %ptr monotonic, align 4
   ret void
 }
-define void @store_x_i64_unordered([100000 x i64]* %mem) {
+define void @store_x_i64_unordered(ptr %mem) {
 ; PPC32-LABEL: store_x_i64_unordered:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    mflr r0
@@ -158,7 +158,7 @@ define void @store_x_i64_unordered([100000 x i64]* %mem) {
 ; PPC64-NEXT:    li r5, 42
 ; PPC64-NEXT:    stdx r5, r3, r4
 ; PPC64-NEXT:    blr
-  %ptr = getelementptr inbounds [100000 x i64], [100000 x i64]* %mem, i64 0, i64 90000
-  store atomic i64 42, i64* %ptr unordered, align 8
+  %ptr = getelementptr inbounds [100000 x i64], ptr %mem, i64 0, i64 90000
+  store atomic i64 42, ptr %ptr unordered, align 8
   ret void
 }

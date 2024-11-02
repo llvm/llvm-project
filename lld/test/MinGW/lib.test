@@ -38,9 +38,20 @@ RUN: ld.lld -### -m i386pep -L%t/lib -lnoprefix -lmsvcstyle 2>&1 | FileCheck -ch
 OTHERSTYLES: noprefix.dll.a
 OTHERSTYLES-SAME: msvcstyle.lib
 
+RUN: not ld.lld -### -m i386pep -L%t/lib -static -lnoprefix 2>&1 | FileCheck -check-prefix=ERROR-NOPREFIX %s
+ERROR-NOPREFIX: unable to find library -lnoprefix
+
+RUN: ld.lld -### -m i386pep -L%t/lib -static -lmsvcstyle 2>&1 | FileCheck -check-prefix=MSVCSTYLE %s
+MSVCSTYLE: msvcstyle.lib
+
 RUN: echo > %t/lib/libnoimplib.dll
 RUN: echo > %t/lib/noprefix_noimplib.dll
 RUN: ld.lld -### -m i386pep -L%t/lib -lnoimplib 2>&1 | FileCheck -check-prefix=DLL1 %s
 RUN: ld.lld -### -m i386pep -L%t/lib -lnoprefix_noimplib 2>&1 | FileCheck -check-prefix=DLL2 %s
 DLL1: libnoimplib.dll
 DLL2: noprefix_noimplib.dll
+
+RUN: not ld.lld -### -m i386pep -L%t/lib -static -lnoimplib 2>&1 | FileCheck -check-prefix=ERROR-NOIMPLIB %s
+RUN: not ld.lld -### -m i386pep -L%t/lib -static -lnoprefix_noimplib 2>&1 | FileCheck -check-prefix=ERROR-NOPREFIX-NOIMPLIB %s
+ERROR-NOIMPLIB: unable to find library -lnoimplib
+ERROR-NOPREFIX-NOIMPLIB: unable to find library -lnoprefix_noimplib

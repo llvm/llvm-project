@@ -1,4 +1,3 @@
-// XFAIL: aix
 // RUN: %clang_pgogen -O2 -mllvm -pgo-function-entry-coverage -o %t %s
 // RUN: %run %t %t.profraw 1 1
 // RUN: llvm-profdata show --all-functions --counts %t.profraw  | FileCheck %s

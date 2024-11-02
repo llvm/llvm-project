@@ -124,6 +124,8 @@ def main():
         common.warn('Don\'t know how to deal with this output')
         continue
 
+      builder.processed_prefixes(prefixes)
+
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False

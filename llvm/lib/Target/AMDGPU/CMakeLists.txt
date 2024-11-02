@@ -57,6 +57,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUFrameLowering.cpp
   AMDGPUGlobalISelUtils.cpp
   AMDGPUHSAMetadataStreamer.cpp
+  AMDGPUInsertDelayAlu.cpp
   AMDGPUInstCombineIntrinsic.cpp
   AMDGPUInstrInfo.cpp
   AMDGPUInstructionSelector.cpp
@@ -75,7 +76,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
-  AMDGPUMFMAIGroupLP.cpp
+  AMDGPUIGroupLP.cpp
   AMDGPUMIRFormatter.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
   AMDGPUPerfHintAnalysis.cpp
@@ -87,9 +88,11 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPromoteKernelArguments.cpp
   AMDGPURegBankCombiner.cpp
   AMDGPURegisterBankInfo.cpp
+  AMDGPUReleaseVGPRs.cpp
   AMDGPUReplaceLDSUseWithPointer.cpp
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteOutArguments.cpp
+  AMDGPURewriteUndefForPHI.cpp
   AMDGPUSetWavePriority.cpp
   AMDGPUSubtarget.cpp
   AMDGPUTargetMachine.cpp
@@ -98,6 +101,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUUnifyDivergentExitNodes.cpp
   AMDGPUUnifyMetadata.cpp
   R600MachineCFGStructurizer.cpp
+  GCNCreateVOPD.cpp
   GCNDPPCombine.cpp
   GCNHazardRecognizer.cpp
   GCNILPSched.cpp
@@ -107,6 +111,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNPreRAOptimizations.cpp
   GCNRegPressure.cpp
   GCNSchedStrategy.cpp
+  GCNVOPDUtils.cpp
   R600AsmPrinter.cpp
   R600ClauseMergePass.cpp
   R600ControlFlowFinalizer.cpp

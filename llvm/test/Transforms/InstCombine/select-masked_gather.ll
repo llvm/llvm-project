@@ -2,123 +2,123 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; Fold zeroing of inactive lanes into the gather's passthrough parameter.
-define <vscale x 2 x float> @masked_gather_and_zero_inactive_1(<vscale x 2 x float*> %ptr, <vscale x 2 x i1> %mask) {
+define <vscale x 2 x float> @masked_gather_and_zero_inactive_1(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_1(
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0f32(<vscale x 2 x float*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x float> zeroinitializer)
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[GATHER]]
 ;
-  %gather = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
+  %gather = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
   %masked = select <vscale x 2 x i1> %mask, <vscale x 2 x float> %gather, <vscale x 2 x float> zeroinitializer
   ret <vscale x 2 x float> %masked
 }
 
 ; As above but reuse the gather's existing passthrough.
-define <vscale x 2 x i32> @masked_gather_and_zero_inactive_2(<vscale x 2 x i32*> %ptr, <vscale x 2 x i1> %mask) {
+define <vscale x 2 x i32> @masked_gather_and_zero_inactive_2(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_2(
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[GATHER]]
 ;
-  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> zeroinitializer)
+  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> zeroinitializer)
   %masked = select <vscale x 2 x i1> %mask, <vscale x 2 x i32> %gather, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i32> %masked
 }
 
 ; No transform when the gather's passthrough cannot be reused or altered.
-define <vscale x 2 x i32> @masked_gather_and_zero_inactive_3(<vscale x 2 x i32*> %ptr, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthrough) {
+define <vscale x 2 x i32> @masked_gather_and_zero_inactive_3(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthrough) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_3(
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i32> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i32> [[PASSTHROUGH:%.*]])
 ; CHECK-NEXT:    [[MASKED:%.*]] = select <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> [[GATHER]], <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[MASKED]]
 ;
-  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthrough)
+  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthrough)
   %masked = select <vscale x 2 x i1> %mask, <vscale x 2 x i32> %gather, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i32> %masked
 }
 
 ; Remove redundant select when its mask doesn't overlap with the gather mask.
-define <vscale x 2 x i32> @masked_gather_and_zero_inactive_4(<vscale x 2 x i32*> %ptr, <vscale x 2 x i1> %inv_mask) {
+define <vscale x 2 x i32> @masked_gather_and_zero_inactive_4(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %inv_mask) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_4(
 ; CHECK-NEXT:    [[MASK:%.*]] = xor <vscale x 2 x i1> [[INV_MASK:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[GATHER]]
 ;
   %splat  = shufflevector <vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
   %mask = xor <vscale x 2 x i1> %inv_mask, %splat
-  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
+  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
   %masked = select <vscale x 2 x i1> %inv_mask, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> %gather
   ret <vscale x 2 x i32> %masked
 }
 
 ; As above but reuse the gather's existing passthrough.
-define <vscale x 2 x i32> @masked_gather_and_zero_inactive_5(<vscale x 2 x i32*> %ptr, <vscale x 2 x i1> %inv_mask) {
+define <vscale x 2 x i32> @masked_gather_and_zero_inactive_5(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %inv_mask) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_5(
 ; CHECK-NEXT:    [[MASK:%.*]] = xor <vscale x 2 x i1> [[INV_MASK:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[GATHER]]
 ;
   %splat  = shufflevector <vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
   %mask = xor <vscale x 2 x i1> %inv_mask, %splat
-  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> zeroinitializer)
+  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> zeroinitializer)
   %masked = select <vscale x 2 x i1> %inv_mask, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> %gather
   ret <vscale x 2 x i32> %masked
 }
 
 ; No transform when the gather's passthrough cannot be reused or altered.
-define <vscale x 2 x i32> @masked_gather_and_zero_inactive_6(<vscale x 2 x i32*> %ptr, <vscale x 2 x i1> %inv_mask, <vscale x 2 x i32> %passthrough) {
+define <vscale x 2 x i32> @masked_gather_and_zero_inactive_6(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %inv_mask, <vscale x 2 x i32> %passthrough) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_6(
 ; CHECK-NEXT:    [[MASK:%.*]] = xor <vscale x 2 x i1> [[INV_MASK:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> [[PASSTHROUGH:%.*]])
 ; CHECK-NEXT:    [[MASKED:%.*]] = select <vscale x 2 x i1> [[INV_MASK]], <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> [[GATHER]]
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[MASKED]]
 ;
   %splat  = shufflevector <vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
   %mask = xor <vscale x 2 x i1> %inv_mask, %splat
-  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthrough)
+  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthrough)
   %masked = select <vscale x 2 x i1> %inv_mask, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> %gather
   ret <vscale x 2 x i32> %masked
 }
 
 ; No transform when select and gather masks have no relation.
-define <vscale x 2 x i32> @masked_gather_and_zero_inactive_7(<vscale x 2 x i32*> %ptr, <vscale x 2 x i1> %mask1, <vscale x 2 x i1> %mask2) {
+define <vscale x 2 x i32> @masked_gather_and_zero_inactive_7(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %mask1, <vscale x 2 x i1> %mask2) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_7(
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK1:%.*]], <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[MASK1:%.*]], <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[MASKED:%.*]] = select <vscale x 2 x i1> [[MASK2:%.*]], <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> [[GATHER]]
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[MASKED]]
 ;
-  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptr, i32 4, <vscale x 2 x i1> %mask1, <vscale x 2 x i32> zeroinitializer)
+  %gather = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %mask1, <vscale x 2 x i32> zeroinitializer)
   %masked = select <vscale x 2 x i1> %mask2, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> %gather
   ret <vscale x 2 x i32> %masked
 }
 
 ; A more complex case where we can prove the select mask is a subset of the
 ; gather's inactive lanes and thus the gather's passthrough takes effect.
-define <vscale x 2 x float> @masked_gather_and_zero_inactive_8(<vscale x 2 x float*> %ptr, <vscale x 2 x i1> %inv_mask, <vscale x 2 x i1> %cond) {
+define <vscale x 2 x float> @masked_gather_and_zero_inactive_8(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %inv_mask, <vscale x 2 x i1> %cond) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_8(
 ; CHECK-NEXT:    [[MASK:%.*]] = xor <vscale x 2 x i1> [[INV_MASK:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[PG:%.*]] = and <vscale x 2 x i1> [[MASK]], [[COND:%.*]]
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0f32(<vscale x 2 x float*> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[PG]], <vscale x 2 x float> zeroinitializer)
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[PG]], <vscale x 2 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[GATHER]]
 ;
   %splat  = shufflevector <vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
   %mask = xor <vscale x 2 x i1> %inv_mask, %splat
   %pg = and <vscale x 2 x i1> %mask, %cond
-  %gather = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*> %ptr, i32 4, <vscale x 2 x i1> %pg, <vscale x 2 x float> undef)
+  %gather = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr> %ptr, i32 4, <vscale x 2 x i1> %pg, <vscale x 2 x float> undef)
   %masked = select <vscale x 2 x i1> %inv_mask, <vscale x 2 x float> zeroinitializer, <vscale x 2 x float> %gather
   ret <vscale x 2 x float> %masked
 }
 
-define <vscale x 2 x float> @masked_load_and_scalar_select_cond(<vscale x 2 x float*> %ptr, <vscale x 2 x i1> %mask, i1 %cond) {
+define <vscale x 2 x float> @masked_load_and_scalar_select_cond(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %mask, i1 %cond) {
 ; CHECK-LABEL: @masked_load_and_scalar_select_cond(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0f32(<vscale x 2 x float*> [[PTR:%.*]], i32 32, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x float> undef)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 32, <vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x float> undef)
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], <vscale x 2 x float> zeroinitializer, <vscale x 2 x float> [[TMP0]]
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 ;
 entry:
-  %0 = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*> %ptr, i32 32, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
+  %0 = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr> %ptr, i32 32, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
   %1 = select i1 %cond, <vscale x 2 x float> zeroinitializer, <vscale x 2 x float> %0
   ret <vscale x 2 x float> %1
 }
 
-declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
-declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
+declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
+declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)

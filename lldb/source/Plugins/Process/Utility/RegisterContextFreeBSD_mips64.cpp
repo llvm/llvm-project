@@ -169,7 +169,7 @@ size_t RegisterContextFreeBSD_mips64::GetRegisterSetCount() const {
 }
 
 const RegisterInfo *RegisterContextFreeBSD_mips64::GetRegisterInfo() const {
-  assert(m_target_arch.GetCore() == ArchSpec::eCore_mips64);
+  assert(GetTargetArchitecture().GetCore() == ArchSpec::eCore_mips64);
   return g_register_infos_mips64;
 }
 

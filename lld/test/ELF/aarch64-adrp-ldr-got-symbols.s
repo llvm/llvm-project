@@ -5,8 +5,9 @@
 # RUN: rm -rf %t && split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/symbols.s -o %t/symbols.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %t/abs.s -o %t/abs.o
 
-# RUN: ld.lld -shared -T %t/linker.t %t/symbols.o -o %t/symbols.so
+# RUN: ld.lld -shared -T %t/linker.t %t/symbols.o %t/abs.o -o %t/symbols.so
 # RUN: llvm-objdump --no-show-raw-insn -d %t/symbols.so | \
 # RUN:   FileCheck --check-prefix=LIB %s
 
@@ -26,13 +27,21 @@ LIB-NEXT: ldr    x2
 LIB-NEXT: adrp   x3
 LIB-NEXT: ldr    x3
 
-# RUN: ld.lld -T %t/linker.t -z undefs %t/symbols.o -o %t/symbols
+## Symbol 'abs_sym' is absolute, no relaxations should be applied.
+LIB-NEXT: adrp   x4
+LIB-NEXT: ldr    x4
+
+# RUN: ld.lld -T %t/linker.t -z undefs %t/symbols.o %t/abs.o -o %t/symbols
 # RUN: llvm-objdump --no-show-raw-insn -d %t/symbols | \
 # RUN:   FileCheck --check-prefix=EXE %s
 
 ## Symbol 'global_sym' is nonpreemptible, the relaxation should be applied.
 EXE:      adrp   x1
 EXE-NEXT: add    x1
+
+## Symbol 'abs_sym' is absolute, relaxations may be applied in -no-pie mode.
+EXE:      adrp   x4
+EXE-NEXT: add    x4
 
 ## The linker script ensures that .rodata and .text are sufficiently (>1MB)
 ## far apart so that the adrp + ldr pair cannot be relaxed to adr + nop.
@@ -41,6 +50,13 @@ SECTIONS {
  .rodata 0x1000: { *(.rodata) }
  .text   0x300100: { *(.text) }
 }
+
+# This symbol is defined in a separate file to prevent the definition from
+# being folded into the instructions that reference it.
+#--- abs.s
+.global abs_sym
+.hidden abs_sym
+abs_sym = 0x1000
 
 #--- symbols.s
 .rodata
@@ -68,3 +84,5 @@ _start:
   ldr     x2, [x2, #:got_lo12:undefined_sym]
   adrp    x3, :got:ifunc_sym
   ldr     x3, [x3, #:got_lo12:ifunc_sym]
+  adrp    x4, :got:abs_sym
+  ldr     x4, [x4, #:got_lo12:abs_sym]

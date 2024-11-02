@@ -17,7 +17,7 @@
 /// \param LANG - The Language for which this is a standard.
 /// \param DESC - A short description of the standard.
 /// \param FEATURES - The standard features as flags, these are enums from the
-/// clang::frontend namespace, which is assumed to be be available.
+/// clang::frontend namespace, which is assumed to be available.
 
 /// LANGSTANDARD_ALIAS(IDENT, ALIAS)
 /// \param IDENT - The name of the standard as a C++ identifier.

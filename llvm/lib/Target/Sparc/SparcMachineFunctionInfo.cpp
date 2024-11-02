@@ -11,3 +11,10 @@
 using namespace llvm;
 
 void SparcMachineFunctionInfo::anchor() { }
+
+MachineFunctionInfo *SparcMachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<SparcMachineFunctionInfo>(*this);
+}

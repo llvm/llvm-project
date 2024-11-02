@@ -118,7 +118,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   case Stmt::SizeOfPackExprClass:
   case Stmt::PredefinedExprClass:
     // Known constants; defer to SValBuilder.
-    return svalBuilder.getConstantVal(cast<Expr>(S)).getValue();
+    return *svalBuilder.getConstantVal(cast<Expr>(S));
 
   case Stmt::ReturnStmtClass: {
     const auto *RS = cast<ReturnStmt>(S);
@@ -274,7 +274,8 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
 
       const Stmt *S = I->first.getStmt();
       Indent(Out, InnerSpace, IsDot)
-          << "{ \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
+          << "{ \"stmt_id\": " << S->getID(Ctx) << ", \"kind\": \""
+          << S->getStmtClassName() << "\", \"pretty\": ";
       S->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
 
       Out << ", \"value\": ";

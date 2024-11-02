@@ -5,23 +5,9 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main-arm-none-eabi"
 
-  @a = global i32 0, align 4
   @b = local_unnamed_addr global i32 0, align 4
 
   define i32 @c() {
-  entry:
-    br i1 icmp eq (i8 trunc (i32 sdiv (i32 zext (i8 trunc (i32 lshr (i32 zext (i8 ptrtoint (i32* @a to i8) to i32), i32 6) to i8) to i32), i32 7) to i8), i8 0), label %if.then, label %safe_mod_func_int32_t_s_s.exit
-
-  safe_mod_func_int32_t_s_s.exit:                   ; preds = %entry
-    br i1 icmp eq (i32 srem (i32 6, i32 zext (i8 trunc (i32 sdiv (i32 zext (i8 trunc (i32 lshr (i32 zext (i8 ptrtoint (i32* @a to i8) to i32), i32 6) to i8) to i32), i32 7) to i8) to i32)), i32 0), label %if.end, label %if.then
-
-  if.then:                                          ; preds = %safe_mod_func_int32_t_s_s.exit, %entry
-    %0 = load i32, i32* @b, align 4
-    %inc = add nsw i32 %0, 1
-    store i32 %inc, i32* @b, align 4
-    br label %if.end
-
-  if.end:                                           ; preds = %if.then, %safe_mod_func_int32_t_s_s.exit
     ret i32 undef
   }
 
@@ -32,36 +18,36 @@ alignment:       2
 tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: c
-  ; CHECK: bb.0.entry:
+  ; CHECK: bb.0:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK:   renamable $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   tCBNZ killed renamable $r0, %bb.2
-  ; CHECK: bb.1.safe_mod_func_int32_t_s_s.exit:
+  ; CHECK: bb.1:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK:   tCBZ undef renamable $r0, %bb.3
-  ; CHECK: bb.2.if.then:
+  ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   $r0 = t2MOVi16 target-flags(arm-lo16) @b, 14 /* CC::al */, $noreg
   ; CHECK:   $r0 = t2MOVTi16 killed $r0, target-flags(arm-hi16) @b, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1 = tLDRi renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @b)
   ; CHECK:   renamable $r1, dead $cpsr = nsw tADDi8 killed renamable $r1, 1, 14 /* CC::al */, $noreg
   ; CHECK:   tSTRi killed renamable $r1, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into @b)
-  ; CHECK: bb.3.if.end:
+  ; CHECK: bb.3:
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit undef $r0
-  bb.0.entry:
+  bb.0:
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
 
     renamable $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1 /* CC::ne */, killed $cpsr
 
-  bb.1.safe_mod_func_int32_t_s_s.exit:
+  bb.1:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
 
     tCMPi8 undef renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2Bcc %bb.3, 0 /* CC::eq */, killed $cpsr
 
-  bb.2.if.then:
+  bb.2:
     successors: %bb.3(0x80000000)
 
     $r0 = t2MOVi16 target-flags(arm-lo16) @b, 14 /* CC::al */, $noreg
@@ -70,7 +56,7 @@ body:             |
     renamable $r1, dead $cpsr = nsw tADDi8 killed renamable $r1, 1, 14 /* CC::al */, $noreg
     tSTRi killed renamable $r1, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into @b)
 
-  bb.3.if.end:
+  bb.3:
     tBX_RET 14 /* CC::al */, $noreg, implicit undef $r0
 
 ...

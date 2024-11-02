@@ -41,7 +41,7 @@ TEST(OffloadingTest, checkOffloadingBinary) {
   Data.TheOffloadKind = static_cast<OffloadKind>(KindDist(Rng));
   Data.Flags = KindDist(Rng);
   Data.StringData = StringData;
-  Data.Image = *ImageData;
+  Data.Image = std::move(ImageData);
 
   auto BinaryBuffer = OffloadBinary::write(Data);
 
@@ -59,7 +59,7 @@ TEST(OffloadingTest, checkOffloadingBinary) {
     ASSERT_TRUE(StringData[KeyAndValue.first] ==
                 Binary.getString(KeyAndValue.first));
 
-  EXPECT_TRUE(Data.Image.getBuffer() == Binary.getImage());
+  EXPECT_TRUE(Data.Image->getBuffer() == Binary.getImage());
 
   // Ensure the size and alignment of the data is correct.
   EXPECT_TRUE(Binary.getSize() % OffloadBinary::getAlignment() == 0);

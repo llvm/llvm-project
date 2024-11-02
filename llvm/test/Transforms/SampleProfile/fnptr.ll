@@ -81,7 +81,7 @@ for.body3:                                        ; preds = %for.inc, %for.cond1
   %call = tail call i32 @rand() #3, !dbg !15
   %rem = srem i32 %call, 100, !dbg !15
   %cmp4 = icmp slt i32 %rem, 30, !dbg !15
-  %_Z3fooi._Z3bari = select i1 %cmp4, double (i32)* @_Z3fooi, double (i32)* @_Z3bari, !dbg !15
+  %_Z3fooi._Z3bari = select i1 %cmp4, ptr @_Z3fooi, ptr @_Z3bari, !dbg !15
   %call5 = tail call i32 @rand() #3, !dbg !16
   %rem6 = srem i32 %call5, 100, !dbg !16
   %cmp7 = icmp slt i32 %rem6, 10, !dbg !16
@@ -114,7 +114,7 @@ for.inc12:                                        ; preds = %for.inc
 
 for.end14:                                        ; preds = %for.inc12
   %S.2.lcssa.lcssa = phi double [ %S.2.lcssa, %for.inc12 ]
-  %call15 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0), double %S.2.lcssa.lcssa), !dbg !24
+  %call15 = tail call i32 (ptr, ...) @printf(ptr @.str, double %S.2.lcssa.lcssa), !dbg !24
   ret i32 0, !dbg !25
 }
 
@@ -122,7 +122,7 @@ for.end14:                                        ; preds = %for.inc12
 declare i32 @rand() #1
 
 ; Function Attrs: nounwind
-declare i32 @printf(i8* nocapture readonly, ...) #1
+declare i32 @printf(ptr nocapture readonly, ...) #1
 
 attributes #0 = {"use-sample-profile"}
 attributes #2 = {"use-sample-profile"}

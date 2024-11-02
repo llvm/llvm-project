@@ -7,11 +7,11 @@ RUN: ld.lld %t.o -o %t -q
 RUN: llvm-objdump -d --disassemble-symbols=use_avx512 %t | \
 RUN:   FileCheck %s --check-prefix=CHECK-DIS-NO-TRAP
 
-RUN: llvm-bolt %t -trap-avx512=1 -o %t.bolt -lite=0 2>&1 | FileCheck %s
+RUN: llvm-bolt %t --trap-avx512=1 -o %t.bolt --lite=0 2>&1 | FileCheck %s
 RUN: llvm-objdump -d --disassemble-symbols=use_avx512 %t.bolt | \
 RUN:   FileCheck %s --check-prefix=CHECK-DIS
 
-RUN: llvm-bolt %t -trap-avx512=0 -o %t.bolt -lite=0
+RUN: llvm-bolt %t --trap-avx512=0 -o %t.bolt --lite=0
 RUN: llvm-objdump -d --disassemble-symbols=use_avx512 %t.bolt | \
 RUN:   FileCheck %s --check-prefix=CHECK-DIS-NO-TRAP
 

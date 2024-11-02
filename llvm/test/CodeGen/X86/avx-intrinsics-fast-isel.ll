@@ -136,7 +136,7 @@ define <8 x float> @test_mm256_blendv_ps(<8 x float> %a0, <8 x float> %a1, <8 x 
 }
 declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>, <8 x float>) nounwind readnone
 
-define <4 x double> @test_mm256_broadcast_pd(<2 x double>* %a0) nounwind {
+define <4 x double> @test_mm256_broadcast_pd(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_broadcast_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -147,12 +147,12 @@ define <4 x double> @test_mm256_broadcast_pd(<2 x double>* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
-  %ld = load <2 x double>, <2 x double>* %a0
+  %ld = load <2 x double>, ptr %a0
   %res = shufflevector <2 x double> %ld, <2 x double> %ld, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x double> %res
 }
 
-define <8 x float> @test_mm256_broadcast_ps(<4 x float>* %a0) nounwind {
+define <8 x float> @test_mm256_broadcast_ps(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_broadcast_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -163,12 +163,12 @@ define <8 x float> @test_mm256_broadcast_ps(<4 x float>* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
-  %ld = load <4 x float>, <4 x float>* %a0
+  %ld = load <4 x float>, ptr %a0
   %res = shufflevector <4 x float> %ld, <4 x float> %ld, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <8 x float> %res
 }
 
-define <4 x double> @test_mm256_broadcast_sd(double* %a0) nounwind {
+define <4 x double> @test_mm256_broadcast_sd(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_broadcast_sd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -179,7 +179,7 @@ define <4 x double> @test_mm256_broadcast_sd(double* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %ld = load double, double* %a0
+  %ld = load double, ptr %a0
   %ins0 = insertelement <4 x double> undef, double %ld, i32 0
   %ins1 = insertelement <4 x double> %ins0, double %ld, i32 1
   %ins2 = insertelement <4 x double> %ins1, double %ld, i32 2
@@ -187,7 +187,7 @@ define <4 x double> @test_mm256_broadcast_sd(double* %a0) nounwind {
   ret <4 x double> %ins3
 }
 
-define <4 x float> @test_mm_broadcast_ss(float* %a0) nounwind {
+define <4 x float> @test_mm_broadcast_ss(ptr %a0) nounwind {
 ; X86-LABEL: test_mm_broadcast_ss:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -198,7 +198,7 @@ define <4 x float> @test_mm_broadcast_ss(float* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi), %xmm0
 ; X64-NEXT:    retq
-  %ld = load float, float* %a0
+  %ld = load float, ptr %a0
   %ins0 = insertelement <4 x float> undef, float %ld, i32 0
   %ins1 = insertelement <4 x float> %ins0, float %ld, i32 1
   %ins2 = insertelement <4 x float> %ins1, float %ld, i32 2
@@ -206,7 +206,7 @@ define <4 x float> @test_mm_broadcast_ss(float* %a0) nounwind {
   ret <4 x float> %ins3
 }
 
-define <8 x float> @test_mm256_broadcast_ss(float* %a0) nounwind {
+define <8 x float> @test_mm256_broadcast_ss(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_broadcast_ss:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -217,7 +217,7 @@ define <8 x float> @test_mm256_broadcast_ss(float* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %ld = load float, float* %a0
+  %ld = load float, ptr %a0
   %ins0 = insertelement <8 x float> undef, float %ld, i32 0
   %ins1 = insertelement <8 x float> %ins0, float %ld, i32 1
   %ins2 = insertelement <8 x float> %ins1, float %ld, i32 2
@@ -258,7 +258,6 @@ define <4 x double> @test_mm256_castpd128_pd256_freeze(<2 x double> %a0) nounwin
 ; CHECK-LABEL: test_mm256_castpd128_pd256_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <2 x double> poison
   %res = shufflevector <2 x double> %a0, <2 x double> %a1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -304,7 +303,6 @@ define <8 x float> @test_mm256_castps128_ps256_freeze(<4 x float> %a0) nounwind 
 ; CHECK-LABEL: test_mm256_castps128_ps256_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <4 x float> poison
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -334,7 +332,6 @@ define <4 x i64> @test_mm256_castsi128_si256_freeze(<2 x i64> %a0) nounwind {
 ; CHECK-LABEL: test_mm256_castsi128_si256_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <2 x i64> poison
   %res = shufflevector <2 x i64> %a0, <2 x i64> %a1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -718,8 +715,7 @@ define <4 x i64> @test_mm256_insert_epi8(<4 x i64> %a0, i8 %a1) nounwind {
 ;
 ; X64-LABEL: test_mm256_insert_epi8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm1
+; X64-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
@@ -818,7 +814,7 @@ define <4 x i64> @test_mm256_insertf128_si256(<4 x i64> %a0, <2 x i64> %a1) noun
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_mm256_lddqu_si256(<4 x i64>* %a0) nounwind {
+define <4 x i64> @test_mm256_lddqu_si256(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_lddqu_si256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -829,14 +825,13 @@ define <4 x i64> @test_mm256_lddqu_si256(<4 x i64>* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vlddqu (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast <4 x i64>* %a0 to i8*
-  %res = call <32 x i8> @llvm.x86.avx.ldu.dq.256(i8* %arg0)
+  %res = call <32 x i8> @llvm.x86.avx.ldu.dq.256(ptr %a0)
   %bc = bitcast <32 x i8> %res to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <32 x i8> @llvm.x86.avx.ldu.dq.256(i8*) nounwind readnone
+declare <32 x i8> @llvm.x86.avx.ldu.dq.256(ptr) nounwind readnone
 
-define <4 x double> @test_mm256_load_pd(double* %a0) nounwind {
+define <4 x double> @test_mm256_load_pd(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_load_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -847,12 +842,11 @@ define <4 x double> @test_mm256_load_pd(double* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to <4 x double>*
-  %res = load <4 x double>, <4 x double>* %arg0, align 32
+  %res = load <4 x double>, ptr %a0, align 32
   ret <4 x double> %res
 }
 
-define <8 x float> @test_mm256_load_ps(float* %a0) nounwind {
+define <8 x float> @test_mm256_load_ps(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_load_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -863,12 +857,11 @@ define <8 x float> @test_mm256_load_ps(float* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <8 x float>*
-  %res = load <8 x float>, <8 x float>* %arg0, align 32
+  %res = load <8 x float>, ptr %a0, align 32
   ret <8 x float> %res
 }
 
-define <4 x i64> @test_mm256_load_si256(<4 x i64>* %a0) nounwind {
+define <4 x i64> @test_mm256_load_si256(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_load_si256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -879,11 +872,11 @@ define <4 x i64> @test_mm256_load_si256(<4 x i64>* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %res = load <4 x i64>, <4 x i64>* %a0, align 32
+  %res = load <4 x i64>, ptr %a0, align 32
   ret <4 x i64> %res
 }
 
-define <4 x double> @test_mm256_loadu_pd(double* %a0) nounwind {
+define <4 x double> @test_mm256_loadu_pd(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_loadu_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -894,12 +887,11 @@ define <4 x double> @test_mm256_loadu_pd(double* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovups (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to <4 x double>*
-  %res = load <4 x double>, <4 x double>* %arg0, align 1
+  %res = load <4 x double>, ptr %a0, align 1
   ret <4 x double> %res
 }
 
-define <8 x float> @test_mm256_loadu_ps(float* %a0) nounwind {
+define <8 x float> @test_mm256_loadu_ps(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_loadu_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -910,12 +902,11 @@ define <8 x float> @test_mm256_loadu_ps(float* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovups (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <8 x float>*
-  %res = load <8 x float>, <8 x float>* %arg0, align 1
+  %res = load <8 x float>, ptr %a0, align 1
   ret <8 x float> %res
 }
 
-define <4 x i64> @test_mm256_loadu_si256(<4 x i64>* %a0) nounwind {
+define <4 x i64> @test_mm256_loadu_si256(ptr %a0) nounwind {
 ; X86-LABEL: test_mm256_loadu_si256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -926,11 +917,11 @@ define <4 x i64> @test_mm256_loadu_si256(<4 x i64>* %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovups (%rdi), %ymm0
 ; X64-NEXT:    retq
-  %res = load <4 x i64>, <4 x i64>* %a0, align 1
+  %res = load <4 x i64>, ptr %a0, align 1
   ret <4 x i64> %res
 }
 
-define <8 x float> @test_mm256_loadu2_m128(float* %a0, float* %a1) nounwind {
+define <8 x float> @test_mm256_loadu2_m128(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: test_mm256_loadu2_m128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -944,17 +935,15 @@ define <8 x float> @test_mm256_loadu2_m128(float* %a0, float* %a1) nounwind {
 ; X64-NEXT:    vmovups (%rsi), %xmm0
 ; X64-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <4 x float>*
-  %hi4 = load <4 x float>, <4 x float>* %arg0, align 1
+  %hi4 = load <4 x float>, ptr %a0, align 1
   %hi8 = shufflevector <4 x float> %hi4, <4 x float> %hi4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-  %arg1 = bitcast float* %a1 to <4 x float>*
-  %lo4 = load <4 x float>, <4 x float>* %arg1, align 1
+  %lo4 = load <4 x float>, ptr %a1, align 1
   %lo8 = shufflevector <4 x float> %lo4, <4 x float> %lo4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %res = shufflevector <8 x float> %lo8, <8 x float> %hi8, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   ret <8 x float> %res
 }
 
-define <4 x double> @test_mm256_loadu2_m128d(double* %a0, double* %a1) nounwind {
+define <4 x double> @test_mm256_loadu2_m128d(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: test_mm256_loadu2_m128d:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -968,17 +957,15 @@ define <4 x double> @test_mm256_loadu2_m128d(double* %a0, double* %a1) nounwind 
 ; X64-NEXT:    vmovups (%rsi), %xmm0
 ; X64-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to <2 x double>*
-  %hi2 = load <2 x double>, <2 x double>* %arg0, align 1
+  %hi2 = load <2 x double>, ptr %a0, align 1
   %hi4 = shufflevector <2 x double> %hi2, <2 x double> %hi2, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  %arg1 = bitcast double* %a1 to <2 x double>*
-  %lo2 = load <2 x double>, <2 x double>* %arg1, align 1
+  %lo2 = load <2 x double>, ptr %a1, align 1
   %lo4 = shufflevector <2 x double> %lo2, <2 x double> %lo2, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %res = shufflevector <4 x double> %lo4, <4 x double> %hi4, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x double> %res
 }
 
-define <4 x i64> @test_mm256_loadu2_m128i(i64* %a0, i64* %a1) nounwind {
+define <4 x i64> @test_mm256_loadu2_m128i(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: test_mm256_loadu2_m128i:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -992,17 +979,15 @@ define <4 x i64> @test_mm256_loadu2_m128i(i64* %a0, i64* %a1) nounwind {
 ; X64-NEXT:    vmovups (%rsi), %xmm0
 ; X64-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast i64* %a0 to <2 x i64>*
-  %hi2 = load <2 x i64>, <2 x i64>* %arg0, align 1
+  %hi2 = load <2 x i64>, ptr %a0, align 1
   %hi4 = shufflevector <2 x i64> %hi2, <2 x i64> %hi2, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  %arg1 = bitcast i64* %a1 to <2 x i64>*
-  %lo2 = load <2 x i64>, <2 x i64>* %arg1, align 1
+  %lo2 = load <2 x i64>, ptr %a1, align 1
   %lo4 = shufflevector <2 x i64> %lo2, <2 x i64> %lo2, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %res = shufflevector <4 x i64> %lo4, <4 x i64> %hi4, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x i64> %res
 }
 
-define <2 x double> @test_mm_maskload_pd(double* %a0, <2 x i64> %a1) nounwind {
+define <2 x double> @test_mm_maskload_pd(ptr %a0, <2 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm_maskload_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1013,13 +998,12 @@ define <2 x double> @test_mm_maskload_pd(double* %a0, <2 x i64> %a1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to i8*
-  %res = call <2 x double> @llvm.x86.avx.maskload.pd(i8* %arg0, <2 x i64> %a1)
+  %res = call <2 x double> @llvm.x86.avx.maskload.pd(ptr %a0, <2 x i64> %a1)
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.avx.maskload.pd(i8*, <2 x i64>) nounwind readnone
+declare <2 x double> @llvm.x86.avx.maskload.pd(ptr, <2 x i64>) nounwind readnone
 
-define <4 x double> @test_mm256_maskload_pd(double* %a0, <4 x i64> %a1) nounwind {
+define <4 x double> @test_mm256_maskload_pd(ptr %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm256_maskload_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1030,13 +1014,12 @@ define <4 x double> @test_mm256_maskload_pd(double* %a0, <4 x i64> %a1) nounwind
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to i8*
-  %res = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8* %arg0, <4 x i64> %a1)
+  %res = call <4 x double> @llvm.x86.avx.maskload.pd.256(ptr %a0, <4 x i64> %a1)
   ret <4 x double> %res
 }
-declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8*, <4 x i64>) nounwind readnone
+declare <4 x double> @llvm.x86.avx.maskload.pd.256(ptr, <4 x i64>) nounwind readnone
 
-define <4 x float> @test_mm_maskload_ps(float* %a0, <2 x i64> %a1) nounwind {
+define <4 x float> @test_mm_maskload_ps(ptr %a0, <2 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm_maskload_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1047,14 +1030,13 @@ define <4 x float> @test_mm_maskload_ps(float* %a0, <2 x i64> %a1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to i8*
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <4 x float> @llvm.x86.avx.maskload.ps(i8* %arg0, <4 x i32> %arg1)
+  %res = call <4 x float> @llvm.x86.avx.maskload.ps(ptr %a0, <4 x i32> %arg1)
   ret <4 x float> %res
 }
-declare <4 x float> @llvm.x86.avx.maskload.ps(i8*, <4 x i32>) nounwind readnone
+declare <4 x float> @llvm.x86.avx.maskload.ps(ptr, <4 x i32>) nounwind readnone
 
-define <8 x float> @test_mm256_maskload_ps(float* %a0, <4 x i64> %a1) nounwind {
+define <8 x float> @test_mm256_maskload_ps(ptr %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm256_maskload_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1065,14 +1047,13 @@ define <8 x float> @test_mm256_maskload_ps(float* %a0, <4 x i64> %a1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to i8*
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
-  %res = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8* %arg0, <8 x i32> %arg1)
+  %res = call <8 x float> @llvm.x86.avx.maskload.ps.256(ptr %a0, <8 x i32> %arg1)
   ret <8 x float> %res
 }
-declare <8 x float> @llvm.x86.avx.maskload.ps.256(i8*, <8 x i32>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.maskload.ps.256(ptr, <8 x i32>) nounwind readnone
 
-define void @test_mm_maskstore_pd(double* %a0, <2 x i64> %a1, <2 x double> %a2) nounwind {
+define void @test_mm_maskstore_pd(ptr %a0, <2 x i64> %a1, <2 x double> %a2) nounwind {
 ; X86-LABEL: test_mm_maskstore_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1083,13 +1064,12 @@ define void @test_mm_maskstore_pd(double* %a0, <2 x i64> %a1, <2 x double> %a2) 
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to i8*
-  call void @llvm.x86.avx.maskstore.pd(i8* %arg0, <2 x i64> %a1, <2 x double> %a2)
+  call void @llvm.x86.avx.maskstore.pd(ptr %a0, <2 x i64> %a1, <2 x double> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.pd(i8*, <2 x i64>, <2 x double>) nounwind readnone
+declare void @llvm.x86.avx.maskstore.pd(ptr, <2 x i64>, <2 x double>) nounwind readnone
 
-define void @test_mm256_maskstore_pd(double* %a0, <4 x i64> %a1, <4 x double> %a2) nounwind {
+define void @test_mm256_maskstore_pd(ptr %a0, <4 x i64> %a1, <4 x double> %a2) nounwind {
 ; X86-LABEL: test_mm256_maskstore_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1102,13 +1082,12 @@ define void @test_mm256_maskstore_pd(double* %a0, <4 x i64> %a1, <4 x double> %a
 ; X64-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to i8*
-  call void @llvm.x86.avx.maskstore.pd.256(i8* %arg0, <4 x i64> %a1, <4 x double> %a2)
+  call void @llvm.x86.avx.maskstore.pd.256(ptr %a0, <4 x i64> %a1, <4 x double> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.pd.256(i8*, <4 x i64>, <4 x double>) nounwind readnone
+declare void @llvm.x86.avx.maskstore.pd.256(ptr, <4 x i64>, <4 x double>) nounwind readnone
 
-define void @test_mm_maskstore_ps(float* %a0, <2 x i64> %a1, <4 x float> %a2) nounwind {
+define void @test_mm_maskstore_ps(ptr %a0, <2 x i64> %a1, <4 x float> %a2) nounwind {
 ; X86-LABEL: test_mm_maskstore_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1119,14 +1098,13 @@ define void @test_mm_maskstore_ps(float* %a0, <2 x i64> %a1, <4 x float> %a2) no
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to i8*
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  call void @llvm.x86.avx.maskstore.ps(i8* %arg0, <4 x i32> %arg1, <4 x float> %a2)
+  call void @llvm.x86.avx.maskstore.ps(ptr %a0, <4 x i32> %arg1, <4 x float> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.ps(i8*, <4 x i32>, <4 x float>) nounwind readnone
+declare void @llvm.x86.avx.maskstore.ps(ptr, <4 x i32>, <4 x float>) nounwind readnone
 
-define void @test_mm256_maskstore_ps(float* %a0, <4 x i64> %a1, <8 x float> %a2) nounwind {
+define void @test_mm256_maskstore_ps(ptr %a0, <4 x i64> %a1, <8 x float> %a2) nounwind {
 ; X86-LABEL: test_mm256_maskstore_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1139,12 +1117,11 @@ define void @test_mm256_maskstore_ps(float* %a0, <4 x i64> %a1, <8 x float> %a2)
 ; X64-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to i8*
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
-  call void @llvm.x86.avx.maskstore.ps.256(i8* %arg0, <8 x i32> %arg1, <8 x float> %a2)
+  call void @llvm.x86.avx.maskstore.ps.256(ptr %a0, <8 x i32> %arg1, <8 x float> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.ps.256(i8*, <8 x i32>, <8 x float>) nounwind readnone
+declare void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>) nounwind readnone
 
 define <4 x double> @test_mm256_max_pd(<4 x double> %a0, <4 x double> %a1) nounwind {
 ; CHECK-LABEL: test_mm256_max_pd:
@@ -1440,8 +1417,8 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ; X86-LABEL: test_mm256_set_epi8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
@@ -1472,8 +1449,8 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
@@ -1508,10 +1485,10 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ;
 ; X64-LABEL: test_mm256_set_epi8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    vpinsrb $1, %r10d, %xmm0, %xmm0
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
@@ -1528,21 +1505,15 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ; X64-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %r9b, %eax
-; X64-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %r8b, %eax
-; X64-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %cl, %eax
-; X64-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %dl, %eax
-; X64-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $10, %r9d, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $11, %r8d, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $14, %esi, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $15, %edi, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    vmovd %ecx, %xmm1
+; X64-NEXT:    vmovd %eax, %xmm1
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
@@ -1881,8 +1852,7 @@ define <4 x i64> @test_mm256_set1_epi8(i8 %a0) nounwind {
 ;
 ; X64-LABEL: test_mm256_set1_epi8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    vmovd %edi, %xmm0
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -2056,8 +2026,8 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ; X86-LABEL: test_mm256_setr_epi8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
@@ -2088,8 +2058,8 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
@@ -2124,10 +2094,10 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ;
 ; X64-LABEL: test_mm256_setr_epi8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    vpinsrb $1, %r10d, %xmm0, %xmm0
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
@@ -2156,18 +2126,12 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ; X64-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movzbl %dil, %esi
-; X64-NEXT:    vmovd %esi, %xmm1
-; X64-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %dl, %eax
-; X64-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %cl, %eax
-; X64-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %r8b, %eax
-; X64-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %r9b, %eax
-; X64-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; X64-NEXT:    vmovd %edi, %xmm1
+; X64-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $4, %r8d, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $5, %r9d, %xmm1, %xmm1
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
@@ -2551,7 +2515,7 @@ entry:
 
 declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #1
 
-define void @test_mm256_store_pd(double* %a0, <4 x double> %a1) nounwind {
+define void @test_mm256_store_pd(ptr %a0, <4 x double> %a1) nounwind {
 ; X86-LABEL: test_mm256_store_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2564,12 +2528,11 @@ define void @test_mm256_store_pd(double* %a0, <4 x double> %a1) nounwind {
 ; X64-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to <4 x double>*
-  store <4 x double> %a1, <4 x double>* %arg0, align 32
+  store <4 x double> %a1, ptr %a0, align 32
   ret void
 }
 
-define void @test_mm256_store_ps(float* %a0, <8 x float> %a1) nounwind {
+define void @test_mm256_store_ps(ptr %a0, <8 x float> %a1) nounwind {
 ; X86-LABEL: test_mm256_store_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2582,12 +2545,11 @@ define void @test_mm256_store_ps(float* %a0, <8 x float> %a1) nounwind {
 ; X64-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <8 x float>*
-  store <8 x float> %a1, <8 x float>* %arg0, align 32
+  store <8 x float> %a1, ptr %a0, align 32
   ret void
 }
 
-define void @test_mm256_store_si256(<4 x i64>* %a0, <4 x i64> %a1) nounwind {
+define void @test_mm256_store_si256(ptr %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm256_store_si256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2600,11 +2562,11 @@ define void @test_mm256_store_si256(<4 x i64>* %a0, <4 x i64> %a1) nounwind {
 ; X64-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  store <4 x i64> %a1, <4 x i64>* %a0, align 32
+  store <4 x i64> %a1, ptr %a0, align 32
   ret void
 }
 
-define void @test_mm256_storeu_pd(double* %a0, <4 x double> %a1) nounwind {
+define void @test_mm256_storeu_pd(ptr %a0, <4 x double> %a1) nounwind {
 ; X86-LABEL: test_mm256_storeu_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2617,12 +2579,11 @@ define void @test_mm256_storeu_pd(double* %a0, <4 x double> %a1) nounwind {
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to <4 x double>*
-  store <4 x double> %a1, <4 x double>* %arg0, align 1
+  store <4 x double> %a1, ptr %a0, align 1
   ret void
 }
 
-define void @test_mm256_storeu_ps(float* %a0, <8 x float> %a1) nounwind {
+define void @test_mm256_storeu_ps(ptr %a0, <8 x float> %a1) nounwind {
 ; X86-LABEL: test_mm256_storeu_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2635,12 +2596,11 @@ define void @test_mm256_storeu_ps(float* %a0, <8 x float> %a1) nounwind {
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <8 x float>*
-  store <8 x float> %a1, <8 x float>* %arg0, align 1
+  store <8 x float> %a1, ptr %a0, align 1
   ret void
 }
 
-define void @test_mm256_storeu_si256(<4 x i64>* %a0, <4 x i64> %a1) nounwind {
+define void @test_mm256_storeu_si256(ptr %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm256_storeu_si256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2653,11 +2613,11 @@ define void @test_mm256_storeu_si256(<4 x i64>* %a0, <4 x i64> %a1) nounwind {
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  store <4 x i64> %a1, <4 x i64>* %a0, align 1
+  store <4 x i64> %a1, ptr %a0, align 1
   ret void
 }
 
-define void @test_mm256_storeu2_m128(float* %a0, float* %a1, <8 x float> %a2) nounwind {
+define void @test_mm256_storeu2_m128(ptr %a0, ptr %a1, <8 x float> %a2) nounwind {
 ; X86-LABEL: test_mm256_storeu2_m128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2675,16 +2635,14 @@ define void @test_mm256_storeu2_m128(float* %a0, float* %a1, <8 x float> %a2) no
 ; X64-NEXT:    vmovups %xmm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <4 x float>*
   %lo = shufflevector <8 x float> %a2, <8 x float> %a2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x float> %lo, <4 x float>* %arg0, align 1
-  %arg1 = bitcast float* %a1 to <4 x float>*
+  store <4 x float> %lo, ptr %a0, align 1
   %hi = shufflevector <8 x float> %a2, <8 x float> %a2, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  store <4 x float> %hi, <4 x float>* %arg1, align 1
+  store <4 x float> %hi, ptr %a1, align 1
   ret void
 }
 
-define void @test_mm256_storeu2_m128d(double* %a0, double* %a1, <4 x double> %a2) nounwind {
+define void @test_mm256_storeu2_m128d(ptr %a0, ptr %a1, <4 x double> %a2) nounwind {
 ; X86-LABEL: test_mm256_storeu2_m128d:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2702,16 +2660,14 @@ define void @test_mm256_storeu2_m128d(double* %a0, double* %a1, <4 x double> %a2
 ; X64-NEXT:    vmovups %xmm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to <2 x double>*
   %lo = shufflevector <4 x double> %a2, <4 x double> %a2, <2 x i32> <i32 0, i32 1>
-  store <2 x double> %lo, <2 x double>* %arg0, align 1
-  %arg1 = bitcast double* %a1 to <2 x double>*
+  store <2 x double> %lo, ptr %a0, align 1
   %hi = shufflevector <4 x double> %a2, <4 x double> %a2, <2 x i32> <i32 2, i32 3>
-  store <2 x double> %hi, <2 x double>* %arg1, align 1
+  store <2 x double> %hi, ptr %a1, align 1
   ret void
 }
 
-define void @test_mm256_storeu2_m128i(<2 x i64>* %a0, <2 x i64>* %a1, <4 x i64> %a2) nounwind {
+define void @test_mm256_storeu2_m128i(ptr %a0, ptr %a1, <4 x i64> %a2) nounwind {
 ; X86-LABEL: test_mm256_storeu2_m128i:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2729,16 +2685,14 @@ define void @test_mm256_storeu2_m128i(<2 x i64>* %a0, <2 x i64>* %a1, <4 x i64> 
 ; X64-NEXT:    vmovups %xmm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast <2 x i64>* %a0 to <2 x i64>*
   %lo = shufflevector <4 x i64> %a2, <4 x i64> %a2, <2 x i32> <i32 0, i32 1>
-  store <2 x i64> %lo, <2 x i64>* %arg0, align 1
-  %arg1 = bitcast <2 x i64>* %a1 to <2 x i64>*
+  store <2 x i64> %lo, ptr %a0, align 1
   %hi = shufflevector <4 x i64> %a2, <4 x i64> %a2, <2 x i32> <i32 2, i32 3>
-  store <2 x i64> %hi, <2 x i64>* %arg1, align 1
+  store <2 x i64> %hi, ptr %a1, align 1
   ret void
 }
 
-define void @test_mm256_stream_pd(double *%a0, <4 x double> %a1) nounwind {
+define void @test_mm256_stream_pd(ptr%a0, <4 x double> %a1) nounwind {
 ; X86-LABEL: test_mm256_stream_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2751,12 +2705,11 @@ define void @test_mm256_stream_pd(double *%a0, <4 x double> %a1) nounwind {
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to <4 x double>*
-  store <4 x double> %a1, <4 x double>* %arg0, align 32, !nontemporal !0
+  store <4 x double> %a1, ptr %a0, align 32, !nontemporal !0
   ret void
 }
 
-define void @test_mm256_stream_ps(float *%a0, <8 x float> %a1) nounwind {
+define void @test_mm256_stream_ps(ptr%a0, <8 x float> %a1) nounwind {
 ; X86-LABEL: test_mm256_stream_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2769,12 +2722,11 @@ define void @test_mm256_stream_ps(float *%a0, <8 x float> %a1) nounwind {
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <8 x float>*
-  store <8 x float> %a1, <8 x float>* %arg0, align 32, !nontemporal !0
+  store <8 x float> %a1, ptr %a0, align 32, !nontemporal !0
   ret void
 }
 
-define void @test_mm256_stream_si256(<4 x i64> *%a0, <4 x i64> %a1) nounwind {
+define void @test_mm256_stream_si256(ptr%a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: test_mm256_stream_si256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2787,7 +2739,7 @@ define void @test_mm256_stream_si256(<4 x i64> *%a0, <4 x i64> %a1) nounwind {
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  store <4 x i64> %a1, <4 x i64>* %a0, align 32, !nontemporal !0
+  store <4 x i64> %a1, ptr %a0, align 32, !nontemporal !0
   ret void
 }
 
@@ -2997,13 +2949,6 @@ define i32 @test_mm256_testz_si256(<4 x i64> %a0, <4 x i64> %a1) nounwind {
   ret i32 %res
 }
 declare i32 @llvm.x86.avx.ptestz.256(<4 x i64>, <4 x i64>) nounwind readnone
-
-define <2 x double> @test_mm_undefined_pd() nounwind {
-; CHECK-LABEL: test_mm_undefined_pd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  ret <2 x double> undef
-}
 
 define <4 x double> @test_mm256_undefined_pd() nounwind {
 ; CHECK-LABEL: test_mm256_undefined_pd:

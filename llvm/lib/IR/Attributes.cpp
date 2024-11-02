@@ -26,6 +26,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ModRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -55,12 +56,11 @@ static const unsigned AllocSizeNumElemsNotPresent = -1;
 
 static uint64_t packAllocSizeArgs(unsigned ElemSizeArg,
                                   const Optional<unsigned> &NumElemsArg) {
-  assert((!NumElemsArg.hasValue() ||
-          *NumElemsArg != AllocSizeNumElemsNotPresent) &&
+  assert((!NumElemsArg || *NumElemsArg != AllocSizeNumElemsNotPresent) &&
          "Attempting to pack a reserved value");
 
   return uint64_t(ElemSizeArg) << 32 |
-         NumElemsArg.getValueOr(AllocSizeNumElemsNotPresent);
+         NumElemsArg.value_or(AllocSizeNumElemsNotPresent);
 }
 
 static std::pair<unsigned, Optional<unsigned>>
@@ -76,7 +76,7 @@ unpackAllocSizeArgs(uint64_t Num) {
 
 static uint64_t packVScaleRangeArgs(unsigned MinValue,
                                     Optional<unsigned> MaxValue) {
-  return uint64_t(MinValue) << 32 | MaxValue.getValueOr(0);
+  return uint64_t(MinValue) << 32 | MaxValue.value_or(0);
 }
 
 static std::pair<unsigned, Optional<unsigned>>
@@ -90,15 +90,17 @@ unpackVScaleRangeArgs(uint64_t Value) {
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          uint64_t Val) {
-  if (Val)
-    assert(Attribute::isIntAttrKind(Kind) && "Not an int attribute");
-  else
-    assert(Attribute::isEnumAttrKind(Kind) && "Not an enum attribute");
+  bool IsIntAttr = Attribute::isIntAttrKind(Kind);
+  assert((IsIntAttr || Attribute::isEnumAttrKind(Kind)) &&
+         "Not an enum or int attribute");
 
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  if (Val) ID.AddInteger(Val);
+  if (IsIntAttr)
+    ID.AddInteger(Val);
+  else
+    assert(Val == 0 && "Value must be zero for enum attributes");
 
   void *InsertPoint;
   AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
@@ -106,7 +108,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    if (!Val)
+    if (!IsIntAttr)
       PA = new (pImpl->Alloc) EnumAttributeImpl(Kind);
     else
       PA = new (pImpl->Alloc) IntAttributeImpl(Kind, Val);
@@ -207,6 +209,11 @@ Attribute Attribute::getWithInAllocaType(LLVMContext &Context, Type *Ty) {
 Attribute Attribute::getWithUWTableKind(LLVMContext &Context,
                                         UWTableKind Kind) {
   return get(Context, UWTable, uint64_t(Kind));
+}
+
+Attribute Attribute::getWithMemoryEffects(LLVMContext &Context,
+                                          MemoryEffects ME) {
+  return get(Context, Memory, ME.toIntValue());
 }
 
 Attribute
@@ -382,6 +389,26 @@ AllocFnKind Attribute::getAllocKind() const {
   return AllocFnKind(pImpl->getValueAsInt());
 }
 
+MemoryEffects Attribute::getMemoryEffects() const {
+  assert(hasAttribute(Attribute::Memory) &&
+         "Can only call getMemoryEffects() on memory attribute");
+  return MemoryEffects::createFromIntValue(pImpl->getValueAsInt());
+}
+
+static const char *getModRefStr(ModRefInfo MR) {
+  switch (MR) {
+  case ModRefInfo::NoModRef:
+    return "none";
+  case ModRefInfo::Ref:
+    return "read";
+  case ModRefInfo::Mod:
+    return "write";
+  case ModRefInfo::ModRef:
+    return "readwrite";
+  }
+  llvm_unreachable("Invalid ModRefInfo");
+}
+
 std::string Attribute::getAsString(bool InAttrGrp) const {
   if (!pImpl) return {};
 
@@ -438,7 +465,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     unsigned MinValue = getVScaleRangeMin();
     Optional<unsigned> MaxValue = getVScaleRangeMax();
     return ("vscale_range(" + Twine(MinValue) + "," +
-            Twine(MaxValue.getValueOr(0)) + ")")
+            Twine(MaxValue.value_or(0)) + ")")
         .str();
   }
 
@@ -471,6 +498,48 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return ("allockind(\"" +
             Twine(llvm::join(parts.begin(), parts.end(), ",")) + "\")")
         .str();
+  }
+
+  if (hasAttribute(Attribute::Memory)) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    bool First = true;
+    OS << "memory(";
+
+    MemoryEffects ME = getMemoryEffects();
+
+    // Print access kind for "other" as the default access kind. This way it
+    // will apply to any new location kinds that get split out of "other".
+    ModRefInfo OtherMR = ME.getModRef(MemoryEffects::Other);
+    if (OtherMR != ModRefInfo::NoModRef || ME.getModRef() == OtherMR) {
+      First = false;
+      OS << getModRefStr(OtherMR);
+    }
+
+    for (auto Loc : MemoryEffects::locations()) {
+      ModRefInfo MR = ME.getModRef(Loc);
+      if (MR == OtherMR)
+        continue;
+
+      if (!First)
+        OS << ", ";
+      First = false;
+
+      switch (Loc) {
+      case MemoryEffects::ArgMem:
+        OS << "argmem: ";
+        break;
+      case MemoryEffects::InaccessibleMem:
+        OS << "inaccessiblemem: ";
+        break;
+      case MemoryEffects::Other:
+        llvm_unreachable("This is represented as the default access kind");
+      }
+      OS << getModRefStr(MR);
+    }
+    OS << ")";
+    OS.flush();
+    return Result;
   }
 
   // Convert target-dependent attributes to strings of the form:
@@ -744,9 +813,11 @@ Type *AttributeSet::getElementType() const {
   return SetNode ? SetNode->getAttributeType(Attribute::ElementType) : nullptr;
 }
 
-std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
-  return SetNode ? SetNode->getAllocSizeArgs()
-                 : std::pair<unsigned, Optional<unsigned>>(0, 0);
+Optional<std::pair<unsigned, Optional<unsigned>>>
+AttributeSet::getAllocSizeArgs() const {
+  if (SetNode)
+    return SetNode->getAllocSizeArgs();
+  return None;
 }
 
 unsigned AttributeSet::getVScaleRangeMin() const {
@@ -763,6 +834,10 @@ UWTableKind AttributeSet::getUWTableKind() const {
 
 AllocFnKind AttributeSet::getAllocKind() const {
   return SetNode ? SetNode->getAllocKind() : AllocFnKind::Unknown;
+}
+
+MemoryEffects AttributeSet::getMemoryEffects() const {
+  return SetNode ? SetNode->getMemoryEffects() : MemoryEffects::unknown();
 }
 
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
@@ -912,11 +987,11 @@ uint64_t AttributeSetNode::getDereferenceableOrNullBytes() const {
   return 0;
 }
 
-std::pair<unsigned, Optional<unsigned>>
+Optional<std::pair<unsigned, Optional<unsigned>>>
 AttributeSetNode::getAllocSizeArgs() const {
   if (auto A = findEnumAttribute(Attribute::AllocSize))
     return A->getAllocSizeArgs();
-  return std::make_pair(0, 0);
+  return None;
 }
 
 unsigned AttributeSetNode::getVScaleRangeMin() const {
@@ -941,6 +1016,12 @@ AllocFnKind AttributeSetNode::getAllocKind() const {
   if (auto A = findEnumAttribute(Attribute::AllocKind))
     return A->getAllocKind();
   return AllocFnKind::Unknown;
+}
+
+MemoryEffects AttributeSetNode::getMemoryEffects() const {
+  if (auto A = findEnumAttribute(Attribute::Memory))
+    return A->getMemoryEffects();
+  return MemoryEffects::unknown();
 }
 
 std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
@@ -1054,11 +1135,7 @@ AttributeList::get(LLVMContext &C,
   if (Attrs.empty())
     return {};
 
-  assert(llvm::is_sorted(Attrs,
-                         [](const std::pair<unsigned, Attribute> &LHS,
-                            const std::pair<unsigned, Attribute> &RHS) {
-                           return LHS.first < RHS.first;
-                         }) &&
+  assert(llvm::is_sorted(Attrs, llvm::less_first()) &&
          "Misordered Attributes list!");
   assert(llvm::all_of(Attrs,
                       [](const std::pair<unsigned, Attribute> &Pair) {
@@ -1091,11 +1168,7 @@ AttributeList::get(LLVMContext &C,
   if (Attrs.empty())
     return {};
 
-  assert(llvm::is_sorted(Attrs,
-                         [](const std::pair<unsigned, AttributeSet> &LHS,
-                            const std::pair<unsigned, AttributeSet> &RHS) {
-                           return LHS.first < RHS.first;
-                         }) &&
+  assert(llvm::is_sorted(Attrs, llvm::less_first()) &&
          "Misordered Attributes list!");
   assert(llvm::none_of(Attrs,
                        [](const std::pair<unsigned, AttributeSet> &Pair) {
@@ -1503,6 +1576,10 @@ AllocFnKind AttributeList::getAllocKind() const {
   return getFnAttrs().getAllocKind();
 }
 
+MemoryEffects AttributeList::getMemoryEffects() const {
+  return getFnAttrs().getMemoryEffects();
+}
+
 std::string AttributeList::getAsString(unsigned Index, bool InAttrGrp) const {
   return getAttributes(Index).getAsString(InAttrGrp);
 }
@@ -1647,10 +1724,12 @@ AttrBuilder &AttrBuilder::removeAttribute(StringRef A) {
   return *this;
 }
 
-uint64_t AttrBuilder::getRawIntAttr(Attribute::AttrKind Kind) const {
+Optional<uint64_t> AttrBuilder::getRawIntAttr(Attribute::AttrKind Kind) const {
   assert(Attribute::isIntAttrKind(Kind) && "Not an int attribute");
   Attribute A = getAttribute(Kind);
-  return A.isValid() ? A.getValueAsInt() : 0;
+  if (A.isValid())
+    return A.getValueAsInt();
+  return None;
 }
 
 AttrBuilder &AttrBuilder::addRawIntAttr(Attribute::AttrKind Kind,
@@ -1658,16 +1737,12 @@ AttrBuilder &AttrBuilder::addRawIntAttr(Attribute::AttrKind Kind,
   return addAttribute(Attribute::get(Ctx, Kind, Value));
 }
 
-std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
-  return unpackAllocSizeArgs(getRawIntAttr(Attribute::AllocSize));
-}
-
-unsigned AttrBuilder::getVScaleRangeMin() const {
-  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).first;
-}
-
-Optional<unsigned> AttrBuilder::getVScaleRangeMax() const {
-  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).second;
+Optional<std::pair<unsigned, Optional<unsigned>>>
+AttrBuilder::getAllocSizeArgs() const {
+  Attribute A = getAttribute(Attribute::AllocSize);
+  if (A.isValid())
+    return A.getAllocSizeArgs();
+  return None;
 }
 
 AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
@@ -1728,6 +1803,10 @@ AttrBuilder &AttrBuilder::addUWTableAttr(UWTableKind Kind) {
   if (Kind == UWTableKind::None)
     return *this;
   return addRawIntAttr(Attribute::UWTable, uint64_t(Kind));
+}
+
+AttrBuilder &AttrBuilder::addMemoryAttr(MemoryEffects ME) {
+  return addRawIntAttr(Attribute::Memory, ME.toIntValue());
 }
 
 AttrBuilder &AttrBuilder::addAllocKindAttr(AllocFnKind Kind) {
@@ -1802,10 +1881,6 @@ bool AttrBuilder::contains(Attribute::AttrKind A) const {
 
 bool AttrBuilder::contains(StringRef A) const {
   return getAttribute(A).isValid();
-}
-
-bool AttrBuilder::hasAlignmentAttr() const {
-  return getRawIntAttr(Attribute::Alignment) != 0;
 }
 
 bool AttrBuilder::operator==(const AttrBuilder &B) const {

@@ -13,6 +13,7 @@
 #include <__config>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <cstddef>
 #include <iosfwd> // for forward declaration of basic_streambuf
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -64,7 +65,7 @@ public:
 
     template <class _Ch, class _Tr>
     friend
-    _LIBCPP_HIDDEN
+    _LIBCPP_HIDE_FROM_ABI
     ostreambuf_iterator<_Ch, _Tr>
     __pad_and_output(ostreambuf_iterator<_Ch, _Tr> __s,
                      const _Ch* __ob, const _Ch* __op, const _Ch* __oe,

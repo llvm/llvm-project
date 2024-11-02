@@ -345,7 +345,7 @@ INITIALIZE_PASS_END(LoopIdiomRecognizeLegacyPass, "loop-idiom",
 Pass *llvm::createLoopIdiomPass() { return new LoopIdiomRecognizeLegacyPass(); }
 
 static void deleteDeadInstruction(Instruction *I) {
-  I->replaceAllUsesWith(UndefValue::get(I->getType()));
+  I->replaceAllUsesWith(PoisonValue::get(I->getType()));
   I->eraseFromParent();
 }
 
@@ -994,9 +994,8 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   SmallPtrSet<Instruction *, 1> MSIs;
   MSIs.insert(MSI);
   return processLoopStridedStore(Pointer, SE->getSCEV(MSI->getLength()),
-                                 MaybeAlign(MSI->getDestAlignment()),
-                                 SplatValue, MSI, MSIs, Ev, BECount,
-                                 IsNegStride, /*IsLoopMemset=*/true);
+                                 MSI->getDestAlign(), SplatValue, MSI, MSIs, Ev,
+                                 BECount, IsNegStride, /*IsLoopMemset=*/true);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -1029,8 +1028,7 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   for (BasicBlock *B : L->blocks())
     for (Instruction &I : *B)
       if (!IgnoredInsts.contains(&I) &&
-          isModOrRefSet(
-              intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
         return true;
   return false;
 }
@@ -1130,7 +1128,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   // TODO: ideally we should still be able to generate memset if SCEV expander
   // is taught to generate the dependencies at the latest point.
-  if (!isSafeToExpand(Start, *SE))
+  if (!Expander.isSafeToExpand(Start))
     return Changed;
 
   // Okay, we have a strided store "p[i]" of a splattable value.  We can turn
@@ -1164,7 +1162,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   // TODO: ideally we should still be able to generate memset if SCEV expander
   // is taught to generate the dependencies at the latest point.
-  if (!isSafeToExpand(NumBytesS, *SE))
+  if (!Expander.isSafeToExpand(NumBytesS))
     return Changed;
 
   Value *NumBytes =
@@ -1482,9 +1480,9 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
       return Changed;
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
-    assert((StoreAlign.hasValue() && LoadAlign.hasValue()) &&
+    assert((StoreAlign && LoadAlign) &&
            "Expect unordered load/store to have align.");
-    if (StoreAlign.getValue() < StoreSize || LoadAlign.getValue() < StoreSize)
+    if (StoreAlign.value() < StoreSize || LoadAlign.value() < StoreSize)
       return Changed;
 
     // If the element.atomic memcpy is not lowered into explicit
@@ -1498,7 +1496,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
-        StoreBasePtr, StoreAlign.getValue(), LoadBasePtr, LoadAlign.getValue(),
+        StoreBasePtr, StoreAlign.value(), LoadBasePtr, LoadAlign.value(),
         NumBytes, StoreSize, AATags.TBAA, AATags.TBAAStruct, AATags.Scope,
         AATags.NoAlias);
   }

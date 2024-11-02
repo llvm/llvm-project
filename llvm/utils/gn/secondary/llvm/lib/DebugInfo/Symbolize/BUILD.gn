@@ -9,8 +9,9 @@ static_library("Symbolize") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "DIFetcher.cpp",
     "DIPrinter.cpp",
+    "Markup.cpp",
+    "MarkupFilter.cpp",
     "SymbolizableObjectFile.cpp",
     "Symbolize.cpp",
   ]

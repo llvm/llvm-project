@@ -167,7 +167,7 @@ def AffineMapAccessInterface : OpInterface<"AffineMapAccessInterface"> {
         ConcreteOp op = cast<ConcreteOp>(this->getOperation());
         assert(memref == op.getMemRef() &&
                "Expected memref argument to match memref operand");
-        return {StringAttr::get(op.getContext(), op.getMapAttrName()),
+        return {StringAttr::get(op.getContext(), op.getMapAttrStrName()),
                 op.getAffineMapAttr()};
       }]
     >,

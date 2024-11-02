@@ -55,6 +55,12 @@ module tinit
     integer :: j = 3
   end type
 
+  type tv
+    real, pointer :: v(:)
+  end type
+
+  real, pointer :: mv(:)
+
   ! Test scalar with default init
   type(t0) :: at0
 ! CHECK-LABEL: fir.global @_QMtinitEat0 : !fir.type<_QMtinitTt0{k:i32}> {
@@ -125,6 +131,17 @@ module tinit
   ! CHECK: %[[VAL_45:.*]] = fir.undefined i32
   ! CHECK: %[[VAL_46:.*]] = fir.insert_value %[[VAL_44]], %[[VAL_45]], ["l", !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>] : (!fir.type<_QMtinitTtextendst0{k:i32,l:i32}>, i32) -> !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>
   ! CHECK: fir.has_value %[[VAL_46]] : !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>
+
+  type(tv) :: withmold = tv(null(mv))
+  ! CHECK-LABEL: fir.global @_QMtinitEwithmold
+  ! CHECK: %[[C0:.*]] = arith.constant 0 : index
+  ! CHECK: %[[UNDEF:.*]] = fir.undefined !fir.type<_QMtinitTtv{v:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+  ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
+  ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+  ! CHECK: %[[ZEROBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  ! CHECK: %[[RET:.*]] = fir.insert_value %[[UNDEF]], %[[ZEROBOX]], ["v", !fir.type<_QMtinitTtv{v:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>] : (!fir.type<_QMtinitTtv{v:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.type<_QMtinitTtv{v:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+  ! CHECK: fir.has_value %[[RET]] : !fir.type<_QMtinitTtv{v:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+
 end module
 
 

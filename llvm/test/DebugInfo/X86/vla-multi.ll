@@ -63,9 +63,9 @@ entry:
   %5 = mul nuw i64 %4, %2, !dbg !40
   %6 = mul nuw i64 %5, %3, !dbg !40
   %vla = alloca i32, i64 %6, align 16, !dbg !40
-  call void @llvm.dbg.declare(metadata i32* %vla, metadata !25, metadata !DIExpression()), !dbg !40
+  call void @llvm.dbg.declare(metadata ptr %vla, metadata !25, metadata !DIExpression()), !dbg !40
   %vla4 = alloca i32, i64 %6, align 16, !dbg !40
-  call void @llvm.dbg.declare(metadata i32* %vla4, metadata !13, metadata !DIExpression()), !dbg !40
+  call void @llvm.dbg.declare(metadata ptr %vla4, metadata !13, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i32 %i, metadata !29, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i32 %j, metadata !31, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i32 %k, metadata !33, metadata !DIExpression()), !dbg !40
@@ -74,7 +74,7 @@ entry:
   call void @llvm.dbg.value(metadata i32 %j, metadata !20, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i32 %k, metadata !22, metadata !DIExpression()), !dbg !40
   call void @llvm.dbg.value(metadata i64 %3, metadata !24, metadata !DIExpression()), !dbg !40
-  %call = call i32 (i32*, i32*, ...) bitcast (i32 (...)* @use to i32 (i32*, i32*, ...)*)(i32* nonnull %vla, i32* nonnull %vla4) #1, !dbg !40
+  %call = call i32 (ptr, ptr, ...) @use(ptr nonnull %vla, ptr nonnull %vla4) #1, !dbg !40
   ret void, !dbg !40
 }
 

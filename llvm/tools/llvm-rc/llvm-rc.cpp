@@ -27,7 +27,6 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -725,12 +724,12 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
 
 } // anonymous namespace
 
-int main(int Argc, const char **Argv) {
+int llvm_rc_main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-rc: ");
 
-  const char **DashDash = std::find_if(
-      Argv + 1, Argv + Argc, [](StringRef Str) { return Str == "--"; });
+  char **DashDash = std::find_if(Argv + 1, Argv + Argc,
+                                 [](StringRef Str) { return Str == "--"; });
   ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, DashDash);
   ArrayRef<const char *> FileArgsArr;
   if (DashDash != Argv + Argc)

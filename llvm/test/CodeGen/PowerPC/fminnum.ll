@@ -328,13 +328,13 @@ define <8 x float> @test_intrinsic_fmin_v8f32(<8 x float> %x, <8 x float> %y) {
 ; CHECK-NEXT:    fmr 30, 7
 ; CHECK-NEXT:    stfd 31, 120(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr 31, 8
-; CHECK-NEXT:    lfs 24, 192(1)
-; CHECK-NEXT:    lfs 23, 184(1)
-; CHECK-NEXT:    lfs 22, 176(1)
-; CHECK-NEXT:    lfs 21, 168(1)
-; CHECK-NEXT:    lfs 20, 160(1)
-; CHECK-NEXT:    lfs 19, 152(1)
-; CHECK-NEXT:    lfs 18, 144(1)
+; CHECK-NEXT:    lfs 24, 164(1)
+; CHECK-NEXT:    lfs 23, 160(1)
+; CHECK-NEXT:    lfs 22, 156(1)
+; CHECK-NEXT:    lfs 21, 152(1)
+; CHECK-NEXT:    lfs 20, 148(1)
+; CHECK-NEXT:    lfs 19, 144(1)
+; CHECK-NEXT:    lfs 18, 140(1)
 ; CHECK-NEXT:    bl fminf
 ; CHECK-NEXT:    fmr 17, 1
 ; CHECK-NEXT:    fmr 1, 25

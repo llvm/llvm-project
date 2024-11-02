@@ -8,7 +8,7 @@ define void @gather_const_v8f16(<8 x half>* %x) {
 ; CHECK-LABEL: gather_const_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 10
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vlse16.v v8, (a1), zero
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -24,7 +24,7 @@ define void @gather_const_v4f32(<4 x float>* %x) {
 ; CHECK-LABEL: gather_const_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 8
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a1), zero
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -39,7 +39,7 @@ define void @gather_const_v4f32(<4 x float>* %x) {
 define void @gather_const_v2f64(<2 x double>* %x) {
 ; CHECK-LABEL: gather_const_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), zero
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -56,7 +56,7 @@ define void @gather_const_v64f16(<64 x half>* %x) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 64
 ; LMULMAX8-NEXT:    addi a2, a0, 94
-; LMULMAX8-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; LMULMAX8-NEXT:    vlse16.v v8, (a2), zero
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
@@ -68,7 +68,7 @@ define void @gather_const_v64f16(<64 x half>* %x) {
 ; LMULMAX1-NEXT:    addi a3, a0, 48
 ; LMULMAX1-NEXT:    addi a4, a0, 32
 ; LMULMAX1-NEXT:    addi a5, a0, 94
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vlse16.v v8, (a5), zero
 ; LMULMAX1-NEXT:    addi a5, a0, 64
 ; LMULMAX1-NEXT:    addi a6, a0, 112
@@ -95,7 +95,7 @@ define void @gather_const_v32f32(<32 x float>* %x) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 32
 ; LMULMAX8-NEXT:    addi a2, a0, 68
-; LMULMAX8-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; LMULMAX8-NEXT:    vlse32.v v8, (a2), zero
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
@@ -107,7 +107,7 @@ define void @gather_const_v32f32(<32 x float>* %x) {
 ; LMULMAX1-NEXT:    addi a3, a0, 48
 ; LMULMAX1-NEXT:    addi a4, a0, 32
 ; LMULMAX1-NEXT:    addi a5, a0, 68
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vlse32.v v8, (a5), zero
 ; LMULMAX1-NEXT:    addi a5, a0, 80
 ; LMULMAX1-NEXT:    addi a6, a0, 112
@@ -133,7 +133,7 @@ define void @gather_const_v16f64(<16 x double>* %x) {
 ; LMULMAX8-LABEL: gather_const_v16f64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    addi a1, a0, 80
-; LMULMAX8-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; LMULMAX8-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; LMULMAX8-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX8-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
@@ -144,7 +144,7 @@ define void @gather_const_v16f64(<16 x double>* %x) {
 ; LMULMAX1-NEXT:    addi a2, a0, 16
 ; LMULMAX1-NEXT:    addi a3, a0, 48
 ; LMULMAX1-NEXT:    addi a4, a0, 32
-; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; LMULMAX1-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX1-NEXT:    addi a5, a0, 64
 ; LMULMAX1-NEXT:    addi a6, a0, 112

@@ -13,9 +13,9 @@
 #ifndef LLVM_TARGET_DIRECTX_POINTERTYPEANALYSIS_H
 #define LLVM_TARGET_DIRECTX_POINTERTYPEANALYSIS_H
 
-#include "DXILPointerType.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/TypedPointerType.h"
 
 namespace llvm {
 

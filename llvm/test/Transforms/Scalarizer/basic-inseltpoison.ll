@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 declare <4 x float> @ext(<4 x float>)
 @g = global <4 x float> zeroinitializer
 
-define void @f1(<4 x float> %init, <4 x float> *%base, i32 %count) {
+define void @f1(<4 x float> %init, ptr %base, i32 %count) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INIT_I0:%.*]] = extractelement <4 x float> [[INIT:%.*]], i32 0
@@ -20,15 +20,14 @@ define void @f1(<4 x float> %init, <4 x float> *%base, i32 %count) {
 ; CHECK-NEXT:    [[ACC_I2:%.*]] = phi float [ [[INIT_I2]], [[ENTRY]] ], [ [[SEL_I2:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ACC_I3:%.*]] = phi float [ [[INIT_I3]], [[ENTRY]] ], [ [[SEL_I3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NEXTI]] = sub i32 [[I]], 1
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <4 x float>, <4 x float>* [[BASE:%.*]], i32 [[I]]
-; CHECK-NEXT:    [[PTR_I0:%.*]] = bitcast <4 x float>* [[PTR]] to float*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, float* [[PTR_I0]], align 16
-; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr float, float* [[PTR_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, float* [[PTR_I1]], align 4
-; CHECK-NEXT:    [[PTR_I2:%.*]] = getelementptr float, float* [[PTR_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, float* [[PTR_I2]], align 8
-; CHECK-NEXT:    [[PTR_I3:%.*]] = getelementptr float, float* [[PTR_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, float* [[PTR_I3]], align 4
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <4 x float>, ptr [[BASE:%.*]], i32 [[I]]
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, ptr [[PTR_I1]], align 4
+; CHECK-NEXT:    [[PTR_I2:%.*]] = getelementptr float, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, ptr [[PTR_I2]], align 8
+; CHECK-NEXT:    [[PTR_I3:%.*]] = getelementptr float, ptr [[PTR]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, ptr [[PTR_I3]], align 4
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = fadd float [[VAL_I0]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = fadd float [[VAL_I1]], [[VAL_I3]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = fadd float [[ACC_I0]], [[ACC_I2]]
@@ -50,10 +49,10 @@ define void @f1(<4 x float> %init, <4 x float> *%base, i32 %count) {
 ; CHECK-NEXT:    [[SEL_I1]] = select i1 [[CMP_I1]], float [[CALL_I1]], float 6.000000e+00
 ; CHECK-NEXT:    [[SEL_I2]] = select i1 [[CMP_I2]], float [[CALL_I2]], float 7.000000e+00
 ; CHECK-NEXT:    [[SEL_I3]] = select i1 [[CMP_I3]], float [[CALL_I3]], float 8.000000e+00
-; CHECK-NEXT:    store float [[SEL_I0]], float* [[PTR_I0]], align 16
-; CHECK-NEXT:    store float [[SEL_I1]], float* [[PTR_I1]], align 4
-; CHECK-NEXT:    store float [[SEL_I2]], float* [[PTR_I2]], align 8
-; CHECK-NEXT:    store float [[SEL_I3]], float* [[PTR_I3]], align 4
+; CHECK-NEXT:    store float [[SEL_I0]], ptr [[PTR]], align 16
+; CHECK-NEXT:    store float [[SEL_I1]], ptr [[PTR_I1]], align 4
+; CHECK-NEXT:    store float [[SEL_I2]], ptr [[PTR_I2]], align 8
+; CHECK-NEXT:    store float [[SEL_I3]], ptr [[PTR_I3]], align 4
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp eq i32 [[NEXTI]], 0
 ; CHECK-NEXT:    br i1 [[TEST]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -67,8 +66,8 @@ loop:
   %acc = phi <4 x float> [ %init, %entry ], [ %sel, %loop ]
   %nexti = sub i32 %i, 1
 
-  %ptr = getelementptr <4 x float>, <4 x float> *%base, i32 %i
-  %val = load <4 x float> , <4 x float> *%ptr
+  %ptr = getelementptr <4 x float>, ptr %base, i32 %i
+  %val = load <4 x float> , ptr %ptr
   %dval = bitcast <4 x float> %val to <2 x double>
   %dacc = bitcast <4 x float> %acc to <2 x double>
   %shuffle1 = shufflevector <2 x double> %dval, <2 x double> %dacc,
@@ -83,7 +82,7 @@ loop:
   <float 1.0, float 2.0, float 3.0, float 4.0>
   %sel = select <4 x i1> %cmp, <4 x float> %call,
   <4 x float> <float 5.0, float 6.0, float 7.0, float 8.0>
-  store <4 x float> %sel, <4 x float> *%ptr
+  store <4 x float> %sel, ptr %ptr
 
   %test = icmp eq i32 %nexti, 0
   br i1 %test, label %loop, label %exit
@@ -92,7 +91,7 @@ exit:
   ret void
 }
 
-define void @f2(<4 x i32> %init, <4 x i8> *%base, i32 %count) {
+define void @f2(<4 x i32> %init, ptr %base, i32 %count) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INIT_I0:%.*]] = extractelement <4 x i32> [[INIT:%.*]], i32 0
@@ -107,15 +106,14 @@ define void @f2(<4 x i32> %init, <4 x i8> *%base, i32 %count) {
 ; CHECK-NEXT:    [[ACC_I2:%.*]] = phi i32 [ [[INIT_I2]], [[ENTRY]] ], [ [[SEL_I2:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ACC_I3:%.*]] = phi i32 [ [[INIT_I3]], [[ENTRY]] ], [ [[SEL_I3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NEXTI]] = sub i32 [[I]], 1
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <4 x i8>, <4 x i8>* [[BASE:%.*]], i32 [[I]]
-; CHECK-NEXT:    [[PTR_I0:%.*]] = bitcast <4 x i8>* [[PTR]] to i8*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i8, i8* [[PTR_I0]], align 4
-; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr i8, i8* [[PTR_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i8, i8* [[PTR_I1]], align 1
-; CHECK-NEXT:    [[PTR_I2:%.*]] = getelementptr i8, i8* [[PTR_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i8, i8* [[PTR_I2]], align 2
-; CHECK-NEXT:    [[PTR_I3:%.*]] = getelementptr i8, i8* [[PTR_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i8, i8* [[PTR_I3]], align 1
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <4 x i8>, ptr [[BASE:%.*]], i32 [[I]]
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i8, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr i8, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i8, ptr [[PTR_I1]], align 1
+; CHECK-NEXT:    [[PTR_I2:%.*]] = getelementptr i8, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i8, ptr [[PTR_I2]], align 2
+; CHECK-NEXT:    [[PTR_I3:%.*]] = getelementptr i8, ptr [[PTR]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i8, ptr [[PTR_I3]], align 1
 ; CHECK-NEXT:    [[EXT_I0:%.*]] = sext i8 [[VAL_I0]] to i32
 ; CHECK-NEXT:    [[EXT_I1:%.*]] = sext i8 [[VAL_I1]] to i32
 ; CHECK-NEXT:    [[EXT_I2:%.*]] = sext i8 [[VAL_I2]] to i32
@@ -136,10 +134,10 @@ define void @f2(<4 x i32> %init, <4 x i8> *%base, i32 %count) {
 ; CHECK-NEXT:    [[TRUNC_I1:%.*]] = trunc i32 [[SEL_I1]] to i8
 ; CHECK-NEXT:    [[TRUNC_I2:%.*]] = trunc i32 [[SEL_I2]] to i8
 ; CHECK-NEXT:    [[TRUNC_I3:%.*]] = trunc i32 [[SEL_I3]] to i8
-; CHECK-NEXT:    store i8 [[TRUNC_I0]], i8* [[PTR_I0]], align 4
-; CHECK-NEXT:    store i8 [[TRUNC_I1]], i8* [[PTR_I1]], align 1
-; CHECK-NEXT:    store i8 [[TRUNC_I2]], i8* [[PTR_I2]], align 2
-; CHECK-NEXT:    store i8 [[TRUNC_I3]], i8* [[PTR_I3]], align 1
+; CHECK-NEXT:    store i8 [[TRUNC_I0]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i8 [[TRUNC_I1]], ptr [[PTR_I1]], align 1
+; CHECK-NEXT:    store i8 [[TRUNC_I2]], ptr [[PTR_I2]], align 2
+; CHECK-NEXT:    store i8 [[TRUNC_I3]], ptr [[PTR_I3]], align 1
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp eq i32 [[NEXTI]], 0
 ; CHECK-NEXT:    br i1 [[TEST]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -153,8 +151,8 @@ loop:
   %acc = phi <4 x i32> [ %init, %entry ], [ %sel, %loop ]
   %nexti = sub i32 %i, 1
 
-  %ptr = getelementptr <4 x i8>, <4 x i8> *%base, i32 %i
-  %val = load <4 x i8> , <4 x i8> *%ptr
+  %ptr = getelementptr <4 x i8>, ptr %base, i32 %i
+  %val = load <4 x i8> , ptr %ptr
   %ext = sext <4 x i8> %val to <4 x i32>
   %add = add <4 x i32> %ext, %acc
   %cmp = icmp slt <4 x i32> %add, <i32 -10, i32 -11, i32 -12, i32 -13>
@@ -163,7 +161,7 @@ loop:
   <4 x i32> zeroinitializer
   %sel = select <4 x i1> %cmp, <4 x i32> %add, <4 x i32> %limit
   %trunc = trunc <4 x i32> %sel to <4 x i8>
-  store <4 x i8> %trunc, <4 x i8> *%ptr
+  store <4 x i8> %trunc, ptr %ptr
 
   %test = icmp eq i32 %nexti, 0
   br i1 %test, label %loop, label %exit
@@ -173,96 +171,90 @@ exit:
 }
 
 ; Check that !tbaa information is preserved.
-define void @f3(<4 x i32> *%src, <4 x i32> *%dst) {
+define void @f3(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @f3(
-; CHECK-NEXT:    [[DST_I0:%.*]] = bitcast <4 x i32>* [[DST:%.*]] to i32*
-; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 1
-; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 2
-; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 3
-; CHECK-NEXT:    [[SRC_I0:%.*]] = bitcast <4 x i32>* [[SRC:%.*]] to i32*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, i32* [[SRC_I0]], align 16, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, i32* [[SRC_I1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, i32* [[SRC_I2]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, i32* [[SRC_I3]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 1
+; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 2
+; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[SRC:%.*]], align 16, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = add i32 [[VAL_I0]], [[VAL_I0]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = add i32 [[VAL_I1]], [[VAL_I1]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = add i32 [[VAL_I2]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = add i32 [[VAL_I3]], [[VAL_I3]]
-; CHECK-NEXT:    store i32 [[ADD_I0]], i32* [[DST_I0]], align 16, !tbaa [[TBAA3:![0-9]+]]
-; CHECK-NEXT:    store i32 [[ADD_I1]], i32* [[DST_I1]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    store i32 [[ADD_I2]], i32* [[DST_I2]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    store i32 [[ADD_I3]], i32* [[DST_I3]], align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[DST:%.*]], align 16, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[DST_I1]], align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[DST_I2]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[DST_I3]], align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
-  %val = load <4 x i32> , <4 x i32> *%src, !tbaa !1
+  %val = load <4 x i32> , ptr %src, !tbaa !1
   %add = add <4 x i32> %val, %val
-  store <4 x i32> %add, <4 x i32> *%dst, !tbaa !2
+  store <4 x i32> %add, ptr %dst, !tbaa !2
   ret void
 }
 
 ; Check that !tbaa.struct information is preserved.
-define void @f4(<4 x i32> *%src, <4 x i32> *%dst) {
+define void @f4(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @f4(
-; CHECK-NEXT:    [[DST_I0:%.*]] = bitcast <4 x i32>* [[DST:%.*]] to i32*
-; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 1
-; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 2
-; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 3
-; CHECK-NEXT:    [[SRC_I0:%.*]] = bitcast <4 x i32>* [[SRC:%.*]] to i32*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, i32* [[SRC_I0]], align 16, !tbaa.struct !5
-; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, i32* [[SRC_I1]], align 4, !tbaa.struct !5
-; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, i32* [[SRC_I2]], align 8, !tbaa.struct !5
-; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, i32* [[SRC_I3]], align 4, !tbaa.struct !5
+; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 1
+; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 2
+; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[SRC:%.*]], align 16, !tbaa.struct !5
+; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4, !tbaa.struct !5
+; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8, !tbaa.struct !5
+; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4, !tbaa.struct !5
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = add i32 [[VAL_I0]], [[VAL_I0]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = add i32 [[VAL_I1]], [[VAL_I1]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = add i32 [[VAL_I2]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = add i32 [[VAL_I3]], [[VAL_I3]]
-; CHECK-NEXT:    store i32 [[ADD_I0]], i32* [[DST_I0]], align 16, !tbaa.struct !5
-; CHECK-NEXT:    store i32 [[ADD_I1]], i32* [[DST_I1]], align 4, !tbaa.struct !5
-; CHECK-NEXT:    store i32 [[ADD_I2]], i32* [[DST_I2]], align 8, !tbaa.struct !5
-; CHECK-NEXT:    store i32 [[ADD_I3]], i32* [[DST_I3]], align 4, !tbaa.struct !5
+; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[DST:%.*]], align 16, !tbaa.struct !5
+; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[DST_I1]], align 4, !tbaa.struct !5
+; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[DST_I2]], align 8, !tbaa.struct !5
+; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[DST_I3]], align 4, !tbaa.struct !5
 ; CHECK-NEXT:    ret void
 ;
-  %val = load <4 x i32> , <4 x i32> *%src, !tbaa.struct !5
+  %val = load <4 x i32> , ptr %src, !tbaa.struct !5
   %add = add <4 x i32> %val, %val
-  store <4 x i32> %add, <4 x i32> *%dst, !tbaa.struct !5
+  store <4 x i32> %add, ptr %dst, !tbaa.struct !5
   ret void
 }
 
 ; Check that llvm.access.group information is preserved.
-define void @f5(i32 %count, <4 x i32> *%src, <4 x i32> *%dst) {
+define void @f5(i32 %count, ptr %src, ptr %dst) {
 ; CHECK-LABEL: @f5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[NEXT_INDEX:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[THIS_SRC:%.*]] = getelementptr <4 x i32>, <4 x i32>* [[SRC:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[THIS_SRC_I0:%.*]] = bitcast <4 x i32>* [[THIS_SRC]] to i32*
-; CHECK-NEXT:    [[THIS_SRC_I1:%.*]] = getelementptr i32, i32* [[THIS_SRC_I0]], i32 1
-; CHECK-NEXT:    [[THIS_SRC_I2:%.*]] = getelementptr i32, i32* [[THIS_SRC_I0]], i32 2
-; CHECK-NEXT:    [[THIS_SRC_I3:%.*]] = getelementptr i32, i32* [[THIS_SRC_I0]], i32 3
-; CHECK-NEXT:    [[THIS_DST:%.*]] = getelementptr <4 x i32>, <4 x i32>* [[DST:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[THIS_DST_I0:%.*]] = bitcast <4 x i32>* [[THIS_DST]] to i32*
-; CHECK-NEXT:    [[THIS_DST_I1:%.*]] = getelementptr i32, i32* [[THIS_DST_I0]], i32 1
-; CHECK-NEXT:    [[THIS_DST_I2:%.*]] = getelementptr i32, i32* [[THIS_DST_I0]], i32 2
-; CHECK-NEXT:    [[THIS_DST_I3:%.*]] = getelementptr i32, i32* [[THIS_DST_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, i32* [[THIS_SRC_I0]], align 16, !llvm.access.group !6
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, i32* [[THIS_SRC_I1]], align 4, !llvm.access.group !6
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, i32* [[THIS_SRC_I2]], align 8, !llvm.access.group !6
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, i32* [[THIS_SRC_I3]], align 4, !llvm.access.group !6
+; CHECK-NEXT:    [[THIS_SRC:%.*]] = getelementptr <4 x i32>, ptr [[SRC:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[THIS_SRC_I1:%.*]] = getelementptr i32, ptr [[THIS_SRC]], i32 1
+; CHECK-NEXT:    [[THIS_SRC_I2:%.*]] = getelementptr i32, ptr [[THIS_SRC]], i32 2
+; CHECK-NEXT:    [[THIS_SRC_I3:%.*]] = getelementptr i32, ptr [[THIS_SRC]], i32 3
+; CHECK-NEXT:    [[THIS_DST:%.*]] = getelementptr <4 x i32>, ptr [[DST:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[THIS_DST_I1:%.*]] = getelementptr i32, ptr [[THIS_DST]], i32 1
+; CHECK-NEXT:    [[THIS_DST_I2:%.*]] = getelementptr i32, ptr [[THIS_DST]], i32 2
+; CHECK-NEXT:    [[THIS_DST_I3:%.*]] = getelementptr i32, ptr [[THIS_DST]], i32 3
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[THIS_SRC]], align 16, !llvm.access.group !6
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[THIS_SRC_I1]], align 4, !llvm.access.group !6
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[THIS_SRC_I2]], align 8, !llvm.access.group !6
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[THIS_SRC_I3]], align 4, !llvm.access.group !6
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = add i32 [[VAL_I0]], [[VAL_I0]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = add i32 [[VAL_I1]], [[VAL_I1]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = add i32 [[VAL_I2]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = add i32 [[VAL_I3]], [[VAL_I3]]
-; CHECK-NEXT:    store i32 [[ADD_I0]], i32* [[THIS_DST_I0]], align 16, !llvm.access.group !6
-; CHECK-NEXT:    store i32 [[ADD_I1]], i32* [[THIS_DST_I1]], align 4, !llvm.access.group !6
-; CHECK-NEXT:    store i32 [[ADD_I2]], i32* [[THIS_DST_I2]], align 8, !llvm.access.group !6
-; CHECK-NEXT:    store i32 [[ADD_I3]], i32* [[THIS_DST_I3]], align 4, !llvm.access.group !6
+; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[THIS_DST]], align 16, !llvm.access.group !6
+; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[THIS_DST_I1]], align 4, !llvm.access.group !6
+; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[THIS_DST_I2]], align 8, !llvm.access.group !6
+; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[THIS_DST_I3]], align 4, !llvm.access.group !6
 ; CHECK-NEXT:    [[NEXT_INDEX]] = add i32 [[INDEX]], -1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[NEXT_INDEX]], [[COUNT:%.*]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[END:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -274,11 +266,11 @@ entry:
 
 loop:
   %index = phi i32 [ 0, %entry ], [ %next_index, %loop ]
-  %this_src = getelementptr <4 x i32>, <4 x i32> *%src, i32 %index
-  %this_dst = getelementptr <4 x i32>, <4 x i32> *%dst, i32 %index
-  %val = load <4 x i32> , <4 x i32> *%this_src, !llvm.access.group !13
+  %this_src = getelementptr <4 x i32>, ptr %src, i32 %index
+  %this_dst = getelementptr <4 x i32>, ptr %dst, i32 %index
+  %val = load <4 x i32> , ptr %this_src, !llvm.access.group !13
   %add = add <4 x i32> %val, %val
-  store <4 x i32> %add, <4 x i32> *%this_dst, !llvm.access.group !13
+  store <4 x i32> %add, ptr %this_dst, !llvm.access.group !13
   %next_index = add i32 %index, -1
   %continue = icmp ne i32 %next_index, %count
   br i1 %continue, label %loop, label %end, !llvm.loop !3
@@ -310,124 +302,117 @@ define <4 x float> @f6(<4 x float> %x) {
 }
 
 ; Check that random metadata isn't kept.
-define void @f7(<4 x i32> *%src, <4 x i32> *%dst) {
+define void @f7(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @f7(
-; CHECK-NEXT:    [[DST_I0:%.*]] = bitcast <4 x i32>* [[DST:%.*]] to i32*
-; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 1
-; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 2
-; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, i32* [[DST_I0]], i32 3
-; CHECK-NEXT:    [[SRC_I0:%.*]] = bitcast <4 x i32>* [[SRC:%.*]] to i32*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, i32* [[SRC_I0]], align 16
-; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, i32* [[SRC_I1]], align 4
-; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, i32* [[SRC_I2]], align 8
-; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, i32* [[SRC_I3]], align 4
+; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 1
+; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 2
+; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[SRC:%.*]], align 16
+; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4
+; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8
+; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = add i32 [[VAL_I0]], [[VAL_I0]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = add i32 [[VAL_I1]], [[VAL_I1]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = add i32 [[VAL_I2]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = add i32 [[VAL_I3]], [[VAL_I3]]
-; CHECK-NEXT:    store i32 [[ADD_I0]], i32* [[DST_I0]], align 16
-; CHECK-NEXT:    store i32 [[ADD_I1]], i32* [[DST_I1]], align 4
-; CHECK-NEXT:    store i32 [[ADD_I2]], i32* [[DST_I2]], align 8
-; CHECK-NEXT:    store i32 [[ADD_I3]], i32* [[DST_I3]], align 4
+; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[DST:%.*]], align 16
+; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[DST_I1]], align 4
+; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[DST_I2]], align 8
+; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[DST_I3]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %val = load <4 x i32> , <4 x i32> *%src, !foo !5
+  %val = load <4 x i32> , ptr %src, !foo !5
   %add = add <4 x i32> %val, %val
-  store <4 x i32> %add, <4 x i32> *%dst, !foo !5
+  store <4 x i32> %add, ptr %dst, !foo !5
   ret void
 }
 
 ; Test GEP with vectors.
-define void @f8(<4 x float *> *%dest, <4 x float *> %ptr0, <4 x i32> %i0,
+define void @f8(ptr %dest, <4 x ptr> %ptr0, <4 x i32> %i0,
 ; CHECK-LABEL: @f8(
-; CHECK-NEXT:    [[DEST_I0:%.*]] = bitcast <4 x float*>* [[DEST:%.*]] to float**
-; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr float*, float** [[DEST_I0]], i32 1
-; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr float*, float** [[DEST_I0]], i32 2
-; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr float*, float** [[DEST_I0]], i32 3
-; CHECK-NEXT:    [[PTR0_I0:%.*]] = extractelement <4 x float*> [[PTR0:%.*]], i32 0
-; CHECK-NEXT:    [[PTR0_I2:%.*]] = extractelement <4 x float*> [[PTR0]], i32 2
-; CHECK-NEXT:    [[PTR0_I3:%.*]] = extractelement <4 x float*> [[PTR0]], i32 3
+; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 1
+; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 2
+; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 3
+; CHECK-NEXT:    [[PTR0_I0:%.*]] = extractelement <4 x ptr> [[PTR0:%.*]], i32 0
+; CHECK-NEXT:    [[PTR0_I2:%.*]] = extractelement <4 x ptr> [[PTR0]], i32 2
+; CHECK-NEXT:    [[PTR0_I3:%.*]] = extractelement <4 x ptr> [[PTR0]], i32 3
 ; CHECK-NEXT:    [[I0_I1:%.*]] = extractelement <4 x i32> [[I0:%.*]], i32 1
 ; CHECK-NEXT:    [[I0_I3:%.*]] = extractelement <4 x i32> [[I0]], i32 3
-; CHECK-NEXT:    [[VAL_I0:%.*]] = getelementptr float, float* [[PTR0_I0]], i32 100
-; CHECK-NEXT:    [[VAL_I1:%.*]] = getelementptr float, float* [[OTHER:%.*]], i32 [[I0_I1]]
-; CHECK-NEXT:    [[VAL_I2:%.*]] = getelementptr float, float* [[PTR0_I2]], i32 100
-; CHECK-NEXT:    [[VAL_I3:%.*]] = getelementptr float, float* [[PTR0_I3]], i32 [[I0_I3]]
-; CHECK-NEXT:    store float* [[VAL_I0]], float** [[DEST_I0]], align 32
-; CHECK-NEXT:    store float* [[VAL_I1]], float** [[DEST_I1]], align 8
-; CHECK-NEXT:    store float* [[VAL_I2]], float** [[DEST_I2]], align 16
-; CHECK-NEXT:    store float* [[VAL_I3]], float** [[DEST_I3]], align 8
+; CHECK-NEXT:    [[VAL_I0:%.*]] = getelementptr float, ptr [[PTR0_I0]], i32 100
+; CHECK-NEXT:    [[VAL_I1:%.*]] = getelementptr float, ptr [[OTHER:%.*]], i32 [[I0_I1]]
+; CHECK-NEXT:    [[VAL_I2:%.*]] = getelementptr float, ptr [[PTR0_I2]], i32 100
+; CHECK-NEXT:    [[VAL_I3:%.*]] = getelementptr float, ptr [[PTR0_I3]], i32 [[I0_I3]]
+; CHECK-NEXT:    store ptr [[VAL_I0]], ptr [[DEST:%.*]], align 32
+; CHECK-NEXT:    store ptr [[VAL_I1]], ptr [[DEST_I1]], align 8
+; CHECK-NEXT:    store ptr [[VAL_I2]], ptr [[DEST_I2]], align 16
+; CHECK-NEXT:    store ptr [[VAL_I3]], ptr [[DEST_I3]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  float *%other) {
+  ptr %other) {
   %i1 = insertelement <4 x i32> %i0, i32 100, i32 0
   %i2 = insertelement <4 x i32> %i1, i32 100, i32 2
-  %ptr1 = insertelement <4 x float *> %ptr0, float *%other, i32 1
-  %val = getelementptr float, <4 x float *> %ptr1, <4 x i32> %i2
-  store <4 x float *> %val, <4 x float *> *%dest
+  %ptr1 = insertelement <4 x ptr> %ptr0, ptr %other, i32 1
+  %val = getelementptr float, <4 x ptr> %ptr1, <4 x i32> %i2
+  store <4 x ptr> %val, ptr %dest
   ret void
 }
 
 ; Test the handling of unaligned loads.
-define void @f9(<4 x float> *%dest, <4 x float> *%src) {
+define void @f9(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @f9(
-; CHECK-NEXT:    [[DEST_I0:%.*]] = bitcast <4 x float>* [[DEST:%.*]] to float*
-; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr float, float* [[DEST_I0]], i32 1
-; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr float, float* [[DEST_I0]], i32 2
-; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr float, float* [[DEST_I0]], i32 3
-; CHECK-NEXT:    [[SRC_I0:%.*]] = bitcast <4 x float>* [[SRC:%.*]] to float*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, float* [[SRC_I0]], align 4
-; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr float, float* [[SRC_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, float* [[SRC_I1]], align 4
-; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr float, float* [[SRC_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, float* [[SRC_I2]], align 4
-; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr float, float* [[SRC_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, float* [[SRC_I3]], align 4
-; CHECK-NEXT:    store float [[VAL_I0]], float* [[DEST_I0]], align 8
-; CHECK-NEXT:    store float [[VAL_I1]], float* [[DEST_I1]], align 4
-; CHECK-NEXT:    store float [[VAL_I2]], float* [[DEST_I2]], align 8
-; CHECK-NEXT:    store float [[VAL_I3]], float* [[DEST_I3]], align 4
+; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr float, ptr [[DEST:%.*]], i32 1
+; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr float, ptr [[DEST:%.*]], i32 2
+; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr float, ptr [[DEST:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr float, ptr [[SRC:%.*]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, ptr [[SRC_I1]], align 4
+; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr float, ptr [[SRC:%.*]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, ptr [[SRC_I2]], align 4
+; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr float, ptr [[SRC:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, ptr [[SRC_I3]], align 4
+; CHECK-NEXT:    store float [[VAL_I0]], ptr [[DEST:%.*]], align 8
+; CHECK-NEXT:    store float [[VAL_I1]], ptr [[DEST_I1]], align 4
+; CHECK-NEXT:    store float [[VAL_I2]], ptr [[DEST_I2]], align 8
+; CHECK-NEXT:    store float [[VAL_I3]], ptr [[DEST_I3]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %val = load <4 x float> , <4 x float> *%src, align 4
-  store <4 x float> %val, <4 x float> *%dest, align 8
+  %val = load <4 x float> , ptr %src, align 4
+  store <4 x float> %val, ptr %dest, align 8
   ret void
 }
 
 ; ...and again with subelement alignment.
-define void @f10(<4 x float> *%dest, <4 x float> *%src) {
+define void @f10(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @f10(
-; CHECK-NEXT:    [[DEST_I0:%.*]] = bitcast <4 x float>* [[DEST:%.*]] to float*
-; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr float, float* [[DEST_I0]], i32 1
-; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr float, float* [[DEST_I0]], i32 2
-; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr float, float* [[DEST_I0]], i32 3
-; CHECK-NEXT:    [[SRC_I0:%.*]] = bitcast <4 x float>* [[SRC:%.*]] to float*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, float* [[SRC_I0]], align 1
-; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr float, float* [[SRC_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, float* [[SRC_I1]], align 1
-; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr float, float* [[SRC_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, float* [[SRC_I2]], align 1
-; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr float, float* [[SRC_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, float* [[SRC_I3]], align 1
-; CHECK-NEXT:    store float [[VAL_I0]], float* [[DEST_I0]], align 2
-; CHECK-NEXT:    store float [[VAL_I1]], float* [[DEST_I1]], align 2
-; CHECK-NEXT:    store float [[VAL_I2]], float* [[DEST_I2]], align 2
-; CHECK-NEXT:    store float [[VAL_I3]], float* [[DEST_I3]], align 2
+; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr float, ptr [[DEST:%.*]], i32 1
+; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr float, ptr [[DEST:%.*]], i32 2
+; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr float, ptr [[DEST:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, ptr [[SRC:%.*]], align 1
+; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr float, ptr [[SRC:%.*]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, ptr [[SRC_I1]], align 1
+; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr float, ptr [[SRC:%.*]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, ptr [[SRC_I2]], align 1
+; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr float, ptr [[SRC:%.*]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, ptr [[SRC_I3]], align 1
+; CHECK-NEXT:    store float [[VAL_I0]], ptr [[DEST:%.*]], align 2
+; CHECK-NEXT:    store float [[VAL_I1]], ptr [[DEST_I1]], align 2
+; CHECK-NEXT:    store float [[VAL_I2]], ptr [[DEST_I2]], align 2
+; CHECK-NEXT:    store float [[VAL_I3]], ptr [[DEST_I3]], align 2
 ; CHECK-NEXT:    ret void
 ;
-  %val = load <4 x float> , <4 x float> *%src, align 1
-  store <4 x float> %val, <4 x float> *%dest, align 2
+  %val = load <4 x float> , ptr %src, align 1
+  store <4 x float> %val, ptr %dest, align 2
   ret void
 }
 
 ; Test that sub-byte loads aren't scalarized.
-define void @f11(<32 x i1> *%dest, <32 x i1> *%src0) {
+define void @f11(ptr %dest, ptr %src0) {
 ; CHECK-LABEL: @f11(
-; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr <32 x i1>, <32 x i1>* [[SRC0:%.*]], i32 1
-; CHECK-NEXT:    [[VAL0:%.*]] = load <32 x i1>, <32 x i1>* [[SRC0]], align 4
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr <32 x i1>, ptr [[SRC0:%.*]], i32 1
+; CHECK-NEXT:    [[VAL0:%.*]] = load <32 x i1>, ptr [[SRC0]], align 4
 ; CHECK-NEXT:    [[VAL0_I0:%.*]] = extractelement <32 x i1> [[VAL0]], i32 0
 ; CHECK-NEXT:    [[VAL0_I1:%.*]] = extractelement <32 x i1> [[VAL0]], i32 1
 ; CHECK-NEXT:    [[VAL0_I2:%.*]] = extractelement <32 x i1> [[VAL0]], i32 2
@@ -460,7 +445,7 @@ define void @f11(<32 x i1> *%dest, <32 x i1> *%src0) {
 ; CHECK-NEXT:    [[VAL0_I29:%.*]] = extractelement <32 x i1> [[VAL0]], i32 29
 ; CHECK-NEXT:    [[VAL0_I30:%.*]] = extractelement <32 x i1> [[VAL0]], i32 30
 ; CHECK-NEXT:    [[VAL0_I31:%.*]] = extractelement <32 x i1> [[VAL0]], i32 31
-; CHECK-NEXT:    [[VAL1:%.*]] = load <32 x i1>, <32 x i1>* [[SRC1]], align 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load <32 x i1>, ptr [[SRC1]], align 4
 ; CHECK-NEXT:    [[VAL1_I0:%.*]] = extractelement <32 x i1> [[VAL1]], i32 0
 ; CHECK-NEXT:    [[AND_I0:%.*]] = and i1 [[VAL0_I0]], [[VAL1_I0]]
 ; CHECK-NEXT:    [[VAL1_I1:%.*]] = extractelement <32 x i1> [[VAL1]], i32 1
@@ -557,47 +542,46 @@ define void @f11(<32 x i1> *%dest, <32 x i1> *%src0) {
 ; CHECK-NEXT:    [[AND_UPTO29:%.*]] = insertelement <32 x i1> [[AND_UPTO28]], i1 [[AND_I29]], i32 29
 ; CHECK-NEXT:    [[AND_UPTO30:%.*]] = insertelement <32 x i1> [[AND_UPTO29]], i1 [[AND_I30]], i32 30
 ; CHECK-NEXT:    [[AND:%.*]] = insertelement <32 x i1> [[AND_UPTO30]], i1 [[AND_I31]], i32 31
-; CHECK-NEXT:    store <32 x i1> [[AND]], <32 x i1>* [[DEST:%.*]], align 4
+; CHECK-NEXT:    store <32 x i1> [[AND]], ptr [[DEST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %src1 = getelementptr <32 x i1>, <32 x i1> *%src0, i32 1
-  %val0 = load <32 x i1> , <32 x i1> *%src0
-  %val1 = load <32 x i1> , <32 x i1> *%src1
+  %src1 = getelementptr <32 x i1>, ptr %src0, i32 1
+  %val0 = load <32 x i1> , ptr %src0
+  %val1 = load <32 x i1> , ptr %src1
   %and = and <32 x i1> %val0, %val1
-  store <32 x i1> %and, <32 x i1> *%dest
+  store <32 x i1> %and, ptr %dest
   ret void
 }
 
 ; Test vector GEPs with more than one index.
-define void @f13(<4 x float *> *%dest, <4 x [4 x float] *> %ptr, <4 x i32> %i,
+define void @f13(ptr %dest, <4 x ptr> %ptr, <4 x i32> %i,
 ; CHECK-LABEL: @f13(
-; CHECK-NEXT:    [[DEST_I0:%.*]] = bitcast <4 x float*>* [[DEST:%.*]] to float**
-; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr float*, float** [[DEST_I0]], i32 1
-; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr float*, float** [[DEST_I0]], i32 2
-; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr float*, float** [[DEST_I0]], i32 3
+; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 1
+; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 2
+; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 3
 ; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <4 x i32> [[I:%.*]], i32 0
-; CHECK-NEXT:    [[PTR_I0:%.*]] = extractelement <4 x [4 x float]*> [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[VAL_I0:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[PTR_I0]], i32 0, i32 [[I_I0]]
+; CHECK-NEXT:    [[PTR_I0:%.*]] = extractelement <4 x ptr> [[PTR:%.*]], i32 0
+; CHECK-NEXT:    [[VAL_I0:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I0]], i32 0, i32 [[I_I0]]
 ; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <4 x i32> [[I]], i32 1
-; CHECK-NEXT:    [[PTR_I1:%.*]] = extractelement <4 x [4 x float]*> [[PTR]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[PTR_I1]], i32 1, i32 [[I_I1]]
+; CHECK-NEXT:    [[PTR_I1:%.*]] = extractelement <4 x ptr> [[PTR]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I1]], i32 1, i32 [[I_I1]]
 ; CHECK-NEXT:    [[I_I2:%.*]] = extractelement <4 x i32> [[I]], i32 2
-; CHECK-NEXT:    [[PTR_I2:%.*]] = extractelement <4 x [4 x float]*> [[PTR]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[PTR_I2]], i32 2, i32 [[I_I2]]
+; CHECK-NEXT:    [[PTR_I2:%.*]] = extractelement <4 x ptr> [[PTR]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I2]], i32 2, i32 [[I_I2]]
 ; CHECK-NEXT:    [[I_I3:%.*]] = extractelement <4 x i32> [[I]], i32 3
-; CHECK-NEXT:    [[PTR_I3:%.*]] = extractelement <4 x [4 x float]*> [[PTR]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[PTR_I3]], i32 3, i32 [[I_I3]]
-; CHECK-NEXT:    store float* [[VAL_I0]], float** [[DEST_I0]], align 32
-; CHECK-NEXT:    store float* [[VAL_I1]], float** [[DEST_I1]], align 8
-; CHECK-NEXT:    store float* [[VAL_I2]], float** [[DEST_I2]], align 16
-; CHECK-NEXT:    store float* [[VAL_I3]], float** [[DEST_I3]], align 8
+; CHECK-NEXT:    [[PTR_I3:%.*]] = extractelement <4 x ptr> [[PTR]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I3]], i32 3, i32 [[I_I3]]
+; CHECK-NEXT:    store ptr [[VAL_I0]], ptr [[DEST:%.*]], align 32
+; CHECK-NEXT:    store ptr [[VAL_I1]], ptr [[DEST_I1]], align 8
+; CHECK-NEXT:    store ptr [[VAL_I2]], ptr [[DEST_I2]], align 16
+; CHECK-NEXT:    store ptr [[VAL_I3]], ptr [[DEST_I3]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  float *%other) {
-  %val = getelementptr inbounds [4 x float], <4 x [4 x float] *> %ptr,
+  ptr %other) {
+  %val = getelementptr inbounds [4 x float], <4 x ptr> %ptr,
   <4 x i32> <i32 0, i32 1, i32 2, i32 3>,
   <4 x i32> %i
-  store <4 x float *> %val, <4 x float *> *%dest
+  store <4 x ptr> %val, ptr %dest
   ret void
 }
 
@@ -656,22 +640,21 @@ exit:
 }
 
 ; Test unary operator scalarization.
-define void @f15(<4 x float> %init, <4 x float> *%base, i32 %count) {
+define void @f15(<4 x float> %init, ptr %base, i32 %count) {
 ; CHECK-LABEL: @f15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NEXTI]] = sub i32 [[I]], 1
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <4 x float>, <4 x float>* [[BASE:%.*]], i32 [[I]]
-; CHECK-NEXT:    [[PTR_I0:%.*]] = bitcast <4 x float>* [[PTR]] to float*
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, float* [[PTR_I0]], align 16
-; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr float, float* [[PTR_I0]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, float* [[PTR_I1]], align 4
-; CHECK-NEXT:    [[PTR_I2:%.*]] = getelementptr float, float* [[PTR_I0]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, float* [[PTR_I2]], align 8
-; CHECK-NEXT:    [[PTR_I3:%.*]] = getelementptr float, float* [[PTR_I0]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, float* [[PTR_I3]], align 4
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <4 x float>, ptr [[BASE:%.*]], i32 [[I]]
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load float, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[PTR_I1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load float, ptr [[PTR_I1]], align 4
+; CHECK-NEXT:    [[PTR_I2:%.*]] = getelementptr float, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load float, ptr [[PTR_I2]], align 8
+; CHECK-NEXT:    [[PTR_I3:%.*]] = getelementptr float, ptr [[PTR]], i32 3
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load float, ptr [[PTR_I3]], align 4
 ; CHECK-NEXT:    [[NEG_I0:%.*]] = fneg float [[VAL_I0]]
 ; CHECK-NEXT:    [[NEG_I1:%.*]] = fneg float [[VAL_I1]]
 ; CHECK-NEXT:    [[NEG_I2:%.*]] = fneg float [[VAL_I2]]
@@ -693,10 +676,10 @@ define void @f15(<4 x float> %init, <4 x float> *%base, i32 %count) {
 ; CHECK-NEXT:    [[SEL_I1:%.*]] = select i1 [[CMP_I1]], float [[CALL_I1]], float 6.000000e+00
 ; CHECK-NEXT:    [[SEL_I2:%.*]] = select i1 [[CMP_I2]], float [[CALL_I2]], float 7.000000e+00
 ; CHECK-NEXT:    [[SEL_I3:%.*]] = select i1 [[CMP_I3]], float [[CALL_I3]], float 8.000000e+00
-; CHECK-NEXT:    store float [[SEL_I0]], float* [[PTR_I0]], align 16
-; CHECK-NEXT:    store float [[SEL_I1]], float* [[PTR_I1]], align 4
-; CHECK-NEXT:    store float [[SEL_I2]], float* [[PTR_I2]], align 8
-; CHECK-NEXT:    store float [[SEL_I3]], float* [[PTR_I3]], align 4
+; CHECK-NEXT:    store float [[SEL_I0]], ptr [[PTR]], align 16
+; CHECK-NEXT:    store float [[SEL_I1]], ptr [[PTR_I1]], align 4
+; CHECK-NEXT:    store float [[SEL_I2]], ptr [[PTR_I2]], align 8
+; CHECK-NEXT:    store float [[SEL_I3]], ptr [[PTR_I3]], align 4
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp eq i32 [[NEXTI]], 0
 ; CHECK-NEXT:    br i1 [[TEST]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -710,15 +693,15 @@ loop:
   %acc = phi <4 x float> [ %init, %entry ], [ %sel, %loop ]
   %nexti = sub i32 %i, 1
 
-  %ptr = getelementptr <4 x float>, <4 x float> *%base, i32 %i
-  %val = load <4 x float> , <4 x float> *%ptr
+  %ptr = getelementptr <4 x float>, ptr %base, i32 %i
+  %val = load <4 x float> , ptr %ptr
   %neg = fneg <4 x float> %val
   %call = call <4 x float> @ext(<4 x float> %neg)
   %cmp = fcmp ogt <4 x float> %call,
   <float 1.0, float 2.0, float 3.0, float 4.0>
   %sel = select <4 x i1> %cmp, <4 x float> %call,
   <4 x float> <float 5.0, float 6.0, float 7.0, float 8.0>
-  store <4 x float> %sel, <4 x float> *%ptr
+  store <4 x float> %sel, ptr %ptr
 
   %test = icmp eq i32 %nexti, 0
   br i1 %test, label %loop, label %exit

@@ -145,6 +145,8 @@ struct RootRegion {
 struct CheckForLeaksParam {
   Frontier frontier;
   LeakedChunks leaks;
+  tid_t caller_tid;
+  uptr caller_sp;
   bool success = false;
 };
 

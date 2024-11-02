@@ -46,7 +46,7 @@ using namespace llvm::object;
 
 static cl::OptionCategory RTDyldCategory("RTDyld Options");
 
-static cl::list<std::string> InputFileList(cl::Positional, cl::ZeroOrMore,
+static cl::list<std::string> InputFileList(cl::Positional,
                                            cl::desc("<input files>"),
                                            cl::cat(RTDyldCategory));
 
@@ -79,11 +79,11 @@ static cl::opt<std::string>
                cl::init("_main"), cl::cat(RTDyldCategory));
 
 static cl::list<std::string> Dylibs("dylib", cl::desc("Add library."),
-                                    cl::ZeroOrMore, cl::cat(RTDyldCategory));
+                                    cl::cat(RTDyldCategory));
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs,
+                                       cl::PositionalEatsArgs,
                                        cl::cat(RTDyldCategory));
 
 static cl::opt<std::string>
@@ -98,7 +98,7 @@ static cl::opt<std::string>
 static cl::list<std::string>
     CheckFiles("check",
                cl::desc("File containing RuntimeDyld verifier checks."),
-               cl::ZeroOrMore, cl::cat(RTDyldCategory));
+               cl::cat(RTDyldCategory));
 
 static cl::opt<uint64_t>
     PreallocMemory("preallocate",
@@ -127,14 +127,13 @@ static cl::list<std::string>
     SpecificSectionMappings("map-section",
                             cl::desc("For -verify only: Map a section to a "
                                      "specific address."),
-                            cl::ZeroOrMore, cl::Hidden,
-                            cl::cat(RTDyldCategory));
+                            cl::Hidden, cl::cat(RTDyldCategory));
 
 static cl::list<std::string> DummySymbolMappings(
     "dummy-extern",
     cl::desc("For -verify only: Inject a symbol into the extern "
              "symbol table."),
-    cl::ZeroOrMore, cl::Hidden, cl::cat(RTDyldCategory));
+    cl::Hidden, cl::cat(RTDyldCategory));
 
 static cl::opt<bool> PrintAllocationRequests(
     "print-alloc-requests",

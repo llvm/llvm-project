@@ -192,7 +192,7 @@ public:
       std::initializer_list<SymbolStringPtr> Names,
       SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
     Symbols.reserve(Names.size());
-    for (auto &Name : Names)
+    for (const auto &Name : Names)
       add(std::move(Name), Flags);
   }
 
@@ -331,7 +331,7 @@ public:
   SymbolNameVector getSymbolNames() const {
     SymbolNameVector Names;
     Names.reserve(Symbols.size());
-    for (auto &KV : Symbols)
+    for (const auto &KV : Symbols)
       Names.push_back(KV.first);
     return Names;
   }
@@ -339,11 +339,7 @@ public:
   /// Sort the lookup set by pointer value. This sort is fast but sensitive to
   /// allocation order and so should not be used where a consistent order is
   /// required.
-  void sortByAddress() {
-    llvm::sort(Symbols, [](const value_type &LHS, const value_type &RHS) {
-      return LHS.first < RHS.first;
-    });
-  }
+  void sortByAddress() { llvm::sort(Symbols, llvm::less_first()); }
 
   /// Sort the lookup set lexicographically. This sort is slow but the order
   /// is unaffected by allocation order.
@@ -711,6 +707,13 @@ public:
   /// has been overridden.
   void doDiscard(const JITDylib &JD, const SymbolStringPtr &Name) {
     SymbolFlags.erase(Name);
+    if (InitSymbol == Name) {
+      DEBUG_WITH_TYPE("orc", {
+        dbgs() << "In " << getName() << ": discarding init symbol \""
+               << *Name << "\"\n";
+      });
+      InitSymbol = nullptr;
+    }
     discard(JD, std::move(Name));
   }
 

@@ -229,7 +229,7 @@ public:
     vector_.pop_back();
   }
 
-  LLVM_NODISCARD T pop_back_val() {
+  [[nodiscard]] T pop_back_val() {
     T Ret = back();
     pop_back();
     return Ret;

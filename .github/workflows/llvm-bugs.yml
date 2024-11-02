@@ -19,39 +19,39 @@ jobs:
           MAILGUN_API_KEY: ${{ secrets.LLVM_BUGS_KEY }}
         with:
           script: |
-            const Mailgun = require("mailgun.js");
+            const Mailgun = require('mailgun.js');
             const formData = require('form-data');
+
             const mailgun = new Mailgun(formData);
+            const DOMAIN = 'email.llvm.org';
 
-            const DOMAIN = "email.llvm.org";
-
-            const mg = mailgun.client({username: 'api', key: process.env.MAILGUN_API_KEY});
+            const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY });
 
             github.rest.issues.get({
               issue_number: context.issue.number,
               owner: context.repo.owner,
-              repo: context.repo.repo,
+              repo: context.repo.repo
             })
-            .then(function(issue) {
+            .then((issue) => {
               const payload = {
                 author : issue.data.user.login,
                 issue  : issue.data.number,
                 title  : issue.data.title,
                 url    : issue.data.html_url,
-                labels : issue.data.labels.map(label => { return label.name }),
-                assignee : issue.data.assignees.map(assignee => { return assignee.login }),
+                labels : issue.data.labels.map((label) => label.name),
+                assignee : issue.data.assignees.map((assignee) => assignee.login),
                 body   : issue.data.body
               };
-            
+
               const data = {
-                from: "LLVM Bugs <llvm-bugs@email.llvm.org>",
-                to: "llvm-bugs@lists.llvm.org",
+                from: 'LLVM Bugs <llvm-bugs@email.llvm.org>',
+                to: 'llvm-bugs@lists.llvm.org',
                 subject: `[Bug ${issue.data.number}] ${issue.data.title}`,
-                template: "new-github-issue",
+                template: 'new-github-issue',
                 'o:tracking-clicks': 'no',
                 'h:X-Mailgun-Variables': JSON.stringify(payload)
               };
 
-              return mg.messages.create(DOMAIN, data)
+              return mg.messages.create(DOMAIN, data);
             })
-            .then(msg => console.log(msg));
+            .then((msg) => console.log(msg));

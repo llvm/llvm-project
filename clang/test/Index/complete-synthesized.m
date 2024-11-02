@@ -39,7 +39,7 @@
 // RUN: c-index-test -code-completion-at=%s:30:2 -target x86_64-apple-macosx10.7 -fobjc-nonfragile-abi %s | FileCheck %s
 // RUN: c-index-test -code-completion-at=%s:34:2 -target x86_64-apple-macosx10.7 -fobjc-nonfragile-abi %s | FileCheck %s
 
-// CHECK: NotImplemented:{TypedText _Bool} (50)
+// CHECK: Keyword:{TypedText _Bool} (50)
 // CHECK: ObjCIvarDecl:{ResultType float}{TypedText _prop2} (35)
 // CHECK-NOT: prop2
 // CHECK-NOT: prop3

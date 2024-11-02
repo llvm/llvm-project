@@ -1,4 +1,4 @@
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s -x86-pad-max-prefix-size=15 -x86-pad-for-align=1 | llvm-objdump -d - | FileCheck %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s -x86-pad-max-prefix-size=15 -x86-pad-for-align=1 | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 # Check prefix padding generation for all cases on 64 bit x86.
 

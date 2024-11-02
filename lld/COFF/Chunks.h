@@ -21,8 +21,7 @@
 #include <utility>
 #include <vector>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 using llvm::COFF::ImportDirectoryTableEntry;
 using llvm::object::COFFSymbolRef;
@@ -173,6 +172,23 @@ public:
 
 protected:
   NonSectionChunk(Kind k = OtherKind) : Chunk(k) {}
+};
+
+// MinGW specific; information about one individual location in the image
+// that needs to be fixed up at runtime after loading. This represents
+// one individual element in the PseudoRelocTableChunk table.
+class RuntimePseudoReloc {
+public:
+  RuntimePseudoReloc(Defined *sym, SectionChunk *target, uint32_t targetOffset,
+                     int flags)
+      : sym(sym), target(target), targetOffset(targetOffset), flags(flags) {}
+
+  Defined *sym;
+  SectionChunk *target;
+  uint32_t targetOffset;
+  // The Flags field contains the size of the relocation, in bits. No other
+  // flags are currently defined.
+  int flags;
 };
 
 // A chunk corresponding a section of an input file.
@@ -650,23 +666,6 @@ private:
   std::vector<RuntimePseudoReloc> relocs;
 };
 
-// MinGW specific; information about one individual location in the image
-// that needs to be fixed up at runtime after loading. This represents
-// one individual element in the PseudoRelocTableChunk table.
-class RuntimePseudoReloc {
-public:
-  RuntimePseudoReloc(Defined *sym, SectionChunk *target, uint32_t targetOffset,
-                     int flags)
-      : sym(sym), target(target), targetOffset(targetOffset), flags(flags) {}
-
-  Defined *sym;
-  SectionChunk *target;
-  uint32_t targetOffset;
-  // The Flags field contains the size of the relocation, in bits. No other
-  // flags are currently defined.
-  int flags;
-};
-
 // MinGW specific. A Chunk that contains one pointer-sized absolute value.
 class AbsolutePointerChunk : public NonSectionChunk {
 public:
@@ -698,8 +697,7 @@ void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift);
 void applyArm64Imm(uint8_t *off, uint64_t imm, uint32_t rangeLimit);
 void applyArm64Branch26(uint8_t *off, int64_t v);
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 namespace llvm {
 template <>

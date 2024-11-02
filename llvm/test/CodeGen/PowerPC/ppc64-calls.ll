@@ -39,7 +39,7 @@ define dso_local void @test_weak() nounwind readnone {
 }
 
 ; Indirect calls requires a full stub creation
-define dso_local void @test_indirect(void ()* nocapture %fp) nounwind {
+define dso_local void @test_indirect(ptr nocapture %fp) nounwind {
 ; CHECK-LABEL: test_indirect:
   tail call void %fp() nounwind
 ; CHECK: ld [[FP:[0-9]+]], 0(3)
@@ -56,7 +56,7 @@ define dso_local void @test_indirect(void ()* nocapture %fp) nounwind {
 ; used on 64-bit SVR4 (as e.g. on Darwin).
 define dso_local void @test_abs() nounwind {
 ; CHECK-LABEL: test_abs:
-  tail call void inttoptr (i64 1024 to void ()*)() nounwind
+  tail call void inttoptr (i64 1024 to ptr)() nounwind
 ; CHECK: ld [[FP:[0-9]+]], 1024(0)
 ; CHECK: ld 11, 1040(0)
 ; CHECK: ld 2, 1032(0)
@@ -79,10 +79,10 @@ define double @test_external(double %x) nounwind {
 
 ; The 'ld 2, 40(1)' really must always come directly after the bctrl to make
 ; the unwinding code in libgcc happy.
-@g = external global void ()*
+@g = external global ptr
 declare void @h(i64)
 define dso_local void @test_indir_toc_reload(i64 %x) {
-  %1 = load void ()*, void ()** @g
+  %1 = load ptr, ptr @g
   call void %1()
   call void @h(i64 %x)
   ret void

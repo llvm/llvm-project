@@ -7,8 +7,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-11 status
-// UNSUPPORTED: gcc-11
+// TODO FMT Evaluate gcc-12 status
+// UNSUPPORTED: gcc-12
 // TODO FMT Investigate AppleClang ICE
 // UNSUPPORTED: apple-clang-13
 
@@ -16,10 +16,10 @@
 
 // template<class Out, class... Args>
 //   format_to_n_result<Out> format_to_n(Out out, iter_difference_t<Out> n,
-//                                       string_view fmt, const Args&... args);
+//                                       format-string<Args...> fmt, const Args&... args);
 // template<class Out, class... Args>
 //   format_to_n_result<Out> format_to_n(Out out, iter_difference_t<Out> n,
-//                                       wstring_view fmt, const Args&... args);
+//                                       wformat-string<Args...> fmt, const Args&... args);
 
 #include <format>
 #include <algorithm>
@@ -30,25 +30,28 @@
 #include "test_macros.h"
 #include "format_tests.h"
 #include "string_literal.h"
+#include "test_format_string.h"
 
-auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string_view<CharT> expected,
-                                                               const Args&... args) constexpr {
+auto test = []<class CharT, class... Args>(
+                std::basic_string_view<CharT> expected,
+                test_format_string<CharT, Args...> fmt,
+                Args&&... args) constexpr {
   {
     std::list<CharT> out;
-    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 0, fmt.template sv<CharT>(), args...);
+    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 0, fmt, std::forward<Args>(args)...);
     // To avoid signedness warnings make sure formatted_size uses the same type
     // as result.size.
     using diff_type = decltype(result.size);
-    diff_type formatted_size = std::formatted_size(fmt.template sv<CharT>(), args...);
+    diff_type formatted_size = std::formatted_size(fmt, std::forward<Args>(args)...);
 
     assert(result.size == formatted_size);
     assert(out.empty());
   }
   {
     std::vector<CharT> out;
-    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 5, fmt.template sv<CharT>(), args...);
+    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 5, fmt, std::forward<Args>(args)...);
     using diff_type = decltype(result.size);
-    diff_type formatted_size = std::formatted_size(fmt.template sv<CharT>(), args...);
+    diff_type formatted_size       = std::formatted_size(fmt, std::forward<Args>(args)...);
     diff_type size = std::min<diff_type>(5, formatted_size);
 
     assert(result.size == formatted_size);
@@ -56,9 +59,9 @@ auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string
   }
   {
     std::basic_string<CharT> out;
-    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 1000, fmt.template sv<CharT>(), args...);
+    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 1000, fmt, std::forward<Args>(args)...);
     using diff_type = decltype(result.size);
-    diff_type formatted_size = std::formatted_size(fmt.template sv<CharT>(), args...);
+    diff_type formatted_size       = std::formatted_size(fmt, std::forward<Args>(args)...);
     diff_type size = std::min<diff_type>(1000, formatted_size);
 
     assert(result.size == formatted_size);
@@ -67,9 +70,9 @@ auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string
   {
     // Test the returned iterator.
     std::basic_string<CharT> out(10, CharT(' '));
-    std::format_to_n_result result = std::format_to_n(out.begin(), 10, fmt.template sv<CharT>(), args...);
+    std::format_to_n_result result = std::format_to_n(out.begin(), 10, fmt, std::forward<Args>(args)...);
     using diff_type = decltype(result.size);
-    diff_type formatted_size = std::formatted_size(fmt.template sv<CharT>(), args...);
+    diff_type formatted_size       = std::formatted_size(fmt, std::forward<Args>(args)...);
     diff_type size = std::min<diff_type>(10, formatted_size);
 
     assert(result.size == formatted_size);
@@ -81,9 +84,9 @@ auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string
                   "If the difference type isn't negative the test will fail "
                   "due to using a large positive value.");
     CharT buffer[1] = {CharT(0)};
-    std::format_to_n_result result = std::format_to_n(buffer, -1, fmt.template sv<CharT>(), args...);
+    std::format_to_n_result result = std::format_to_n(buffer, -1, fmt, std::forward<Args>(args)...);
     using diff_type = decltype(result.size);
-    diff_type formatted_size = std::formatted_size(fmt.template sv<CharT>(), args...);
+    diff_type formatted_size       = std::formatted_size(fmt, std::forward<Args>(args)...);
 
     assert(result.size == formatted_size);
     assert(result.out == buffer);
@@ -91,23 +94,11 @@ auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string
   }
 };
 
-auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
-                                                     const Args&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  try {
-    std::basic_string<CharT> out;
-    std::format_to_n(std::back_inserter(out), 0, fmt, args...);
-    assert(false);
-  } catch (const std::format_error& e) {
-    LIBCPP_ASSERT(e.what() == what);
-    return;
-  }
-  assert(false);
-#else
-  (void)what;
-  (void)fmt;
-  (void)sizeof...(args);
-#endif
+auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {
+  // After P2216 most exceptions thrown by std::format_to_n become ill-formed.
+  // Therefore this tests does nothing.
+  // A basic ill-formed test is done in format_to_n.verify.cpp
+  // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
 int main(int, char**) {

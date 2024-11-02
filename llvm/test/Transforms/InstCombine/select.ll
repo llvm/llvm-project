@@ -41,12 +41,12 @@ define <2 x i1> @trueval_is_true_vec(<2 x i1> %C, <2 x i1> %X) {
   ret <2 x i1> %R
 }
 
-define <2 x i1> @trueval_is_true_vec_undef_elt(<2 x i1> %C, <2 x i1> %X) {
-; CHECK-LABEL: @trueval_is_true_vec_undef_elt(
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 undef, i1 true>, <2 x i1> [[X:%.*]]
+define <2 x i1> @trueval_is_true_vec_poison_elt(<2 x i1> %C, <2 x i1> %X) {
+; CHECK-LABEL: @trueval_is_true_vec_poison_elt(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 poison, i1 true>, <2 x i1> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %R = select <2 x i1> %C, <2 x i1> <i1 undef, i1 true>, <2 x i1> %X
+  %R = select <2 x i1> %C, <2 x i1> <i1 poison, i1 true>, <2 x i1> %X
   ret <2 x i1> %R
 }
 
@@ -165,8 +165,8 @@ define <2 x i1> @test24vec(<2 x i1> %a, <2 x i1> %b) {
 
 define i1 @test62(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT_A]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -176,8 +176,8 @@ define i1 @test62(i1 %A, i1 %B) {
 
 define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test62vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -187,8 +187,8 @@ define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 
 define i1 @test63(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test63(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -198,8 +198,8 @@ define i1 @test63(i1 %A, i1 %B) {
 
 define <2 x i1> @test63vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test63vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -958,10 +958,10 @@ define i32 @test61(i32* %ptr) {
 }
 
 ; PR14131
-define void @test64(i32 %p, i16 %b) noreturn {
+define void @test64(i32 %p, i16 %b, i1 %c1) noreturn {
 ; CHECK-LABEL: @test64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
@@ -976,7 +976,7 @@ define void @test64(i32 %p, i16 %b) noreturn {
 entry:
   %p.addr.0.insert.mask = and i32 %p, -65536
   %conv2 = and i32 %p, 65535
-  br i1 undef, label %lor.rhs, label %lor.end
+  br i1 %c1, label %lor.rhs, label %lor.end
 
 lor.rhs:
   %p.addr.0.extract.trunc = trunc i32 %p.addr.0.insert.mask to i16
@@ -1456,6 +1456,17 @@ define i32 @PR27817_nsw(i32 %x) {
   %sub = sub nsw i32 0, %x
   %sel = select i1 %cmp, i32 -2147483648, i32 %sub
   ret i32 %sel
+}
+
+define <2 x i32> @PR27817_nsw_vec(<2 x i32> %x) {
+; CHECK-LABEL: @PR27817_nsw_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
+;
+  %cmp = icmp eq <2 x i32> %x, <i32 -2147483648, i32 -2147483648>
+  %sub = sub nsw <2 x i32> zeroinitializer, %x
+  %sel = select <2 x i1> %cmp, <2 x i32> <i32 -2147483648, i32 -2147483648>, <2 x i32> %sub
+  ret <2 x i32> %sel
 }
 
 define i32 @select_icmp_slt0_xor(i32 %x) {
@@ -2769,6 +2780,43 @@ define i8 @select_replacement_add_eq(i8 %x, i8 %y) {
   ret i8 %sel
 }
 
+define <2 x i8> @select_replacement_add_eq_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_replacement_add_eq_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 2, i8 2>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 1, i8 1>
+  %add = add <2 x i8> %x, <i8 1, i8 1>
+  %sel = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> %y
+  ret <2 x i8> %sel
+}
+
+define <2 x i8> @select_replacement_add_eq_vec_nonuniform(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_replacement_add_eq_vec_nonuniform(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 2>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 4, i8 6>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 1, i8 2>
+  %add = add <2 x i8> %x, <i8 3, i8 4>
+  %sel = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> %y
+  ret <2 x i8> %sel
+}
+
+define <2 x i8> @select_replacement_add_eq_vec_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_replacement_add_eq_vec_poison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 poison>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 1, i8 poison>
+  %add = add <2 x i8> %x, <i8 1, i8 1>
+  %sel = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> %y
+  ret <2 x i8> %sel
+}
+
 define i8 @select_replacement_add_ne(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_replacement_add_ne(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 1
@@ -3184,7 +3232,202 @@ define <2 x i8> @ne0_is_all_ones_swap_vec_poison(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
+define i64 @udiv_of_select_constexpr(i1 %c, i64 %x) {
+; CHECK-LABEL: @udiv_of_select_constexpr(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i64 [[X:%.*]], i64 ptrtoint (i32* @glbl to i64)
+; CHECK-NEXT:    [[OP:%.*]] = udiv i64 [[SEL]], 3
+; CHECK-NEXT:    ret i64 [[OP]]
+;
+  %sel = select i1 %c, i64 %x, i64 ptrtoint (i32* @glbl to i64)
+  %op = udiv i64 %sel, 3
+  ret i64 %op
+}
+
+define i64 @udiv_of_select_constexpr_commuted(i1 %c, i64 %x) {
+; CHECK-LABEL: @udiv_of_select_constexpr_commuted(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i64 ptrtoint (i32* @glbl to i64), i64 [[X:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = udiv i64 [[SEL]], 3
+; CHECK-NEXT:    ret i64 [[OP]]
+;
+  %sel = select i1 %c, i64 ptrtoint (i32* @glbl to i64), i64 %x
+  %op = udiv i64 %sel, 3
+  ret i64 %op
+}
+
 declare void @use(i1)
 declare void @use_i8(i8)
 declare void @use_i32(i32)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
+
+define i32 @select_cond_zext_cond(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_zext_cond(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 1, i32 [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %zext = zext i1 %cond to i32
+  %sel = select i1 %cond, i32 %zext, i32 %b
+  ret i32 %sel
+}
+
+define <2 x i32> @select_cond_zext_cond_vec(<2 x i1> %cond, <2 x i32> %b) {
+; CHECK-LABEL: @select_cond_zext_cond_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 1, i32 1>, <2 x i32> [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %zext = zext <2 x i1> %cond to <2 x i32>
+  %sel = select <2 x i1> %cond, <2 x i32> %zext, <2 x i32> %b
+  ret <2 x i32> %sel
+}
+
+define i32 @select_cond_sext_cond(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_sext_cond(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 -1, i32 [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %sext = sext i1 %cond to i32
+  %sel = select i1 %cond, i32 %sext, i32 %b
+  ret i32 %sel
+}
+
+define <2 x i32> @select_cond_sext_cond_vec(<2 x i1> %cond, <2 x i32> %b) {
+; CHECK-LABEL: @select_cond_sext_cond_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 -1, i32 -1>, <2 x i32> [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %sext = sext <2 x i1> %cond to <2 x i32>
+  %sel = select <2 x i1> %cond, <2 x i32> %sext, <2 x i32> %b
+  ret <2 x i32> %sel
+}
+
+define i32 @select_cond_val_zext_cond(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_val_zext_cond(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %zext = zext i1 %cond to i32
+  %sel = select i1 %cond, i32 %b, i32 %zext
+  ret i32 %sel
+}
+
+define <2 x i32> @select_cond_val_zext_cond_vec(<2 x i1> %cond, <2 x i32> %b) {
+; CHECK-LABEL: @select_cond_val_zext_cond_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> [[B:%.*]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %zext = zext <2 x i1> %cond to <2 x i32>
+  %sel = select <2 x i1> %cond, <2 x i32> %b, <2 x i32> %zext
+  ret <2 x i32> %sel
+}
+
+define i32 @select_cond_val_sext_cond(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_val_sext_cond(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %sext = sext i1 %cond to i32
+  %sel = select i1 %cond, i32 %b, i32 %sext
+  ret i32 %sel
+}
+
+define i32 @select_cond_zext_not_cond_val(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_zext_not_cond_val(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 0, i32 [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %not_cond = xor i1 %cond, true
+  %zext = zext i1 %not_cond to i32
+  %sel = select i1 %cond, i32 %zext, i32 %b
+  ret i32 %sel
+}
+
+define i32 @select_cond_sext_not_cond_val(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_sext_not_cond_val(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 0, i32 [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %not_cond = xor i1 %cond, true
+  %sext = sext i1 %not_cond to i32
+  %sel = select i1 %cond, i32 %sext, i32 %b
+  ret i32 %sel
+}
+
+
+define i32 @select_cond_val_zext_not_cond(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_val_zext_not_cond(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %not_cond = xor i1 %cond, true
+  %zext = zext i1 %not_cond to i32
+  %sel = select i1 %cond, i32 %b, i32 %zext
+  ret i32 %sel
+}
+
+define i32 @select_cond_val_sext_not_cond(i1 %cond, i32 %b) {
+; CHECK-LABEL: @select_cond_val_sext_not_cond(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[B:%.*]], i32 -1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %not_cond = xor i1 %cond, true
+  %sext = sext i1 %not_cond to i32
+  %sel = select i1 %cond, i32 %b, i32 %sext
+  ret i32 %sel
+}
+
+define i32 @select_cond_not_cond_cond1(i1 %cond) {
+; CHECK-LABEL: @select_cond_not_cond_cond1(
+; CHECK-NEXT:    ret i32 0
+;
+  %z = zext i1 %cond to i32
+  %not_cond = xor i1 %cond, true
+  %s = sext i1 %not_cond to i32
+  %v = select i1 %cond, i32 %s, i32 %z
+  ret i32 %v
+}
+
+define i32 @select_cond_not_cond_cond2(i1 %cond) {
+; CHECK-LABEL: @select_cond_not_cond_cond2(
+; CHECK-NEXT:    ret i32 0
+;
+  %z = sext i1 %cond to i32
+  %not_cond = xor i1 %cond, true
+  %s = zext i1 %not_cond to i32
+  %v = select i1 %cond, i32 %s, i32 %z
+  ret i32 %v
+}
+
+; This previously crashed due to Constant::getUniqueInteger not handling
+; scalable vector splat ConstantExprs.
+define <vscale x 2 x i32> @and_constant_select_svec(<vscale x 2 x i32> %x, <vscale x 2 x i1> %cond) {
+; CHECK-LABEL: @and_constant_select_svec(
+; CHECK-NEXT:    [[A:%.*]] = and <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[B:%.*]] = select <vscale x 2 x i1> [[COND:%.*]], <vscale x 2 x i32> [[A]], <vscale x 2 x i32> [[X]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
+;
+  %a = and <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %b = select <vscale x 2 x i1> %cond, <vscale x 2 x i32> %a, <vscale x 2 x i32> %x
+  ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x i32> @scalable_sign_bits(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @scalable_sign_bits(
+; CHECK-NEXT:    [[A:%.*]] = sext <vscale x 2 x i8> [[X:%.*]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[B:%.*]] = shl nsw <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 16, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
+;
+  %a = sext <vscale x 2 x i8> %x to <vscale x 2 x i32>
+  %b = shl <vscale x 2 x i32> %a, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 16, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @scalable_non_zero(
+; CHECK-NEXT:    [[A:%.*]] = or <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
+;
+  %a = or <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %b = add <vscale x 2 x i32> %a, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %cmp = icmp ult <vscale x 2 x i32> %b, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i1> %cmp
+}

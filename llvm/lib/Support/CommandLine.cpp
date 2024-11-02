@@ -166,9 +166,9 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
-  CommandLineParser() : ActiveSubCommand(nullptr) {
-    registerSubCommand(&*TopLevelSubCommand);
-    registerSubCommand(&*AllSubCommands);
+  CommandLineParser() {
+    registerSubCommand(&SubCommand::getTopLevel());
+    registerSubCommand(&SubCommand::getAll());
   }
 
   void ResetAllOptionOccurrences();
@@ -188,7 +188,7 @@ public:
 
     // If we're adding this to all sub-commands, add it to the ones that have
     // already been registered.
-    if (SC == &*AllSubCommands) {
+    if (SC == &SubCommand::getAll()) {
       for (auto *Sub : RegisteredSubCommands) {
         if (SC == Sub)
           continue;
@@ -199,7 +199,7 @@ public:
 
   void addLiteralOption(Option &Opt, StringRef Name) {
     if (Opt.Subs.empty())
-      addLiteralOption(Opt, &*TopLevelSubCommand, Name);
+      addLiteralOption(Opt, &SubCommand::getTopLevel(), Name);
     else {
       for (auto *SC : Opt.Subs)
         addLiteralOption(Opt, SC, Name);
@@ -244,7 +244,7 @@ public:
 
     // If we're adding this to all sub-commands, add it to the ones that have
     // already been registered.
-    if (SC == &*AllSubCommands) {
+    if (SC == &SubCommand::getAll()) {
       for (auto *Sub : RegisteredSubCommands) {
         if (SC == Sub)
           continue;
@@ -260,7 +260,7 @@ public:
     }
 
     if (O->Subs.empty()) {
-      addOption(O, &*TopLevelSubCommand);
+      addOption(O, &SubCommand::getTopLevel());
     } else {
       for (auto *SC : O->Subs)
         addOption(O, SC);
@@ -302,7 +302,7 @@ public:
 
   void removeOption(Option *O) {
     if (O->Subs.empty())
-      removeOption(O, &*TopLevelSubCommand);
+      removeOption(O, &SubCommand::getTopLevel());
     else {
       if (O->isInAllSubCommands()) {
         for (auto *SC : RegisteredSubCommands)
@@ -341,7 +341,7 @@ public:
 
   void updateArgStr(Option *O, StringRef NewName) {
     if (O->Subs.empty())
-      updateArgStr(O, NewName, &*TopLevelSubCommand);
+      updateArgStr(O, NewName, &SubCommand::getTopLevel());
     else {
       if (O->isInAllSubCommands()) {
         for (auto *SC : RegisteredSubCommands)
@@ -376,8 +376,8 @@ public:
 
     // For all options that have been registered for all subcommands, add the
     // option to this subcommand now.
-    if (sub != &*AllSubCommands) {
-      for (auto &E : AllSubCommands->OptionsMap) {
+    if (sub != &SubCommand::getAll()) {
+      for (auto &E : SubCommand::getAll().OptionsMap) {
         Option *O = E.second;
         if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
             O->hasArgStr())
@@ -409,16 +409,16 @@ public:
     ResetAllOptionOccurrences();
     RegisteredSubCommands.clear();
 
-    TopLevelSubCommand->reset();
-    AllSubCommands->reset();
-    registerSubCommand(&*TopLevelSubCommand);
-    registerSubCommand(&*AllSubCommands);
+    SubCommand::getTopLevel().reset();
+    SubCommand::getAll().reset();
+    registerSubCommand(&SubCommand::getTopLevel());
+    registerSubCommand(&SubCommand::getAll());
 
     DefaultOptions.clear();
   }
 
 private:
-  SubCommand *ActiveSubCommand;
+  SubCommand *ActiveSubCommand = nullptr;
 
   Option *LookupOption(SubCommand &Sub, StringRef &Arg, StringRef &Value);
   Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
@@ -491,6 +491,10 @@ ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
 // A special subcommand that can be used to put an option into all subcommands.
 ManagedStatic<SubCommand> llvm::cl::AllSubCommands;
 
+SubCommand &SubCommand::getTopLevel() { return *TopLevelSubCommand; }
+
+SubCommand &SubCommand::getAll() { return *AllSubCommands; }
+
 void SubCommand::registerSubCommand() {
   GlobalParser->registerSubCommand(this);
 }
@@ -523,7 +527,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
   // Reject all dashes.
   if (Arg.empty())
     return nullptr;
-  assert(&Sub != &*AllSubCommands);
+  assert(&Sub != &SubCommand::getAll());
 
   size_t EqualPos = Arg.find('=');
 
@@ -551,9 +555,9 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
 
 SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
   if (Name.empty())
-    return &*TopLevelSubCommand;
+    return &SubCommand::getTopLevel();
   for (auto *S : RegisteredSubCommands) {
-    if (S == &*AllSubCommands)
+    if (S == &SubCommand::getAll())
       continue;
     if (S->getName().empty())
       continue;
@@ -561,7 +565,7 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
     if (StringRef(S->getName()) == StringRef(Name))
       return S;
   }
-  return &*TopLevelSubCommand;
+  return &SubCommand::getTopLevel();
 }
 
 /// LookupNearestOption - Lookup the closest match to the option specified by
@@ -1149,17 +1153,16 @@ static void ExpandBasePaths(StringRef BasePath, StringSaver &Saver,
 }
 
 // FName must be an absolute path.
-static llvm::Error ExpandResponseFile(StringRef FName, StringSaver &Saver,
-                                      TokenizerCallback Tokenizer,
-                                      SmallVectorImpl<const char *> &NewArgv,
-                                      bool MarkEOLs, bool RelativeNames,
-                                      bool ExpandBasePath,
-                                      llvm::vfs::FileSystem &FS) {
+Error ExpansionContext::expandResponseFile(
+    StringRef FName, SmallVectorImpl<const char *> &NewArgv) {
   assert(sys::path::is_absolute(FName));
   llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
-      FS.getBufferForFile(FName);
-  if (!MemBufOrErr)
-    return llvm::errorCodeToError(MemBufOrErr.getError());
+      FS->getBufferForFile(FName);
+  if (!MemBufOrErr) {
+    std::error_code EC = MemBufOrErr.getError();
+    return llvm::createStringError(EC, Twine("cannot not open file '") + FName +
+                                           "': " + EC.message());
+  }
   MemoryBuffer &MemBuf = *MemBufOrErr.get();
   StringRef Str(MemBuf.getBufferStart(), MemBuf.getBufferSize());
 
@@ -1181,29 +1184,30 @@ static llvm::Error ExpandResponseFile(StringRef FName, StringSaver &Saver,
   // Tokenize the contents into NewArgv.
   Tokenizer(Str, Saver, NewArgv, MarkEOLs);
 
-  if (!RelativeNames)
+  // Expanded file content may require additional transformations, like using
+  // absolute paths instead of relative in '@file' constructs or expanding
+  // macros.
+  if (!RelativeNames && !InConfigFile)
     return Error::success();
-  llvm::StringRef BasePath = llvm::sys::path::parent_path(FName);
-  // If names of nested response files should be resolved relative to including
-  // file, replace the included response file names with their full paths
-  // obtained by required resolution.
-  for (auto &Arg : NewArgv) {
-    if (!Arg)
+
+  StringRef BasePath = llvm::sys::path::parent_path(FName);
+  for (auto I = NewArgv.begin(), E = NewArgv.end(); I != E; ++I) {
+    const char *&Arg = *I;
+    if (Arg == nullptr)
       continue;
 
     // Substitute <CFGDIR> with the file's base path.
-    if (ExpandBasePath)
+    if (InConfigFile)
       ExpandBasePaths(BasePath, Saver, Arg);
 
-    // Skip non-rsp file arguments.
-    if (Arg[0] != '@')
+    // Get expanded file name.
+    StringRef FileName(Arg);
+    if (!FileName.consume_front("@"))
       continue;
-
-    StringRef FileName(Arg + 1);
-    // Skip if non-relative.
     if (!llvm::sys::path::is_relative(FileName))
       continue;
 
+    // Update expansion construct.
     SmallString<128> ResponseFile;
     ResponseFile.push_back('@');
     ResponseFile.append(BasePath);
@@ -1215,12 +1219,8 @@ static llvm::Error ExpandResponseFile(StringRef FName, StringSaver &Saver,
 
 /// Expand response files on a command line recursively using the given
 /// StringSaver and tokenization strategy.
-bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
-                             SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames, bool ExpandBasePath,
-                             llvm::Optional<llvm::StringRef> CurrentDir,
-                             llvm::vfs::FileSystem &FS) {
-  bool AllExpanded = true;
+Error ExpansionContext::expandResponseFiles(
+    SmallVectorImpl<const char *> &Argv) {
   struct ResponseFileRecord {
     std::string File;
     size_t End;
@@ -1260,52 +1260,63 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     // always have an absolute path deduced from the containing file.
     SmallString<128> CurrDir;
     if (llvm::sys::path::is_relative(FName)) {
-      if (!CurrentDir)
-        llvm::sys::fs::current_path(CurrDir);
-      else
-        CurrDir = *CurrentDir;
+      if (CurrentDir.empty()) {
+        if (auto CWD = FS->getCurrentWorkingDirectory()) {
+          CurrDir = *CWD;
+        } else {
+          return createStringError(
+              CWD.getError(), Twine("cannot get absolute path for: ") + FName);
+        }
+      } else {
+        CurrDir = CurrentDir;
+      }
       llvm::sys::path::append(CurrDir, FName);
       FName = CurrDir.c_str();
     }
-    auto IsEquivalent = [FName, &FS](const ResponseFileRecord &RFile) {
-      llvm::ErrorOr<llvm::vfs::Status> LHS = FS.status(FName);
-      if (!LHS) {
-        // TODO: The error should be propagated up the stack.
-        llvm::consumeError(llvm::errorCodeToError(LHS.getError()));
-        return false;
+
+    ErrorOr<llvm::vfs::Status> Res = FS->status(FName);
+    if (!Res || !Res->exists()) {
+      std::error_code EC = Res.getError();
+      if (!InConfigFile) {
+        // If the specified file does not exist, leave '@file' unexpanded, as
+        // libiberty does.
+        if (!EC || EC == llvm::errc::no_such_file_or_directory) {
+          ++I;
+          continue;
+        }
       }
-      llvm::ErrorOr<llvm::vfs::Status> RHS = FS.status(RFile.File);
-      if (!RHS) {
-        // TODO: The error should be propagated up the stack.
-        llvm::consumeError(llvm::errorCodeToError(RHS.getError()));
-        return false;
-      }
-      return LHS->equivalent(*RHS);
+      if (!EC)
+        EC = llvm::errc::no_such_file_or_directory;
+      return createStringError(EC, Twine("cannot not open file '") + FName +
+                                       "': " + EC.message());
+    }
+    const llvm::vfs::Status &FileStatus = Res.get();
+
+    auto IsEquivalent =
+        [FileStatus, this](const ResponseFileRecord &RFile) -> ErrorOr<bool> {
+      ErrorOr<llvm::vfs::Status> RHS = FS->status(RFile.File);
+      if (!RHS)
+        return RHS.getError();
+      return FileStatus.equivalent(*RHS);
     };
 
     // Check for recursive response files.
-    if (any_of(drop_begin(FileStack), IsEquivalent)) {
-      // This file is recursive, so we leave it in the argument stream and
-      // move on.
-      AllExpanded = false;
-      ++I;
-      continue;
+    for (const auto &F : drop_begin(FileStack)) {
+      if (ErrorOr<bool> R = IsEquivalent(F)) {
+        if (R.get())
+          return createStringError(
+              R.getError(), Twine("recursive expansion of: '") + F.File + "'");
+      } else {
+        return createStringError(R.getError(),
+                                 Twine("cannot open file: ") + F.File);
+      }
     }
 
     // Replace this response file argument with the tokenization of its
     // contents.  Nested response files are expanded in subsequent iterations.
     SmallVector<const char *, 0> ExpandedArgv;
-    if (llvm::Error Err =
-            ExpandResponseFile(FName, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
-                               RelativeNames, ExpandBasePath, FS)) {
-      // We couldn't read this file, so we leave it in the argument stream and
-      // move on.
-      // TODO: The error should be propagated up the stack.
-      llvm::consumeError(std::move(Err));
-      AllExpanded = false;
-      ++I;
-      continue;
-    }
+    if (Error Err = expandResponseFile(FName, ExpandedArgv))
+      return Err;
 
     for (ResponseFileRecord &Record : FileStack) {
       // Increase the end of all active records by the number of newly expanded
@@ -1324,16 +1335,7 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   // don't have a chance to pop the stack when encountering recursive files at
   // the end of the stream, so seeing that doesn't indicate a bug.
   assert(FileStack.size() > 0 && Argv.size() == FileStack.back().End);
-  return AllExpanded;
-}
-
-bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
-                             SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames, bool ExpandBasePath,
-                             llvm::Optional<StringRef> CurrentDir) {
-  return ExpandResponseFiles(Saver, std::move(Tokenizer), Argv, MarkEOLs,
-                             RelativeNames, ExpandBasePath,
-                             std::move(CurrentDir), *vfs::getRealFileSystem());
+  return Error::success();
 }
 
 bool cl::expandResponseFiles(int Argc, const char *const *Argv,
@@ -1349,28 +1351,79 @@ bool cl::expandResponseFiles(int Argc, const char *const *Argv,
 
   // Command line options can override the environment variable.
   NewArgv.append(Argv + 1, Argv + Argc);
-  return ExpandResponseFiles(Saver, Tokenize, NewArgv);
-}
-
-bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
-                        SmallVectorImpl<const char *> &Argv) {
-  SmallString<128> AbsPath;
-  if (sys::path::is_relative(CfgFile)) {
-    llvm::sys::fs::current_path(AbsPath);
-    llvm::sys::path::append(AbsPath, CfgFile);
-    CfgFile = AbsPath.str();
-  }
-  if (llvm::Error Err = ExpandResponseFile(
-          CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-          /*MarkEOLs=*/false, /*RelativeNames=*/true, /*ExpandBasePath=*/true,
-          *llvm::vfs::getRealFileSystem())) {
-    // TODO: The error should be propagated up the stack.
-    llvm::consumeError(std::move(Err));
+  ExpansionContext ECtx(Saver.getAllocator(), Tokenize);
+  if (Error Err = ECtx.expandResponseFiles(NewArgv)) {
+    errs() << toString(std::move(Err)) << '\n';
     return false;
   }
-  return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
-                             /*ExpandBasePath=*/true, llvm::None);
+  return true;
+}
+
+bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
+                             SmallVectorImpl<const char *> &Argv) {
+  ExpansionContext ECtx(Saver.getAllocator(), Tokenizer);
+  if (Error Err = ECtx.expandResponseFiles(Argv)) {
+    errs() << toString(std::move(Err)) << '\n';
+    return false;
+  }
+  return true;
+}
+
+ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T)
+    : Saver(A), Tokenizer(T), FS(vfs::getRealFileSystem().get()) {}
+
+bool ExpansionContext::findConfigFile(StringRef FileName,
+                                      SmallVectorImpl<char> &FilePath) {
+  SmallString<128> CfgFilePath;
+  const auto FileExists = [this](SmallString<128> Path) -> bool {
+    auto Status = FS->status(Path);
+    return Status &&
+           Status->getType() == llvm::sys::fs::file_type::regular_file;
+  };
+
+  // If file name contains directory separator, treat it as a path to
+  // configuration file.
+  if (llvm::sys::path::has_parent_path(FileName)) {
+    CfgFilePath = FileName;
+    if (llvm::sys::path::is_relative(FileName) && FS->makeAbsolute(CfgFilePath))
+      return false;
+    if (!FileExists(CfgFilePath))
+      return false;
+    FilePath.assign(CfgFilePath.begin(), CfgFilePath.end());
+    return true;
+  }
+
+  // Look for the file in search directories.
+  for (const StringRef &Dir : SearchDirs) {
+    if (Dir.empty())
+      continue;
+    CfgFilePath.assign(Dir);
+    llvm::sys::path::append(CfgFilePath, FileName);
+    llvm::sys::path::native(CfgFilePath);
+    if (FileExists(CfgFilePath)) {
+      FilePath.assign(CfgFilePath.begin(), CfgFilePath.end());
+      return true;
+    }
+  }
+
+  return false;
+}
+
+Error ExpansionContext::readConfigFile(StringRef CfgFile,
+                                       SmallVectorImpl<const char *> &Argv) {
+  SmallString<128> AbsPath;
+  if (sys::path::is_relative(CfgFile)) {
+    AbsPath.assign(CfgFile);
+    if (std::error_code EC = FS->makeAbsolute(AbsPath))
+      return make_error<StringError>(
+          EC, Twine("cannot get absolute path for " + CfgFile));
+    CfgFile = AbsPath.str();
+  }
+  InConfigFile = true;
+  RelativeNames = true;
+  if (Error Err = expandResponseFile(CfgFile, Argv))
+    return Err;
+  return expandResponseFiles(Argv);
 }
 
 static void initCommonOptions();
@@ -1425,25 +1478,27 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
                                                 bool LongOptionsUseDoubleDash) {
   assert(hasOptions() && "No options specified!");
 
-  // Expand response files.
-  SmallVector<const char *, 20> newArgv(argv, argv + argc);
-  BumpPtrAllocator A;
-  StringSaver Saver(A);
-  ExpandResponseFiles(Saver,
-         Triple(sys::getProcessTriple()).isOSWindows() ?
-         cl::TokenizeWindowsCommandLine : cl::TokenizeGNUCommandLine,
-         newArgv);
-  argv = &newArgv[0];
-  argc = static_cast<int>(newArgv.size());
-
-  // Copy the program name into ProgName, making sure not to overflow it.
-  ProgramName = std::string(sys::path::filename(StringRef(argv[0])));
-
   ProgramOverview = Overview;
   bool IgnoreErrors = Errs;
   if (!Errs)
     Errs = &errs();
   bool ErrorParsing = false;
+
+  // Expand response files.
+  SmallVector<const char *, 20> newArgv(argv, argv + argc);
+  BumpPtrAllocator A;
+  ExpansionContext ECtx(A, Triple(sys::getProcessTriple()).isOSWindows()
+                               ? cl::TokenizeWindowsCommandLine
+                               : cl::TokenizeGNUCommandLine);
+  if (Error Err = ECtx.expandResponseFiles(newArgv)) {
+    *Errs << toString(std::move(Err)) << '\n';
+    return false;
+  }
+  argv = &newArgv[0];
+  argc = static_cast<int>(newArgv.size());
+
+  // Copy the program name into ProgName, making sure not to overflow it.
+  ProgramName = std::string(sys::path::filename(StringRef(argv[0])));
 
   // Check out the positional arguments to collect information about them.
   unsigned NumPositionalRequired = 0;
@@ -1452,12 +1507,12 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   bool HasUnlimitedPositionals = false;
 
   int FirstArg = 1;
-  SubCommand *ChosenSubCommand = &*TopLevelSubCommand;
+  SubCommand *ChosenSubCommand = &SubCommand::getTopLevel();
   if (argc >= 2 && argv[FirstArg][0] != '-') {
     // If the first argument specifies a valid subcommand, start processing
     // options from the second argument.
     ChosenSubCommand = LookupSubCommand(StringRef(argv[FirstArg]));
-    if (ChosenSubCommand != &*TopLevelSubCommand)
+    if (ChosenSubCommand != &SubCommand::getTopLevel())
       FirstArg = 2;
   }
   GlobalParser->ActiveSubCommand = ChosenSubCommand;
@@ -1675,7 +1730,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
         switch (PositionalOpts[i]->getNumOccurrencesFlag()) {
         case cl::Optional:
           Done = true; // Optional arguments want _at most_ one value
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case cl::ZeroOrMore: // Zero or more will take all they can get...
         case cl::OneOrMore:  // One or more will take all they can get...
           ProvidePositionalOption(PositionalOpts[i],
@@ -1729,7 +1784,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
         Opt.second->error("must be specified at least once!");
         ErrorParsing = true;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       break;
     }
@@ -1862,8 +1917,10 @@ void basic_parser_impl::printOptionInfo(const Option &O,
       outs() << " <" << getValueStr(O, ValName) << ">...";
     } else if (O.getValueExpectedFlag() == ValueOptional)
       outs() << "[=<" << getValueStr(O, ValName) << ">]";
-    else
-      outs() << "=<" << getValueStr(O, ValName) << '>';
+    else {
+      outs() << (O.ArgStr.size() == 1 ? " <" : "=<") << getValueStr(O, ValName)
+             << '>';
+    }
   }
 
   Option::printHelpStr(O.HelpStr, GlobalWidth, getOptionWidth(O));
@@ -2287,7 +2344,7 @@ public:
     if (!GlobalParser->ProgramOverview.empty())
       outs() << "OVERVIEW: " << GlobalParser->ProgramOverview << "\n";
 
-    if (Sub == &*TopLevelSubCommand) {
+    if (Sub == &SubCommand::getTopLevel()) {
       outs() << "USAGE: " << GlobalParser->ProgramName;
       if (Subs.size() > 2)
         outs() << " [subcommand]";
@@ -2311,7 +2368,7 @@ public:
     if (ConsumeAfterOpt)
       outs() << " " << ConsumeAfterOpt->HelpStr;
 
-    if (Sub == &*TopLevelSubCommand && !Subs.empty()) {
+    if (Sub == &SubCommand::getTopLevel() && !Subs.empty()) {
       // Compute the maximum subcommand length...
       size_t MaxSubLen = 0;
       for (size_t i = 0, e = Subs.size(); i != e; ++i)
@@ -2380,7 +2437,7 @@ protected:
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
       for (auto &Cat : Opt->Categories) {
-        assert(find(SortedCategories, Cat) != SortedCategories.end() &&
+        assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
       }
@@ -2468,11 +2525,7 @@ public:
 #else
     OS << "LLVM (http://llvm.org/):\n  ";
 #endif
-    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
-#ifdef LLVM_VERSION_INFO
-    OS << " " << LLVM_VERSION_INFO;
-#endif
-    OS << "\n  ";
+    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION << "\n  ";
 #if LLVM_IS_DEBUG_BUILD
     OS << "DEBUG build";
 #else
@@ -2521,7 +2574,7 @@ struct CommandLineCommonOptions {
       cl::Hidden,
       cl::ValueDisallowed,
       cl::cat(GenericCategory),
-      cl::sub(*AllSubCommands)};
+      cl::sub(SubCommand::getAll())};
 
   cl::opt<HelpPrinter, true, parser<bool>> HLHOp{
       "help-list-hidden",
@@ -2530,7 +2583,7 @@ struct CommandLineCommonOptions {
       cl::Hidden,
       cl::ValueDisallowed,
       cl::cat(GenericCategory),
-      cl::sub(*AllSubCommands)};
+      cl::sub(SubCommand::getAll())};
 
   // Define uncategorized/categorized help printers. These printers change their
   // behaviour at runtime depending on whether one or more Option categories
@@ -2541,7 +2594,7 @@ struct CommandLineCommonOptions {
       cl::location(WrappedNormalPrinter),
       cl::ValueDisallowed,
       cl::cat(GenericCategory),
-      cl::sub(*AllSubCommands)};
+      cl::sub(SubCommand::getAll())};
 
   cl::alias HOpA{"h", cl::desc("Alias for --help"), cl::aliasopt(HOp),
                  cl::DefaultOption};
@@ -2553,7 +2606,7 @@ struct CommandLineCommonOptions {
       cl::Hidden,
       cl::ValueDisallowed,
       cl::cat(GenericCategory),
-      cl::sub(*AllSubCommands)};
+      cl::sub(SubCommand::getAll())};
 
   cl::opt<bool> PrintOptions{
       "print-options",
@@ -2561,7 +2614,7 @@ struct CommandLineCommonOptions {
       cl::Hidden,
       cl::init(false),
       cl::cat(GenericCategory),
-      cl::sub(*AllSubCommands)};
+      cl::sub(SubCommand::getAll())};
 
   cl::opt<bool> PrintAllOptions{
       "print-all-options",
@@ -2569,7 +2622,7 @@ struct CommandLineCommonOptions {
       cl::Hidden,
       cl::init(false),
       cl::cat(GenericCategory),
-      cl::sub(*AllSubCommands)};
+      cl::sub(SubCommand::getAll())};
 
   VersionPrinterTy OverrideVersionPrinter = nullptr;
 

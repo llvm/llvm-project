@@ -17,9 +17,9 @@ entry:
 if.then:                                          ; preds = %entry
 ; It's ok to modify this test in the future should be able to split critical
 ; edges here, just noting that this is the critical edge that we care about.
-; CHECK: callbr void asm sideeffect "", "i"(i8* blockaddress(@b, %cleanup.cont.critedge))
+; CHECK: callbr void asm sideeffect "", "!i"()
 ; CHECK-NEXT: to label %return [label %cleanup.cont.critedge]
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@b, %cleanup.cont.critedge))
+  callbr void asm sideeffect "", "!i"()
           to label %return [label %cleanup.cont.critedge]
 
 cleanup.cont.critedge:                            ; preds = %entry, %if.then
@@ -46,7 +46,7 @@ if.then:                                          ; preds = %for.cond
   br i1 %tobool.not.i, label %if.then2, label %if.then.i
 
 if.then.i:                                        ; preds = %if.then
-  callbr void asm sideeffect "", "i"(i8* blockaddress(@do_pages_move_nr_pages, %if.then2))
+  callbr void asm sideeffect "", "!i"()
           to label %if.end3 [label %if.then2]
 
 if.then2:                                         ; preds = %if.then, %if.then.i

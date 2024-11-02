@@ -1,17 +1,8 @@
 // RUN: mlir-opt %s --sparse-compiler | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test_symmetric.mtx" \
+// RUN: TENSOR0="%mlir_src_dir/test/Integration/data/test_symmetric.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
-//
-// Do the same run, but now with SIMDization as well. This should not change the outcome.
-//
-// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=2 vl=2" | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test_symmetric.mtx" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 !Filename = !llvm.ptr<i8>
@@ -39,7 +30,7 @@ module {
   // A kernel that sum-reduces a matrix to a single scalar.
   //
   func.func @kernel_sum_reduce(%arga: tensor<?x?xf64, #SparseMatrix>,
-                          %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
+                               %argx: tensor<f64>) -> tensor<f64> {
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xf64, #SparseMatrix>)
       outs(%argx: tensor<f64>) {
@@ -61,9 +52,7 @@ module {
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.
-    %xdata = memref.alloc() : memref<f64>
-    memref.store %d0, %xdata[] : memref<f64>
-    %x = bufferization.to_tensor %xdata : memref<f64>
+    %x = tensor.from_elements %d0 : tensor<f64>
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -77,13 +66,11 @@ module {
     //
     // CHECK: 30.2
     //
-    %m = bufferization.to_memref %0 : memref<f64>
-    %v = memref.load %m[] : memref<f64>
+    %v = tensor.extract %0[] : tensor<f64>
     vector.print %v : f64
 
     // Release the resources.
-    memref.dealloc %xdata : memref<f64>
-    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xf64, #SparseMatrix>
 
     return
   }

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
 func.func private @printMemrefF32(memref<*xf32>)
@@ -28,10 +28,10 @@ func.func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>)
   %C = memref.alloc(%m, %n) : memref<?x?xf32>
   linalg.fill ins(%f0 : f32) outs(%C : memref<?x?xf32>)
   scf.for %i = %c0 to %n step %c1 {
-    %b = memref.subview %B[0, %i][%x, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
-    %c = memref.subview %C[0, %i][%m, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
-    linalg.matvec ins(%A, %b: memref<?x?xf32>, memref<?xf32, offset: ?, strides: [?]>)
-                  outs(%c: memref<?xf32, offset: ?, strides: [?]>)
+    %b = memref.subview %B[0, %i][%x, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?], offset: ?>>
+    %c = memref.subview %C[0, %i][%m, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?], offset: ?>>
+    linalg.matvec ins(%A, %b: memref<?x?xf32>, memref<?xf32, strided<[?], offset: ?>>)
+                  outs(%c: memref<?xf32, strided<[?], offset: ?>>)
   }
   return %C : memref<?x?xf32>
 }

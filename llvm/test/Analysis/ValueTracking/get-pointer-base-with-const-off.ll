@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 ; Make sure we don't crash when analyzing an addrspacecast in
 ; GetPointerBaseWithConstantOffset()

@@ -201,9 +201,11 @@ namespace clang {
     ParsingDeclRAIIObject ParsingRAII;
 
   public:
-    ParsingDeclarator(Parser &P, const ParsingDeclSpec &DS, DeclaratorContext C)
-      : Declarator(DS, C), ParsingRAII(P, &DS.getDelayedDiagnosticPool()) {
-    }
+    ParsingDeclarator(Parser &P, const ParsingDeclSpec &DS,
+                      const ParsedAttributes &DeclarationAttrs,
+                      DeclaratorContext C)
+        : Declarator(DS, DeclarationAttrs, C),
+          ParsingRAII(P, &DS.getDelayedDiagnosticPool()) {}
 
     const ParsingDeclSpec &getDeclSpec() const {
       return static_cast<const ParsingDeclSpec&>(Declarator::getDeclSpec());
@@ -228,9 +230,10 @@ namespace clang {
     ParsingDeclRAIIObject ParsingRAII;
 
   public:
-    ParsingFieldDeclarator(Parser &P, const ParsingDeclSpec &DS)
-      : FieldDeclarator(DS), ParsingRAII(P, &DS.getDelayedDiagnosticPool()) {
-    }
+    ParsingFieldDeclarator(Parser &P, const ParsingDeclSpec &DS,
+                           const ParsedAttributes &DeclarationAttrs)
+        : FieldDeclarator(DS, DeclarationAttrs),
+          ParsingRAII(P, &DS.getDelayedDiagnosticPool()) {}
 
     const ParsingDeclSpec &getDeclSpec() const {
       return static_cast<const ParsingDeclSpec&>(D.getDeclSpec());

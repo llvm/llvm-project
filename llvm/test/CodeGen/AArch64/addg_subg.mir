@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=prologepilog,aarch64-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prologepilog,aarch64-expand-pseudo %s -o - | FileCheck %s
 
 # CHECK: renamable $x8 = IRG $sp, $xzr
 

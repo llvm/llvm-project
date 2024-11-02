@@ -9,11 +9,12 @@
 #ifndef LIBC_SRC_STRING_STRING_UTILS_H
 #define LIBC_SRC_STRING_STRING_UTILS_H
 
-#include "src/__support/CPP/Bitset.h"
+#include "src/__support/CPP/bitset.h"
 #include "src/__support/common.h"
+#include "src/string/memory_utils/bzero_implementations.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/memory_utils/memset_implementations.h"
-#include <stddef.h> // size_t
+#include <stddef.h> // For size_t
+#include <stdlib.h> // For malloc and free
 
 namespace __llvm_libc {
 namespace internal {
@@ -40,7 +41,7 @@ static inline void *find_first_character(const unsigned char *src,
 // 'segment'. If no characters are found, returns the length of 'src'.
 static inline size_t complementary_span(const char *src, const char *segment) {
   const char *initial = src;
-  cpp::Bitset<256> bitset;
+  cpp::bitset<256> bitset;
 
   for (; *segment; ++segment)
     bitset.set(*segment);
@@ -65,7 +66,7 @@ static inline char *string_token(char *__restrict src,
   if (unlikely(src == nullptr && ((src = *saveptr) == nullptr)))
     return nullptr;
 
-  cpp::Bitset<256> delimiter_set;
+  cpp::bitset<256> delimiter_set;
   for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(*delimiter_string);
 
@@ -94,8 +95,19 @@ static inline size_t strlcpy(char *__restrict dst, const char *__restrict src,
     return len;
   size_t n = len < size - 1 ? len : size - 1;
   inline_memcpy(dst, src, n);
-  inline_memset(dst + n, 0, size - n);
+  inline_bzero(dst + n, size - n);
   return len;
+}
+
+inline char *strdup(const char *src) {
+  if (src == nullptr)
+    return nullptr;
+  size_t len = string_length(src) + 1;
+  char *newstr = reinterpret_cast<char *>(::malloc(len));
+  if (newstr == nullptr)
+    return nullptr;
+  inline_memcpy(newstr, src, len);
+  return newstr;
 }
 
 } // namespace internal

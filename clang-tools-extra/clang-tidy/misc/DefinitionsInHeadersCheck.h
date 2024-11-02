@@ -30,7 +30,7 @@ namespace misc {
 ///     empty string between ";" if there are other filename extensions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-definitions-in-headers.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/definitions-in-headers.html
 class DefinitionsInHeadersCheck : public ClangTidyCheck {
 public:
   DefinitionsInHeadersCheck(StringRef Name, ClangTidyContext *Context);

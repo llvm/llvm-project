@@ -687,7 +687,7 @@ OMPT_API_ROUTINE int ompt_get_num_places(void) {
 #else
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  return __kmp_affinity_num_masks;
+  return __kmp_affinity.num_masks;
 #endif
 }
 
@@ -703,11 +703,11 @@ OMPT_API_ROUTINE int ompt_get_place_proc_ids(int place_num, int ids_size,
     tmp_ids[j] = 0;
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  if (place_num < 0 || place_num >= (int)__kmp_affinity_num_masks)
+  if (place_num < 0 || place_num >= (int)__kmp_affinity.num_masks)
     return 0;
   /* TODO: Is this safe for asynchronous call from signal handler during runtime
    * shutdown? */
-  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
+  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity.masks, place_num);
   count = 0;
   KMP_CPU_SET_ITERATE(i, mask) {
     if ((!KMP_CPU_ISSET(i, __kmp_affin_fullMask)) ||
@@ -790,7 +790,7 @@ OMPT_API_ROUTINE int ompt_get_partition_place_nums(int place_nums_size,
 OMPT_API_ROUTINE int ompt_get_proc_id(void) {
   if (!ompt_enabled.enabled || __kmp_get_gtid() < 0)
     return -1;
-#if KMP_OS_LINUX
+#if KMP_HAVE_SCHED_GETCPU
   return sched_getcpu();
 #elif KMP_OS_WINDOWS
   PROCESSOR_NUMBER pn;

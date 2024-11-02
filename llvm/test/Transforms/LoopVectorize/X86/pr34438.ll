@@ -30,8 +30,7 @@ define void @small_tc(float* noalias nocapture %A, float* noalias nocapture read
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP5]] to <8 x float>*
 ; CHECK-NEXT:    store <8 x float> [[TMP7]], <8 x float>* [[TMP8]], align 4, !llvm.access.group !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP1:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP1:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 8, 8
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]

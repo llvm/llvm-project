@@ -12,14 +12,16 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 
 namespace __llvm_libc {
 namespace fputil {
 namespace x86 {
 
-inline void normalize(int &exponent, __uint128_t &mantissa) {
+inline void normalize(int &exponent, UInt128 &mantissa) {
   const int shift =
-      __builtin_clzll(static_cast<uint64_t>(mantissa)) -
+      unsafe_clz(static_cast<uint64_t>(mantissa)) -
       (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE);
   exponent -= shift;
   mantissa <<= shift;
@@ -42,7 +44,7 @@ static inline long double sqrt(long double x) {
   if (bits.is_inf_or_nan()) {
     if (bits.get_sign() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return FPBits<long double>::build_nan(ONE >> 1);
+      return FPBits<long double>::build_quiet_nan(ONE >> 1);
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
@@ -54,7 +56,7 @@ static inline long double sqrt(long double x) {
     return x;
   } else if (bits.get_sign()) {
     // sqrt( negative numbers ) = NaN
-    return FPBits<long double>::build_nan(ONE >> 1);
+    return FPBits<long double>::build_quiet_nan(ONE >> 1);
   } else {
     int x_exp = bits.get_exponent();
     UIntType x_mant = bits.get_mantissa();

@@ -52,10 +52,8 @@ constexpr void test() {
 #ifndef TEST_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
   test<char16_t>();
   test<char32_t>();
-#endif
 }
 
 static_assert(std::is_same_v<std::format_parse_context,

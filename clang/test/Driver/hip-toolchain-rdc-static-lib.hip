@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   --emit-static-lib -nogpulib \
 // RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \

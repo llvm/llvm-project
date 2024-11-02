@@ -1,7 +1,7 @@
 ; Tests that coro-split passes initialized values to coroutine frame allocator.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define i8* @f(i32 %argument) "coroutine.presplit"="1" {
+define i8* @f(i32 %argument) presplitcoroutine {
 entry:
   %argument.addr = alloca i32, align 4
   %incremented = add i32 %argument, 1

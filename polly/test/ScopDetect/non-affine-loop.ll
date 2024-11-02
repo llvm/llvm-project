@@ -6,7 +6,7 @@
 ;
 ; This function/region does contain a loop, however it is non-affine, hence the access
 ; A[i] is also. Furthermore, it is the only loop, thus when we over approximate
-; non-affine loops __and__ accesses __and__ allow regins without a (affine) loop we will
+; non-affine loops __and__ accesses __and__ allow regions without a (affine) loop we will
 ; detect it, otherwise we won't.
 ;
 ;    void f(int *A) {

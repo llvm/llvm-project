@@ -9,8 +9,6 @@ from lldbsuite.test.lldbtest import *
 
 class StepScriptedTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -100,7 +98,7 @@ class StepScriptedTestCase(TestBase):
             self.assertSuccess(err)
 
         # We should not have exited:
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "We are stopped")
+        self.assertState(process.GetState(), lldb.eStateStopped, "We are stopped")
 
         # We should still be in foo:
         self.assertEqual("foo", frame.GetFunctionName())

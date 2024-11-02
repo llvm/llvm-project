@@ -209,14 +209,14 @@ define <16 x i8> @sel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i1> %cond) {
 ; expected IR when 1 of the blend operands is a constant 0 vector. Potentially, this could
 ; be transformed to bitwise logic in IR, but currently that transform is left to the backend.
 
-define <4 x float> @sel_v4f32_sse_reality(<4 x float>* %x, <4 x float> %y, <4 x float> %z) {
+define <4 x float> @sel_v4f32_sse_reality(ptr %x, <4 x float> %y, <4 x float> %z) {
 ; CHECK-LABEL: @sel_v4f32_sse_reality(
-; CHECK-NEXT:    [[LD:%.*]] = load <4 x float>, <4 x float>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[LD:%.*]] = load <4 x float>, ptr [[X:%.*]], align 16
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x float> [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[CMP]], <4 x float> zeroinitializer, <4 x float> [[LD]]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
-  %ld = load <4 x float>, <4 x float>* %x, align 16
+  %ld = load <4 x float>, ptr %x, align 16
   %cmp = fcmp olt <4 x float> %z, %y
   %sext = sext <4 x i1> %cmp to <4 x i32>
   %cond = bitcast <4 x i32> %sext to <4 x float>
@@ -224,14 +224,14 @@ define <4 x float> @sel_v4f32_sse_reality(<4 x float>* %x, <4 x float> %y, <4 x 
   ret <4 x float> %r
 }
 
-define <2 x double> @sel_v2f64_sse_reality(<2 x double>* nocapture readonly %x, <2 x double> %y, <2 x double> %z) {
+define <2 x double> @sel_v2f64_sse_reality(ptr nocapture readonly %x, <2 x double> %y, <2 x double> %z) {
 ; CHECK-LABEL: @sel_v2f64_sse_reality(
-; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, ptr [[X:%.*]], align 16
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <2 x double> [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x double> zeroinitializer, <2 x double> [[LD]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
-  %ld = load <2 x double>, <2 x double>* %x, align 16
+  %ld = load <2 x double>, ptr %x, align 16
   %cmp = fcmp olt <2 x double> %z, %y
   %sext = sext <2 x i1> %cmp to <2 x i64>
   %cond = bitcast <2 x i64> %sext to <2 x double>
@@ -241,10 +241,9 @@ define <2 x double> @sel_v2f64_sse_reality(<2 x double>* nocapture readonly %x, 
 
 ; Bitcast the inputs and the result and remove the intrinsic.
 
-define <2 x i64> @sel_v4i32_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i64> %y, <2 x i64> %z) {
+define <2 x i64> @sel_v4i32_sse_reality(ptr nocapture readonly %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: @sel_v4i32_sse_reality(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64>* [[X:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[LD1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 16
+; CHECK-NEXT:    [[LD1:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 16
 ; CHECK-NEXT:    [[YCAST:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[ZCAST:%.*]] = bitcast <2 x i64> [[Z:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i32> [[YCAST]], [[ZCAST]]
@@ -252,8 +251,7 @@ define <2 x i64> @sel_v4i32_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i
 ; CHECK-NEXT:    [[RCAST:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RCAST]]
 ;
-  %xcast = bitcast <2 x i64>* %x to <16 x i8>*
-  %ld = load <16 x i8>, <16 x i8>* %xcast, align 16
+  %ld = load <16 x i8>, ptr %x, align 16
   %ycast = bitcast <2 x i64> %y to <4 x i32>
   %zcast = bitcast <2 x i64> %z to <4 x i32>
   %cmp = icmp sgt <4 x i32> %ycast, %zcast
@@ -264,10 +262,9 @@ define <2 x i64> @sel_v4i32_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i
   ret <2 x i64> %rcast
 }
 
-define <2 x i64> @sel_v16i8_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i64> %y, <2 x i64> %z) {
+define <2 x i64> @sel_v16i8_sse_reality(ptr nocapture readonly %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: @sel_v16i8_sse_reality(
-; CHECK-NEXT:    [[XCAST:%.*]] = bitcast <2 x i64>* [[X:%.*]] to <16 x i8>*
-; CHECK-NEXT:    [[LD:%.*]] = load <16 x i8>, <16 x i8>* [[XCAST]], align 16
+; CHECK-NEXT:    [[LD:%.*]] = load <16 x i8>, ptr [[X:%.*]], align 16
 ; CHECK-NEXT:    [[YCAST:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <16 x i8>
 ; CHECK-NEXT:    [[ZCAST:%.*]] = bitcast <2 x i64> [[Z:%.*]] to <16 x i8>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <16 x i8> [[YCAST]], [[ZCAST]]
@@ -275,8 +272,7 @@ define <2 x i64> @sel_v16i8_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i
 ; CHECK-NEXT:    [[RCAST:%.*]] = bitcast <16 x i8> [[R]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RCAST]]
 ;
-  %xcast = bitcast <2 x i64>* %x to <16 x i8>*
-  %ld = load <16 x i8>, <16 x i8>* %xcast, align 16
+  %ld = load <16 x i8>, ptr %x, align 16
   %ycast = bitcast <2 x i64> %y to <16 x i8>
   %zcast = bitcast <2 x i64> %z to <16 x i8>
   %cmp = icmp sgt <16 x i8> %ycast, %zcast

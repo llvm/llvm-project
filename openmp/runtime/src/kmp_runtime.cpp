@@ -1947,12 +1947,14 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         }
       } else if (call_context == fork_context_gnu) {
 #if OMPT_SUPPORT
-        ompt_lw_taskteam_t lwt;
-        __ompt_lw_taskteam_init(&lwt, master_th, gtid, &ompt_parallel_data,
-                                return_address);
+        if (ompt_enabled.enabled) {
+          ompt_lw_taskteam_t lwt;
+          __ompt_lw_taskteam_init(&lwt, master_th, gtid, &ompt_parallel_data,
+                                  return_address);
 
-        lwt.ompt_task_info.frame.exit_frame = ompt_data_none;
-        __ompt_lw_taskteam_link(&lwt, master_th, 1);
+          lwt.ompt_task_info.frame.exit_frame = ompt_data_none;
+          __ompt_lw_taskteam_link(&lwt, master_th, 1);
+        }
 // don't use lw_taskteam after linking. content was swaped
 #endif
 
@@ -2222,11 +2224,11 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       } else
 // only one notification scheme (either "submit" or "forking/joined", not both)
 #endif /* USE_ITT_NOTIFY */
-          if ((__itt_frame_begin_v3_ptr || KMP_ITT_DEBUG) &&
-              __kmp_forkjoin_frames && !__kmp_forkjoin_frames_mode) {
-        // Mark start of "parallel" region for Intel(R) VTune(TM) analyzer.
-        __kmp_itt_region_forking(gtid, team->t.t_nproc, 0);
-      }
+        if ((__itt_frame_begin_v3_ptr || KMP_ITT_DEBUG) &&
+            __kmp_forkjoin_frames && !__kmp_forkjoin_frames_mode) {
+          // Mark start of "parallel" region for Intel(R) VTune(TM) analyzer.
+          __kmp_itt_region_forking(gtid, team->t.t_nproc, 0);
+        }
     }
 #endif /* USE_ITT_BUILD */
 
@@ -2396,6 +2398,9 @@ void __kmp_join_call(ident_t *loc, int gtid
 
 #if OMPT_SUPPORT
     if (ompt_enabled.enabled) {
+      if (fork_context == fork_context_gnu) {
+        __ompt_lw_taskteam_unlink(master_th);
+      }
       __kmp_join_restore_state(master_th, parent_team);
     }
 #endif
@@ -2641,6 +2646,11 @@ void __kmp_join_call(ident_t *loc, int gtid
 
   __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
 
+#if KMP_AFFINITY_SUPPORTED
+  if (master_th->th.th_team->t.t_level == 0 && __kmp_affinity.flags.reset) {
+    __kmp_reset_root_init_mask(gtid);
+  }
+#endif
 #if OMPT_SUPPORT
   int flags =
       OMPT_INVOKER(fork_context) |
@@ -3276,7 +3286,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
                           __kmp_nested_proc_bind.bind_types[0], &r_icvs,
                           0 // argc
                           USE_NESTED_HOT_ARG(NULL) // primary thread is unknown
-                          );
+      );
 #if USE_DEBUGGER
   // Non-NULL value should be assigned to make the debugger display the root
   // team.
@@ -3313,7 +3323,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
                           __kmp_nested_proc_bind.bind_types[0], &r_icvs,
                           0 // argc
                           USE_NESTED_HOT_ARG(NULL) // primary thread is unknown
-                          );
+      );
   KF_TRACE(10, ("__kmp_initialize_root: after hot_team = %p\n", hot_team));
 
   root->r.r_hot_team = hot_team;
@@ -3669,11 +3679,16 @@ static int __kmp_expand_threads(int nNeed) {
              __kmp_threads_capacity * sizeof(kmp_info_t *));
   KMP_MEMCPY(newRoot, __kmp_root,
              __kmp_threads_capacity * sizeof(kmp_root_t *));
+  // Put old __kmp_threads array on a list. Any ongoing references to the old
+  // list will be valid. This list is cleaned up at library shutdown.
+  kmp_old_threads_list_t *node =
+      (kmp_old_threads_list_t *)__kmp_allocate(sizeof(kmp_old_threads_list_t));
+  node->threads = __kmp_threads;
+  node->next = __kmp_old_threads_list;
+  __kmp_old_threads_list = node;
 
-  kmp_info_t **temp_threads = __kmp_threads;
   *(kmp_info_t * *volatile *)&__kmp_threads = newThreads;
   *(kmp_root_t * *volatile *)&__kmp_root = newRoot;
-  __kmp_free(temp_threads);
   added += newCapacity - __kmp_threads_capacity;
   *(volatile int *)&__kmp_threads_capacity = newCapacity;
 
@@ -4721,6 +4736,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
   int first_place = master_th->th.th_first_place;
   int last_place = master_th->th.th_last_place;
   int masters_place = master_th->th.th_current_place;
+  int num_masks = __kmp_affinity.num_masks;
   team->t.t_first_place = first_place;
   team->t.t_last_place = last_place;
 
@@ -4765,7 +4781,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
     if (first_place <= last_place) {
       n_places = last_place - first_place + 1;
     } else {
-      n_places = __kmp_affinity_num_masks - first_place + last_place + 1;
+      n_places = num_masks - first_place + last_place + 1;
     }
     if (n_th <= n_places) {
       int place = masters_place;
@@ -4775,7 +4791,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
         if (place == last_place) {
           place = first_place;
-        } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+        } else if (place == (num_masks - 1)) {
           place = 0;
         } else {
           place++;
@@ -4820,7 +4836,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           // we added an extra thread to this place; move to next place
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -4831,7 +4847,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         } else if (s_count == S) { // place full; don't add extra
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -4858,12 +4874,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
     if (first_place <= last_place) {
       n_places = last_place - first_place + 1;
     } else {
-      n_places = __kmp_affinity_num_masks - first_place + last_place + 1;
+      n_places = num_masks - first_place + last_place + 1;
     }
     if (n_th <= n_places) {
       int place = -1;
 
-      if (n_places != static_cast<int>(__kmp_affinity_num_masks)) {
+      if (n_places != num_masks) {
         int S = n_places / n_th;
         int s_count, rem, gap, gap_ct;
 
@@ -4888,7 +4904,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           while (s_count < S) {
             if (place == last_place) {
               place = first_place;
-            } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+            } else if (place == (num_masks - 1)) {
               place = 0;
             } else {
               place++;
@@ -4898,7 +4914,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           if (rem && (gap_ct == gap)) {
             if (place == last_place) {
               place = first_place;
-            } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+            } else if (place == (num_masks - 1)) {
               place = 0;
             } else {
               place++;
@@ -4911,7 +4927,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -4919,10 +4935,10 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
           KA_TRACE(100,
                    ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
-                    "partition = [%d,%d], __kmp_affinity_num_masks: %u\n",
+                    "partition = [%d,%d], num_masks: %u\n",
                     __kmp_gtid_from_thread(team->t.t_threads[f]), team->t.t_id,
                     f, th->th.th_new_place, th->th.th_first_place,
-                    th->th.th_last_place, __kmp_affinity_num_masks));
+                    th->th.th_last_place, num_masks));
         }
       } else {
         /* Having uniform space of available computation places I can create
@@ -5019,7 +5035,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           // we added an extra thread to this place; move on to next place
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -5030,7 +5046,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         } else if (s_count == S) { // place is full; don't add extra thread
           if (place == last_place) {
             place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+          } else if (place == (num_masks - 1)) {
             place = 0;
           } else {
             place++;
@@ -6960,10 +6976,12 @@ static void __kmp_do_serial_initialize(void) {
   /* Initialize internal memory allocator */
   __kmp_init_allocator();
 
-  /* Register the library startup via an environment variable and check to see
-     whether another copy of the library is already registered. */
-
-  __kmp_register_library_startup();
+  /* Register the library startup via an environment variable or via mapped
+     shared memory file and check to see whether another copy of the library is
+     already registered. Since forked child process is often terminated, we
+     postpone the registration till middle initialization in the child */
+  if (__kmp_need_register_serial)
+    __kmp_register_library_startup();
 
   /* TODO reinitialization of library */
   if (TCR_4(__kmp_global.g.g_done)) {
@@ -7250,6 +7268,12 @@ static void __kmp_do_middle_initialize(void) {
 
   KA_TRACE(10, ("__kmp_middle_initialize: enter\n"));
 
+  if (UNLIKELY(!__kmp_need_register_serial)) {
+    // We are in a forked child process. The registration was skipped during
+    // serial initialization in __kmp_atfork_child handler. Do it here.
+    __kmp_register_library_startup();
+  }
+
   // Save the previous value for the __kmp_dflt_team_nth so that
   // we can avoid some reinitialization if it hasn't changed.
   prev_dflt_team_nth = __kmp_dflt_team_nth;
@@ -7257,7 +7281,7 @@ static void __kmp_do_middle_initialize(void) {
 #if KMP_AFFINITY_SUPPORTED
   // __kmp_affinity_initialize() will try to set __kmp_ncores to the
   // number of cores on the machine.
-  __kmp_affinity_initialize();
+  __kmp_affinity_initialize(__kmp_affinity);
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -7442,6 +7466,14 @@ void __kmp_hidden_helper_initialize() {
     __kmp_release_bootstrap_lock(&__kmp_initz_lock);
     return;
   }
+
+#if KMP_AFFINITY_SUPPORTED
+  // Initialize hidden helper affinity settings.
+  // The above __kmp_parallel_initialize() will initialize
+  // regular affinity (and topology) if not already done.
+  if (!__kmp_hh_affinity.flags.initialized)
+    __kmp_affinity_initialize(__kmp_hh_affinity);
+#endif
 
   // Set the count of hidden helper tasks to be executed to zero
   KMP_ATOMIC_ST_REL(&__kmp_unexecuted_hidden_helper_tasks, 0);
@@ -8101,6 +8133,15 @@ void __kmp_cleanup(void) {
   __kmp_root = NULL;
   __kmp_threads_capacity = 0;
 
+  // Free old __kmp_threads arrays if they exist.
+  kmp_old_threads_list_t *ptr = __kmp_old_threads_list;
+  while (ptr) {
+    kmp_old_threads_list_t *next = ptr->next;
+    __kmp_free(ptr->threads);
+    __kmp_free(ptr);
+    ptr = next;
+  }
+
 #if KMP_USE_DYNAMIC_LOCK
   __kmp_cleanup_indirect_user_locks();
 #else
@@ -8286,7 +8327,7 @@ void __kmp_aux_set_library(enum library_type arg) {
     break;
   case library_throughput:
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
-      __kmp_dflt_blocktime = 200;
+      __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
     break;
   default:
     KMP_FATAL(UnknownLibraryType, arg);
@@ -8707,7 +8748,8 @@ __kmp_determine_reduction_method(
   KMP_DEBUG_ASSERT(lck); // it would be nice to test ( lck != 0 )
 
 #define FAST_REDUCTION_ATOMIC_METHOD_GENERATED                                 \
-  ((loc->flags & (KMP_IDENT_ATOMIC_REDUCE)) == (KMP_IDENT_ATOMIC_REDUCE))
+  (loc &&                                                                      \
+   ((loc->flags & (KMP_IDENT_ATOMIC_REDUCE)) == (KMP_IDENT_ATOMIC_REDUCE)))
 #define FAST_REDUCTION_TREE_METHOD_GENERATED ((reduce_data) && (reduce_func))
 
   retval = critical_reduce_block;
@@ -8723,7 +8765,7 @@ __kmp_determine_reduction_method(
     int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
-    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD

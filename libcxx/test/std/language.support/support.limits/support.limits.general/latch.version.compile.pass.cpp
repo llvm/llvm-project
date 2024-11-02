@@ -53,7 +53,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_latch
-#     error "__cpp_lib_latch should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch) is not defined!"
+#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch)' is not met!"
 #   endif
 # endif
 
@@ -68,7 +68,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_latch
-#     error "__cpp_lib_latch should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch) is not defined!"
+#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch)' is not met!"
 #   endif
 # endif
 

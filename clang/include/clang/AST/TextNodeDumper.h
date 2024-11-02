@@ -246,6 +246,7 @@ public:
   void VisitLabelStmt(const LabelStmt *Node);
   void VisitGotoStmt(const GotoStmt *Node);
   void VisitCaseStmt(const CaseStmt *Node);
+  void VisitCompoundStmt(const CompoundStmt *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);
@@ -316,6 +317,9 @@ public:
   void VisitUnaryTransformType(const UnaryTransformType *T);
   void VisitTagType(const TagType *T);
   void VisitTemplateTypeParmType(const TemplateTypeParmType *T);
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
+  void
+  VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
   void VisitAutoType(const AutoType *T);
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *T);
@@ -379,6 +383,7 @@ public:
   void VisitConceptDecl(const ConceptDecl *D);
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
+  void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
 };
 
 } // namespace clang

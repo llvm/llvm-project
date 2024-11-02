@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 %s -verify
+// RUN: %clang_cc1 -std=c++20 %s -Wno-c++2b-extensions -verify
+// RUN: %clang_cc1 -std=c++2b %s -verify
 
 
 template <auto> struct Nothing {};
@@ -120,3 +121,26 @@ template <class T>
 void foo(decltype(+[](T) {}) lambda, T param);
 static_assert(!__is_same(decltype(foo<int>), void));
 } // namespace GH51641
+
+namespace StaticLambdas {
+template <auto> struct Nothing {};
+Nothing<[]() static { return 0; }()> nothing;
+
+template <typename> struct NothingT {};
+Nothing<[]() static { return 0; }> nothingT;
+
+template <typename T>
+concept True = [] static { return true; }();
+static_assert(True<int>);
+
+static_assert(sizeof([] static { return 0; }));
+static_assert(sizeof([] static { return 0; }()));
+
+void f()  noexcept(noexcept([] static { return 0; }()));
+
+using a = decltype([] static { return 0; });
+using b = decltype([] static { return 0; }());
+using c = decltype([]() static noexcept(noexcept([] { return 0; }())) { return 0; });
+using d = decltype(sizeof([] static { return 0; }));
+
+}

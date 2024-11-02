@@ -1164,7 +1164,7 @@ define <4 x float> @foo() {
 ; X64-NEXT:    vfmsub213ss {rd-sae}, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x38,0xab,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %0 = load <4 x float>, <4 x float>* undef, align 16
+  %0 = load <4 x float>, ptr undef, align 16
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %0
   %1 = extractelement <4 x float> %sub, i64 0
   %2 = call float @llvm.x86.avx512.vfmadd.f32(float undef, float undef, float %1, i32 9)

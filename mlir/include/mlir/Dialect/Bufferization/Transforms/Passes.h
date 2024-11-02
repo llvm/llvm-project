@@ -17,6 +17,9 @@ struct OneShotBufferizationOptions;
 // Passes
 //===----------------------------------------------------------------------===//
 
+#define GEN_PASS_DECL
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+
 /// Creates an instance of the BufferDeallocation pass to free all allocated
 /// buffers.
 std::unique_ptr<Pass> createBufferDeallocationPass();
@@ -32,12 +35,35 @@ std::unique_ptr<Pass> createBufferHoistingPass();
 /// reallocations inside of loops.
 std::unique_ptr<Pass> createBufferLoopHoistingPass();
 
+// Options struct for BufferResultsToOutParams pass.
+// Note: defined only here, not in tablegen.
+struct BufferResultsToOutParamsOptions {
+  // Filter function; returns true if the function should be converted.
+  // Defaults to true, i.e. all functions are converted.
+  llvm::function_ref<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
+    return true;
+  };
+};
+
 /// Creates a pass that converts memref function results to out-params.
-std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
+std::unique_ptr<Pass> createBufferResultsToOutParamsPass(
+    const BufferResultsToOutParamsOptions &options = {});
 
 /// Replace buffers that are returned from a function with an out parameter.
 /// Also update all call sites.
-LogicalResult promoteBufferResultsToOutParams(ModuleOp module);
+LogicalResult
+promoteBufferResultsToOutParams(ModuleOp module,
+                                const BufferResultsToOutParamsOptions &options);
+
+/// Creates a pass that drops memref function results that are equivalent to a
+/// function argument.
+std::unique_ptr<Pass> createDropEquivalentBufferResultsPass();
+
+/// Create a pass that rewrites tensor.empty to bufferization.alloc_tensor.
+std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
+
+/// Drop all memref function results that are equivalent to a function argument.
+LogicalResult dropEquivalentBufferResults(ModuleOp module);
 
 /// Creates a pass that finalizes a partial bufferization by removing remaining
 /// bufferization.to_tensor and bufferization.to_memref operations.
@@ -70,6 +96,11 @@ std::unique_ptr<Pass> createAllocTensorEliminationPass();
 
 /// Create a pass that bufferizes ops from the bufferization dialect.
 std::unique_ptr<Pass> createBufferizationBufferizePass();
+
+/// Create a pass that resolves out-of-place tensor OpOperands with copies.
+std::unique_ptr<Pass> createTensorCopyInsertionPass();
+std::unique_ptr<Pass>
+createTensorCopyInsertionPass(const OneShotBufferizationOptions &options);
 
 //===----------------------------------------------------------------------===//
 // Registration

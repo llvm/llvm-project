@@ -62,20 +62,24 @@ def ACCC_Collapse : Clause<"collapse"> {
 // 2.7.6
 def ACCC_Copy : Clause<"copy"> {
   let flangClass = "AccObjectList";
+  let aliases = ["present_or_copy", "pcopy"];
 }
 // 2.7.7
 def ACCC_Copyin : Clause<"copyin"> {
   let flangClass = "AccObjectListWithModifier";
+  let aliases = ["present_or_copyin", "pcopyin"];
 }
 
 // 2.7.8
 def ACCC_Copyout : Clause<"copyout"> {
   let flangClass = "AccObjectListWithModifier";
+  let aliases = ["present_or_copyout", "pcopyout"];
 }
 
 // 2.7.9
 def ACCC_Create : Clause<"create"> {
   let flangClass = "AccObjectListWithModifier";
+  let aliases = ["present_or_create", "pcreate"];
 }
 
 // 2.5.15
@@ -128,10 +132,9 @@ def ACCC_DeviceResident : Clause<"device_resident"> {
 
 // 2.4
 def ACCC_DeviceType : Clause<"device_type"> {
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "AccDeviceTypeExprList";
   let defaultValue = "*";
-  let isValueOptional = true;
-  let isValueList = true;
+  let aliases = ["dtype"];
 }
 
 // 2.6.6
@@ -218,6 +221,7 @@ def ACCC_Reduction : Clause<"reduction"> {
 // 2.5.6
 def ACCC_Self : Clause<"self"> {
   let flangClass = "AccSelfClause";
+  let isValueOptional = true;
 }
 
 // 2.9.5
@@ -227,6 +231,7 @@ def ACCC_Seq : Clause<"seq"> {}
 def ACCC_Vector : Clause<"vector"> {
   let flangClass = "ScalarIntExpr";
   let isValueOptional = true;
+  let prefix = "length";
 }
 
 // 2.5.11
@@ -244,6 +249,7 @@ def ACCC_Wait : Clause<"wait"> {
 def ACCC_Worker: Clause<"worker"> {
   let flangClass = "ScalarIntExpr";
   let isValueOptional = true;
+  let prefix = "num";
 }
 
 // 2.12

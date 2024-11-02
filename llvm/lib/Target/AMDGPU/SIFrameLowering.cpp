@@ -328,7 +328,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
                       AMDGPU::FLAT_SCR_HI)
     .addReg(FlatScrInitLo, RegState::Kill)
     .addImm(8);
-  LShr->getOperand(3).setIsDead(true); // Mark SCC as dead.
+  LShr->getOperand(3).setIsDead(); // Mark SCC as dead.
 }
 
 // Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
@@ -707,14 +707,13 @@ static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
                                      MachineFunction &MF,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     bool IsProlog) {
+                                     const DebugLoc &DL, bool IsProlog) {
   Register ScratchExecCopy;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  DebugLoc DL;
 
   initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, IsProlog);
 
@@ -762,6 +761,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   LivePhysRegs LiveRegs;
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
+  // DebugLoc must be unknown since the first instruction with DebugLoc is used
+  // to determine the end of the prologue.
   DebugLoc DL;
 
   bool HasFP = false;
@@ -782,7 +783,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       continue;
 
     if (!ScratchExecCopy)
-      ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI,
+      ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL,
                                              /*IsProlog*/ true);
 
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, Reg.VGPR,
@@ -792,7 +793,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
     if (!ScratchExecCopy)
       ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ true);
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ true);
 
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
                      std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
@@ -828,7 +829,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(!MFI.isDeadObjectIndex(FI));
 
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(FI);
     assert(Spill.size() == 1);
 
@@ -966,9 +967,18 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   LivePhysRegs LiveRegs;
+  // Get the insert location for the epilogue. If there were no terminators in
+  // the block, get the last instruction.
+  MachineBasicBlock::iterator MBBI = MBB.end();
   DebugLoc DL;
+  if (!MBB.empty()) {
+    MBBI = MBB.getLastNonDebugInstr();
+    if (MBBI != MBB.end())
+      DL = MBBI->getDebugLoc();
+
+    MBBI = MBB.getFirstTerminator();
+  }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();
@@ -1017,7 +1027,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
   auto RestoreSGPRFromVGPRLane = [&](Register Reg, const int FI) {
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(FI);
     assert(Spill.size() == 1);
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), Reg)
@@ -1051,7 +1061,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
     if (!ScratchExecCopy)
       ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
 
     buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
                        Reg.VGPR, *Reg.FI);
@@ -1060,7 +1070,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
     if (!ScratchExecCopy)
       ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
 
     buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
                        std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
@@ -1178,6 +1188,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         // correct register value. But not sure the register value alone is
         for (MachineInstr &MI : MBB) {
           if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
+              !MFI.isFixedObjectIndex(MI.getOperand(0).getIndex()) &&
               SpillFIs[MI.getOperand(0).getIndex()]) {
             MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
           }

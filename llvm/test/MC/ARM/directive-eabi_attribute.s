@@ -233,11 +233,12 @@
 @ CHECK-OBJ-NEXT:   Value: 0
 @ CHECK-OBJ-NEXT:   TagName: nodefaults
 @ CHECK-OBJ-NEXT:   Description: Unspecified Tags UNDEFINED
-	.eabi_attribute Tag_also_compatible_with, "gnu"
-@ CHECK: .eabi_attribute 65, "gnu"
+	.eabi_attribute Tag_also_compatible_with, "\006\017"
+@ CHECK: .eabi_attribute 65, "\006\017"
 @ CHECK-OBJ:        Tag: 65
 @ CHECK-OBJ-NEXT:   TagName: also_compatible_with
-@ CHECK-OBJ-NEXT:   Value: gnu
+@ CHECK-OBJ-NEXT:   Value: \006\017
+@ CHECK-OBJ-NEXT:   Description: Tag_CPU_arch = 15 (ARM v8-R)
 	.eabi_attribute Tag_T2EE_use, 0
 @ CHECK: .eabi_attribute 66, 0
 @ CHECK-OBJ:        Tag: 66

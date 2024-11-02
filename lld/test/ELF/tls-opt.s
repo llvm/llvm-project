@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t1
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=NORELOC %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
 
 // NORELOC:      Relocations [
 // NORELOC-NEXT: ]

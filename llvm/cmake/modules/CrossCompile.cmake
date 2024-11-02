@@ -15,7 +15,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_TOOLCHAIN_FILE=\"${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake\")
-  else()
+  elseif (NOT CMAKE_CROSSCOMPILING)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -26,7 +26,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   # project specific version of the flags up above
   set(CROSS_TOOLCHAIN_FLAGS_${project_name}_${target_name} ""
-    CACHE STRING "Toolchain configuration for ${Pproject_name}_${target_name}")
+    CACHE STRING "Toolchain configuration for ${project_name}_${target_name}")
 
   if (buildtype)
     set(build_type_flags "-DCMAKE_BUILD_TYPE=${buildtype}")

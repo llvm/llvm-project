@@ -61,24 +61,48 @@ contains
   end subroutine
   subroutine test3
     interface abs
-      module procedure abs_int_redef2 ! override module's use of m1
+      module procedure abs_complex_redef ! extend module's use of m1
     end interface
-    !CHECK: abs_int_redef2(
+    !CHECK: abs_int_redef(
     print *, abs(1)
     !CHECK: 1._4
     print *, abs(1.)
-    !CHECK: 1.41421353816986083984375_4
+    !CHECK: abs_complex_redef(
     print *, abs((1,1))
     !CHECK: abs_noargs(
     print *, abs()
     block
-      use m1, only: abs ! override the override
-      !CHECK: abs_int_redef(
-      print *, abs(1)
+      intrinsic abs ! override the extension
+      !CHECK: 1.41421353816986083984375_4
+      print *, abs((1,1))
     end block
   end subroutine
-  integer function abs_int_redef2(j)
-    integer, intent(in) :: j
-    abs_int_redef2 = j
+  real function abs_complex_redef(z)
+    complex, intent(in) :: z
+    abs_complex_redef = z
   end function
+  subroutine test4
+    !CHECK: abs(
+    print *, abs(1)
+   contains
+    integer function abs(n) ! override module's use of m1
+      integer, intent(in) :: n
+      abs = n
+    end function
+  end subroutine
+end module
+
+module m4
+ contains
+  integer function abs(n)
+    integer, intent(in) :: n
+    abs = n
+  end function
+  subroutine test5
+    interface abs
+      module procedure abs ! same name, host-associated
+    end interface
+    !CHECK: abs(
+    print *, abs(1)
+  end subroutine
 end module

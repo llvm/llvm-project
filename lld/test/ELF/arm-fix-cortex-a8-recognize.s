@@ -1,17 +1,17 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
 // RUN: ld.lld --fix-cortex-a8 -verbose %t.o -o %t2 2>&1 | FileCheck %s
-// RUN: llvm-objdump -d %t2 --start-address=0x29004 --stop-address=0x29024 --no-show-raw-insn | FileCheck --check-prefix=CHECK-PATCHES %s
-// RUN: llvm-objdump -d %t2 --start-address=0x21ffa --stop-address=0x22002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE1 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x22ffa --stop-address=0x23002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE2 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x23ffa --stop-address=0x24002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE3 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x24ff4 --stop-address=0x25002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE4 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x25ffa --stop-address=0x26002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE5 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x26ffa --stop-address=0x27002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE6 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x27ffa --stop-address=0x28002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE7 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x28ff4 --stop-address=0x29002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE8 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x29004 --stop-address=0x29024 --no-show-raw-insn | FileCheck --check-prefix=CHECK-PATCHES %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x21ffa --stop-address=0x22002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x22ffa --stop-address=0x23002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x23ffa --stop-address=0x24002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE3 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x24ff4 --stop-address=0x25002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE4 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x25ffa --stop-address=0x26002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE5 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x26ffa --stop-address=0x27002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE6 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x27ffa --stop-address=0x28002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE7 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x28ff4 --stop-address=0x29002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE8 %s
 // RUN: ld.lld --fix-cortex-a8 -verbose -r %t.o -o %t3 2>&1 | FileCheck --check-prefix=CHECK-RELOCATABLE-LLD %s
-// RUN: llvm-objdump --no-show-raw-insn -d %t3 --start-address=0xffa --stop-address=0x1002 | FileCheck --check-prefix=CHECK-RELOCATABLE %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t3 --start-address=0xffa --stop-address=0x1002 | FileCheck --check-prefix=CHECK-RELOCATABLE %s
 
 // CHECK:      ld.lld: detected cortex-a8-657419 erratum sequence starting at 22FFE in unpatched output.
 // CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 23FFE in unpatched output.

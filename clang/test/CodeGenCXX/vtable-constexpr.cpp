@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --implicit-check-not=DoNotEmit
+// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --implicit-check-not=DoNotEmit
 
 // constexpr virtual functions can be called at runtime and go in the vtable as
 // normal. But they are implicitly inline so are never the key function.
@@ -8,7 +8,7 @@ struct DoNotEmit {
 };
 constexpr void DoNotEmit::f() {}
 
-// CHECK-DAG: @_ZTV1B = {{.*}} constant { [3 x i8*] } { {{.*}} null, {{.*}} @_ZTI1B {{.*}} @_ZN1B1fEv
+// CHECK-DAG: @_ZTV1B = {{.*}} constant { [3 x ptr] } { {{.*}} null, {{.*}} @_ZTI1B, {{.*}} @_ZN1B1fEv
 struct B {
   // CHECK-DAG: define {{.*}} @_ZN1B1fEv
   virtual constexpr void f() {}
@@ -19,7 +19,7 @@ struct CBase {
   virtual constexpr void f(); // not key function
 };
 
-// CHECK-DAG: @_ZTV1C = {{.*}} constant {{.*}} null, {{.*}} @_ZTI1C {{.*}} @_ZN1C1fEv
+// CHECK-DAG: @_ZTV1C = {{.*}} constant {{.*}} null, {{.*}} @_ZTI1C, {{.*}} @_ZN1C1fEv
 struct C : CBase {
   void f(); // key function
 };

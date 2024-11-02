@@ -1606,6 +1606,30 @@ namespace substitution_test {
       dlr.unlockData(d1);
     }
   };
+
+  // Automatic object destructor calls don't appear as expressions in the CFG,
+  // so we have to handle them separately whenever substitutions are required.
+  struct DestructorRequires {
+    Mutex mu;
+    ~DestructorRequires() EXCLUSIVE_LOCKS_REQUIRED(mu);
+  };
+
+  void destructorRequires() {
+    DestructorRequires rd;
+    rd.mu.AssertHeld();
+  }
+
+  struct DestructorExcludes {
+    Mutex mu;
+    ~DestructorExcludes() LOCKS_EXCLUDED(mu);
+  };
+
+  void destructorExcludes() {
+    DestructorExcludes ed;
+    ed.mu.Lock(); // expected-note {{mutex acquired here}}
+  } // expected-warning {{cannot call function '~DestructorExcludes' while mutex 'ed.mu' is held}}
+    // expected-warning@-1 {{mutex 'ed.mu' is still held at the end of function}}
+
 } // end namespace substituation_test
 
 
@@ -1683,6 +1707,22 @@ struct TestScopedLockable {
     a = 5;
   }
 
+#ifdef __cpp_guaranteed_copy_elision
+  void const_lock() {
+    const MutexLock mulock = MutexLock(&mu1);
+    a = 5;
+  }
+#endif
+
+  void temporary() {
+    MutexLock{&mu1}, a = 5;
+  }
+
+  void lifetime_extension() {
+    const MutexLock &mulock = MutexLock(&mu1);
+    a = 5;
+  }
+
   void foo2() {
     ReaderMutexLock mulock1(&mu1);
     if (getBool()) {
@@ -1698,6 +1738,12 @@ struct TestScopedLockable {
   void foo3() {
     MutexLock mulock_a(&mu1); // expected-note{{mutex acquired here}}
     MutexLock mulock_b(&mu1); // \
+      // expected-warning {{acquiring mutex 'mu1' that is already held}}
+  }
+
+  void temporary_double_lock() {
+    MutexLock mulock_a(&mu1); // expected-note{{mutex acquired here}}
+    MutexLock{&mu1};          // \
       // expected-warning {{acquiring mutex 'mu1' that is already held}}
   }
 
@@ -4180,6 +4226,20 @@ public:
   void foo() EXCLUSIVE_LOCKS_REQUIRED(this);
 };
 
+class SelfLockDeferred {
+public:
+  SelfLockDeferred() LOCKS_EXCLUDED(mu_);
+  ~SelfLockDeferred() UNLOCK_FUNCTION(mu_);
+
+  Mutex mu_;
+};
+
+class LOCKABLE SelfLockDeferred2 {
+public:
+  SelfLockDeferred2() LOCKS_EXCLUDED(this);
+  ~SelfLockDeferred2() UNLOCK_FUNCTION();
+};
+
 
 void test() {
   SelfLock s;
@@ -4189,6 +4249,14 @@ void test() {
 void test2() {
   SelfLock2 s2;
   s2.foo();
+}
+
+void testDeferredTemporary() {
+  SelfLockDeferred(); // expected-warning {{releasing mutex '<temporary>.mu_' that was not held}}
+}
+
+void testDeferredTemporary2() {
+  SelfLockDeferred2(); // expected-warning {{releasing mutex '<temporary>' that was not held}}
 }
 
 }  // end namespace SelfConstructorTest
@@ -4870,6 +4938,8 @@ class PtGuardedByCorrectnessTest {
   int    sa[10] GUARDED_BY(mu1);
   Cell   sc[10] GUARDED_BY(mu1);
 
+  static constexpr int Cell::*pa = &Cell::a;
+
   void test1() {
     mu1.Lock();
     if (a == 0) doSomething();  // OK, we don't dereference.
@@ -4889,9 +4959,11 @@ class PtGuardedByCorrectnessTest {
 
     if (c->a == 0) doSomething();    // expected-warning {{reading the value pointed to by 'c' requires holding mutex 'mu2'}}
     c->a = 0;                        // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
+    c->*pa = 0;                      // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
 
     if ((*c).a == 0) doSomething();  // expected-warning {{reading the value pointed to by 'c' requires holding mutex 'mu2'}}
     (*c).a = 0;                      // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
+    (*c).*pa = 0;                    // expected-warning {{writing the value pointed to by 'c' requires holding mutex 'mu2' exclusively}}
 
     if (a[0] == 42) doSomething();     // expected-warning {{reading the value pointed to by 'a' requires holding mutex 'mu2'}}
     a[0] = 57;                         // expected-warning {{writing the value pointed to by 'a' requires holding mutex 'mu2' exclusively}}
@@ -4923,6 +4995,7 @@ class PtGuardedByCorrectnessTest {
     sa[0] = 57;                         // expected-warning {{writing variable 'sa' requires holding mutex 'mu1' exclusively}}
     if (sc[0].a == 42) doSomething();   // expected-warning {{reading variable 'sc' requires holding mutex 'mu1'}}
     sc[0].a = 57;                       // expected-warning {{writing variable 'sc' requires holding mutex 'mu1' exclusively}}
+    sc[0].*pa = 57;                     // expected-warning {{writing variable 'sc' requires holding mutex 'mu1' exclusively}}
 
     if (*sa == 42) doSomething();       // expected-warning {{reading variable 'sa' requires holding mutex 'mu1'}}
     *sa = 57;                           // expected-warning {{writing variable 'sa' requires holding mutex 'mu1' exclusively}}
@@ -5880,46 +5953,74 @@ C c;
 void f() { c[A()]->g(); }
 } // namespace PR34800
 
+#ifdef __cpp_guaranteed_copy_elision
+
 namespace ReturnScopedLockable {
-  template<typename Object> class SCOPED_LOCKABLE ReadLockedPtr {
-  public:
-    ReadLockedPtr(Object *ptr) SHARED_LOCK_FUNCTION((*this)->mutex);
-    ReadLockedPtr(ReadLockedPtr &&) SHARED_LOCK_FUNCTION((*this)->mutex);
-    ~ReadLockedPtr() UNLOCK_FUNCTION();
 
-    Object *operator->() const { return object; }
+class Object {
+public:
+  MutexLock lock() EXCLUSIVE_LOCK_FUNCTION(mutex) {
+    // TODO: False positive because scoped lock isn't destructed.
+    return MutexLock(&mutex); // expected-note {{mutex acquired here}}
+  }                           // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
-  private:
-    Object *object;
-  };
+  ReaderMutexLock lockShared() SHARED_LOCK_FUNCTION(mutex) {
+    // TODO: False positive because scoped lock isn't destructed.
+    return ReaderMutexLock(&mutex); // expected-note {{mutex acquired here}}
+  }                                 // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
-  struct Object {
-    int f() SHARED_LOCKS_REQUIRED(mutex);
-    Mutex mutex;
-  };
+  MutexLock adopt() EXCLUSIVE_LOCKS_REQUIRED(mutex) {
+    // TODO: False positive because scoped lock isn't destructed.
+    return MutexLock(&mutex, true); // expected-note {{mutex acquired here}}
+  }                                 // expected-warning {{mutex 'mutex' is still held at the end of function}}
 
-  ReadLockedPtr<Object> get();
-  int use() {
-    auto ptr = get();
-    return ptr->f();
+  ReaderMutexLock adoptShared() SHARED_LOCKS_REQUIRED(mutex) {
+    // TODO: False positive because scoped lock isn't destructed.
+    return ReaderMutexLock(&mutex, true); // expected-note {{mutex acquired here}}
+  }                                       // expected-warning {{mutex 'mutex' is still held at the end of function}}
+
+  int x GUARDED_BY(mutex);
+  void needsLock() EXCLUSIVE_LOCKS_REQUIRED(mutex);
+
+  void testInside() {
+    MutexLock scope = lock();
+    x = 1;
+    needsLock();
   }
-  void use_constructor() {
-    auto ptr = ReadLockedPtr<Object>(nullptr);
-    ptr->f();
-    auto ptr2 = ReadLockedPtr<Object>{nullptr};
-    ptr2->f();
-    auto ptr3 = (ReadLockedPtr<Object>{nullptr});
-    ptr3->f();
-  }
-  struct Convertible {
-    Convertible();
-    operator ReadLockedPtr<Object>();
-  };
-  void use_conversion() {
-    ReadLockedPtr<Object> ptr = Convertible();
-    ptr->f();
-  }
+
+  Mutex mutex;
+};
+
+Object obj;
+
+void testLock() {
+  MutexLock scope = obj.lock();
+  obj.x = 1;
+  obj.needsLock();
 }
+
+int testSharedLock() {
+  ReaderMutexLock scope = obj.lockShared();
+  obj.x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'obj.mutex' exclusively}}
+  return obj.x;
+}
+
+void testAdopt() {
+  obj.mutex.Lock();
+  MutexLock scope = obj.adopt();
+  obj.x = 1;
+}
+
+int testAdoptShared() {
+  obj.mutex.Lock();
+  ReaderMutexLock scope = obj.adoptShared();
+  obj.x = 1;
+  return obj.x;
+}
+
+} // namespace ReturnScopedLockable
+
+#endif
 
 namespace PR38640 {
 void f() {

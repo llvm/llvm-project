@@ -1,7 +1,7 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-linux-gnu \
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix \
+// RUN: %clang_cc1 -triple powerpc64-unknown-aix \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
 
 extern double a;
@@ -12,8 +12,8 @@ extern float e;
 extern float f;
 
 // CHECK-LABEL: @test_swdiv_nochk(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @b, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @b, align 8
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast double [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    ret double [[SWDIV_NOCHK]]
 //
@@ -22,8 +22,8 @@ double test_swdiv_nochk() {
 }
 
 // CHECK-LABEL: @test_swdivs_nochk(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @e, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @e, align 4
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast float [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    ret float [[SWDIV_NOCHK]]
 //
@@ -32,10 +32,10 @@ float test_swdivs_nochk() {
 }
 
 // CHECK-LABEL: @test_flags_swdiv_nochk(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @b, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @b, align 8
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast double [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, double* @c, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @c, align 8
 // CHECK-NEXT:    [[ADD:%.*]] = fadd double [[SWDIV_NOCHK]], [[TMP2]]
 // CHECK-NEXT:    ret double [[ADD]]
 //
@@ -44,10 +44,10 @@ double test_flags_swdiv_nochk() {
 }
 
 // CHECK-LABEL: @test_flags_swdivs_nochk(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @e, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @e, align 4
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast float [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, float* @f, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @f, align 4
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[SWDIV_NOCHK]], [[TMP2]]
 // CHECK-NEXT:    ret float [[ADD]]
 //
@@ -56,8 +56,8 @@ float test_flags_swdivs_nochk() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_swdiv_nochk(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @b, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @b, align 8
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast double [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    ret double [[SWDIV_NOCHK]]
 //
@@ -66,8 +66,8 @@ double test_builtin_ppc_swdiv_nochk() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_swdivs_nochk(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @e, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @e, align 4
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast float [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    ret float [[SWDIV_NOCHK]]
 //
@@ -76,10 +76,10 @@ float test_builtin_ppc_swdivs_nochk() {
 }
 
 // CHECK-LABEL: @test_flags_builtin_ppc_swdiv_nochk(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @b, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @b, align 8
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast double [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, double* @c, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @c, align 8
 // CHECK-NEXT:    [[ADD:%.*]] = fadd double [[SWDIV_NOCHK]], [[TMP2]]
 // CHECK-NEXT:    ret double [[ADD]]
 //
@@ -88,10 +88,10 @@ double test_flags_builtin_ppc_swdiv_nochk() {
 }
 
 // CHECK-LABEL: @test_flags_builtin_ppc_swdivs_nochk(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @e, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @e, align 4
 // CHECK-NEXT:    [[SWDIV_NOCHK:%.*]] = fdiv fast float [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, float* @f, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @f, align 4
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[SWDIV_NOCHK]], [[TMP2]]
 // CHECK-NEXT:    ret float [[ADD]]
 //

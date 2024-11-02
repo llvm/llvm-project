@@ -60,7 +60,7 @@ define dso_local void @test_mtmsr() {
 ; CHECK-32BIT-NEXT:    mtmsr 3, 0
 ; CHECK-32BIT-NEXT:    blr
 entry:
-  %0 = load i64, i64* @ula, align 8
+  %0 = load i64, ptr @ula, align 8
   %conv = trunc i64 %0 to i32
   call void @llvm.ppc.mtmsr(i32 %conv)
   ret void

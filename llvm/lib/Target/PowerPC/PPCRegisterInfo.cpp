@@ -91,6 +91,8 @@ ReportAccMoves("ppc-report-acc-moves",
                cl::Hidden, cl::init(false));
 #endif
 
+extern cl::opt<bool> DisableAutoPairedVecSt;
+
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
 
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
@@ -114,6 +116,8 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   ImmToIdxMap[PPC::STB8] = PPC::STBX8; ImmToIdxMap[PPC::STH8] = PPC::STHX8;
   ImmToIdxMap[PPC::STW8] = PPC::STWX8; ImmToIdxMap[PPC::STDU] = PPC::STDUX;
   ImmToIdxMap[PPC::ADDI8] = PPC::ADD8;
+  ImmToIdxMap[PPC::LQ] = PPC::LQX_PSEUDO;
+  ImmToIdxMap[PPC::STQ] = PPC::STQX_PSEUDO;
 
   // VSX
   ImmToIdxMap[PPC::DFLOADf32] = PPC::LXSSPX;
@@ -233,8 +237,14 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   // Standard calling convention CSRs.
   if (TM.isPPC64()) {
-    if (Subtarget.pairedVectorMemops())
+    if (Subtarget.pairedVectorMemops()) {
+      if (Subtarget.isAIXABI()) {
+        if (!TM.getAIXExtendedAltivecABI())
+          return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
+        return SaveR2 ? CSR_AIX64_R2_VSRP_SaveList : CSR_AIX64_VSRP_SaveList;
+      }
       return SaveR2 ? CSR_SVR464_R2_VSRP_SaveList : CSR_SVR464_VSRP_SaveList;
+    }
     if (Subtarget.hasAltivec() &&
         (!Subtarget.isAIXABI() || TM.getAIXExtendedAltivecABI())) {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
@@ -244,6 +254,9 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   // 32-bit targets.
   if (Subtarget.isAIXABI()) {
+    if (Subtarget.pairedVectorMemops())
+      return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_VSRP_SaveList
+                                           : CSR_AIX32_SaveList;
     if (Subtarget.hasAltivec())
       return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_Altivec_SaveList
                                            : CSR_AIX32_SaveList;
@@ -253,8 +266,11 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_SVR432_VSRP_SaveList;
   if (Subtarget.hasAltivec())
     return CSR_SVR432_Altivec_SaveList;
-  else if (Subtarget.hasSPE())
+  else if (Subtarget.hasSPE()) {
+    if (TM.isPositionIndependent() && !TM.isPPC64())
+      return CSR_SVR432_SPE_NO_S30_31_SaveList;
     return CSR_SVR432_SPE_SaveList;
+   }
   return CSR_SVR432_SaveList;
 }
 
@@ -279,6 +295,11 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   if (Subtarget.isAIXABI()) {
+    if (Subtarget.pairedVectorMemops()) {
+      if (!TM.getAIXExtendedAltivecABI())
+        return TM.isPPC64() ? CSR_PPC64_RegMask : CSR_AIX32_RegMask;
+      return TM.isPPC64() ? CSR_AIX64_VSRP_RegMask : CSR_AIX32_VSRP_RegMask;
+    }
     return TM.isPPC64()
                ? ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
                       ? CSR_PPC64_Altivec_RegMask
@@ -313,8 +334,11 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                ? CSR_SVR432_VSRP_RegMask
                : (Subtarget.hasAltivec()
                       ? CSR_SVR432_Altivec_RegMask
-                      : (Subtarget.hasSPE() ? CSR_SVR432_SPE_RegMask
-                                            : CSR_SVR432_RegMask));
+                      : (Subtarget.hasSPE()
+                             ? (TM.isPositionIndependent()
+                                     ? CSR_SVR432_SPE_NO_S30_31_RegMask
+                                     : CSR_SVR432_SPE_RegMask)
+                             : CSR_SVR432_RegMask));
 }
 
 const uint32_t*
@@ -394,9 +418,8 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve Altivec registers when Altivec is unavailable.
   if (!Subtarget.hasAltivec())
-    for (TargetRegisterClass::iterator I = PPC::VRRCRegClass.begin(),
-         IE = PPC::VRRCRegClass.end(); I != IE; ++I)
-      markSuperRegs(Reserved, *I);
+    for (MCRegister Reg : PPC::VRRCRegClass)
+      markSuperRegs(Reserved, Reg);
 
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
       !TM.getAIXExtendedAltivecABI()) {
@@ -455,13 +478,13 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
   // The callee saved info is valid so it can be traversed.
   // Checking for registers that need saving that do not have load or store
   // forms where the address offset is an immediate.
-  for (unsigned i = 0; i < Info.size(); i++) {
+  for (const CalleeSavedInfo &CSI : Info) {
     // If the spill is to a register no scavenging is required.
-    if (Info[i].isSpilledToReg())
+    if (CSI.isSpilledToReg())
       continue;
 
-    int FrIdx = Info[i].getFrameIdx();
-    Register Reg = Info[i].getReg();
+    int FrIdx = CSI.getFrameIdx();
+    Register Reg = CSI.getReg();
 
     const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
     unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(RC);
@@ -487,6 +510,14 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
       LLVM_DEBUG(dbgs() << "Memory Operand: " << InstrInfo->getName(Opcode)
                         << " for register " << printReg(Reg, this) << ".\n");
       LLVM_DEBUG(dbgs() << "TRUE - Memory operand is X-Form.\n");
+      return true;
+    }
+
+    // This is a spill/restore of a quadword.
+    if ((Opcode == PPC::RESTORE_QUADWORD) || (Opcode == PPC::SPILL_QUADWORD)) {
+      LLVM_DEBUG(dbgs() << "Memory Operand: " << InstrInfo->getName(Opcode)
+                        << " for register " << printReg(Reg, this) << ".\n");
+      LLVM_DEBUG(dbgs() << "TRUE - Memory operand is a quadword.\n");
       return true;
     }
   }
@@ -549,6 +580,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   // want to allocate the corresponding physical subreg for the source.
   // The copy into ACC will be a BUILD_UACC so we want to allocate
   // the same number UACC for the source.
+  const TargetRegisterClass *RegClass = MRI->getRegClass(VirtReg);
   for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
     const MachineOperand *ResultOp = nullptr;
     Register ResultReg;
@@ -560,10 +592,17 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           MRI->getRegClass(ResultReg)->contains(PPC::UACC0) &&
           VRM->hasPhys(ResultReg)) {
         Register UACCPhys = VRM->getPhys(ResultReg);
-        Register HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
-        // Ensure that the hint is a VSRp register.
-        if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
-          Hints.push_back(HintReg);
+        Register HintReg;
+        if (RegClass->contains(PPC::VSRp0)) {
+          HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
+          // Ensure that the hint is a VSRp register.
+          if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
+            Hints.push_back(HintReg);
+        } else if (RegClass->contains(PPC::ACC0)) {
+          HintReg = PPC::ACC0 + (UACCPhys - PPC::UACC0);
+          if (HintReg >= PPC::ACC0 && HintReg <= PPC::ACC7)
+            Hints.push_back(HintReg);
+        }
       }
       break;
     }
@@ -1189,6 +1228,59 @@ static void emitAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsPrimed,
 #endif
 }
 
+static void spillRegPairs(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator II, DebugLoc DL,
+                          const TargetInstrInfo &TII, Register SrcReg,
+                          unsigned FrameIndex, bool IsLittleEndian,
+                          bool IsKilled, bool TwoPairs) {
+  unsigned Offset = 0;
+  if (TwoPairs)
+    Offset = IsLittleEndian ? 48 : 0;
+  else
+    Offset = IsLittleEndian ? 16 : 0;
+  Register Reg = (SrcReg > PPC::VSRp15) ? PPC::V0 + (SrcReg - PPC::VSRp16) * 2
+                                        : PPC::VSL0 + (SrcReg - PPC::VSRp0) * 2;
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                        .addReg(Reg, getKillRegState(IsKilled)),
+                    FrameIndex, Offset);
+  Offset += IsLittleEndian ? -16 : 16;
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                        .addReg(Reg + 1, getKillRegState(IsKilled)),
+                    FrameIndex, Offset);
+  if (TwoPairs) {
+    Offset += IsLittleEndian ? -16 : 16;
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                          .addReg(Reg + 2, getKillRegState(IsKilled)),
+                      FrameIndex, Offset);
+    Offset += IsLittleEndian ? -16 : 16;
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+                          .addReg(Reg + 3, getKillRegState(IsKilled)),
+                      FrameIndex, Offset);
+  }
+}
+
+/// Remove any STXVP[X] instructions and split them out into a pair of
+/// STXV[X] instructions if --disable-auto-paired-vec-st is specified on
+/// the command line.
+void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
+                                           unsigned FrameIndex) const {
+  assert(DisableAutoPairedVecSt &&
+         "Expecting to do this only if paired vector stores are disabled.");
+  MachineInstr &MI = *II; // STXVP <SrcReg>, <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  Register SrcReg = MI.getOperand(0).getReg();
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+  bool IsKilled = MI.getOperand(0).isKill();
+  spillRegPairs(MBB, II, DL, TII, SrcReg, FrameIndex, IsLittleEndian, IsKilled,
+                /* TwoPairs */ false);
+  // Discard the original instruction.
+  MBB.erase(II);
+}
+
 /// lowerACCSpilling - Generate the code for spilling the accumulator register.
 /// Similarly to other spills/reloads that use pseudo-ops, we do not actually
 /// eliminate the FrameIndex here nor compute the stack offset. We simply
@@ -1218,12 +1310,17 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   // adjust the offset of the store that is within the 64-byte stack slot.
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(Reg, getKillRegState(IsKilled)),
-                    FrameIndex, IsLittleEndian ? 32 : 0);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(Reg + 1, getKillRegState(IsKilled)),
-                    FrameIndex, IsLittleEndian ? 0 : 32);
+  if (DisableAutoPairedVecSt)
+    spillRegPairs(MBB, II, DL, TII, Reg, FrameIndex, IsLittleEndian, IsKilled,
+                  /* TwoPairs */ true);
+  else {
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                          .addReg(Reg, getKillRegState(IsKilled)),
+                      FrameIndex, IsLittleEndian ? 32 : 0);
+    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                          .addReg(Reg + 1, getKillRegState(IsKilled)),
+                      FrameIndex, IsLittleEndian ? 0 : 32);
+  }
   if (IsPrimed && !IsKilled)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMTACC), SrcReg).addReg(SrcReg);
 
@@ -1459,6 +1556,9 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   } else if (OpC == PPC::RESTORE_ACC || OpC == PPC::RESTORE_UACC) {
     lowerACCRestore(II, FrameIndex);
     return;
+  } else if (OpC == PPC::STXVP && DisableAutoPairedVecSt) {
+    lowerOctWordSpilling(II, FrameIndex);
+    return;
   } else if (OpC == PPC::SPILL_QUADWORD) {
     lowerQuadwordSpilling(II, FrameIndex);
     return;
@@ -1477,7 +1577,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                    OpC != TargetOpcode::PATCHPOINT && !ImmToIdxMap.count(OpC);
 
   // Now add the frame object offset to the offset from r1.
-  int Offset = MFI.getObjectOffset(FrameIndex);
+  int64_t Offset = MFI.getObjectOffset(FrameIndex);
   Offset += MI.getOperand(OffsetOperandNo).getImm();
 
   // If we're not using a Frame Pointer that has been set to the value of the
@@ -1531,19 +1631,40 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
   const TargetRegisterClass *RC = is64Bit ? G8RC : GPRC;
-  Register SRegHi = MF.getRegInfo().createVirtualRegister(RC),
-           SReg = MF.getRegInfo().createVirtualRegister(RC);
+  unsigned NewOpcode = 0u;
+  bool ScavengingFailed = RS && RS->getRegsAvailable(RC).none() &&
+                          RS->getRegsAvailable(&PPC::VSFRCRegClass).any();
+  Register SRegHi, SReg, VSReg;
+
+  // The register scavenger is unable to get a GPR but can get a VSR. We
+  // need to stash a GPR into a VSR so that we can free one up.
+  if (ScavengingFailed && Subtarget.hasDirectMove()) {
+    // Pick a volatile register and if we are spilling/restoring that
+    // particular one, pick the next one.
+    SRegHi = SReg = is64Bit ? PPC::X4 : PPC::R4;
+    if (MI.getOperand(0).getReg() == SReg)
+      SRegHi = SReg = SReg + 1;
+    VSReg = MF.getRegInfo().createVirtualRegister(&PPC::VSFRCRegClass);
+    BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::MTVSRD : PPC::MTVSRWZ), VSReg)
+        .addReg(SReg);
+  } else {
+    SRegHi = MF.getRegInfo().createVirtualRegister(RC);
+    SReg = MF.getRegInfo().createVirtualRegister(RC);
+  }
 
   // Insert a set of rA with the full offset value before the ld, st, or add
   if (isInt<16>(Offset))
     BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::LI8 : PPC::LI), SReg)
-      .addImm(Offset);
-  else {
+        .addImm(Offset);
+  else if (isInt<32>(Offset)) {
     BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::LIS8 : PPC::LIS), SRegHi)
-      .addImm(Offset >> 16);
+        .addImm(Offset >> 16);
     BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::ORI8 : PPC::ORI), SReg)
-      .addReg(SRegHi, RegState::Kill)
-      .addImm(Offset);
+        .addReg(SRegHi, RegState::Kill)
+        .addImm(Offset);
+  } else {
+    assert(is64Bit && "Huge stack is only supported on PPC64");
+    TII.materializeImmPostRA(MBB, II, dl, SReg, Offset);
   }
 
   // Convert into indexed form of the instruction:
@@ -1558,7 +1679,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
            OpC != TargetOpcode::INLINEASM_BR) {
     assert(ImmToIdxMap.count(OpC) &&
            "No indexed form of load or store available!");
-    unsigned NewOpcode = ImmToIdxMap.find(OpC)->second;
+    NewOpcode = ImmToIdxMap.find(OpC)->second;
     MI.setDesc(TII.get(NewOpcode));
     OperandBase = 1;
   } else {
@@ -1568,6 +1689,26 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register StackReg = MI.getOperand(FIOperandNum).getReg();
   MI.getOperand(OperandBase).ChangeToRegister(StackReg, false);
   MI.getOperand(OperandBase + 1).ChangeToRegister(SReg, false, false, true);
+
+  // If we stashed a value from a GPR into a VSR, we need to get it back after
+  // spilling the register.
+  if (ScavengingFailed && Subtarget.hasDirectMove())
+    BuildMI(MBB, ++II, dl, TII.get(is64Bit ? PPC::MFVSRD : PPC::MFVSRWZ), SReg)
+        .addReg(VSReg);
+
+  // Since these are not real X-Form instructions, we must
+  // add the registers and access 0(NewReg) rather than
+  // emitting the X-Form pseudo.
+  if (NewOpcode == PPC::LQX_PSEUDO || NewOpcode == PPC::STQX_PSEUDO) {
+    assert(is64Bit && "Quadword loads/stores only supported in 64-bit mode");
+    Register NewReg = MF.getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(MBB, II, dl, TII.get(PPC::ADD8), NewReg)
+        .addReg(SReg, RegState::Kill)
+        .addReg(StackReg);
+    MI.setDesc(TII.get(NewOpcode == PPC::LQX_PSEUDO ? PPC::LQ : PPC::STQ));
+    MI.getOperand(OperandBase + 1).ChangeToRegister(NewReg, false);
+    MI.getOperand(OperandBase).ChangeToImmediate(0);
+  }
 }
 
 Register PPCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

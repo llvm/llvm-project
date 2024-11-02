@@ -223,10 +223,26 @@ ProvenanceRange AllSources::AddCompilerInsertion(std::string text) {
   return covers;
 }
 
+static void EmitPrefix(llvm::raw_ostream &o, llvm::raw_ostream::Colors color,
+    const std::string &prefix, bool showColors) {
+  if (prefix.empty()) {
+    return;
+  }
+  if (showColors) {
+    o.changeColor(color, true);
+  }
+  o << prefix;
+  if (showColors) {
+    o.resetColor();
+  }
+}
+
 void AllSources::EmitMessage(llvm::raw_ostream &o,
     const std::optional<ProvenanceRange> &range, const std::string &message,
+    const std::string &prefix, llvm::raw_ostream::Colors color,
     bool echoSourceLine) const {
   if (!range) {
+    EmitPrefix(o, color, prefix, this->getShowColors());
     o << message << '\n';
     return;
   }
@@ -238,8 +254,9 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
             o << inc.source.path();
             std::size_t offset{origin.covers.MemberOffset(range->start())};
             SourcePosition pos{inc.source.FindOffsetLineAndColumn(offset)};
-            o << ':' << pos.line << ':' << pos.column;
-            o << ": " << message << '\n';
+            o << ':' << pos.line << ':' << pos.column << ": ";
+            EmitPrefix(o, color, prefix, this->getShowColors());
+            o << message << '\n';
             if (echoSourceLine) {
               const char *text{inc.source.content().data() +
                   inc.source.GetLineStartOffset(pos.line)};
@@ -269,14 +286,15 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
             }
             if (IsValid(origin.replaces)) {
               EmitMessage(o, origin.replaces,
-                  inc.isModule ? "used here"s : "included here"s,
+                  inc.isModule ? "used here"s : "included here"s, prefix, color,
                   echoSourceLine);
             }
           },
           [&](const Macro &mac) {
-            EmitMessage(o, origin.replaces, message, echoSourceLine);
             EmitMessage(
-                o, mac.definition, "in a macro defined here", echoSourceLine);
+                o, origin.replaces, message, prefix, color, echoSourceLine);
+            EmitMessage(o, mac.definition, "in a macro defined here", prefix,
+                color, echoSourceLine);
             if (echoSourceLine) {
               o << "that expanded to:\n  " << mac.expansion << "\n  ";
               for (std::size_t j{0};
@@ -286,7 +304,10 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
               o << "^\n";
             }
           },
-          [&](const CompilerInsertion &) { o << message << '\n'; },
+          [&](const CompilerInsertion &) {
+            EmitPrefix(o, color, prefix, this->getShowColors());
+            o << message << '\n';
+          },
       },
       origin.u);
 }

@@ -289,8 +289,14 @@ class StmtComparer {
 
   bool IsStmtEquivalent(const SubstNonTypeTemplateParmExpr *E1,
                         const SubstNonTypeTemplateParmExpr *E2) {
-    return IsStructurallyEquivalent(Context, E1->getParameter(),
-                                    E2->getParameter());
+    if (!IsStructurallyEquivalent(Context, E1->getAssociatedDecl(),
+                                  E2->getAssociatedDecl()))
+      return false;
+    if (E1->getIndex() != E2->getIndex())
+      return false;
+    if (E1->getPackIndex() != E2->getPackIndex())
+      return false;
+    return true;
   }
 
   bool IsStmtEquivalent(const SubstNonTypeTemplateParmPackExpr *E1,
@@ -510,8 +516,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         *P2 = N2.getAsSubstTemplateTemplateParmPack();
     return IsStructurallyEquivalent(Context, P1->getArgumentPack(),
                                     P2->getArgumentPack()) &&
-           IsStructurallyEquivalent(Context, P1->getParameterPack(),
-                                    P2->getParameterPack());
+           IsStructurallyEquivalent(Context, P1->getAssociatedDecl(),
+                                    P2->getAssociatedDecl()) &&
+           P1->getIndex() == P2->getIndex();
   }
 
    case TemplateName::Template:
@@ -525,6 +532,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   return true;
 }
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     ArrayRef<TemplateArgument> Args1,
+                                     ArrayRef<TemplateArgument> Args2);
 
 /// Determine whether two template arguments are equivalent.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -568,18 +579,24 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                     Arg2.getAsExpr());
 
   case TemplateArgument::Pack:
-    if (Arg1.pack_size() != Arg2.pack_size())
-      return false;
-
-    for (unsigned I = 0, N = Arg1.pack_size(); I != N; ++I)
-      if (!IsStructurallyEquivalent(Context, Arg1.pack_begin()[I],
-                                    Arg2.pack_begin()[I]))
-        return false;
-
-    return true;
+    return IsStructurallyEquivalent(Context, Arg1.pack_elements(),
+                                    Arg2.pack_elements());
   }
 
   llvm_unreachable("Invalid template argument kind");
+}
+
+/// Determine structural equivalence of two template argument lists.
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     ArrayRef<TemplateArgument> Args1,
+                                     ArrayRef<TemplateArgument> Args2) {
+  if (Args1.size() != Args2.size())
+    return false;
+  for (unsigned I = 0, N = Args1.size(); I != N; ++I) {
+    if (!IsStructurallyEquivalent(Context, Args1[I], Args2[I]))
+      return false;
+  }
+  return true;
 }
 
 /// Determine structural equivalence for the common part of array
@@ -900,7 +917,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
 
     // Fall through to check the bits common with FunctionNoProtoType.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   case Type::FunctionNoProto: {
@@ -957,11 +974,17 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, cast<UsingType>(T1)->getFoundDecl(),
                                   cast<UsingType>(T2)->getFoundDecl()))
       return false;
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<UsingType>(T1)->getUnderlyingType(),
+                                  cast<UsingType>(T2)->getUnderlyingType()))
+      return false;
     break;
 
   case Type::Typedef:
     if (!IsStructurallyEquivalent(Context, cast<TypedefType>(T1)->getDecl(),
-                                  cast<TypedefType>(T2)->getDecl()))
+                                  cast<TypedefType>(T2)->getDecl()) ||
+        !IsStructurallyEquivalent(Context, cast<TypedefType>(T1)->desugar(),
+                                  cast<TypedefType>(T2)->desugar()))
       return false;
     break;
 
@@ -974,8 +997,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   case Type::TypeOf:
     if (!IsStructurallyEquivalent(Context,
-                                  cast<TypeOfType>(T1)->getUnderlyingType(),
-                                  cast<TypeOfType>(T2)->getUnderlyingType()))
+                                  cast<TypeOfType>(T1)->getUnmodifiedType(),
+                                  cast<TypeOfType>(T2)->getUnmodifiedType()))
       return false;
     break;
 
@@ -1005,16 +1028,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       if (Auto1->getTypeConstraintConcept() !=
           Auto2->getTypeConstraintConcept())
         return false;
-      ArrayRef<TemplateArgument> Auto1Args =
-          Auto1->getTypeConstraintArguments();
-      ArrayRef<TemplateArgument> Auto2Args =
-          Auto2->getTypeConstraintArguments();
-      if (Auto1Args.size() != Auto2Args.size())
+      if (!IsStructurallyEquivalent(Context,
+                                    Auto1->getTypeConstraintArguments(),
+                                    Auto2->getTypeConstraintArguments()))
         return false;
-      for (unsigned I = 0, N = Auto1Args.size(); I != N; ++I) {
-        if (!IsStructurallyEquivalent(Context, Auto1Args[I], Auto2Args[I]))
-          return false;
-      }
     }
     break;
   }
@@ -1055,12 +1072,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::SubstTemplateTypeParm: {
     const auto *Subst1 = cast<SubstTemplateTypeParmType>(T1);
     const auto *Subst2 = cast<SubstTemplateTypeParmType>(T2);
-    if (!IsStructurallyEquivalent(Context,
-                                  QualType(Subst1->getReplacedParameter(), 0),
-                                  QualType(Subst2->getReplacedParameter(), 0)))
-      return false;
     if (!IsStructurallyEquivalent(Context, Subst1->getReplacementType(),
                                   Subst2->getReplacementType()))
+      return false;
+    if (!IsStructurallyEquivalent(Context, Subst1->getAssociatedDecl(),
+                                  Subst2->getAssociatedDecl()))
+      return false;
+    if (Subst1->getIndex() != Subst2->getIndex())
+      return false;
+    if (Subst1->getPackIndex() != Subst2->getPackIndex())
       return false;
     break;
   }
@@ -1068,9 +1088,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::SubstTemplateTypeParmPack: {
     const auto *Subst1 = cast<SubstTemplateTypeParmPackType>(T1);
     const auto *Subst2 = cast<SubstTemplateTypeParmPackType>(T2);
-    if (!IsStructurallyEquivalent(Context,
-                                  QualType(Subst1->getReplacedParameter(), 0),
-                                  QualType(Subst2->getReplacedParameter(), 0)))
+    if (!IsStructurallyEquivalent(Context, Subst1->getAssociatedDecl(),
+                                  Subst2->getAssociatedDecl()))
+      return false;
+    if (Subst1->getIndex() != Subst2->getIndex())
       return false;
     if (!IsStructurallyEquivalent(Context, Subst1->getArgumentPack(),
                                   Subst2->getArgumentPack()))
@@ -1084,13 +1105,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, Spec1->getTemplateName(),
                                   Spec2->getTemplateName()))
       return false;
-    if (Spec1->getNumArgs() != Spec2->getNumArgs())
+    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
+                                  Spec2->template_arguments()))
       return false;
-    for (unsigned I = 0, N = Spec1->getNumArgs(); I != N; ++I) {
-      if (!IsStructurallyEquivalent(Context, Spec1->getArg(I),
-                                    Spec2->getArg(I)))
-        return false;
-    }
     break;
   }
 
@@ -1141,13 +1158,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Spec1->getIdentifier(),
                                   Spec2->getIdentifier()))
       return false;
-    if (Spec1->getNumArgs() != Spec2->getNumArgs())
+    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
+                                  Spec2->template_arguments()))
       return false;
-    for (unsigned I = 0, N = Spec1->getNumArgs(); I != N; ++I) {
-      if (!IsStructurallyEquivalent(Context, Spec1->getArg(I),
-                                    Spec2->getArg(I)))
-        return false;
-    }
     break;
   }
 

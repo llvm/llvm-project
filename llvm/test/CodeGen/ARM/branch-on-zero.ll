@@ -56,19 +56,16 @@ define i32 @test_lshr(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
 ;
 ; CHECK-V7A-LABEL: test_lshr:
 ; CHECK-V7A:       @ %bb.0: @ %entry
-; CHECK-V7A-NEXT:    mov r3, #0
-; CHECK-V7A-NEXT:    cmp r3, r2, lsr #2
-; CHECK-V7A-NEXT:    beq .LBB0_3
-; CHECK-V7A-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-V7A-NEXT:    lsr r2, r2, #2
-; CHECK-V7A-NEXT:  .LBB0_2: @ %while.body
+; CHECK-V7A-NEXT:    lsrs r2, r2, #2
+; CHECK-V7A-NEXT:    beq .LBB0_2
+; CHECK-V7A-NEXT:  .LBB0_1: @ %while.body
 ; CHECK-V7A-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-V7A-NEXT:    ldr r3, [r1], #4
 ; CHECK-V7A-NEXT:    subs r2, r2, #1
 ; CHECK-V7A-NEXT:    lsl r3, r3, #1
 ; CHECK-V7A-NEXT:    str r3, [r0], #4
-; CHECK-V7A-NEXT:    bne .LBB0_2
-; CHECK-V7A-NEXT:  .LBB0_3: @ %while.end
+; CHECK-V7A-NEXT:    bne .LBB0_1
+; CHECK-V7A-NEXT:  .LBB0_2: @ %while.end
 ; CHECK-V7A-NEXT:    mov r0, #0
 ; CHECK-V7A-NEXT:    bx lr
 entry:
@@ -145,19 +142,16 @@ define i32 @test_lshr2(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
 ;
 ; CHECK-V7A-LABEL: test_lshr2:
 ; CHECK-V7A:       @ %bb.0: @ %entry
-; CHECK-V7A-NEXT:    mov r3, #0
-; CHECK-V7A-NEXT:    cmp r3, r2, lsr #2
-; CHECK-V7A-NEXT:    beq .LBB1_3
-; CHECK-V7A-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-V7A-NEXT:    lsr r2, r2, #2
-; CHECK-V7A-NEXT:  .LBB1_2: @ %while.body
+; CHECK-V7A-NEXT:    lsrs r2, r2, #2
+; CHECK-V7A-NEXT:    beq .LBB1_2
+; CHECK-V7A-NEXT:  .LBB1_1: @ %while.body
 ; CHECK-V7A-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-V7A-NEXT:    ldr r3, [r1], #4
 ; CHECK-V7A-NEXT:    subs r2, r2, #1
 ; CHECK-V7A-NEXT:    lsl r3, r3, #1
 ; CHECK-V7A-NEXT:    str r3, [r0], #4
-; CHECK-V7A-NEXT:    bne .LBB1_2
-; CHECK-V7A-NEXT:  .LBB1_3: @ %while.end
+; CHECK-V7A-NEXT:    bne .LBB1_1
+; CHECK-V7A-NEXT:  .LBB1_2: @ %while.end
 ; CHECK-V7A-NEXT:    mov r0, #0
 ; CHECK-V7A-NEXT:    bx lr
 entry:

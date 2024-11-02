@@ -88,7 +88,6 @@ CODEGENOPT(EmitGcovArcs      , 1, 0) ///< Emit coverage data files, aka. GCDA.
 CODEGENOPT(EmitGcovNotes     , 1, 0) ///< Emit coverage "notes" files, aka GCNO.
 CODEGENOPT(EmitOpenCLArgMetadata , 1, 0) ///< Emit OpenCL kernel arg metadata.
 CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set by default or -f[no-]emulated-tls.
-CODEGENOPT(ExplicitEmulatedTLS , 1, 0) ///< Set if -f[no-]emulated-tls is used.
 /// Embed Bitcode mode (off/all/bitcode/marker).
 ENUM_CODEGENOPT(EmbedBitcode, EmbedBitcodeKind, 2, Embed_Off)
 /// Inline asm dialect, -masm=(att|intel)
@@ -107,12 +106,19 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
 CODEGENOPT(IBTSeal, 1, 0)             ///< set to optimize CFProtectionBranch.
+CODEGENOPT(FunctionReturnThunks, 1, 0) ///< -mfunction-return={keep|thunk-extern}
+CODEGENOPT(IndirectBranchCSPrefix, 1, 0) ///< if -mindirect-branch-cs-prefix
+                                         ///< is set.
 
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
 CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabled.
 CODEGENOPT(ForceDwarfFrameSection , 1, 0) ///< Set when -fforce-dwarf-frame is
                                           ///< enabled.
+
+///< Set when -femit-dwarf-unwind is passed.
+ENUM_CODEGENOPT(EmitDwarfUnwind, llvm::EmitDwarfUnwindType, 2,
+                llvm::EmitDwarfUnwindType::Default)
 
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0)
@@ -166,7 +172,6 @@ CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
                                               ///< linker.
 CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
 CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
-CODEGENOPT(MSVolatile        , 1, 0) ///< Set when /volatile:ms is enabled.
 CODEGENOPT(NoCommon          , 1, 0) ///< Set when -fno-common or C++ is enabled.
 CODEGENOPT(NoDwarfDirectoryAsm , 1, 0) ///< Set when -fno-dwarf-directory-asm is
                                        ///< enabled.
@@ -174,6 +179,7 @@ CODEGENOPT(NoExecStack       , 1, 0) ///< Set when -Wa,--noexecstack is enabled.
 CODEGENOPT(FatalWarnings     , 1, 0) ///< Set when -Wa,--fatal-warnings is
                                      ///< enabled.
 CODEGENOPT(NoWarn            , 1, 0) ///< Set when -Wa,--no-warn is enabled.
+CODEGENOPT(NoTypeCheck       , 1, 0) ///< Set when -Wa,--no-type-check is enabled.
 CODEGENOPT(MisExpect         , 1, 0) ///< Set when -Wmisexpect is enabled
 CODEGENOPT(EnableSegmentedStacks , 1, 0) ///< Set when -fsplit-stack is enabled.
 CODEGENOPT(NoInlineLineTables, 1, 0) ///< Whether debug info should contain
@@ -183,6 +189,7 @@ CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enable
 CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
 CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
+CODEGENOPT(HIPSaveKernelArgName, 1, 0) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profile information.
 
@@ -207,6 +214,10 @@ CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
 ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNone)
 /// Choose profile kind for PGO use compilation.
 ENUM_CODEGENOPT(ProfileUse, ProfileInstrKind, 2, ProfileNone)
+/// Partition functions into N groups and select only functions in group i to be
+/// instrumented. Selected group numbers can be 0 to N-1 inclusive.
+VALUE_CODEGENOPT(ProfileTotalFunctionGroups, 32, 1)
+VALUE_CODEGENOPT(ProfileSelectedFunctionGroup, 32, 0)
 CODEGENOPT(CoverageMapping , 1, 0) ///< Generate coverage mapping regions to
                                    ///< enable code coverage analysis.
 CODEGENOPT(DumpCoverageMapping , 1, 0) ///< Dump the generated coverage mapping
@@ -270,10 +281,13 @@ CODEGENOPT(SanitizeCoverageTracePCGuard, 1, 0) ///< Enable PC tracing with guard
 CODEGENOPT(SanitizeCoverageInline8bitCounters, 1, 0) ///< Use inline 8bit counters.
 CODEGENOPT(SanitizeCoverageInlineBoolFlag, 1, 0) ///< Use inline bool flag.
 CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.
+CODEGENOPT(SanitizeCoverageControlFlow, 1, 0) ///< Collect control flow
 CODEGENOPT(SanitizeCoverageNoPrune, 1, 0) ///< Disable coverage pruning.
 CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
 CODEGENOPT(SanitizeCoverageTraceLoads, 1, 0) ///< Enable tracing of loads.
 CODEGENOPT(SanitizeCoverageTraceStores, 1, 0) ///< Enable tracing of stores.
+CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0) ///< Emit PCs for covered functions.
+CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0) ///< Emit PCs for atomic operations.
 CODEGENOPT(SanitizeStats     , 1, 0) ///< Collect statistics for sanitizers.
 CODEGENOPT(SimplifyLibCalls  , 1, 1) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0) ///< -soft-float.
@@ -317,6 +331,10 @@ VALUE_CODEGENOPT(StackProbeSize    , 32, 4096) ///< Overrides default stack
 VALUE_CODEGENOPT(WarnStackSize     , 32, UINT_MAX) ///< Set via -fwarn-stack-size.
 CODEGENOPT(NoStackArgProbe, 1, 0) ///< Set when -mno-stack-arg-probe is used
 CODEGENOPT(DebugStrictDwarf, 1, 1) ///< Whether or not to use strict DWARF info.
+
+CODEGENOPT(EnableAssignmentTracking, 1,0) ///< Enable the Assignment Tracking
+                                          ///< debug info feature.
+
 CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
                                   ///< in debug info.
 
@@ -326,6 +344,9 @@ CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
 CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
                                        ///< contain explicit imports for
                                        ///< anonymous namespaces
+
+/// Set debug info source file hashing algorithm.
+ENUM_CODEGENOPT(DebugSrcHash, DebugSrcHashKind, 2, DSH_MD5)
 
 CODEGENOPT(SplitDwarfInlining, 1, 1) ///< Whether to include inlining info in the
                                      ///< skeleton CU to allow for symbolication
@@ -384,8 +405,14 @@ CODEGENOPT(EmitCodeView, 1, 0)
 /// Whether to emit the .debug$H section containing hashes of CodeView types.
 CODEGENOPT(CodeViewGHash, 1, 0)
 
+/// Whether to emit the compiler path and command line into the CodeView debug information.
+CODEGENOPT(CodeViewCommandLine, 1, 0)
+
 /// The kind of inlining to perform.
 ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
+
+/// The maximum stack size a function can have to be considered for inlining.
+VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX)
 
 // Vector functions library to use.
 ENUM_CODEGENOPT(VecLib, VectorLibrary, 3, NoLibrary)
@@ -471,6 +498,10 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
 
 /// Whether to use opaque pointers.
 CODEGENOPT(OpaquePointers, 1, 0)
+
+/// Modify C++ ABI to returning `this` pointer from constructors and
+/// non-deleting destructors. (No effect on Microsoft ABI.)
+CODEGENOPT(CtorDtorReturnThis, 1, 0)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

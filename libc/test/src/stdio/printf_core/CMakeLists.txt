@@ -9,6 +9,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdio.printf_core.parser
     libc.src.stdio.printf_core.core_structs
+    libc.src.__support.CPP.string_view
     libc.src.__support.arg_list
 )
 
@@ -21,6 +22,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdio.printf_core.writer
     libc.src.stdio.printf_core.string_writer
+    libc.src.__support.CPP.string_view
 )
 
 add_libc_unittest(

@@ -153,12 +153,17 @@ static Register performCopyPropagation(Register Reg,
   RI = ++MachineBasicBlock::iterator(Def);
   IsKill = DestSrc->Source->isKill();
 
-  // There are no uses of original register between COPY and STATEPOINT.
-  // There can't be any after STATEPOINT, so we can eliminate Def.
   if (!Use) {
+    // There are no uses of original register between COPY and STATEPOINT.
+    // There can't be any after STATEPOINT, so we can eliminate Def.
     LLVM_DEBUG(dbgs() << "spillRegisters: removing dead copy " << *Def);
     Def->eraseFromParent();
+  } else if (IsKill) {
+    // COPY will remain in place, spill will be inserted *after* it, so it is
+    // not a kill of source anymore.
+    const_cast<MachineOperand *>(DestSrc->Source)->setIsKill(false);
   }
+
   return SrcReg;
 }
 

@@ -736,7 +736,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   BlockStats.NumInstances++;
 
   // BLOCKINFO is a special part of the stream.
-  bool DumpRecords = O.hasValue();
+  bool DumpRecords = O.has_value();
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
     if (O && !O->DumpBlockinfo)
       O->OS << Indent << "<BLOCKINFO_BLOCK/>\n";
@@ -761,7 +761,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   // Keep it for later, when we see a MODULE_HASH record
   uint64_t BlockEntryPos = Stream.getCurrentByteNo();
 
-  Optional<const char *> BlockName = None;
+  Optional<const char *> BlockName;
   if (DumpRecords) {
     O->OS << Indent << "<";
     if ((BlockName = GetBlockName(BlockID, BlockInfo, CurStreamType)))
@@ -898,7 +898,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
 
       // If we found a module hash, let's verify that it matches!
       if (BlockID == bitc::MODULE_BLOCK_ID && Code == bitc::MODULE_CODE_HASH &&
-          CheckHash.hasValue()) {
+          CheckHash) {
         if (Record.size() != 5)
           O->OS << " (invalid)";
         else {

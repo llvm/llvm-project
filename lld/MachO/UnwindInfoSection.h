@@ -13,10 +13,7 @@
 #include "SyntheticSections.h"
 #include "llvm/ADT/MapVector.h"
 
-#include "mach-o/compact_unwind_encoding.h"
-
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class UnwindInfoSection : public SyntheticSection {
 public:
@@ -24,7 +21,7 @@ public:
   // section entirely.
   bool isNeeded() const override { return !allEntriesAreOmitted; }
   void addSymbol(const Defined *);
-  virtual void prepareRelocations() = 0;
+  virtual void prepare() = 0;
 
 protected:
   UnwindInfoSection();
@@ -37,7 +34,6 @@ protected:
 
 UnwindInfoSection *makeUnwindInfoSection();
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

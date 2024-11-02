@@ -176,7 +176,7 @@ private:
         parse(External, N);
       } else if (N.getType() == Node::NK_Scalar ||
                  N.getType() == Node::NK_BlockScalar) {
-        parse(External, scalarValue(N, "External").getValue());
+        parse(External, *scalarValue(N, "External"));
       } else {
         error("External must be either a scalar or a mapping.", N);
         return;

@@ -790,6 +790,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (Tag == dwarf::DW_TAG_ptr_to_member_type)
     addDIEEntry(Buffer, dwarf::DW_AT_containing_type,
                 *getOrCreateTypeDIE(cast<DIDerivedType>(DTy)->getClassType()));
+
+  addAccess(Buffer, DTy->getFlags());
+
   // Add source line info if available and TyDesc is not a forward declaration.
   if (!DTy->isForwardDecl())
     addSourceLine(Buffer, DTy);
@@ -799,7 +802,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   // or reference types.
   if (DTy->getDWARFAddressSpace())
     addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
-            DTy->getDWARFAddressSpace().getValue());
+            *DTy->getDWARFAddressSpace());
 }
 
 void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {

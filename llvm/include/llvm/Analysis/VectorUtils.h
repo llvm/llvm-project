@@ -236,10 +236,10 @@ class VFDatabase {
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector
       // function in the Module M.
-      if (Shape.hasValue() && (Shape.getValue().ScalarName == ScalarName)) {
-        assert(CI.getModule()->getFunction(Shape.getValue().VectorName) &&
+      if (Shape && (Shape.value().ScalarName == ScalarName)) {
+        assert(CI.getModule()->getFunction(Shape.value().VectorName) &&
                "Vector function is missing.");
-        Mappings.push_back(Shape.getValue());
+        Mappings.push_back(Shape.value());
       }
     }
   }
@@ -365,6 +365,14 @@ Value *getSplatValue(const Value *V);
 /// This may be more powerful than the related getSplatValue() because it is
 /// not limited by finding a scalar source value to a splatted vector.
 bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
+
+/// Transform a shuffle mask's output demanded element mask into demanded
+/// element masks for the 2 operands, returns false if the mask isn't valid.
+/// Both \p DemandedLHS and \p DemandedRHS are initialised to [SrcWidth].
+/// \p AllowUndefElts permits "-1" indices to be treated as undef.
+bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
+                            const APInt &DemandedElts, APInt &DemandedLHS,
+                            APInt &DemandedRHS, bool AllowUndefElts = false);
 
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
@@ -810,6 +818,9 @@ public:
   /// happen when optimizing for size forbids a scalar epilogue, and the gap
   /// cannot be filtered by masking the load/store.
   void invalidateGroupsRequiringScalarEpilogue();
+
+  /// Returns true if we have any interleave groups.
+  bool hasGroups() const { return !InterleaveGroups.empty(); }
 
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.

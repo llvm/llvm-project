@@ -783,7 +783,7 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
 void RegAllocPBQP::postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS) {
   VRegSpiller.postOptimization();
   /// Remove dead defs because of rematerialization.
-  for (auto DeadInst : DeadRemats) {
+  for (auto *DeadInst : DeadRemats) {
     LIS.RemoveMachineInstrFromMaps(*DeadInst);
     DeadInst->eraseFromParent();
   }

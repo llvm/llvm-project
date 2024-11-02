@@ -78,9 +78,9 @@ void Foo::bingo() volatile {
 // CHECK-IMPLICIT-VOLATILE: CXXMethod:{ResultType void}{TypedText bingo}{LeftParen (}{RightParen )}{Informative  volatile} (34)
 
 // RUN: c-index-test -code-completion-at=%s:4:17 %s | FileCheck -check-prefix=CHECK-CVQUAL-AFTER %s
-// CHECK-CVQUAL-AFTER: NotImplemented:{TypedText const} (40)
-// CHECK-CVQUAL-AFTER: NotImplemented:{TypedText volatile} (40)
+// CHECK-CVQUAL-AFTER: Keyword:{TypedText const} (40)
+// CHECK-CVQUAL-AFTER: Keyword:{TypedText volatile} (40)
 
 // RUN: c-index-test -code-completion-at=%s:4:23 %s | FileCheck -check-prefix=CHECK-CVQUAL-AFTER2 %s
-// CHECK-CVQUAL-AFTER2-NOT: NotImplemented:{TypedText const} (40)
-// CHECK-CVQUAL-AFTER2: NotImplemented:{TypedText volatile} (40)
+// CHECK-CVQUAL-AFTER2-NOT: Keyword:{TypedText const} (40)
+// CHECK-CVQUAL-AFTER2: Keyword:{TypedText volatile} (40)

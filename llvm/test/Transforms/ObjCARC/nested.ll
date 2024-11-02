@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
 %struct.__objcFastEnumerationState = type { i64, i8**, i64*, [5 x i64] }
 
@@ -821,5 +821,5 @@ entry:
 
 
 ; CHECK: attributes [[NUW]] = { nounwind }
-; CHECK: attributes #1 = { argmemonly nofree nounwind willreturn writeonly }
+; CHECK: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #2 = { nonlazybind }

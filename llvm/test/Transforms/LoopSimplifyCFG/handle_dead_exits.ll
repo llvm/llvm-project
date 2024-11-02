@@ -53,7 +53,7 @@ never:
 
 never-unwind:
 ; CHECK: never-unwind:
-; CHECK-NEXT: ret i32 undef
+; CHECK-NEXT: ret i32 poison
   %p = phi i32 [1, %never]
   %res = landingpad token cleanup
   ret i32 %p

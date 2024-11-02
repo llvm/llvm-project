@@ -2,7 +2,7 @@
 ; coro.begin.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define nonnull i8* @f(i32 %n) "coroutine.presplit"="1" {
+define nonnull i8* @f(i32 %n) presplitcoroutine {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* bitcast ([3 x void (%f.Frame*)*]* @f.resumers to i8*))

@@ -23,4 +23,4 @@ declare <4 x i32> @llvm.aarch64.neon.shadd.v4i32(<4 x i32>, <4 x i32>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, i32)
 
 ; CHECK: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { nofree nounwind willreturn }
-; CHECK: attributes [[NO_CALLBACK_NOFREE_NOSYNC_NOUNWIND_READNONE_WILLRETURN]] = { nocallback nofree nosync nounwind readnone willreturn }
+; CHECK: attributes [[NO_CALLBACK_NOFREE_NOSYNC_NOUNWIND_READNONE_WILLRETURN]] = { nocallback nofree nosync nounwind willreturn memory(none) }

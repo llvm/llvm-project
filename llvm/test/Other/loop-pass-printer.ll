@@ -35,7 +35,7 @@
 ; BAR:	    ; Exit blocks
 ; BAR:	     end:
 
-; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}} {{.*}}%loop
+; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}} {{.*}}loop
 ; FOO-MODULE-NEXT: ModuleID =
 ; FOO-MODULE: define void @foo
 ; FOO-MODULE: define void @bar

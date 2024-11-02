@@ -31,7 +31,7 @@ define <2 x i32> @stest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    i64x2.gt_s
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -75,7 +75,7 @@ define <2 x i32> @utest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    i64x2.replace_lane 1
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -113,7 +113,7 @@ define <2 x i32> @ustest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    i64x2.gt_s
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -302,7 +302,7 @@ define <2 x i16> @stest_f64i16(<2 x double> %x) {
 ; CHECK-NEXT:    v128.const -32768, -32768, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
@@ -329,7 +329,7 @@ define <2 x i16> @utest_f64i16(<2 x double> %x) {
 ; CHECK-NEXT:    v128.const 65535, 65535, 0, 0
 ; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <2 x double> %x to <2 x i32>
@@ -356,7 +356,7 @@ define <2 x i16> @ustest_f64i16(<2 x double> %x) {
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
@@ -379,7 +379,7 @@ define <4 x i16> @stest_f32i16(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const -32768, -32768, -32768, -32768
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -400,7 +400,7 @@ define <4 x i16> @utest_f32i16(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
 ; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <4 x float> %x to <4 x i32>
@@ -421,7 +421,7 @@ define <4 x i16> @ustest_f32i16(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -1539,7 +1539,7 @@ define <2 x i32> @stest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    i64x2.gt_s
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -1581,7 +1581,7 @@ define <2 x i32> @utest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    i64x2.replace_lane 1
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -1618,7 +1618,7 @@ define <2 x i32> @ustest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    i64x2.gt_s
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i64>
@@ -1795,7 +1795,7 @@ define <2 x i16> @stest_f64i16_mm(<2 x double> %x) {
 ; CHECK-NEXT:    v128.const -32768, -32768, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
@@ -1820,7 +1820,7 @@ define <2 x i16> @utest_f64i16_mm(<2 x double> %x) {
 ; CHECK-NEXT:    v128.const 65535, 65535, 0, 0
 ; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <2 x double> %x to <2 x i32>
@@ -1846,7 +1846,7 @@ define <2 x i16> @ustest_f64i16_mm(<2 x double> %x) {
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
@@ -1867,7 +1867,7 @@ define <4 x i16> @stest_f32i16_mm(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const -32768, -32768, -32768, -32768
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -1886,7 +1886,7 @@ define <4 x i16> @utest_f32i16_mm(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
 ; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <4 x float> %x to <4 x i32>
@@ -1906,7 +1906,7 @@ define <4 x i16> @ustest_f32i16_mm(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>

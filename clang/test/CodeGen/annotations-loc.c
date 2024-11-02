@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
 // END.
 # 1 "t.c"
 # 1 "<built-in>"
@@ -7,4 +7,4 @@
 int __attribute((annotate("foo"))) foo(void) { return 0; }
 
 // CHECK: private unnamed_addr constant [4 x i8] c"t.c\00"
-// CHECK: @llvm.global.annotations = {{.*}}, i32 1, i8* null }
+// CHECK: @llvm.global.annotations = {{.*}}, i32 1, ptr null }

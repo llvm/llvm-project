@@ -59,22 +59,22 @@ body:             |
     ; CHECK-OFFSET-NEXT: st2w { z0.s, z1.s }, p0, [sp, #14, mul vl]
     ; CHECK-OFFSET-NEXT: st2d { z0.d, z1.d }, p0, [sp, #-16, mul vl]
     ; CHECK-OFFSET-NEXT: st2d { z0.d, z1.d }, p0, [sp, #14, mul vl]
-    ; CHECK-OFFSET-NEXT: st3b { z0.b, z1.b, z2.b }, p0, [sp, #-24, mul vl]
-    ; CHECK-OFFSET-NEXT: st3b { z0.b, z1.b, z2.b }, p0, [sp, #21, mul vl]
-    ; CHECK-OFFSET-NEXT: st3h { z0.h, z1.h, z2.h }, p0, [sp, #-24, mul vl]
-    ; CHECK-OFFSET-NEXT: st3h { z0.h, z1.h, z2.h }, p0, [sp, #21, mul vl]
-    ; CHECK-OFFSET-NEXT: st3w { z0.s, z1.s, z2.s }, p0, [sp, #-24, mul vl]
-    ; CHECK-OFFSET-NEXT: st3w { z0.s, z1.s, z2.s }, p0, [sp, #21, mul vl]
-    ; CHECK-OFFSET-NEXT: st3d { z0.d, z1.d, z2.d }, p0, [sp, #-24, mul vl]
-    ; CHECK-OFFSET-NEXT: st3d { z0.d, z1.d, z2.d }, p0, [sp, #21, mul vl]
-    ; CHECK-OFFSET-NEXT: st4b { z0.b, z1.b, z2.b, z3.b }, p0, [sp, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: st4b { z0.b, z1.b, z2.b, z3.b }, p0, [sp, #28, mul vl]
-    ; CHECK-OFFSET-NEXT: st4h { z0.h, z1.h, z2.h, z3.h }, p0, [sp, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: st4h { z0.h, z1.h, z2.h, z3.h }, p0, [sp, #28, mul vl]
-    ; CHECK-OFFSET-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [sp, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [sp, #28, mul vl]
-    ; CHECK-OFFSET-NEXT: st4d { z0.d, z1.d, z2.d, z3.d }, p0, [sp, #-32, mul vl]
-    ; CHECK-OFFSET-NEXT: st4d { z0.d, z1.d, z2.d, z3.d }, p0, [sp, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st3b { z0.b - z2.b }, p0, [sp, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3b { z0.b - z2.b }, p0, [sp, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st3h { z0.h - z2.h }, p0, [sp, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3h { z0.h - z2.h }, p0, [sp, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st3w { z0.s - z2.s }, p0, [sp, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3w { z0.s - z2.s }, p0, [sp, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st3d { z0.d - z2.d }, p0, [sp, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3d { z0.d - z2.d }, p0, [sp, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st4b { z0.b - z3.b }, p0, [sp, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4b { z0.b - z3.b }, p0, [sp, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st4h { z0.h - z3.h }, p0, [sp, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4h { z0.h - z3.h }, p0, [sp, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st4w { z0.s - z3.s }, p0, [sp, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4w { z0.s - z3.s }, p0, [sp, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st4d { z0.d - z3.d }, p0, [sp, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4d { z0.d - z3.d }, p0, [sp, #28, mul vl]
     ; CHECK-OFFSET-NEXT: addvl sp, sp, #31
     ; CHECK-OFFSET-NEXT: addvl sp, sp, #1
     ; CHECK-OFFSET-NEXT: ldr x29, [sp], #16
@@ -195,37 +195,37 @@ body:             |
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #2
     ; CHECK-OFFSET-NEXT: st2d { z0.d, z1.d }, p0, [x8, #14, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-3
-    ; CHECK-OFFSET-NEXT: st3b { z0.b, z1.b, z2.b }, p0, [x8, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3b { z0.b - z2.b }, p0, [x8, #-24, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #3
-    ; CHECK-OFFSET-NEXT: st3b { z0.b, z1.b, z2.b }, p0, [x8, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st3b { z0.b - z2.b }, p0, [x8, #21, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-3
-    ; CHECK-OFFSET-NEXT: st3h { z0.h, z1.h, z2.h }, p0, [x8, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3h { z0.h - z2.h }, p0, [x8, #-24, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #3
-    ; CHECK-OFFSET-NEXT: st3h { z0.h, z1.h, z2.h }, p0, [x8, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st3h { z0.h - z2.h }, p0, [x8, #21, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-3
-    ; CHECK-OFFSET-NEXT: st3w { z0.s, z1.s, z2.s }, p0, [x8, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3w { z0.s - z2.s }, p0, [x8, #-24, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #3
-    ; CHECK-OFFSET-NEXT: st3w { z0.s, z1.s, z2.s }, p0, [x8, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st3w { z0.s - z2.s }, p0, [x8, #21, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-3
-    ; CHECK-OFFSET-NEXT: st3d { z0.d, z1.d, z2.d }, p0, [x8, #-24, mul vl]
+    ; CHECK-OFFSET-NEXT: st3d { z0.d - z2.d }, p0, [x8, #-24, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #3
-    ; CHECK-OFFSET-NEXT: st3d { z0.d, z1.d, z2.d }, p0, [x8, #21, mul vl]
+    ; CHECK-OFFSET-NEXT: st3d { z0.d - z2.d }, p0, [x8, #21, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-4
-    ; CHECK-OFFSET-NEXT: st4b { z0.b, z1.b, z2.b, z3.b }, p0, [x8, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4b { z0.b - z3.b }, p0, [x8, #-32, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #4
-    ; CHECK-OFFSET-NEXT: st4b { z0.b, z1.b, z2.b, z3.b }, p0, [x8, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st4b { z0.b - z3.b }, p0, [x8, #28, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-4
-    ; CHECK-OFFSET-NEXT: st4h { z0.h, z1.h, z2.h, z3.h }, p0, [x8, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4h { z0.h - z3.h }, p0, [x8, #-32, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #4
-    ; CHECK-OFFSET-NEXT: st4h { z0.h, z1.h, z2.h, z3.h }, p0, [x8, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st4h { z0.h - z3.h }, p0, [x8, #28, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-4
-    ; CHECK-OFFSET-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x8, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4w { z0.s - z3.s }, p0, [x8, #-32, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #4
-    ; CHECK-OFFSET-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x8, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st4w { z0.s - z3.s }, p0, [x8, #28, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #-4
-    ; CHECK-OFFSET-NEXT: st4d { z0.d, z1.d, z2.d, z3.d }, p0, [x8, #-32, mul vl]
+    ; CHECK-OFFSET-NEXT: st4d { z0.d - z3.d }, p0, [x8, #-32, mul vl]
     ; CHECK-OFFSET-NEXT: addvl x8, sp, #4
-    ; CHECK-OFFSET-NEXT: st4d { z0.d, z1.d, z2.d, z3.d }, p0, [x8, #28, mul vl]
+    ; CHECK-OFFSET-NEXT: st4d { z0.d - z3.d }, p0, [x8, #28, mul vl]
     ; CHECK-OFFSET-NEXT: addvl sp, sp, #31
     ; CHECK-OFFSET-NEXT: addvl sp, sp, #1
     ; CHECK-OFFSET-NEXT: ldr x29, [sp], #16

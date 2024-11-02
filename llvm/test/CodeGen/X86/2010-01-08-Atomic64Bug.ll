@@ -4,7 +4,7 @@
 ; PHI defs in the atomic loop should be used by the add / adc
 ; instructions. They should not be dead.
 
-define void @t(i64* nocapture %p) nounwind ssp {
+define void @t(ptr nocapture %p) nounwind ssp {
 entry:
 ; CHECK-LABEL: t:
 ; CHECK: movl ([[REG:%[a-z]+]]), %eax
@@ -16,6 +16,6 @@ entry:
 ; CHECK: adcl $0, %ecx
 ; CHECK: lock cmpxchg8b ([[REG]])
 ; CHECK-NEXT: jne
-  %0 = atomicrmw add i64* %p, i64 1 seq_cst
+  %0 = atomicrmw add ptr %p, i64 1 seq_cst
   ret void
 }

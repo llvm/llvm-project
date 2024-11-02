@@ -153,7 +153,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     return nullptr;
 
   // Since we may modify cmp of this MBB, make sure NZCV does not live out.
-  for (auto SuccBB : MBB->successors())
+  for (auto *SuccBB : MBB->successors())
     if (SuccBB->isLiveIn(AArch64::NZCV))
       return nullptr;
 

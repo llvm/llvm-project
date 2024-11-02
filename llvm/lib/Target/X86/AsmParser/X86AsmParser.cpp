@@ -9,6 +9,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86AsmParserCommon.h"
@@ -422,18 +423,18 @@ private:
   };
 
   class IntelExprStateMachine {
-    IntelExprState State, PrevState;
-    unsigned BaseReg, IndexReg, TmpReg, Scale;
-    int64_t Imm;
-    const MCExpr *Sym;
+    IntelExprState State = IES_INIT, PrevState = IES_ERROR;
+    unsigned BaseReg = 0, IndexReg = 0, TmpReg = 0, Scale = 0;
+    int64_t Imm = 0;
+    const MCExpr *Sym = nullptr;
     StringRef SymName;
     InfixCalculator IC;
     InlineAsmIdentifierInfo Info;
-    short BracCount;
-    bool MemExpr;
-    bool OffsetOperator;
-    bool AttachToOperandIdx;
-    bool IsPIC;
+    short BracCount = 0;
+    bool MemExpr = false;
+    bool OffsetOperator = false;
+    bool AttachToOperandIdx = false;
+    bool IsPIC = false;
     SMLoc OffsetOperatorLoc;
     AsmTypeInfo CurType;
 
@@ -448,11 +449,7 @@ private:
     }
 
   public:
-    IntelExprStateMachine()
-        : State(IES_INIT), PrevState(IES_ERROR), BaseReg(0), IndexReg(0),
-          TmpReg(0), Scale(0), Imm(0), Sym(nullptr), BracCount(0),
-          MemExpr(false), OffsetOperator(false), AttachToOperandIdx(false),
-          IsPIC(false) {}
+    IntelExprStateMachine() = default;
 
     void addImm(int64_t imm) { Imm += imm; }
     short getBracCount() const { return BracCount; }
@@ -1924,7 +1921,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           break;
         return Error(Tok.getLoc(), "unknown token in expression");
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AsmToken::String: {
       if (Parser.isParsingMasm()) {
         // MASM parsers handle strings in expressions as constants.
@@ -1940,7 +1937,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           return Error(ValueLoc, ErrMsg);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case AsmToken::At:
     case AsmToken::Identifier: {
@@ -3836,84 +3833,33 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
 }
 
 bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
+  using namespace X86;
   const MCRegisterInfo *MRI = getContext().getRegisterInfo();
-
-  switch (Inst.getOpcode()) {
-  case X86::VGATHERDPDYrm:
-  case X86::VGATHERDPDrm:
-  case X86::VGATHERDPSYrm:
-  case X86::VGATHERDPSrm:
-  case X86::VGATHERQPDYrm:
-  case X86::VGATHERQPDrm:
-  case X86::VGATHERQPSYrm:
-  case X86::VGATHERQPSrm:
-  case X86::VPGATHERDDYrm:
-  case X86::VPGATHERDDrm:
-  case X86::VPGATHERDQYrm:
-  case X86::VPGATHERDQrm:
-  case X86::VPGATHERQDYrm:
-  case X86::VPGATHERQDrm:
-  case X86::VPGATHERQQYrm:
-  case X86::VPGATHERQQrm: {
-    unsigned Dest = MRI->getEncodingValue(Inst.getOperand(0).getReg());
-    unsigned Mask = MRI->getEncodingValue(Inst.getOperand(1).getReg());
-    unsigned Index =
-      MRI->getEncodingValue(Inst.getOperand(3 + X86::AddrIndexReg).getReg());
-    if (Dest == Mask || Dest == Index || Mask == Index)
-      return Warning(Ops[0]->getStartLoc(), "mask, index, and destination "
-                                            "registers should be distinct");
-    break;
-  }
-  case X86::VGATHERDPDZ128rm:
-  case X86::VGATHERDPDZ256rm:
-  case X86::VGATHERDPDZrm:
-  case X86::VGATHERDPSZ128rm:
-  case X86::VGATHERDPSZ256rm:
-  case X86::VGATHERDPSZrm:
-  case X86::VGATHERQPDZ128rm:
-  case X86::VGATHERQPDZ256rm:
-  case X86::VGATHERQPDZrm:
-  case X86::VGATHERQPSZ128rm:
-  case X86::VGATHERQPSZ256rm:
-  case X86::VGATHERQPSZrm:
-  case X86::VPGATHERDDZ128rm:
-  case X86::VPGATHERDDZ256rm:
-  case X86::VPGATHERDDZrm:
-  case X86::VPGATHERDQZ128rm:
-  case X86::VPGATHERDQZ256rm:
-  case X86::VPGATHERDQZrm:
-  case X86::VPGATHERQDZ128rm:
-  case X86::VPGATHERQDZ256rm:
-  case X86::VPGATHERQDZrm:
-  case X86::VPGATHERQQZ128rm:
-  case X86::VPGATHERQQZ256rm:
-  case X86::VPGATHERQQZrm: {
-    unsigned Dest = MRI->getEncodingValue(Inst.getOperand(0).getReg());
-    unsigned Index =
-      MRI->getEncodingValue(Inst.getOperand(4 + X86::AddrIndexReg).getReg());
-    if (Dest == Index)
-      return Warning(Ops[0]->getStartLoc(), "index and destination registers "
-                                            "should be distinct");
-    break;
-  }
-  case X86::V4FMADDPSrm:
-  case X86::V4FMADDPSrmk:
-  case X86::V4FMADDPSrmkz:
-  case X86::V4FMADDSSrm:
-  case X86::V4FMADDSSrmk:
-  case X86::V4FMADDSSrmkz:
-  case X86::V4FNMADDPSrm:
-  case X86::V4FNMADDPSrmk:
-  case X86::V4FNMADDPSrmkz:
-  case X86::V4FNMADDSSrm:
-  case X86::V4FNMADDSSrmk:
-  case X86::V4FNMADDSSrmkz:
-  case X86::VP4DPWSSDSrm:
-  case X86::VP4DPWSSDSrmk:
-  case X86::VP4DPWSSDSrmkz:
-  case X86::VP4DPWSSDrm:
-  case X86::VP4DPWSSDrmk:
-  case X86::VP4DPWSSDrmkz: {
+  unsigned Opcode = Inst.getOpcode();
+  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+  if (isVFCMADDCPH(Opcode) || isVFCMADDCSH(Opcode) || isVFMADDCPH(Opcode) ||
+      isVFMADDCSH(Opcode)) {
+    unsigned Dest = Inst.getOperand(0).getReg();
+    for (unsigned i = 2; i < Inst.getNumOperands(); i++)
+      if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
+        return Warning(Ops[0]->getStartLoc(), "Destination register should be "
+                                              "distinct from source registers");
+  } else if (isVFCMULCPH(Opcode) || isVFCMULCSH(Opcode) || isVFMULCPH(Opcode) ||
+             isVFMULCSH(Opcode)) {
+    unsigned Dest = Inst.getOperand(0).getReg();
+    // The mask variants have different operand list. Scan from the third
+    // operand to avoid emitting incorrect warning.
+    //    VFMULCPHZrr   Dest, Src1, Src2
+    //    VFMULCPHZrrk  Dest, Dest, Mask, Src1, Src2
+    //    VFMULCPHZrrkz Dest, Mask, Src1, Src2
+    for (unsigned i = TSFlags & X86II::EVEX_K ? 2 : 1;
+         i < Inst.getNumOperands(); i++)
+      if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
+        return Warning(Ops[0]->getStartLoc(), "Destination register should be "
+                                              "distinct from source registers");
+  } else if (isV4FMADDPS(Opcode) || isV4FMADDSS(Opcode) ||
+             isV4FNMADDPS(Opcode) || isV4FNMADDSS(Opcode) ||
+             isVP4DPWSSDS(Opcode) || isVP4DPWSSD(Opcode)) {
     unsigned Src2 = Inst.getOperand(Inst.getNumOperands() -
                                     X86::AddrNumOperands - 1).getReg();
     unsigned Src2Enc = MRI->getEncodingValue(Src2);
@@ -3927,186 +3873,34 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
                      RegName.take_front(3) + Twine(GroupEnd) +
                      "' source group");
     }
-    break;
-  }
-  case X86::VFCMADDCPHZ128m:
-  case X86::VFCMADDCPHZ256m:
-  case X86::VFCMADDCPHZm:
-  case X86::VFCMADDCPHZ128mb:
-  case X86::VFCMADDCPHZ256mb:
-  case X86::VFCMADDCPHZmb:
-  case X86::VFCMADDCPHZ128mbk:
-  case X86::VFCMADDCPHZ256mbk:
-  case X86::VFCMADDCPHZmbk:
-  case X86::VFCMADDCPHZ128mbkz:
-  case X86::VFCMADDCPHZ256mbkz:
-  case X86::VFCMADDCPHZmbkz:
-  case X86::VFCMADDCPHZ128mk:
-  case X86::VFCMADDCPHZ256mk:
-  case X86::VFCMADDCPHZmk:
-  case X86::VFCMADDCPHZ128mkz:
-  case X86::VFCMADDCPHZ256mkz:
-  case X86::VFCMADDCPHZmkz:
-  case X86::VFCMADDCPHZ128r:
-  case X86::VFCMADDCPHZ256r:
-  case X86::VFCMADDCPHZr:
-  case X86::VFCMADDCPHZ128rk:
-  case X86::VFCMADDCPHZ256rk:
-  case X86::VFCMADDCPHZrk:
-  case X86::VFCMADDCPHZ128rkz:
-  case X86::VFCMADDCPHZ256rkz:
-  case X86::VFCMADDCPHZrkz:
-  case X86::VFCMADDCPHZrb:
-  case X86::VFCMADDCPHZrbk:
-  case X86::VFCMADDCPHZrbkz:
-  case X86::VFCMADDCSHZm:
-  case X86::VFCMADDCSHZmk:
-  case X86::VFCMADDCSHZmkz:
-  case X86::VFCMADDCSHZr:
-  case X86::VFCMADDCSHZrb:
-  case X86::VFCMADDCSHZrbk:
-  case X86::VFCMADDCSHZrbkz:
-  case X86::VFCMADDCSHZrk:
-  case X86::VFCMADDCSHZrkz:
-  case X86::VFMADDCPHZ128m:
-  case X86::VFMADDCPHZ256m:
-  case X86::VFMADDCPHZm:
-  case X86::VFMADDCPHZ128mb:
-  case X86::VFMADDCPHZ256mb:
-  case X86::VFMADDCPHZmb:
-  case X86::VFMADDCPHZ128mbk:
-  case X86::VFMADDCPHZ256mbk:
-  case X86::VFMADDCPHZmbk:
-  case X86::VFMADDCPHZ128mbkz:
-  case X86::VFMADDCPHZ256mbkz:
-  case X86::VFMADDCPHZmbkz:
-  case X86::VFMADDCPHZ128mk:
-  case X86::VFMADDCPHZ256mk:
-  case X86::VFMADDCPHZmk:
-  case X86::VFMADDCPHZ128mkz:
-  case X86::VFMADDCPHZ256mkz:
-  case X86::VFMADDCPHZmkz:
-  case X86::VFMADDCPHZ128r:
-  case X86::VFMADDCPHZ256r:
-  case X86::VFMADDCPHZr:
-  case X86::VFMADDCPHZ128rk:
-  case X86::VFMADDCPHZ256rk:
-  case X86::VFMADDCPHZrk:
-  case X86::VFMADDCPHZ128rkz:
-  case X86::VFMADDCPHZ256rkz:
-  case X86::VFMADDCPHZrkz:
-  case X86::VFMADDCPHZrb:
-  case X86::VFMADDCPHZrbk:
-  case X86::VFMADDCPHZrbkz:
-  case X86::VFMADDCSHZm:
-  case X86::VFMADDCSHZmk:
-  case X86::VFMADDCSHZmkz:
-  case X86::VFMADDCSHZr:
-  case X86::VFMADDCSHZrb:
-  case X86::VFMADDCSHZrbk:
-  case X86::VFMADDCSHZrbkz:
-  case X86::VFMADDCSHZrk:
-  case X86::VFMADDCSHZrkz: {
-    unsigned Dest = Inst.getOperand(0).getReg();
-    for (unsigned i = 2; i < Inst.getNumOperands(); i++)
-      if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
-        return Warning(Ops[0]->getStartLoc(), "Destination register should be "
-                                              "distinct from source registers");
-    break;
-  }
-  case X86::VFCMULCPHZ128rm:
-  case X86::VFCMULCPHZ256rm:
-  case X86::VFCMULCPHZrm:
-  case X86::VFCMULCPHZ128rmb:
-  case X86::VFCMULCPHZ256rmb:
-  case X86::VFCMULCPHZrmb:
-  case X86::VFCMULCPHZ128rmbk:
-  case X86::VFCMULCPHZ256rmbk:
-  case X86::VFCMULCPHZrmbk:
-  case X86::VFCMULCPHZ128rmbkz:
-  case X86::VFCMULCPHZ256rmbkz:
-  case X86::VFCMULCPHZrmbkz:
-  case X86::VFCMULCPHZ128rmk:
-  case X86::VFCMULCPHZ256rmk:
-  case X86::VFCMULCPHZrmk:
-  case X86::VFCMULCPHZ128rmkz:
-  case X86::VFCMULCPHZ256rmkz:
-  case X86::VFCMULCPHZrmkz:
-  case X86::VFCMULCPHZ128rr:
-  case X86::VFCMULCPHZ256rr:
-  case X86::VFCMULCPHZrr:
-  case X86::VFCMULCPHZ128rrk:
-  case X86::VFCMULCPHZ256rrk:
-  case X86::VFCMULCPHZrrk:
-  case X86::VFCMULCPHZ128rrkz:
-  case X86::VFCMULCPHZ256rrkz:
-  case X86::VFCMULCPHZrrkz:
-  case X86::VFCMULCPHZrrb:
-  case X86::VFCMULCPHZrrbk:
-  case X86::VFCMULCPHZrrbkz:
-  case X86::VFCMULCSHZrm:
-  case X86::VFCMULCSHZrmk:
-  case X86::VFCMULCSHZrmkz:
-  case X86::VFCMULCSHZrr:
-  case X86::VFCMULCSHZrrb:
-  case X86::VFCMULCSHZrrbk:
-  case X86::VFCMULCSHZrrbkz:
-  case X86::VFCMULCSHZrrk:
-  case X86::VFCMULCSHZrrkz:
-  case X86::VFMULCPHZ128rm:
-  case X86::VFMULCPHZ256rm:
-  case X86::VFMULCPHZrm:
-  case X86::VFMULCPHZ128rmb:
-  case X86::VFMULCPHZ256rmb:
-  case X86::VFMULCPHZrmb:
-  case X86::VFMULCPHZ128rmbk:
-  case X86::VFMULCPHZ256rmbk:
-  case X86::VFMULCPHZrmbk:
-  case X86::VFMULCPHZ128rmbkz:
-  case X86::VFMULCPHZ256rmbkz:
-  case X86::VFMULCPHZrmbkz:
-  case X86::VFMULCPHZ128rmk:
-  case X86::VFMULCPHZ256rmk:
-  case X86::VFMULCPHZrmk:
-  case X86::VFMULCPHZ128rmkz:
-  case X86::VFMULCPHZ256rmkz:
-  case X86::VFMULCPHZrmkz:
-  case X86::VFMULCPHZ128rr:
-  case X86::VFMULCPHZ256rr:
-  case X86::VFMULCPHZrr:
-  case X86::VFMULCPHZ128rrk:
-  case X86::VFMULCPHZ256rrk:
-  case X86::VFMULCPHZrrk:
-  case X86::VFMULCPHZ128rrkz:
-  case X86::VFMULCPHZ256rrkz:
-  case X86::VFMULCPHZrrkz:
-  case X86::VFMULCPHZrrb:
-  case X86::VFMULCPHZrrbk:
-  case X86::VFMULCPHZrrbkz:
-  case X86::VFMULCSHZrm:
-  case X86::VFMULCSHZrmk:
-  case X86::VFMULCSHZrmkz:
-  case X86::VFMULCSHZrr:
-  case X86::VFMULCSHZrrb:
-  case X86::VFMULCSHZrrbk:
-  case X86::VFMULCSHZrrbkz:
-  case X86::VFMULCSHZrrk:
-  case X86::VFMULCSHZrrkz: {
-    unsigned Dest = Inst.getOperand(0).getReg();
-    for (unsigned i = 1; i < Inst.getNumOperands(); i++)
-      if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
-        return Warning(Ops[0]->getStartLoc(), "Destination register should be "
-                                              "distinct from source registers");
-    break;
-  }
+  } else if (isVGATHERDPD(Opcode) || isVGATHERDPS(Opcode) ||
+             isVGATHERQPD(Opcode) || isVGATHERQPS(Opcode) ||
+             isVPGATHERDD(Opcode) || isVPGATHERDQ(Opcode) ||
+             isVPGATHERQD(Opcode) || isVPGATHERQQ(Opcode)) {
+    bool HasEVEX = (TSFlags & X86II::EncodingMask) == X86II::EVEX;
+    if (HasEVEX) {
+      unsigned Dest = MRI->getEncodingValue(Inst.getOperand(0).getReg());
+      unsigned Index = MRI->getEncodingValue(
+          Inst.getOperand(4 + X86::AddrIndexReg).getReg());
+      if (Dest == Index)
+        return Warning(Ops[0]->getStartLoc(), "index and destination registers "
+                                              "should be distinct");
+    } else {
+      unsigned Dest = MRI->getEncodingValue(Inst.getOperand(0).getReg());
+      unsigned Mask = MRI->getEncodingValue(Inst.getOperand(1).getReg());
+      unsigned Index = MRI->getEncodingValue(
+          Inst.getOperand(3 + X86::AddrIndexReg).getReg());
+      if (Dest == Mask || Dest == Index || Mask == Index)
+        return Warning(Ops[0]->getStartLoc(), "mask, index, and destination "
+                                              "registers should be distinct");
+    }
   }
 
-  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
   // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to
   // check this with the legacy encoding, VEX/EVEX/XOP don't use REX.
-  if ((MCID.TSFlags & X86II::EncodingMask) == 0) {
+  if ((TSFlags & X86II::EncodingMask) == 0) {
     MCPhysReg HReg = X86::NoRegister;
-    bool UsesRex = MCID.TSFlags & X86II::REX_W;
+    bool UsesRex = TSFlags & X86II::REX_W;
     unsigned NumOps = Inst.getNumOperands();
     for (unsigned i = 0; i != NumOps; ++i) {
       const MCOperand &MO = Inst.getOperand(i);
@@ -4470,7 +4264,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
   }
 
-  for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
+  for (unsigned I = 0, E = std::size(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
     if (MemOp && HasVectorReg)
       MemOp->Mem.Size = MemSize[I];
@@ -4516,7 +4310,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   if (NumSuccessfulMatches > 1) {
     char MatchChars[4];
     unsigned NumMatches = 0;
-    for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I)
+    for (unsigned I = 0, E = std::size(Match); I != E; ++I)
       if (Match[I] == Match_Success)
         MatchChars[NumMatches++] = Suffixes[I];
 
@@ -4902,8 +4696,7 @@ bool X86AsmParser::parseDirectiveNops(SMLoc L) {
     if (getParser().parseAbsoluteExpression(Control))
       return true;
   }
-  if (getParser().parseToken(AsmToken::EndOfStatement,
-                             "unexpected token in '.nops' directive"))
+  if (getParser().parseEOL())
     return true;
 
   if (NumBytes <= 0) {
@@ -4925,7 +4718,7 @@ bool X86AsmParser::parseDirectiveNops(SMLoc L) {
 /// parseDirectiveEven
 ///  ::= .even
 bool X86AsmParser::parseDirectiveEven(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+  if (parseEOL())
     return false;
 
   const MCSection *Section = getStreamer().getCurrentSectionOnly();

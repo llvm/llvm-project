@@ -368,6 +368,30 @@ define <8 x i16> @laneselect_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
   ret <8 x i16> %v
 }
 
+; CHECK-LABEL: relaxed_q15mulr_s_i16x8:
+; CHECK-NEXT: .functype relaxed_q15mulr_s_i16x8 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: i16x8.relaxed_q15mulr_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.relaxed.q15mulr.signed(<8 x i16>, <8 x i16>)
+define <8 x i16> @relaxed_q15mulr_s_i16x8(<8 x i16> %a, <8 x i16> %b) {
+  %v = call <8 x i16> @llvm.wasm.relaxed.q15mulr.signed(
+    <8 x i16> %a, <8 x i16> %b
+  )
+  ret <8 x i16> %v
+}
+
+; CHECK-LABEL: dot_i8x16_i7x16_s_i16x8:
+; CHECK-NEXT: .functype dot_i8x16_i7x16_s_i16x8 (v128, v128) -> (v128){{$}}
+; CHECK-NEXT: i16x8.dot_i8x16_i7x16_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.dot.i8x16.i7x16.signed(<16 x i8>, <16 x i8>)
+define <8 x i16> @dot_i8x16_i7x16_s_i16x8(<16 x i8> %a, <16 x i8> %b) {
+  %v = call <8 x i16> @llvm.wasm.dot.i8x16.i7x16.signed(
+    <16 x i8> %a, <16 x i8> %b
+  )
+  ret <8 x i16> %v
+}
+
 ; ==============================================================================
 ; 4 x i32
 ; ==============================================================================
@@ -568,6 +592,20 @@ define <4 x i32> @relaxed_trunc_u_zero(<2 x double> %x) {
   ret <4 x i32> %a
 }
 
+; CHECK-LABEL: dot_i8x16_i7x16_add_s_i32x4:
+; CHECK-NEXT: .functype dot_i8x16_i7x16_add_s_i32x4 (v128, v128, v128) -> (v128){{$}}
+; CHECK-NEXT: i32x4.dot_i8x16_i7x16_add_s $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.dot.i8x16.i7x16.add.signed(<16 x i8>, <16 x i8>,
+                                                        <4 x i32>)
+define <4 x i32> @dot_i8x16_i7x16_add_s_i32x4(<16 x i8> %a, <16 x i8> %b,
+                                              <4 x i32> %c) {
+  %v = call <4 x i32> @llvm.wasm.dot.i8x16.i7x16.add.signed(
+    <16 x i8> %a, <16 x i8> %b, <4 x i32> %c
+  )
+  ret <4 x i32> %v
+}
+
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
@@ -744,6 +782,20 @@ declare <4 x float> @llvm.wasm.relaxed.max.v4f32(<4 x float>, <4 x float>)
 define <4 x float> @relaxed_max_v4f32(<4 x float> %a, <4 x float> %b) {
   %v = call <4 x float> @llvm.wasm.relaxed.max.v4f32(
     <4 x float> %a, <4 x float> %b
+  )
+  ret <4 x float> %v
+}
+
+; CHECK-LABEL: relaxed_dot_bf16x8_add_f32:
+; CHECK-NEXT: .functype relaxed_dot_bf16x8_add_f32 (v128, v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.relaxed_dot_bf16x8_add_f32 $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.relaxed.dot.bf16x8.add.f32(<8 x i16>, <8 x i16>,
+                                                          <4 x float>)
+define <4 x float> @relaxed_dot_bf16x8_add_f32(<8 x i16> %a, <8 x i16> %b,
+                                               <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.relaxed.dot.bf16x8.add.f32(
+    <8 x i16> %a, <8 x i16> %b, <4 x float> %c
   )
   ret <4 x float> %v
 }

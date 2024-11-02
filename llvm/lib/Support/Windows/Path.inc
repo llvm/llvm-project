@@ -130,7 +130,7 @@ namespace fs {
 
 const file_t kInvalidFile = INVALID_HANDLE_VALUE;
 
-std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
+std::string getMainExecutableImpl(const char *argv0, void *MainExecAddr) {
   SmallVector<wchar_t, MAX_PATH> PathName;
   PathName.resize_for_overwrite(PathName.capacity());
   DWORD Size = ::GetModuleFileNameW(NULL, PathName.data(), PathName.size());
@@ -687,7 +687,7 @@ static bool isReservedName(StringRef path) {
     return true;
 
   // Then compare against the list of ancient reserved names.
-  for (size_t i = 0; i < array_lengthof(sReservedNames); ++i) {
+  for (size_t i = 0; i < std::size(sReservedNames); ++i) {
     if (path.equals_insensitive(sReservedNames[i]))
       return true;
   }

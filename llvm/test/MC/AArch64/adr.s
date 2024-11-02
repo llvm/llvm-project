@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-elf -filetype=obj %s -o - | llvm-objdump -d -r - | FileCheck %s
+// RUN: llvm-mc -triple aarch64-elf -filetype=obj %s -o - | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s
 
 // CHECK: adr x0, #100
 // CHECK-NEXT: adr x2, #0

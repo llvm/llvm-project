@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin8 -mattr=+sse2 | FileCheck %s --check-prefix=X64
 ; rdar://6034396
 
-define void @test(i32 %x, float* %y) nounwind {
+define void @test(i32 %x, ptr %y) nounwind {
 ; X32-LABEL: test:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -22,6 +22,6 @@ define void @test(i32 %x, float* %y) nounwind {
 entry:
   lshr i32 %x, 23
   uitofp i32 %0 to float
-  store float %1, float* %y
+  store float %1, ptr %y
   ret void
 }

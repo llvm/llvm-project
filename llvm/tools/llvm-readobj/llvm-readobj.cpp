@@ -162,6 +162,8 @@ static bool COFFTLSDirectory;
 
 // XCOFF specific options.
 static bool XCOFFAuxiliaryHeader;
+static bool XCOFFLoaderSectionHeader;
+static bool XCOFFExceptionSection;
 
 OutputStyleTy Output = OutputStyleTy::LLVM;
 static std::vector<std::string> InputFilenames;
@@ -302,6 +304,8 @@ static void parseOptions(const opt::InputArgList &Args) {
 
   // XCOFF specific options.
   opts::XCOFFAuxiliaryHeader = Args.hasArg(OPT_auxiliary_header);
+  opts::XCOFFLoaderSectionHeader = Args.hasArg(OPT_loader_section_header);
+  opts::XCOFFExceptionSection = Args.hasArg(OPT_exception_section);
 
   opts::InputFilenames = Args.getAllArgValues(OPT_INPUT);
 }
@@ -395,6 +399,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
   if (opts::FileHeaders)
     Dumper->printFileHeaders();
 
+  // Auxiliary header in XOCFF is right after the file header, so print the data
+  // here.
   if (Obj.isXCOFF() && opts::XCOFFAuxiliaryHeader)
     Dumper->printAuxiliaryHeader();
 
@@ -502,6 +508,15 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     if (opts::CGProfile)
       Dumper->printCGProfile();
   }
+
+  if (Obj.isXCOFF()) {
+    if (opts::XCOFFLoaderSectionHeader)
+      Dumper->printLoaderSection(opts::XCOFFLoaderSectionHeader);
+
+    if (opts::XCOFFExceptionSection)
+      Dumper->printExceptionSection();
+  }
+
   if (opts::PrintStackMap)
     Dumper->printStackMap();
   if (opts::PrintStackSizes)
@@ -605,7 +620,7 @@ std::unique_ptr<ScopedPrinter> createWriter() {
   return std::make_unique<ScopedPrinter>(fouts());
 }
 
-int main(int argc, char *argv[]) {
+int llvm_readobj_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);

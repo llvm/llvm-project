@@ -23,18 +23,18 @@
 ; SUMMARY-NEXT:             Byte:            0
 ; SUMMARY-NEXT:             Bit:             0
 
-; CHECK: @vt4a = constant i32 (i8*, i32, i32)* @vf4a
-@vt4a = constant i32 (i8*, i32, i32)* @vf4a, !type !0
+; CHECK: @vt4a = constant ptr @vf4a
+@vt4a = constant ptr @vf4a, !type !0
 
-; CHECK: @vt4b = constant i32 (i8*, i32, i32)* @vf4b
-@vt4b = constant i32 (i8*, i32, i32)* @vf4b, !type !0
+; CHECK: @vt4b = constant ptr @vf4b
+@vt4b = constant ptr @vf4b, !type !0
 
-define i32 @vf4a(i8*, i32 %x, i32 %y) {
+define i32 @vf4a(ptr, i32 %x, i32 %y) {
   %z = add i32 %x, %y
   ret i32 %z
 }
 
-define i32 @vf4b(i8*, i32 %x, i32 %y) {
+define i32 @vf4b(ptr, i32 %x, i32 %y) {
   ret i32 36
 }
 

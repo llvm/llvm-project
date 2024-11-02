@@ -857,12 +857,13 @@ define <4 x i1> @isnan_v4f(<4 x float> %x) {
 ; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-32-NEXT:    sahf
 ; CHECK-32-NEXT:    setp %dh
+; CHECK-32-NEXT:    shlb $2, %dh
 ; CHECK-32-NEXT:    fucomp %st(0)
 ; CHECK-32-NEXT:    fnstsw %ax
 ; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-32-NEXT:    sahf
 ; CHECK-32-NEXT:    setp %dl
-; CHECK-32-NEXT:    addb %dl, %dl
+; CHECK-32-NEXT:    shlb $3, %dl
 ; CHECK-32-NEXT:    orb %dh, %dl
 ; CHECK-32-NEXT:    fucomp %st(0)
 ; CHECK-32-NEXT:    fnstsw %ax
@@ -876,7 +877,6 @@ define <4 x i1> @isnan_v4f(<4 x float> %x) {
 ; CHECK-32-NEXT:    setp %al
 ; CHECK-32-NEXT:    addb %al, %al
 ; CHECK-32-NEXT:    orb %dh, %al
-; CHECK-32-NEXT:    shlb $2, %al
 ; CHECK-32-NEXT:    orb %dl, %al
 ; CHECK-32-NEXT:    movb %al, (%ecx)
 ; CHECK-32-NEXT:    movl %ecx, %eax
@@ -903,11 +903,12 @@ define <4 x i1> @isnan_v4f_strictfp(<4 x float> %x) strictfp {
 ; CHECK-32-NEXT:    andl %ecx, %edx
 ; CHECK-32-NEXT:    cmpl $2139095041, %edx # imm = 0x7F800001
 ; CHECK-32-NEXT:    setge %dh
+; CHECK-32-NEXT:    shlb $2, %dh
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-32-NEXT:    andl %ecx, %esi
 ; CHECK-32-NEXT:    cmpl $2139095041, %esi # imm = 0x7F800001
 ; CHECK-32-NEXT:    setge %dl
-; CHECK-32-NEXT:    addb %dl, %dl
+; CHECK-32-NEXT:    shlb $3, %dl
 ; CHECK-32-NEXT:    orb %dh, %dl
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-32-NEXT:    andl %ecx, %esi
@@ -918,7 +919,6 @@ define <4 x i1> @isnan_v4f_strictfp(<4 x float> %x) strictfp {
 ; CHECK-32-NEXT:    setge %cl
 ; CHECK-32-NEXT:    addb %cl, %cl
 ; CHECK-32-NEXT:    orb %dh, %cl
-; CHECK-32-NEXT:    shlb $2, %cl
 ; CHECK-32-NEXT:    orb %dl, %cl
 ; CHECK-32-NEXT:    movb %cl, (%eax)
 ; CHECK-32-NEXT:    popl %esi

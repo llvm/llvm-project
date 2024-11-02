@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PrintfMatcher.h"
+
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include "utils/UnitTest/StringUtils.h"
@@ -35,8 +37,8 @@ namespace {
     break
 
 void display(testutils::StreamWrapper &stream, FormatSection form) {
-  stream << "Raw String (len " << form.raw_len << "): \"";
-  for (size_t i = 0; i < form.raw_len; ++i) {
+  stream << "Raw String (len " << form.raw_string.size() << "): \"";
+  for (size_t i = 0; i < form.raw_string.size(); ++i) {
     stream << form.raw_string[i];
   }
   stream << "\"";
@@ -70,7 +72,9 @@ void display(testutils::StreamWrapper &stream, FormatSection form) {
                     reinterpret_cast<uintptr_t>(form.conv_val_ptr))
              << "\n";
     else if (form.conv_name != '%')
-      stream << "\tvalue: " << int_to_hex<__uint128_t>(form.conv_val_raw)
+      stream << "\tvalue: "
+             << int_to_hex<fputil::FPBits<long double>::UIntType>(
+                    form.conv_val_raw)
              << "\n";
   }
 }

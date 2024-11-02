@@ -1,4 +1,4 @@
-; RUN: opt -globals-aa -gvn -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=globals-aa -passes='require<globals-aa>,gvn' -S < %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa,globals-aa -passes='require<globals-aa>,gvn' -S < %s | FileCheck %s
 ;
 ; Functions w/o `nosync` attribute may communicate via memory and must be

@@ -94,7 +94,7 @@ normal:
   ret i32 %v
 
 uw:
-  %ehvals = landingpad { i8*, i32 }
+  %ehvals = landingpad { ptr, i32 }
       cleanup
   ret i32 1
 ; CHECK:	callq	_callee_0
@@ -115,7 +115,7 @@ normal:
   ret i32 %v
 
 uw:
-  %ehvals = landingpad { i8*, i32 }
+  %ehvals = landingpad { ptr, i32 }
       cleanup
   ret i32 1
 ; CHECK:	movl	$45, %edi
@@ -127,7 +127,7 @@ uw:
 ; CHECK:	retq
 }
 
-define i32 @invoker_2() personality i32 (...)* @__CxxFrameHandler3 {
+define i32 @invoker_2() personality ptr @__CxxFrameHandler3 {
 entry:
   %val = invoke i32 @callee_1(i32 1)
           to label %try.cont unwind label %catch.dispatch
@@ -136,7 +136,7 @@ catch.dispatch:
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %cp1 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %cp1 = catchpad within %cs1 [ptr null, i32 64, ptr null]
   %val2 = call i32 @callee_1(i32 100) "statepoint-id"="4243" [ "funclet"(token %cp1), "deopt"(i32 55) ]
   catchret from %cp1 to label %try.cont
 
@@ -153,13 +153,13 @@ define void @f_0(i64 %n) {
   ; Check that the stackmap does not reference %s through
   ; SP since the offset is not static because of %vl.
   ; STACKMAPS: Loc 3: Direct 6
-  call void @g_0(i64* %vl) [ "deopt"(i64* %s) ]
+  call void @g_0(ptr %vl) [ "deopt"(ptr %s) ]
   ret void
 }
 
-declare void @g_0(i64* %vl)
+declare void @g_0(ptr %vl)
 
-define void @vector_deopt_bundle(<32 x i64 addrspace(1)*> %val) {
+define void @vector_deopt_bundle(<32 x ptr addrspace(1)> %val) {
 ; CHECK-LABEL: _vector_deopt_bundle:
 ; CHECK: movaps  16(%rbp), %xmm8
 ; CHECK-NEXT: movaps  32(%rbp), %xmm9
@@ -185,7 +185,7 @@ define void @vector_deopt_bundle(<32 x i64 addrspace(1)*> %val) {
 ; CHECK-NEXT: movaps  %xmm2, 32(%rsp)
 ; CHECK-NEXT: movaps  %xmm1, 16(%rsp)
 ; CHECK-NEXT: movaps  %xmm0, (%rsp)
-  call void @unknown() [ "deopt"(<32 x i64 addrspace(1)*> %val) ]
+  call void @unknown() [ "deopt"(<32 x ptr addrspace(1)> %val) ]
   ret void
 ; STACKMAPS: Stack Maps: callsite 2882400015
 ; STACKMAPS-NEXT: Stack Maps:   has 4 locations

@@ -64,6 +64,10 @@ public:
   // more information than the AddDecl class.
   void AddEnumDecl(const EnumDecl *Enum);
 
+  // Use this for ODR checking ObjC protocols. This
+  // method compares more information than the AddDecl class.
+  void AddObjCProtocolDecl(const ObjCProtocolDecl *P);
+
   // Process SubDecls of the main Decl.  This method calls the DeclVisitor
   // while AddDecl does not.
   void AddSubDecl(const Decl *D);
@@ -89,7 +93,7 @@ public:
   // Save booleans until the end to lower the size of data to process.
   void AddBoolean(bool value);
 
-  static bool isDeclToBeProcessed(const Decl* D, const DeclContext *Parent);
+  static bool isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent);
 
 private:
   void AddDeclarationNameImpl(DeclarationName Name);

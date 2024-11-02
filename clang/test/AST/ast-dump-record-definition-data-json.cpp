@@ -323,7 +323,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "isReferenced": true,
-// CHECK-NEXT:    "name": "~",
+// CHECK-NEXT:    "name": "~(lambda at {{.*}})",
 // CHECK-NEXT:    "mangledName": "_ZZ1fvEN3$_0D1Ev",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "void () noexcept"
@@ -708,7 +708,7 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "isReferenced": true,
-// CHECK-NEXT:    "name": "~",
+// CHECK-NEXT:    "name": "~(lambda at {{.*}})",
 // CHECK-NEXT:    "mangledName": "_ZZ1fvEN3$_1D1Ev",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "void () noexcept"

@@ -50,6 +50,8 @@ protected:
 
     ID_WinRes, // Windows resource (.res) file.
 
+    ID_Offload, // Offloading binary file.
+
     // Object and children.
     ID_StartObjects,
     ID_COFF,
@@ -68,8 +70,6 @@ protected:
     ID_MachO64B, // MachO 64-bit, big endian
 
     ID_Wasm,
-
-    ID_Offload, // Offloading binary file.
 
     ID_EndObjects
   };

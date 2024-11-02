@@ -167,7 +167,7 @@ uint32_t EHProgramBuilder::ConvertMachineToLLDBRegister(uint8_t machine_reg) {
       lldb_r8_x86_64,  lldb_r9_x86_64,  lldb_r10_x86_64, lldb_r11_x86_64,
       lldb_r12_x86_64, lldb_r13_x86_64, lldb_r14_x86_64, lldb_r15_x86_64};
 
-  if (machine_reg >= llvm::array_lengthof(machine_to_lldb_register))
+  if (machine_reg >= std::size(machine_to_lldb_register))
     return LLDB_INVALID_REGNUM;
 
   return machine_to_lldb_register[machine_reg];
@@ -182,7 +182,7 @@ uint32_t EHProgramBuilder::ConvertXMMToLLDBRegister(uint8_t xmm_reg) {
       lldb_xmm12_x86_64, lldb_xmm13_x86_64, lldb_xmm14_x86_64,
       lldb_xmm15_x86_64};
 
-  if (xmm_reg >= llvm::array_lengthof(xmm_to_lldb_register))
+  if (xmm_reg >= std::size(xmm_to_lldb_register))
     return LLDB_INVALID_REGNUM;
 
   return xmm_to_lldb_register[xmm_reg];

@@ -13,6 +13,13 @@
 #include <stdlib.h>
 
 void __asan_set_shadow_00(size_t addr, size_t size);
+void __asan_set_shadow_01(size_t addr, size_t size);
+void __asan_set_shadow_02(size_t addr, size_t size);
+void __asan_set_shadow_03(size_t addr, size_t size);
+void __asan_set_shadow_04(size_t addr, size_t size);
+void __asan_set_shadow_05(size_t addr, size_t size);
+void __asan_set_shadow_06(size_t addr, size_t size);
+void __asan_set_shadow_07(size_t addr, size_t size);
 void __asan_set_shadow_f1(size_t addr, size_t size);
 void __asan_set_shadow_f2(size_t addr, size_t size);
 void __asan_set_shadow_f3(size_t addr, size_t size);
@@ -32,6 +39,34 @@ void f(long arg) {
   // X00: PASS
   case 0x00:
     return __asan_set_shadow_00(addr, 1);
+  // X01: AddressSanitizer: stack-buffer-overflow
+  // X01: [01]
+  case 0x01:
+    return __asan_set_shadow_01(addr, 1);
+  // X02: AddressSanitizer: stack-buffer-overflow
+  // X02: [02]
+  case 0x02:
+    return __asan_set_shadow_02(addr, 1);
+  // X03: AddressSanitizer: stack-buffer-overflow
+  // X03: [03]
+  case 0x03:
+    return __asan_set_shadow_03(addr, 1);
+  // X04: AddressSanitizer: stack-buffer-overflow
+  // X04: [04]
+  case 0x04:
+    return __asan_set_shadow_04(addr, 1);
+  // X05: AddressSanitizer: stack-buffer-overflow
+  // X05: [05]
+  case 0x05:
+    return __asan_set_shadow_05(addr, 1);
+  // X06: AddressSanitizer: stack-buffer-overflow
+  // X06: [06]
+  case 0x06:
+    return __asan_set_shadow_06(addr, 1);
+  // X07: AddressSanitizer: stack-buffer-overflow
+  // X07: [07]
+  case 0x07:
+    return __asan_set_shadow_07(addr, 1);
   // XF1: AddressSanitizer: stack-buffer-underflow
   // XF1: [f1]
   case 0xf1:

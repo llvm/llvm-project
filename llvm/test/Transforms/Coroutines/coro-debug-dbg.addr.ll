@@ -43,7 +43,7 @@
 source_filename = "../llvm/test/Transforms/Coroutines/coro-debug-dbg.values-O2.ll"
 declare void @consume(i32)
 
-define void @f(i32 %i, i32 %j, i8* %ptr) "coroutine.presplit"="0" !dbg !8 {
+define void @f(i32 %i, i32 %j, i8* %ptr) presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
   %x = alloca [10 x i32], align 16

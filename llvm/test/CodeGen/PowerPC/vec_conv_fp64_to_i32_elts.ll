@@ -43,7 +43,7 @@ entry:
   ret i64 %1
 }
 
-define <4 x i32> @test4elt(<4 x double>* nocapture readonly) local_unnamed_addr #1 {
+define <4 x i32> @test4elt(ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test4elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r4, 16
@@ -80,12 +80,12 @@ define <4 x i32> @test4elt(<4 x double>* nocapture readonly) local_unnamed_addr 
 ; CHECK-BE-NEXT:    vmrgew v2, v3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <4 x double>, <4 x double>* %0, align 32
+  %a = load <4 x double>, ptr %0, align 32
   %1 = fptoui <4 x double> %a to <4 x i32>
   ret <4 x i32> %1
 }
 
-define void @test8elt(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.result, <8 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test8elt(ptr noalias nocapture sret(<8 x i32>) %agg.result, ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32
@@ -95,22 +95,18 @@ define void @test8elt(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.result, 
 ; CHECK-P8-NEXT:    li r5, 16
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r5
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
-; CHECK-P8-NEXT:    xxmrgld vs4, vs1, vs0
-; CHECK-P8-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-P8-NEXT:    xxmrgld vs1, vs2, vs3
-; CHECK-P8-NEXT:    xxmrghd vs2, vs2, vs3
+; CHECK-P8-NEXT:    xxmrghd vs4, vs0, vs1
+; CHECK-P8-NEXT:    xxmrgld vs0, vs0, vs1
+; CHECK-P8-NEXT:    xxmrghd vs1, vs3, vs2
+; CHECK-P8-NEXT:    xxmrgld vs2, vs3, vs2
 ; CHECK-P8-NEXT:    xvcvdpuxws v2, vs4
 ; CHECK-P8-NEXT:    xvcvdpuxws v3, vs0
 ; CHECK-P8-NEXT:    xvcvdpuxws v4, vs1
 ; CHECK-P8-NEXT:    xvcvdpuxws v5, vs2
 ; CHECK-P8-NEXT:    vmrgew v2, v3, v2
 ; CHECK-P8-NEXT:    vmrgew v3, v5, v4
-; CHECK-P8-NEXT:    stvx v2, r3, r5
-; CHECK-P8-NEXT:    stvx v3, 0, r3
+; CHECK-P8-NEXT:    stxvd2x v2, r3, r5
+; CHECK-P8-NEXT:    stxvd2x v3, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt:
@@ -153,62 +149,54 @@ define void @test8elt(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.result, 
 ; CHECK-BE-NEXT:    stxv v3, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <8 x double>, <8 x double>* %0, align 64
+  %a = load <8 x double>, ptr %0, align 64
   %1 = fptoui <8 x double> %a to <8 x i32>
-  store <8 x i32> %1, <8 x i32>* %agg.result, align 32
+  store <8 x i32> %1, ptr %agg.result, align 32
   ret void
 }
 
-define void @test16elt(<16 x i32>* noalias nocapture sret(<16 x i32>) %agg.result, <16 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test16elt(ptr noalias nocapture sret(<16 x i32>) %agg.result, ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32
 ; CHECK-P8-NEXT:    li r6, 48
-; CHECK-P8-NEXT:    li r8, 64
-; CHECK-P8-NEXT:    li r7, 16
-; CHECK-P8-NEXT:    li r9, 80
-; CHECK-P8-NEXT:    lxvd2x vs7, 0, r4
+; CHECK-P8-NEXT:    li r7, 64
+; CHECK-P8-NEXT:    li r8, 80
+; CHECK-P8-NEXT:    lxvd2x vs8, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
-; CHECK-P8-NEXT:    lxvd2x vs3, r4, r8
-; CHECK-P8-NEXT:    li r8, 96
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
-; CHECK-P8-NEXT:    lxvd2x vs5, r4, r8
+; CHECK-P8-NEXT:    lxvd2x vs3, r4, r8
+; CHECK-P8-NEXT:    li r7, 96
 ; CHECK-P8-NEXT:    li r8, 112
-; CHECK-P8-NEXT:    lxvd2x vs4, r4, r9
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
+; CHECK-P8-NEXT:    lxvd2x vs5, r4, r7
+; CHECK-P8-NEXT:    li r7, 16
 ; CHECK-P8-NEXT:    lxvd2x vs6, r4, r8
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    xxswapd vs4, vs4
-; CHECK-P8-NEXT:    xxswapd vs5, vs5
-; CHECK-P8-NEXT:    xxmrgld vs8, vs1, vs0
-; CHECK-P8-NEXT:    xxswapd vs6, vs6
-; CHECK-P8-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-P8-NEXT:    xxswapd vs1, vs7
-; CHECK-P8-NEXT:    xxmrgld vs7, vs4, vs3
-; CHECK-P8-NEXT:    xxmrghd vs3, vs4, vs3
-; CHECK-P8-NEXT:    xxmrgld vs4, vs6, vs5
-; CHECK-P8-NEXT:    xvcvdpuxws v2, vs8
+; CHECK-P8-NEXT:    xxmrghd vs4, vs0, vs1
+; CHECK-P8-NEXT:    xxmrgld vs0, vs0, vs1
+; CHECK-P8-NEXT:    lxvd2x vs7, r4, r7
+; CHECK-P8-NEXT:    xxmrghd vs1, vs2, vs3
+; CHECK-P8-NEXT:    xxmrgld vs2, vs2, vs3
+; CHECK-P8-NEXT:    xxmrghd vs3, vs5, vs6
 ; CHECK-P8-NEXT:    xvcvdpuxws v3, vs0
-; CHECK-P8-NEXT:    xxmrghd vs0, vs6, vs5
-; CHECK-P8-NEXT:    xxmrgld vs5, vs2, vs1
-; CHECK-P8-NEXT:    xxmrghd vs1, vs2, vs1
-; CHECK-P8-NEXT:    xvcvdpuxws v4, vs7
-; CHECK-P8-NEXT:    xvcvdpuxws v5, vs3
-; CHECK-P8-NEXT:    xvcvdpuxws v0, vs4
+; CHECK-P8-NEXT:    xxmrgld vs0, vs5, vs6
+; CHECK-P8-NEXT:    xvcvdpuxws v4, vs1
+; CHECK-P8-NEXT:    xxmrghd vs1, vs8, vs7
+; CHECK-P8-NEXT:    xvcvdpuxws v5, vs2
+; CHECK-P8-NEXT:    xxmrgld vs2, vs8, vs7
+; CHECK-P8-NEXT:    xvcvdpuxws v2, vs4
+; CHECK-P8-NEXT:    xvcvdpuxws v0, vs3
 ; CHECK-P8-NEXT:    xvcvdpuxws v1, vs0
-; CHECK-P8-NEXT:    xvcvdpuxws v6, vs5
-; CHECK-P8-NEXT:    xvcvdpuxws v7, vs1
+; CHECK-P8-NEXT:    xvcvdpuxws v6, vs1
+; CHECK-P8-NEXT:    xvcvdpuxws v7, vs2
 ; CHECK-P8-NEXT:    vmrgew v2, v3, v2
 ; CHECK-P8-NEXT:    vmrgew v3, v5, v4
 ; CHECK-P8-NEXT:    vmrgew v4, v1, v0
 ; CHECK-P8-NEXT:    vmrgew v5, v7, v6
-; CHECK-P8-NEXT:    stvx v2, r3, r7
-; CHECK-P8-NEXT:    stvx v3, r3, r5
-; CHECK-P8-NEXT:    stvx v4, r3, r6
-; CHECK-P8-NEXT:    stvx v5, 0, r3
+; CHECK-P8-NEXT:    stxvd2x v4, r3, r6
+; CHECK-P8-NEXT:    stxvd2x v3, r3, r5
+; CHECK-P8-NEXT:    stxvd2x v2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x v5, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt:
@@ -283,9 +271,9 @@ define void @test16elt(<16 x i32>* noalias nocapture sret(<16 x i32>) %agg.resul
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <16 x double>, <16 x double>* %0, align 128
+  %a = load <16 x double>, ptr %0, align 128
   %1 = fptoui <16 x double> %a to <16 x i32>
-  store <16 x i32> %1, <16 x i32>* %agg.result, align 64
+  store <16 x i32> %1, ptr %agg.result, align 64
   ret void
 }
 
@@ -323,7 +311,7 @@ entry:
   ret i64 %1
 }
 
-define <4 x i32> @test4elt_signed(<4 x double>* nocapture readonly) local_unnamed_addr #1 {
+define <4 x i32> @test4elt_signed(ptr nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test4elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r4, 16
@@ -360,12 +348,12 @@ define <4 x i32> @test4elt_signed(<4 x double>* nocapture readonly) local_unname
 ; CHECK-BE-NEXT:    vmrgew v2, v3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <4 x double>, <4 x double>* %0, align 32
+  %a = load <4 x double>, ptr %0, align 32
   %1 = fptosi <4 x double> %a to <4 x i32>
   ret <4 x i32> %1
 }
 
-define void @test8elt_signed(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.result, <8 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test8elt_signed(ptr noalias nocapture sret(<8 x i32>) %agg.result, ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32
@@ -375,22 +363,18 @@ define void @test8elt_signed(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.r
 ; CHECK-P8-NEXT:    li r5, 16
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r5
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
-; CHECK-P8-NEXT:    xxmrgld vs4, vs1, vs0
-; CHECK-P8-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-P8-NEXT:    xxmrgld vs1, vs2, vs3
-; CHECK-P8-NEXT:    xxmrghd vs2, vs2, vs3
+; CHECK-P8-NEXT:    xxmrghd vs4, vs0, vs1
+; CHECK-P8-NEXT:    xxmrgld vs0, vs0, vs1
+; CHECK-P8-NEXT:    xxmrghd vs1, vs3, vs2
+; CHECK-P8-NEXT:    xxmrgld vs2, vs3, vs2
 ; CHECK-P8-NEXT:    xvcvdpsxws v2, vs4
 ; CHECK-P8-NEXT:    xvcvdpsxws v3, vs0
 ; CHECK-P8-NEXT:    xvcvdpsxws v4, vs1
 ; CHECK-P8-NEXT:    xvcvdpsxws v5, vs2
 ; CHECK-P8-NEXT:    vmrgew v2, v3, v2
 ; CHECK-P8-NEXT:    vmrgew v3, v5, v4
-; CHECK-P8-NEXT:    stvx v2, r3, r5
-; CHECK-P8-NEXT:    stvx v3, 0, r3
+; CHECK-P8-NEXT:    stxvd2x v2, r3, r5
+; CHECK-P8-NEXT:    stxvd2x v3, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt_signed:
@@ -433,62 +417,54 @@ define void @test8elt_signed(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.r
 ; CHECK-BE-NEXT:    stxv v3, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <8 x double>, <8 x double>* %0, align 64
+  %a = load <8 x double>, ptr %0, align 64
   %1 = fptosi <8 x double> %a to <8 x i32>
-  store <8 x i32> %1, <8 x i32>* %agg.result, align 32
+  store <8 x i32> %1, ptr %agg.result, align 32
   ret void
 }
 
-define void @test16elt_signed(<16 x i32>* noalias nocapture sret(<16 x i32>) %agg.result, <16 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test16elt_signed(ptr noalias nocapture sret(<16 x i32>) %agg.result, ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32
 ; CHECK-P8-NEXT:    li r6, 48
-; CHECK-P8-NEXT:    li r8, 64
-; CHECK-P8-NEXT:    li r7, 16
-; CHECK-P8-NEXT:    li r9, 80
-; CHECK-P8-NEXT:    lxvd2x vs7, 0, r4
+; CHECK-P8-NEXT:    li r7, 64
+; CHECK-P8-NEXT:    li r8, 80
+; CHECK-P8-NEXT:    lxvd2x vs8, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
-; CHECK-P8-NEXT:    lxvd2x vs3, r4, r8
-; CHECK-P8-NEXT:    li r8, 96
 ; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
-; CHECK-P8-NEXT:    lxvd2x vs5, r4, r8
+; CHECK-P8-NEXT:    lxvd2x vs3, r4, r8
+; CHECK-P8-NEXT:    li r7, 96
 ; CHECK-P8-NEXT:    li r8, 112
-; CHECK-P8-NEXT:    lxvd2x vs4, r4, r9
-; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    xxswapd vs1, vs1
+; CHECK-P8-NEXT:    lxvd2x vs5, r4, r7
+; CHECK-P8-NEXT:    li r7, 16
 ; CHECK-P8-NEXT:    lxvd2x vs6, r4, r8
-; CHECK-P8-NEXT:    xxswapd vs2, vs2
-; CHECK-P8-NEXT:    xxswapd vs3, vs3
-; CHECK-P8-NEXT:    xxswapd vs4, vs4
-; CHECK-P8-NEXT:    xxswapd vs5, vs5
-; CHECK-P8-NEXT:    xxmrgld vs8, vs1, vs0
-; CHECK-P8-NEXT:    xxswapd vs6, vs6
-; CHECK-P8-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-P8-NEXT:    xxswapd vs1, vs7
-; CHECK-P8-NEXT:    xxmrgld vs7, vs4, vs3
-; CHECK-P8-NEXT:    xxmrghd vs3, vs4, vs3
-; CHECK-P8-NEXT:    xxmrgld vs4, vs6, vs5
-; CHECK-P8-NEXT:    xvcvdpsxws v2, vs8
+; CHECK-P8-NEXT:    xxmrghd vs4, vs0, vs1
+; CHECK-P8-NEXT:    xxmrgld vs0, vs0, vs1
+; CHECK-P8-NEXT:    lxvd2x vs7, r4, r7
+; CHECK-P8-NEXT:    xxmrghd vs1, vs2, vs3
+; CHECK-P8-NEXT:    xxmrgld vs2, vs2, vs3
+; CHECK-P8-NEXT:    xxmrghd vs3, vs5, vs6
 ; CHECK-P8-NEXT:    xvcvdpsxws v3, vs0
-; CHECK-P8-NEXT:    xxmrghd vs0, vs6, vs5
-; CHECK-P8-NEXT:    xxmrgld vs5, vs2, vs1
-; CHECK-P8-NEXT:    xxmrghd vs1, vs2, vs1
-; CHECK-P8-NEXT:    xvcvdpsxws v4, vs7
-; CHECK-P8-NEXT:    xvcvdpsxws v5, vs3
-; CHECK-P8-NEXT:    xvcvdpsxws v0, vs4
+; CHECK-P8-NEXT:    xxmrgld vs0, vs5, vs6
+; CHECK-P8-NEXT:    xvcvdpsxws v4, vs1
+; CHECK-P8-NEXT:    xxmrghd vs1, vs8, vs7
+; CHECK-P8-NEXT:    xvcvdpsxws v5, vs2
+; CHECK-P8-NEXT:    xxmrgld vs2, vs8, vs7
+; CHECK-P8-NEXT:    xvcvdpsxws v2, vs4
+; CHECK-P8-NEXT:    xvcvdpsxws v0, vs3
 ; CHECK-P8-NEXT:    xvcvdpsxws v1, vs0
-; CHECK-P8-NEXT:    xvcvdpsxws v6, vs5
-; CHECK-P8-NEXT:    xvcvdpsxws v7, vs1
+; CHECK-P8-NEXT:    xvcvdpsxws v6, vs1
+; CHECK-P8-NEXT:    xvcvdpsxws v7, vs2
 ; CHECK-P8-NEXT:    vmrgew v2, v3, v2
 ; CHECK-P8-NEXT:    vmrgew v3, v5, v4
 ; CHECK-P8-NEXT:    vmrgew v4, v1, v0
 ; CHECK-P8-NEXT:    vmrgew v5, v7, v6
-; CHECK-P8-NEXT:    stvx v2, r3, r7
-; CHECK-P8-NEXT:    stvx v3, r3, r5
-; CHECK-P8-NEXT:    stvx v4, r3, r6
-; CHECK-P8-NEXT:    stvx v5, 0, r3
+; CHECK-P8-NEXT:    stxvd2x v4, r3, r6
+; CHECK-P8-NEXT:    stxvd2x v3, r3, r5
+; CHECK-P8-NEXT:    stxvd2x v2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x v5, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt_signed:
@@ -563,8 +539,8 @@ define void @test16elt_signed(<16 x i32>* noalias nocapture sret(<16 x i32>) %ag
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <16 x double>, <16 x double>* %0, align 128
+  %a = load <16 x double>, ptr %0, align 128
   %1 = fptosi <16 x double> %a to <16 x i32>
-  store <16 x i32> %1, <16 x i32>* %agg.result, align 64
+  store <16 x i32> %1, ptr %agg.result, align 64
   ret void
 }

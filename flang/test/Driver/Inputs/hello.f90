@@ -1,3 +1,3 @@
 program hello
-  write (*,*), "hello world" 
+  write(*,*), "Hello world!"
 end program hello

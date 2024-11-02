@@ -174,16 +174,6 @@ define i64 @mul_both_ce() {
 	ret i64 mul nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
 }
 
-define i64 @sdiv_exact_ce() {
-; CHECK: ret i64 sdiv exact (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 sdiv exact (i64 ptrtoint (i64* @addr to i64), i64 91)
-}
-
-define i64 @udiv_exact_ce() {
-; CHECK: ret i64 udiv exact (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 udiv exact (i64 ptrtoint (i64* @addr to i64), i64 91)
-}
-
 define i64 @ashr_exact_ce() {
 ; CHECK: ret i64 ashr exact (i64 ptrtoint (i64* @addr to i64), i64 9)
 	ret i64 ashr exact (i64 ptrtoint (i64* @addr to i64), i64 9)
@@ -212,11 +202,6 @@ define i64 @sub_plain_ce() {
 define i64 @mul_plain_ce() {
 ; CHECK: ret i64 mul (i64 ptrtoint (i64* @addr to i64), i64 91)
 	ret i64 mul (i64 ptrtoint (i64* @addr to i64), i64 91)
-}
-
-define i64 @sdiv_plain_ce() {
-; CHECK: ret i64 sdiv (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 sdiv (i64 ptrtoint (i64* @addr to i64), i64 91)
 }
 
 define i64* @gep_plain_ce() {

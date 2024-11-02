@@ -11,19 +11,33 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 static void
 extractOperandsFromModule(Oracle &O, Module &Program,
                           function_ref<Value *(Use &)> ReduceValue) {
   for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
+      if (PHINode *Phi = dyn_cast<PHINode>(&I)) {
+        for (auto &Op : Phi->incoming_values()) {
+          if (!O.shouldKeep()) {
+            if (Value *Reduced = ReduceValue(Op))
+              Phi->setIncomingValueForBlock(Phi->getIncomingBlock(Op), Reduced);
+          }
+        }
+
+        continue;
+      }
+
       for (auto &Op : I.operands()) {
-        Value *Reduced = ReduceValue(Op);
-        if (Reduced && !O.shouldKeep())
-          Op.set(Reduced);
+        if (Value *Reduced = ReduceValue(Op)) {
+          if (!O.shouldKeep())
+            Op.set(Reduced);
+        }
       }
     }
   }
@@ -37,6 +51,12 @@ static bool isOne(Use &Op) {
 static bool isZero(Use &Op) {
   auto *C = dyn_cast<Constant>(Op);
   return C && C->isNullValue();
+}
+
+static bool isZeroOrOneFP(Value *Op) {
+  const APFloat *C;
+  return match(Op, m_APFloat(C)) &&
+         ((C->isZero() && !C->isNegative()) || C->isExactlyValue(1.0));
 }
 
 static bool shouldReduceOperand(Use &Op) {
@@ -54,45 +74,99 @@ static bool shouldReduceOperand(Use &Op) {
   return true;
 }
 
-void llvm::reduceOperandsUndefDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Operands to undef...\n";
-  auto ReduceValue = [](Use &Op) -> Value * {
-    if (!shouldReduceOperand(Op))
-      return nullptr;
-    // Don't replace existing ConstantData Uses.
-    return isa<ConstantData>(*Op) ? nullptr : UndefValue::get(Op->getType());
-  };
-  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
-    extractOperandsFromModule(O, Program, ReduceValue);
-  });
+static bool switchCaseExists(Use &Op, ConstantInt *CI) {
+  SwitchInst *SI = dyn_cast<SwitchInst>(Op.getUser());
+  if (!SI)
+    return false;
+  return SI->findCaseValue(CI) != SI->case_default();
 }
 
 void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Operands to one...\n";
   auto ReduceValue = [](Use &Op) -> Value * {
-    // TODO: support floats
     if (!shouldReduceOperand(Op))
       return nullptr;
-    auto *Ty = dyn_cast<IntegerType>(Op->getType());
-    if (!Ty)
-      return nullptr;
-    // Don't replace existing ones and zeroes.
-    return (isOne(Op) || isZero(Op)) ? nullptr : ConstantInt::get(Ty, 1);
+
+    Type *Ty = Op->getType();
+    if (auto *IntTy = dyn_cast<IntegerType>(Ty)) {
+      // Don't duplicate an existing switch case.
+      if (switchCaseExists(Op, ConstantInt::get(IntTy, 1)))
+        return nullptr;
+      // Don't replace existing ones and zeroes.
+      return (isOne(Op) || isZero(Op)) ? nullptr : ConstantInt::get(IntTy, 1);
+    }
+
+    if (Ty->isFloatingPointTy())
+      return isZeroOrOneFP(Op) ? nullptr : ConstantFP::get(Ty, 1.0);
+
+    if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
+      if (isOne(Op) || isZero(Op) || isZeroOrOneFP(Op))
+        return nullptr;
+
+      Type *ElementType = VT->getElementType();
+      Constant *C;
+      if (ElementType->isFloatingPointTy()) {
+        C = ConstantFP::get(ElementType, 1.0);
+      } else if (IntegerType *IntTy = dyn_cast<IntegerType>(ElementType)) {
+        C = ConstantInt::get(IntTy, 1);
+      } else {
+        return nullptr;
+      }
+      return ConstantVector::getSplat(VT->getElementCount(), C);
+    }
+
+    return nullptr;
   };
-  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
-    extractOperandsFromModule(O, Program, ReduceValue);
-  });
+  runDeltaPass(
+      Test,
+      [ReduceValue](Oracle &O, Module &Program) {
+        extractOperandsFromModule(O, Program, ReduceValue);
+      },
+      "Reducing Operands to one");
 }
 
 void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Operands to zero...\n";
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
+    // Don't duplicate an existing switch case.
+    if (auto *IntTy = dyn_cast<IntegerType>(Op->getType()))
+      if (switchCaseExists(Op, ConstantInt::get(IntTy, 0)))
+        return nullptr;
     // Don't replace existing zeroes.
     return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
   };
-  runDeltaPass(Test, [ReduceValue](Oracle &O, Module &Program) {
-    extractOperandsFromModule(O, Program, ReduceValue);
-  });
+  runDeltaPass(
+      Test,
+      [ReduceValue](Oracle &O, Module &Program) {
+        extractOperandsFromModule(O, Program, ReduceValue);
+      },
+      "Reducing Operands to zero");
+}
+
+void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
+  auto ReduceValue = [](Use &Op) -> Value * {
+    Type *Ty = Op->getType();
+    if (!Ty->isFPOrFPVectorTy())
+      return nullptr;
+
+    // Prefer 0.0 or 1.0 over NaN.
+    //
+    // TODO: Preferring NaN may make more sense because FP operations are more
+    // universally foldable.
+    if (match(Op.get(), m_NaN()) || isZeroOrOneFP(Op.get()))
+      return nullptr;
+
+    if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
+      return ConstantVector::getSplat(VT->getElementCount(),
+                                      ConstantFP::getQNaN(VT->getElementType()));
+    }
+
+    return ConstantFP::getQNaN(Ty);
+  };
+  runDeltaPass(
+      Test,
+      [ReduceValue](Oracle &O, Module &Program) {
+        extractOperandsFromModule(O, Program, ReduceValue);
+      },
+      "Reducing Operands to NaN");
 }

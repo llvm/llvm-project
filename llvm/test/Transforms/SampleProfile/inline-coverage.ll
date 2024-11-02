@@ -1,5 +1,5 @@
-; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
-; RUN: opt < %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt %s -passes='function(instcombine),sample-profile' -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -pass-remarks-analysis=sample-profile -o /dev/null 2>&1 | FileCheck %s
 ;
 ; Original code:
 ;
@@ -35,11 +35,11 @@
 define i64 @_Z3fool(i64 %i) #0 !dbg !4 {
 entry:
   %i.addr = alloca i64, align 8
-  store i64 %i, i64* %i.addr, align 8
-  call void @llvm.dbg.declare(metadata i64* %i.addr, metadata !16, metadata !17), !dbg !18
+  store i64 %i, ptr %i.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !16, metadata !17), !dbg !18
   %call = call i32 @rand(), !dbg !19
   %conv = sext i32 %call to i64, !dbg !19
-  %0 = load i64, i64* %i.addr, align 8, !dbg !20
+  %0 = load i64, ptr %i.addr, align 8, !dbg !20
   %mul = mul nsw i64 %conv, %0, !dbg !21
   ret i64 %mul, !dbg !22
 }
@@ -53,35 +53,35 @@ entry:
   %retval = alloca i32, align 4
   %sum = alloca i64, align 8
   %i = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i64* %sum, metadata !23, metadata !17), !dbg !24
-  store i64 0, i64* %sum, align 8, !dbg !24
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !25, metadata !17), !dbg !27
-  store i32 0, i32* %i, align 4, !dbg !27
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %sum, metadata !23, metadata !17), !dbg !24
+  store i64 0, ptr %sum, align 8, !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !25, metadata !17), !dbg !27
+  store i32 0, ptr %i, align 4, !dbg !27
   br label %for.cond, !dbg !28
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, i32* %i, align 4, !dbg !29
+  %0 = load i32, ptr %i, align 4, !dbg !29
   %cmp = icmp slt i32 %0, 600000000, !dbg !32
   br i1 %cmp, label %for.body, label %for.end, !dbg !33
 
 for.body:                                         ; preds = %for.cond
-  %1 = load i32, i32* %i, align 4, !dbg !34
+  %1 = load i32, ptr %i, align 4, !dbg !34
   %conv = sext i32 %1 to i64, !dbg !34
   %call = call i64 @_Z3fool(i64 %conv), !dbg !35
-  %2 = load i64, i64* %sum, align 8, !dbg !36
+  %2 = load i64, ptr %sum, align 8, !dbg !36
   %add = add nsw i64 %2, %call, !dbg !36
-  store i64 %add, i64* %sum, align 8, !dbg !36
+  store i64 %add, ptr %sum, align 8, !dbg !36
   br label %for.inc, !dbg !37
 
 for.inc:                                          ; preds = %for.body
-  %3 = load i32, i32* %i, align 4, !dbg !38
+  %3 = load i32, ptr %i, align 4, !dbg !38
   %inc = add nsw i32 %3, 1, !dbg !38
-  store i32 %inc, i32* %i, align 4, !dbg !38
+  store i32 %inc, ptr %i, align 4, !dbg !38
   br label %for.cond, !dbg !39
 
 for.end:                                          ; preds = %for.cond
-  %4 = load i64, i64* %sum, align 8, !dbg !40
+  %4 = load i64, ptr %sum, align 8, !dbg !40
   %cmp1 = icmp sgt i64 %4, 0, !dbg !41
   %cond = select i1 %cmp1, i32 0, i32 1, !dbg !40
   ret i32 %cond, !dbg !42

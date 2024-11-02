@@ -13,7 +13,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; CHECK-LABEL: name: test_merge_p1_s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -180,7 +182,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
     ; CHECK-LABEL: name: test_merge_s64_s32_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: $vgpr1_vgpr2 = COPY [[MV]](s64)
@@ -196,7 +200,9 @@ body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; CHECK-LABEL: name: test_merge_s64_s16_s16_s16_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
@@ -1006,7 +1012,9 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_merge_s32_s16_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
@@ -1030,7 +1038,9 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; CHECK-LABEL: name: test_merge_s48_s16_s16_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
@@ -1066,7 +1076,9 @@ body: |
     liveins:  $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
 
     ; CHECK-LABEL: name: test_merge_s256_s128
-    ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[COPY]](s128), [[COPY1]](s128)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[MV]](s256)
@@ -1084,7 +1096,9 @@ body: |
     liveins:  $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_merge_s512_s256
-    ; CHECK: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s256) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s512) = G_MERGE_VALUES [[COPY]](s256), [[COPY1]](s256)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[MV]](s512)
@@ -1102,7 +1116,9 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
 
     ; CHECK-LABEL: name: test_merge_s1024_s512
-    ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s512) = COPY $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s1024) = G_MERGE_VALUES [[COPY]](s512), [[COPY1]](s512)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[MV]](s1024)

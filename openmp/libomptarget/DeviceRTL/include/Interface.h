@@ -126,6 +126,8 @@ int omp_get_default_device(void);
 
 int omp_get_num_devices(void);
 
+int omp_get_device_num(void);
+
 int omp_get_num_teams(void);
 
 int omp_get_team_num();

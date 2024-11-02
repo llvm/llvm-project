@@ -90,6 +90,32 @@ bool lldb_private::LLDBSwigPythonWatchpointCallbackFunction(
   return stop_at_watchpoint;
 }
 
+// This function is called by
+// ScriptInterpreterPython::FormatterMatchingCallbackFunction and it's used when
+// a data formatter provides the name of a callback to inspect a candidate type
+// before considering a match.
+bool lldb_private::LLDBSwigPythonFormatterCallbackFunction(
+    const char *python_function_name, const char *session_dictionary_name,
+    lldb::TypeImplSP type_impl_sp) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
+      session_dictionary_name);
+  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+      python_function_name, dict);
+
+  if (!pfunc.IsAllocated())
+    return false;
+
+  PythonObject result =
+      pfunc(ToSWIGWrapper(type_impl_sp), dict);
+
+  // Only if everything goes okay and the function returns True we'll consider
+  // it a match.
+  return result.get() == Py_True;
+}
+
 bool lldb_private::LLDBSwigPythonCallTypeScript(
     const char *python_function_name, const void *session_dictionary,
     const lldb::ValueObjectSP &valobj_sp, void **pyfunct_wrapper,

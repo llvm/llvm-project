@@ -3,9 +3,9 @@
 
 declare void @may_unwind()
 
-declare i32 @__gxx_personality_v0(...);
+declare i32 @__gxx_personality_v0(...)
 
-define i1 @test_invoke_in_block_with_assume(i32 %x) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i1 @test_invoke_in_block_with_assume(i32 %x) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test_invoke_in_block_with_assume(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @may_unwind()
@@ -19,8 +19,8 @@ define i1 @test_invoke_in_block_with_assume(i32 %x) personality i8* bitcast (i32
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 10
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[X]], 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, [[C_3]]
@@ -30,7 +30,8 @@ entry:
   call void @may_unwind()
   %c.1 = icmp ult i32 %x, 10
   call void @llvm.assume(i1 %c.1)
-  invoke void @may_unwind() to label %cont unwind label %lpad
+  invoke void @may_unwind()
+  to label %cont unwind label %lpad
 
 cont:
   %t.1 = icmp ult i32 %x, 10
@@ -39,8 +40,8 @@ cont:
   ret i1 %res.1
 
 lpad:
-  %lp = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
+  %lp = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
   %t.2 = icmp ult i32 %x, 10
   %c.3 = icmp ult i32 %x, 9
   %res.2 = xor i1 %t.2, %c.3

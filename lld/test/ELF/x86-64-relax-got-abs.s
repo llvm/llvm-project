@@ -5,7 +5,7 @@
 
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t.so -shared
-# RUN: llvm-objdump -d %t.so | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t.so | FileCheck %s
 
 # CHECK: movq  4209(%rip), %rax
 

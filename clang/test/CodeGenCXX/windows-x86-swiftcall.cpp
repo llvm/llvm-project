@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows -emit-llvm -target-cpu core2 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows -emit-llvm -target-cpu core2 -o - %s | FileCheck %s
 
 #define SWIFTCALL __attribute__((swiftcall))
 #define OUT __attribute__((swift_indirect_result))
@@ -18,7 +18,7 @@ struct NonTrivial {
 
 SWIFTCALL int receiveNonTrivial(NonTrivial o) { return o.o; }
 
-// CHECK-LABEL: define dso_local swiftcc noundef i32 @"?receiveNonTrivial@@YSHUNonTrivial@@@Z"(%struct.NonTrivial* noundef %o)
+// CHECK-LABEL: define dso_local swiftcc noundef i32 @"?receiveNonTrivial@@YSHUNonTrivial@@@Z"(ptr noundef %o)
 
 int passNonTrivial() {
   return receiveNonTrivial({});
@@ -26,4 +26,4 @@ int passNonTrivial() {
 
 // CHECK-LABEL: define dso_local noundef i32 @"?passNonTrivial@@YAHXZ"()
 // CHECK-NOT: stacksave
-// CHECK: call swiftcc noundef i32 @"?receiveNonTrivial@@YSHUNonTrivial@@@Z"(%struct.NonTrivial* noundef %{{.*}})
+// CHECK: call swiftcc noundef i32 @"?receiveNonTrivial@@YSHUNonTrivial@@@Z"(ptr noundef %{{.*}})

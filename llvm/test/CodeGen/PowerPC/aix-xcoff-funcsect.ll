@@ -34,7 +34,7 @@ entry:
   ret void
 }
 
-; ASM:        .csect .foo[PR],2
+; ASM:        .csect .foo[PR],5
 ; ASM-NEXT:  	.globl	foo[DS]                         # -- Begin function foo
 ; ASM-NEXT:  	.globl	.foo[PR]
 ; ASM-NEXT:  	.align	4
@@ -43,11 +43,11 @@ entry:
 ; ASM-NEXT:  	.vbyte	{{[0-9]+}}, .foo[PR]
 ; ASM-NEXT:  	.vbyte	{{[0-9]+}}, TOC[TC0]
 ; ASM-NEXT:  	.vbyte	{{[0-9]+}}, 0
-; ASM-NEXT:  	.csect .foo[PR],2
+; ASM-NEXT:  	.csect .foo[PR],5
 ; ASM-NEXT:  .alias_foo:
 ; ASM-NEXT:  # %bb.0:                                # %entry
 ; ASM-NEXT:  	blr
-; ASM:        .csect .hidden_foo[PR],2
+; ASM:        .csect .hidden_foo[PR],5
 ; ASM-NEXT:  	.globl	hidden_foo[DS],hidden           # -- Begin function hidden_foo
 ; ASM-NEXT:  	.globl	.hidden_foo[PR],hidden
 ; ASM-NEXT:  	.align	4
@@ -58,7 +58,7 @@ entry:
 ; ASM-NEXT:  	.csect .hidden_foo[PR]
 ; ASM-NEXT:  # %bb.0:                                # %entry
 ; ASM-NEXT:  	blr
-; ASM:        .csect .bar[PR],2
+; ASM:        .csect .bar[PR],5
 ; ASM-NEXT:  	.globl	bar[DS]                         # -- Begin function bar
 ; ASM-NEXT:  	.globl	.bar[PR]
 ; ASM-NEXT:  	.align	4
@@ -66,7 +66,7 @@ entry:
 ; ASM-NEXT:  	.vbyte	{{[0-9]+}}, .bar[PR]                     # @bar
 ; ASM-NEXT:  	.vbyte	{{[0-9]+}}, TOC[TC0]
 ; ASM-NEXT:  	.vbyte	{{[0-9]+}}, 0
-; ASM-NEXT:  	.csect .bar[PR],2
+; ASM-NEXT:  	.csect .bar[PR],5
 ; ASM-NEXT:  # %bb.0:                                # %entry
 ; ASM:        bl .foo[PR]
 ; ASM-NEXT:  	nop

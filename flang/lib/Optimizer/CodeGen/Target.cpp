@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Target.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeRange.h"
@@ -79,7 +81,7 @@ struct TargetI386 : public GenericTarget<TargetI386> {
   static constexpr int defaultWidth = 32;
 
   CodeGenSpecifics::Marshalling
-  complexArgumentType(mlir::Type eleTy) const override {
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
     assert(fir::isa_real(eleTy));
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
@@ -92,7 +94,7 @@ struct TargetI386 : public GenericTarget<TargetI386> {
   }
 
   CodeGenSpecifics::Marshalling
-  complexReturnType(mlir::Type eleTy) const override {
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
     assert(fir::isa_real(eleTy));
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
@@ -108,7 +110,7 @@ struct TargetI386 : public GenericTarget<TargetI386> {
       marshal.emplace_back(fir::ReferenceType::get(structTy),
                            AT{/*alignment=*/4, /*byval=*/false, /*sret=*/true});
     } else {
-      llvm::report_fatal_error("complex for this precision not implemented");
+      TODO(loc, "complex for this precision");
     }
     return marshal;
   }
@@ -126,7 +128,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
   static constexpr int defaultWidth = 64;
 
   CodeGenSpecifics::Marshalling
-  complexArgumentType(mlir::Type eleTy) const override {
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle()) {
@@ -136,14 +138,21 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       // two distinct double arguments
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, byval, align 16
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(fir::ReferenceType::get(
+                               mlir::TupleType::get(eleTy.getContext(), range)),
+                           AT{/*align=*/16, /*byval=*/true});
     } else {
-      llvm::report_fatal_error("complex for this precision not implemented");
+      TODO(loc, "complex for this precision");
     }
     return marshal;
   }
 
   CodeGenSpecifics::Marshalling
-  complexReturnType(mlir::Type eleTy) const override {
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle()) {
@@ -155,8 +164,15 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       mlir::TypeRange range = {eleTy, eleTy};
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, sret, align 16
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(fir::ReferenceType::get(
+                               mlir::TupleType::get(eleTy.getContext(), range)),
+                           AT{/*align=*/16, /*byval=*/false, /*sret=*/true});
     } else {
-      llvm::report_fatal_error("complex for this precision not implemented");
+      TODO(loc, "complex for this precision");
     }
     return marshal;
   }
@@ -174,7 +190,7 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
   static constexpr int defaultWidth = 64;
 
   CodeGenSpecifics::Marshalling
-  complexArgumentType(mlir::Type eleTy) const override {
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle() ||
@@ -182,13 +198,13 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
       // [2 x t]   array of 2 eleTy
       marshal.emplace_back(fir::SequenceType::get({2}, eleTy), AT{});
     } else {
-      llvm::report_fatal_error("complex for this precision not implemented");
+      TODO(loc, "complex for this precision");
     }
     return marshal;
   }
 
   CodeGenSpecifics::Marshalling
-  complexReturnType(mlir::Type eleTy) const override {
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle() ||
@@ -199,7 +215,7 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
     } else {
-      llvm::report_fatal_error("complex for this precision not implemented");
+      TODO(loc, "complex for this precision");
     }
     return marshal;
   }
@@ -217,7 +233,7 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
   static constexpr int defaultWidth = 64;
 
   CodeGenSpecifics::Marshalling
-  complexArgumentType(mlir::Type eleTy) const override {
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     // two distinct element type arguments (re, im)
     marshal.emplace_back(eleTy, AT{});
@@ -226,10 +242,91 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
   }
 
   CodeGenSpecifics::Marshalling
-  complexReturnType(mlir::Type eleTy) const override {
+  complexReturnType(mlir::Location, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     // Use a type that will be translated into LLVM as:
     // { t, t }   struct of 2 element type
+    mlir::TypeRange range = {eleTy, eleTy};
+    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    return marshal;
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// sparc (sparc 32 bit) target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetSparc : public GenericTarget<TargetSparc> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 32;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 eleTy
+    mlir::TypeRange range = {eleTy, eleTy};
+    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    marshal.emplace_back(fir::ReferenceType::get(structTy), AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 eleTy, byval
+    mlir::TypeRange range = {eleTy, eleTy};
+    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    marshal.emplace_back(fir::ReferenceType::get(structTy),
+                         AT{/*alignment=*/0, /*byval=*/true});
+    return marshal;
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// sparcv9 (sparc 64 bit) target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetSparcV9 : public GenericTarget<TargetSparcV9> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // two distinct float, double arguments
+      marshal.emplace_back(eleTy, AT{});
+      marshal.emplace_back(eleTy, AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, byval, align 16
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(fir::ReferenceType::get(
+                               mlir::TupleType::get(eleTy.getContext(), range)),
+                           AT{/*align=*/16, /*byval=*/true});
+    } else {
+      TODO(loc, "complex for this precision");
+    }
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { eleTy, eleTy }   struct of 2 eleTy
     mlir::TypeRange range = {eleTy, eleTy};
     marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
     return marshal;
@@ -246,50 +343,23 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   default:
     break;
   case llvm::Triple::ArchType::x86:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Darwin:
-    case llvm::Triple::OSType::MacOSX:
-    case llvm::Triple::OSType::Win32:
-      return std::make_unique<TargetI386>(ctx, std::move(trp),
-                                          std::move(kindMap));
-    }
-    break;
+    return std::make_unique<TargetI386>(ctx, std::move(trp),
+                                        std::move(kindMap));
   case llvm::Triple::ArchType::x86_64:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Darwin:
-    case llvm::Triple::OSType::MacOSX:
-    case llvm::Triple::OSType::Win32:
-      return std::make_unique<TargetX86_64>(ctx, std::move(trp),
-                                            std::move(kindMap));
-    }
-    break;
+    return std::make_unique<TargetX86_64>(ctx, std::move(trp),
+                                          std::move(kindMap));
   case llvm::Triple::ArchType::aarch64:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Darwin:
-    case llvm::Triple::OSType::MacOSX:
-    case llvm::Triple::OSType::Win32:
-      return std::make_unique<TargetAArch64>(ctx, std::move(trp),
-                                             std::move(kindMap));
-    }
-    break;
+    return std::make_unique<TargetAArch64>(ctx, std::move(trp),
+                                           std::move(kindMap));
   case llvm::Triple::ArchType::ppc64le:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-      return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
-                                             std::move(kindMap));
-    }
-    break;
+    return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
+                                           std::move(kindMap));
+  case llvm::Triple::ArchType::sparc:
+    return std::make_unique<TargetSparc>(ctx, std::move(trp),
+                                         std::move(kindMap));
+  case llvm::Triple::ArchType::sparcv9:
+    return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
+                                           std::move(kindMap));
   }
-  llvm::report_fatal_error("target not implemented");
+  TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }

@@ -14,9 +14,9 @@ target triple = "powerpc-ibm-aix7.2.0.0"
 @__profd_main = private global i64 zeroinitializer, section "__llvm_prf_data", align 8
 @__llvm_prf_nm = private constant [6 x i8] c"\04\00main", section "__llvm_prf_names", align 1
 
-@llvm.used = appending global [2 x i8*]
-  [i8* bitcast (i64* @__profd_main to i8*),
-   i8* getelementptr inbounds ([6 x i8], [6 x i8]* @__llvm_prf_nm, i32 0, i32 0)], section "llvm.metadata"
+@llvm.used = appending global [2 x ptr]
+  [ptr @__profd_main,
+   ptr @__llvm_prf_nm], section "llvm.metadata"
 
 define i32 @main() #0 {
 entry:
@@ -37,10 +37,10 @@ target triple = "powerpc-ibm-aix7.2.0.0"
 @__profd_main = private global i64 zeroinitializer, section "__llvm_prf_data", align 8
 @__llvm_prf_nm = private constant [6 x i8] c"\04\00main", section "__llvm_prf_names", align 1
 
-@llvm.used = appending global [3 x i8*]
-  [i8* bitcast ([1 x i64]* @__profc_main to i8*),
-   i8* bitcast (i64* @__profd_main to i8*),
-   i8* getelementptr inbounds ([6 x i8], [6 x i8]* @__llvm_prf_nm, i32 0, i32 0)], section "llvm.metadata"
+@llvm.used = appending global [3 x ptr]
+  [ptr @__profc_main,
+   ptr @__profd_main,
+   ptr @__llvm_prf_nm], section "llvm.metadata"
 
 define i32 @main() #0 {
 entry:
@@ -62,13 +62,13 @@ entry:
 @__profc_main = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", align 8
 @__profd_main = private global i64 zeroinitializer, section "__llvm_prf_data", align 8
 @__llvm_prf_nm = private constant [6 x i8] c"\04\00main", section "__llvm_prf_names", align 1
-@__llvm_prf_vnodes = private global [10 x { i64, i64, i8* }] zeroinitializer, section "__llvm_prf_vnds"
+@__llvm_prf_vnodes = private global [10 x { i64, i64, ptr }] zeroinitializer, section "__llvm_prf_vnds"
 
-@llvm.used = appending global [4 x i8*]
-  [i8* bitcast ([1 x i64]* @__profc_main to i8*),
-   i8* bitcast (i64* @__profd_main to i8*),
-   i8* getelementptr inbounds ([6 x i8], [6 x i8]* @__llvm_prf_nm, i32 0, i32 0),
-   i8* bitcast ([10 x { i64, i64, i8* }]* @__llvm_prf_vnodes to i8*)], section "llvm.metadata"
+@llvm.used = appending global [4 x ptr]
+  [ptr @__profc_main,
+   ptr @__profd_main,
+   ptr @__llvm_prf_nm,
+   ptr @__llvm_prf_vnodes], section "llvm.metadata"
 
 define i32 @main() #0 {
 entry:

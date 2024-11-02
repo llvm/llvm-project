@@ -2,17 +2,17 @@
 ; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 ; The first comparison (a != b) should not be dropped
-define i1 @test1(i8* %a, i8* %b) {
+define i1 @test1(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i8* [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 -1
-; CHECK-NEXT:    [[COND2:%.*]] = icmp ugt i8* [[A2]], [[B]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne ptr [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 -1
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ugt ptr [[A2]], [[B]]
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
-  %cond1 = icmp ne i8* %a, %b
-  %a2 = getelementptr inbounds i8, i8* %a, i64 -1
-  %cond2 = icmp ugt i8* %a2, %b
+  %cond1 = icmp ne ptr %a, %b
+  %a2 = getelementptr inbounds i8, ptr %a, i64 -1
+  %cond2 = icmp ugt ptr %a2, %b
   %res = select i1 %cond1, i1 %cond2, i1 false
   ret i1 %res
 }

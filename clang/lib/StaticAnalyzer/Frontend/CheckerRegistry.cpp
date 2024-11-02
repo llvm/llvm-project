@@ -15,7 +15,6 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -480,9 +479,7 @@ static void isOptionContainedIn(const CmdLineOptionList &OptionList,
     return Opt.OptionName == SuppliedOption;
   };
 
-  const auto *OptionIt = llvm::find_if(OptionList, SameOptName);
-
-  if (OptionIt == OptionList.end()) {
+  if (llvm::none_of(OptionList, SameOptName)) {
     Diags.Report(diag::err_analyzer_checker_option_unknown)
         << SuppliedChecker << SuppliedOption;
     return;

@@ -7,7 +7,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.out -lite=0 -v=1 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.out --lite=0 -v=1 2>&1 | FileCheck %s
 
 # CHECK-NOT: unclaimed PC-relative relocations left in data
 # CHECK: BOLT-INFO: marking main.cold as a fragment of main

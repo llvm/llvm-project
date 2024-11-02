@@ -14,4 +14,4 @@
  * user has not specified one. Set this up by moving the runtime's copy of this
  * symbol to an object file within the archive.
  */
-COMPILER_RT_WEAK char INSTR_PROF_PROFILE_NAME_VAR[1] = {0};
+COMPILER_RT_WEAK COMPILER_RT_VISIBILITY char INSTR_PROF_PROFILE_NAME_VAR[1] = {0};

@@ -290,6 +290,45 @@ define i64 @test6_smnegl(i32 %x) {
   ret i64 %sub
 }
 
+; We may hoist the "mov" instructions out of a loop
+define i32 @mull6_sub(i32 %x) {
+; CHECK-LABEL: mull6_sub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w9, #-1
+; CHECK-NEXT:    madd w0, w0, w8, w9
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: mull6_sub:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w9, #-1
+; GISEL-NEXT:    madd w0, w0, w8, w9
+; GISEL-NEXT:    ret
+  %mul = mul nsw i32 %x, 6
+  %sub = add nsw i32 %mul, -1
+  ret i32 %sub
+}
+
+define i64 @mull6_sub_orr(i64 %x) {
+; CHECK-LABEL: mull6_sub_orr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov x9, #16773120
+; CHECK-NEXT:    madd x0, x0, x8, x9
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: mull6_sub_orr:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov x9, #16773120
+; GISEL-NEXT:    madd x0, x0, x8, x9
+; GISEL-NEXT:    ret
+  %mul = mul nsw i64 %x, 6
+  %sub = add nsw i64 %mul, 16773120
+  ret i64 %sub
+}
+
 define i32 @test7(i32 %x) {
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0:
@@ -408,8 +447,8 @@ define i32 @test13(i32 %x) {
 define i32 @test14(i32 %x) {
 ; CHECK-LABEL: test14:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #14
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #4
+; CHECK-NEXT:    sub w0, w8, w0, lsl #1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test14:
@@ -451,6 +490,94 @@ define i32 @test16(i32 %x) {
 ; GISEL-NEXT:    ret
 
   %mul = mul nsw i32 %x, 16
+  ret i32 %mul
+}
+
+define i32 @test25_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test25_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w0, lsl #2
+; CHECK-NEXT:    add w0, w8, w8, lsl #2
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test25_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #25
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 25 ; 25 = (1+4)*(1+4)
+  ret i32 %mul
+}
+
+define i32 @test45_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test45_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w0, lsl #2
+; CHECK-NEXT:    add w0, w8, w8, lsl #3
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test45_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #45
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 45 ; 45 = (1+4)*(1+8)
+  ret i32 %mul
+}
+
+; Negative test: Keep MUL as don't have the feature LSLFast
+define i32 @test45(i32 %x) {
+; CHECK-LABEL: test45:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #45
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test45:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #45
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 45 ; 45 = (1+4)*(1+8)
+  ret i32 %mul
+}
+
+; Negative test: The shift amount 4 larger than 3
+define i32 @test85_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test85_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #85
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test85_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #85
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 85 ; 85 = (1+4)*(1+16)
+  ret i32 %mul
+}
+
+; Negative test: The shift amount 5 larger than 3
+define i32 @test297_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test297_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #297
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test297_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #297
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 297 ; 297 = (1+8)*(1+32)
   ret i32 %mul
 }
 
@@ -524,8 +651,8 @@ define i32 @ntest5(i32 %x) {
 define i32 @ntest6(i32 %x) {
 ; CHECK-LABEL: ntest6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-6
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    sub w0, w8, w0, lsl #3
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest6:
@@ -623,8 +750,8 @@ define i32 @ntest11(i32 %x) {
 define i32 @ntest12(i32 %x) {
 ; CHECK-LABEL: ntest12:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-12
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #2
+; CHECK-NEXT:    sub w0, w8, w0, lsl #4
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest12:
@@ -656,8 +783,8 @@ define i32 @ntest13(i32 %x) {
 define i32 @ntest14(i32 %x) {
 ; CHECK-LABEL: ntest14:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-14
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    sub w0, w8, w0, lsl #4
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest14:
@@ -731,11 +858,11 @@ define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; GISEL-LABEL: muladd_demand_commute:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI42_1
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI42_1]
-; GISEL-NEXT:    adrp x8, .LCPI42_0
+; GISEL-NEXT:    adrp x8, .LCPI49_1
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI49_1]
+; GISEL-NEXT:    adrp x8, .LCPI49_0
 ; GISEL-NEXT:    mla v1.4s, v0.4s, v2.4s
-; GISEL-NEXT:    ldr q0, [x8, :lo12:.LCPI42_0]
+; GISEL-NEXT:    ldr q0, [x8, :lo12:.LCPI49_0]
 ; GISEL-NEXT:    and v0.16b, v1.16b, v0.16b
 ; GISEL-NEXT:    ret
   %m = mul <4 x i32> %x, <i32 131008, i32 131008, i32 131008, i32 131008>

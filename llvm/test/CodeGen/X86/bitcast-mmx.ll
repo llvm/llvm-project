@@ -96,7 +96,7 @@ entry:
   ret i64 %6
 }
 
-define i64 @t3(<1 x i64>* %y, i32* %n) nounwind {
+define i64 @t3(ptr %y, ptr %n) nounwind {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -123,12 +123,11 @@ define i64 @t3(<1 x i64>* %y, i32* %n) nounwind {
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast <1 x i64>* %y to x86_mmx*
-  %1 = load x86_mmx, x86_mmx* %0, align 8
-  %2 = load i32, i32* %n, align 4
-  %3 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %1, i32 %2)
-  %4 = bitcast x86_mmx %3 to i64
-  ret i64 %4
+  %0 = load x86_mmx, ptr %y, align 8
+  %1 = load i32, ptr %n, align 4
+  %2 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %0, i32 %1)
+  %3 = bitcast x86_mmx %2 to i64
+  ret i64 %3
 }
 
 declare x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx, i8)

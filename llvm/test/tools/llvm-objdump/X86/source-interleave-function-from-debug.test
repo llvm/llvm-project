@@ -2,10 +2,10 @@
 ;; output, getting it from the debug info.
 
 ; RUN: llc < %s -o %t.o -filetype=obj -mtriple=x86_64-unknown-linux-gnu
-; RUN: llvm-objdump -dl %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DEMANGLE
+; RUN: llvm-objdump --no-print-imm-hex -dl %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DEMANGLE
 
 ; RUN: llc < %s -o %t.o -filetype=obj -mtriple=x86_64-unknown-linux-gnu
-; RUN: llvm-objdump -dlC %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-DEMANGLE
+; RUN: llvm-objdump --no-print-imm-hex -dlC %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-DEMANGLE
 
 ; CHECK:      0000000000000000 <foo>:
 ; CHECK-NEXT: ; foo():
@@ -35,7 +35,7 @@
 ;; info. The IR is intentionally doctored to have different names in debug info
 ;; for the test case here.
 ; RUN: llvm-strip %t.o -N foo -N _ZN3xyz3barEv -N _ZN3xyz3bazEv -o %t-stripped.o
-; RUN: llvm-objdump -dlC %t-stripped.o | FileCheck %s --check-prefix=STRIPPED
+; RUN: llvm-objdump --no-print-imm-hex -dlC %t-stripped.o | FileCheck %s --check-prefix=STRIPPED
 
 ; STRIPPED:      0000000000000000 <.text>:
 ; STRIPPED-NEXT: ; Function1():

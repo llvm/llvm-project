@@ -12,10 +12,12 @@
 
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Timer.h"
 #include <atomic>
+#include <iterator>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -29,12 +31,9 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-static cl::opt<bool>
-UseDFS("icf-dfs",
-  cl::desc("use DFS ordering when using -icf option"),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> UseDFS("icf-dfs",
+                            cl::desc("use DFS ordering when using -icf option"),
+                            cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 TimeICF("time-icf",
@@ -158,18 +157,26 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   // instruction sequences and the same index in their corresponding
   // functions. The latter is important for CFG equality.
 
-  if (A.layout_size() != B.layout_size())
+  if (A.getLayout().block_size() != B.getLayout().block_size())
     return false;
 
   // Comparing multi-entry functions could be non-trivial.
   if (A.isMultiEntry() || B.isMultiEntry())
     return false;
 
+  if (A.hasIslandsInfo() || B.hasIslandsInfo())
+    return false;
+
   // Process both functions in either DFS or existing order.
-  const BinaryFunction::BasicBlockOrderType &OrderA =
-      opts::UseDFS ? A.dfs() : A.getLayout();
-  const BinaryFunction::BasicBlockOrderType &OrderB =
-      opts::UseDFS ? B.dfs() : B.getLayout();
+  SmallVector<const BinaryBasicBlock *, 0> OrderA;
+  SmallVector<const BinaryBasicBlock *, 0> OrderB;
+  if (opts::UseDFS) {
+    copy(A.dfs(), std::back_inserter(OrderA));
+    copy(B.dfs(), std::back_inserter(OrderB));
+  } else {
+    copy(A.getLayout().blocks(), std::back_inserter(OrderA));
+    copy(B.getLayout().blocks(), std::back_inserter(OrderB));
+  }
 
   const BinaryContext &BC = A.getBinaryContext();
 
@@ -278,7 +285,7 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     // One of the identical blocks may have a trailing unconditional jump that
     // is ignored for CFG purposes.
     const MCInst *TrailingInstr =
-        (I != E ? &(*I) : (OtherI != OtherE ? &(*OtherI) : 0));
+        (I != E ? &(*I) : (OtherI != OtherE ? &(*OtherI) : nullptr));
     if (TrailingInstr && !BC.MIB->isUnconditionalBranch(*TrailingInstr))
       return false;
 
@@ -418,7 +425,7 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
                                         "ICF breakdown", opts::TimeICF);
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       // Make sure indices are in-order.
-      BF.updateLayoutIndices();
+      BF.getLayout().updateLayoutIndices();
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.
@@ -482,11 +489,10 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
         // Fold functions. Keep the order consistent across invocations with
         // different options.
-        std::stable_sort(Twins.begin(), Twins.end(),
-                         [](const BinaryFunction *A, const BinaryFunction *B) {
-                           return A->getFunctionNumber() <
-                                  B->getFunctionNumber();
-                         });
+        llvm::stable_sort(
+            Twins, [](const BinaryFunction *A, const BinaryFunction *B) {
+              return A->getFunctionNumber() < B->getFunctionNumber();
+            });
 
         BinaryFunction *ParentBF = Twins[0];
         for (unsigned I = 1; I < Twins.size(); ++I) {

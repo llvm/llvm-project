@@ -59,8 +59,8 @@ namespace std::numbers {
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__concepts/arithmetic.h>
 #include <__config>
-#include <concepts>
 #include <type_traits>
 #include <version>
 
@@ -130,5 +130,9 @@ inline constexpr double phi        = phi_v<double>;
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER > 17
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <concepts>
+#endif
 
 #endif // _LIBCPP_NUMBERS

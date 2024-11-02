@@ -7,6 +7,10 @@
 // expected-warning@-1 {{defined as expected}}
 #endif
 
+void test_memcpy_inline_invalid_arg_types() {
+  __builtin_memcpy_inline(1, 2, 3); // expected-error {{cannot initialize a parameter of type 'void *' with an rvalue of type 'int'}}
+}
+
 void test_memcpy_inline_null_src(void *ptr) {
   __builtin_memcpy_inline(ptr, NULL, 4); // expected-warning {{null passed to a callee that requires a non-null argument}}
 }

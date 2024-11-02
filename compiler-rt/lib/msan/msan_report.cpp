@@ -36,24 +36,19 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
 
 static void DescribeStackOrigin(const char *so, uptr pc) {
   Decorator d;
-  char *s = internal_strdup(so);
-  char *sep = internal_strchr(s, '@');
-  CHECK(sep);
-  *sep = '\0';
   Printf("%s", d.Origin());
-  Printf(
-      "  %sUninitialized value was created by an allocation of '%s%s%s'"
-      " in the stack frame of function '%s%s%s'%s\n",
-      d.Origin(), d.Name(), s, d.Origin(), d.Name(), sep + 1, d.Origin(),
-      d.Default());
-  InternalFree(s);
-
-  if (pc) {
-    // For some reason function address in LLVM IR is 1 less then the address
-    // of the first instruction.
-    pc = StackTrace::GetNextInstructionPc(pc);
-    StackTrace(&pc, 1).Print();
+  if (so) {
+    Printf(
+        "  %sUninitialized value was created by an allocation of '%s%s%s'"
+        " in the stack frame%s\n",
+        d.Origin(), d.Name(), so, d.Origin(), d.Default());
+  } else {
+    Printf("  %sUninitialized value was created in the stack frame%s\n",
+           d.Origin(), d.Default());
   }
+
+  if (pc)
+    StackTrace(&pc, 1).Print();
 }
 
 static void DescribeOrigin(u32 id) {
@@ -84,6 +79,13 @@ static void DescribeOrigin(u32 id) {
         break;
       case STACK_TRACE_TAG_POISON:
         Printf("  %sMemory was marked as uninitialized%s\n", d.Origin(),
+               d.Default());
+        break;
+      case STACK_TRACE_TAG_FIELDS:
+        Printf("  %sMember fields were destroyed%s\n", d.Origin(), d.Default());
+        break;
+      case STACK_TRACE_TAG_VPTR:
+        Printf("  %sVirtual table ptr was destroyed%s\n", d.Origin(),
                d.Default());
         break;
       default:

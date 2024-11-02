@@ -74,9 +74,7 @@ class ConcurrentEventsBase(TestBase):
         bpno = lldbutil.run_break_set_by_file_and_line(
             self, self.filename, line, num_expected_locations=-1)
         bp = self.inferior_target.FindBreakpointByID(bpno)
-        descriptions.append(
-            ": file = 'main.cpp', line = %d" %
-            self.finish_breakpoint_line)
+        descriptions.append(": file = 'main.cpp', line = %d" % line)
         return bp
 
     def inferior_done(self):

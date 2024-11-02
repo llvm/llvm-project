@@ -1,19 +1,19 @@
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
 // RUN:   -faltivec-src-compat=mixed -triple powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
-// RUN: not %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
+// RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx \
 // RUN:   -faltivec-src-compat=gcc -triple powerpc-unknown-unknown -S -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
 // RUN:   -faltivec-src-compat=xl -triple powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang -Xclang -no-opaque-pointers -mcpu=pwr8 -faltivec-src-compat=xl --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang -Xclang -no-opaque-pointers -mcpu=pwr9 -faltivec-src-compat=xl --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -mcpu=pwr8 -faltivec-src-compat=xl --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -mcpu=pwr9 -faltivec-src-compat=xl --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: @ui8(
 // CHECK:         [[A_ADDR:%.*]] = alloca <16 x i8>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <16 x i8>, align 16
-// CHECK-NEXT:    store <16 x i8> [[A:%.*]], <16 x i8>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <16 x i8> [[B:%.*]], <16 x i8>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <16 x i8> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <16 x i8> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpequb.p(i32 2, <16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -28,10 +28,10 @@ int ui8(vector unsigned char a, vector unsigned char b) {
 // CHECK-LABEL: @si8(
 // CHECK:         [[A_ADDR:%.*]] = alloca <16 x i8>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <16 x i8>, align 16
-// CHECK-NEXT:    store <16 x i8> [[A:%.*]], <16 x i8>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <16 x i8> [[B:%.*]], <16 x i8>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <16 x i8> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <16 x i8> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpequb.p(i32 2, <16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -46,10 +46,10 @@ int si8(vector signed char a, vector signed char b) {
 // CHECK-LABEL: @ui16(
 // CHECK:         [[A_ADDR:%.*]] = alloca <8 x i16>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <8 x i16>, align 16
-// CHECK-NEXT:    store <8 x i16> [[A:%.*]], <8 x i16>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <8 x i16> [[B:%.*]], <8 x i16>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, <8 x i16>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <8 x i16> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <8 x i16> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpequh.p(i32 2, <8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -64,10 +64,10 @@ int ui16(vector unsigned short a, vector unsigned short b) {
 // CHECK-LABEL: @si16(
 // CHECK:         [[A_ADDR:%.*]] = alloca <8 x i16>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <8 x i16>, align 16
-// CHECK-NEXT:    store <8 x i16> [[A:%.*]], <8 x i16>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <8 x i16> [[B:%.*]], <8 x i16>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, <8 x i16>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <8 x i16> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <8 x i16> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpequh.p(i32 2, <8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -82,10 +82,10 @@ int si16(vector signed short a, vector signed short b) {
 // CHECK-LABEL: @ui32(
 // CHECK:         [[A_ADDR:%.*]] = alloca <4 x i32>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i32>, align 16
-// CHECK-NEXT:    store <4 x i32> [[A:%.*]], <4 x i32>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <4 x i32> [[B:%.*]], <4 x i32>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpequw.p(i32 2, <4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -100,10 +100,10 @@ int ui32(vector unsigned int a, vector unsigned int b) {
 // CHECK-LABEL: @si32(
 // CHECK:         [[A_ADDR:%.*]] = alloca <4 x i32>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x i32>, align 16
-// CHECK-NEXT:    store <4 x i32> [[A:%.*]], <4 x i32>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <4 x i32> [[B:%.*]], <4 x i32>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpequw.p(i32 2, <4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -118,10 +118,10 @@ int si32(vector signed int a, vector signed int b) {
 // CHECK-LABEL: @si64(
 // CHECK:         [[A_ADDR:%.*]] = alloca <2 x i64>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x i64>, align 16
-// CHECK-NEXT:    store <2 x i64> [[A:%.*]], <2 x i64>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <2 x i64> [[B:%.*]], <2 x i64>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <2 x i64> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <2 x i64> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpequd.p(i32 2, <2 x i64> [[TMP0]], <2 x i64> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -136,10 +136,10 @@ int si64(vector long long a, vector long long b) {
 // CHECK-LABEL: @f32(
 // CHECK:         [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    store <4 x float> [[A:%.*]], <4 x float>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <4 x float> [[B:%.*]], <4 x float>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <4 x float> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <4 x float> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.altivec.vcmpeqfp.p(i32 2, <4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64
@@ -154,10 +154,10 @@ int f32(vector float a, vector float b) {
 // CHECK-LABEL: @f64(
 // CHECK:         [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NEXT:    store <2 x double> [[A:%.*]], <2 x double>* [[A_ADDR]], align 16
-// CHECK-NEXT:    store <2 x double> [[B:%.*]], <2 x double>* [[B_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, <2 x double>* [[A_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[B_ADDR]], align 16
+// CHECK-NEXT:    store <2 x double> [[A:%.*]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <2 x double> [[B:%.*]], ptr [[B_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ppc.vsx.xvcmpeqdp.p(i32 2, <2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i64

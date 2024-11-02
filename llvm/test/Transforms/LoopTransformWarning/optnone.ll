@@ -1,7 +1,3 @@
-; Legacy pass manager
-; RUN: opt -transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning < %s 2>&1 | FileCheck -allow-empty %s
-;
-; New pass manager
 ; RUN: opt -passes=transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning < %s 2>&1 | FileCheck -allow-empty %s
 ;
 ; Verify that no transformation warnings are emitted for functions with

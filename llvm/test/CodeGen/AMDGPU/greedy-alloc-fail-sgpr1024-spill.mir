@@ -25,99 +25,109 @@ machineFunctionInfo:
 body:             |
   ; CHECK-LABEL: name: greedy_fail_alloc_sgpr1024_spill
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
-  ; CHECK:   renamable $sgpr34_sgpr35 = COPY $sgpr8_sgpr9
-  ; CHECK:   renamable $sgpr33 = COPY $sgpr15
-  ; CHECK:   renamable $sgpr42 = COPY $sgpr14
-  ; CHECK:   renamable $sgpr36_sgpr37 = COPY $sgpr10_sgpr11
-  ; CHECK:   renamable $sgpr38_sgpr39 = COPY $sgpr6_sgpr7
-  ; CHECK:   renamable $sgpr40_sgpr41 = COPY $sgpr4_sgpr5
-  ; CHECK:   renamable $sgpr66_sgpr67 = S_LOAD_DWORDX2_IMM renamable $sgpr34_sgpr35, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
-  ; CHECK:   renamable $sgpr44 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr45 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr46 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr47 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr48 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr49 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr50 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr51 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr52 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr53 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr54 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr55 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr56 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr57 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr58 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr59 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr60 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr61 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr62 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr63 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr64 = S_MOV_B32 0
-  ; CHECK:   renamable $sgpr68_sgpr69 = IMPLICIT_DEF
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; CHECK:   dead $sgpr30_sgpr31 = SI_CALL renamable $sgpr68_sgpr69, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; CHECK:   $sgpr4_sgpr5 = COPY killed renamable $sgpr40_sgpr41
-  ; CHECK:   $sgpr6_sgpr7 = COPY killed renamable $sgpr38_sgpr39
-  ; CHECK:   $sgpr8_sgpr9 = COPY killed renamable $sgpr34_sgpr35
-  ; CHECK:   $sgpr10_sgpr11 = COPY killed renamable $sgpr36_sgpr37
-  ; CHECK:   $sgpr12 = COPY killed renamable $sgpr42
-  ; CHECK:   $sgpr13 = COPY killed renamable $sgpr33
-  ; CHECK:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr68_sgpr69, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit killed $sgpr12, implicit killed $sgpr13, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; CHECK:   renamable $sgpr4_sgpr5 = COPY $exec, implicit-def $exec
-  ; CHECK:   dead renamable $sgpr6_sgpr7 = IMPLICIT_DEF
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
-  ; CHECK:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
-  ; CHECK:   renamable $sgpr6_sgpr7 = COPY $exec, implicit-def $exec
-  ; CHECK:   S_CBRANCH_EXECZ %bb.4, implicit $exec
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
-  ; CHECK:   [[COPY:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
-  ; CHECK:   renamable $sgpr6 = S_LSHL_B32 renamable $sgpr67, 1, implicit-def dead $scc
-  ; CHECK:   dead [[COPY]]:vreg_1024 = V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 [[COPY]], 0, killed $sgpr6, 3, implicit-def $m0, implicit $m0, implicit $exec
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
-  ; CHECK:   renamable $sgpr6_sgpr7 = S_OR_SAVEEXEC_B64 renamable $sgpr4_sgpr5, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; CHECK:   renamable $sgpr68 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr69 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr70 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr71 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr72 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr73 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr74 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr75 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr76 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr77 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr78 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr79 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr80 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr81 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr82 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr83 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr84 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr85 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr86 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr87 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr88 = COPY renamable $sgpr44
-  ; CHECK:   renamable $sgpr89 = COPY renamable $sgpr44
-  ; CHECK:   dead %18:vreg_1024 = COPY renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, implicit $exec
-  ; CHECK:   $exec = S_XOR_B64_term $exec, killed renamable $sgpr6_sgpr7, implicit-def $scc
-  ; CHECK:   S_CBRANCH_EXECZ %bb.5, implicit $exec
-  ; CHECK:   S_BRANCH %bb.1
-  ; CHECK: bb.4:
-  ; CHECK:   successors: %bb.5(0x80000000)
-  ; CHECK:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr6_sgpr7, $sgpr66_sgpr67:0x0000000000000003
-  ; CHECK:   $exec = S_OR_B64 $exec, killed renamable $sgpr6_sgpr7, implicit-def $scc
-  ; CHECK:   dead renamable $sgpr4 = S_LSHL_B32 killed renamable $sgpr66, 1, implicit-def dead $scc
-  ; CHECK:   dead %16:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
-  ; CHECK: bb.5:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $sgpr34_sgpr35 = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   renamable $sgpr33 = COPY $sgpr15
+  ; CHECK-NEXT:   renamable $sgpr42 = COPY $sgpr14
+  ; CHECK-NEXT:   renamable $sgpr36_sgpr37 = COPY $sgpr10_sgpr11
+  ; CHECK-NEXT:   renamable $sgpr38_sgpr39 = COPY $sgpr6_sgpr7
+  ; CHECK-NEXT:   renamable $sgpr40_sgpr41 = COPY $sgpr4_sgpr5
+  ; CHECK-NEXT:   renamable $sgpr66_sgpr67 = S_LOAD_DWORDX2_IMM renamable $sgpr34_sgpr35, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+  ; CHECK-NEXT:   renamable $sgpr44 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr45 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr46 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr47 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr48 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr49 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr50 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr51 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr52 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr53 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr54 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr55 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr56 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr57 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr58 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr59 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr60 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr61 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr62 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr63 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr64 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $sgpr68_sgpr69 = IMPLICIT_DEF
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+  ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL renamable $sgpr68_sgpr69, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY killed renamable $sgpr40_sgpr41
+  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY killed renamable $sgpr38_sgpr39
+  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY killed renamable $sgpr34_sgpr35
+  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY killed renamable $sgpr36_sgpr37
+  ; CHECK-NEXT:   $sgpr12 = COPY killed renamable $sgpr42
+  ; CHECK-NEXT:   $sgpr13 = COPY killed renamable $sgpr33
+  ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr68_sgpr69, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit killed $sgpr12, implicit killed $sgpr13, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = COPY $exec, implicit-def $exec
+  ; CHECK-NEXT:   dead renamable $sgpr6_sgpr7 = IMPLICIT_DEF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = COPY $exec, implicit-def $exec
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.4, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
+  ; CHECK-NEXT:   renamable $sgpr6 = S_LSHL_B32 renamable $sgpr67, 1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead [[COPY]]:vreg_1024 = V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 [[COPY]], 0, killed $sgpr6, 3, implicit-def $m0, implicit $m0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = S_OR_SAVEEXEC_B64 renamable $sgpr4_sgpr5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr68 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr69 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr70 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr71 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr72 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr73 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr74 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr75 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr76 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr77 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr78 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr79 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr80 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr81 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr82 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr83 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr84 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr85 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr86 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr87 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr88 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   renamable $sgpr89 = COPY renamable $sgpr44
+  ; CHECK-NEXT:   dead %18:vreg_1024 = COPY renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, implicit $exec
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, killed renamable $sgpr6_sgpr7, implicit-def $scc
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
+  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr6_sgpr7, $sgpr66_sgpr67:0x0000000000000003
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr6_sgpr7, implicit-def $scc
+  ; CHECK-NEXT:   dead renamable $sgpr4 = S_LSHL_B32 killed renamable $sgpr66, 1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead %16:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr14, $sgpr15
 

@@ -459,10 +459,10 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   // FIXME: For absolute pointer addresses, we just return that value back as
   //  well, although in reality we should return the offset added to that
   //  value. See also the similar FIXME in getLValueFieldOrIvar().
-  if (Base.isUnknownOrUndef() || Base.getAs<loc::ConcreteInt>())
+  if (Base.isUnknownOrUndef() || isa<loc::ConcreteInt>(Base))
     return Base;
 
-  if (Base.getAs<loc::GotoLabel>())
+  if (isa<loc::GotoLabel>(Base))
     return UnknownVal();
 
   const SubRegion *BaseRegion =
@@ -488,7 +488,7 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
 
   SVal BaseIdx = ElemR->getIndex();
 
-  if (!BaseIdx.getAs<nonloc::ConcreteInt>())
+  if (!isa<nonloc::ConcreteInt>(BaseIdx))
     return UnknownVal();
 
   const llvm::APSInt &BaseIdxI =
@@ -497,7 +497,7 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   // Only allow non-integer offsets if the base region has no offset itself.
   // FIXME: This is a somewhat arbitrary restriction. We should be using
   // SValBuilder here to add the two offsets without checking their types.
-  if (!Offset.getAs<nonloc::ConcreteInt>()) {
+  if (!isa<nonloc::ConcreteInt>(Offset)) {
     if (isa<ElementRegion>(BaseRegion->StripCasts()))
       return UnknownVal();
 

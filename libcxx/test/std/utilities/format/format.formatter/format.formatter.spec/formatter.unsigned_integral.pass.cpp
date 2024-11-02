@@ -31,6 +31,7 @@
 #include <concepts>
 #include <type_traits>
 
+#include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
 
@@ -50,8 +51,8 @@ void test(StringT expected, StringViewT fmt, ArithmeticT arg) {
   auto out = std::back_inserter(result);
   using FormatCtxT = std::basic_format_context<decltype(out), CharT>;
 
-  auto format_ctx = std::__format_context_create<decltype(out), CharT>(
-      out, std::make_format_args<FormatCtxT>(arg));
+  FormatCtxT format_ctx =
+      test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(arg));
   formatter.format(arg, format_ctx);
   assert(result == expected);
 }
@@ -83,9 +84,13 @@ void test_unsigned_integral_type() {
   if (sizeof(A) > 4)
     test_termination_condition(STR("8446744073709551615"), STR("}"),
                                A(8446744073709551615));
-
-  // TODO FMT Implement the __uint128_t maximum once the formatter can handle
-  // these values.
+#ifndef TEST_HAS_NO_INT128
+  if (sizeof(A) > 8)
+    test_termination_condition(
+        STR("340282366920938463463374607431768211455"), STR("}"), A(std::numeric_limits<__uint128_t>::max()));
+#endif
+  // Test __formatter::__transform (libc++ specific).
+  test_termination_condition(STR("FF"), STR("X}"), A(255));
 }
 
 template <class CharT>

@@ -9,7 +9,7 @@ module m
   logical, parameter :: test_cshift_3 = all(cshift([1, 2, 3], 4) == [2, 3, 1])
   logical, parameter :: test_cshift_4 = all(cshift([1, 2, 3], -1) == [3, 1, 2])
   logical, parameter :: test_cshift_5 = all([cshift(arr, 1, dim=1)] == [2, 1, 4, 3, 6, 5])
-  logical, parameter :: test_cshift_6 = all([cshift(arr, 1, dim=2)] == [3, 5, 1, 4, 6, 2])
+  logical, parameter :: test_cshift_6 = all([cshift(arr, 1, dim=2)] == [3, 4, 5, 6, 1, 2])
   logical, parameter :: test_cshift_7 = all([cshift(arr, [1, 2, 3])] == [2, 1, 3, 4, 6, 5])
-  logical, parameter :: test_cshift_8 = all([cshift(arr, [1, 2], dim=2)] == [3, 5, 1, 6, 2, 4])
+  logical, parameter :: test_cshift_8 = all([cshift(arr, [1, 2], dim=2)] == [3, 6, 5, 2, 1, 4])
 end module

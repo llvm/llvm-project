@@ -8,14 +8,14 @@
 
 #include "lldb/Expression/DWARFExpression.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
-#include "lldb/Core/Value.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Testing/Support/Error.h"
@@ -53,7 +53,7 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
       return Scalar(llvm::APInt(buf.GetByteSize()*8, val, false));
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return status.ToError();
   }
@@ -61,6 +61,9 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
 
 class DWARFExpressionTester : public YAMLModuleTester {
 public:
+  DWARFExpressionTester(llvm::StringRef yaml_data, size_t cu_index) :
+      YAMLModuleTester(yaml_data, cu_index) {}
+
   using YAMLModuleTester::YAMLModuleTester;
   llvm::Expected<Scalar> Eval(llvm::ArrayRef<uint8_t> expr) {
     return ::Evaluate(expr, m_module_sp, m_dwarf_unit);
@@ -78,7 +81,6 @@ static Scalar GetScalar(unsigned bits, uint64_t value, bool sign) {
 class DWARFExpressionMockProcessTest : public ::testing::Test {
 public:
   void SetUp() override {
-    llvm::cantFail(repro::Reproducer::Initialize(repro::ReproducerMode::Off, {}));
     FileSystem::Initialize();
     HostInfo::Initialize();
     platform_linux::PlatformLinux::Initialize();
@@ -87,7 +89,6 @@ public:
     platform_linux::PlatformLinux::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
-    repro::Reproducer::Terminate();
   }
 };
 
@@ -131,6 +132,25 @@ TEST(DWARFExpression, DW_OP_const) {
       llvm::HasValue(0xffff010101010101));
 }
 
+TEST(DWARFExpression, DW_OP_skip) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0x42, DW_OP_skip, 0x02, 0x00,
+                                 DW_OP_const1u, 0xff}),
+                       llvm::HasValue(0x42));
+}
+
+TEST(DWARFExpression, DW_OP_bra) {
+  EXPECT_THAT_EXPECTED(
+      // clang-format off
+      Evaluate({
+        DW_OP_const1u, 0x42,     // push 0x42
+        DW_OP_const1u, 0x1,      // push 0x1
+        DW_OP_bra, 0x02, 0x00,   // if 0x1 > 0, then skip 0x0002 opcodes
+        DW_OP_const1u, 0xff,     // push 0xff
+      }),
+      // clang-format on
+      llvm::HasValue(0x42));
+}
+
 TEST(DWARFExpression, DW_OP_convert) {
   /// Auxiliary debug info.
   const char *yamldata = R"(
@@ -160,6 +180,17 @@ DWARF:
   debug_info:
     - Version:         4
       AddrSize:        8
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x000000000000000C
+        - AbbrCode:        0x00000000
+    - Version:         4
+      AddrSize:        8
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
       Entries:
         - AbbrCode:        0x00000001
           Values:
@@ -195,14 +226,16 @@ DWARF:
             - Value:           0x000000000000000b # DW_ATE_numeric_string
             - Value:           0x0000000000000001
         - AbbrCode:        0x00000000
+
 )";
+  // Compile unit relative offsets to each DW_TAG_base_type
   uint8_t offs_uint32_t = 0x0000000e;
   uint8_t offs_uint64_t = 0x00000011;
   uint8_t offs_sint64_t = 0x00000014;
   uint8_t offs_uchar = 0x00000017;
   uint8_t offs_schar = 0x0000001a;
 
-  DWARFExpressionTester t(yamldata);
+  DWARFExpressionTester t(yamldata, /*cu_index=*/1);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
   // Constant is given as little-endian.
@@ -309,7 +342,9 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 
   struct MockProcess : Process {
-    using Process::Process;
+    MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+        : Process(target_sp, listener_sp) {}
+
     llvm::StringRef GetPluginName() override { return "mock process"; }
     bool CanDebug(lldb::TargetSP target,
                   bool plugin_specified_by_name) override {
@@ -366,4 +401,116 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value}, {}, {}, &exe_ctx),
       llvm::HasValue(GetScalar(32, 0x07060504, false)));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
+  // Set up a wasm target
+  ArchSpec arch("wasm32-unknown-unknown-wasm");
+  lldb::PlatformSP host_platform_sp =
+      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+  ASSERT_TRUE(host_platform_sp);
+  Platform::SetHostPlatform(host_platform_sp);
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  lldb::TargetSP target_sp;
+  lldb::PlatformSP platform_sp;
+  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
+                                            lldb_private::eLoadDependentsNo,
+                                            platform_sp, target_sp);
+
+  ExecutionContext exe_ctx(target_sp, false);
+  // DW_OP_addr takes a single operand of address size width:
+  uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  ASSERT_TRUE(DWARFExpression::Evaluate(
+      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
+      /*unit*/ nullptr, lldb::eRegisterKindLLDB,
+      /*initial_value_ptr*/ nullptr,
+      /*object_address_ptr*/ nullptr, result, &status))
+      << status.ToError();
+
+  ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr_index) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_addr_base
+              Form:            DW_FORM_sec_offset
+
+  debug_info:
+    - Version:         5
+      AddrSize:        4
+      UnitType:        DW_UT_compile
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x8 # Offset of the first Address past the header
+        - AbbrCode:        0x0
+
+  debug_addr:
+    - Version: 5
+      AddressSize: 4
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+)";
+
+  // Can't use DWARFExpressionTester from above because subsystems overlap with
+  // the fixture.
+  SubsystemRAII<ObjectFileELF, SymbolFileDWARF> subsystems;
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  auto *dwarf_cu = llvm::cast<SymbolFileDWARF>(module_sp->GetSymbolFile())
+                       ->DebugInfo()
+                       .GetUnitAtIndex(0);
+  ASSERT_TRUE(dwarf_cu);
+  dwarf_cu->ExtractDIEsIfNeeded();
+
+  // Set up a wasm target
+  ArchSpec arch("wasm32-unknown-unknown-wasm");
+  lldb::PlatformSP host_platform_sp =
+      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+  ASSERT_TRUE(host_platform_sp);
+  Platform::SetHostPlatform(host_platform_sp);
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  lldb::TargetSP target_sp;
+  lldb::PlatformSP platform_sp;
+  debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
+                                            lldb_private::eLoadDependentsNo,
+                                            platform_sp, target_sp);
+
+  ExecutionContext exe_ctx(target_sp, false);
+  // DW_OP_addrx takes a single leb128 operand, the index in the addr table:
+  uint8_t expr[] = {DW_OP_addrx, 0x01};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  ASSERT_TRUE(DWARFExpression::Evaluate(
+      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
+      lldb::eRegisterKindLLDB,
+      /*initial_value_ptr*/ nullptr,
+      /*object_address_ptr*/ nullptr, result, &status))
+      << status.ToError();
+
+  ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
+  ASSERT_EQ(result.GetScalar().UInt(), 0x5678u);
 }

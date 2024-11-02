@@ -152,7 +152,7 @@ public:
   formatv_object(StringRef Fmt, Tuple &&Params)
       : formatv_object_base(Fmt, ParameterPointers),
         Parameters(std::move(Params)) {
-    ParameterPointers = apply_tuple(create_adapters(), Parameters);
+    ParameterPointers = std::apply(create_adapters(), Parameters);
   }
 
   formatv_object(formatv_object const &rhs) = delete;
@@ -160,7 +160,7 @@ public:
   formatv_object(formatv_object &&rhs)
       : formatv_object_base(std::move(rhs)),
         Parameters(std::move(rhs.Parameters)) {
-    ParameterPointers = apply_tuple(create_adapters(), Parameters);
+    ParameterPointers = std::apply(create_adapters(), Parameters);
     Adapters = ParameterPointers;
   }
 };

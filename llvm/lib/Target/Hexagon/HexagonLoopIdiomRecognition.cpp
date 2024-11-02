@@ -192,10 +192,8 @@ private:
 
     void push_back(Value *V) {
       // Do not push back duplicates.
-      if (!S.count(V)) {
+      if (S.insert(V).second)
         Q.push_back(V);
-        S.insert(V);
-      }
     }
 
     Value *pop_front_val() {
@@ -1139,7 +1137,7 @@ bool PolynomialMultiplyRecognize::findCycle(Value *Out, Value *In,
   auto *BB = cast<Instruction>(Out)->getParent();
   bool HadPhi = false;
 
-  for (auto U : Out->users()) {
+  for (auto *U : Out->users()) {
     auto *I = dyn_cast<Instruction>(&*U);
     if (I == nullptr || I->getParent() != BB)
       continue;
@@ -1152,9 +1150,8 @@ bool PolynomialMultiplyRecognize::findCycle(Value *Out, Value *In,
     if (IsPhi && HadPhi)
       return false;
     HadPhi |= IsPhi;
-    if (Cycle.count(I))
+    if (!Cycle.insert(I))
       return false;
-    Cycle.insert(I);
     if (findCycle(I, In, Cycle))
       break;
     Cycle.remove(I);
@@ -1487,7 +1484,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
 void PolynomialMultiplyRecognize::cleanupLoopBody(BasicBlock *LoopB) {
   for (auto &I : *LoopB)
-    if (Value *SV = SimplifyInstruction(&I, {DL, &TLI, &DT}))
+    if (Value *SV = simplifyInstruction(&I, {DL, &TLI, &DT}))
       I.replaceAllUsesWith(SV);
 
   for (Instruction &I : llvm::make_early_inc_range(*LoopB))
@@ -2006,8 +2003,7 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   for (auto *B : L->blocks())
     for (auto &I : *B)
       if (Ignored.count(&I) == 0 &&
-          isModOrRefSet(
-              intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
         return true;
 
   return false;
@@ -2169,7 +2165,7 @@ CleanupAndExit:
                                SCEV::FlagNUW);
   Value *NumBytes = Expander.expandCodeFor(NumBytesS, IntPtrTy, ExpPt);
   if (Instruction *In = dyn_cast<Instruction>(NumBytes))
-    if (Value *Simp = SimplifyInstruction(In, {*DL, TLI, DT}))
+    if (Value *Simp = simplifyInstruction(In, {*DL, TLI, DT}))
       NumBytes = Simp;
 
   CallInst *NewCall;
@@ -2279,7 +2275,7 @@ CleanupAndExit:
       Value *NumWords = Expander.expandCodeFor(NumWordsS, Int32Ty,
                                                MemmoveB->getTerminator());
       if (Instruction *In = dyn_cast<Instruction>(NumWords))
-        if (Value *Simp = SimplifyInstruction(In, {*DL, TLI, DT}))
+        if (Value *Simp = simplifyInstruction(In, {*DL, TLI, DT}))
           NumWords = Simp;
 
       Value *Op0 = (StoreBasePtr->getType() == Int32PtrTy)
@@ -2350,7 +2346,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;
-      for (auto K : In.users()) {
+      for (auto *K : In.users()) {
         Instruction *UseI = dyn_cast<Instruction>(K);
         if (!UseI)
           continue;

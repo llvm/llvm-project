@@ -14,6 +14,7 @@
 
 #include "llvm/MCA/Support.h"
 #include "llvm/MC/MCSchedule.h"
+#include <numeric>
 
 namespace llvm {
 namespace mca {
@@ -26,7 +27,7 @@ ResourceCycles &ResourceCycles::operator+=(const ResourceCycles &RHS) {
   else {
     // Create a common denominator for LHS and RHS by calculating the least
     // common multiple from the GCD.
-    unsigned GCD = GreatestCommonDivisor64(Denominator, RHS.Denominator);
+    unsigned GCD = std::gcd(Denominator, RHS.Denominator);
     unsigned LCM = (Denominator * RHS.Denominator) / GCD;
     unsigned LHSNumerator = Numerator * (LCM / Denominator);
     unsigned RHSNumerator = RHS.Numerator * (LCM / RHS.Denominator);

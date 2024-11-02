@@ -20,6 +20,9 @@ namespace lldb {
         SBTypeNameSpecifier (const char* name,
                              bool is_regex = false);
 
+        SBTypeNameSpecifier (const char* name,
+                             lldb::FormatterMatchType match_type);
+
         SBTypeNameSpecifier (SBType type);
 
         SBTypeNameSpecifier (const lldb::SBTypeNameSpecifier &rhs);
@@ -39,6 +42,9 @@ namespace lldb {
 
         lldb::SBType
         GetType ();
+
+        lldb::FormatterMatchType
+        GetMatchType();
 
         bool
         IsRegex();

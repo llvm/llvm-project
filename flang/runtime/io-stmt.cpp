@@ -8,6 +8,7 @@
 
 #include "io-stmt.h"
 #include "connection.h"
+#include "emit-encoded.h"
 #include "format.h"
 #include "tools.h"
 #include "unit.h"
@@ -24,12 +25,6 @@ namespace Fortran::runtime::io {
 bool IoStatementBase::Emit(const char *, std::size_t, std::size_t) {
   return false;
 }
-
-bool IoStatementBase::Emit(const char *, std::size_t) { return false; }
-
-bool IoStatementBase::Emit(const char16_t *, std::size_t) { return false; }
-
-bool IoStatementBase::Emit(const char32_t *, std::size_t) { return false; }
 
 std::size_t IoStatementBase::GetNextInputBytes(const char *&p) {
   p = nullptr;
@@ -82,34 +77,33 @@ void IoStatementBase::BadInquiryKeywordHashCrash(InquiryKeywordHash inquiry) {
       decode ? decode : "(cannot decode)");
 }
 
-template <Direction DIR, typename CHAR>
-InternalIoStatementState<DIR, CHAR>::InternalIoStatementState(
+template <Direction DIR>
+InternalIoStatementState<DIR>::InternalIoStatementState(
     Buffer scalar, std::size_t length, const char *sourceFile, int sourceLine)
-    : IoStatementBase{sourceFile, sourceLine}, unit_{scalar, length} {}
+    : IoStatementBase{sourceFile, sourceLine}, unit_{scalar, length, 1} {}
 
-template <Direction DIR, typename CHAR>
-InternalIoStatementState<DIR, CHAR>::InternalIoStatementState(
+template <Direction DIR>
+InternalIoStatementState<DIR>::InternalIoStatementState(
     const Descriptor &d, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, unit_{d, *this} {}
 
-template <Direction DIR, typename CHAR>
-bool InternalIoStatementState<DIR, CHAR>::Emit(
-    const CharType *data, std::size_t chars) {
+template <Direction DIR>
+bool InternalIoStatementState<DIR>::Emit(
+    const char *data, std::size_t bytes, std::size_t /*elementBytes*/) {
   if constexpr (DIR == Direction::Input) {
     Crash("InternalIoStatementState<Direction::Input>::Emit() called");
     return false;
   }
-  return unit_.Emit(data, chars * sizeof(CharType), *this);
+  return unit_.Emit(data, bytes, *this);
 }
 
-template <Direction DIR, typename CHAR>
-std::size_t InternalIoStatementState<DIR, CHAR>::GetNextInputBytes(
-    const char *&p) {
+template <Direction DIR>
+std::size_t InternalIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
   return unit_.GetNextInputBytes(p, *this);
 }
 
-template <Direction DIR, typename CHAR>
-bool InternalIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
+template <Direction DIR>
+bool InternalIoStatementState<DIR>::AdvanceRecord(int n) {
   while (n-- > 0) {
     if (!unit_.AdvanceRecord(*this)) {
       return false;
@@ -118,13 +112,11 @@ bool InternalIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
   return true;
 }
 
-template <Direction DIR, typename CHAR>
-void InternalIoStatementState<DIR, CHAR>::BackspaceRecord() {
+template <Direction DIR> void InternalIoStatementState<DIR>::BackspaceRecord() {
   unit_.BackspaceRecord(*this);
 }
 
-template <Direction DIR, typename CHAR>
-int InternalIoStatementState<DIR, CHAR>::EndIoStatement() {
+template <Direction DIR> int InternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Output) {
     unit_.EndIoStatement(); // fill
   }
@@ -135,32 +127,32 @@ int InternalIoStatementState<DIR, CHAR>::EndIoStatement() {
   return result;
 }
 
-template <Direction DIR, typename CHAR>
-void InternalIoStatementState<DIR, CHAR>::HandleAbsolutePosition(
-    std::int64_t n) {
+template <Direction DIR>
+void InternalIoStatementState<DIR>::HandleAbsolutePosition(std::int64_t n) {
   return unit_.HandleAbsolutePosition(n);
 }
 
-template <Direction DIR, typename CHAR>
-void InternalIoStatementState<DIR, CHAR>::HandleRelativePosition(
-    std::int64_t n) {
+template <Direction DIR>
+void InternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
   return unit_.HandleRelativePosition(n);
 }
 
 template <Direction DIR, typename CHAR>
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
-    Buffer buffer, std::size_t length, const CHAR *format,
-    std::size_t formatLength, const char *sourceFile, int sourceLine)
-    : InternalIoStatementState<DIR, CHAR>{buffer, length, sourceFile,
-          sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength} {}
+    Buffer buffer, std::size_t length, const CharType *format,
+    std::size_t formatLength, const Descriptor *formatDescriptor,
+    const char *sourceFile, int sourceLine)
+    : InternalIoStatementState<DIR>{buffer, length, sourceFile, sourceLine},
+      ioStatementState_{*this}, format_{*this, format, formatLength,
+                                    formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
-    const Descriptor &d, const CHAR *format, std::size_t formatLength,
-    const char *sourceFile, int sourceLine)
-    : InternalIoStatementState<DIR, CHAR>{d, sourceFile, sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength} {}
+    const Descriptor &d, const CharType *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
+    : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
+      ioStatementState_{*this}, format_{*this, format, formatLength,
+                                    formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -175,20 +167,19 @@ void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
 template <Direction DIR, typename CHAR>
 int InternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
   CompleteOperation();
-  return InternalIoStatementState<DIR, CHAR>::EndIoStatement();
+  return InternalIoStatementState<DIR>::EndIoStatement();
 }
 
-template <Direction DIR, typename CHAR>
-InternalListIoStatementState<DIR, CHAR>::InternalListIoStatementState(
+template <Direction DIR>
+InternalListIoStatementState<DIR>::InternalListIoStatementState(
     Buffer buffer, std::size_t length, const char *sourceFile, int sourceLine)
-    : InternalIoStatementState<DIR, CharType>{buffer, length, sourceFile,
-          sourceLine},
+    : InternalIoStatementState<DIR>{buffer, length, sourceFile, sourceLine},
       ioStatementState_{*this} {}
 
-template <Direction DIR, typename CHAR>
-InternalListIoStatementState<DIR, CHAR>::InternalListIoStatementState(
+template <Direction DIR>
+InternalListIoStatementState<DIR>::InternalListIoStatementState(
     const Descriptor &d, const char *sourceFile, int sourceLine)
-    : InternalIoStatementState<DIR, CharType>{d, sourceFile, sourceLine},
+    : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
       ioStatementState_{*this} {}
 
 ExternalIoStatementBase::ExternalIoStatementBase(
@@ -204,6 +195,10 @@ int ExternalIoStatementBase::EndIoStatement() {
   auto result{IoStatementBase::EndIoStatement()};
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
   return result;
+}
+
+void ExternalIoStatementBase::SetAsynchronous() {
+  asynchronousID_ = unit().GetAsynchronousId(*this);
 }
 
 void OpenStatementState::set_path(const char *path, std::size_t length) {
@@ -283,6 +278,7 @@ int CloseStatementState::EndIoStatement() {
 }
 
 void NoUnitIoStatementState::CompleteOperation() {
+  SignalPendingError();
   IoStatementBase::CompleteOperation();
 }
 
@@ -315,20 +311,18 @@ void ExternalIoStatementState<DIR>::CompleteOperation() {
   }
   if constexpr (DIR == Direction::Input) {
     BeginReadingRecord(); // in case there were no I/O items
-    if (mutableModes().nonAdvancing) {
+    if (mutableModes().nonAdvancing && !InError()) {
       unit().leftTabLimit = unit().furthestPositionInRecord;
-    }
-    if (!mutableModes().nonAdvancing || GetIoStat() == IostatEor) {
+    } else {
       FinishReadingRecord();
     }
   } else { // output
     if (mutableModes().nonAdvancing) {
       // Make effects of positioning past the last Emit() visible with blanks.
       std::int64_t n{unit().positionInRecord - unit().furthestPositionInRecord};
-      unit().positionInRecord = unit().furthestPositionInRecord;
       while (n-- > 0 && unit().Emit(" ", 1, 1, *this)) {
       }
-      unit().leftTabLimit = unit().furthestPositionInRecord;
+      unit().leftTabLimit = unit().positionInRecord;
     } else {
       unit().AdvanceRecord(*this);
     }
@@ -349,36 +343,6 @@ bool ExternalIoStatementState<DIR>::Emit(
     Crash("ExternalIoStatementState::Emit(char) called for input statement");
   }
   return unit().Emit(data, bytes, elementBytes, *this);
-}
-
-template <Direction DIR>
-bool ExternalIoStatementState<DIR>::Emit(const char *data, std::size_t bytes) {
-  if constexpr (DIR == Direction::Input) {
-    Crash("ExternalIoStatementState::Emit(char) called for input statement");
-  }
-  return unit().Emit(data, bytes, 0, *this);
-}
-
-template <Direction DIR>
-bool ExternalIoStatementState<DIR>::Emit(
-    const char16_t *data, std::size_t chars) {
-  if constexpr (DIR == Direction::Input) {
-    Crash(
-        "ExternalIoStatementState::Emit(char16_t) called for input statement");
-  }
-  return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
-      sizeof *data, *this);
-}
-
-template <Direction DIR>
-bool ExternalIoStatementState<DIR>::Emit(
-    const char32_t *data, std::size_t chars) {
-  if constexpr (DIR == Direction::Input) {
-    Crash(
-        "ExternalIoStatementState::Emit(char32_t) called for input statement");
-  }
-  return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
-      sizeof *data, *this);
 }
 
 template <Direction DIR>
@@ -434,9 +398,9 @@ void ExternalIoStatementState<DIR>::FinishReadingRecord() {
 template <Direction DIR, typename CHAR>
 ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
     ExternalFileUnit &unit, const CHAR *format, std::size_t formatLength,
-    const char *sourceFile, int sourceLine)
+    const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : ExternalIoStatementState<DIR>{unit, sourceFile, sourceLine},
-      format_{*this, format, formatLength} {}
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ExternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -462,45 +426,9 @@ std::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
 }
 
 bool IoStatementState::Emit(
-    const char *data, std::size_t n, std::size_t elementBytes) {
+    const char *data, std::size_t bytes, std::size_t elementBytes) {
   return common::visit(
-      [=](auto &x) { return x.get().Emit(data, n, elementBytes); }, u_);
-}
-
-bool IoStatementState::Emit(const char *data, std::size_t n) {
-  return common::visit([=](auto &x) { return x.get().Emit(data, n); }, u_);
-}
-
-bool IoStatementState::Emit(const char16_t *data, std::size_t chars) {
-  return common::visit([=](auto &x) { return x.get().Emit(data, chars); }, u_);
-}
-
-bool IoStatementState::Emit(const char32_t *data, std::size_t chars) {
-  return common::visit([=](auto &x) { return x.get().Emit(data, chars); }, u_);
-}
-
-template <typename CHAR>
-bool IoStatementState::EmitEncoded(const CHAR *data0, std::size_t chars) {
-  // Don't allow sign extension
-  using UnsignedChar = std::make_unsigned_t<CHAR>;
-  const UnsignedChar *data{reinterpret_cast<const UnsignedChar *>(data0)};
-  if (GetConnectionState().useUTF8<CHAR>()) {
-    char buffer[256];
-    std::size_t at{0};
-    while (chars-- > 0) {
-      auto len{EncodeUTF8(buffer + at, *data++)};
-      at += len;
-      if (at + maxUTF8Bytes > sizeof buffer) {
-        if (!Emit(buffer, at)) {
-          return false;
-        }
-        at = 0;
-      }
-    }
-    return at == 0 || Emit(buffer, at);
-  } else {
-    return Emit(data0, chars);
-  }
+      [=](auto &x) { return x.get().Emit(data, bytes, elementBytes); }, u_);
 }
 
 bool IoStatementState::Receive(
@@ -575,7 +503,8 @@ std::optional<char32_t> IoStatementState::GetCurrentChar(
     byteCount = 0;
     return std::nullopt;
   } else {
-    if (GetConnectionState().isUTF8) {
+    const ConnectionState &connection{GetConnectionState()};
+    if (connection.isUTF8) {
       std::size_t length{MeasureUTF8Bytes(*p)};
       if (length <= bytes) {
         if (auto result{DecodeUTF8(p)}) {
@@ -585,35 +514,16 @@ std::optional<char32_t> IoStatementState::GetCurrentChar(
       }
       GetIoErrorHandler().SignalError(IostatUTF8Decoding);
       // Error recovery: return the next byte
+    } else if (connection.internalIoCharKind > 1) {
+      byteCount = connection.internalIoCharKind;
+      if (byteCount == 2) {
+        return *reinterpret_cast<const char16_t *>(p);
+      } else {
+        return *reinterpret_cast<const char32_t *>(p);
+      }
     }
     byteCount = 1;
     return *p;
-  }
-}
-
-bool IoStatementState::EmitRepeated(char ch, std::size_t n) {
-  return common::visit(
-      [=](auto &x) {
-        for (std::size_t j{0}; j < n; ++j) {
-          if (!x.get().Emit(&ch, 1)) {
-            return false;
-          }
-        }
-        return true;
-      },
-      u_);
-}
-
-bool IoStatementState::EmitField(
-    const char *p, std::size_t length, std::size_t width) {
-  if (width <= 0) {
-    width = static_cast<int>(length);
-  }
-  if (length > static_cast<std::size_t>(width)) {
-    return EmitRepeated('*', width);
-  } else {
-    return EmitRepeated(' ', static_cast<int>(width - length)) &&
-        Emit(p, length);
   }
 }
 
@@ -627,7 +537,6 @@ std::optional<char32_t> IoStatementState::NextInField(
         switch (*next) {
         case ' ':
         case '\t':
-        case ';':
         case '/':
         case '(':
         case ')':
@@ -637,11 +546,15 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '\n': // for stream access
           return std::nullopt;
         case ',':
-          if (edit.modes.editingFlags & decimalComma) {
-            break;
-          } else {
+          if (!(edit.modes.editingFlags & decimalComma)) {
             return std::nullopt;
           }
+          break;
+        case ';':
+          if (edit.modes.editingFlags & decimalComma) {
+            return std::nullopt;
+          }
+          break;
         default:
           break;
         }
@@ -674,7 +587,8 @@ bool IoStatementState::CheckForEndOfRecord() {
     if (auto length{connection.EffectiveRecordLength()}) {
       if (connection.positionInRecord >= *length) {
         IoErrorHandler &handler{GetIoErrorHandler()};
-        if (mutableModes().nonAdvancing) {
+        const auto &modes{mutableModes()};
+        if (modes.nonAdvancing) {
           if (connection.access == Access::Stream &&
               connection.unterminatedRecord) {
             // Reading final unterminated record left by a
@@ -684,10 +598,10 @@ bool IoStatementState::CheckForEndOfRecord() {
           } else {
             handler.SignalEor();
           }
-        } else if (!connection.modes.pad) {
+        } else if (!modes.pad) {
           handler.SignalError(IostatRecordReadOverrun);
         }
-        return connection.modes.pad; // PAD='YES'
+        return modes.pad; // PAD='YES'
       }
     }
   }
@@ -748,7 +662,7 @@ bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
     return io.AdvanceRecord();
   }
   if (space) {
-    return io.Emit(" ", 1);
+    return EmitAscii(io, " ", 1);
   }
   return true;
 }
@@ -796,7 +710,9 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     if (remaining_ > 0) {
       repeatPosition_.emplace(io);
     }
-    return edit;
+    if (!imaginaryPart_) {
+      return edit;
+    }
   }
   // Skip separators, handle a "r*c" repeat count; see 13.10.2 in Fortran 2018
   if (imaginaryPart_) {
@@ -920,21 +836,6 @@ bool ChildIoStatementState<DIR>::Emit(
 }
 
 template <Direction DIR>
-bool ChildIoStatementState<DIR>::Emit(const char *data, std::size_t bytes) {
-  return child_.parent().Emit(data, bytes);
-}
-
-template <Direction DIR>
-bool ChildIoStatementState<DIR>::Emit(const char16_t *data, std::size_t chars) {
-  return child_.parent().Emit(data, chars);
-}
-
-template <Direction DIR>
-bool ChildIoStatementState<DIR>::Emit(const char32_t *data, std::size_t chars) {
-  return child_.parent().Emit(data, chars);
-}
-
-template <Direction DIR>
 std::size_t ChildIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
   return child_.parent().GetNextInputBytes(p);
 }
@@ -952,10 +853,11 @@ void ChildIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
 template <Direction DIR, typename CHAR>
 ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
     ChildIo &child, const CHAR *format, std::size_t formatLength,
-    const char *sourceFile, int sourceLine)
+    const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine},
       mutableModes_{child.parent().mutableModes()}, format_{*this, format,
-                                                        formatLength} {}
+                                                        formatLength,
+                                                        formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -1024,6 +926,8 @@ void ExternalMiscIoStatementState::CompleteOperation() {
   case Rewind:
     ext.Rewind(*this);
     break;
+  case Wait:
+    break; // handled in io-api.cpp BeginWait
   }
   return IoStatementBase::CompleteOperation();
 }
@@ -1332,7 +1236,7 @@ bool InquireNoUnitState::Inquire(
   case HashInquiryKeyword("STREAM"):
   case HashInquiryKeyword("WRITE"):
   case HashInquiryKeyword("UNFORMATTED"):
-    ToFortranDefaultCharacter(result, length, "UNKNONN");
+    ToFortranDefaultCharacter(result, length, "UNKNOWN");
     return true;
   default:
     BadInquiryKeywordHashCrash(inquiry);
@@ -1483,8 +1387,10 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("NUMBER"):
   case HashInquiryKeyword("POS"):
   case HashInquiryKeyword("RECL"):
-  case HashInquiryKeyword("SIZE"):
     result = -1;
+    return true;
+  case HashInquiryKeyword("SIZE"):
+    result = SizeInBytes(path_.get());
     return true;
   default:
     BadInquiryKeywordHashCrash(inquiry);
@@ -1496,35 +1402,17 @@ InquireIOLengthState::InquireIOLengthState(
     const char *sourceFile, int sourceLine)
     : NoUnitIoStatementState{*this, sourceFile, sourceLine} {}
 
-bool InquireIOLengthState::Emit(const char *, std::size_t n, std::size_t) {
-  bytes_ += n;
-  return true;
-}
-
-bool InquireIOLengthState::Emit(const char *p, std::size_t n) {
-  bytes_ += sizeof *p * n;
-  return true;
-}
-
-bool InquireIOLengthState::Emit(const char16_t *p, std::size_t n) {
-  bytes_ += sizeof *p * n;
-  return true;
-}
-
-bool InquireIOLengthState::Emit(const char32_t *p, std::size_t n) {
-  bytes_ += sizeof *p * n;
+bool InquireIOLengthState::Emit(const char *, std::size_t bytes, std::size_t) {
+  bytes_ += bytes;
   return true;
 }
 
 int ErroneousIoStatementState::EndIoStatement() {
   SignalPendingError();
+  if (unit_) {
+    unit_->EndIoStatement();
+  }
   return IoStatementBase::EndIoStatement();
 }
-
-template bool IoStatementState::EmitEncoded<char>(const char *, std::size_t);
-template bool IoStatementState::EmitEncoded<char16_t>(
-    const char16_t *, std::size_t);
-template bool IoStatementState::EmitEncoded<char32_t>(
-    const char32_t *, std::size_t);
 
 } // namespace Fortran::runtime::io

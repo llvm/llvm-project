@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 void *f();
 
 template <typename T> T* g() {
@@ -105,22 +105,22 @@ void while_destruct(int z) {
     // CHECK-NEXT: br i1 [[COND]]
 
     // Loop-exit staging block.
-    // CHECK: store i32 3, i32* [[CLEANUPDEST]]
+    // CHECK: store i32 3, ptr [[CLEANUPDEST]]
     // CHECK-NEXT: br
 
     // While body.
-    // CHECK: store i32 21, i32* [[Z]]
-    // CHECK: store i32 0, i32* [[CLEANUPDEST]]
+    // CHECK: store i32 21, ptr [[Z]]
+    // CHECK: store i32 0, ptr [[CLEANUPDEST]]
     // CHECK-NEXT: br
     z = 21;
 
     // Cleanup.
     // CHECK: call void @_ZN1XD1Ev
-    // CHECK-NEXT: [[DEST:%.*]] = load i32, i32* [[CLEANUPDEST]]
+    // CHECK-NEXT: [[DEST:%.*]] = load i32, ptr [[CLEANUPDEST]]
     // CHECK-NEXT: switch i32 [[DEST]]
   }
 
-  // CHECK: store i32 22, i32* [[Z]]
+  // CHECK: store i32 22, ptr [[Z]]
   z = 22;
 
   // CHECK: call void @_Z4getXv
@@ -129,7 +129,7 @@ void while_destruct(int z) {
   // CHECK-NEXT: br
   while(getX()) { }
 
-  // CHECK: store i32 25, i32* [[Z]]
+  // CHECK: store i32 25, ptr [[Z]]
   z = 25;
 
   // CHECK: ret
@@ -152,27 +152,27 @@ void for_destruct(int z) {
     // -> %for.body, %for.cond.cleanup
 
     // %for.cond.cleanup: Exit cleanup staging.
-    // CHECK: store i32 2, i32* [[CLEANUPDEST]]
+    // CHECK: store i32 2, ptr [[CLEANUPDEST]]
     // CHECK-NEXT: br
     // -> %cleanup
 
     // %for.body:
-    // CHECK: store i32 23, i32* [[Z]]
+    // CHECK: store i32 23, ptr [[Z]]
     // CHECK-NEXT: br
     // -> %for.inc
     z = 23;
 
     // %for.inc:
-    // CHECK: [[TMP:%.*]] = load i32, i32* [[Z]]
+    // CHECK: [[TMP:%.*]] = load i32, ptr [[Z]]
     // CHECK-NEXT: [[INC:%.*]] = add nsw i32 [[TMP]], 1
-    // CHECK-NEXT: store i32 [[INC]], i32* [[Z]]
-    // CHECK-NEXT: store i32 0, i32* [[CLEANUPDEST]]
+    // CHECK-NEXT: store i32 [[INC]], ptr [[Z]]
+    // CHECK-NEXT: store i32 0, ptr [[CLEANUPDEST]]
     // CHECK-NEXT: br
     // -> %cleanup
 
     // %cleanup:  Destroys X.
     // CHECK: call void @_ZN1XD1Ev
-    // CHECK-NEXT: [[YDESTTMP:%.*]] = load i32, i32* [[CLEANUPDEST]]
+    // CHECK-NEXT: [[YDESTTMP:%.*]] = load i32, ptr [[CLEANUPDEST]]
     // CHECK-NEXT: switch i32 [[YDESTTMP]]
     // 0 -> %cleanup.cont, default -> %cleanup1
 
@@ -190,7 +190,7 @@ void for_destruct(int z) {
   // CHECK: store i32 24
   z = 24;
 
-  // CHECK-NEXT: store i32 0, i32* [[I]]
+  // CHECK-NEXT: store i32 0, ptr [[I]]
   // CHECK-NEXT: br
   // -> %for.cond6
 
@@ -207,7 +207,7 @@ void for_destruct(int z) {
 
   // %for.inc11:
   // CHECK: call void @_Z4getXv
-  // CHECK-NEXT: load i32, i32* [[I]]
+  // CHECK-NEXT: load i32, ptr [[I]]
   // CHECK-NEXT: add
   // CHECK-NEXT: store
   // CHECK-NEXT: call void @_ZN1XD1Ev

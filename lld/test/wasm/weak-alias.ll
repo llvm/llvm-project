@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -o %t.o %s
-; RUN: llc -filetype=obj %S/Inputs/weak-alias.ll -o %t2.o
+; RUN: llc -mcpu=mvp -filetype=obj -o %t.o %s
+; RUN: llc -mcpu=mvp -filetype=obj %S/Inputs/weak-alias.ll -o %t2.o
 ; RUN: wasm-ld --export-dynamic %t.o %t2.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 

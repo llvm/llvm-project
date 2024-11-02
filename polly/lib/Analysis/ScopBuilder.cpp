@@ -78,15 +78,14 @@ static unsigned const MaxDimensionsInAccessRange = 9;
 static cl::opt<bool, true> XModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
     cl::desc("Model read-only scalar values in the scop description"),
-    cl::location(ModelReadOnlyScalars), cl::Hidden, cl::ZeroOrMore,
-    cl::init(true), cl::cat(PollyCategory));
+    cl::location(ModelReadOnlyScalars), cl::Hidden, cl::init(true),
+    cl::cat(PollyCategory));
 
 static cl::opt<int>
     OptComputeOut("polly-analysis-computeout",
                   cl::desc("Bound the scop analysis by a maximal amount of "
                            "computational steps (0 means no bound)"),
-                  cl::Hidden, cl::init(800000), cl::ZeroOrMore,
-                  cl::cat(PollyCategory));
+                  cl::Hidden, cl::init(800000), cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyAllowDereferenceOfAllFunctionParams(
     "polly-allow-dereference-of-all-function-parameters",
@@ -106,18 +105,18 @@ static cl::opt<bool>
 static cl::opt<unsigned> RunTimeChecksMaxArraysPerGroup(
     "polly-rtc-max-arrays-per-group",
     cl::desc("The maximal number of arrays to compare in each alias group."),
-    cl::Hidden, cl::ZeroOrMore, cl::init(20), cl::cat(PollyCategory));
+    cl::Hidden, cl::init(20), cl::cat(PollyCategory));
 
 static cl::opt<unsigned> RunTimeChecksMaxAccessDisjuncts(
     "polly-rtc-max-array-disjuncts",
     cl::desc("The maximal number of disjunts allowed in memory accesses to "
              "to build RTCs."),
-    cl::Hidden, cl::ZeroOrMore, cl::init(8), cl::cat(PollyCategory));
+    cl::Hidden, cl::init(8), cl::cat(PollyCategory));
 
 static cl::opt<unsigned> RunTimeChecksMaxParameters(
     "polly-rtc-max-parameters",
     cl::desc("The maximal number of parameters allowed in RTCs."), cl::Hidden,
-    cl::ZeroOrMore, cl::init(8), cl::cat(PollyCategory));
+    cl::init(8), cl::cat(PollyCategory));
 
 static cl::opt<bool> UnprofitableScalarAccs(
     "polly-unprofitable-scalar-accs",
@@ -131,16 +130,16 @@ static cl::opt<std::string> UserContextStr(
 
 static cl::opt<bool> DetectReductions("polly-detect-reductions",
                                       cl::desc("Detect and exploit reductions"),
-                                      cl::Hidden, cl::ZeroOrMore,
-                                      cl::init(true), cl::cat(PollyCategory));
+                                      cl::Hidden, cl::init(true),
+                                      cl::cat(PollyCategory));
 
 // Multiplicative reductions can be disabled separately as these kind of
 // operations can overflow easily. Additive reductions and bit operations
 // are in contrast pretty stable.
 static cl::opt<bool> DisableMultiplicativeReductions(
     "polly-disable-multiplicative-reductions",
-    cl::desc("Disable multiplicative reductions"), cl::Hidden, cl::ZeroOrMore,
-    cl::init(false), cl::cat(PollyCategory));
+    cl::desc("Disable multiplicative reductions"), cl::Hidden,
+    cl::cat(PollyCategory));
 
 enum class GranularityChoice { BasicBlocks, ScalarIndependence, Stores };
 
@@ -698,8 +697,7 @@ isl::set ScopBuilder::getPredecessorDomainConstraints(BasicBlock *BB,
 
     // If the predecessor is in a region we used for propagation we can skip it.
     auto PredBBInRegion = [PredBB](Region *PR) { return PR->contains(PredBB); };
-    if (std::any_of(PropagatedRegions.begin(), PropagatedRegions.end(),
-                    PredBBInRegion)) {
+    if (llvm::any_of(PropagatedRegions, PredBBInRegion)) {
       continue;
     }
 
@@ -1441,6 +1439,10 @@ void ScopBuilder::addUserAssumptions(
 }
 
 bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
+  // Memory builtins are not considered in this function.
+  if (!Inst.isLoad() && !Inst.isStore())
+    return false;
+
   Value *Val = Inst.getValueOperand();
   Type *ElementType = Val->getType();
   Value *Address = Inst.getPointerOperand();
@@ -1503,6 +1505,10 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
 }
 
 bool ScopBuilder::buildAccessMultiDimParam(MemAccInst Inst, ScopStmt *Stmt) {
+  // Memory builtins are not considered by this function.
+  if (!Inst.isLoad() && !Inst.isStore())
+    return false;
+
   if (!PollyDelinearize)
     return false;
 
@@ -1636,31 +1642,16 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   if (CI->doesNotAccessMemory() || isIgnoredIntrinsic(CI) || isDebugCall(CI))
     return true;
 
-  bool ReadOnly = false;
   auto *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
   auto *CalledFunction = CI->getCalledFunction();
-  switch (AA.getModRefBehavior(CalledFunction)) {
-  case FMRB_UnknownModRefBehavior:
-    llvm_unreachable("Unknown mod ref behaviour cannot be represented.");
-  case FMRB_DoesNotAccessMemory:
+  MemoryEffects ME = AA.getMemoryEffects(CalledFunction);
+  if (ME.doesNotAccessMemory())
     return true;
-  case FMRB_OnlyWritesMemory:
-  case FMRB_OnlyWritesInaccessibleMem:
-  case FMRB_OnlyWritesInaccessibleOrArgMem:
-  case FMRB_OnlyAccessesInaccessibleMem:
-  case FMRB_OnlyAccessesInaccessibleOrArgMem:
-    return false;
-  case FMRB_OnlyReadsMemory:
-  case FMRB_OnlyReadsInaccessibleMem:
-  case FMRB_OnlyReadsInaccessibleOrArgMem:
-    GlobalReads.emplace_back(Stmt, CI);
-    return true;
-  case FMRB_OnlyReadsArgumentPointees:
-    ReadOnly = true;
-    LLVM_FALLTHROUGH;
-  case FMRB_OnlyWritesArgumentPointees:
-  case FMRB_OnlyAccessesArgumentPointees: {
-    auto AccType = ReadOnly ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
+
+  if (ME.onlyAccessesArgPointees()) {
+    ModRefInfo ArgMR = ME.getModRef(MemoryEffects::ArgMem);
+    auto AccType =
+        !isModSet(ArgMR) ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
     Loop *L = LI.getLoopFor(Inst->getParent());
     for (const auto &Arg : CI->args()) {
       if (!Arg->getType()->isPointerTy())
@@ -1681,12 +1672,19 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
     }
     return true;
   }
-  }
 
-  return true;
+  if (ME.onlyReadsMemory()) {
+    GlobalReads.emplace_back(Stmt, CI);
+    return true;
+  }
+  return false;
 }
 
-void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt) {
+bool ScopBuilder::buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt) {
+  // Memory builtins are not considered by this function.
+  if (!Inst.isLoad() && !Inst.isStore())
+    return false;
+
   Value *Address = Inst.getPointerOperand();
   Value *Val = Inst.getValueOperand();
   Type *ElementType = Val->getType();
@@ -1728,6 +1726,7 @@ void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt) {
 
   addArrayAccess(Stmt, Inst, AccType, BasePointer->getValue(), ElementType,
                  IsAffine, {AccessFunction}, {nullptr}, Val);
+  return true;
 }
 
 void ScopBuilder::buildMemoryAccess(MemAccInst Inst, ScopStmt *Stmt) {
@@ -1743,7 +1742,12 @@ void ScopBuilder::buildMemoryAccess(MemAccInst Inst, ScopStmt *Stmt) {
   if (buildAccessMultiDimParam(Inst, Stmt))
     return;
 
-  buildAccessSingleDim(Inst, Stmt);
+  if (buildAccessSingleDim(Inst, Stmt))
+    return;
+
+  llvm_unreachable(
+      "At least one of the buildAccess functions must handled this access, or "
+      "ScopDetection should have rejected this SCoP");
 }
 
 void ScopBuilder::buildAccessFunctions() {
@@ -2387,7 +2391,7 @@ void ScopBuilder::ensureValueRead(Value *V, ScopStmt *UserStmt) {
     if (!ModelReadOnlyScalars)
       break;
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case VirtualUse::Inter:
 
     // Do not create another MemoryAccess for reloading the value if one already
@@ -2484,7 +2488,7 @@ static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
   case Instruction::FAdd:
     if (!BinOp->isFast())
       return MemoryAccess::RT_NONE;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::Add:
     return MemoryAccess::RT_ADD;
   case Instruction::Or:
@@ -2496,7 +2500,7 @@ static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
   case Instruction::FMul:
     if (!BinOp->isFast())
       return MemoryAccess::RT_NONE;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::Mul:
     if (DisableMultiplicativeReductions)
       return MemoryAccess::RT_NONE;

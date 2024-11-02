@@ -615,7 +615,7 @@ static void initializeWorkList(std::vector<WorkListItem> &WorkList,
       auto Src = InstantiatedValue{Val, I};
       // If there's an assignment edge from X to Y, it means Y is reachable from
       // X at S3 and X is reachable from Y at S1
-      for (auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges) {
+      for (const auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges) {
         propagate(Edge.Other, Src, MatchState::FlowFromReadOnly, ReachSet,
                   WorkList);
         propagate(Src, Edge.Other, MatchState::FlowToWriteOnly, ReachSet,
@@ -831,14 +831,14 @@ CFLAndersAAResult::ensureCached(const Function &Fn) {
     scan(Fn);
     Iter = Cache.find(&Fn);
     assert(Iter != Cache.end());
-    assert(Iter->second.hasValue());
+    assert(Iter->second);
   }
   return Iter->second;
 }
 
 const AliasSummary *CFLAndersAAResult::getAliasSummary(const Function &Fn) {
   auto &FunInfo = ensureCached(Fn);
-  if (FunInfo.hasValue())
+  if (FunInfo)
     return &FunInfo->getAliasSummary();
   else
     return nullptr;

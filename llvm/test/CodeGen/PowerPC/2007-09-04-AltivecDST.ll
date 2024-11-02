@@ -7,7 +7,7 @@
 ; RUN:   FileCheck %s --check-prefix=AIX32
 
 
-define hidden void @_Z4borkPc(i8* %image) {
+define hidden void @_Z4borkPc(ptr %image) {
 ; CHECK-LABEL: _Z4borkPc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 8
@@ -35,14 +35,14 @@ define hidden void @_Z4borkPc(i8* %image) {
 ; AIX32-NEXT:    nop
 ; AIX32-NEXT:    blr
 entry:
-	tail call void @llvm.ppc.altivec.dst( i8* %image, i32 8, i32 0 )
-	tail call void @llvm.ppc.altivec.dstt( i8* %image, i32 8, i32 0 )
-	tail call void @llvm.ppc.altivec.dstst( i8* %image, i32 8, i32 0 )
-	tail call void @llvm.ppc.altivec.dststt( i8* %image, i32 8, i32 0 )
+	tail call void @llvm.ppc.altivec.dst( ptr %image, i32 8, i32 0 )
+	tail call void @llvm.ppc.altivec.dstt( ptr %image, i32 8, i32 0 )
+	tail call void @llvm.ppc.altivec.dstst( ptr %image, i32 8, i32 0 )
+	tail call void @llvm.ppc.altivec.dststt( ptr %image, i32 8, i32 0 )
 	ret void
 }
 
-declare void @llvm.ppc.altivec.dst(i8*, i32, i32)
-declare void @llvm.ppc.altivec.dstt(i8*, i32, i32)
-declare void @llvm.ppc.altivec.dstst(i8*, i32, i32)
-declare void @llvm.ppc.altivec.dststt(i8*, i32, i32)
+declare void @llvm.ppc.altivec.dst(ptr, i32, i32)
+declare void @llvm.ppc.altivec.dstt(ptr, i32, i32)
+declare void @llvm.ppc.altivec.dstst(ptr, i32, i32)
+declare void @llvm.ppc.altivec.dststt(ptr, i32, i32)

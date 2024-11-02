@@ -22,3 +22,12 @@ void too_big_for_char(int param) {
   char ok3 = true ? 0 : 99999 + 1;
   char ok4 = true ? 0 : nines() + 1;
 }
+
+void test_bitfield() {
+  struct S {
+    int one_bit : 1;
+  } s;
+
+  s.one_bit = 1;    // expected-warning {{implicit truncation from 'int' to a one-bit wide bit-field changes value from 1 to -1}}
+  s.one_bit = true; // no-warning
+}

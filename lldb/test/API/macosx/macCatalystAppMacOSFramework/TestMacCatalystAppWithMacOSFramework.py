@@ -3,12 +3,9 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
-import unittest2
 
 
 class TestMacCatalystAppWithMacOSFramework(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(macos_version=["<", "10.15"])
     @skipUnlessDarwin

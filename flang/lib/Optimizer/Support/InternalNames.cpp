@@ -38,7 +38,7 @@ static std::string doModules(llvm::ArrayRef<llvm::StringRef> mods) {
 static std::string doModulesHost(llvm::ArrayRef<llvm::StringRef> mods,
                                  llvm::Optional<llvm::StringRef> host) {
   std::string result = doModules(mods);
-  if (host.hasValue())
+  if (host)
     result.append("F").append(host->lower());
   return result;
 }
@@ -51,8 +51,8 @@ convertToStringRef(llvm::ArrayRef<std::string> from) {
 inline llvm::Optional<llvm::StringRef>
 convertToStringRef(const llvm::Optional<std::string> &from) {
   llvm::Optional<llvm::StringRef> to;
-  if (from.hasValue())
-    to = from.getValue();
+  if (from)
+    to = *from;
   return to;
 }
 
@@ -329,18 +329,18 @@ static std::string
 mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
   if (kinds.empty())
     return "";
-  std::string result = "";
+  std::string result;
   for (std::int64_t kind : kinds)
     result += "." + std::to_string(kind);
   return result;
 }
 
-std::string
-fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
-  auto result = deconstruct(mangledTypeName);
-  if (result.first != NameKind::DERIVED_TYPE)
+static std::string getDerivedTypeObjectName(llvm::StringRef mangledTypeName,
+                                            const llvm::StringRef separator) {
+  auto result = fir::NameUniquer::deconstruct(mangledTypeName);
+  if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return "";
-  std::string varName = ".dt." + result.second.name +
+  std::string varName = separator.str() + result.second.name +
                         mangleTypeDescriptorKinds(result.second.kinds);
   llvm::SmallVector<llvm::StringRef> modules;
   for (const std::string &mod : result.second.modules)
@@ -348,5 +348,15 @@ fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
   llvm::Optional<llvm::StringRef> host;
   if (result.second.host)
     host = *result.second.host;
-  return doVariable(modules, host, varName);
+  return fir::NameUniquer::doVariable(modules, host, varName);
+}
+
+std::string
+fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
+  return getDerivedTypeObjectName(mangledTypeName, typeDescriptorSeparator);
+}
+
+std::string fir::NameUniquer::getTypeDescriptorBindingTableName(
+    llvm::StringRef mangledTypeName) {
+  return getDerivedTypeObjectName(mangledTypeName, bindingTableSeparator);
 }

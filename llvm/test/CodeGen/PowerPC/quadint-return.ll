@@ -7,8 +7,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 define i128 @foo() nounwind {
 entry:
   %x = alloca i128, align 16
-  store i128 27, i128* %x, align 16
-  %0 = load i128, i128* %x, align 16
+  store i128 27, ptr %x, align 16
+  %0 = load i128, ptr %x, align 16
   ret i128 %0
 }
 

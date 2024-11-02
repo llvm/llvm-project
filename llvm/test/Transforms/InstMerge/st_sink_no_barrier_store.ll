@@ -1,6 +1,6 @@
 ; Test to make sure that stores in a diamond get merged with a non barrier store after the store instruction to be sunk
 ; Stores sunks into the footer.
-; RUN: opt -basic-aa -memdep -mldst-motion -S < %s | FileCheck %s
+; RUN: opt -mldst-motion -S < %s | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 %struct.node = type { i32, %struct.node*, %struct.node*, %struct.node*, i32, i32, i32, i32 }

@@ -168,11 +168,11 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = load i32, i32 addrspace(4)* @external_constant
-  %ptr = load float*, float* addrspace(4)* @const.ptr
   %tmp1 = icmp ne i32 %tmp, 0
   br i1 %tmp1, label %bb12, label %bb2
 
 bb2:
+  %ptr = load float*, float* addrspace(4)* @const.ptr
   %tmp4 = load float, float* %ptr, align 4
   %tmp5 = fcmp olt float %tmp4, 1.0
   %tmp6 = or i1 %tmp5, false

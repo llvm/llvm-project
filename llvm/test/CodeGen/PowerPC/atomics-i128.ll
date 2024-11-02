@@ -23,7 +23,7 @@
 ; RUN: | FileCheck --check-prefix=PPC-PWR8 %s
 
 
-define i128 @swap(i128* %a, i128 %x) {
+define i128 @swap(ptr %a, i128 %x) {
 ; CHECK-LABEL: swap:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -110,11 +110,11 @@ define i128 @swap(i128* %a, i128 %x) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = atomicrmw xchg i128* %a, i128 %x seq_cst, align 16
+  %0 = atomicrmw xchg ptr %a, i128 %x seq_cst, align 16
   ret i128 %0
 }
 
-define i128 @add(i128* %a, i128 %x) {
+define i128 @add(ptr %a, i128 %x) {
 ; CHECK-LABEL: add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -248,11 +248,11 @@ define i128 @add(i128* %a, i128 %x) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = atomicrmw add i128* %a, i128 %x seq_cst, align 16
+  %0 = atomicrmw add ptr %a, i128 %x seq_cst, align 16
   ret i128 %0
 }
 
-define i128 @sub(i128* %a, i128 %x) {
+define i128 @sub(ptr %a, i128 %x) {
 ; CHECK-LABEL: sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -386,11 +386,11 @@ define i128 @sub(i128* %a, i128 %x) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = atomicrmw sub i128* %a, i128 %x seq_cst, align 16
+  %0 = atomicrmw sub ptr %a, i128 %x seq_cst, align 16
   ret i128 %0
 }
 
-define i128 @and(i128* %a, i128 %x) {
+define i128 @and(ptr %a, i128 %x) {
 ; CHECK-LABEL: and:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -524,11 +524,11 @@ define i128 @and(i128* %a, i128 %x) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = atomicrmw and i128* %a, i128 %x seq_cst, align 16
+  %0 = atomicrmw and ptr %a, i128 %x seq_cst, align 16
   ret i128 %0
 }
 
-define i128 @or(i128* %a, i128 %x) {
+define i128 @or(ptr %a, i128 %x) {
 ; CHECK-LABEL: or:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -662,11 +662,11 @@ define i128 @or(i128* %a, i128 %x) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = atomicrmw or i128* %a, i128 %x seq_cst, align 16
+  %0 = atomicrmw or ptr %a, i128 %x seq_cst, align 16
   ret i128 %0
 }
 
-define i128 @xor(i128* %a, i128 %x) {
+define i128 @xor(ptr %a, i128 %x) {
 ; CHECK-LABEL: xor:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -800,11 +800,11 @@ define i128 @xor(i128* %a, i128 %x) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = atomicrmw xor i128* %a, i128 %x seq_cst, align 16
+  %0 = atomicrmw xor ptr %a, i128 %x seq_cst, align 16
   ret i128 %0
 }
 
-define i128 @nand(i128* %a, i128 %x) {
+define i128 @nand(ptr %a, i128 %x) {
 ; CHECK-LABEL: nand:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -938,12 +938,12 @@ define i128 @nand(i128* %a, i128 %x) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = atomicrmw nand i128* %a, i128 %x seq_cst, align 16
+  %0 = atomicrmw nand ptr %a, i128 %x seq_cst, align 16
   ret i128 %0
 }
 
 ;; CmpXchg
-define i128 @cas_weak_acquire_acquire(i128* %a, i128 %cmp, i128 %new) {
+define i128 @cas_weak_acquire_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-LABEL: cas_weak_acquire_acquire:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB7_1: # %entry
@@ -1069,12 +1069,12 @@ define i128 @cas_weak_acquire_acquire(i128* %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = cmpxchg weak i128* %a, i128 %cmp, i128 %new acquire acquire
+  %0 = cmpxchg weak ptr %a, i128 %cmp, i128 %new acquire acquire
   %1 = extractvalue { i128, i1 } %0, 0
   ret i128 %1
 }
 
-define i128 @cas_weak_release_monotonic(i128* %a, i128 %cmp, i128 %new) {
+define i128 @cas_weak_release_monotonic(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-LABEL: cas_weak_release_monotonic:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwsync
@@ -1200,12 +1200,12 @@ define i128 @cas_weak_release_monotonic(i128* %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = cmpxchg weak i128* %a, i128 %cmp, i128 %new release monotonic
+  %0 = cmpxchg weak ptr %a, i128 %cmp, i128 %new release monotonic
   %1 = extractvalue { i128, i1 } %0, 0
   ret i128 %1
 }
 
-define i128 @cas_sc_sc(i128* %a, i128 %cmp, i128 %new) {
+define i128 @cas_sc_sc(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-LABEL: cas_sc_sc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sync
@@ -1333,12 +1333,12 @@ define i128 @cas_sc_sc(i128* %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = cmpxchg i128* %a, i128 %cmp, i128 %new seq_cst seq_cst
+  %0 = cmpxchg ptr %a, i128 %cmp, i128 %new seq_cst seq_cst
   %1 = extractvalue { i128, i1 } %0, 0
   ret i128 %1
 }
 
-define i128 @cas_acqrel_acquire(i128* %a, i128 %cmp, i128 %new) {
+define i128 @cas_acqrel_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-LABEL: cas_acqrel_acquire:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwsync
@@ -1466,12 +1466,12 @@ define i128 @cas_acqrel_acquire(i128* %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = cmpxchg i128* %a, i128 %cmp, i128 %new acq_rel acquire
+  %0 = cmpxchg ptr %a, i128 %cmp, i128 %new acq_rel acquire
   %1 = extractvalue { i128, i1 } %0, 0
   ret i128 %1
 }
 
-define i1 @cas_acqrel_acquire_check_succ(i128* %a, i128 %cmp, i128 %new) {
+define i1 @cas_acqrel_acquire_check_succ(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-LABEL: cas_acqrel_acquire_check_succ:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwsync
@@ -1597,7 +1597,7 @@ define i1 @cas_acqrel_acquire_check_succ(i128* %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    mtlr r0
 ; PPC-PWR8-NEXT:    blr
 entry:
-  %0 = cmpxchg i128* %a, i128 %cmp, i128 %new acq_rel acquire
+  %0 = cmpxchg ptr %a, i128 %cmp, i128 %new acq_rel acquire
   %1 = extractvalue { i128, i1 } %0, 1
   ret i1 %1
 }

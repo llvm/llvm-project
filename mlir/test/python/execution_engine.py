@@ -1,6 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
-# REQUIRES: native
-import gc, sys
+# REQUIRES: host-supports-jit
+import gc, sys, os, tempfile
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
@@ -62,9 +62,8 @@ run(testInvalidModule)
 
 
 def lowerToLLVM(module):
-  import mlir.conversions
   pm = PassManager.parse(
-      "convert-complex-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts")
+      "builtin.module(convert-complex-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)")
   pm.run(module)
   return module
 
@@ -266,6 +265,50 @@ def testMemrefAdd():
 run(testMemrefAdd)
 
 
+# Test addition of two f16 memrefs
+# CHECK-LABEL: TEST: testF16MemrefAdd
+def testF16MemrefAdd():
+  with Context():
+    module = Module.parse("""
+    module  {
+      func.func @main(%arg0: memref<1xf16>,
+                      %arg1: memref<1xf16>,
+                      %arg2: memref<1xf16>) attributes { llvm.emit_c_interface } {
+        %0 = arith.constant 0 : index
+        %1 = memref.load %arg0[%0] : memref<1xf16>
+        %2 = memref.load %arg1[%0] : memref<1xf16>
+        %3 = arith.addf %1, %2 : f16
+        memref.store %3, %arg2[%0] : memref<1xf16>
+        return
+      }
+    } """)
+
+    arg1 = np.array([11.]).astype(np.float16)
+    arg2 = np.array([22.]).astype(np.float16)
+    arg3 = np.array([0.]).astype(np.float16)
+
+    arg1_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_ranked_memref_descriptor(arg1)))
+    arg2_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_ranked_memref_descriptor(arg2)))
+    arg3_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_ranked_memref_descriptor(arg3)))
+
+    execution_engine = ExecutionEngine(lowerToLLVM(module))
+    execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr,
+                            arg3_memref_ptr)
+    # CHECK: [11.] + [22.] = [33.]
+    log("{0} + {1} = {2}".format(arg1, arg2, arg3))
+
+    # test to-numpy utility
+    # CHECK: [33.]
+    npout = ranked_memref_to_numpy(arg3_memref_ptr[0])
+    log(npout)
+
+
+run(testF16MemrefAdd)
+
+
 # Test addition of two complex memrefs
 # CHECK-LABEL: TEST: testComplexMemrefAdd
 def testComplexMemrefAdd():
@@ -442,15 +485,20 @@ def testSharedLibLoad():
         ctypes.pointer(get_ranked_memref_descriptor(arg0)))
 
     if sys.platform == 'win32':
-        shared_libs = [
-            "../../../../bin/mlir_runner_utils.dll",
-            "../../../../bin/mlir_c_runner_utils.dll"
-        ]
+      shared_libs = [
+          "../../../../bin/mlir_runner_utils.dll",
+          "../../../../bin/mlir_c_runner_utils.dll"
+      ]
+    elif sys.platform == 'darwin':
+      shared_libs = [
+          "../../../../lib/libmlir_runner_utils.dylib",
+          "../../../../lib/libmlir_c_runner_utils.dylib"
+      ]
     else:
-        shared_libs = [
-            "../../../../lib/libmlir_runner_utils.so",
-            "../../../../lib/libmlir_c_runner_utils.so"
-        ]
+      shared_libs = [
+          "../../../../lib/libmlir_runner_utils.so",
+          "../../../../lib/libmlir_c_runner_utils.so"
+      ]
 
     execution_engine = ExecutionEngine(
         lowerToLLVM(module),
@@ -484,15 +532,15 @@ def testNanoTime():
     }""")
 
     if sys.platform == 'win32':
-        shared_libs = [
-            "../../../../bin/mlir_runner_utils.dll",
-            "../../../../bin/mlir_c_runner_utils.dll"
-        ]
+      shared_libs = [
+          "../../../../bin/mlir_runner_utils.dll",
+          "../../../../bin/mlir_c_runner_utils.dll"
+      ]
     else:
-        shared_libs = [
-            "../../../../lib/libmlir_runner_utils.so",
-            "../../../../lib/libmlir_c_runner_utils.so"
-        ]
+      shared_libs = [
+          "../../../../lib/libmlir_runner_utils.so",
+          "../../../../lib/libmlir_c_runner_utils.so"
+      ]
 
     execution_engine = ExecutionEngine(
         lowerToLLVM(module),
@@ -504,3 +552,41 @@ def testNanoTime():
 
 
 run(testNanoTime)
+
+
+#  Test that nano time clock is available.
+# CHECK-LABEL: TEST: testDumpToObjectFile
+def testDumpToObjectFile():
+  fd, object_path = tempfile.mkstemp(suffix=".o")
+
+  try:
+    with Context():
+      module = Module.parse("""
+        module {
+        func.func @main() attributes { llvm.emit_c_interface } {
+          return
+        }
+      }""")
+
+      execution_engine = ExecutionEngine(
+          lowerToLLVM(module),
+          opt_level=3)
+
+      # CHECK: Object file exists: True
+      print(f"Object file exists: {os.path.exists(object_path)}")
+      # CHECK: Object file is empty: True
+      print(f"Object file is empty: {os.path.getsize(object_path) == 0}")
+
+      execution_engine.dump_to_object_file(object_path)
+
+      # CHECK: Object file exists: True
+      print(f"Object file exists: {os.path.exists(object_path)}")
+      # CHECK: Object file is empty: False
+      print(f"Object file is empty: {os.path.getsize(object_path) == 0}")
+
+  finally:
+    os.close(fd)
+    os.remove(object_path)
+
+
+run(testDumpToObjectFile)

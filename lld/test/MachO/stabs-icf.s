@@ -4,37 +4,46 @@
 # RUN: %lld -lSystem --icf=all %t.o -o %t
 # RUN: dsymutil -s %t | FileCheck %s -DDIR=%t -DSRC_PATH=%t.o
 
-# This should include no N_FUN entry for _bar2 (which is ICF'd into _bar),
-# but it does include a SECT EXT entry.
-# CHECK:      (N_SO         ) 00      0000   0000000000000000   '/tmp{{[/\\]}}test.cpp'
+## This should include no N_FUN entry for _baz (which is ICF'd into _bar),
+## but it does include a SECT EXT entry.
+## NOTE: We do not omit the N_FUN entry for _bar even though it is of size zero.
+##       Only folded symbols get omitted.
+## NOTE: Unlike ld64, we also omit the N_FUN entry for _baz2.
+# CHECK:      (N_SO         ) 00      0000   0000000000000000  '/tmp{{[/\\]}}test.cpp'
 # CHECK-NEXT: (N_OSO        ) 03      0001   {{.*}} '[[SRC_PATH]]'
-# CHECK-NEXT: (N_FUN        ) 01      0000   [[#%.16x,MAIN:]]   '_main'
+# CHECK-NEXT: (N_FUN        ) 01      0000   [[#%.16x,MAIN:]]  '_main'
 # CHECK-NEXT: (N_FUN        ) 00      0000   000000000000000b{{$}}
-# CHECK-NEXT: (N_FUN        ) 01      0000   [[#%.16x,BAR:]]    '_bar'
+# CHECK-NEXT: (N_FUN        ) 01      0000   [[#%.16x,BAR:]]   '_bar'
+# CHECK-NEXT: (N_FUN        ) 00      0000   0000000000000000{{$}}
+# CHECK-NEXT: (N_FUN        ) 01      0000   [[#BAR]]          '_bar2'
 # CHECK-NEXT: (N_FUN        ) 00      0000   0000000000000001{{$}}
 # CHECK-NEXT: (N_SO         ) 01      0000   0000000000000000{{$}}
-# CHECK-DAG:  (     SECT EXT) 01      0000   [[#MAIN]]           '_main'
-# CHECK-DAG:  (     SECT EXT) 01      0000   [[#BAR]]           '_bar'
+# CHECK-DAG:  (     SECT EXT) 01      0000   [[#MAIN]]         '_main'
+# CHECK-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_bar'
 # CHECK-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_bar2'
+# CHECK-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_baz'
+# CHECK-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_baz2'
 # CHECK-DAG:  (       {{.*}}) {{[0-9]+}}                 0010   {{[0-9a-f]+}}      '__mh_execute_header'
 # CHECK-DAG:  (       {{.*}}) {{[0-9]+}}                 0100   0000000000000000   'dyld_stub_binder'
 # CHECK-EMPTY:
 
 .text
-.globl _bar, _bar2, _main
+.globl _bar, _bar2, _baz, _baz2, _main
 
 .subsections_via_symbols
 
 _bar:
+_bar2:
   ret
 
-_bar2:
+_baz:
+_baz2:
   ret
 
 _main:
 Lfunc_begin0:
   call _bar
-  call _bar2
+  call _baz
   ret
 Lfunc_end0:
 

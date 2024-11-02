@@ -8,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 class FindLineEntry(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_compile_unit_find_line_entry_index(self):
         """ Test the CompileUnit LineEntryIndex lookup API """
         self.build()

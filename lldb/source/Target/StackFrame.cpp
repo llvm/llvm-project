@@ -20,6 +20,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
@@ -420,10 +421,12 @@ StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
   return m_sc;
 }
 
-VariableList *StackFrame::GetVariableList(bool get_file_globals) {
+VariableList *StackFrame::GetVariableList(bool get_file_globals,
+                                          Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_flags.IsClear(RESOLVED_VARIABLES)) {
     m_flags.Set(RESOLVED_VARIABLES);
+    m_variable_list_sp = std::make_shared<VariableList>();
 
     Block *frame_block = GetFrameBlock();
 
@@ -431,7 +434,6 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals) {
       const bool get_child_variables = true;
       const bool can_create = true;
       const bool stop_if_child_block_is_inlined_function = true;
-      m_variable_list_sp = std::make_shared<VariableList>();
       frame_block->AppendBlockVariables(can_create, get_child_variables,
                                         stop_if_child_block_is_inlined_function,
                                         [](Variable *v) { return true; },
@@ -452,6 +454,17 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals) {
         m_variable_list_sp->AddVariables(global_variable_list_sp.get());
       else
         m_variable_list_sp = global_variable_list_sp;
+    }
+  }
+
+  if (error_ptr && m_variable_list_sp->GetSize() == 0) {
+    // Check with the symbol file to check if there is an error for why we
+    // don't have variables that the user might need to know about.
+    GetSymbolContext(eSymbolContextEverything);
+    if (m_sc.module_sp) {
+      SymbolFile *sym_file = m_sc.module_sp->GetSymbolFile();
+      if (sym_file)
+        *error_ptr = sym_file->GetFrameVariableError(*this);
     }
   }
 
@@ -552,7 +565,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
   if (!var_sp && (options & eExpressionPathOptionsAllowDirectIVarAccess)) {
     // Check for direct ivars access which helps us with implicit access to
-    // ivars with the "this->" or "self->"
+    // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
     lldb::LanguageType method_language = eLanguageTypeUnknown;
     bool is_instance_method = false;
@@ -563,7 +576,13 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         var_sp = variable_list->FindVariable(method_object_name);
         if (var_sp) {
           separator_idx = 0;
-          var_expr_storage = "->";
+          if (Type *var_type = var_sp->GetType())
+            if (auto compiler_type = var_type->GetForwardCompilerType())
+              if (!compiler_type.IsPointerType())
+                var_expr_storage = ".";
+
+          if (var_expr_storage.empty())
+            var_expr_storage = "->";
           var_expr_storage += var_expr;
           var_expr = var_expr_storage;
           synthetically_added_instance_object = true;
@@ -660,7 +679,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       }
 
       var_expr = var_expr.drop_front(); // Remove the '-'
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case '.': {
       var_expr = var_expr.drop_front(); // Remove the '.' or '>'
       separator_idx = var_expr.find_first_of(".-[");
@@ -1081,7 +1100,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
       ExecutionContext exe_ctx(shared_from_this());
       Value expr_value;
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
-      if (m_sc.function->GetFrameBaseExpression().IsLocationList())
+      if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
             m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 exe_ctx.GetTargetPtr());
@@ -1110,7 +1129,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
   return m_frame_base_error.Success();
 }
 
-DWARFExpression *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
+DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
   if (!m_sc.function) {
     if (error_ptr) {
       error_ptr->SetErrorString("No function in symbol context.");
@@ -1139,26 +1158,34 @@ bool StackFrame::HasDebugInformation() {
 ValueObjectSP
 StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
                                            DynamicValueType use_dynamic) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ValueObjectSP valobj_sp;
-  if (IsHistorical()) {
-    return valobj_sp;
-  }
-  VariableList *var_list = GetVariableList(true);
-  if (var_list) {
-    // Make sure the variable is a frame variable
-    const uint32_t var_idx = var_list->FindIndexForVariable(variable_sp.get());
-    const uint32_t num_variables = var_list->GetSize();
-    if (var_idx < num_variables) {
-      valobj_sp = m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
-      if (!valobj_sp) {
-        if (m_variable_list_value_objects.GetSize() < num_variables)
-          m_variable_list_value_objects.Resize(num_variables);
-        valobj_sp = ValueObjectVariable::Create(this, variable_sp);
-        m_variable_list_value_objects.SetValueObjectAtIndex(var_idx, valobj_sp);
+  { // Scope for stack frame mutex.  We need to drop this mutex before we figure
+    // out the dynamic value.  That will require converting the StackID in the
+    // VO back to a StackFrame, which will in turn require locking the
+    // StackFrameList.  If we still hold the StackFrame mutex, we could suffer
+    // lock inversion against the pattern of getting the StackFrameList and
+    // then the stack frame, which is fairly common.
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    if (IsHistorical()) {
+      return valobj_sp;
+    }
+    VariableList *var_list = GetVariableList(true, nullptr);
+    if (var_list) {
+      // Make sure the variable is a frame variable
+      const uint32_t var_idx = var_list->FindIndexForVariable(variable_sp.get());
+      const uint32_t num_variables = var_list->GetSize();
+      if (var_idx < num_variables) {
+        valobj_sp = m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
+        if (!valobj_sp) {
+          if (m_variable_list_value_objects.GetSize() < num_variables)
+            m_variable_list_value_objects.Resize(num_variables);
+          valobj_sp = ValueObjectVariable::Create(this, variable_sp);
+          m_variable_list_value_objects.SetValueObjectAtIndex(var_idx,
+                                                              valobj_sp);
+        }
       }
     }
-  }
+  } // End of StackFrame mutex scope.
   if (use_dynamic != eNoDynamicValues && valobj_sp) {
     ValueObjectSP dynamic_sp = valobj_sp->GetDynamicValue(use_dynamic);
     if (dynamic_sp)
@@ -1194,7 +1221,7 @@ lldb::LanguageType StackFrame::GuessLanguage() {
   LanguageType lang_type = GetLanguage();
 
   if (lang_type == eLanguageTypeUnknown) {
-    SymbolContext sc = GetSymbolContext(eSymbolContextFunction 
+    SymbolContext sc = GetSymbolContext(eSymbolContextFunction
                                         | eSymbolContextSymbol);
     if (sc.function) {
       lang_type = sc.function->GetMangled().GuessLanguage();
@@ -1384,7 +1411,7 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     }
 
     int64_t child_offset = child_sp->GetByteOffset();
-    int64_t child_size = child_sp->GetByteSize().getValueOr(0);
+    int64_t child_size = child_sp->GetByteSize().value_or(0);
 
     if (offset >= child_offset && offset < (child_offset + child_size)) {
       return GetValueForOffset(frame, child_sp, offset - child_offset);
@@ -1411,14 +1438,14 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
 
   Status error;
   ValueObjectSP pointee = base->Dereference(error);
-    
+
   if (!pointee) {
     return ValueObjectSP();
   }
 
   if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
-    int64_t index = offset / pointee->GetByteSize().getValueOr(1);
-    offset = offset % pointee->GetByteSize().getValueOr(1);
+    int64_t index = offset / pointee->GetByteSize().value_or(1);
+    offset = offset % pointee->GetByteSize().value_or(1);
     const bool can_create = true;
     pointee = base->GetSyntheticArrayMember(index, can_create);
   }
@@ -1499,7 +1526,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
                    Instruction::Operand::BuildRegister(reg));
 
   for (VariableSP var_sp : variables) {
-    if (var_sp->LocationExpression().MatchesOperand(frame, op))
+    if (var_sp->LocationExpressionList().MatchesOperand(frame, op))
       return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
   }
 
@@ -1684,7 +1711,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
   }
 
   const bool get_file_globals = false;
-  VariableList *variables = GetVariableList(get_file_globals);
+  VariableList *variables = GetVariableList(get_file_globals, nullptr);
 
   if (!variables) {
     return ValueObjectSP();
@@ -1918,12 +1945,12 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       case Debugger::eStopDisassemblyTypeNoDebugInfo:
         if (have_debuginfo)
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 
       case Debugger::eStopDisassemblyTypeNoSource:
         if (have_source)
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 
       case Debugger::eStopDisassemblyTypeAlways:
         if (target) {

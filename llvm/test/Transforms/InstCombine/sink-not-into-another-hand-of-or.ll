@@ -74,11 +74,11 @@ define i32 @n3(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
 }
 
 ; FIXME: we could invert all uses of %i1 here
-define i32 @n4(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, i32* %dst) {
+define i32 @n4(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, ptr %dst) {
 ; CHECK-LABEL: @n4(
 ; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I1]], i32 [[V2:%.*]], i32 [[V3:%.*]]
-; CHECK-NEXT:    store i32 [[I2]], i32* [[DST:%.*]], align 4
+; CHECK-NEXT:    store i32 [[I2]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    [[I3:%.*]] = xor i1 [[I0:%.*]], true
 ; CHECK-NEXT:    [[I4:%.*]] = or i1 [[I1]], [[I3]]
 ; CHECK-NEXT:    [[I5:%.*]] = select i1 [[I4]], i32 [[V4:%.*]], i32 [[V5:%.*]]
@@ -86,7 +86,7 @@ define i32 @n4(i1 %i0, i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, i32
 ;
   %i1 = icmp eq i32 %v0, %v1 ; has extra invertible use
   %i2 = select i1 %i1, i32 %v2, i32 %v3 ; invertible use
-  store i32 %i2, i32* %dst
+  store i32 %i2, ptr %dst
   %i3 = xor i1 %i0, -1
   %i4 = or i1 %i3, %i1
   %i5 = select i1 %i4, i32 %v4, i32 %v5

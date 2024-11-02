@@ -9,31 +9,30 @@ define dso_local void @_Z12d2s_bufferedmPc(i64, i8* nocapture) {
 ; CHECK-NEXT:    cmpq $10000, %rdi # imm = 0x2710
 ; CHECK-NEXT:    jb .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %.preheader
-; CHECK-NEXT:    movq %rdi, %r9
-; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movabsq $3777893186295716171, %r8 # imm = 0x346DC5D63886594B
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %r9, %rax
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %r8
 ; CHECK-NEXT:    shrq $11, %rdx
 ; CHECK-NEXT:    imulq $10000, %rdx, %rax # imm = 0x2710
-; CHECK-NEXT:    movq %r9, %rdi
-; CHECK-NEXT:    subq %rax, %rdi
-; CHECK-NEXT:    imulq $1374389535, %rdi, %rax # imm = 0x51EB851F
+; CHECK-NEXT:    movq %rdi, %r9
+; CHECK-NEXT:    subq %rax, %r9
+; CHECK-NEXT:    imulq $1374389535, %r9, %rax # imm = 0x51EB851F
 ; CHECK-NEXT:    shrq $37, %rax
-; CHECK-NEXT:    imull $100, %eax, %ecx
-; CHECK-NEXT:    subl %ecx, %edi
-; CHECK-NEXT:    movl %r10d, %r11d
-; CHECK-NEXT:    movq %rsi, %rcx
-; CHECK-NEXT:    subq %r11, %rcx
-; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%rdi,%rdi), %edi
-; CHECK-NEXT:    movw %di, -1(%rcx)
+; CHECK-NEXT:    imull $100, %eax, %r10d
+; CHECK-NEXT:    subl %r10d, %r9d
+; CHECK-NEXT:    movl %ecx, %r10d
+; CHECK-NEXT:    movq %rsi, %r11
+; CHECK-NEXT:    subq %r10, %r11
+; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%r9,%r9), %r9d
+; CHECK-NEXT:    movw %r9w, -1(%r11)
 ; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%rax,%rax), %eax
-; CHECK-NEXT:    movw %ax, -3(%rcx)
-; CHECK-NEXT:    addl $4, %r10d
-; CHECK-NEXT:    cmpq $99999999, %r9 # imm = 0x5F5E0FF
-; CHECK-NEXT:    movq %rdx, %r9
+; CHECK-NEXT:    movw %ax, -3(%r11)
+; CHECK-NEXT:    addl $4, %ecx
+; CHECK-NEXT:    cmpq $99999999, %rdi # imm = 0x5F5E0FF
+; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    ja .LBB0_2
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    retq

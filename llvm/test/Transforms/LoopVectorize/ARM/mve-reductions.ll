@@ -1359,7 +1359,7 @@ define i32 @reduction_interleave_group(i32 %n, i32* %arr) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 6
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 7
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP2]], -4
@@ -1428,6 +1428,56 @@ for.body:                                         ; preds = %for.body.preheader,
 exit:
   %ret.lcssa = phi i32 [ 0, %entry ], [ %red.2, %for.body ]
   ret i32 %ret.lcssa
+}
+
+; 16x to use VMLA.u8, same as mla_i8_i32 with multiple uses of the ext `add(mul(x, x))`
+define i32 @mla_i8_i32_multiuse(i8* nocapture readonly %x, i8* nocapture readonly %y, i32 %n) #0 {
+; CHECK-LABEL: @mla_i8_i32_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP9]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -16
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX]], i32 [[N]])
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[X:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* [[TMP1]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_MASKED_LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw <16 x i32> [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> [[TMP3]], <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP4]])
+; CHECK-NEXT:    [[TMP6]] = add i32 [[TMP5]], [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP6]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[R_0_LCSSA]]
+;
+entry:
+  %cmp9 = icmp sgt i32 %n, 0
+  br i1 %cmp9, label %for.body, label %for.cond.cleanup
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %r.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, i8* %x, i32 %i.011
+  %0 = load i8, i8* %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  %mul = mul nuw nsw i32 %conv, %conv
+  %add = add nuw nsw i32 %mul, %r.010
+  %inc = add nuw nsw i32 %i.011, 1
+  %exitcond = icmp eq i32 %inc, %n
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  ret i32 %r.0.lcssa
 }
 
 attributes #0 = { "target-features"="+mve" }

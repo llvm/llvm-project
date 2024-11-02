@@ -46,11 +46,11 @@ bb:		; preds = %bb, %entry
 	%tmp4958 = bitcast <8 x i16> %tmp4957 to <2 x i64>		; <<2 x i64>> [#uses=1]
 	%tmp4967 = tail call <8 x i16> @llvm.ssub.sat.v8i16( <8 x i16> %tmp4403, <8 x i16> zeroinitializer ) nounwind readnone 		; <<8 x i16>> [#uses=1]
 	%tmp4968 = bitcast <8 x i16> %tmp4967 to <2 x i64>		; <<2 x i64>> [#uses=1]
-	store <2 x i64> %tmp4829, <2 x i64>* null, align 16
-	store <2 x i64> %tmp4958, <2 x i64>* null, align 16
-	store <2 x i64> %tmp4968, <2 x i64>* null, align 16
-	store <2 x i64> %tmp4950, <2 x i64>* null, align 16
-	store <2 x i64> %tmp4708, <2 x i64>* null, align 16
+	store <2 x i64> %tmp4829, ptr null, align 16
+	store <2 x i64> %tmp4958, ptr null, align 16
+	store <2 x i64> %tmp4968, ptr null, align 16
+	store <2 x i64> %tmp4950, ptr null, align 16
+	store <2 x i64> %tmp4708, ptr null, align 16
 	br label %bb
 }
 

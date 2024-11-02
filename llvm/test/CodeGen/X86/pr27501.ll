@@ -2,7 +2,7 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-define void @test1(i64* %result.repack) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1(ptr %result.repack) personality ptr @__CxxFrameHandler3 {
 bb:
   invoke void @may_throw(i32 1)
           to label %postinvoke unwind label %cleanuppad
@@ -11,7 +11,7 @@ bb:
 ; CHECK:        callq   may_throw
 
 postinvoke:                                       ; preds = %bb
-  store i64 19, i64* %result.repack, align 8
+  store i64 19, ptr %result.repack, align 8
 ; CHECK:        movq	[[SpillLoc]], [[R1:%r..]]
 ; CHECK:        movq    $19, ([[R1]])
 ; CHECK:        movl    $2, %ecx
@@ -23,7 +23,7 @@ catch.dispatch:                                   ; preds = %cleanuppad9, %posti
   %tmp3 = catchswitch within none [label %catch.object.Throwable] unwind label %cleanuppad
 
 catch.object.Throwable:                           ; preds = %catch.dispatch
-  %tmp2 = catchpad within %tmp3 [i8* null, i32 64, i8* null]
+  %tmp2 = catchpad within %tmp3 [ptr null, i32 64, ptr null]
   catchret from %tmp2 to label %catchhandler
 
 catchhandler:                                     ; preds = %catch.object.Throwable
@@ -37,7 +37,7 @@ try.success.or.caught:                            ; preds = %catchhandler
 ; CHECK-NEXT:   callq   may_throw
 
 postinvoke27:                                     ; preds = %try.success.or.caught
-  store i64 42, i64* %result.repack, align 8
+  store i64 42, ptr %result.repack, align 8
 ; CHECK:        movq    [[SpillLoc]], [[R2:%r..]]
 ; CHECK-NEXT:   movq    $42, ([[R2]])
   ret void

@@ -398,13 +398,9 @@ define i64 @ustest_f64i64(double %x) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    csel w9, w10, w9, eq
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    csel x0, x8, xzr, ne
+; CHECK-NEXT:    cmp xzr, x8
+; CHECK-NEXT:    ngcs xzr, x9
+; CHECK-NEXT:    csel x0, x8, xzr, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -461,13 +457,9 @@ define i64 @ustest_f32i64(float %x) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    csel w9, w10, w9, eq
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    csel x0, x8, xzr, ne
+; CHECK-NEXT:    cmp xzr, x8
+; CHECK-NEXT:    ngcs xzr, x9
+; CHECK-NEXT:    csel x0, x8, xzr, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -530,13 +522,9 @@ define i64 @ustest_f16i64(half %x) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    csel w9, w10, w9, eq
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    csel x0, x8, xzr, ne
+; CHECK-NEXT:    cmp xzr, x8
+; CHECK-NEXT:    ngcs xzr, x9
+; CHECK-NEXT:    csel x0, x8, xzr, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:

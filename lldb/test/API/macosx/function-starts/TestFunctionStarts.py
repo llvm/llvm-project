@@ -13,12 +13,11 @@ exe_name = "StripMe"  # Must match Makefile
 
 class FunctionStartsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
     @skipUnlessDarwin
+    @skipIf(compiler="clang", compiler_version=['<', '13.0'])
     def test_function_starts_binary(self):
         """Test that we make synthetic symbols when we have the binary."""
         self.build(dictionary={'CODESIGN': ''}) # Binary is getting stripped later.
@@ -26,6 +25,7 @@ class FunctionStartsTestCase(TestBase):
 
     @skipIfRemote
     @skipUnlessDarwin
+    @skipIf(compiler="clang", compiler_version=['<', '13.0'])
     def test_function_starts_no_binary(self):
         """Test that we make synthetic symbols when we don't have the binary"""
         self.build(dictionary={'CODESIGN': ''}) # Binary is getting stripped later.

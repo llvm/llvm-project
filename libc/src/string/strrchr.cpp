@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(char *, strrchr, (const char *src, int c)) {
-  const char ch = c;
+  const char ch = static_cast<char>(c);
   char *last_occurrence = nullptr;
   for (; *src; ++src) {
     if (*src == ch)

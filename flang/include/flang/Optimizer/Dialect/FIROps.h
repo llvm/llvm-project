@@ -9,8 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
 
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"

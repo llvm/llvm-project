@@ -289,7 +289,8 @@ public:
                            APInt *Payload = nullptr);
   static Constant *getSNaN(Type *Ty, bool Negative = false,
                            APInt *Payload = nullptr);
-  static Constant *getNegativeZero(Type *Ty);
+  static Constant *getZero(Type *Ty, bool Negative = false);
+  static Constant *getNegativeZero(Type *Ty) { return getZero(Ty, true); }
   static Constant *getInfinity(Type *Ty, bool Negative = false);
 
   /// Return true if Ty is big enough to represent V.
@@ -1012,23 +1013,13 @@ public:
 
   static Constant *getNeg(Constant *C, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getFNeg(Constant *C);
   static Constant *getNot(Constant *C);
   static Constant *getAdd(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getFAdd(Constant *C1, Constant *C2);
   static Constant *getSub(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getFSub(Constant *C1, Constant *C2);
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getFMul(Constant *C1, Constant *C2);
-  static Constant *getUDiv(Constant *C1, Constant *C2, bool isExact = false);
-  static Constant *getSDiv(Constant *C1, Constant *C2, bool isExact = false);
-  static Constant *getFDiv(Constant *C1, Constant *C2);
-  static Constant *getURem(Constant *C1, Constant *C2);
-  static Constant *getSRem(Constant *C1, Constant *C2);
-  static Constant *getFRem(Constant *C1, Constant *C2);
   static Constant *getAnd(Constant *C1, Constant *C2);
   static Constant *getOr(Constant *C1, Constant *C2);
   static Constant *getXor(Constant *C1, Constant *C2);
@@ -1092,14 +1083,6 @@ public:
     return getShl(C1, C2, true, false);
   }
 
-  static Constant *getExactSDiv(Constant *C1, Constant *C2) {
-    return getSDiv(C1, C2, true);
-  }
-
-  static Constant *getExactUDiv(Constant *C1, Constant *C2) {
-    return getUDiv(C1, C2, true);
-  }
-
   static Constant *getExactAShr(Constant *C1, Constant *C2) {
     return getAShr(C1, C2, true);
   }
@@ -1120,9 +1103,12 @@ public:
   /// commutative, callers can acquire the operand 1 identity constant by
   /// setting AllowRHSConstant to true. For example, any shift has a zero
   /// identity constant for operand 1: X shift 0 = X.
+  /// If this is a fadd/fsub operation and we don't care about signed zeros,
+  /// then setting NSZ to true returns the identity +0.0 instead of -0.0.
   /// Return nullptr if the operator does not have an identity constant.
   static Constant *getBinOpIdentity(unsigned Opcode, Type *Ty,
-                                    bool AllowRHSConstant = false);
+                                    bool AllowRHSConstant = false,
+                                    bool NSZ = false);
 
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for
@@ -1197,22 +1183,11 @@ public:
   /// Return true if this is a compare constant expression
   bool isCompare() const;
 
-  /// Return true if this is an insertvalue or extractvalue expression,
-  /// and the getIndices() method may be used.
-  bool hasIndices() const;
-
   /// Select constant expr
   ///
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
                              Type *OnlyIfReducedTy = nullptr);
-
-  /// get - Return a unary operator constant expression,
-  /// folding if possible.
-  ///
-  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
-  static Constant *get(unsigned Opcode, Constant *C1, unsigned Flags = 0,
-                       Type *OnlyIfReducedTy = nullptr);
 
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
@@ -1290,11 +1265,6 @@ public:
   static Constant *getShuffleVector(Constant *V1, Constant *V2,
                                     ArrayRef<int> Mask,
                                     Type *OnlyIfReducedTy = nullptr);
-  static Constant *getExtractValue(Constant *Agg, ArrayRef<unsigned> Idxs,
-                                   Type *OnlyIfReducedTy = nullptr);
-  static Constant *getInsertValue(Constant *Agg, Constant *Val,
-                                  ArrayRef<unsigned> Idxs,
-                                  Type *OnlyIfReducedTy = nullptr);
 
   /// Return the opcode at the root of this constant expression
   unsigned getOpcode() const { return getSubclassDataFromValue(); }
@@ -1302,10 +1272,6 @@ public:
   /// Return the ICMP or FCMP predicate value. Assert if this is not an ICMP or
   /// FCMP constant expression.
   unsigned getPredicate() const;
-
-  /// Assert that this is an insertvalue or exactvalue
-  /// expression and return the list of indices.
-  ArrayRef<unsigned> getIndices() const;
 
   /// Assert that this is a shufflevector and return the mask. See class
   /// ShuffleVectorInst for a description of the mask representation.
@@ -1349,6 +1315,14 @@ public:
   /// implementation details of ConstantExpr outside of Constants.cpp, which
   /// would make it harder to remove ConstantExprs altogether.
   Instruction *getAsInstruction(Instruction *InsertBefore = nullptr) const;
+
+  /// Whether creating a constant expression for this binary operator is
+  /// desirable.
+  static bool isDesirableBinOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this binary operator is
+  /// supported.
+  static bool isSupportedBinOp(unsigned Opcode);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

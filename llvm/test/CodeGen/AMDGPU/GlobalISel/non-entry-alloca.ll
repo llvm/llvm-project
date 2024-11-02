@@ -27,14 +27,14 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_cmp_lg_u32 s6, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCN-NEXT:  ; %bb.2: ; %bb.1
-; GCN-NEXT:    s_load_dword s6, s[4:5], 0x10
-; GCN-NEXT:    s_add_u32 s7, s32, 0x1000
+; GCN-NEXT:    s_load_dword s7, s[4:5], 0x10
+; GCN-NEXT:    s_add_u32 s6, s32, 0x1000
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, s7
+; GCN-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s6, s6, 2
-; GCN-NEXT:    s_add_u32 s6, s7, s6
+; GCN-NEXT:    s_lshl_b32 s7, s7, 2
+; GCN-NEXT:    s_add_u32 s6, s6, s7
 ; GCN-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v3, v2, s[0:3], 0 offen offset:4
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6

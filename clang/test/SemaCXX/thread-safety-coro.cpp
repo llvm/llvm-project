@@ -38,10 +38,14 @@ public:
     Task get_return_object() noexcept;
     void unhandled_exception() noexcept;
     void return_value(int value) noexcept;
+
+    std::suspend_always yield_value(int value) noexcept;
   };
 };
 
 Task Foo() noexcept {
   // ICE'd
+  co_yield({ int frame = 0; 0; });
+  co_await({ int frame = 0; std::suspend_always(); });
   co_return({ int frame = 0; 0; });
 }

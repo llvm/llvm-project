@@ -1,4 +1,4 @@
-; RUN: opt -S -reassociate < %s | FileCheck %s
+; RUN: opt -S -passes=reassociate < %s | FileCheck %s
 
 ; PR34231
 ;

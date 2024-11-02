@@ -16,7 +16,6 @@
 # available.
 #----------------------------------------------------------------------
 
-from __future__ import print_function
 import binascii
 import subprocess
 import json

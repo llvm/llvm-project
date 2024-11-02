@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=MISCHED %s
-; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-ilp -verify-machineinstrs < %s | FileCheck --check-prefix=GCN-ILP %s
+; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-iterative-ilp -verify-machineinstrs < %s | FileCheck --check-prefix=GCN-ILP %s
 
 ; Test the scheduler when only one wave is requested. The result should be high register usage and max ILP.
 

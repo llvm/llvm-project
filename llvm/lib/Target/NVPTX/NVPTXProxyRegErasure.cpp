@@ -75,6 +75,8 @@ bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
       case NVPTX::ProxyRegI64:
       case NVPTX::ProxyRegF16:
       case NVPTX::ProxyRegF16x2:
+      case NVPTX::ProxyRegBF16:
+      case NVPTX::ProxyRegBF16x2:
       case NVPTX::ProxyRegF32:
       case NVPTX::ProxyRegF64:
         replaceMachineInstructionUsage(MF, MI);

@@ -5,7 +5,7 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc18.0.0"
 
-define void @test1(i32* %s, i1 %b) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1(ptr %s, i1 %b) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @pure_computation()
@@ -19,8 +19,8 @@ define void @test1(i32* %s, i1 %b) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[DOTLCSSA1:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
-; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS]] [i8* null, i32 64, i8* null]
-; CHECK-NEXT:    store i32 [[DOTLCSSA1]], i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
+; CHECK-NEXT:    store i32 [[DOTLCSSA1]], ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    catchret from [[CP]] to label [[TRY_CONT:%.*]]
 ; CHECK:       try.cont.loopexit:
 ; CHECK-NEXT:    br label [[TRY_CONT]]
@@ -43,15 +43,15 @@ catch.dispatch:                                   ; preds = %while.body
   %cs = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %cp = catchpad within %cs [i8* null, i32 64, i8* null]
-  store i32 %.lcssa1, i32* %s
+  %cp = catchpad within %cs [ptr null, i32 64, ptr null]
+  store i32 %.lcssa1, ptr %s
   catchret from %cp to label %try.cont
 
 try.cont:                                         ; preds = %catch, %while.cond
   ret void
 }
 
-define void @test2(i32* %s, i1 %b) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test2(ptr %s, i1 %b) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
@@ -63,7 +63,7 @@ define void @test2(i32* %s, i1 %b) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CP:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @pure_computation() [ "funclet"(token [[CP]]) ]
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[S:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    cleanupret from [[CP]] unwind to caller
 ; CHECK:       try.cont:
 ; CHECK-NEXT:    ret void
@@ -82,27 +82,25 @@ while.body:                                       ; preds = %while.cond
 catch.dispatch:                                   ; preds = %while.body
   %.lcssa1 = phi i32 [ %0, %while.body ]
   %cp = cleanuppad within none []
-  store i32 %.lcssa1, i32* %s
+  store i32 %.lcssa1, ptr %s
   cleanupret from %cp unwind to caller
 
 try.cont:                                         ; preds = %catch, %while.cond
   ret void
 }
 
-define void @test3(i1 %a, i1 %b, i1 %c) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test3(i1 %a, i1 %b, i1 %c) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTFRAME:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    [[DOTFRAME2:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[DOTFRAME]] to i32*
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast i8* [[DOTFRAME2]] to i32*
 ; CHECK-NEXT:    br i1 [[A:%.*]], label [[TRY_SUCCESS_OR_CAUGHT:%.*]], label [[FORBODY_PREHEADER:%.*]]
 ; CHECK:       forbody.preheader:
-; CHECK-NEXT:    store i32 1, i32* [[BC]], align 4
-; CHECK-NEXT:    store i32 2, i32* [[BC2]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[DOTFRAME]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[DOTFRAME2]], align 4
 ; CHECK-NEXT:    br label [[FORBODY:%.*]]
 ; CHECK:       catch.object.Throwable:
-; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS:%.*]] [i8* null, i32 64, i8* null]
+; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS:%.*]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       try.success.or.caught.loopexit:
 ; CHECK-NEXT:    br label [[TRY_SUCCESS_OR_CAUGHT]]
@@ -124,12 +122,10 @@ define void @test3(i1 %a, i1 %b, i1 %c) personality i32 (...)* @__CxxFrameHandle
 entry:
   %.frame = alloca i8, align 4
   %.frame2 = alloca i8, align 4
-  %bc = bitcast i8* %.frame to i32*
-  %bc2 = bitcast i8* %.frame2 to i32*
   br i1 %a, label %try.success.or.caught, label %forbody
 
 catch.object.Throwable:                           ; preds = %catch.dispatch
-  %cp = catchpad within %cs [i8* null, i32 64, i8* null]
+  %cp = catchpad within %cs [ptr null, i32 64, ptr null]
   unreachable
 
 try.success.or.caught:                            ; preds = %forcond.backedge, %0
@@ -145,8 +141,8 @@ catch.dispatch:                                   ; preds = %else, %forbody
   %cs = catchswitch within none [label %catch.object.Throwable] unwind to caller
 
 forbody:                                          ; preds = %forcond.backedge, %0
-  store i32 1, i32* %bc, align 4
-  store i32 2, i32* %bc2, align 4
+  store i32 1, ptr %.frame, align 4
+  store i32 2, ptr %.frame2, align 4
   invoke void @may_throw()
   to label %postinvoke unwind label %catch.dispatch
 

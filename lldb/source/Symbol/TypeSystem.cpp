@@ -118,23 +118,25 @@ CompilerType TypeSystem::GetTypeForFormatters(void *type) {
   return CompilerType(this, type);
 }
 
-size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
+size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
+                                           bool expand_pack) {
   return 0;
 }
 
 TemplateArgumentKind
-TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx) {
+TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx,
+                                    bool expand_pack) {
   return eTemplateArgumentKindNull;
 }
 
 CompilerType TypeSystem::GetTypeTemplateArgument(opaque_compiler_type_t type,
-                                                 size_t idx) {
+                                                 size_t idx, bool expand_pack) {
   return CompilerType();
 }
 
 llvm::Optional<CompilerType::IntegralTemplateArgument>
-TypeSystem::GetIntegralTemplateArgument(opaque_compiler_type_t type,
-                                        size_t idx) {
+TypeSystem::GetIntegralTemplateArgument(opaque_compiler_type_t type, size_t idx,
+                                        bool expand_pack) {
   return llvm::None;
 }
 
@@ -174,6 +176,10 @@ TypeSystem::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
 std::unique_ptr<UtilityFunction>
 TypeSystem::CreateUtilityFunction(std::string text, std::string name) {
   return {};
+}
+
+llvm::Optional<llvm::json::Value> TypeSystem::ReportStatistics() {
+  return llvm::None;
 }
 
 #pragma mark TypeSystemMap

@@ -484,8 +484,7 @@ private:
                              const AbiTagList *AdditionalAbiTags);
   void mangleModuleName(const NamedDecl *ND);
   void mangleTemplateName(const TemplateDecl *TD,
-                          const TemplateArgument *TemplateArgs,
-                          unsigned NumTemplateArgs);
+                          ArrayRef<TemplateArgument> Args);
   void mangleUnqualifiedName(GlobalDecl GD, const DeclContext *DC,
                              const AbiTagList *AdditionalAbiTags) {
     mangleUnqualifiedName(GD, cast<NamedDecl>(GD.getDecl())->getDeclName(), DC,
@@ -513,8 +512,7 @@ private:
                         const AbiTagList *AdditionalAbiTags,
                         bool NoFunction=false);
   void mangleNestedName(const TemplateDecl *TD,
-                        const TemplateArgument *TemplateArgs,
-                        unsigned NumTemplateArgs);
+                        ArrayRef<TemplateArgument> Args);
   void mangleNestedNameWithClosurePrefix(GlobalDecl GD,
                                          const NamedDecl *PrefixND,
                                          const AbiTagList *AdditionalAbiTags);
@@ -578,8 +576,7 @@ private:
   void mangleTemplateArgs(TemplateName TN,
                           const TemplateArgumentLoc *TemplateArgs,
                           unsigned NumTemplateArgs);
-  void mangleTemplateArgs(TemplateName TN, const TemplateArgument *TemplateArgs,
-                          unsigned NumTemplateArgs);
+  void mangleTemplateArgs(TemplateName TN, ArrayRef<TemplateArgument> Args);
   void mangleTemplateArgs(TemplateName TN, const TemplateArgumentList &AL);
   void mangleTemplateArg(TemplateArgument A, bool NeedExactType);
   void mangleTemplateArgExpr(const Expr *E);
@@ -1087,15 +1084,14 @@ void CXXNameMangler::mangleModuleNamePrefix(StringRef Name, bool IsPartition) {
 }
 
 void CXXNameMangler::mangleTemplateName(const TemplateDecl *TD,
-                                        const TemplateArgument *TemplateArgs,
-                                        unsigned NumTemplateArgs) {
+                                        ArrayRef<TemplateArgument> Args) {
   const DeclContext *DC = Context.getEffectiveDeclContext(TD);
 
   if (DC->isTranslationUnit() || isStdNamespace(DC)) {
     mangleUnscopedTemplateName(TD, DC, nullptr);
-    mangleTemplateArgs(asTemplateName(TD), TemplateArgs, NumTemplateArgs);
+    mangleTemplateArgs(asTemplateName(TD), Args);
   } else {
-    mangleNestedName(TD, TemplateArgs, NumTemplateArgs);
+    mangleNestedName(TD, Args);
   }
 }
 
@@ -1244,8 +1240,7 @@ void CXXNameMangler::manglePrefix(QualType type) {
       // FIXME: GCC does not appear to mangle the template arguments when
       // the template in question is a dependent template name. Should we
       // emulate that badness?
-      mangleTemplateArgs(TST->getTemplateName(), TST->getArgs(),
-                         TST->getNumArgs());
+      mangleTemplateArgs(TST->getTemplateName(), TST->template_arguments());
       addSubstitution(QualType(TST, 0));
     }
   } else if (const auto *DTST =
@@ -1258,7 +1253,7 @@ void CXXNameMangler::manglePrefix(QualType type) {
       // FIXME: GCC does not appear to mangle the template arguments when
       // the template in question is a dependent template name. Should we
       // emulate that badness?
-      mangleTemplateArgs(Template, DTST->getArgs(), DTST->getNumArgs());
+      mangleTemplateArgs(Template, DTST->template_arguments());
       addSubstitution(QualType(DTST, 0));
     }
   } else {
@@ -1588,7 +1583,9 @@ void CXXNameMangler::mangleUnqualifiedName(
 
     // Get a unique id for the anonymous struct. If it is not a real output
     // ID doesn't matter so use fake one.
-    unsigned AnonStructId = NullOut ? 0 : Context.getAnonymousStructId(TD);
+    unsigned AnonStructId =
+        NullOut ? 0
+                : Context.getAnonymousStructId(TD, dyn_cast<FunctionDecl>(DC));
 
     // Mangle it as a source name in the form
     // [n] $_<id>
@@ -1659,7 +1656,7 @@ void CXXNameMangler::mangleUnqualifiedName(
         if (!MD->isStatic())
           Arity++;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DeclarationName::CXXConversionFunctionName:
   case DeclarationName::CXXLiteralOperatorName:
     mangleOperatorName(Name, Arity);
@@ -1730,14 +1727,13 @@ void CXXNameMangler::mangleNestedName(GlobalDecl GD,
   Out << 'E';
 }
 void CXXNameMangler::mangleNestedName(const TemplateDecl *TD,
-                                      const TemplateArgument *TemplateArgs,
-                                      unsigned NumTemplateArgs) {
+                                      ArrayRef<TemplateArgument> Args) {
   // <nested-name> ::= N [<CV-qualifiers>] <template-prefix> <template-args> E
 
   Out << 'N';
 
   mangleTemplatePrefix(TD);
-  mangleTemplateArgs(asTemplateName(TD), TemplateArgs, NumTemplateArgs);
+  mangleTemplateArgs(asTemplateName(TD), Args);
 
   Out << 'E';
 }
@@ -2416,7 +2412,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     // conversions to the corresponding template parameter.
     // FIXME: Other compilers mangle partially-resolved template arguments in
     // unresolved-qualifier-levels.
-    mangleTemplateArgs(TemplateName(), TST->getArgs(), TST->getNumArgs());
+    mangleTemplateArgs(TemplateName(), TST->template_arguments());
     break;
   }
 
@@ -2435,7 +2431,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     TemplateName Template = getASTContext().getDependentTemplateName(
         DTST->getQualifier(), DTST->getIdentifier());
     mangleSourceName(DTST->getIdentifier());
-    mangleTemplateArgs(Template, DTST->getArgs(), DTST->getNumArgs());
+    mangleTemplateArgs(Template, DTST->template_arguments());
     break;
   }
 
@@ -3874,7 +3870,7 @@ void CXXNameMangler::mangleType(const InjectedClassNameType *T) {
 
 void CXXNameMangler::mangleType(const TemplateSpecializationType *T) {
   if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl()) {
-    mangleTemplateName(TD, T->getArgs(), T->getNumArgs());
+    mangleTemplateName(TD, T->template_arguments());
   } else {
     if (mangleSubstitution(QualType(T, 0)))
       return;
@@ -3884,7 +3880,7 @@ void CXXNameMangler::mangleType(const TemplateSpecializationType *T) {
     // FIXME: GCC does not appear to mangle the template arguments when
     // the template in question is a dependent template name. Should we
     // emulate that badness?
-    mangleTemplateArgs(T->getTemplateName(), T->getArgs(), T->getNumArgs());
+    mangleTemplateArgs(T->getTemplateName(), T->template_arguments());
     addSubstitution(QualType(T, 0));
   }
 }
@@ -3936,7 +3932,7 @@ void CXXNameMangler::mangleType(const DependentTemplateSpecializationType *T) {
   // FIXME: GCC does not appear to mangle the template arguments when
   // the template in question is a dependent template name. Should we
   // emulate that badness?
-  mangleTemplateArgs(Prefix, T->getArgs(), T->getNumArgs());
+  mangleTemplateArgs(Prefix, T->template_arguments());
   Out << 'E';
 }
 
@@ -3980,16 +3976,22 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
   // If this is dependent, we need to record that. If not, we simply
   // mangle it as the underlying type since they are equivalent.
   if (T->isDependentType()) {
-    Out << 'U';
+    Out << "u";
 
+    StringRef BuiltinName;
     switch (T->getUTTKind()) {
-      case UnaryTransformType::EnumUnderlyingType:
-        Out << "3eut";
-        break;
+#define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
+  case UnaryTransformType::Enum:                                               \
+    BuiltinName = "__" #Trait;                                                 \
+    break;
+#include "clang/Basic/TransformTypeTraits.def"
     }
+    Out << BuiltinName.size() << BuiltinName;
   }
 
+  Out << "I";
   mangleType(T->getBaseType());
+  Out << "E";
 }
 
 void CXXNameMangler::mangleType(const AutoType *T) {
@@ -4671,7 +4673,7 @@ recurse:
         Out << 'E';
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case UETT_AlignOf:
       Out << 'a';
       MangleAlignofSizeofArg();
@@ -4886,9 +4888,7 @@ recurse:
     //  <expr-primary> ::= L <mangled-name> E # external name
     Out << "L_Z";
     auto *CSE = cast<ConceptSpecializationExpr>(E);
-    mangleTemplateName(CSE->getNamedConcept(),
-                       CSE->getTemplateArguments().data(),
-                       CSE->getTemplateArguments().size());
+    mangleTemplateName(CSE->getNamedConcept(), CSE->getTemplateArguments());
     Out << 'E';
     break;
   }
@@ -5345,13 +5345,12 @@ void CXXNameMangler::mangleTemplateArgs(TemplateName TN,
 }
 
 void CXXNameMangler::mangleTemplateArgs(TemplateName TN,
-                                        const TemplateArgument *TemplateArgs,
-                                        unsigned NumTemplateArgs) {
+                                        ArrayRef<TemplateArgument> Args) {
   // <template-args> ::= I <template-arg>+ E
   Out << 'I';
   TemplateArgManglingInfo Info(TN);
-  for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    mangleTemplateArg(TemplateArgs[i], Info.needExactType(i, TemplateArgs[i]));
+  for (unsigned i = 0; i != Args.size(); ++i)
+    mangleTemplateArg(Args[i], Info.needExactType(i, Args[i]));
   Out << 'E';
 }
 
@@ -5646,8 +5645,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
     assert(RD && "unexpected type for record value");
 
     // Drop trailing zero-initialized elements.
-    llvm::SmallVector<const FieldDecl *, 16> Fields(RD->field_begin(),
-                                                    RD->field_end());
+    llvm::SmallVector<const FieldDecl *, 16> Fields(RD->fields());
     while (
         !Fields.empty() &&
         (Fields.back()->isUnnamedBitfield() ||

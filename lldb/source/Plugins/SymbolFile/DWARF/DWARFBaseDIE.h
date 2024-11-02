@@ -107,6 +107,9 @@ public:
   uint64_t GetAttributeValueAsUnsigned(const dw_attr_t attr,
                                        uint64_t fail_value) const;
 
+  llvm::Optional<uint64_t>
+  GetAttributeValueAsOptionalUnsigned(const dw_attr_t attr) const;
+
   uint64_t GetAttributeValueAsAddress(const dw_attr_t attr,
                                       uint64_t fail_value) const;
 

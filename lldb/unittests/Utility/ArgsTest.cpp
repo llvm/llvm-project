@@ -284,37 +284,6 @@ TEST(ArgsTest, ReplaceArgumentAtIndexFarOutOfRange) {
   EXPECT_STREQ(args.GetArgumentAtIndex(2), "b");
 }
 
-TEST(ArgsTest, Yaml) {
-  std::string buffer;
-  llvm::raw_string_ostream os(buffer);
-
-  // Serialize.
-  Args args;
-  args.SetCommandString("this 'has' \"multiple\" args");
-  llvm::yaml::Output yout(os);
-  yout << args;
-  os.flush();
-
-  llvm::outs() << buffer;
-
-  // Deserialize.
-  Args deserialized;
-  llvm::yaml::Input yin(buffer);
-  yin >> deserialized;
-
-  EXPECT_EQ(4u, deserialized.GetArgumentCount());
-  EXPECT_STREQ(deserialized.GetArgumentAtIndex(0), "this");
-  EXPECT_STREQ(deserialized.GetArgumentAtIndex(1), "has");
-  EXPECT_STREQ(deserialized.GetArgumentAtIndex(2), "multiple");
-  EXPECT_STREQ(deserialized.GetArgumentAtIndex(3), "args");
-
-  llvm::ArrayRef<Args::ArgEntry> entries = deserialized.entries();
-  EXPECT_EQ(entries[0].GetQuoteChar(), '\0');
-  EXPECT_EQ(entries[1].GetQuoteChar(), '\'');
-  EXPECT_EQ(entries[2].GetQuoteChar(), '"');
-  EXPECT_EQ(entries[3].GetQuoteChar(), '\0');
-}
-
 TEST(ArgsTest, GetShellSafeArgument) {
   // Try escaping with bash at start/middle/end of the argument.
   FileSpec bash("/bin/bash", FileSpec::Style::posix);
@@ -347,6 +316,13 @@ TEST(ArgsTest, GetShellSafeArgument) {
             R"(\ \'\"\<\>\(\)\&\;)");
   // Normal characters and globbing expressions that shouldn't be escaped.
   EXPECT_EQ(Args::GetShellSafeArgument(sh, "aA$1*"), "aA$1*");
+
+  // Test escaping fish special characters.
+  FileSpec fish("/bin/fish", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(fish, R"( '"<>()&\|;)"),
+            R"(\ \'\"\<\>\(\)\&\\\|\;)");
+  // Normal characters and expressions that shouldn't be escaped.
+  EXPECT_EQ(Args::GetShellSafeArgument(fish, "aA$1*"), "aA$1*");
 
   // Try escaping with an unknown shell.
   FileSpec unknown_shell("/bin/unknown_shell", FileSpec::Style::posix);

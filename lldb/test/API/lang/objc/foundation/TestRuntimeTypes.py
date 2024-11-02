@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class RuntimeTypesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["macosx"],
         debug_info="gmodules",
@@ -32,6 +30,8 @@ class RuntimeTypesTestCase(TestBase):
             sym_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
+
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
         # The backtrace should show we stop at -[MyString description].
         self.expect("thread backtrace", "Stop at -[MyString description]",

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -w -triple i386-pc-elfiamcu -mfloat-abi soft -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -triple i386-pc-elfiamcu -mfloat-abi soft -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define{{.*}} void @ints(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d)
 void ints(int a, int b, int c, int d) {}
@@ -40,10 +40,10 @@ void smallStructs(st4_t st1, st4_t st2, st4_t st3) {}
 // CHECK-LABEL: define{{.*}} void @paddedStruct(i32 noundef %i1, i32 %st.coerce0, i32 %st.coerce1, i32 %st4.0)
 void paddedStruct(int i1, st5_t st, st4_t st4) {}
 
-// CHECK-LABEL: define{{.*}} void @largeStructBegin(%struct.st12_t* noundef byval(%struct.st12_t) align 4 %st)
+// CHECK-LABEL: define{{.*}} void @largeStructBegin(ptr noundef byval(%struct.st12_t) align 4 %st)
 void largeStructBegin(st12_t st) {}
 
-// CHECK-LABEL: define{{.*}} void @largeStructMiddle(i32 noundef %i1, %struct.st12_t* noundef byval(%struct.st12_t) align 4 %st, i32 noundef %i2, i32 noundef %i3)
+// CHECK-LABEL: define{{.*}} void @largeStructMiddle(i32 noundef %i1, ptr noundef byval(%struct.st12_t) align 4 %st, i32 noundef %i2, i32 noundef %i3)
 void largeStructMiddle(int i1, st12_t st, int i2, int i3) {}
 
 // CHECK-LABEL: define{{.*}} void @largeStructEnd(i32 noundef %i1, i32 noundef %i2, i32 noundef %i3, i32 %st.0, i32 %st.1, i32 %st.2)
@@ -58,7 +58,7 @@ st4_t retSmallStruct(st4_t r) { return r; }
 // CHECK-LABEL: define{{.*}} i64 @retPaddedStruct(i32 %r.coerce0, i32 %r.coerce1)
 st5_t retPaddedStruct(st5_t r) { return r; }
 
-// CHECK-LABEL: define{{.*}} void @retLargeStruct(%struct.st12_t* noalias sret(%struct.st12_t) align 4 %agg.result, i32 noundef %i1, %struct.st12_t* noundef byval(%struct.st12_t) align 4 %r)
+// CHECK-LABEL: define{{.*}} void @retLargeStruct(ptr noalias sret(%struct.st12_t) align 4 %agg.result, i32 noundef %i1, ptr noundef byval(%struct.st12_t) align 4 %r)
 st12_t retLargeStruct(int i1, st12_t r) { return r; }
 
 // CHECK-LABEL: define{{.*}} i32 @varArgs(i32 noundef %i1, ...)

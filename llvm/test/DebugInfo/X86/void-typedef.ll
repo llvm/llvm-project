@@ -31,18 +31,18 @@ target triple = "i686-pc-windows-msvc"
 %class.A = type { i8 }
 
 ; Function Attrs: noinline nounwind optnone
-define x86_thiscallcc zeroext i1 @"\01?m_fn1@B@@AAE_NXZ"(%class.B* %this) #0 align 2 !dbg !9 {
+define x86_thiscallcc zeroext i1 @"\01?m_fn1@B@@AAE_NXZ"(ptr %this) #0 align 2 !dbg !9 {
 entry:
   %retval = alloca i1, align 1
-  %this.addr = alloca %class.B*, align 4
-  store %class.B* %this, %class.B** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.B** %this.addr, metadata !22, metadata !DIExpression()), !dbg !24
-  %this1 = load %class.B*, %class.B** %this.addr, align 4
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !22, metadata !DIExpression()), !dbg !24
+  %this1 = load ptr, ptr %this.addr, align 4
   call void @llvm.trap(), !dbg !25
   unreachable, !dbg !25
 
 return:                                           ; No predecessors!
-  %0 = load i1, i1* %retval, align 1, !dbg !25
+  %0 = load i1, ptr %retval, align 1, !dbg !25
   ret i1 %0, !dbg !25
 }
 

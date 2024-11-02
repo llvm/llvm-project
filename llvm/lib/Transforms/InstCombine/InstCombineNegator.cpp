@@ -130,7 +130,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
 // FIXME: can this be reworked into a worklist-based algorithm while preserving
 // the depth-first, early bailout traversal?
-LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
+[[nodiscard]] Value *Negator::visitImpl(Value *V, unsigned Depth) {
   // -(undef) -> undef.
   if (match(V, m_Undef()))
     return V;
@@ -248,6 +248,19 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return nullptr;
 
   switch (I->getOpcode()) {
+  case Instruction::ZExt: {
+    // Negation of zext of signbit is signbit splat:
+    // 0 - (zext (i8 X u>> 7) to iN) --> sext (i8 X s>> 7) to iN
+    Value *SrcOp = I->getOperand(0);
+    unsigned SrcWidth = SrcOp->getType()->getScalarSizeInBits();
+    const APInt &FullShift = APInt(SrcWidth, SrcWidth - 1);
+    if (IsTrulyNegation &&
+        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowUndef(FullShift)))) {
+      Value *Ashr = Builder.CreateAShr(X, FullShift);
+      return Builder.CreateSExt(Ashr, I->getType());
+    }
+    break;
+  }
   case Instruction::And: {
     Constant *ShAmt;
     // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
@@ -382,7 +395,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
       return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
     // Otherwise, `shl %x, C` can be interpreted as `mul %x, 1<<C`.
     auto *Op1C = dyn_cast<Constant>(I->getOperand(1));
-    if (!Op1C) // Early return.
+    if (!Op1C || !IsTrulyNegation)
       return nullptr;
     return Builder.CreateMul(
         I->getOperand(0),
@@ -399,7 +412,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     if (match(Ops[1], m_One()))
       return Builder.CreateNot(Ops[0], I->getName() + ".neg");
     // Else, just defer to Instruction::Add handling.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
@@ -465,7 +478,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   llvm_unreachable("Can't get here. We always return from switch.");
 }
 
-LLVM_NODISCARD Value *Negator::negate(Value *V, unsigned Depth) {
+[[nodiscard]] Value *Negator::negate(Value *V, unsigned Depth) {
   NegatorMaxDepthVisited.updateMax(Depth);
   ++NegatorNumValuesVisited;
 
@@ -502,7 +515,7 @@ LLVM_NODISCARD Value *Negator::negate(Value *V, unsigned Depth) {
   return NegatedV;
 }
 
-LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
+[[nodiscard]] Optional<Negator::Result> Negator::run(Value *Root) {
   Value *Negated = negate(Root, /*Depth=*/0);
   if (!Negated) {
     // We must cleanup newly-inserted instructions, to avoid any potential
@@ -514,8 +527,8 @@ LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
   return std::make_pair(ArrayRef<Instruction *>(NewInstructions), Negated);
 }
 
-LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
-                                      InstCombinerImpl &IC) {
+[[nodiscard]] Value *Negator::Negate(bool LHSIsZero, Value *Root,
+                                     InstCombinerImpl &IC) {
   ++NegatorTotalNegationsAttempted;
   LLVM_DEBUG(dbgs() << "Negator: attempting to sink negation into " << *Root
                     << "\n");

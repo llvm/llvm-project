@@ -196,7 +196,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
          "Only NoInit can have no initializer!");
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
-  CXXNewExprBits.IsArray = ArraySize.hasValue();
+  CXXNewExprBits.IsArray = ArraySize.has_value();
   CXXNewExprBits.ShouldPassAlignment = ShouldPassAlignment;
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.StoredInitializationStyle =
@@ -248,7 +248,7 @@ CXXNewExpr::Create(const ASTContext &Ctx, bool IsGlobalNew,
                    InitializationStyle InitializationStyle, Expr *Initializer,
                    QualType Ty, TypeSourceInfo *AllocatedTypeInfo,
                    SourceRange Range, SourceRange DirectInitRange) {
-  bool IsArray = ArraySize.hasValue();
+  bool IsArray = ArraySize.has_value();
   bool HasInit = Initializer != nullptr;
   unsigned NumPlacementArgs = PlacementArgs.size();
   bool IsParenTypeId = TypeIdParens.isValid();
@@ -314,7 +314,7 @@ QualType CXXDeleteExpr::getDestroyedType() const {
 // CXXPseudoDestructorExpr
 PseudoDestructorTypeStorage::PseudoDestructorTypeStorage(TypeSourceInfo *Info)
     : Type(Info) {
-  Location = Info->getTypeLoc().getLocalSourceRange().getBegin();
+  Location = Info->getTypeLoc().getBeginLoc();
 }
 
 CXXPseudoDestructorExpr::CXXPseudoDestructorExpr(
@@ -341,7 +341,7 @@ QualType CXXPseudoDestructorExpr::getDestroyedType() const {
 SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   SourceLocation End = DestroyedType.getLocation();
   if (TypeSourceInfo *TInfo = DestroyedType.getTypeSourceInfo())
-    End = TInfo->getTypeLoc().getLocalSourceRange().getEnd();
+    End = TInfo->getTypeLoc().getSourceRange().getEnd();
   return End;
 }
 
@@ -1087,7 +1087,7 @@ CXXConstructExpr::CXXConstructExpr(StmtClass SC, EmptyShell Empty,
     : Expr(SC, Empty), NumArgs(NumArgs) {}
 
 LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
-                             LambdaCaptureKind Kind, VarDecl *Var,
+                             LambdaCaptureKind Kind, ValueDecl *Var,
                              SourceLocation EllipsisLoc)
     : DeclAndBits(Var, 0), Loc(Loc), EllipsisLoc(EllipsisLoc) {
   unsigned Bits = 0;
@@ -1097,7 +1097,7 @@ LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
   switch (Kind) {
   case LCK_StarThis:
     Bits |= Capture_ByCopy;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LCK_This:
     assert(!Var && "'this' capture cannot have a variable!");
     Bits |= Capture_This;
@@ -1105,7 +1105,7 @@ LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
 
   case LCK_ByCopy:
     Bits |= Capture_ByCopy;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LCK_ByRef:
     assert(Var && "capture must have a variable!");
     break;
@@ -1211,8 +1211,8 @@ const CompoundStmt *LambdaExpr::getCompoundStmtBody() const {
 }
 
 bool LambdaExpr::isInitCapture(const LambdaCapture *C) const {
-  return (C->capturesVariable() && C->getCapturedVar()->isInitCapture() &&
-          (getCallOperator() == C->getCapturedVar()->getDeclContext()));
+  return C->capturesVariable() && C->getCapturedVar()->isInitCapture() &&
+         getCallOperator() == C->getCapturedVar()->getDeclContext();
 }
 
 LambdaExpr::capture_iterator LambdaExpr::capture_begin() const {
@@ -1574,6 +1574,11 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
   return new (Storage) SizeOfPackExpr(EmptyShell(), NumPartialArgs);
 }
 
+NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
+  return cast<NonTypeTemplateParmDecl>(
+      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+}
+
 QualType SubstNonTypeTemplateParmExpr::getParameterType(
     const ASTContext &Context) const {
   // Note that, for a class type NTTP, we will have an lvalue of type 'const
@@ -1584,13 +1589,20 @@ QualType SubstNonTypeTemplateParmExpr::getParameterType(
 }
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
-    QualType T, ExprValueKind ValueKind, NonTypeTemplateParmDecl *Param,
-    SourceLocation NameLoc, const TemplateArgument &ArgPack)
+    QualType T, ExprValueKind ValueKind, SourceLocation NameLoc,
+    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index)
     : Expr(SubstNonTypeTemplateParmPackExprClass, T, ValueKind, OK_Ordinary),
-      Param(Param), Arguments(ArgPack.pack_begin()),
-      NumArguments(ArgPack.pack_size()), NameLoc(NameLoc) {
+      AssociatedDecl(AssociatedDecl), Arguments(ArgPack.pack_begin()),
+      NumArguments(ArgPack.pack_size()), Index(Index), NameLoc(NameLoc) {
+  assert(AssociatedDecl != nullptr);
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
+}
+
+NonTypeTemplateParmDecl *
+SubstNonTypeTemplateParmPackExpr::getParameterPack() const {
+  return cast<NonTypeTemplateParmDecl>(
+      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
 }
 
 TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {

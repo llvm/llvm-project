@@ -75,7 +75,7 @@ func.func @test_max_pool2d(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32
 // -----
 /// CHECK-LABEL: transpose_conv2d
 func.func @test_transpose_conv2d(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>) -> tensor<1x32x32x16xf32> {
-  %0 = "tosa.transpose_conv2d"(%arg0, %arg1, %arg2) {dilation = [1, 1], out_pad = [0, 0], out_shape = [1, 32, 32, 16], stride = [1, 1]} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>) -> tensor<1x32x32x16xf32>
+  %0 = "tosa.transpose_conv2d"(%arg0, %arg1, %arg2) {out_pad = [0, 0, 0, 0], out_shape = [1, 32, 32, 16], stride = [1, 1]} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>) -> tensor<1x32x32x16xf32>
   return %0 : tensor<1x32x32x16xf32>
 }
 
@@ -85,14 +85,6 @@ func.func @test_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
   %0 = "tosa.clamp"(%arg0) {min_fp = 0.0 : f32, max_fp = 1.0: f32, min_int = 0 : i64, max_int = 1 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
-
-// -----
-// CHECK-LABEL: relu
-func.func @test_relu(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
-  %0 = "tosa.reluN"(%arg0) {max_fp = 3.40282347E+38 : f32, max_int = 0 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
-  return %0 : tensor<13x21x3xf32>
-}
-
 
 // -----
 // CHECK-LABEL: sigmoid
@@ -456,7 +448,7 @@ func.func @test_scatter(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %a
 // -----
 // CHECK-LABEL: resize
 func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
-  %1 = "tosa.resize"(%arg0) {output_size = [64, 64], stride = [1024, 1024], offset = [0, 0], shift = 10 : i32, stride_fp = [0.0 : f32, 0.0 : f32], offset_fp = [0.0 : f32, 0.0 : f32], mode = "BILINEAR"} : (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
+  %1 = "tosa.resize"(%arg0) { scale = [4, 2, 4, 2], offset = [-1, -1], border = [1, 1], mode = "BILINEAR"} : (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }
 
@@ -506,11 +498,11 @@ func.func @test_identity(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
 // CHECK-LABEL: cond_if
 func.func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
   %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
-  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
     %1 = "tosa.add"(%arg3, %arg4) : (tensor<f32>, tensor<f32>) -> tensor<f32>
     "tosa.yield"(%1) : (tensor<f32>) -> ()
   },  {
-  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
     %1 = "tosa.sub"(%arg3, %arg4) : (tensor<f32>, tensor<f32>) -> tensor<f32>
     "tosa.yield"(%1) : (tensor<f32>) -> ()
   }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
@@ -522,12 +514,12 @@ func.func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1
 func.func @test_while_loop(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
   %0 = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
   %1:3 = "tosa.while_loop"(%0, %0, %arg0) ({
-  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):  
+  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):
     %2 = "tosa.greater_equal"(%arg3, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = "tosa.logical_not"(%2) : (tensor<i1>) -> tensor<i1>
     "tosa.yield"(%3) : (tensor<i1>) -> ()
   },  {
-  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):  
+  ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<10xi32>):
     %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
     %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     %4 = "tosa.reshape"(%2) {new_shape = [1]} : (tensor<i32>) -> tensor<1xi32>
@@ -536,4 +528,11 @@ func.func @test_while_loop(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
     "tosa.yield"(%6, %3, %5) : (tensor<i32>, tensor<i32>, tensor<10xi32>) -> ()
   }) : (tensor<i32>, tensor<i32>, tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<10xi32>)
   return
+}
+
+// -----
+// CHECK-LABEL: custom
+func.func @test_custom(%arg0: tensor<10xi32>) -> tensor<10xi32> {
+  %0 = "tosa.custom"(%arg0) {identifier="custom_test", config="tosa_mlir_test", implementation_attrs=""} : (tensor<10xi32>) -> (tensor<10xi32>)
+  return %0 : tensor<10xi32>
 }

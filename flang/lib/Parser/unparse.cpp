@@ -758,6 +758,10 @@ public:
     Walk(std::get<CharLiteralConstant>(x.t));
     Put('('), Walk(std::get<SubstringRange>(x.t)), Put(')');
   }
+  void Unparse(const SubstringInquiry &x) {
+    Walk(x.v);
+    Put(x.source.end()[-1] == 'n' ? "%LEN" : "%KIND");
+  }
   void Unparse(const SubstringRange &x) { // R910
     Walk(x.t, ":");
   }
@@ -2004,6 +2008,10 @@ public:
     Walk(std::get<OmpScheduleClause::ScheduleType>(x.t));
     Walk(",", std::get<std::optional<ScalarIntExpr>>(x.t));
   }
+  void Unparse(const OmpDeviceClause &x) {
+    Walk(std::get<std::optional<OmpDeviceClause::DeviceModifier>>(x.t), ":");
+    Walk(std::get<ScalarIntExpr>(x.t));
+  }
   void Unparse(const OmpAlignedClause &x) {
     Walk(std::get<std::list<Name>>(x.t), ",");
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
@@ -2021,6 +2029,11 @@ public:
     Walk(":", x.step);
   }
   void Unparse(const OmpReductionClause &x) {
+    Walk(std::get<OmpReductionOperator>(x.t));
+    Put(":");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpInReductionClause &x) {
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
@@ -2216,6 +2229,21 @@ public:
       break;
     }
   }
+
+  void Unparse(const OmpAtomicDefaultMemOrderClause &x) {
+    switch (x.v) {
+    case OmpAtomicDefaultMemOrderClause::Type::SeqCst:
+      Word("SEQ_CST");
+      break;
+    case OmpAtomicDefaultMemOrderClause::Type::AcqRel:
+      Word("ACQ_REL");
+      break;
+    case OmpAtomicDefaultMemOrderClause::Type::Relaxed:
+      Word("RELAXED");
+      break;
+    }
+  }
+
   void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }
 
   void Unparse(const OmpAtomic &x) {
@@ -2379,6 +2407,13 @@ public:
             [&](const OpenMPDeclareTargetConstruct &) {
               Word("DECLARE TARGET ");
               return true;
+            },
+            [&](const OpenMPRequiresConstruct &y) {
+              Word("REQUIRES ");
+              Walk(std::get<OmpClauseList>(y.t));
+              Put("\n");
+              EndOpenMP();
+              return false;
             },
             [&](const OpenMPThreadprivate &) {
               Word("THREADPRIVATE (");
@@ -2571,6 +2606,7 @@ public:
   WALK_NESTED_ENUM(OmpDependenceType, Type) // OMP dependence-type
   WALK_NESTED_ENUM(OmpMapType, Type) // OMP map-type
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
+  WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
 #undef WALK_NESTED_ENUM

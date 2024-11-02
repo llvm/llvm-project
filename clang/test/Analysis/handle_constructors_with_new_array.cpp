@@ -59,12 +59,9 @@ void test_automatic_aggregate() {
   init_in_body a2[1];
   init_default_member a3[1];
 
-  // FIXME: Should be TRUE, not FALSE.
-  clang_analyzer_eval(a1[0].a == 1); // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  // FIXME: Should be TRUE, not FALSE.
-  clang_analyzer_eval(a2[0].a == 1); // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  // FIXME: Should be TRUE, not FALSE.
-  clang_analyzer_eval(a3[0].a == 1); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(a1[0].a == 1); // expected-warning {{TRUE}}
+  clang_analyzer_eval(a2[0].a == 1); // expected-warning {{TRUE}}
+  clang_analyzer_eval(a3[0].a == 1); // expected-warning {{TRUE}}
 }
 
 void test_dynamic_aggregate() {
@@ -73,12 +70,9 @@ void test_dynamic_aggregate() {
   auto *a2 = new init_in_body[1];
   auto *a3 = new init_default_member[1];
 
-  // FIXME: Should be TRUE, not FALSE.
-  clang_analyzer_eval(a1[0].a == 1); // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  // FIXME: Should be TRUE, not FALSE.
-  clang_analyzer_eval(a2[0].a == 1); // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  // FIXME: Should be TRUE, not FALSE.
-  clang_analyzer_eval(a3[0].a == 1); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(a1[0].a == 1); // expected-warning {{TRUE}}
+  clang_analyzer_eval(a2[0].a == 1); // expected-warning {{TRUE}}
+  clang_analyzer_eval(a3[0].a == 1); // expected-warning {{TRUE}}
 
   delete[] a1;
   delete[] a2;

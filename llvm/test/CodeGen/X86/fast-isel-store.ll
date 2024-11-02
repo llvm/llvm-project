@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=x86_64-none-linux -fast-isel -fast-isel-abort=1 -mattr=+avx512vl,+avx512dq,+avx512bw < %s | FileCheck %s --check-prefixes=ALL32,AVX32,AVX51232
 ; RUN: llc -mtriple=i686-none-linux -fast-isel -fast-isel-abort=1 -mattr=+avx512f,+avx512dq,+avx512bw < %s | FileCheck %s --check-prefixes=ALL64,AVX64,AVX51264
 
-define i32 @test_store_32(i32* nocapture %addr, i32 %value) {
+define i32 @test_store_32(ptr nocapture %addr, i32 %value) {
 ; ALL32-LABEL: test_store_32:
 ; ALL32:       # %bb.0: # %entry
 ; ALL32-NEXT:    movl %esi, %eax
@@ -22,11 +22,11 @@ define i32 @test_store_32(i32* nocapture %addr, i32 %value) {
 ; ALL64-NEXT:    movl %eax, (%ecx)
 ; ALL64-NEXT:    retl
 entry:
-  store i32 %value, i32* %addr, align 1
+  store i32 %value, ptr %addr, align 1
   ret i32 %value
 }
 
-define i16 @test_store_16(i16* nocapture %addr, i16 %value) {
+define i16 @test_store_16(ptr nocapture %addr, i16 %value) {
 ; ALL32-LABEL: test_store_16:
 ; ALL32:       # %bb.0: # %entry
 ; ALL32-NEXT:    movl %esi, %eax
@@ -41,11 +41,11 @@ define i16 @test_store_16(i16* nocapture %addr, i16 %value) {
 ; ALL64-NEXT:    movw %ax, (%ecx)
 ; ALL64-NEXT:    retl
 entry:
-  store i16 %value, i16* %addr, align 1
+  store i16 %value, ptr %addr, align 1
   ret i16 %value
 }
 
-define <4 x i32> @test_store_4xi32(<4 x i32>* nocapture %addr, <4 x i32> %value, <4 x i32> %value2) {
+define <4 x i32> @test_store_4xi32(ptr nocapture %addr, <4 x i32> %value, <4 x i32> %value2) {
 ; SSE32-LABEL: test_store_4xi32:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    paddd %xmm1, %xmm0
@@ -72,11 +72,11 @@ define <4 x i32> @test_store_4xi32(<4 x i32>* nocapture %addr, <4 x i32> %value,
 ; AVX64-NEXT:    vmovdqu %xmm0, (%eax)
 ; AVX64-NEXT:    retl
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
-  store <4 x i32> %foo, <4 x i32>* %addr, align 1
+  store <4 x i32> %foo, ptr %addr, align 1
   ret <4 x i32> %foo
 }
 
-define <4 x i32> @test_store_4xi32_aligned(<4 x i32>* nocapture %addr, <4 x i32> %value, <4 x i32> %value2) {
+define <4 x i32> @test_store_4xi32_aligned(ptr nocapture %addr, <4 x i32> %value, <4 x i32> %value2) {
 ; SSE32-LABEL: test_store_4xi32_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    paddd %xmm1, %xmm0
@@ -103,11 +103,11 @@ define <4 x i32> @test_store_4xi32_aligned(<4 x i32>* nocapture %addr, <4 x i32>
 ; AVX64-NEXT:    vmovdqa %xmm0, (%eax)
 ; AVX64-NEXT:    retl
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
-  store <4 x i32> %foo, <4 x i32>* %addr, align 16
+  store <4 x i32> %foo, ptr %addr, align 16
   ret <4 x i32> %foo
 }
 
-define <4 x float> @test_store_4xf32(<4 x float>* nocapture %addr, <4 x float> %value) {
+define <4 x float> @test_store_4xf32(ptr nocapture %addr, <4 x float> %value) {
 ; SSE32-LABEL: test_store_4xf32:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movups %xmm0, (%rdi)
@@ -129,11 +129,11 @@ define <4 x float> @test_store_4xf32(<4 x float>* nocapture %addr, <4 x float> %
 ; AVX64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX64-NEXT:    vmovups %xmm0, (%eax)
 ; AVX64-NEXT:    retl
-  store <4 x float> %value, <4 x float>* %addr, align 1
+  store <4 x float> %value, ptr %addr, align 1
   ret <4 x float> %value
 }
 
-define <4 x float> @test_store_4xf32_aligned(<4 x float>* nocapture %addr, <4 x float> %value) {
+define <4 x float> @test_store_4xf32_aligned(ptr nocapture %addr, <4 x float> %value) {
 ; SSE32-LABEL: test_store_4xf32_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movaps %xmm0, (%rdi)
@@ -155,11 +155,11 @@ define <4 x float> @test_store_4xf32_aligned(<4 x float>* nocapture %addr, <4 x 
 ; AVX64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX64-NEXT:    vmovaps %xmm0, (%eax)
 ; AVX64-NEXT:    retl
-  store <4 x float> %value, <4 x float>* %addr, align 16
+  store <4 x float> %value, ptr %addr, align 16
   ret <4 x float> %value
 }
 
-define <2 x double> @test_store_2xf64(<2 x double>* nocapture %addr, <2 x double> %value, <2 x double> %value2) {
+define <2 x double> @test_store_2xf64(ptr nocapture %addr, <2 x double> %value, <2 x double> %value2) {
 ; SSE32-LABEL: test_store_2xf64:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    addpd %xmm1, %xmm0
@@ -186,11 +186,11 @@ define <2 x double> @test_store_2xf64(<2 x double>* nocapture %addr, <2 x double
 ; AVX64-NEXT:    vmovupd %xmm0, (%eax)
 ; AVX64-NEXT:    retl
   %foo = fadd <2 x double> %value, %value2 ; to force dobule type on store
-  store <2 x double> %foo, <2 x double>* %addr, align 1
+  store <2 x double> %foo, ptr %addr, align 1
   ret <2 x double> %foo
 }
 
-define <2 x double> @test_store_2xf64_aligned(<2 x double>* nocapture %addr, <2 x double> %value, <2 x double> %value2) {
+define <2 x double> @test_store_2xf64_aligned(ptr nocapture %addr, <2 x double> %value, <2 x double> %value2) {
 ; SSE32-LABEL: test_store_2xf64_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    addpd %xmm1, %xmm0
@@ -217,11 +217,11 @@ define <2 x double> @test_store_2xf64_aligned(<2 x double>* nocapture %addr, <2 
 ; AVX64-NEXT:    vmovapd %xmm0, (%eax)
 ; AVX64-NEXT:    retl
   %foo = fadd <2 x double> %value, %value2 ; to force dobule type on store
-  store <2 x double> %foo, <2 x double>* %addr, align 16
+  store <2 x double> %foo, ptr %addr, align 16
   ret <2 x double> %foo
 }
 
-define <8 x i32> @test_store_8xi32(<8 x i32>* nocapture %addr, <8 x i32> %value) {
+define <8 x i32> @test_store_8xi32(ptr nocapture %addr, <8 x i32> %value) {
 ; SSE32-LABEL: test_store_8xi32:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movups %xmm0, (%rdi)
@@ -245,11 +245,11 @@ define <8 x i32> @test_store_8xi32(<8 x i32>* nocapture %addr, <8 x i32> %value)
 ; AVX64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX64-NEXT:    vmovups %ymm0, (%eax)
 ; AVX64-NEXT:    retl
-  store <8 x i32> %value, <8 x i32>* %addr, align 1
+  store <8 x i32> %value, ptr %addr, align 1
   ret <8 x i32> %value
 }
 
-define <8 x i32> @test_store_8xi32_aligned(<8 x i32>* nocapture %addr, <8 x i32> %value) {
+define <8 x i32> @test_store_8xi32_aligned(ptr nocapture %addr, <8 x i32> %value) {
 ; SSE32-LABEL: test_store_8xi32_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movaps %xmm0, (%rdi)
@@ -273,11 +273,11 @@ define <8 x i32> @test_store_8xi32_aligned(<8 x i32>* nocapture %addr, <8 x i32>
 ; AVX64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX64-NEXT:    vmovaps %ymm0, (%eax)
 ; AVX64-NEXT:    retl
-  store <8 x i32> %value, <8 x i32>* %addr, align 32
+  store <8 x i32> %value, ptr %addr, align 32
   ret <8 x i32> %value
 }
 
-define <8 x float> @test_store_8xf32(<8 x float>* nocapture %addr, <8 x float> %value) {
+define <8 x float> @test_store_8xf32(ptr nocapture %addr, <8 x float> %value) {
 ; SSE32-LABEL: test_store_8xf32:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movups %xmm0, (%rdi)
@@ -301,11 +301,11 @@ define <8 x float> @test_store_8xf32(<8 x float>* nocapture %addr, <8 x float> %
 ; AVX64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX64-NEXT:    vmovups %ymm0, (%eax)
 ; AVX64-NEXT:    retl
-  store <8 x float> %value, <8 x float>* %addr, align 1
+  store <8 x float> %value, ptr %addr, align 1
   ret <8 x float> %value
 }
 
-define <8 x float> @test_store_8xf32_aligned(<8 x float>* nocapture %addr, <8 x float> %value) {
+define <8 x float> @test_store_8xf32_aligned(ptr nocapture %addr, <8 x float> %value) {
 ; SSE32-LABEL: test_store_8xf32_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movaps %xmm0, (%rdi)
@@ -329,11 +329,11 @@ define <8 x float> @test_store_8xf32_aligned(<8 x float>* nocapture %addr, <8 x 
 ; AVX64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX64-NEXT:    vmovaps %ymm0, (%eax)
 ; AVX64-NEXT:    retl
-  store <8 x float> %value, <8 x float>* %addr, align 32
+  store <8 x float> %value, ptr %addr, align 32
   ret <8 x float> %value
 }
 
-define <4 x double> @test_store_4xf64(<4 x double>* nocapture %addr, <4 x double> %value, <4 x double> %value2) {
+define <4 x double> @test_store_4xf64(ptr nocapture %addr, <4 x double> %value, <4 x double> %value2) {
 ; SSE32-LABEL: test_store_4xf64:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    addpd %xmm2, %xmm0
@@ -369,11 +369,11 @@ define <4 x double> @test_store_4xf64(<4 x double>* nocapture %addr, <4 x double
 ; AVX64-NEXT:    vmovupd %ymm0, (%eax)
 ; AVX64-NEXT:    retl
   %foo = fadd <4 x double> %value, %value2 ; to force dobule type on store
-  store <4 x double> %foo, <4 x double>* %addr, align 1
+  store <4 x double> %foo, ptr %addr, align 1
   ret <4 x double> %foo
 }
 
-define <4 x double> @test_store_4xf64_aligned(<4 x double>* nocapture %addr, <4 x double> %value, <4 x double> %value2) {
+define <4 x double> @test_store_4xf64_aligned(ptr nocapture %addr, <4 x double> %value, <4 x double> %value2) {
 ; SSE32-LABEL: test_store_4xf64_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    addpd %xmm2, %xmm0
@@ -409,11 +409,11 @@ define <4 x double> @test_store_4xf64_aligned(<4 x double>* nocapture %addr, <4 
 ; AVX64-NEXT:    vmovapd %ymm0, (%eax)
 ; AVX64-NEXT:    retl
   %foo = fadd <4 x double> %value, %value2 ; to force dobule type on store
-  store <4 x double> %foo, <4 x double>* %addr, align 32
+  store <4 x double> %foo, ptr %addr, align 32
   ret <4 x double> %foo
 }
 
-define <16 x i32> @test_store_16xi32(<16 x i32>* nocapture %addr, <16 x i32> %value) {
+define <16 x i32> @test_store_16xi32(ptr nocapture %addr, <16 x i32> %value) {
 ; SSE32-LABEL: test_store_16xi32:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movups %xmm0, (%rdi)
@@ -459,11 +459,11 @@ define <16 x i32> @test_store_16xi32(<16 x i32>* nocapture %addr, <16 x i32> %va
 ; AVX51264-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX51264-NEXT:    vmovups %zmm0, (%eax)
 ; AVX51264-NEXT:    retl
-  store <16 x i32> %value, <16 x i32>* %addr, align 1
+  store <16 x i32> %value, ptr %addr, align 1
   ret <16 x i32> %value
 }
 
-define <16 x i32> @test_store_16xi32_aligned(<16 x i32>* nocapture %addr, <16 x i32> %value) {
+define <16 x i32> @test_store_16xi32_aligned(ptr nocapture %addr, <16 x i32> %value) {
 ; SSE32-LABEL: test_store_16xi32_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movaps %xmm0, (%rdi)
@@ -509,11 +509,11 @@ define <16 x i32> @test_store_16xi32_aligned(<16 x i32>* nocapture %addr, <16 x 
 ; AVX51264-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX51264-NEXT:    vmovaps %zmm0, (%eax)
 ; AVX51264-NEXT:    retl
-  store <16 x i32> %value, <16 x i32>* %addr, align 64
+  store <16 x i32> %value, ptr %addr, align 64
   ret <16 x i32> %value
 }
 
-define <16 x float> @test_store_16xf32(<16 x float>* nocapture %addr, <16 x float> %value) {
+define <16 x float> @test_store_16xf32(ptr nocapture %addr, <16 x float> %value) {
 ; SSE32-LABEL: test_store_16xf32:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movups %xmm0, (%rdi)
@@ -559,11 +559,11 @@ define <16 x float> @test_store_16xf32(<16 x float>* nocapture %addr, <16 x floa
 ; AVX51264-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX51264-NEXT:    vmovups %zmm0, (%eax)
 ; AVX51264-NEXT:    retl
-  store <16 x float> %value, <16 x float>* %addr, align 1
+  store <16 x float> %value, ptr %addr, align 1
   ret <16 x float> %value
 }
 
-define <16 x float> @test_store_16xf32_aligned(<16 x float>* nocapture %addr, <16 x float> %value) {
+define <16 x float> @test_store_16xf32_aligned(ptr nocapture %addr, <16 x float> %value) {
 ; SSE32-LABEL: test_store_16xf32_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    movaps %xmm0, (%rdi)
@@ -609,11 +609,11 @@ define <16 x float> @test_store_16xf32_aligned(<16 x float>* nocapture %addr, <1
 ; AVX51264-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX51264-NEXT:    vmovaps %zmm0, (%eax)
 ; AVX51264-NEXT:    retl
-  store <16 x float> %value, <16 x float>* %addr, align 64
+  store <16 x float> %value, ptr %addr, align 64
   ret <16 x float> %value
 }
 
-define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double> %value, <8 x double> %value2) {
+define <8 x double> @test_store_8xf64(ptr nocapture %addr, <8 x double> %value, <8 x double> %value2) {
 ; SSE32-LABEL: test_store_8xf64:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    addpd %xmm4, %xmm0
@@ -688,11 +688,11 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ; AVX51264-NEXT:    vmovupd %zmm0, (%eax)
 ; AVX51264-NEXT:    retl
   %foo = fadd <8 x double> %value, %value2 ; to force dobule type on store
-  store <8 x double> %foo, <8 x double>* %addr, align 1
+  store <8 x double> %foo, ptr %addr, align 1
   ret <8 x double> %foo
 }
 
-define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 x double> %value, <8 x double> %value2) {
+define <8 x double> @test_store_8xf64_aligned(ptr nocapture %addr, <8 x double> %value, <8 x double> %value2) {
 ; SSE32-LABEL: test_store_8xf64_aligned:
 ; SSE32:       # %bb.0:
 ; SSE32-NEXT:    addpd %xmm4, %xmm0
@@ -767,6 +767,6 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ; AVX51264-NEXT:    vmovapd %zmm0, (%eax)
 ; AVX51264-NEXT:    retl
   %foo = fadd <8 x double> %value, %value2 ; to force dobule type on store
-  store <8 x double> %foo, <8 x double>* %addr, align 64
+  store <8 x double> %foo, ptr %addr, align 64
   ret <8 x double> %foo
 }

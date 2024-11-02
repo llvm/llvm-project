@@ -330,7 +330,7 @@ public:
   PyDiagnosticHandler(MlirContext context, pybind11::object callback);
   ~PyDiagnosticHandler();
 
-  bool isAttached() { return registeredID.hasValue(); }
+  bool isAttached() { return registeredID.has_value(); }
   bool getHadError() { return hadError; }
 
   /// Detaches the handler. Does nothing if not attached.
@@ -388,6 +388,32 @@ public:
 
 private:
   pybind11::object descriptor;
+};
+
+/// Wrapper around an MlirDialectRegistry.
+/// Upon construction, the Python wrapper takes ownership of the
+/// underlying MlirDialectRegistry.
+class PyDialectRegistry {
+public:
+  PyDialectRegistry() : registry(mlirDialectRegistryCreate()) {}
+  PyDialectRegistry(MlirDialectRegistry registry) : registry(registry) {}
+  ~PyDialectRegistry() {
+    if (!mlirDialectRegistryIsNull(registry))
+      mlirDialectRegistryDestroy(registry);
+  }
+  PyDialectRegistry(PyDialectRegistry &) = delete;
+  PyDialectRegistry(PyDialectRegistry &&other) : registry(other.registry) {
+    other.registry = {nullptr};
+  }
+
+  operator MlirDialectRegistry() const { return registry; }
+  MlirDialectRegistry get() const { return registry; }
+
+  pybind11::object getCapsule();
+  static PyDialectRegistry createFromCapsule(pybind11::object capsule);
+
+private:
+  MlirDialectRegistry registry;
 };
 
 /// Wrapper around an MlirLocation.
@@ -485,6 +511,9 @@ public:
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope,
                           bool assumeVerified);
+
+  // Implement the bound 'writeBytecode' method.
+  void writeBytecode(const pybind11::object &fileObject);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);

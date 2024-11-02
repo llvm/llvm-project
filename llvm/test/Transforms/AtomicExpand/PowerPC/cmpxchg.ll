@@ -7,13 +7,11 @@
 define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
 ; CHECK-LABEL: @test_cmpxchg_seq_cst(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMPVAL_SHIFTED:%.*]] = shl i128 [[DESIRE:%.*]], 0
-; CHECK-NEXT:    [[NEWVAL_SHIFTED:%.*]] = shl i128 [[NEW:%.*]], 0
-; CHECK-NEXT:    [[CMP_LO:%.*]] = trunc i128 [[CMPVAL_SHIFTED]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i128 [[CMPVAL_SHIFTED]], 64
+; CHECK-NEXT:    [[CMP_LO:%.*]] = trunc i128 [[DESIRE:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i128 [[DESIRE]], 64
 ; CHECK-NEXT:    [[CMP_HI:%.*]] = trunc i128 [[TMP0]] to i64
-; CHECK-NEXT:    [[NEW_LO:%.*]] = trunc i128 [[NEWVAL_SHIFTED]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[NEWVAL_SHIFTED]], 64
+; CHECK-NEXT:    [[NEW_LO:%.*]] = trunc i128 [[NEW:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[NEW]], 64
 ; CHECK-NEXT:    [[NEW_HI:%.*]] = trunc i128 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128* [[ADDR:%.*]] to i8*
 ; CHECK-NEXT:    call void @llvm.ppc.sync()
@@ -26,10 +24,9 @@ define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i128 [[HI64]], 64
 ; CHECK-NEXT:    [[VAL64:%.*]] = or i128 [[LO64]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i128, i1 } undef, i128 [[VAL64]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = and i128 [[VAL64]], -1
-; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i128 [[CMPVAL_SHIFTED]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i128, i1 } [[TMP5]], i1 [[SUCCESS]], 1
-; CHECK-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP7]], 1
+; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i128 [[DESIRE]], [[VAL64]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i128, i1 } [[TMP5]], i1 [[SUCCESS]], 1
+; CHECK-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP6]], 1
 ; CHECK-NEXT:    ret i1 [[SUCC]]
 ;
 ; PWR7-LABEL: @test_cmpxchg_seq_cst(

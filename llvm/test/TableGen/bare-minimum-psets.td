@@ -48,7 +48,7 @@ def MyTarget : Target;
 // NAMESPACE-NEXT: } // end namespace TestNamespace
 
 // CHECK-LABEL: getRegPressureSetName(unsigned Idx) const {
-// CHECK-NEXT:    static const char *const PressureNameTable[] = {
+// CHECK-NEXT:    static const char *PressureNameTable[] = {
 // CHECK-NEXT:      "D_32",
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return PressureNameTable[Idx];

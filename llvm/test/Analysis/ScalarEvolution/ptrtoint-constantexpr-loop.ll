@@ -394,7 +394,7 @@ define i64 @sext_like_noop(i32 %n) {
 ; PTR64_IDX64-NEXT:    %ii = sext i32 %i to i64
 ; PTR64_IDX64-NEXT:    --> (sext i32 {1,+,1}<nuw><%for.body> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) --> (sext i32 (-1 + (trunc i64 (ptrtoint i64 (i32)* @sext_like_noop to i64) to i32)) to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; PTR64_IDX64-NEXT:    %div = sdiv i64 55555, %ii
-; PTR64_IDX64-NEXT:    --> %div U: full-set S: full-set --> sdiv (i64 55555, i64 sext (i32 add (i32 ptrtoint (i64 (i32)* @sext_like_noop to i32), i32 -1) to i64)) U: full-set S: full-set
+; PTR64_IDX64-NEXT:    --> %div U: full-set S: full-set
 ; PTR64_IDX64-NEXT:    %i = phi i32 [ %inc, %for.body ], [ 1, %entry ]
 ; PTR64_IDX64-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,0) S: [1,0) Exits: (-1 + (trunc i64 (ptrtoint i64 (i32)* @sext_like_noop to i64) to i32)) LoopDispositions: { %for.body: Computable }
 ; PTR64_IDX64-NEXT:    %inc = add nuw i32 %i, 1
@@ -411,7 +411,7 @@ define i64 @sext_like_noop(i32 %n) {
 ; PTR64_IDX32-NEXT:    %ii = sext i32 %i to i64
 ; PTR64_IDX32-NEXT:    --> (sext i32 {1,+,1}<nuw><%for.body> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) --> (sext i32 (-1 + ptrtoint (i64 (i32)* @sext_like_noop to i32)) to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; PTR64_IDX32-NEXT:    %div = sdiv i64 55555, %ii
-; PTR64_IDX32-NEXT:    --> %div U: full-set S: full-set --> sdiv (i64 55555, i64 sext (i32 add (i32 ptrtoint (i64 (i32)* @sext_like_noop to i32), i32 -1) to i64)) U: full-set S: full-set
+; PTR64_IDX32-NEXT:    --> %div U: full-set S: full-set
 ; PTR64_IDX32-NEXT:    %i = phi i32 [ %inc, %for.body ], [ 1, %entry ]
 ; PTR64_IDX32-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,0) S: [1,0) Exits: (-1 + ptrtoint (i64 (i32)* @sext_like_noop to i32)) LoopDispositions: { %for.body: Computable }
 ; PTR64_IDX32-NEXT:    %inc = add nuw i32 %i, 1
@@ -428,7 +428,7 @@ define i64 @sext_like_noop(i32 %n) {
 ; PTR16_IDX16-NEXT:    %ii = sext i32 %i to i64
 ; PTR16_IDX16-NEXT:    --> (sext i32 {1,+,1}<nuw><%for.body> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) --> (-1 + (zext i16 (ptrtoint i64 (i32)* @sext_like_noop to i16) to i64))<nsw> U: [-1,65535) S: [-1,65535)
 ; PTR16_IDX16-NEXT:    %div = sdiv i64 55555, %ii
-; PTR16_IDX16-NEXT:    --> %div U: full-set S: full-set --> sdiv (i64 55555, i64 add (i64 zext (i16 ptrtoint (i64 (i32)* @sext_like_noop to i16) to i64), i64 -1)) U: full-set S: full-set
+; PTR16_IDX16-NEXT:    --> %div U: full-set S: full-set
 ; PTR16_IDX16-NEXT:    %i = phi i32 [ %inc, %for.body ], [ 1, %entry ]
 ; PTR16_IDX16-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,0) S: [1,0) Exits: (-1 + (zext i16 (ptrtoint i64 (i32)* @sext_like_noop to i16) to i32))<nsw> LoopDispositions: { %for.body: Computable }
 ; PTR16_IDX16-NEXT:    %inc = add nuw i32 %i, 1
@@ -445,7 +445,7 @@ define i64 @sext_like_noop(i32 %n) {
 ; PTR16_IDX32-NEXT:    %ii = sext i32 %i to i64
 ; PTR16_IDX32-NEXT:    --> (sext i32 {1,+,1}<nuw><%for.body> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) --> (-1 + (zext i32 ptrtoint (i64 (i32)* @sext_like_noop to i32) to i64))<nsw> U: [-1,65535) S: [-1,65535)
 ; PTR16_IDX32-NEXT:    %div = sdiv i64 55555, %ii
-; PTR16_IDX32-NEXT:    --> %div U: full-set S: full-set --> sdiv (i64 55555, i64 add (i64 zext (i32 ptrtoint (i64 (i32)* @sext_like_noop to i32) to i64), i64 -1)) U: full-set S: full-set
+; PTR16_IDX32-NEXT:    --> %div U: full-set S: full-set
 ; PTR16_IDX32-NEXT:    %i = phi i32 [ %inc, %for.body ], [ 1, %entry ]
 ; PTR16_IDX32-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,0) S: [1,0) Exits: (-1 + ptrtoint (i64 (i32)* @sext_like_noop to i32))<nsw> LoopDispositions: { %for.body: Computable }
 ; PTR16_IDX32-NEXT:    %inc = add nuw i32 %i, 1

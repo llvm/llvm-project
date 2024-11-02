@@ -197,7 +197,17 @@ using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
 
 /// This ThinBackend runs the individual backend jobs in-process.
 /// The default value means to use one job per hardware core (not hyper-thread).
-ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism);
+/// OnWrite is callback which receives module identifier and notifies LTO user
+/// that index file for the module (and optionally imports file) was created.
+/// ShouldEmitIndexFiles being true will write sharded ThinLTO index files
+/// to the same path as the input module, with suffix ".thinlto.bc"
+/// ShouldEmitImportsFiles is true it also writes a list of imported files to a
+/// similar path with ".imports" appended instead.
+using IndexWriteCallback = std::function<void(const std::string &)>;
+ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
+                                       IndexWriteCallback OnWrite = nullptr,
+                                       bool ShouldEmitIndexFiles = false,
+                                       bool ShouldEmitImportsFiles = false);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
@@ -212,7 +222,6 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism);
 /// the final ThinLTO linking. Can be nullptr.
 /// OnWrite is callback which receives module identifier and notifies LTO user
 /// that index file for the module (and optionally imports file) was created.
-using IndexWriteCallback = std::function<void(const std::string &)>;
 ThinBackend createWriteIndexesThinBackend(std::string OldPrefix,
                                           std::string NewPrefix,
                                           bool ShouldEmitImportsFiles,

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test constexpr bool operator[](size_t pos) const;
+// constexpr bool operator[](size_t pos) const; // constexpr since C++23
 
 #include <bitset>
 #include <cassert>
@@ -17,7 +17,7 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_index_const() {
+TEST_CONSTEXPR_CXX23 void test_index_const() {
     std::vector<std::bitset<N> > const cases = get_test_cases<N>();
     for (std::size_t c = 0; c != cases.size(); ++c) {
         std::bitset<N> const v = cases[c];
@@ -32,16 +32,15 @@ void test_index_const() {
 #endif
 }
 
-int main(int, char**) {
-    test_index_const<0>();
-    test_index_const<1>();
-    test_index_const<31>();
-    test_index_const<32>();
-    test_index_const<33>();
-    test_index_const<63>();
-    test_index_const<64>();
-    test_index_const<65>();
-    test_index_const<1000>();
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_index_const<0>();
+  test_index_const<1>();
+  test_index_const<31>();
+  test_index_const<32>();
+  test_index_const<33>();
+  test_index_const<63>();
+  test_index_const<64>();
+  test_index_const<65>();
 
   std::bitset<1> set_;
   set_[0] = false;
@@ -54,5 +53,15 @@ int main(int, char**) {
   assert(b);
 #endif
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  test_index_const<1000>(); // not in constexpr because of constexpr evaluation step limits
+#if TEST_STD_VER > 20
+  static_assert(test());
+#endif
+
+  return 0;
 }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SocketTestUtilities.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/UriParser.h"

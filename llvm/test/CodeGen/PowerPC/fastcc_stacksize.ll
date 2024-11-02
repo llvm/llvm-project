@@ -6,7 +6,7 @@
 
 ; Max number of GPR is 8
 define linkonce_odr void
-    @WithoutParamArea(i8* %a, i32 signext %b) align 2 {
+    @WithoutParamArea(ptr %a, i32 signext %b) align 2 {
 entry:
   call fastcc void @fastccFunc(i32 signext 1)
   ret void
@@ -18,7 +18,7 @@ entry:
 declare fastcc void @fastccFunc(i32 signext %level) unnamed_addr
 
 ; No need for Parameter Save Area if only 8 GPRs is needed.
-define linkonce_odr void @WithoutParamArea2(i8* %a, i32 signext %b) align 2 {
+define linkonce_odr void @WithoutParamArea2(ptr %a, i32 signext %b) align 2 {
 entry:
   call fastcc void @eightArgs(i32 signext 1, i32 signext 2, i32 signext 3,
                               i32 signext 4, i32 signext 5, i32 signext 6,
@@ -36,7 +36,7 @@ declare fastcc void
                i32 signext %level7, i32 signext %level8) unnamed_addr
 
 ; No need for Parameter Save Area for calls that utiliizes 8 GPR and 2 FPR.
-define linkonce_odr void @WithoutParamArea3(i8* %a, i32 signext %b) align 2 {
+define linkonce_odr void @WithoutParamArea3(ptr %a, i32 signext %b) align 2 {
 entry:
   call fastcc void
       @mixedArgs(i32 signext 1, float 1.0, i32 signext 2, float 2.0,
@@ -58,9 +58,9 @@ declare fastcc void
 ; Pass by value usage requiring less GPR then available
 %"myClass::Mem" = type { i8, i8, i16, i32, i32, i32, i64 }
 
-define internal fastcc void @CallPassByValue(%"myClass::Mem"* %E) align 2 {
+define internal fastcc void @CallPassByValue(ptr %E) align 2 {
 entry:
-  call fastcc void @PassByValue(%"myClass::Mem"* byval(%"myClass::Mem") nonnull align 8 undef);
+  call fastcc void @PassByValue(ptr byval(%"myClass::Mem") nonnull align 8 undef);
   ret void
 
 ; CHECK-LABEL: PassByValue
@@ -69,14 +69,14 @@ entry:
 }
 
 declare dso_local fastcc void
-    @PassByValue(%"myClass::Mem"* byval(%"myClass::Mem") nocapture readonly align 8) align 2
+    @PassByValue(ptr byval(%"myClass::Mem") nocapture readonly align 8) align 2
 
 ; Verify Paramater Save Area is allocated if parameter exceed the number that
 ; can be passed via registers
 ; ------------------------------------------------------------------------------
 
 ; Max number of GPR is 8
-define linkonce_odr void @WithParamArea(i8 * %a, i32 signext %b) align 2 {
+define linkonce_odr void @WithParamArea(ptr %a, i32 signext %b) align 2 {
 entry:
   call fastcc void @nineArgs(i32 signext 1, i32 signext 2, i32 signext 3,
                            i32 signext 4, i32 signext 5, i32 signext 6,
@@ -94,7 +94,7 @@ declare fastcc void @nineArgs(i32 signext %level, i32 signext %level2,
   i32 signext %level9) unnamed_addr
 
 ; Max number of FPR for parameter passing is 13
-define linkonce_odr void @WithParamArea2(i8* %a, i32 signext %b) align 2 {
+define linkonce_odr void @WithParamArea2(ptr %a, i32 signext %b) align 2 {
 entry:
   call fastcc void @funcW14FloatArgs(float 1.0, float 2.0, float 3.0,
     float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 1.0,
@@ -116,18 +116,18 @@ declare fastcc void
 
 ; Pass by value usage requires more GPR then available
 %"myClass::MemA" = type { i8, i8, i16, i32, i32, i32, i64 }
-%"myClass::MemB" = type { i32*, i32, i32, %"myClass::MemB"** }
-%"myClass::MemC" = type { %"myClass::MemD"*, %"myClass::MemC"*, i64 }
-%"myClass::MemD" = type { %"myClass::MemB"*, %"myClass::MemC"*, i8, i8, i16,
+%"myClass::MemB" = type { ptr, i32, i32, ptr }
+%"myClass::MemC" = type { ptr, ptr, i64 }
+%"myClass::MemD" = type { ptr, ptr, i8, i8, i16,
               i32 }
-%"myStruct::MemF" = type { i32, %"myClass::MemA"*, %"myClass::MemA"*, i64, i64 }
-%"myClass::MemK" = type { i32, %"myClass::MemD"*, %"myClass::MemD"*, i64, i32,
+%"myStruct::MemF" = type { i32, ptr, ptr, i64, i64 }
+%"myClass::MemK" = type { i32, ptr, ptr, i64, i32,
                           i64, i8, i32, %"myStruct::MemF",
-              i8, %"myClass::MemA"* }
+              i8, ptr }
 
-define internal fastcc void @AggMemExprEmitter(%"myClass::MemK"* %E) align 2 {
+define internal fastcc void @AggMemExprEmitter(ptr %E) align 2 {
 entry:
-  call fastcc void @MemExprEmitterInitialization(%"myClass::MemK"*
+  call fastcc void @MemExprEmitterInitialization(ptr
                                                byval(%"myClass::MemK") nonnull align 8 undef);
   ret void
 
@@ -137,5 +137,5 @@ entry:
 }
 
 declare dso_local fastcc void
-    @MemExprEmitterInitialization(%"myClass::MemK"*
+    @MemExprEmitterInitialization(ptr
                                   byval(%"myClass::MemK") nocapture readonly align 8) align 2

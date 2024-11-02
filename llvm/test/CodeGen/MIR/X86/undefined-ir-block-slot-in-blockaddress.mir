@@ -24,6 +24,6 @@ body: |
     MOV64mr $rip, 1, _, @addr, _, killed $rax
     JMP64m $rip, 1, _, @addr, _
 
-  bb.1 (address-taken):
+  bb.1:
     RET64
 ...

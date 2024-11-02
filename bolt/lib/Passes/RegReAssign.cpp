@@ -26,14 +26,11 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> UpdateDebugSections;
 
-static cl::opt<bool>
-AggressiveReAssign("use-aggr-reg-reassign",
-  cl::desc("use register liveness analysis to try to find more opportunities "
-           "for -reg-reassign optimization"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
-
+static cl::opt<bool> AggressiveReAssign(
+    "use-aggr-reg-reassign",
+    cl::desc("use register liveness analysis to try to find more opportunities "
+             "for -reg-reassign optimization"),
+    cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -98,7 +95,7 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
                             false)));
         }
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       case MCCFIInstruction::OpUndefined:
       case MCCFIInstruction::OpDefCfa:
       case MCCFIInstruction::OpOffset:
@@ -200,8 +197,8 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
     }
   }
   std::iota(RankedRegs.begin(), RankedRegs.end(), 0); // 0, 1, 2, 3...
-  std::sort(RankedRegs.begin(), RankedRegs.end(),
-            [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
+  llvm::sort(RankedRegs,
+             [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
 
   LLVM_DEBUG({
     for (size_t Reg : RankedRegs) {

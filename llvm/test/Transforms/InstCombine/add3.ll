@@ -8,12 +8,12 @@ target triple = "i686-apple-darwin8"
 define void @test2(i32 %.val24) {
 EntryBlock:
         add i32 %.val24, -12
-        inttoptr i32 %0 to i32*
-        store i32 1, i32* %1
+        inttoptr i32 %0 to ptr
+        store i32 1, ptr %1
         add i32 %.val24, -16
-        inttoptr i32 %2 to i32*
-        getelementptr i32, i32* %3, i32 1
-        load i32, i32* %4
+        inttoptr i32 %2 to ptr
+        getelementptr i32, ptr %3, i32 1
+        load i32, ptr %4
         tail call i32 @callee( i32 %5 )
         ret void
 }

@@ -33,9 +33,9 @@
 #include "min_allocator.h"
 
 template <class S>
-void test() {
+TEST_CONSTEXPR_CXX20 bool test() {
     // Test that a call to reserve() does shrink the string.
-    {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
         S s(1000, 'a');
         typename S::size_type old_cap = s.capacity();
         s.resize(20);
@@ -66,6 +66,8 @@ void test() {
         s.reserve(0);
         assert(s.capacity() == old_cap);
     }
+
+    return true;
 }
 
 int main(int, char**) {
@@ -73,6 +75,10 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 11
     test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+#endif
+
+#if TEST_STD_VER > 17
+    static_assert(test<std::string>());
 #endif
 
     return 0;

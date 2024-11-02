@@ -43,11 +43,10 @@ let test_transforms () =
   let fn2 = define_function "fn2" fty m in begin
       ignore (build_ret (const_int i8_type 4) (builder_at_end context (entry_block fn)));
       let b = builder_at_end context  (entry_block fn2) in
-      ignore (build_ret (build_call fn [| |] "" b) b);
+      ignore (build_ret (build_call fty fn [| |] "" b) b);
   end;
 
   ignore (PassManager.create ()
-           ++ add_argument_promotion
            ++ add_constant_merge
            ++ add_dead_arg_elimination
            ++ add_function_attrs
@@ -55,7 +54,6 @@ let test_transforms () =
            ++ add_always_inliner
            ++ add_global_dce
            ++ add_global_optimizer
-           ++ add_prune_eh
            ++ add_ipsccp
            ++ add_internalize ~all_but_main:true
            ++ add_strip_dead_prototypes

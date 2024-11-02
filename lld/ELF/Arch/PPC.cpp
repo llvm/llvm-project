@@ -51,14 +51,13 @@ public:
                 uint64_t val) const override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   int getTlsGdRelaxSkip(RelType type) const override;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+
+private:
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 } // namespace
 
@@ -480,6 +479,36 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
   default:
     llvm_unreachable("unsupported relocation for TLS IE to LE relaxation");
+  }
+}
+
+void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  for (const Relocation &rel : sec.relocations) {
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr),
+        32);
+    switch (rel.expr) {
+    case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
+      relaxTlsGdToIe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_GD_TO_LE:
+      relaxTlsGdToLe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_LD_TO_LE_ABS:
+      relaxTlsLdToLe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_IE_TO_LE:
+      relaxTlsIeToLe(loc, rel, val);
+      break;
+    default:
+      relocate(loc, rel, val);
+      break;
+    }
   }
 }
 

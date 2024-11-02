@@ -37,15 +37,6 @@ static std::int64_t StringLength(const char *string) {
   }
 }
 
-std::int64_t RTNAME(ArgumentLength)(std::int32_t n) {
-  if (n < 0 || n >= executionEnvironment.argc ||
-      !executionEnvironment.argv[n]) {
-    return 0;
-  }
-
-  return StringLength(executionEnvironment.argv[n]);
-}
-
 static bool IsValidCharDescriptor(const Descriptor *value) {
   return value && value->IsAllocated() &&
       value->type() == TypeCode(TypeCategory::Character, 1) &&
@@ -107,27 +98,12 @@ static std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
   return stat;
 }
 
-std::int32_t RTNAME(ArgumentValue)(
-    std::int32_t n, const Descriptor *value, const Descriptor *errmsg) {
-  if (IsValidCharDescriptor(value)) {
-    FillWithSpaces(*value);
-  }
-
-  if (n < 0 || n >= executionEnvironment.argc) {
-    return ToErrmsg(errmsg, StatInvalidArgumentNumber);
-  }
-
-  if (IsValidCharDescriptor(value)) {
-    const char *arg{executionEnvironment.argv[n]};
-    std::int64_t argLen{StringLength(arg)};
-    if (argLen <= 0) {
-      return ToErrmsg(errmsg, StatMissingArgument);
-    }
-
-    return CopyToDescriptor(*value, arg, argLen, errmsg);
-  }
-
-  return StatOk;
+static void StoreLengthToDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator) {
+  auto typeCode{length->type().GetCategoryAndKind()};
+  int kind{typeCode->second};
+  Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt, void>(
+      kind, terminator, *length, /* atIndex = */ 0, value);
 }
 
 template <int KIND> struct FitsInIntegerKind {
@@ -137,17 +113,55 @@ template <int KIND> struct FitsInIntegerKind {
   }
 };
 
-std::int32_t RTNAME(GetCommand)(const Descriptor *value,
+static bool FitsInDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator) {
+  auto typeCode{length->type().GetCategoryAndKind()};
+  int kind{typeCode->second};
+  return Fortran::runtime::ApplyIntegerKind<FitsInIntegerKind, bool>(
+      kind, terminator, value);
+}
+
+std::int32_t RTNAME(GetCommandArgument)(std::int32_t n, const Descriptor *value,
     const Descriptor *length, const Descriptor *errmsg, const char *sourceFile,
     int line) {
   Terminator terminator{sourceFile, line};
 
-  auto storeLength = [&](std::int64_t value) {
-    auto typeCode{length->type().GetCategoryAndKind()};
-    int kind{typeCode->second};
-    Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt, void>(
-        kind, terminator, *length, /* atIndex = */ 0, value);
-  };
+  if (value) {
+    RUNTIME_CHECK(terminator, IsValidCharDescriptor(value));
+    FillWithSpaces(*value);
+  }
+
+  // Store 0 in case we error out later on.
+  if (length) {
+    RUNTIME_CHECK(terminator, IsValidIntDescriptor(length));
+    StoreLengthToDescriptor(length, 0, terminator);
+  }
+
+  if (n < 0 || n >= executionEnvironment.argc) {
+    return ToErrmsg(errmsg, StatInvalidArgumentNumber);
+  }
+
+  const char *arg{executionEnvironment.argv[n]};
+  std::int64_t argLen{StringLength(arg)};
+  if (argLen <= 0) {
+    return ToErrmsg(errmsg, StatMissingArgument);
+  }
+
+  if (length && FitsInDescriptor(length, argLen, terminator)) {
+    StoreLengthToDescriptor(length, argLen, terminator);
+  }
+
+  if (value) {
+    return CopyToDescriptor(*value, arg, argLen, errmsg);
+  }
+
+  return StatOk;
+}
+
+std::int32_t RTNAME(GetCommand)(const Descriptor *value,
+    const Descriptor *length, const Descriptor *errmsg, const char *sourceFile,
+    int line) {
+  Terminator terminator{sourceFile, line};
 
   if (value) {
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(value));
@@ -156,7 +170,7 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
   // Store 0 in case we error out later on.
   if (length) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(length));
-    storeLength(0);
+    StoreLengthToDescriptor(length, 0, terminator);
   }
 
   auto shouldContinue = [&](std::int32_t stat) -> bool {
@@ -192,15 +206,8 @@ std::int32_t RTNAME(GetCommand)(const Descriptor *value,
     }
   }
 
-  auto fitsInLength = [&](std::int64_t value) -> bool {
-    auto typeCode{length->type().GetCategoryAndKind()};
-    int kind{typeCode->second};
-    return Fortran::runtime::ApplyIntegerKind<FitsInIntegerKind, bool>(
-        kind, terminator, value);
-  };
-
-  if (length && fitsInLength(offset)) {
-    storeLength(offset);
+  if (length && FitsInDescriptor(length, offset, terminator)) {
+    StoreLengthToDescriptor(length, offset, terminator);
   }
 
   // value += spaces for padding

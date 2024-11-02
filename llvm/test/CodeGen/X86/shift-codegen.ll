@@ -14,11 +14,11 @@ define void @fn1() {
 ; CHECK-NEXT:    shll $3, %eax
 ; CHECK-NEXT:    orl %eax, X
 ; CHECK-NEXT:    retl
-  %tmp = load i32, i32* @Y
+  %tmp = load i32, ptr @Y
   %tmp1 = shl i32 %tmp, 3
-  %tmp2 = load i32, i32* @X
+  %tmp2 = load i32, ptr @X
   %tmp3 = or i32 %tmp1, %tmp2
-  store i32 %tmp3, i32* @X
+  store i32 %tmp3, ptr @X
   ret void
 }
 

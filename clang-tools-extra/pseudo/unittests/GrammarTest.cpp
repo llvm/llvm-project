@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -35,19 +35,19 @@ public:
 
   SymbolID id(llvm::StringRef Name) const {
     for (unsigned I = 0; I < NumTerminals; ++I)
-      if (G->table().Terminals[I] == Name)
+      if (G.table().Terminals[I] == Name)
         return tokenSymbol(static_cast<tok::TokenKind>(I));
-    for (SymbolID ID = 0; ID < G->table().Nonterminals.size(); ++ID)
-      if (G->table().Nonterminals[ID].Name == Name)
+    for (SymbolID ID = 0; ID < G.table().Nonterminals.size(); ++ID)
+      if (G.table().Nonterminals[ID].Name == Name)
         return ID;
     ADD_FAILURE() << "No such symbol found: " << Name;
     return 0;
   }
 
   RuleID ruleFor(llvm::StringRef NonterminalName) const {
-    auto RuleRange = G->table().Nonterminals[id(NonterminalName)].RuleRange;
+    auto RuleRange = G.table().Nonterminals[id(NonterminalName)].RuleRange;
     if (RuleRange.End - RuleRange.Start == 1)
-      return G->table().Nonterminals[id(NonterminalName)].RuleRange.Start;
+      return G.table().Nonterminals[id(NonterminalName)].RuleRange.Start;
     ADD_FAILURE() << "Expected a single rule for " << NonterminalName
                   << ", but it has " << RuleRange.End - RuleRange.Start
                   << " rule!\n";
@@ -55,7 +55,7 @@ public:
   }
 
 protected:
-  std::unique_ptr<Grammar> G;
+  Grammar G;
   std::vector<std::string> Diags;
 };
 
@@ -65,19 +65,19 @@ TEST_F(GrammarTest, Basic) {
 
   auto ExpectedRule =
       AllOf(TargetID(id("_")), Sequence(id("IDENTIFIER"), id("+"), id("_")));
-  EXPECT_EQ(G->symbolName(id("_")), "_");
-  EXPECT_THAT(G->rulesFor(id("_")), UnorderedElementsAre(ExpectedRule));
-  const auto &Rule = G->lookupRule(/*RID=*/0);
+  EXPECT_EQ(G.symbolName(id("_")), "_");
+  EXPECT_THAT(G.rulesFor(id("_")), UnorderedElementsAre(ExpectedRule));
+  const auto &Rule = G.lookupRule(/*RID=*/0);
   EXPECT_THAT(Rule, ExpectedRule);
-  EXPECT_THAT(G->symbolName(Rule.seq()[0]), "IDENTIFIER");
-  EXPECT_THAT(G->symbolName(Rule.seq()[1]), "+");
-  EXPECT_THAT(G->symbolName(Rule.seq()[2]), "_");
+  EXPECT_THAT(G.symbolName(Rule.seq()[0]), "IDENTIFIER");
+  EXPECT_THAT(G.symbolName(Rule.seq()[1]), "+");
+  EXPECT_THAT(G.symbolName(Rule.seq()[2]), "_");
 }
 
 TEST_F(GrammarTest, EliminatedOptional) {
   build("_ := CONST_opt INT ;_opt");
   EXPECT_THAT(Diags, IsEmpty());
-  EXPECT_THAT(G->table().Rules,
+  EXPECT_THAT(G.table().Rules,
               UnorderedElementsAre(Sequence(id("INT")),
                                    Sequence(id("CONST"), id("INT")),
                                    Sequence(id("CONST"), id("INT"), id(";")),
@@ -99,6 +99,16 @@ TEST_F(GrammarTest, RuleIDSorted) {
   EXPECT_LT(ruleFor("x"), ruleFor("_"));
 }
 
+TEST_F(GrammarTest, Annotation) {
+  build(R"bnf(
+    _ := x
+    x := IDENTIFIER [guard]
+  )bnf");
+  ASSERT_THAT(Diags, IsEmpty());
+  EXPECT_FALSE(G.lookupRule(ruleFor("_")).Guarded);
+  EXPECT_TRUE(G.lookupRule(ruleFor("x")).Guarded);
+}
+
 TEST_F(GrammarTest, Diagnostics) {
   build(R"cpp(
     _ := ,_opt
@@ -110,9 +120,11 @@ TEST_F(GrammarTest, Diagnostics) {
     # cycle
     a := b
     b := a
+
+    _ := IDENTIFIER [unknown=value]
   )cpp");
 
-  EXPECT_EQ(G->underscore(), id("_"));
+  EXPECT_EQ(G.underscore(), id("_"));
   EXPECT_THAT(Diags, UnorderedElementsAre(
                          "Rule '_ := ,_opt' has a nullable RHS",
                          "Rule 'null := ' has a nullable RHS",
@@ -120,7 +132,20 @@ TEST_F(GrammarTest, Diagnostics) {
                          "Failed to parse 'invalid': no separator :=",
                          "Token-like name IDENFIFIE is used as a nonterminal",
                          "No rules for nonterminal: IDENFIFIE",
-                         "The grammar contains a cycle involving symbol a"));
+                         "The grammar contains a cycle involving symbol a",
+                         "Unknown attribute 'unknown'"));
+}
+
+TEST_F(GrammarTest, DuplicatedDiagnostics) {
+  build(R"cpp(
+    _ := test
+
+    test := INT
+    test := DOUBLE
+    test := INT
+  )cpp");
+
+  EXPECT_THAT(Diags, UnorderedElementsAre("Duplicate rule: `test := INT`"));
 }
 
 TEST_F(GrammarTest, FirstAndFollowSets) {
@@ -141,13 +166,13 @@ term := ( expr )
   };
 
   EXPECT_THAT(
-      ToPairs(firstSets(*G)),
+      ToPairs(firstSets(G)),
       UnorderedElementsAre(
           Pair(id("_"), UnorderedElementsAre(id("IDENTIFIER"), id("("))),
           Pair(id("expr"), UnorderedElementsAre(id("IDENTIFIER"), id("("))),
           Pair(id("term"), UnorderedElementsAre(id("IDENTIFIER"), id("(")))));
   EXPECT_THAT(
-      ToPairs(followSets(*G)),
+      ToPairs(followSets(G)),
       UnorderedElementsAre(
           Pair(id("_"), UnorderedElementsAre(id("EOF"))),
           Pair(id("expr"), UnorderedElementsAre(id("-"), id("EOF"), id(")"))),
@@ -164,7 +189,7 @@ simple-type-specifier := INT
    )bnf");
   ASSERT_TRUE(Diags.empty());
   EXPECT_THAT(
-      ToPairs(firstSets(*G)),
+      ToPairs(firstSets(G)),
       UnorderedElementsAre(
           Pair(id("_"), UnorderedElementsAre(id("INLINE"), id("INT"))),
           Pair(id("decl-specifier-seq"),
@@ -173,7 +198,7 @@ simple-type-specifier := INT
           Pair(id("decl-specifier"),
                UnorderedElementsAre(id("INLINE"), id("INT")))));
   EXPECT_THAT(
-      ToPairs(followSets(*G)),
+      ToPairs(followSets(G)),
       UnorderedElementsAre(
           Pair(id("_"), UnorderedElementsAre(id("EOF"))),
           Pair(id("decl-specifier-seq"), UnorderedElementsAre(id("EOF"))),

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon --filetype=obj < %s  -o - | llvm-objdump -d - | FileCheck %s
+; RUN: llc -march=hexagon --filetype=obj < %s  -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; Function Attrs: nounwind
 define i32 @cmpeq(i32 %i) #0 {

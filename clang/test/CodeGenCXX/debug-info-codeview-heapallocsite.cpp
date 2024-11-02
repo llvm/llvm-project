@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fexceptions -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -fdeclspec -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fexceptions -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -fdeclspec -S -emit-llvm %s -o - | FileCheck %s
 
 struct Foo {
   int x;
@@ -14,8 +14,8 @@ extern "C" void doit() {
 }
 
 // CHECK-LABEL: define {{.*}}void @doit
-// CHECK: call {{.*}} i8* {{.*}}@"??2@YAPEAX_K@Z"(i64 noundef 4) {{.*}} !heapallocsite [[DBG_FOO:!.*]]
-// CHECK: call {{.*}} i8* {{.*}}@"??2@YAPEAX_K@Z"(i64 noundef 4) {{.*}} !heapallocsite [[DBG_BAR:!.*]]
+// CHECK: call {{.*}} ptr {{.*}}@"??2@YAPEAX_K@Z"(i64 noundef 4) {{.*}} !heapallocsite [[DBG_FOO:!.*]]
+// CHECK: call {{.*}} ptr {{.*}}@"??2@YAPEAX_K@Z"(i64 noundef 4) {{.*}} !heapallocsite [[DBG_BAR:!.*]]
 
 extern "C" void useinvoke() {
   struct HasDtor {
@@ -25,7 +25,7 @@ extern "C" void useinvoke() {
 }
 
 // CHECK-LABEL: define {{.*}}void @useinvoke
-// CHECK: invoke {{.*}} i8* {{.*}}@"??2@YAPEAX_K@Z"(i64 noundef 4)
+// CHECK: invoke {{.*}} ptr {{.*}}@"??2@YAPEAX_K@Z"(i64 noundef 4)
 // CHECK-NEXT: to label {{.*}} unwind label {{.*}} !heapallocsite [[DBG_FOO]]
 
 // CHECK: [[DBG_FOO]] = distinct !DICompositeType(tag: DW_TAG_structure_type,

@@ -4,7 +4,7 @@
 # RUN: ld.lld -shared %tdso.o -soname=t.so -o %t.so
 # RUN: ld.lld --hash-style=sysv -shared %t.o %t.so -o %t
 # RUN: llvm-readobj -r -S %t | FileCheck --check-prefix=RELOC %s
-# RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DISASM %s
 
 # RELOC:      Relocations [
 # RELOC-NEXT:   Section ({{.*}}) .rela.dyn {

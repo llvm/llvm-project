@@ -1,5 +1,6 @@
 set(CLANG_INCLUDE_CLEANER_TEST_DEPS
   ClangIncludeCleanerTests
+  clang-include-cleaner
   )
 
 foreach (dep FileCheck not count)

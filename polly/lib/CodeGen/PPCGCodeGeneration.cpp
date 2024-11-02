@@ -55,35 +55,29 @@ using namespace llvm;
 
 static cl::opt<bool> DumpSchedule("polly-acc-dump-schedule",
                                   cl::desc("Dump the computed GPU Schedule"),
-                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                  cl::cat(PollyCategory));
+                                  cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     DumpCode("polly-acc-dump-code",
              cl::desc("Dump C code describing the GPU mapping"), cl::Hidden,
-             cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+             cl::cat(PollyCategory));
 
 static cl::opt<bool> DumpKernelIR("polly-acc-dump-kernel-ir",
                                   cl::desc("Dump the kernel LLVM-IR"),
-                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                  cl::cat(PollyCategory));
+                                  cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> DumpKernelASM("polly-acc-dump-kernel-asm",
                                    cl::desc("Dump the kernel assembly code"),
-                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                   cl::cat(PollyCategory));
+                                   cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> FastMath("polly-acc-fastmath",
                               cl::desc("Allow unsafe math optimizations"),
-                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                              cl::cat(PollyCategory));
+                              cl::Hidden, cl::cat(PollyCategory));
 static cl::opt<bool> SharedMemory("polly-acc-use-shared",
                                   cl::desc("Use shared memory"), cl::Hidden,
-                                  cl::init(false), cl::ZeroOrMore,
                                   cl::cat(PollyCategory));
 static cl::opt<bool> PrivateMemory("polly-acc-use-private",
                                    cl::desc("Use private memory"), cl::Hidden,
-                                   cl::init(false), cl::ZeroOrMore,
                                    cl::cat(PollyCategory));
 
 bool polly::PollyManagedMemory;
@@ -93,25 +87,24 @@ static cl::opt<bool, true>
                             " that all memory has been"
                             " declared as managed memory"),
                    cl::location(PollyManagedMemory), cl::Hidden,
-                   cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                   cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     FailOnVerifyModuleFailure("polly-acc-fail-on-verify-module-failure",
                               cl::desc("Fail and generate a backtrace if"
                                        " verifyModule fails on the GPU "
                                        " kernel module."),
-                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                              cl::cat(PollyCategory));
+                              cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<std::string> CUDALibDevice(
     "polly-acc-libdevice", cl::desc("Path to CUDA libdevice"), cl::Hidden,
     cl::init("/usr/local/cuda/nvvm/libdevice/libdevice.compute_20.10.ll"),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<std::string>
     CudaVersion("polly-acc-cuda-version",
                 cl::desc("The CUDA version to compile for"), cl::Hidden,
-                cl::init("sm_30"), cl::ZeroOrMore, cl::cat(PollyCategory));
+                cl::init("sm_30"), cl::cat(PollyCategory));
 
 static cl::opt<int>
     MinCompute("polly-acc-mincompute",
@@ -119,14 +112,15 @@ static cl::opt<int>
                cl::Hidden, cl::init(10 * 512 * 512));
 
 GPURuntime polly::GPURuntimeChoice;
-static cl::opt<GPURuntime, true> XGPURuntimeChoice(
-    "polly-gpu-runtime", cl::desc("The GPU Runtime API to target"),
-    cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
-                          "use the CUDA Runtime API"),
-               clEnumValN(GPURuntime::OpenCL, "libopencl",
-                          "use the OpenCL Runtime API")),
-    cl::location(polly::GPURuntimeChoice), cl::init(GPURuntime::CUDA),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+static cl::opt<GPURuntime, true>
+    XGPURuntimeChoice("polly-gpu-runtime",
+                      cl::desc("The GPU Runtime API to target"),
+                      cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
+                                            "use the CUDA Runtime API"),
+                                 clEnumValN(GPURuntime::OpenCL, "libopencl",
+                                            "use the OpenCL Runtime API")),
+                      cl::location(polly::GPURuntimeChoice),
+                      cl::init(GPURuntime::CUDA), cl::cat(PollyCategory));
 
 GPUArch polly::GPUArchChoice;
 static cl::opt<GPUArch, true>
@@ -138,8 +132,7 @@ static cl::opt<GPUArch, true>
                               clEnumValN(GPUArch::SPIR64, "spir64",
                                          "target SPIR 64-bit architecture")),
                    cl::location(polly::GPUArchChoice),
-                   cl::init(GPUArch::NVPTX64), cl::ZeroOrMore,
-                   cl::cat(PollyCategory));
+                   cl::init(GPUArch::NVPTX64), cl::cat(PollyCategory));
 
 extern bool polly::PerfMonitoring;
 

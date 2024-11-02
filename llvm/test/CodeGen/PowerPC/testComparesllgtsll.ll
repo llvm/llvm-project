@@ -86,7 +86,7 @@ define void @test_llgtsll_store(i64 %a, i64 %b) {
 entry:
   %cmp = icmp sgt i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -107,7 +107,7 @@ define void @test_llgtsll_sext_store(i64 %a, i64 %b) {
 entry:
   %cmp = icmp sgt i64 %a, %b
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -126,7 +126,7 @@ define void @test_llgtsll_z_store(i64 %a) {
 entry:
   %cmp = icmp sgt i64 %a, 0
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -144,6 +144,6 @@ define void @test_llgtsll_sext_z_store(i64 %a) {
 entry:
   %cmp = icmp sgt i64 %a, 0
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }

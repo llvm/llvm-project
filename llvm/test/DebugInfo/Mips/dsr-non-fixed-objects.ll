@@ -3,7 +3,7 @@
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @foo(i32*)
+declare void @foo(ptr)
 
 ; void foo(int *);
 ;
@@ -30,17 +30,17 @@ entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
   %c = alloca i32, align 16
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !15, metadata !16), !dbg !17
-  store i32 %b, i32* %b.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %b.addr, metadata !18, metadata !16), !dbg !19
-  call void @llvm.dbg.declare(metadata i32* %c, metadata !20, metadata !16), !dbg !21
-  %0 = load i32, i32* %a.addr, align 4, !dbg !22
-  %1 = load i32, i32* %b.addr, align 4, !dbg !23
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !15, metadata !16), !dbg !17
+  store i32 %b, ptr %b.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %b.addr, metadata !18, metadata !16), !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !20, metadata !16), !dbg !21
+  %0 = load i32, ptr %a.addr, align 4, !dbg !22
+  %1 = load i32, ptr %b.addr, align 4, !dbg !23
   %add = add nsw i32 %0, %1, !dbg !24
-  store i32 %add, i32* %c, align 16, !dbg !21
-  call void @foo(i32* %c), !dbg !25
-  %2 = load i32, i32* %c, align 16, !dbg !26
+  store i32 %add, ptr %c, align 16, !dbg !21
+  call void @foo(ptr %c), !dbg !25
+  %2 = load i32, ptr %c, align 16, !dbg !26
   ret i32 %2, !dbg !27
 }
 
@@ -48,29 +48,28 @@ entry:
 ; CHECK: DW_AT_location [DW_FORM_exprloc]      (DW_OP_breg23 S7_64+32)
 ; CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000065] = "c")
 
-define i32* @f3(i32 signext %a, i32 signext %b) !dbg !8 {
+define ptr @f3(i32 signext %a, i32 signext %b) !dbg !8 {
 entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
   %c = alloca i32, align 16
-  %w = alloca i32*, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !28, metadata !16), !dbg !29
-  store i32 %b, i32* %b.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %b.addr, metadata !30, metadata !16), !dbg !31
-  call void @llvm.dbg.declare(metadata i32* %c, metadata !32, metadata !16), !dbg !33
-  %0 = load i32, i32* %a.addr, align 4, !dbg !34
-  %1 = load i32, i32* %b.addr, align 4, !dbg !35
+  %w = alloca ptr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !28, metadata !16), !dbg !29
+  store i32 %b, ptr %b.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %b.addr, metadata !30, metadata !16), !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !32, metadata !16), !dbg !33
+  %0 = load i32, ptr %a.addr, align 4, !dbg !34
+  %1 = load i32, ptr %b.addr, align 4, !dbg !35
   %add = add nsw i32 %0, %1, !dbg !36
-  store i32 %add, i32* %c, align 16, !dbg !33
-  call void @llvm.dbg.declare(metadata i32** %w, metadata !37, metadata !DIExpression(DW_OP_deref)), !dbg !38
-  %2 = load i32, i32* %c, align 16, !dbg !39
+  store i32 %add, ptr %c, align 16, !dbg !33
+  call void @llvm.dbg.declare(metadata ptr %w, metadata !37, metadata !DIExpression(DW_OP_deref)), !dbg !38
+  %2 = load i32, ptr %c, align 16, !dbg !39
   %3 = alloca i8, i32 %2, !dbg !40
-  %4 = bitcast i8* %3 to i32*, !dbg !40
-  store i32* %4, i32** %w, align 4, !dbg !38
-  call void @foo(i32* %c), !dbg !41
-  %5 = load i32*, i32** %w, align 4, !dbg !42
-  ret i32* %5, !dbg !43
+  store ptr %3, ptr %w, align 4, !dbg !38
+  call void @foo(ptr %c), !dbg !41
+  %4 = load ptr, ptr %w, align 4, !dbg !42
+  ret ptr %4, !dbg !43
 }
 
 !llvm.dbg.cu = !{!0}

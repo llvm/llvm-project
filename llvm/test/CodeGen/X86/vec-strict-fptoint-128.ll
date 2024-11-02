@@ -690,7 +690,7 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64(<2 x float> %a) #0 {
   ret <2 x i64> %ret
 }
 
-define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64_load128(<4 x float>* %x) strictfp {
+define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64_load128(ptr %x) strictfp {
 ; SSE-32-LABEL: strict_vector_fptosi_v2f32_to_v2i64_load128:
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    pushl %ebp
@@ -877,7 +877,7 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64_load128(<4 x float>* %x) s
 ; AVX512VLDQ-64:       # %bb.0:
 ; AVX512VLDQ-64-NEXT:    vcvttps2qq (%rdi), %xmm0
 ; AVX512VLDQ-64-NEXT:    retq
-  %a = load <4 x float>, <4 x float>* %x
+  %a = load <4 x float>, ptr %x
   %b = shufflevector <4 x float> %a, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %c = call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f32(<2 x float> %b, metadata !"fpexcept.strict") #0
   ret <2 x i64> %c
@@ -1189,7 +1189,7 @@ define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64(<2 x float> %a) #0 {
   ret <2 x i64> %ret
 }
 
-define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64_load128(<4 x float>* %x) strictfp {
+define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64_load128(ptr %x) strictfp {
 ; SSE-32-LABEL: strict_vector_fptoui_v2f32_to_v2i64_load128:
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    pushl %ebp
@@ -1512,7 +1512,7 @@ define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64_load128(<4 x float>* %x) s
 ; AVX512VLDQ-64:       # %bb.0:
 ; AVX512VLDQ-64-NEXT:    vcvttps2uqq (%rdi), %xmm0
 ; AVX512VLDQ-64-NEXT:    retq
-  %a = load <4 x float>, <4 x float>* %x
+  %a = load <4 x float>, ptr %x
   %b = shufflevector <4 x float> %a, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %c = call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f32(<2 x float> %b, metadata !"fpexcept.strict") #0
   ret <2 x i64> %c

@@ -25,8 +25,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1079,16 +1079,15 @@ public:
                           ObjCPropertyQueryKind QueryKind) const;
 
   using PropertyMap =
-      llvm::DenseMap<std::pair<IdentifierInfo *, unsigned/*isClassProperty*/>,
-                     ObjCPropertyDecl *>;
+      llvm::MapVector<std::pair<IdentifierInfo *, unsigned /*isClassProperty*/>,
+                      ObjCPropertyDecl *>;
   using ProtocolPropertySet = llvm::SmallDenseSet<const ObjCProtocolDecl *, 8>;
   using PropertyDeclOrder = llvm::SmallVector<ObjCPropertyDecl *, 8>;
 
   /// This routine collects list of properties to be implemented in the class.
   /// This includes, class's and its conforming protocols' properties.
   /// Note, the superclass's properties are not included in the list.
-  virtual void collectPropertiesToImplement(PropertyMap &PM,
-                                            PropertyDeclOrder &PO) const {}
+  virtual void collectPropertiesToImplement(PropertyMap &PM) const {}
 
   SourceLocation getAtStartLoc() const { return ObjCContainerDeclBits.AtStart; }
 
@@ -1780,8 +1779,7 @@ public:
     *FindPropertyVisibleInPrimaryClass(IdentifierInfo *PropertyId,
                                        ObjCPropertyQueryKind QueryKind) const;
 
-  void collectPropertiesToImplement(PropertyMap &PM,
-                                    PropertyDeclOrder &PO) const override;
+  void collectPropertiesToImplement(PropertyMap &PM) const override;
 
   /// isSuperClassOf - Return true if this class is the specified class or is a
   /// super class of the specified interface class.
@@ -2057,6 +2055,12 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
 
     /// Referenced protocols
     ObjCProtocolList ReferencedProtocols;
+
+    /// Tracks whether a ODR hash has been computed for this protocol.
+    unsigned HasODRHash : 1;
+
+    /// A hash of parts of the class to help in ODR checking.
+    unsigned ODRHash = 0;
   };
 
   /// Contains a pointer to the data associated with this class,
@@ -2093,10 +2097,15 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
     return getMostRecentDecl();
   }
 
+  /// True if a valid hash is stored in ODRHash.
+  bool hasODRHash() const;
+  void setHasODRHash(bool HasHash);
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;
+  friend class ODRDiagsEmitter;
 
   static ObjCProtocolDecl *Create(ASTContext &C, DeclContext *DC,
                                   IdentifierInfo *Id,
@@ -2246,12 +2255,14 @@ public:
   ObjCProtocolDecl *getCanonicalDecl() override { return getFirstDecl(); }
   const ObjCProtocolDecl *getCanonicalDecl() const { return getFirstDecl(); }
 
-  void collectPropertiesToImplement(PropertyMap &PM,
-                                    PropertyDeclOrder &PO) const override;
+  void collectPropertiesToImplement(PropertyMap &PM) const override;
 
   void collectInheritedProtocolProperties(const ObjCPropertyDecl *Property,
                                           ProtocolPropertySet &PS,
                                           PropertyDeclOrder &PO) const;
+
+  /// Get precomputed ODRHash or add a new one.
+  unsigned getODRHash();
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCProtocol; }

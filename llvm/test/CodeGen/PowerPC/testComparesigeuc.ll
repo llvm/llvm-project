@@ -74,7 +74,7 @@ define dso_local void @test_igeuc_store(i8 zeroext %a, i8 zeroext %b) {
 entry:
   %cmp = icmp uge i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @glob
+  store i8 %conv3, ptr @glob
   ret void
 }
 
@@ -91,7 +91,7 @@ define dso_local void @test_igeuc_sext_store(i8 zeroext %a, i8 zeroext %b) {
 entry:
   %cmp = icmp uge i8 %a, %b
   %conv3 = sext i1 %cmp to i8
-  store i8 %conv3, i8* @glob
+  store i8 %conv3, ptr @glob
   ret void
 ; CHECK-TBD-LABEL: @test_igeuc_sext_store
 ; CHECK-TBD: subf [[REG1:r[0-9]+]], r3, r4
@@ -112,7 +112,7 @@ define dso_local void @test_igeuc_z_store(i8 zeroext %a) {
 entry:
   %cmp = icmp uge i8 %a, 0
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @glob
+  store i8 %conv3, ptr @glob
   ret void
 }
 
@@ -127,6 +127,6 @@ define dso_local void @test_igeuc_sext_z_store(i8 zeroext %a) {
 entry:
   %cmp = icmp uge i8 %a, 0
   %conv3 = sext i1 %cmp to i8
-  store i8 %conv3, i8* @glob
+  store i8 %conv3, ptr @glob
   ret void
 }

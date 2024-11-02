@@ -1,0 +1,26 @@
+add_entrypoint_object(
+  time
+  SRCS
+    time.cpp
+  HDRS
+    ../time_func.h
+  DEPENDS
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  clock
+  SRCS
+    clock.cpp
+  HDRS
+    ../clock.h
+  DEPENDS
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

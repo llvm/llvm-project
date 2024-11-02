@@ -7,7 +7,7 @@ target triple = "i686-apple-darwin8"
 ; This should store directly into P from the FP stack.  It should not
 ; go through a stack slot to get there.
 
-define void @bar(double* %P) {
+define void @bar(ptr %P) {
 ; CHECK-LABEL: bar:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushl %esi
@@ -23,13 +23,13 @@ define void @bar(double* %P) {
 ; CHECK-NEXT:    retl
 entry:
 	%tmp = tail call double (...) @foo( )		; <double> [#uses=1]
-	store double %tmp, double* %P, align 8
+	store double %tmp, ptr %P, align 8
 	ret void
 }
 
 declare double @foo(...)
 
-define void @bar2(float* %P) {
+define void @bar2(ptr %P) {
 ; CHECK-LABEL: bar2:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushl %esi
@@ -46,7 +46,7 @@ define void @bar2(float* %P) {
 entry:
 	%tmp = tail call double (...) @foo2( )		; <double> [#uses=1]
 	%tmp1 = fptrunc double %tmp to float		; <float> [#uses=1]
-	store float %tmp1, float* %P, align 4
+	store float %tmp1, ptr %P, align 4
 	ret void
 }
 

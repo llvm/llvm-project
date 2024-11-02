@@ -1,6 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W32
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W32
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64
 ; RUN: llc -O0 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64-O0
 
 ; Test that we correctly legalize VGPR Rsrc operands in MUBUF instructions.
@@ -79,8 +81,8 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64: s_cbranch_execnz [[LOOPBB1]]
 
 ; W64: s_mov_b64 exec, [[SAVEEXEC]]
-; W64-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
-; W64-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
+; W64-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
+; W64-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
 
 
 ; W32-LABEL: mubuf_vgpr_adjacent_in_block
@@ -117,8 +119,8 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W32: s_cbranch_execnz [[LOOPBB1]]
 
 ; W32: s_mov_b32 exec_lo, [[SAVEEXEC]]
-; W32-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
-; W32-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
+; W32-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
+; W32-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
 
 define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, float addrspace(1)* %out0, float addrspace(1)* %out1) #0 {
 entry:
@@ -171,7 +173,7 @@ entry:
 ; W64: s_mov_b64 exec, [[SAVEEXEC]]
 
 ; W64: [[TERMBB]]:
-; W64: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
+; W64: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
 
 
 ; W32-LABEL: mubuf_vgpr_outside_entry
@@ -215,7 +217,7 @@ entry:
 ; W32: s_mov_b32 exec_lo, [[SAVEEXEC]]
 
 ; W32: [[TERMBB]]:
-; W32: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
+; W32: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
 
 
 ; Confirm spills do not occur between the XOR and branch that terminate the
@@ -225,14 +227,14 @@ entry:
 
 ; W64-O0-DAG: s_mov_b32 [[IDX_S:s[0-9]+]], s{{[0-9]+}}
 ; W64-O0-DAG: v_mov_b32_e32 [[IDX_V:v[0-9]+]], s{{[0-9]+}}
+; W64-O0-DAG: buffer_store_dword [[IDX_V]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF_TMP:[0-9]+]] ; 4-byte Folded Spill
 ; W64-O0-DAG: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
-; W64-O0-DAG: buffer_store_dword [[IDX_V]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} ; 4-byte Folded Spill
 
 ; W64-O0: [[LOOPBB0:.LBB[0-9]+_[0-9]+]]: ; =>This Inner Loop Header: Depth=1
-; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0-DAG: v_readfirstlane_b32 s[[S0:[0-9]+]], v[[VRSRC0]]
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP1:[0-9]+]], v[[VRSRC1]]
@@ -249,7 +251,7 @@ entry:
 ; W64-O0-DAG: s_mov_b32 s[[S2:[0-9]+]], s[[SRSRCTMP2]]
 ; W64-O0-DAG: s_mov_b32 s[[S3:[0-9]+]], s[[SRSRCTMP3]]
 ; W64-O0: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], [[AND]]
-; W64-O0: buffer_load_dword [[IDX:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword [[IDX:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s[[[S0]]:[[S3]]], {{.*}} idxen
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0: buffer_store_dword [[RES]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF_TMP:[0-9]+]] ; 4-byte Folded Spill
@@ -268,10 +270,10 @@ entry:
 ; W64-O0: v_writelane_b32 [[VSAVEEXEC]], s[[SAVEEXEC1]], [[SAVEEXEC_IDX1:[0-9]+]]
 
 ; W64-O0: [[LOOPBB1:.LBB[0-9]+_[0-9]+]]: ; =>This Inner Loop Header: Depth=1
-; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0-DAG: v_readfirstlane_b32 s[[S0:[0-9]+]], v[[VRSRC0]]
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP1:[0-9]+]], v[[VRSRC1]]
@@ -295,10 +297,10 @@ entry:
 ; W64-O0: s_xor_b64 exec, exec, [[SAVE]]
 ; W64-O0-NEXT: s_cbranch_execnz [[LOOPBB1]]
 
+; W64-O0: buffer_load_dword [[RES:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF_TMP]] ; 4-byte Folded Reload
 ; W64-O0: v_readlane_b32 s[[SAVEEXEC0:[0-9]+]], [[VSAVEEXEC]], [[SAVEEXEC_IDX0]]
 ; W64-O0: v_readlane_b32 s[[SAVEEXEC1:[0-9]+]], [[VSAVEEXEC]], [[SAVEEXEC_IDX1]]
 ; W64-O0: s_mov_b64 exec, s[[[SAVEEXEC0]]:[[SAVEEXEC1]]]
-; W64-O0: buffer_load_dword [[RES:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF_TMP]] ; 4-byte Folded Reload
 ; W64-O0: buffer_store_dword [[RES]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF]] ; 4-byte Folded Spill
 
 ; W64-O0: [[TERMBB]]:

@@ -28,8 +28,8 @@ entry:
 define i32 @foo(i32 signext %value) {
 entry:
   %value.addr = alloca i32, align 4
-  store i32 %value, i32* %value.addr, align 4
-  %0 = load i32, i32* %value.addr, align 4
+  store i32 %value, ptr %value.addr, align 4
+  %0 = load i32, ptr %value.addr, align 4
   ret i32 %0
 }
 
@@ -39,11 +39,11 @@ entry:
   %result = alloca i32, align 4
   %v = alloca i32, align 4
   %call = call i32 @init()
-  store i32 %call, i32* %v, align 4
-  %0 = load i32, i32* %v, align 4
+  store i32 %call, ptr %v, align 4
+  %0 = load i32, ptr %v, align 4
   %call1 = call i32 @foo(i32 signext %0)
-  store i32 %call1, i32* %result, align 4
-  %1 = load i32, i32* %result, align 4
+  store i32 %call1, ptr %result, align 4
+  %1 = load i32, ptr %result, align 4
   ret i32 %1
 }
 

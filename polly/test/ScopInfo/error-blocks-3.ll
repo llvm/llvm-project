@@ -1,26 +1,18 @@
 ; RUN: opt %loadPolly -polly-print-scops -polly-detect-keep-going -polly-allow-nonaffine -disable-output < %s | FileCheck %s
 ;
-; TODO: FIXME: Investigate why "-polly-detect-keep-going" is needed to detect
-;              this SCoP. That flag should not make a difference.
+; The instruction
 ;
-; CHECK:         Context:
-; CHECK-NEXT:    [N] -> {  : -2147483648 <= N <= 2147483647 }
-; CHECK-NEXT:    Assumed Context:
-; CHECK-NEXT:    [N] -> {  :  }
-; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [N] -> {  : N >= 514 }
+;   %idxprom = sext i32 %call to i64
 ;
-; CHECK:         Statements {
-; CHECK-NEXT:    	Stmt_if_end3
-; CHECK-NEXT:            Domain :=
-; CHECK-NEXT:                [N] -> { Stmt_if_end3[i0] : 0 <= i0 < N };
-; CHECK-NEXT:            Schedule :=
-; CHECK-NEXT:                [N] -> { Stmt_if_end3[i0] -> [i0] };
-; CHECK-NEXT:            ReadAccess :=	[Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:                [N] -> { Stmt_if_end3[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:                [N] -> { Stmt_if_end3[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:    }
+; uses an argument that is inside and error block. Since error blocks are
+; removed from the SCoP, the argument is not available. Polly currently
+; does not consider that %idxprom itself is an error block as well.
+;
+; This also tests that -polly-detect-keep-going still correctly rejects this SCoP.
+; https://llvm.org/PR58484
+;
+; CHECK:      Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'for.cond => for.end' in function 'g':
+; CHECK-NEXT: Invalid Scop!
 ;
 ;    int f();
 ;    void g(int *A, int N) {

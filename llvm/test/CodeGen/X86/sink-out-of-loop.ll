@@ -5,7 +5,7 @@
 ; same loop, the other successor is outside the loop. We should be able to sink
 ; MOV32ri outside the loop.
 ; rdar://11980766
-define i32 @sink_succ(i32 %argc, i8** nocapture %argv) nounwind uwtable ssp {
+define i32 @sink_succ(i32 %argc, ptr nocapture %argv) nounwind uwtable ssp {
 ; CHECK-LABEL: sink_succ:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -87,7 +87,7 @@ for.end20:
   ret i32 0
 }
 
-define i32 @sink_out_of_loop(i32 %n, i32* %output) {
+define i32 @sink_out_of_loop(i32 %n, ptr %output) {
 ; CHECK-LABEL: sink_out_of_loop:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    xorl %ecx, %ecx
@@ -108,8 +108,8 @@ entry:
 loop:
   %i = phi i32 [ 0, %entry ], [ %i2, %loop ]
   %j = mul i32 %i, %i
-  %addr = getelementptr i32, i32* %output, i32 %i
-  store i32 %i, i32* %addr
+  %addr = getelementptr i32, ptr %output, i32 %i
+  store i32 %i, ptr %addr
   %i2 = add i32 %i, 1
   %exit_cond = icmp sge i32 %i2, %n
   br i1 %exit_cond, label %exit, label %loop

@@ -233,7 +233,8 @@ ProcessMinidump::ProcessMinidump(lldb::TargetSP target_sp,
                                  const FileSpec &core_file,
                                  DataBufferSP core_data)
     : PostMortemProcess(target_sp, listener_sp), m_core_file(core_file),
-      m_core_data(std::move(core_data)), m_is_wow64(false) {}
+      m_core_data(std::move(core_data)), m_active_exception(nullptr),
+      m_is_wow64(false) {}
 
 ProcessMinidump::~ProcessMinidump() {
   Clear();
@@ -297,7 +298,7 @@ Status ProcessMinidump::DoLoadCore() {
                             GetTarget().GetDebugger().GetID());
     pid = 1;
   }
-  SetID(pid.getValue());
+  SetID(*pid);
 
   return error;
 }
@@ -567,7 +568,7 @@ void ProcessMinidump::ReadModuleList() {
       partial_module_spec.GetUUID().Clear();
       module_sp = GetOrCreateModule(uuid, name, partial_module_spec);
       if (!module_sp) {
-        partial_module_spec.GetFileSpec().GetDirectory().Clear();
+        partial_module_spec.GetFileSpec().ClearDirectory();
         module_sp = GetOrCreateModule(uuid, name, partial_module_spec);
       }
     }

@@ -77,7 +77,7 @@ public:
 
     bool MatchAndExplain(const llvm::Optional<T> &Input,
                          testing::MatchResultListener *L) const override {
-      return Input && ValueMatcher.MatchAndExplain(Input.getValue(), L);
+      return Input && ValueMatcher.MatchAndExplain(*Input, L);
     }
 
     void DescribeTo(std::ostream *OS) const override {

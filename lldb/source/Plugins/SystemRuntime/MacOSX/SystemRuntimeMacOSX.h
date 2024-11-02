@@ -174,6 +174,14 @@ private:
       dqo_target_queue = UINT16_MAX;
       dqo_target_queue = UINT16_MAX;
       dqo_priority = UINT16_MAX;
+      dqo_label_size = 0;
+      dqo_flags_size = 0;
+      dqo_serialnum_size = 0;
+      dqo_width_size = 0;
+      dqo_running_size = 0;
+      dqo_suspend_cnt_size = 0;
+      dqo_target_queue_size = 0;
+      dqo_priority_size = 0;
     }
 
     bool IsValid() { return dqo_version != UINT16_MAX; }

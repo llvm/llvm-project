@@ -710,13 +710,13 @@ define float @test_shrink_intrin_fabs_fast_fp16_src(half %C) {
 define float @test_no_shrink_intrin_floor_multi_use_fpext(half %C) {
 ; CHECK-LABEL: @test_no_shrink_intrin_floor_multi_use_fpext(
 ; CHECK-NEXT:    [[D:%.*]] = fpext half [[C:%.*]] to double
-; CHECK-NEXT:    store volatile double [[D]], double* undef, align 8
+; CHECK-NEXT:    store volatile double [[D]], ptr undef, align 8
 ; CHECK-NEXT:    [[E:%.*]] = call double @llvm.floor.f64(double [[D]])
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %D = fpext half %C to double
-  store volatile double %D, double* undef
+  store volatile double %D, ptr undef
   %E = call double @llvm.floor.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F
@@ -725,13 +725,13 @@ define float @test_no_shrink_intrin_floor_multi_use_fpext(half %C) {
 define float @test_no_shrink_intrin_fabs_multi_use_fpext(half %C) {
 ; CHECK-LABEL: @test_no_shrink_intrin_fabs_multi_use_fpext(
 ; CHECK-NEXT:    [[D:%.*]] = fpext half [[C:%.*]] to double
-; CHECK-NEXT:    store volatile double [[D]], double* undef, align 8
+; CHECK-NEXT:    store volatile double [[D]], ptr undef, align 8
 ; CHECK-NEXT:    [[E:%.*]] = call double @llvm.fabs.f64(double [[D]])
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %D = fpext half %C to double
-  store volatile double %D, double* undef
+  store volatile double %D, ptr undef
   %E = call double @llvm.fabs.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F

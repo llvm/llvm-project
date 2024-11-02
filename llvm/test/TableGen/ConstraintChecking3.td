@@ -4,5 +4,5 @@ include "ConstraintChecking.inc"
 
 // (This is illegal because the '=' has to be surrounded by whitespace)
 
-// CHECK: [[FILE]]:[[@LINE+1]]:1: error: Illegal format for tied-to constraint in 'Foo'
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: Illegal format for tied-to constraint in 'Foo'
 def Foo : TestInstructionWithConstraints<"$dest1=$dest2">;

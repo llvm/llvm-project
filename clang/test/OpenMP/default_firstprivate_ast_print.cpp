@@ -38,22 +38,31 @@ struct SomeKernel {
   void apply() {
 #pragma omp parallel default(firstprivate)
     {
-      targetDev++;
+      [=]() -> int {
+        return targetDev++;
+      }();
     }
     // PRINT: #pragma omp parallel default(firstprivate)
     // PRINT-NEXT: {
-    // PRINT-NEXT:  this->targetDev++;
-    // CHECK-NEXT: }
+    // PRINT-NEXT:  [=]() -> int {
+    // PRINT-NEXT:     return this->targetDev++;
+    // PRINT-NEXT:  }();
+    // PRINT-NEXT: }
     // DUMP: -OMPParallelDirective
-    // DUMP->NEXT: -OMPDefaultClause
+    // DUMP-NEXT: -OMPDefaultClause
+    // DUMP-NOT:   -OMPFirstprivateClause
   }
   // PRINT: template<> void apply<32U>()
   // PRINT: #pragma omp parallel default(firstprivate)
   // PRINT-NEXT: {
-  // PRINT-NEXT:  this->targetDev++;
+  // PRINT-NEXT:  [=]() -> int {
+  // PRINT-NEXT:     return this->targetDev++;
+  // PRINT-NEXT:  }();
   // CHECK-NEXT: }
   // DUMP: -OMPParallelDirective
   // DUMP-NEXT: -OMPDefaultClause
+  // DUMP-NEXT: -OMPFirstprivateClause
+  // DUMP-NEXT:   -DeclRefExpr {{.*}} 'targetDev'
 };
 
 void use_template() {
@@ -99,4 +108,60 @@ void bar() {
   // DUMP-NEXT: -DeclRefExpr {{.*}} 'yy'
   // DUMP-NEXT: -DeclRefExpr {{.*}} 'y'
 }
+void zoo(int);
+struct A {
+  int z;
+  int f;
+  A();
+  ~A();
+  void foo() {
+#pragma omp parallel firstprivate(z) default(firstprivate)
+    {
+      z++;
+      f++;
+      zoo(z + f);
+      f++;
+    }
+  }
+  // PRINT:  #pragma omp parallel firstprivate(this->z) default(firstprivate)
+  // DUMP:   -OMPParallelDirective
+  // DUMP-NEXT: -OMPFirstprivateClause
+  // DUMP-NEXT: -DeclRefExpr {{.*}} 'z'
+  // DUMP-NEXT: -OMPDefaultClause
+  // DUMP-NEXT: -OMPFirstprivateClause {{.*}} <implicit>
+  // DUMP-NEXT: -DeclRefExpr {{.*}} 'f'
+  // DUMP:      -CXXThisExpr {{.*}} 'A *' implicit this
+  // DUMP-NEXT: -DeclRefExpr {{.*}} 'z'
+  // DUMP-NEXT: -DeclRefExpr {{.*}} 'f'
+  void bar() {
+#pragma omp parallel firstprivate(z) default(firstprivate)
+    {
+#pragma omp parallel private(z) default(firstprivate)
+      {
+        z++;
+        f++;
+        zoo(z + f);
+        f++;
+      }
+    }
+  }
+  // PRINT:  #pragma omp parallel firstprivate(this->z) default(firstprivate)
+  // PRINT:    #pragma omp parallel private(this->z) default(firstprivate)
+  // DUMP:     -OMPParallelDirective
+  // DUMP-NEXT: -OMPFirstprivateClause
+  // DUMP-NEXT:  -DeclRefExpr {{.*}} 'z'
+  // DUMP-NEXT:  -OMPDefaultClause
+  // DUMP:        -OMPParallelDirective
+  // DUMP-NEXT:    -OMPPrivateClaus
+  // DUMP-NEXT:     -DeclRefExpr {{.*}} 'z'
+  // DUMP-NEXT:     -OMPDefaultClause
+  // DUMP-NEXT:     -OMPFirstprivateClause {{.*}} <implicit>
+  // DUMP-NEXT:      -DeclRefExpr {{.*}} 'f'
+  // DUMP:           -CXXThisExpr {{.*}} 'A *' implicit this
+  // DUMP-NEXT:      -DeclRefExpr {{.*}} 'f'
+  // DUMP:         -MemberExpr {{.*}}
+  // DUMP-NEXT:      -CXXThisExpr
+  // DUMP:       -CXXThisExpr {{.*}} 'A *' implicit this
+  // DUMP-NEXT:  -DeclRefExpr {{.*}} 'z'
+};
 #endif // HEADER

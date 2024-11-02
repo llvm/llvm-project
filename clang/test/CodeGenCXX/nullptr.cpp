@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -I%S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -I%S -emit-llvm -o - %s | FileCheck %s
 
 #include <typeinfo>
 
-// CHECK: @_ZTIDn = external constant i8*
+// CHECK: @_ZTIDn = external constant ptr
 int* a = nullptr;
 
 void f() {
@@ -15,7 +15,7 @@ nullptr_t get_nullptr();
 
 struct X { };
 void g() {
-  // CHECK: call i8* @_Z11get_nullptrv()
+  // CHECK: call ptr @_Z11get_nullptrv()
   int (X::*pmf)(int) = get_nullptr();
 }
 
@@ -38,7 +38,7 @@ bool pr23833_a(U &u) { return bool(u.b); }
 // CHECK: store
 // CHECK: load
 // CHECK-NOT: load
-// CHECK: ret i8* null
+// CHECK: ret ptr null
 nullptr_t pr23833_b(nullptr_t &n) { return n; }
 
 struct X1 { operator int*(); };
@@ -58,7 +58,7 @@ int pr23833_c() {
 // CHECK-NOT: load
 // CHECK: store
 // CHECK: load
-// CHECK: ret i32*
+// CHECK: ret ptr
 int *pr23833_d() {
   int *p = X2();
   return p;

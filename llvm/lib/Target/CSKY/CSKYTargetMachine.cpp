@@ -52,7 +52,7 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
                                      Optional<CodeModel::Model> CM,
                                      CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        RM.getValueOr(Reloc::Static),
+                        RM.value_or(Reloc::Static),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<CSKYELFTargetObjectFile>()) {
   initAsmInfo();

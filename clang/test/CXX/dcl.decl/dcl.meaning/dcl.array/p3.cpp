@@ -98,7 +98,8 @@ namespace dependent {
     static_assert(sizeof(arr2) == 12, "");
 
     // Use a failing test to ensure the type isn't considered dependent.
-    static_assert(sizeof(arr2) == 13, ""); // expected-error {{failed}}
+    static_assert(sizeof(arr2) == 13, ""); // expected-error {{failed}} \
+                                           // expected-note {{evaluates to '12 == 13'}}
   }
 
   void g() { f<int[3]>(); } // expected-note {{in instantiation of}}

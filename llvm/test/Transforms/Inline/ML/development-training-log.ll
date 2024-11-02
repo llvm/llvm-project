@@ -1,8 +1,9 @@
 ; Test that we can produce a log if we have or do not have a model, in development mode.
 ; REQUIRES: have_tf_api
 ; Generate mock model
-; RUN: rm -rf %t
-; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t
+; RUN: rm -rf %t_savedmodel %t
+; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t_savedmodel
+; RUN: %python %S/../../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ;
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s | FileCheck %s 
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -tfutils-text-log -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-output-spec-override=%S/Inputs/test_output_spec.json -S < %s | FileCheck %s --check-prefixes=EXTRA-OUTPUTS,CHECK

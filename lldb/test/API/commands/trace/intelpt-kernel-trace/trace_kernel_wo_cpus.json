@@ -1,0 +1,20 @@
+{
+  "cpuInfo": {
+    "family": 6,
+    "model": 85,
+    "stepping": 4,
+    "vendor": "GenuineIntel"
+  },
+  "processes": [
+  ],
+  "tscPerfZeroConversion": {
+    "timeMult": 1076264588,
+    "timeShift": 31,
+    "timeZero": 18433473881008870804
+  },
+  "kernel": {
+    "file": "../intelpt-multi-core-trace/modules/m.out",
+    "loadAddress": 4194304
+  },
+  "type": "intel-pt"
+}

@@ -27,6 +27,10 @@ SourceRange getTypeRange(const ParmVarDecl &Param) {
 
 } // namespace
 
+void AvoidConstParamsInDecls::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
   const auto ConstParamDecl =
       parmVarDecl(hasType(qualType(isConstQualified()))).bind("param");
@@ -43,6 +47,12 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
 
   if (!Param->getType().isLocalConstQualified())
     return;
+
+  if (IgnoreMacros &&
+      (Param->getBeginLoc().isMacroID() || Param->getEndLoc().isMacroID())) {
+    // Suppress the check if macros are involved.
+    return;
+  }
 
   auto Diag = diag(Param->getBeginLoc(),
                    "parameter %0 is const-qualified in the function "

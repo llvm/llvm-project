@@ -70,6 +70,27 @@ TEST(CFG, VariableOfIncompleteType) {
   EXPECT_EQ(BuildResult::BuiltCFG, BuildCFG(Code).getStatus());
 }
 
+// Constructing a CFG with a dependent base should not crash.
+TEST(CFG, DependantBaseAddImplicitDtors) {
+  const char *Code = R"(
+    template <class T>
+    struct Base {
+      virtual ~Base() {}
+    };
+
+    template <typename T>
+    struct Derived : public Base<T> {
+      virtual ~Derived() {}
+    };
+  )";
+  CFG::BuildOptions Options;
+  Options.AddImplicitDtors = true;
+  Options.setAllAlwaysAdd();
+  EXPECT_EQ(BuildResult::BuiltCFG,
+            BuildCFG(Code, Options, ast_matchers::hasName("~Derived<T>"))
+                .getStatus());
+}
+
 TEST(CFG, IsLinear) {
   auto expectLinear = [](bool IsLinear, const char *Code) {
     BuildResult B = BuildCFG(Code);

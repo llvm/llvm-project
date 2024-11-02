@@ -429,24 +429,24 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vpmovsxdq 8(%ebp), %xmm4
-; X86-NEXT:    vpmovsxdq 16(%ebp), %xmm3
-; X86-NEXT:    vpsrad $31, %xmm2, %xmm5
-; X86-NEXT:    vpsrad $1, %xmm2, %xmm6
-; X86-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
-; X86-NEXT:    vpblendw {{.*#+}} xmm5 = xmm6[0,1],xmm5[2,3],xmm6[4,5],xmm5[6,7]
+; X86-NEXT:    vmovapd 8(%ebp), %xmm3
+; X86-NEXT:    vpsrad $31, %xmm2, %xmm4
+; X86-NEXT:    vpsrad $1, %xmm2, %xmm5
+; X86-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; X86-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1],xmm4[2,3],xmm5[4,5],xmm4[6,7]
 ; X86-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; X86-NEXT:    vpsrad $31, %xmm2, %xmm6
+; X86-NEXT:    vpsrad $31, %xmm2, %xmm5
 ; X86-NEXT:    vpsrad $1, %xmm2, %xmm2
 ; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; X86-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm6[2,3],xmm2[4,5],xmm6[6,7]
+; X86-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm5[2,3],xmm2[4,5],xmm5[6,7]
+; X86-NEXT:    vpermilps {{.*#+}} xmm5 = xmm3[2,2,3,3]
 ; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm6
-; X86-NEXT:    vblendvpd %xmm6, %xmm5, %xmm4, %xmm4
 ; X86-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
+; X86-NEXT:    vblendvpd %xmm0, %xmm2, %xmm5, %xmm0
+; X86-NEXT:    vblendvpd %xmm6, %xmm4, %xmm3, %xmm1
+; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -467,16 +467,14 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X64-AVX1-NEXT:    vpsrad $1, %xmm2, %xmm2
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm5[2,3],xmm2[4,5],xmm5[6,7]
-; X64-AVX1-NEXT:    vpmovsxdq %xmm3, %xmm5
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; X64-AVX1-NEXT:    vpmovsxdq %xmm3, %xmm3
+; X64-AVX1-NEXT:    vpermilps {{.*#+}} xmm5 = xmm3[2,2,3,3]
 ; X64-AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm6
-; X64-AVX1-NEXT:    vblendvpd %xmm6, %xmm4, %xmm5, %xmm4
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
+; X64-AVX1-NEXT:    vblendvpd %xmm0, %xmm2, %xmm5, %xmm0
+; X64-AVX1-NEXT:    vblendvpd %xmm6, %xmm4, %xmm3, %xmm1
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X64-AVX1-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -486,11 +484,9 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ;
 ; X64-AVX2-LABEL: signbits_ashr_sext_select_shuffle_sitofp:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpsrad $31, %ymm2, %ymm4
 ; X64-AVX2-NEXT:    vpsrad $1, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} ymm2 = ymm2[1,1,3,3,5,5,7,7]
-; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm4[1],ymm2[2],ymm4[3],ymm2[4],ymm4[5],ymm2[6],ymm4[7]
-; X64-AVX2-NEXT:    vpmovsxdq %xmm3, %ymm3
+; X64-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; X64-AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vblendvpd %ymm0, %ymm2, %ymm3, %ymm0
 ; X64-AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5]
@@ -738,7 +734,7 @@ declare <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double>, <2 x double>, i8 immarg
 ; so we can avoid having to shift bit 0 into bit 7 for each element due to
 ; v32i1->v32i8 promotion and the splitting of v32i8 into 2xv16i8. This requires
 ; ComputeNumSignBits handling for insert_subvector.
-define void @cross_bb_signbits_insert_subvec(<32 x i8>* %ptr, <32 x i8> %x, <32 x i8> %z) {
+define void @cross_bb_signbits_insert_subvec(ptr %ptr, <32 x i8> %x, <32 x i8> %z) {
 ; X86-LABEL: cross_bb_signbits_insert_subvec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -783,7 +779,7 @@ define void @cross_bb_signbits_insert_subvec(<32 x i8>* %ptr, <32 x i8> %x, <32 
 
 block:
   %d = select <32 x i1> %c, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <32 x i8> %z
-  store <32 x i8> %d, <32 x i8>* %ptr, align 32
+  store <32 x i8> %d, ptr %ptr, align 32
   br label %exit
 
 exit:

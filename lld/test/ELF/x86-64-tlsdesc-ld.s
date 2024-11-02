@@ -3,11 +3,11 @@
 
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=LD-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=LD %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck --check-prefix=LD %s
 
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 
 ## Check _TLS_MODULE_BASE_ used by LD produces a dynamic relocation with a value of 0.
 # LD-REL:      .rela.dyn {

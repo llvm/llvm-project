@@ -19,7 +19,8 @@ bool lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
                                      const RegisterInfo *reg_info,
                                      bool prefix_with_name,
                                      bool prefix_with_alt_name, Format format,
-                                     uint32_t reg_name_right_align_at) {
+                                     uint32_t reg_name_right_align_at,
+                                     ExecutionContextScope *exe_scope) {
   DataExtractor data;
   if (reg_val.GetData(data)) {
     bool name_printed = false;
@@ -71,7 +72,8 @@ bool lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
                       UINT32_MAX,           // num_per_line
                       LLDB_INVALID_ADDRESS, // base_addr
                       0,                    // item_bit_size
-                      0);                   // item_bit_offset
+                      0,                    // item_bit_offset
+                      exe_scope);
     return true;
   }
   return false;

@@ -20,26 +20,24 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
-inline
-T
-sqr(T x)
-{
+T sqr(T x) {
     return x * x;
 }
 
-void
-test1()
-{
-    typedef std::negative_binomial_distribution<> D;
+template <class T>
+void test1() {
+    typedef std::negative_binomial_distribution<T> D;
     typedef std::minstd_rand G;
     G g;
     D d(5, .25);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -71,18 +69,17 @@ test1()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
 }
 
-void
-test2()
-{
-    typedef std::negative_binomial_distribution<> D;
+template <class T>
+void test2() {
+    typedef std::negative_binomial_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(30, .03125);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -114,18 +111,17 @@ test2()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
 }
 
-void
-test3()
-{
-    typedef std::negative_binomial_distribution<> D;
+template <class T>
+void test3() {
+    typedef std::negative_binomial_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(40, .25);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -157,18 +153,17 @@ test3()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
-void
-test4()
-{
-    typedef std::negative_binomial_distribution<> D;
+template <class T>
+void test4() {
+    typedef std::negative_binomial_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(40, 1);
     const int N = 1000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -202,18 +197,17 @@ test4()
     (void)kurtosis; (void)x_kurtosis;
 }
 
-void
-test5()
-{
-    typedef std::negative_binomial_distribution<> D;
+template <class T>
+void test5() {
+    typedef std::negative_binomial_distribution<T> D;
     typedef std::mt19937 G;
     G g;
-    D d(400, 0.5);
+    D d(127, 0.5);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -245,18 +239,17 @@ test5()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.05);
 }
 
-void
-test6()
-{
-    typedef std::negative_binomial_distribution<> D;
+template <class T>
+void test6() {
+    typedef std::negative_binomial_distribution<T> D;
     typedef std::mt19937 G;
     G g;
     D d(1, 0.05);
     const int N = 1000000;
-    std::vector<D::result_type> u;
+    std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
-        D::result_type v = d(g);
+        typename D::result_type v = d(g);
         assert(d.min() <= v && v <= d.max());
         u.push_back(v);
     }
@@ -288,14 +281,36 @@ test6()
     assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
-int main(int, char**)
-{
-    test1();
-    test2();
-    test3();
-    test4();
-    test5();
-    test6();
+template <class T>
+void tests() {
+    test1<T>();
+    test2<T>();
+    test3<T>();
+    test4<T>();
+    test5<T>();
+    test6<T>();
+}
 
-  return 0;
+int main(int, char**) {
+    tests<short>();
+    tests<int>();
+    tests<long>();
+    tests<long long>();
+
+    tests<unsigned short>();
+    tests<unsigned int>();
+    tests<unsigned long>();
+    tests<unsigned long long>();
+
+#if defined(_LIBCPP_VERSION) // extension
+    // TODO: std::negative_binomial_distribution currently doesn't work reliably with small types.
+    // tests<int8_t>();
+    // tests<uint8_t>();
+#if !defined(TEST_HAS_NO_INT128)
+    tests<__int128_t>();
+    tests<__uint128_t>();
+#endif
+#endif
+
+    return 0;
 }

@@ -3,9 +3,9 @@
 //
 // RUN: rm -rf %t
 // RUN: cd %S
-// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I Inputs/malformed -DHEADER="a1.h" %s 2>&1 | FileCheck %s --check-prefix=CHECK-A
-// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I Inputs/malformed -DHEADER="b1.h" %s 2>&1 | FileCheck %s --check-prefix=CHECK-B
-// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I Inputs/malformed -DHEADER="c.h" malformed.cpp 2>&1 | FileCheck %s --check-prefix=CHECK-C
+// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I Inputs/malformed -DHEADER="a1.h" %s 2>&1 | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-A
+// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I Inputs/malformed -DHEADER="b1.h" %s 2>&1 | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-B
+// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I Inputs/malformed -DHEADER="c.h" malformed.cpp 2>&1 | sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-C
 
 #define STR2(x) #x
 #define STR(x) STR2(x)

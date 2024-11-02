@@ -7,7 +7,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 declare void @use(i1)
 
-define void @foo(<2 x i64>* %p) nounwind {
+define void @foo(ptr %p) nounwind {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY_I:%.*]]
@@ -15,7 +15,7 @@ define void @foo(<2 x i64>* %p) nounwind {
 ; CHECK-NEXT:    [[VWORKEXPONENT_I_033:%.*]] = phi <4 x i32> [ [[SUB_I_I:%.*]], [[WHILE_BODY_I]] ], [ <i32 939524096, i32 939524096, i32 939524096, i32 939524096>, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SUB_I_I]] = add <4 x i32> [[VWORKEXPONENT_I_033]], <i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[SUB_I_I]] to <2 x i64>
-; CHECK-NEXT:    store volatile <2 x i64> zeroinitializer, <2 x i64>* [[P:%.*]], align 16
+; CHECK-NEXT:    store volatile <2 x i64> zeroinitializer, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    br label [[WHILE_BODY_I]]
 ;
 entry:
@@ -26,7 +26,7 @@ while.body.i:                                     ; preds = %while.body.i, %entr
   %sub.i.i = add <4 x i32> %vWorkExponent.i.033, <i32 -8388608, i32 -8388608, i32 -8388608, i32 -8388608>
   %0 = bitcast <4 x i32> %sub.i.i to <2 x i64>
   %and.i119.i = and <2 x i64> %0, zeroinitializer
-  store volatile <2 x i64> %and.i119.i, <2 x i64>* %p
+  store volatile <2 x i64> %and.i119.i, ptr %p
   br label %while.body.i
 }
 
@@ -39,7 +39,7 @@ declare <64 x i8> @llvm.abs.v64i8(<64 x i8>, i1 immarg)
 define void @vec_cast_abs() {
 ; CHECK-LABEL: @vec_cast_abs(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <64 x i8>, <64 x i8>* bitcast (%union.V512* @i8_mix to <64 x i8>*), align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = load <64 x i8>, ptr @i8_mix, align 64
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <64 x i8> @llvm.abs.v64i8(<64 x i8> [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <64 x i8> [[TMP2]] to i512
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i512 [[TMP3]], 12
@@ -54,7 +54,7 @@ define void @vec_cast_abs() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp1 = load <64 x i8>, <64 x i8>* bitcast (%union.V512* @i8_mix to <64 x i8>*)
+  %tmp1 = load <64 x i8>, ptr @i8_mix
   %tmp2 = tail call <64 x i8> @llvm.abs.v64i8(<64 x i8> %tmp1, i1 false)
 
   %tmp3 = bitcast <64 x i8> %tmp2 to i512

@@ -44,6 +44,7 @@ add_lld_library(lldCOFF
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${LLVM_ATOMIC_LIB}
 
   DEPENDS
   COFFOptionsTableGen

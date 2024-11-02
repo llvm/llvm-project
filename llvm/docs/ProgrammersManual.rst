@@ -56,26 +56,26 @@ the subject that you can get, so it will not be discussed in this document.
 Here are some useful links:
 
 #. `cppreference.com
-   <http://en.cppreference.com/w/>`_ - an excellent
+   <https://en.cppreference.com/w/>`_ - an excellent
    reference for the STL and other parts of the standard C++ library.
+
+#. `cplusplus.com
+   <https://cplusplus.com/reference/>`_ - another excellent
+   reference like the one above.
 
 #. `C++ In a Nutshell <http://www.tempest-sw.com/cpp/>`_ - This is an O'Reilly
    book in the making.  It has a decent Standard Library Reference that rivals
    Dinkumware's, and is unfortunately no longer free since the book has been
    published.
 
-#. `C++ Frequently Asked Questions <http://www.parashift.com/c++-faq-lite/>`_.
-
-#. `SGI's STL Programmer's Guide <http://www.sgi.com/tech/stl/>`_ - Contains a
-   useful `Introduction to the STL
-   <http://www.sgi.com/tech/stl/stl_introduction.html>`_.
+#. `C++ Frequently Asked Questions <https://www.parashift.com/c++-faq-lite/>`_.
 
 #. `Bjarne Stroustrup's C++ Page
-   <http://www.stroustrup.com/C++.html>`_.
+   <https://www.stroustrup.com/C++.html>`_.
 
-#. `Bruce Eckel's Thinking in C++, 2nd ed. Volume 2 Revision 4.0
+#. `Bruce Eckel's Thinking in C++, 2nd ed. Volume 2.
    (even better, get the book)
-   <http://www.mindview.net/Books/TICPP/ThinkingInCPP2e.html>`_.
+   <https://archive.org/details/TICPP2ndEdVolTwo>`_.
 
 You are also encouraged to take a look at the :doc:`LLVM Coding Standards
 <CodingStandards>` guide which focuses on how to write maintainable code more
@@ -1705,14 +1705,15 @@ the traits class is informed when an element is inserted or removed from the
 list, and ``ilist``\ s are guaranteed to support a constant-time splice
 operation.
 
+An ``ilist`` and an ``iplist`` are ``using`` aliases to one another and the
+latter only currently exists for historical purposes.
+
 These properties are exactly what we want for things like ``Instruction``\ s and
 basic blocks, which is why these are implemented with ``ilist``\ s.
 
 Related classes of interest are explained in the following subsections:
 
 * :ref:`ilist_traits <dss_ilist_traits>`
-
-* :ref:`iplist <dss_iplist>`
 
 * :ref:`llvm/ADT/ilist_node.h <dss_ilist_node>`
 
@@ -1754,19 +1755,8 @@ For example:
 ilist_traits
 ^^^^^^^^^^^^
 
-``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``iplist<T>``
-(and consequently ``ilist<T>``) publicly derive from this traits class.
-
-.. _dss_iplist:
-
-iplist
-^^^^^^
-
-``iplist<T>`` is ``ilist<T>``'s base and as such supports a slightly narrower
-interface.  Notably, inserters from ``T&`` are absent.
-
-``ilist_traits<T>`` is a public base of this class and can be used for a wide
-variety of customizations.
+``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``ilist<T>``
+publicly derives from this traits class.
 
 .. _dss_ilist_node:
 
@@ -2323,6 +2313,18 @@ itself to avoid allocations.
 
 The IntervalMap iterators are quite big, so they should not be passed around as
 STL iterators.  The heavyweight iterators allow a smaller data structure.
+
+.. _dss_intervaltree:
+
+llvm/ADT/IntervalTree.h
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``llvm::IntervalTree`` is a light tree data structure to hold intervals. It
+allows finding all intervals that overlap with any given point. At this time,
+it does not support any deletion or rebalancing operations.
+
+The IntervalTree is designed to be set up once, and then queried without any
+further additions.
 
 .. _dss_map:
 

@@ -23,7 +23,7 @@
 #include "llvm/Support/MD5.h"
 
 static llvm::cl::opt<bool>
-    EnableValueProfiling("enable-value-profiling", llvm::cl::ZeroOrMore,
+    EnableValueProfiling("enable-value-profiling",
                          llvm::cl::desc("Enable value profiling"),
                          llvm::cl::Hidden, llvm::cl::init(false));
 
@@ -821,6 +821,8 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
 
   CGM.ClearUnusedCoverageMapping(D);
   if (Fn->hasFnAttribute(llvm::Attribute::NoProfile))
+    return;
+  if (Fn->hasFnAttribute(llvm::Attribute::SkipProfile))
     return;
 
   setFuncName(Fn);

@@ -52,7 +52,7 @@ public:
     case Stmt::ForStmtClass:
     case Stmt::SwitchStmtClass:
       ++Info.Branches;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Stmt::CompoundStmtClass:
       TrackedParent.push_back(true);
       break;

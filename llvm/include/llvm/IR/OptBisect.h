@@ -15,7 +15,6 @@
 #define LLVM_IR_OPTBISECT_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ManagedStatic.h"
 #include <limits>
 
 namespace llvm {
@@ -90,7 +89,8 @@ private:
 
 /// Singleton instance of the OptBisect class, so multiple pass managers don't
 /// need to coordinate their uses of OptBisect.
-extern ManagedStatic<OptBisect> OptBisector;
+OptBisect &getOptBisector();
+
 } // end namespace llvm
 
 #endif // LLVM_IR_OPTBISECT_H

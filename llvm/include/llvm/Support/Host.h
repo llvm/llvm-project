@@ -65,6 +65,7 @@ namespace sys {
   StringRef getHostCPUNameForARM(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForS390x(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForRISCV(StringRef ProcCpuinfoContent);
+  StringRef getHostCPUNameForSPARC(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForBPF();
 
   /// Helper functions to extract CPU details from CPUID on x86.

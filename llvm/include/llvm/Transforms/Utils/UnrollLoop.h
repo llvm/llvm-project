@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
 
@@ -99,7 +100,8 @@ bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                           DependenceInfo &DI, LoopInfo &LI);
 
 bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
-                        DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
+                        DominatorTree &DT, LoopInfo *LI, AssumptionCache *AC,
+                        ScalarEvolution &SE,
                         const SmallPtrSetImpl<const Value *> &EphValues,
                         OptimizationRemarkEmitter *ORE, unsigned TripCount,
                         unsigned MaxTripCount, bool MaxOrZero,
@@ -123,11 +125,9 @@ TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
     Optional<bool> UserUpperBound, Optional<unsigned> UserFullUnrollMaxCount);
 
-unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
-                             bool &NotDuplicatable, bool &Convergent,
-                             const TargetTransformInfo &TTI,
-                             const SmallPtrSetImpl<const Value *> &EphValues,
-                             unsigned BEInsns);
+InstructionCost ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
+    bool &NotDuplicatable, bool &Convergent, const TargetTransformInfo &TTI,
+    const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns);
 
 } // end namespace llvm
 

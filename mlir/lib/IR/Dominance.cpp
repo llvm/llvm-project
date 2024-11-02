@@ -297,7 +297,7 @@ bool DominanceInfo::properlyDominatesImpl(Operation *a, Operation *b,
 bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
   // block arguments properly dominate all operations in their own block, so
   // we use a dominates check here, not a properlyDominates check.
-  if (auto blockArg = a.dyn_cast<BlockArgument>())
+  if (auto blockArg = dyn_cast<BlockArgument>(a))
     return dominates(blockArg.getOwner(), b->getBlock());
 
   // `a` properlyDominates `b` if the operation defining `a` properlyDominates

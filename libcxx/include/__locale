@@ -15,13 +15,15 @@
 #include <cctype>
 #include <cstdint>
 #include <locale.h>
-#include <memory>
 #include <mutex>
 #include <string>
 
+// Some platforms require more includes than others. Keep the includes on all plaforms for now.
+#include <cstddef>
+#include <cstring>
+
 #if defined(_LIBCPP_MSVCRT_LIKE)
 # include <__support/win32/locale_win32.h>
-# include <cstring>
 #elif defined(_AIX) || defined(__MVS__)
 # include <__support/ibm/xlocale.h>
 #elif defined(__ANDROID__)
@@ -33,7 +35,7 @@
 # include <__support/newlib/xlocale.h>
 #elif defined(__OpenBSD__)
 # include <__support/openbsd/xlocale.h>
-#elif (defined(__APPLE__) || defined(__FreeBSD__) || defined(__IBMCPP__))
+#elif (defined(__APPLE__) || defined(__FreeBSD__))
 # include <xlocale.h>
 #elif defined(__Fuchsia__)
 # include <__support/fuchsia/xlocale.h>
@@ -191,12 +193,12 @@ protected:
     explicit facet(size_t __refs = 0)
         : __shared_count(static_cast<long>(__refs)-1) {}
 
-    virtual ~facet();
+    ~facet() override;
 
 //    facet(const facet&) = delete;     // effectively done in __shared_count
 //    void operator=(const facet&) = delete;
 private:
-    virtual void __on_zero_shared() _NOEXCEPT;
+    void __on_zero_shared() _NOEXCEPT override;
 };
 
 class _LIBCPP_TYPE_VIS locale::id
@@ -291,7 +293,7 @@ public:
     static locale::id id;
 
 protected:
-    ~collate();
+    ~collate() override;
     virtual int do_compare(const char_type* __lo1, const char_type* __hi1,
                            const char_type* __lo2, const char_type* __hi2) const;
     virtual string_type do_transform(const char_type* __lo, const char_type* __hi) const
@@ -337,9 +339,9 @@ collate<_CharT>::do_hash(const char_type* __lo, const char_type* __hi) const
     return static_cast<long>(__h);
 }
 
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>;
 #endif
 
 // template <class CharT> class collate_byname;
@@ -350,7 +352,7 @@ template <>
 class _LIBCPP_TYPE_VIS collate_byname<char>
     : public collate<char>
 {
-    locale_t __l;
+    locale_t __l_;
 public:
     typedef char char_type;
     typedef basic_string<char_type> string_type;
@@ -359,10 +361,10 @@ public:
     explicit collate_byname(const string& __n, size_t __refs = 0);
 
 protected:
-    ~collate_byname();
-    virtual int do_compare(const char_type* __lo1, const char_type* __hi1,
-                           const char_type* __lo2, const char_type* __hi2) const;
-    virtual string_type do_transform(const char_type* __lo, const char_type* __hi) const;
+    ~collate_byname() override;
+    int do_compare(const char_type* __lo1, const char_type* __hi1,
+                   const char_type* __lo2, const char_type* __hi2) const override;
+    string_type do_transform(const char_type* __lo, const char_type* __hi) const override;
 };
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -370,7 +372,7 @@ template <>
 class _LIBCPP_TYPE_VIS collate_byname<wchar_t>
     : public collate<wchar_t>
 {
-    locale_t __l;
+    locale_t __l_;
 public:
     typedef wchar_t char_type;
     typedef basic_string<char_type> string_type;
@@ -379,11 +381,11 @@ public:
     explicit collate_byname(const string& __n, size_t __refs = 0);
 
 protected:
-    ~collate_byname();
+    ~collate_byname() override;
 
-    virtual int do_compare(const char_type* __lo1, const char_type* __hi1,
-                           const char_type* __lo2, const char_type* __hi2) const;
-    virtual string_type do_transform(const char_type* __lo, const char_type* __hi) const;
+    int do_compare(const char_type* __lo1, const char_type* __hi1,
+                   const char_type* __lo2, const char_type* __hi2) const override;
+    string_type do_transform(const char_type* __lo, const char_type* __hi) const override;
 };
 #endif
 
@@ -492,7 +494,11 @@ public:
     static const mask punct  = _ISPUNCT;
     static const mask xdigit = _ISXDIGIT;
     static const mask blank  = _ISBLANK;
+# if defined(_AIX)
+    static const mask __regex_word = 0x8000;
+# else
     static const mask __regex_word = 0x80;
+# endif
 #elif defined(_NEWLIB_VERSION)
     // Same type as Newlib's _ctype_ array in newlib/libc/include/ctype.h.
     typedef char mask;
@@ -545,11 +551,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY ctype_base() {}
 
-// TODO: Remove the ifndef when the assert no longer fails on AIX.
-#ifndef _AIX
     static_assert((__regex_word & ~(space | print | cntrl | upper | lower | alpha | digit | punct | xdigit | blank)) == __regex_word,
                   "__regex_word can't overlap other bits");
-#endif
 };
 
 template <class _CharT> class _LIBCPP_TEMPLATE_VIS ctype;
@@ -642,7 +645,7 @@ public:
     static locale::id id;
 
 protected:
-    ~ctype();
+    ~ctype() override;
     virtual bool do_is(mask __m, char_type __c) const;
     virtual const char_type* do_is(const char_type* __low, const char_type* __high, mask* __vec) const;
     virtual const char_type* do_scan_is(mask __m, const char_type* __low, const char_type* __high) const;
@@ -772,7 +775,7 @@ public:
 #endif
 
 protected:
-    ~ctype();
+    ~ctype() override;
     virtual char_type do_toupper(char_type __c) const;
     virtual const char_type* do_toupper(char_type* __low, const char_type* __high) const;
     virtual char_type do_tolower(char_type __c) const;
@@ -791,18 +794,18 @@ template <>
 class _LIBCPP_TYPE_VIS ctype_byname<char>
     : public ctype<char>
 {
-    locale_t __l;
+    locale_t __l_;
 
 public:
     explicit ctype_byname(const char*, size_t = 0);
     explicit ctype_byname(const string&, size_t = 0);
 
 protected:
-    ~ctype_byname();
-    virtual char_type do_toupper(char_type) const;
-    virtual const char_type* do_toupper(char_type* __low, const char_type* __high) const;
-    virtual char_type do_tolower(char_type) const;
-    virtual const char_type* do_tolower(char_type* __low, const char_type* __high) const;
+    ~ctype_byname() override;
+    char_type do_toupper(char_type) const override;
+    const char_type* do_toupper(char_type* __low, const char_type* __high) const override;
+    char_type do_tolower(char_type) const override;
+    const char_type* do_tolower(char_type* __low, const char_type* __high) const override;
 };
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -810,26 +813,26 @@ template <>
 class _LIBCPP_TYPE_VIS ctype_byname<wchar_t>
     : public ctype<wchar_t>
 {
-    locale_t __l;
+    locale_t __l_;
 
 public:
     explicit ctype_byname(const char*, size_t = 0);
     explicit ctype_byname(const string&, size_t = 0);
 
 protected:
-    ~ctype_byname();
-    virtual bool do_is(mask __m, char_type __c) const;
-    virtual const char_type* do_is(const char_type* __low, const char_type* __high, mask* __vec) const;
-    virtual const char_type* do_scan_is(mask __m, const char_type* __low, const char_type* __high) const;
-    virtual const char_type* do_scan_not(mask __m, const char_type* __low, const char_type* __high) const;
-    virtual char_type do_toupper(char_type) const;
-    virtual const char_type* do_toupper(char_type* __low, const char_type* __high) const;
-    virtual char_type do_tolower(char_type) const;
-    virtual const char_type* do_tolower(char_type* __low, const char_type* __high) const;
-    virtual char_type do_widen(char) const;
-    virtual const char* do_widen(const char* __low, const char* __high, char_type* __dest) const;
-    virtual char do_narrow(char_type, char __dfault) const;
-    virtual const char_type* do_narrow(const char_type* __low, const char_type* __high, char __dfault, char* __dest) const;
+    ~ctype_byname() override;
+    bool do_is(mask __m, char_type __c) const override;
+    const char_type* do_is(const char_type* __low, const char_type* __high, mask* __vec) const override;
+    const char_type* do_scan_is(mask __m, const char_type* __low, const char_type* __high) const override;
+    const char_type* do_scan_not(mask __m, const char_type* __low, const char_type* __high) const override;
+    char_type do_toupper(char_type) const override;
+    const char_type* do_toupper(char_type* __low, const char_type* __high) const override;
+    char_type do_tolower(char_type) const override;
+    const char_type* do_tolower(char_type* __low, const char_type* __high) const override;
+    char_type do_widen(char) const override;
+    const char* do_widen(const char* __low, const char* __high, char_type* __dest) const override;
+    char do_narrow(char_type, char __dfault) const override;
+    const char_type* do_narrow(const char_type* __low, const char_type* __high, char __dfault, char* __dest) const override;
 };
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
@@ -1020,7 +1023,7 @@ protected:
     explicit codecvt(const char*, size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    ~codecvt();
+    ~codecvt() override;
 
     virtual result do_out(state_type& __st,
                           const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
@@ -1044,7 +1047,7 @@ class _LIBCPP_TYPE_VIS codecvt<wchar_t, char, mbstate_t>
     : public locale::facet,
       public codecvt_base
 {
-    locale_t __l;
+    locale_t __l_;
 public:
     typedef wchar_t   intern_type;
     typedef char      extern_type;
@@ -1104,7 +1107,7 @@ public:
 protected:
     explicit codecvt(const char*, size_t __refs = 0);
 
-    ~codecvt();
+    ~codecvt() override;
 
     virtual result do_out(state_type& __st,
                           const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
@@ -1191,7 +1194,7 @@ protected:
     explicit codecvt(const char*, size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    ~codecvt();
+    ~codecvt() override;
 
     virtual result do_out(state_type& __st,
                           const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
@@ -1279,7 +1282,7 @@ protected:
     explicit codecvt(const char*, size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    ~codecvt();
+    ~codecvt() override;
 
     virtual result do_out(state_type& __st,
                           const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
@@ -1367,7 +1370,7 @@ protected:
     explicit codecvt(const char*, size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    ~codecvt();
+    ~codecvt() override;
 
     virtual result do_out(state_type& __st,
                           const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
@@ -1455,7 +1458,7 @@ protected:
     explicit codecvt(const char*, size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    ~codecvt();
+    ~codecvt() override;
 
     virtual result do_out(state_type& __st,
                           const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
@@ -1487,7 +1490,7 @@ public:
     explicit codecvt_byname(const string& __nm, size_t __refs = 0)
         : codecvt<_InternT, _ExternT, _StateT>(__nm.c_str(), __refs) {}
 protected:
-    ~codecvt_byname();
+    ~codecvt_byname() override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -1497,15 +1500,15 @@ codecvt_byname<_InternT, _ExternT, _StateT>::~codecvt_byname()
 }
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>;
 #endif
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>) // deprecated in C++20
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>) // deprecated in C++20
+extern template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
+extern template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>) // C++20
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>) // C++20
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20
 #endif
 
 template <size_t _Np>
@@ -1539,7 +1542,7 @@ struct _LIBCPP_TYPE_VIS __narrow_to_utf8<16>
     __narrow_to_utf8() : codecvt<char16_t, char, mbstate_t>(1) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-    ~__narrow_to_utf8();
+    ~__narrow_to_utf8() override;
 
     template <class _OutputIterator, class _CharT>
     _LIBCPP_INLINE_VISIBILITY
@@ -1575,7 +1578,7 @@ struct _LIBCPP_TYPE_VIS __narrow_to_utf8<32>
     __narrow_to_utf8() : codecvt<char32_t, char, mbstate_t>(1) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-    ~__narrow_to_utf8();
+    ~__narrow_to_utf8() override;
 
     template <class _OutputIterator, class _CharT>
     _LIBCPP_INLINE_VISIBILITY
@@ -1633,7 +1636,7 @@ struct _LIBCPP_TYPE_VIS __widen_from_utf8<16>
     __widen_from_utf8() : codecvt<char16_t, char, mbstate_t>(1) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-    ~__widen_from_utf8();
+    ~__widen_from_utf8() override;
 
     template <class _OutputIterator>
     _LIBCPP_INLINE_VISIBILITY
@@ -1669,7 +1672,7 @@ struct _LIBCPP_TYPE_VIS __widen_from_utf8<32>
     __widen_from_utf8() : codecvt<char32_t, char, mbstate_t>(1) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-    ~__widen_from_utf8();
+    ~__widen_from_utf8() override;
 
     template <class _OutputIterator>
     _LIBCPP_INLINE_VISIBILITY
@@ -1719,7 +1722,7 @@ public:
     static locale::id id;
 
 protected:
-    ~numpunct();
+    ~numpunct() override;
     virtual char_type do_decimal_point() const;
     virtual char_type do_thousands_sep() const;
     virtual string do_grouping() const;
@@ -1751,7 +1754,7 @@ public:
     static locale::id id;
 
 protected:
-    ~numpunct();
+    ~numpunct() override;
     virtual char_type do_decimal_point() const;
     virtual char_type do_thousands_sep() const;
     virtual string do_grouping() const;
@@ -1780,7 +1783,7 @@ public:
     explicit numpunct_byname(const string& __nm, size_t __refs = 0);
 
 protected:
-    ~numpunct_byname();
+    ~numpunct_byname() override;
 
 private:
     void __init(const char*);
@@ -1799,7 +1802,7 @@ public:
     explicit numpunct_byname(const string& __nm, size_t __refs = 0);
 
 protected:
-    ~numpunct_byname();
+    ~numpunct_byname() override;
 
 private:
     void __init(const char*);

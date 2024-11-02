@@ -381,7 +381,7 @@ public:
     /// The AST file was written by a different version of Clang.
     VersionMismatch,
 
-    /// The AST file was writtten with a different language/target
+    /// The AST file was written with a different language/target
     /// configuration.
     ConfigurationMismatch,
 
@@ -689,7 +689,7 @@ private:
     Module *Mod;
 
     /// The kind of module reference.
-    enum { Import, Export, Conflict } Kind;
+    enum { Import, Export, Conflict, Affecting } Kind;
 
     /// The local ID of the module that is being exported.
     unsigned ID;
@@ -1131,6 +1131,8 @@ private:
 
   using DataPointers =
       std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;
+  using ObjCProtocolDataPointers =
+      std::pair<ObjCProtocolDecl *, struct ObjCProtocolDecl::DefinitionData *>;
 
   /// Record definitions in which we found an ODR violation.
   llvm::SmallDenseMap<CXXRecordDecl *, llvm::SmallVector<DataPointers, 2>, 2>
@@ -1143,6 +1145,11 @@ private:
   /// Enum definitions in which we found an ODR violation.
   llvm::SmallDenseMap<EnumDecl *, llvm::SmallVector<EnumDecl *, 2>, 2>
       PendingEnumOdrMergeFailures;
+
+  /// ObjCProtocolDecl in which we found an ODR violation.
+  llvm::SmallDenseMap<ObjCProtocolDecl *,
+                      llvm::SmallVector<ObjCProtocolDataPointers, 2>, 2>
+      PendingObjCProtocolOdrMergeFailures;
 
   /// DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;
@@ -1738,7 +1745,8 @@ public:
                                   const LangOptions &LangOpts,
                                   const TargetOptions &TargetOpts,
                                   const PreprocessorOptions &PPOpts,
-                                  StringRef ExistingModuleCachePath);
+                                  StringRef ExistingModuleCachePath,
+                                  bool RequireStrictOptionMatches = false);
 
   /// Returns the suggested contents of the predefines buffer,
   /// which contains a (typically-empty) subset of the predefines
@@ -1843,10 +1851,6 @@ public:
   /// Retrieve the module file that owns the given declaration, or NULL
   /// if the declaration is not from a module file.
   ModuleFile *getOwningModuleFile(const Decl *D);
-
-  /// Get the best name we know for the module that owns the given
-  /// declaration, or an empty string if the declaration is not from a module.
-  std::string getOwningModuleNameForDiagnostic(const Decl *D);
 
   /// Returns the source location for the decl \p ID.
   SourceLocation getSourceLocationForDeclID(serialization::GlobalDeclID ID);
@@ -2190,6 +2194,18 @@ public:
                                     const RecordDataImpl &Record, unsigned &Idx,
                                     LocSeq *Seq = nullptr) {
     return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
+  }
+
+  /// Read a FileID.
+  FileID ReadFileID(ModuleFile &F, const RecordDataImpl &Record,
+                    unsigned &Idx) const {
+    return TranslateFileID(F, FileID::get(Record[Idx++]));
+  }
+
+  /// Translate a FileID from another module file's FileID space into ours.
+  FileID TranslateFileID(ModuleFile &F, FileID FID) const {
+    assert(FID.ID >= 0 && "Reading non-local FileID.");
+    return FileID::get(F.SLocEntryBaseID + FID.ID - 1);
   }
 
   /// Read a source range.

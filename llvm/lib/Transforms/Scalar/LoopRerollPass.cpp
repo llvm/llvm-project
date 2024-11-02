@@ -1326,15 +1326,17 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
       // Make sure that we don't alias with any instruction in the alias set
       // tracker. If we do, then we depend on a future iteration, and we
       // can't reroll.
-      if (RootInst->mayReadFromMemory())
+      if (RootInst->mayReadFromMemory()) {
+        BatchAAResults BatchAA(*AA);
         for (auto &K : AST) {
-          if (K.aliasesUnknownInst(RootInst, *AA)) {
+          if (K.aliasesUnknownInst(RootInst, BatchAA)) {
             LLVM_DEBUG(dbgs() << "LRR: iteration root match failed at "
                               << *BaseInst << " vs. " << *RootInst
                               << " (depends on future store)\n");
             return false;
           }
         }
+      }
 
       // If we've past an instruction from a future iteration that may have
       // side effects, and this instruction might also, then we can't reorder

@@ -3,112 +3,112 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
 ; Check additions of 1.
-define void @f1(i64 *%ptr) {
+define void @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: agsi 0(%r2), 1
 ; CHECK: br %r14
-  %val = load i64, i64 *%ptr
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 127
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the high end of the constant range.
-define void @f2(i64 *%ptr) {
+define void @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: agsi 0(%r2), 127
 ; CHECK: br %r14
-  %val = load i64, i64 *%ptr
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 127
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the next constant up, which must use an addition and a store.
 ; Both LG/AGHI and LGHI/AG would be OK.
-define void @f3(i64 *%ptr) {
+define void @f3(ptr %ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: agsi
 ; CHECK: stg %r0, 0(%r2)
 ; CHECK: br %r14
-  %val = load i64, i64 *%ptr
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 128
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the low end of the constant range.
-define void @f4(i64 *%ptr) {
+define void @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: agsi 0(%r2), -128
 ; CHECK: br %r14
-  %val = load i64, i64 *%ptr
+  %val = load i64, ptr %ptr
   %add = add i64 %val, -128
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the next value down, with the same comment as f3.
-define void @f5(i64 *%ptr) {
+define void @f5(ptr %ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK-NOT: agsi
 ; CHECK: stg %r0, 0(%r2)
 ; CHECK: br %r14
-  %val = load i64, i64 *%ptr
+  %val = load i64, ptr %ptr
   %add = add i64 %val, -129
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the high end of the aligned AGSI range.
-define void @f6(i64 *%base) {
+define void @f6(ptr %base) {
 ; CHECK-LABEL: f6:
 ; CHECK: agsi 524280(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 65535
-  %val = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %base, i64 65535
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 1
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the next doubleword up, which must use separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f7(i64 *%base) {
+define void @f7(ptr %base) {
 ; CHECK-LABEL: f7:
 ; CHECK: agfi %r2, 524288
 ; CHECK: agsi 0(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 65536
-  %val = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %base, i64 65536
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 1
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the low end of the AGSI range.
-define void @f8(i64 *%base) {
+define void @f8(ptr %base) {
 ; CHECK-LABEL: f8:
 ; CHECK: agsi -524288(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 -65536
-  %val = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %base, i64 -65536
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 1
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check the next doubleword down, which must use separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f9(i64 *%base) {
+define void @f9(ptr %base) {
 ; CHECK-LABEL: f9:
 ; CHECK: agfi %r2, -524296
 ; CHECK: agsi 0(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%base, i64 -65537
-  %val = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %base, i64 -65537
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 1
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
@@ -120,35 +120,35 @@ define void @f10(i64 %base, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 8
-  %ptr = inttoptr i64 %add2 to i64 *
-  %val = load i64, i64 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 1
-  store i64 %add, i64 *%ptr
+  store i64 %add, ptr %ptr
   ret void
 }
 
 ; Check that adding 127 to a spilled value can use AGSI.
-define void @f11(i64 *%ptr, i32 %sel) {
+define void @f11(ptr %ptr, i32 %sel) {
 ; CHECK-LABEL: f11:
 ; CHECK: agsi {{[0-9]+}}(%r15), 127
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i64, i64 *%ptr
-  %val1 = load volatile i64, i64 *%ptr
-  %val2 = load volatile i64, i64 *%ptr
-  %val3 = load volatile i64, i64 *%ptr
-  %val4 = load volatile i64, i64 *%ptr
-  %val5 = load volatile i64, i64 *%ptr
-  %val6 = load volatile i64, i64 *%ptr
-  %val7 = load volatile i64, i64 *%ptr
-  %val8 = load volatile i64, i64 *%ptr
-  %val9 = load volatile i64, i64 *%ptr
-  %val10 = load volatile i64, i64 *%ptr
-  %val11 = load volatile i64, i64 *%ptr
-  %val12 = load volatile i64, i64 *%ptr
-  %val13 = load volatile i64, i64 *%ptr
-  %val14 = load volatile i64, i64 *%ptr
-  %val15 = load volatile i64, i64 *%ptr
+  %val0 = load volatile i64, ptr %ptr
+  %val1 = load volatile i64, ptr %ptr
+  %val2 = load volatile i64, ptr %ptr
+  %val3 = load volatile i64, ptr %ptr
+  %val4 = load volatile i64, ptr %ptr
+  %val5 = load volatile i64, ptr %ptr
+  %val6 = load volatile i64, ptr %ptr
+  %val7 = load volatile i64, ptr %ptr
+  %val8 = load volatile i64, ptr %ptr
+  %val9 = load volatile i64, ptr %ptr
+  %val10 = load volatile i64, ptr %ptr
+  %val11 = load volatile i64, ptr %ptr
+  %val12 = load volatile i64, ptr %ptr
+  %val13 = load volatile i64, ptr %ptr
+  %val14 = load volatile i64, ptr %ptr
+  %val15 = load volatile i64, ptr %ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store
@@ -190,48 +190,48 @@ store:
   %new14 = phi i64 [ %val14, %entry ], [ %add14, %add ]
   %new15 = phi i64 [ %val15, %entry ], [ %add15, %add ]
 
-  store volatile i64 %new0, i64 *%ptr
-  store volatile i64 %new1, i64 *%ptr
-  store volatile i64 %new2, i64 *%ptr
-  store volatile i64 %new3, i64 *%ptr
-  store volatile i64 %new4, i64 *%ptr
-  store volatile i64 %new5, i64 *%ptr
-  store volatile i64 %new6, i64 *%ptr
-  store volatile i64 %new7, i64 *%ptr
-  store volatile i64 %new8, i64 *%ptr
-  store volatile i64 %new9, i64 *%ptr
-  store volatile i64 %new10, i64 *%ptr
-  store volatile i64 %new11, i64 *%ptr
-  store volatile i64 %new12, i64 *%ptr
-  store volatile i64 %new13, i64 *%ptr
-  store volatile i64 %new14, i64 *%ptr
-  store volatile i64 %new15, i64 *%ptr
+  store volatile i64 %new0, ptr %ptr
+  store volatile i64 %new1, ptr %ptr
+  store volatile i64 %new2, ptr %ptr
+  store volatile i64 %new3, ptr %ptr
+  store volatile i64 %new4, ptr %ptr
+  store volatile i64 %new5, ptr %ptr
+  store volatile i64 %new6, ptr %ptr
+  store volatile i64 %new7, ptr %ptr
+  store volatile i64 %new8, ptr %ptr
+  store volatile i64 %new9, ptr %ptr
+  store volatile i64 %new10, ptr %ptr
+  store volatile i64 %new11, ptr %ptr
+  store volatile i64 %new12, ptr %ptr
+  store volatile i64 %new13, ptr %ptr
+  store volatile i64 %new14, ptr %ptr
+  store volatile i64 %new15, ptr %ptr
 
   ret void
 }
 
 ; Check that adding -128 to a spilled value can use AGSI.
-define void @f12(i64 *%ptr, i32 %sel) {
+define void @f12(ptr %ptr, i32 %sel) {
 ; CHECK-LABEL: f12:
 ; CHECK: agsi {{[0-9]+}}(%r15), -128
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i64, i64 *%ptr
-  %val1 = load volatile i64, i64 *%ptr
-  %val2 = load volatile i64, i64 *%ptr
-  %val3 = load volatile i64, i64 *%ptr
-  %val4 = load volatile i64, i64 *%ptr
-  %val5 = load volatile i64, i64 *%ptr
-  %val6 = load volatile i64, i64 *%ptr
-  %val7 = load volatile i64, i64 *%ptr
-  %val8 = load volatile i64, i64 *%ptr
-  %val9 = load volatile i64, i64 *%ptr
-  %val10 = load volatile i64, i64 *%ptr
-  %val11 = load volatile i64, i64 *%ptr
-  %val12 = load volatile i64, i64 *%ptr
-  %val13 = load volatile i64, i64 *%ptr
-  %val14 = load volatile i64, i64 *%ptr
-  %val15 = load volatile i64, i64 *%ptr
+  %val0 = load volatile i64, ptr %ptr
+  %val1 = load volatile i64, ptr %ptr
+  %val2 = load volatile i64, ptr %ptr
+  %val3 = load volatile i64, ptr %ptr
+  %val4 = load volatile i64, ptr %ptr
+  %val5 = load volatile i64, ptr %ptr
+  %val6 = load volatile i64, ptr %ptr
+  %val7 = load volatile i64, ptr %ptr
+  %val8 = load volatile i64, ptr %ptr
+  %val9 = load volatile i64, ptr %ptr
+  %val10 = load volatile i64, ptr %ptr
+  %val11 = load volatile i64, ptr %ptr
+  %val12 = load volatile i64, ptr %ptr
+  %val13 = load volatile i64, ptr %ptr
+  %val14 = load volatile i64, ptr %ptr
+  %val15 = load volatile i64, ptr %ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store
@@ -273,22 +273,22 @@ store:
   %new14 = phi i64 [ %val14, %entry ], [ %add14, %add ]
   %new15 = phi i64 [ %val15, %entry ], [ %add15, %add ]
 
-  store volatile i64 %new0, i64 *%ptr
-  store volatile i64 %new1, i64 *%ptr
-  store volatile i64 %new2, i64 *%ptr
-  store volatile i64 %new3, i64 *%ptr
-  store volatile i64 %new4, i64 *%ptr
-  store volatile i64 %new5, i64 *%ptr
-  store volatile i64 %new6, i64 *%ptr
-  store volatile i64 %new7, i64 *%ptr
-  store volatile i64 %new8, i64 *%ptr
-  store volatile i64 %new9, i64 *%ptr
-  store volatile i64 %new10, i64 *%ptr
-  store volatile i64 %new11, i64 *%ptr
-  store volatile i64 %new12, i64 *%ptr
-  store volatile i64 %new13, i64 *%ptr
-  store volatile i64 %new14, i64 *%ptr
-  store volatile i64 %new15, i64 *%ptr
+  store volatile i64 %new0, ptr %ptr
+  store volatile i64 %new1, ptr %ptr
+  store volatile i64 %new2, ptr %ptr
+  store volatile i64 %new3, ptr %ptr
+  store volatile i64 %new4, ptr %ptr
+  store volatile i64 %new5, ptr %ptr
+  store volatile i64 %new6, ptr %ptr
+  store volatile i64 %new7, ptr %ptr
+  store volatile i64 %new8, ptr %ptr
+  store volatile i64 %new9, ptr %ptr
+  store volatile i64 %new10, ptr %ptr
+  store volatile i64 %new11, ptr %ptr
+  store volatile i64 %new12, ptr %ptr
+  store volatile i64 %new13, ptr %ptr
+  store volatile i64 %new14, ptr %ptr
+  store volatile i64 %new15, ptr %ptr
 
   ret void
 }

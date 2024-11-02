@@ -1,14 +1,12 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple arm-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple aarch64-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple arm-none-linux-gnueabi -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple arm-none-linux-gnueabi -fnative-half-type %s \
+// RUN: %clang_cc1 -emit-llvm -o - -triple arm-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64-none-linux-gnueabi %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-linux-gnu %s | FileCheck %s --check-prefix=NOTNATIVE --check-prefix=CHECK
+// RUN: %clang_cc1 -emit-llvm -o - -triple arm-none-linux-gnueabi -fnative-half-type %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fnative-half-type %s \
+// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fnative-half-type %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -x renderscript %s \
+// RUN: %clang_cc1 -emit-llvm -o - -x renderscript %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
 typedef unsigned cond_t;
 typedef __fp16 float16_t;
@@ -536,10 +534,10 @@ void foo(void) {
   // NATIVE-HALF: fpext float [[MID]] to double
   d0 = (float)h0;
 
-  // NOTNATIVE: [[V1:%.*]] = load i16, i16* @s0
+  // NOTNATIVE: [[V1:%.*]] = load i16, ptr @s0
   // NOTNATIVE: [[CONV:%.*]] = sitofp i16 [[V1]] to float
   // NOTNATIVE: [[TRUNC:%.*]] = fptrunc float [[CONV]] to half
-  // NOTNATIVE: store volatile half [[TRUNC]], half* @h0
+  // NOTNATIVE: store volatile half [[TRUNC]], ptr @h0
   h0 = s0;
 }
 

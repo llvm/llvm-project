@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
 ; RUN: llc -mtriple=x86_64-scei-ps4 %s -o - | FileCheck --check-prefix=PS4 %s
+; RUN: llc -mtriple=x86_64-sie-ps5  %s -o - | FileCheck --check-prefix=PS4 %s
 
 define void @test_ubsantrap() {
 ; CHECK-LABEL: test_ubsantrap

@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i32)
+declare void @use_i8(i8)
 
 ; a & (a ^ b) --> a & ~b
 
@@ -106,16 +107,16 @@ define i32 @and_xor_not_common_op(i32 %a, i32 %b) {
 
 ; a & (a ^ ~b) --> a & b
 
-define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, i32* %dst) {
+define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, ptr %dst) {
 ; CHECK-LABEL: define {{[^@]+}}@and_xor_not_common_op_extrause
-; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32* [[DST:%.*]]) {
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[B]], -1
-; CHECK-NEXT:    store i32 [[B2]], i32* [[DST]], align 4
+; CHECK-NEXT:    store i32 [[B2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %b2 = xor i32 %b, -1
-  store i32 %b2, i32* %dst
+  store i32 %b2, ptr %dst
   %t2 = xor i32 %a, %b2
   %t4 = and i32 %t2, %a
   ret i32 %t4
@@ -3637,8 +3638,8 @@ define i32 @not_and_and_or_no_or_use5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NOT2]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[TMP1]], [[B]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
 ; CHECK-NEXT:    call void @use(i32 [[OR1]])
 ; CHECK-NEXT:    ret i32 [[OR2]]
@@ -3659,8 +3660,8 @@ define i32 @not_and_and_or_no_or_use6(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NOT2]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[TMP1]], [[B]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
 ; CHECK-NEXT:    call void @use(i32 [[NOT1]])
 ; CHECK-NEXT:    ret i32 [[OR2]]
@@ -3702,8 +3703,8 @@ define i32 @not_and_and_or_no_or_use8(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOT2]], [[B]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NOT2]], [[C]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[TMP1]], [[B]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND2]], [[NOT1]]
 ; CHECK-NEXT:    call void @use(i32 [[AND2]])
 ; CHECK-NEXT:    ret i32 [[OR2]]
@@ -3916,11 +3917,10 @@ define i32 @not_or_or_and_no_and_use5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@not_or_or_and_no_and_use5
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT2]], [[B]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[C]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[OR2]], [[NOT1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[NOT2]], [[C]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[TMP1]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = xor i32 [[AND1]], [[OR2]]
 ; CHECK-NEXT:    call void @use(i32 [[AND1]])
 ; CHECK-NEXT:    ret i32 [[AND2]]
 ;
@@ -3940,9 +3940,9 @@ define i32 @not_or_or_and_no_and_use6(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT2]], [[B]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[C]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[OR2]], [[NOT1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[NOT2]], [[C]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[TMP1]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = xor i32 [[AND1]], [[OR2]]
 ; CHECK-NEXT:    call void @use(i32 [[NOT1]])
 ; CHECK-NEXT:    ret i32 [[AND2]]
 ;
@@ -3981,11 +3981,10 @@ define i32 @not_or_or_and_no_and_use8(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@not_or_or_and_no_and_use8
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
 ; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOT2]], [[B]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[C]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[OR2]], [[NOT1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[NOT2]], [[C]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[TMP1]], [[B]]
+; CHECK-NEXT:    [[AND2:%.*]] = xor i32 [[AND1]], [[OR2]]
 ; CHECK-NEXT:    call void @use(i32 [[OR2]])
 ; CHECK-NEXT:    ret i32 [[AND2]]
 ;
@@ -4204,4 +4203,393 @@ define i32 @trunc_trunc_xor_uses(i65 %x, i65 %y) {
   call void @use(i32 %sy)
   %r = xor i32 %sx, %sy
   ret i32 %r
+}
+
+define i16 @and_zext_zext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_zext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i4 %y to i16
+  %r = and i16 %zx, %zy
+  ret i16 %r
+}
+
+define i16 @or_zext_zext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_zext_zext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %zy = zext i4 %y to i16
+  %r = or i16 %zy, %zx
+  ret i16 %r
+}
+
+define <2 x i16> @xor_zext_zext(<2 x i8> %x, <2 x i4> %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_zext_zext
+; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i4> [[Y]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i8> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %zx = zext <2 x i8> %x to <2 x i16>
+  %zy = zext <2 x i4> %y to <2 x i16>
+  %r = xor <2 x i16> %zx, %zy
+  ret <2 x i16> %r
+}
+
+define i16 @and_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = and i16 %sy, %sx
+  ret i16 %r
+}
+
+define i16 @or_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = or i16 %sx, %sy
+  ret i16 %r
+}
+
+define i16 @xor_sext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@xor_sext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = xor i16 %sx, %sy
+  ret i16 %r
+}
+
+; negative test - mismatched casts
+
+define i16 @and_zext_sext(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_sext
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[ZX]], [[SY]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %zx = zext i8 %x to i16
+  %sy = sext i4 %y to i16
+  %r = and i16 %zx, %sy
+  ret i16 %r
+}
+
+; negative test - don't create an extra instruction
+
+define i32 @and_zext_zext_use1(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@and_zext_zext_use1
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZX]])
+; CHECK-NEXT:    [[ZY:%.*]] = zext i4 [[Y]] to i32
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[ZX]], [[ZY]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  call void @use(i32 %zx)
+  %zy = zext i4 %y to i32
+  %r = and i32 %zx, %zy
+  ret i32 %r
+}
+
+; negative test - don't create an extra instruction
+
+define i32 @or_sext_sext_use1(i8 %x, i4 %y) {
+; CHECK-LABEL: define {{[^@]+}}@or_sext_sext_use1
+; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SY]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SX]], [[SY]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i8 %x to i32
+  %sy = sext i4 %y to i32
+  call void @use(i32 %sy)
+  %r = or i32 %sx, %sy
+  ret i32 %r
+}
+
+define i1 @PR56294(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@PR56294
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %t2 = icmp eq i8 %x, 2
+  %t3 = and i8 %x, 1
+  %t4 = zext i1 %t2 to i32
+  %t5 = zext i8 %t3 to i32
+  %t6 = and i32 %t4, %t5
+  %t7 = icmp ne i32 %t6, 0
+  ret i1 %t7
+}
+
+define i32 @canonicalize_logic_first_or0(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or0
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], 15
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], 112
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, 112 ; 01110000
+  %r = or i32 %a, 15   ; 00001111
+  ret i32 %r
+}
+
+define <2 x i32> @canonicalize_logic_first_or_vector0(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_vector0
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 15, i32 15>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], <i32 112, i32 112>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 112, i32 112>, %x ; <0x00000070, 0x00000070>
+  %r = or <2 x i32> <i32 15, i32 15>, %a    ; <0x0000000F, 0x0000000F>
+  ret <2 x i32> %r
+}
+
+; elementwise these constants should be ok to canonicalize logic op then math
+define <2 x i32> @canonicalize_logic_first_or_vector1(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_vector1
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 -8388608, i32 2071986176>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[A]], <i32 32783, i32 2063>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 -8388608, i32 2071986176>, %x ; <0xFF800000, 0x7B800000>
+  %r = or <2 x i32> <i32 32783, i32 2063>, %a           ; <0x0000800F, 0x0000080F>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @canonicalize_logic_first_or_vector2(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_vector2
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 2147483632, i32 2147483640>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[A]], <i32 32783, i32 2063>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 2147483632, i32 2147483640>, %x ; <0x7FFFFFF0, 0x7FFFFFF8>
+  %r = or <2 x i32> <i32 32783, i32 2063>, %a             ; <0x0000800F, 0x0000080F>
+  ret <2 x i32> %r
+}
+
+define i32 @canonicalize_logic_first_or_mult_use1(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_mult_use1
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], 112
+; CHECK-NEXT:    call void @use(i32 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[A]], 15
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, 112 ; 01110000
+  call void @use(i32 %a)
+  %r = or i32 %a, 15   ; 00001111
+  ret i32 %r
+}
+
+define i32 @canonicalize_logic_first_or_bad_constraints2(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_bad_constraints2
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], 112
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[A]], 16
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, 112 ; 01110000
+  %r = or i32 %a, 16   ; 00010000
+  ret i32 %r
+}
+
+define i8 @canonicalize_logic_first_and0(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and0
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -10
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 48
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = add i8 %x, 48    ;  00110000
+  %r = and i8 %b, -10   ;  11110110
+  ret i8 %r
+}
+
+define <2 x i8> @canonicalize_logic_first_and_vector0(<2 x i8> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector0
+; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], <i8 48, i8 48>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = add <2 x i8> <i8 48, i8 48>, %x
+  %r = and <2 x i8> <i8 -10, i8 -10>, %a
+  ret <2 x i8> %r
+}
+
+; element-wise the constants match constraints
+define <2 x i8> @canonicalize_logic_first_and_vector1(<2 x i8> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector1
+; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X]], <i8 48, i8 32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 -10, i8 -4>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = add <2 x i8> <i8 48, i8 32>, %x
+  %r = and <2 x i8> <i8 -10, i8 -4>, %a
+  ret <2 x i8> %r
+}
+
+; elementwise these constants do match constraints needed to canonicalize
+; logic op first then math op
+define <2 x i32> @canonicalize_logic_first_and_vector2(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector2
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 612368384, i32 612368384>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[A]], <i32 -65536, i32 -32768>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 612368384, i32 612368384>, %x ; <0x24800000, 0x24800000>
+  %r = and <2 x i32> <i32 -65536, i32 -32768>, %a       ; <0xFFFF0000, 0xFFFF8000>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @canonicalize_logic_first_and_vector3(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector3
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 32768, i32 16384>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[A]], <i32 -65536, i32 -32768>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 32768, i32 16384>, %x   ; <0x00008000, 0x00004000>
+  %r = and <2 x i32> <i32 -65536, i32 -32768>, %a ; <0xFFFF0000, 0xFFFF8000>
+  ret <2 x i32> %r
+}
+
+define i8 @canonicalize_logic_first_and_mult_use1(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_mult_use1
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X]], 48
+; CHECK-NEXT:    call void @use_i8(i8 [[B]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[B]], -10
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = add i8 %x, 48    ;  00110000
+  call void @use_i8(i8 %b)
+  %r = and i8 %b, -10   ;  11110110
+  ret i8 %r
+}
+
+define i8 @canonicalize_logic_first_and_bad_constraints2(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_bad_constraints2
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X]], 48
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[B]], -26
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = add i8 %x, 48    ;  00110000
+  %r = and i8 %b, -26   ;  11100110
+  ret i8 %r
+}
+
+define i8 @canonicalize_logic_first_xor_0(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_0
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 31
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 96
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, 96  ; 01100000
+  %r = xor i8 %a, 31  ; 00011111
+  ret i8 %r
+}
+
+define <2 x i32> @canonicalize_logic_first_xor_vector0(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_vector0
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], <i32 32783, i32 32783>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], <i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 -8388608, i32 -8388608>, %x ; <0xFF800000, 0xFF800000>
+  %r = xor <2 x i32> <i32 32783, i32 32783>, %a       ; <0x0000800F, 0x0000800F>
+  ret <2 x i32> %r
+}
+
+; elementwise these constants do obey constraints required to canonicalize
+define <2 x i32> @canonicalize_logic_first_xor_vector1(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_vector1
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 -8388608, i32 2071986176>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[A]], <i32 32783, i32 2063>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 -8388608, i32 2071986176>, %x ; <0xFF800000, 0x7B800000>
+  %r = xor <2 x i32> <i32 32783, i32 2063>, %a          ; <0x0000800F, 0x0000080F>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @canonicalize_logic_first_xor_vector2(<2 x i32> %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_vector2
+; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 2147483632, i32 2147483640>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[A]], <i32 32783, i32 2063>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = add <2 x i32> <i32 2147483632, i32 2147483640>, %x ; <0x7FFFFFF0, 0x7FFFFFF8>
+  %r = xor <2 x i32> <i32 32783, i32 2063>, %a            ; <0x0000800F, 0x0000080F>
+  ret <2 x i32> %r
+}
+
+define i8 @canonicalize_logic_first_xor_mult_use1(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_mult_use1
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], 96
+; CHECK-NEXT:    call void @use_i8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 31
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, 96  ; 01100000
+  call void @use_i8(i8 %a)
+  %r = xor i8 %a, 31  ; 00011111
+  ret i8 %r
+}
+
+define i8 @canonicalize_logic_first_xor_bad_constants2(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_bad_constants2
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], 96
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, 96  ; 01100000
+  %r = xor i8 %a, 32  ; 00100000
+  ret i8 %r
 }

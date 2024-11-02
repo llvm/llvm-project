@@ -808,6 +808,7 @@ of type names. This would let you rephrase the above example for arrays of type
 Simple [3] as:
 
 ::
+
    (lldb) type summary add --summary-string "${var[].x}" -x "Simple \[[0-9]+\]"
    (lldb) frame variable
    (Simple [3]) sarray = [1,4,7]
@@ -1107,6 +1108,39 @@ only need to see the ones named B, H and Q, you can define a filter:
       (char) H = 'H'
       (std::string) Q = "Hello world"
    }
+
+Callback-based type matching
+----------------------------
+
+Even though regular expression matching works well for the vast majority of data
+formatters (you normally know the name of the type you're writing a formatter
+for), there are some cases where it's useful to look at the type before deciding
+what formatter to apply.
+
+As an example scenario, imagine we have a code generator that produces some
+classes that inherit from a common ``GeneratedObject`` class, and we have a
+summary function and a synthetic child provider that work for all
+``GeneratedObject`` instances (they all follow the same pattern). However, there
+is no common pattern in the name of these classes, so we can't register the
+formatter neither by name nor by regular expression.
+
+In that case, you can write a recognizer function like this:
+
+::
+
+   def is_generated_object(sbtype, internal_dict):
+     for base in sbtype.get_bases_array():
+       if base.GetName() == "GeneratedObject"
+         return True
+     return False
+
+And pass this function to ``type summary add`` and ``type synthetic add`` using
+the flag ``--recognizer-function``.
+
+::
+
+   (lldb) type summary add --expand --python-function my_summary_function --recognizer-function is_generated_object
+   (lldb) type synthetic add --python-class my_child_provider --recognizer-function is_generated_object
 
 Objective-C Dynamic Type Discovery
 ----------------------------------

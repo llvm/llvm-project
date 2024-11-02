@@ -29,7 +29,7 @@ define i32 @and_freeze_undef(i32 %x) {
 }
 
 declare void @use_i32(i32)
-declare void @use_p32(i32*)
+declare void @use_p32(ptr)
 
 define i32 @and_freeze_undef_multipleuses(i32 %x) {
 ; CHECK-LABEL: @and_freeze_undef_multipleuses(
@@ -113,15 +113,15 @@ define i32 @early_freeze_test1(i32 %x, i32 %y) {
   ret i32 %v3.fr
 }
 
-define i1 @early_freeze_test2(i32* %ptr) {
+define i1 @early_freeze_test2(ptr %ptr) {
 ; CHECK-LABEL: @early_freeze_test2(
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
 ; CHECK-NEXT:    [[V2:%.*]] = and i32 [[V1_FR]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V2]], 0
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
-  %v1 = load i32, i32* %ptr
+  %v1 = load i32, ptr %ptr
   %v2 = and i32 %v1, 1
   %cond = icmp eq i32 %v2, 0
   %cond.fr = freeze i1 %cond
@@ -132,8 +132,7 @@ define i32 @early_freeze_test3(i32 %v1) {
 ; CHECK-LABEL: @early_freeze_test3(
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1:%.*]]
 ; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1_FR]], 1
-; CHECK-NEXT:    [[V3:%.*]] = add i32 [[V2]], 2
-; CHECK-NEXT:    [[V4:%.*]] = or i32 [[V3]], 1
+; CHECK-NEXT:    [[V4:%.*]] = add i32 [[V2]], 3
 ; CHECK-NEXT:    ret i32 [[V4]]
 ;
   %v2 = shl i32 %v1, 1
@@ -163,7 +162,7 @@ define void @freeze_dominated_uses_test2(i32 %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[V_FR:%.*]] = freeze i32 [[V:%.*]]
-; CHECK-NEXT:    call void @use_p32(i32* nonnull [[A]])
+; CHECK-NEXT:    call void @use_p32(ptr nonnull [[A]])
 ; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V_FR]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB0:%.*]], label [[BB1:%.*]]
@@ -179,7 +178,7 @@ define void @freeze_dominated_uses_test2(i32 %v) {
 ;
 entry:
   %a = alloca i32
-  call void @use_p32(i32* %a)
+  call void @use_p32(ptr %a)
   call void @use_i32(i32 %v)
   %cond = icmp eq i32 %v, 0
   br i1 %cond, label %bb0, label %bb1
@@ -230,6 +229,63 @@ bb1:
   br label %end
 
 end:
+  ret void
+}
+
+declare i32 @__CxxFrameHandler3(...)
+
+define void @freeze_dominated_uses_catchswitch(i1 %c, i32 %x) personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: @freeze_dominated_uses_catchswitch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    invoke void @use_i32(i32 0)
+; CHECK-NEXT:    to label [[CLEANUP:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    invoke void @use_i32(i32 1)
+; CHECK-NEXT:    to label [[CLEANUP]] unwind label [[CATCH_DISPATCH]]
+; CHECK:       catch.dispatch:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN]] ], [ [[X:%.*]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label [[CATCH:%.*]], label %catch2] unwind to caller
+; CHECK:       catch:
+; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
+; CHECK-NEXT:    [[PHI_FREEZE:%.*]] = freeze i32 [[PHI]]
+; CHECK-NEXT:    call void @use_i32(i32 [[PHI_FREEZE]]) [ "funclet"(token [[CP]]) ]
+; CHECK-NEXT:    unreachable
+; CHECK:       catch2:
+; CHECK-NEXT:    [[CP2:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
+; CHECK-NEXT:    call void @use_i32(i32 [[PHI]]) [ "funclet"(token [[CP2]]) ]
+; CHECK-NEXT:    unreachable
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  invoke void @use_i32(i32 0)
+  to label %cleanup unwind label %catch.dispatch
+
+if.else:
+  invoke void @use_i32(i32 1)
+  to label %cleanup unwind label %catch.dispatch
+
+catch.dispatch:
+  %phi = phi i32 [ 0, %if.then ], [ %x, %if.else ]
+  %cs = catchswitch within none [label %catch, label %catch2] unwind to caller
+
+catch:
+  %cp = catchpad within %cs [ptr null, i32 64, ptr null]
+  %phi.freeze = freeze i32 %phi
+  call void @use_i32(i32 %phi.freeze) [ "funclet"(token %cp) ]
+  unreachable
+
+catch2:
+  %cp2 = catchpad within %cs [ptr null, i32 64, ptr null]
+  call void @use_i32(i32 %phi) [ "funclet"(token %cp2) ]
+  unreachable
+
+cleanup:
   ret void
 }
 
@@ -324,7 +380,7 @@ join:
   ret i32 %phi
 }
 
-define i32 @freeze_invoke_use_in_phi(i1 %c) personality i8* undef {
+define i32 @freeze_invoke_use_in_phi(i1 %c) personality ptr undef {
 ; CHECK-LABEL: @freeze_invoke_use_in_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = invoke i32 @get_i32()
@@ -356,7 +412,7 @@ invoke.unwind:
   unreachable
 }
 
-define i32 @freeze_invoke_use_after_phi(i1 %c) personality i8* undef {
+define i32 @freeze_invoke_use_after_phi(i1 %c) personality ptr undef {
 ; CHECK-LABEL: @freeze_invoke_use_after_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = invoke i32 @get_i32()
@@ -587,15 +643,15 @@ define i32 @propagate_drop_lshr2(i32 %arg, i32 %unknown) {
   ret i32 %v1.fr
 }
 
-define i8* @propagate_drop_gep1(i8* %arg) {
+define ptr @propagate_drop_gep1(ptr %arg) {
 ; CHECK-LABEL: @propagate_drop_gep1(
-; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i8* [[ARG:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, i8* [[ARG_FR]], i64 16
-; CHECK-NEXT:    ret i8* [[V1]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze ptr [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[ARG_FR]], i64 16
+; CHECK-NEXT:    ret ptr [[V1]]
 ;
-  %v1 = getelementptr inbounds i8, i8* %arg, i64 16
-  %v1.fr = freeze i8* %v1
-  ret i8* %v1.fr
+  %v1 = getelementptr inbounds i8, ptr %arg, i64 16
+  %v1.fr = freeze ptr %v1
+  ret ptr %v1.fr
 }
 
 define float @propagate_drop_fneg(float %arg) {
@@ -716,10 +772,10 @@ exit:                                             ; preds = %loop
 define void @fold_phi_through(i32 %init, i32 %n) {
 ; CHECK-LABEL: @fold_phi_through(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PHI_FR:%.*]] = freeze i32 [[INIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[INIT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[PHI_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -740,14 +796,14 @@ exit:                                             ; preds = %loop
   ret void
 }
 
-define void @fold_phi_neg_flags(i32 %init, i32 %n) {
-; CHECK-LABEL: @fold_phi_neg_flags(
+define void @fold_phi_drop_flags(i32 %init, i32 %n) {
+; CHECK-LABEL: @fold_phi_drop_flags(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze i32 [[INIT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_FR]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -770,10 +826,10 @@ exit:                                             ; preds = %loop
 define void @fold_phi_non_add(i32 %init, i32 %n) {
 ; CHECK-LABEL: @fold_phi_non_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PHI_FR:%.*]] = freeze i32 [[INIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[INIT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[PHI_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = shl i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -794,15 +850,15 @@ exit:                                             ; preds = %loop
   ret void
 }
 
-define void @fold_phi_gep(i8* %init, i8* %end) {
+define void @fold_phi_gep(ptr %init, ptr %end) {
 ; CHECK-LABEL: @fold_phi_gep(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PHI_FR:%.*]] = freeze i8* [[INIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i8* [ [[PHI_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, i8* [[I]], i64 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8* [[I_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -811,45 +867,239 @@ entry:
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
-  %i = phi i8* [ %init, %entry ], [ %i.next, %loop ]
-  %i.fr = freeze i8* %i
-  %i.next = getelementptr i8, i8* %i.fr, i64 1
-  %cond = icmp eq i8* %i.next, %end
+  %i = phi ptr [ %init, %entry ], [ %i.next, %loop ]
+  %i.fr = freeze ptr %i
+  %i.next = getelementptr i8, ptr %i.fr, i64 1
+  %cond = icmp eq ptr %i.next, %end
   br i1 %cond, label %loop, label %exit
 
 exit:                                             ; preds = %loop
   ret void
 }
 
-define i8* @freeze_load_noundef(i8** %ptr) {
+define void @fold_phi_multiple_insts(i32 %init, i32 %n) {
+; CHECK-LABEL: @fold_phi_multiple_insts(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze i32 [[INIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_SQ:%.*]] = mul i32 [[I]], [[I]]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I_SQ]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %i = phi i32 [ %init, %entry ], [ %i.next, %loop ]
+  %i.fr = freeze i32 %i
+  %i.sq = mul nsw nuw i32 %i.fr, %i.fr
+  %i.next = add nsw nuw i32 %i.sq, 1
+  %cond = icmp eq i32 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+define void @fold_phi_multiple_back_edges(i32 %init, i32 %n) {
+; CHECK-LABEL: @fold_phi_multiple_back_edges(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze i32 [[INIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ], [ [[I_NEXT2:%.*]], [[LOOP_LATCH2:%.*]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[LOOP_LATCH2]]
+; CHECK:       loop.latch2:
+; CHECK-NEXT:    [[I_NEXT2]] = add i32 [[I]], 2
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %i = phi i32 [ %init, %entry ], [ %i.next, %loop ], [ %i.next2, %loop.latch2 ]
+  %i.fr = freeze i32 %i
+  %i.next = add nsw nuw i32 %i.fr, 1
+  %cond = icmp eq i32 %i.next, %n
+  br i1 %cond, label %loop, label %loop.latch2
+
+loop.latch2:
+  %i.next2 = add nsw nuw i32 %i.fr, 2
+  %cond2 = icmp eq i32 %i.next, %n
+  br i1 %cond2, label %loop, label %exit
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+define void @fold_phi_multiple_start_values(i1 %c, i32 %init, i32 %init2, i32 %n) {
+; CHECK-LABEL: @fold_phi_multiple_start_values(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[LOOP:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[INIT2:%.*]], [[IF]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_FR]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if, label %loop
+
+if:
+  br label %loop
+
+loop:
+  %i = phi i32 [ %init, %entry ], [ %init2, %if ], [ %i.next, %loop ]
+  %i.fr = freeze i32 %i
+  %i.next = add nsw nuw i32 %i.fr, 1
+  %cond = icmp eq i32 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @fold_phi_invoke_start_value(i32 %n) personality ptr undef {
+; CHECK-LABEL: @fold_phi_invoke_start_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT:%.*]] = invoke i32 @get_i32()
+; CHECK-NEXT:    to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_FR]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       unwind:
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %init = invoke i32 @get_i32()
+  to label %loop unwind label %unwind
+
+loop:
+  %i = phi i32 [ %init, %entry ], [ %i.next, %loop ]
+  %i.fr = freeze i32 %i
+  %i.next = add nsw nuw i32 %i.fr, 1
+  %cond = icmp eq i32 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+unwind:
+  landingpad i8 cleanup
+  unreachable
+
+exit:
+  ret void
+}
+
+define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr undef {
+; CHECK-LABEL: @fold_phi_invoke_noundef_start_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT:%.*]] = invoke noundef i32 @get_i32()
+; CHECK-NEXT:    to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       unwind:
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %init = invoke noundef i32 @get_i32()
+  to label %loop unwind label %unwind
+
+loop:
+  %i = phi i32 [ %init, %entry ], [ %i.next, %loop ]
+  %i.fr = freeze i32 %i
+  %i.next = add nsw nuw i32 %i.fr, 1
+  %cond = icmp eq i32 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+unwind:
+  landingpad i8 cleanup
+  unreachable
+
+exit:
+  ret void
+}
+
+define ptr @freeze_load_noundef(ptr %ptr) {
 ; CHECK-LABEL: @freeze_load_noundef(
-; CHECK-NEXT:    [[P:%.*]] = load i8*, i8** [[PTR:%.*]], align 8, !noundef !0
-; CHECK-NEXT:    ret i8* [[P]]
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !noundef !0
+; CHECK-NEXT:    ret ptr [[P]]
 ;
-  %p = load i8*, i8** %ptr, !noundef !0
-  %p.fr = freeze i8* %p
-  ret i8* %p.fr
+  %p = load ptr, ptr %ptr, !noundef !0
+  %p.fr = freeze ptr %p
+  ret ptr %p.fr
 }
 
-define i8* @freeze_load_dereferenceable(i8** %ptr) {
+define ptr @freeze_load_dereferenceable(ptr %ptr) {
 ; CHECK-LABEL: @freeze_load_dereferenceable(
-; CHECK-NEXT:    [[P:%.*]] = load i8*, i8** [[PTR:%.*]], align 8, !dereferenceable !1
-; CHECK-NEXT:    ret i8* [[P]]
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable !1
+; CHECK-NEXT:    ret ptr [[P]]
 ;
-  %p = load i8*, i8** %ptr, !dereferenceable !1
-  %p.fr = freeze i8* %p
-  ret i8* %p.fr
+  %p = load ptr, ptr %ptr, !dereferenceable !1
+  %p.fr = freeze ptr %p
+  ret ptr %p.fr
 }
 
-define i8* @freeze_load_dereferenceable_or_null(i8** %ptr) {
+define ptr @freeze_load_dereferenceable_or_null(ptr %ptr) {
 ; CHECK-LABEL: @freeze_load_dereferenceable_or_null(
-; CHECK-NEXT:    [[P:%.*]] = load i8*, i8** [[PTR:%.*]], align 8, !dereferenceable_or_null !1
-; CHECK-NEXT:    ret i8* [[P]]
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable_or_null !1
+; CHECK-NEXT:    ret ptr [[P]]
 ;
-  %p = load i8*, i8** %ptr, !dereferenceable_or_null !1
-  %p.fr = freeze i8* %p
-  ret i8* %p.fr
+  %p = load ptr, ptr %ptr, !dereferenceable_or_null !1
+  %p.fr = freeze ptr %p
+  ret ptr %p.fr
+}
+
+define i32 @freeze_load_with_range(ptr %ptr) {
+; CHECK-LABEL: @freeze_load_with_range(
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X_FR]]
+;
+  %x = load i32, ptr %ptr, !range !2
+  %x.fr = freeze i32 %x
+  ret i32 %x.fr
+}
+
+declare i32 @foo.i32()
+
+define i32 @freeze_call_with_range() {
+; CHECK-LABEL: @freeze_call_with_range(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @foo.i32(), !range [[RNG2]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X_FR]]
+;
+  %x = call i32 @foo.i32(), !range !2
+  %x.fr = freeze i32 %x
+  ret i32 %x.fr
 }
 
 !0 = !{}
 !1 = !{i64 4}
+!2 = !{i32 0, i32 100}

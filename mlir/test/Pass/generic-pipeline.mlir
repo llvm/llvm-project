@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -verify-diagnostics -pass-pipeline='any(cse, test-interface-pass)' -allow-unregistered-dialect -o /dev/null
+// RUN: mlir-opt %s -verify-diagnostics -pass-pipeline='builtin.module(any(cse, test-interface-pass))' -allow-unregistered-dialect -o /dev/null
 
 // Test that we execute generic pipelines correctly. The `cse` pass is fully generic and should execute
 // on both the module and the func. The `test-interface-pass` filters based on FunctionOpInterface and

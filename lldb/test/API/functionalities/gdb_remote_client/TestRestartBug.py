@@ -1,4 +1,3 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -7,8 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestRestartBug(GDBRemoteTestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(bugnumber="llvm.org/pr24530")
     def test(self):
@@ -62,4 +59,4 @@ class TestRestartBug(GDBRemoteTestBase):
         # auto-continue after setting the breakpoint.
         self.assertEqual(self.server.responder.continueCount, 1)
         # And the process should end up in the stopped state.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)

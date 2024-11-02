@@ -152,33 +152,38 @@ using namespace llvm;
 static cl::opt<bool> DisableDeallocRet("disable-hexagon-dealloc-ret",
     cl::Hidden, cl::desc("Disable Dealloc Return for Hexagon target"));
 
-static cl::opt<unsigned> NumberScavengerSlots("number-scavenger-slots",
-    cl::Hidden, cl::desc("Set the number of scavenger slots"), cl::init(2),
-    cl::ZeroOrMore);
+static cl::opt<unsigned>
+    NumberScavengerSlots("number-scavenger-slots", cl::Hidden,
+                         cl::desc("Set the number of scavenger slots"),
+                         cl::init(2));
 
-static cl::opt<int> SpillFuncThreshold("spill-func-threshold",
-    cl::Hidden, cl::desc("Specify O2(not Os) spill func threshold"),
-    cl::init(6), cl::ZeroOrMore);
+static cl::opt<int>
+    SpillFuncThreshold("spill-func-threshold", cl::Hidden,
+                       cl::desc("Specify O2(not Os) spill func threshold"),
+                       cl::init(6));
 
-static cl::opt<int> SpillFuncThresholdOs("spill-func-threshold-Os",
-    cl::Hidden, cl::desc("Specify Os spill func threshold"),
-    cl::init(1), cl::ZeroOrMore);
+static cl::opt<int>
+    SpillFuncThresholdOs("spill-func-threshold-Os", cl::Hidden,
+                         cl::desc("Specify Os spill func threshold"),
+                         cl::init(1));
 
-static cl::opt<bool> EnableStackOVFSanitizer("enable-stackovf-sanitizer",
-    cl::Hidden, cl::desc("Enable runtime checks for stack overflow."),
-    cl::init(false), cl::ZeroOrMore);
+static cl::opt<bool> EnableStackOVFSanitizer(
+    "enable-stackovf-sanitizer", cl::Hidden,
+    cl::desc("Enable runtime checks for stack overflow."), cl::init(false));
 
-static cl::opt<bool> EnableShrinkWrapping("hexagon-shrink-frame",
-    cl::init(true), cl::Hidden, cl::ZeroOrMore,
-    cl::desc("Enable stack frame shrink wrapping"));
+static cl::opt<bool>
+    EnableShrinkWrapping("hexagon-shrink-frame", cl::init(true), cl::Hidden,
+                         cl::desc("Enable stack frame shrink wrapping"));
 
-static cl::opt<unsigned> ShrinkLimit("shrink-frame-limit",
-    cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden, cl::ZeroOrMore,
-    cl::desc("Max count of stack frame shrink-wraps"));
+static cl::opt<unsigned>
+    ShrinkLimit("shrink-frame-limit",
+                cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden,
+                cl::desc("Max count of stack frame shrink-wraps"));
 
-static cl::opt<bool> EnableSaveRestoreLong("enable-save-restore-long",
-    cl::Hidden, cl::desc("Enable long calls for save-restore stubs."),
-    cl::init(false), cl::ZeroOrMore);
+static cl::opt<bool>
+    EnableSaveRestoreLong("enable-save-restore-long", cl::Hidden,
+                          cl::desc("Enable long calls for save-restore stubs."),
+                          cl::init(false));
 
 static cl::opt<bool> EliminateFramePointer("hexagon-fp-elim", cl::init(true),
     cl::Hidden, cl::desc("Refrain from using FP whenever possible"));
@@ -615,7 +620,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
       if (MI.getOpcode() == Hexagon::PS_alloca)
         AdjustRegs.push_back(&MI);
 
-  for (auto MI : AdjustRegs) {
+  for (auto *MI : AdjustRegs) {
     assert((MI->getOpcode() == Hexagon::PS_alloca) && "Expected alloca");
     expandAlloca(MI, HII, SP, MaxCF);
     MI->eraseFromParent();
@@ -1018,8 +1023,8 @@ findCFILocation(MachineBasicBlock &B) {
 void HexagonFrameLowering::insertCFIInstructions(MachineFunction &MF) const {
   for (auto &B : MF) {
     auto At = findCFILocation(B);
-    if (At.hasValue())
-      insertCFIInstructionsAt(B, At.getValue());
+    if (At)
+      insertCFIInstructionsAt(B, At.value());
   }
 }
 
@@ -2151,7 +2156,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
     for (unsigned VR : NewRegs)
       SpillRCs.insert(MRI.getRegClass(VR));
 
-    for (auto *RC : SpillRCs) {
+    for (const auto *RC : SpillRCs) {
       if (!needToReserveScavengingSpillSlots(MF, HRI, RC))
         continue;
       unsigned Num = 1;
@@ -2710,12 +2715,12 @@ bool HexagonFrameLowering::mayOverflowFrameOffset(MachineFunction &MF) const {
         case Hexagon::S4_storeirif_io:
         case Hexagon::S4_storeiri_io:
           ++LS;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case Hexagon::S4_storeirht_io:
         case Hexagon::S4_storeirhf_io:
         case Hexagon::S4_storeirh_io:
           ++LS;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case Hexagon::S4_storeirbt_io:
         case Hexagon::S4_storeirbf_io:
         case Hexagon::S4_storeirb_io:

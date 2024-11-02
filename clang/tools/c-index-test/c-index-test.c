@@ -900,6 +900,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (mutable)");
     if (clang_CXXMethod_isDefaulted(Cursor))
       printf(" (defaulted)");
+    if (clang_CXXMethod_isDeleted(Cursor))
+      printf(" (deleted)");
     if (clang_CXXMethod_isStatic(Cursor))
       printf(" (static)");
     if (clang_CXXMethod_isVirtual(Cursor))
@@ -908,6 +910,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (const)");
     if (clang_CXXMethod_isPureVirtual(Cursor))
       printf(" (pure)");
+    if (clang_CXXMethod_isCopyAssignmentOperator(Cursor))
+      printf(" (copy-assignment operator)");
     if (clang_CXXRecord_isAbstract(Cursor))
       printf(" (abstract)");
     if (clang_EnumDecl_isScoped(Cursor))
@@ -1000,7 +1004,10 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
              clang_getCString(Name), line, column);
       clang_disposeString(Name);
 
-      if (Cursor.kind == CXCursor_FunctionDecl) {
+      if (Cursor.kind == CXCursor_FunctionDecl
+          || Cursor.kind == CXCursor_StructDecl
+          || Cursor.kind == CXCursor_ClassDecl
+          || Cursor.kind == CXCursor_ClassTemplatePartialSpecialization) {
         /* Collect the template parameter kinds from the base template. */
         int NumTemplateArgs = clang_Cursor_getNumTemplateArguments(Cursor);
         int I;
@@ -2505,7 +2512,10 @@ static void print_completion_result(CXTranslationUnit translation_unit,
                                     unsigned index,
                                     FILE *file) {
   CXCompletionResult *completion_result = completion_results->Results + index;
-  CXString ks = clang_getCursorKindSpelling(completion_result->CursorKind);
+  CXString ks =
+      completion_result->CursorKind == CXCursor_NotImplemented
+          ? clang_getCompletionResultKindSpelling(completion_result->ResultKind)
+          : clang_getCursorKindSpelling(completion_result->CursorKind);
   unsigned annotationCount;
   enum CXCursorKind ParentKind;
   CXString ParentName;

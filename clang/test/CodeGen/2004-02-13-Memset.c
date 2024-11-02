@@ -5,7 +5,7 @@ void *memset(void*, int, size_t);
 void bzero(void*, size_t);
 
 void test(int* X, char *Y) {
-  // CHECK: call i8* llvm.memset
+  // CHECK: call ptr llvm.memset
   memset(X, 4, 1000);
   // CHECK: call void bzero
   bzero(Y, 100);

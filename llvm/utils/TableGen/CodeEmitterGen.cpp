@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
@@ -49,9 +50,8 @@ private:
   std::string getInstructionCase(Record *R, CodeGenTarget &Target);
   std::string getInstructionCaseForEncoding(Record *R, Record *EncodingDef,
                                             CodeGenTarget &Target);
-  void AddCodeToMergeInOperand(Record *R, BitsInit *BI,
-                               const std::string &VarName,
-                               unsigned &NumberedOp,
+  bool addCodeToMergeInOperand(Record *R, BitsInit *BI,
+                               const std::string &VarName, unsigned &NumberedOp,
                                std::set<unsigned> &NamedOpIndices,
                                std::string &Case, CodeGenTarget &Target);
 
@@ -78,11 +78,13 @@ int CodeEmitterGen::getVariableBit(const std::string &VarName,
   return -1;
 }
 
-void CodeEmitterGen::
-AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
-                        unsigned &NumberedOp,
-                        std::set<unsigned> &NamedOpIndices,
-                        std::string &Case, CodeGenTarget &Target) {
+// Returns true if it succeeds, false if an error.
+bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
+                                             const std::string &VarName,
+                                             unsigned &NumberedOp,
+                                             std::set<unsigned> &NamedOpIndices,
+                                             std::string &Case,
+                                             CodeGenTarget &Target) {
   CodeGenInstruction &CGI = Target.getInstruction(R);
 
   // Determine if VarName actually contributes to the Inst encoding.
@@ -98,18 +100,29 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
   
   // If we found no bits, ignore this value, otherwise emit the call to get the
   // operand encoding.
-  if (bit < 0) return;
-  
+  if (bit < 0)
+    return true;
+
   // If the operand matches by name, reference according to that
   // operand number. Non-matching operands are assumed to be in
   // order.
   unsigned OpIdx;
-  if (CGI.Operands.hasOperandNamed(VarName, OpIdx)) {
+  std::pair<unsigned, unsigned> SubOp;
+  if (CGI.Operands.hasSubOperandAlias(VarName, SubOp)) {
+    OpIdx = CGI.Operands[SubOp.first].MIOperandNo + SubOp.second;
+  } else if (CGI.Operands.hasOperandNamed(VarName, OpIdx)) {
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[OpIdx].MIOperandNo;
     assert(!CGI.Operands.isFlatOperandNotEmitted(OpIdx) &&
            "Explicitly used operand also marked as not emitted!");
   } else {
+    // Fall back to positional lookup. By default, we now disable positional
+    // lookup (and print an error, below), but even so, we'll do the lookup to
+    // help print a helpful diagnostic message.
+    //
+    // TODO: When we remove useDeprecatedPositionallyEncodedOperands, delete all
+    // this code, just leaving a "no operand named X in record Y" error.
+
     unsigned NumberOps = CGI.Operands.size();
     /// If this operand is not supposed to be emitted by the
     /// generated emitter, skip it.
@@ -118,21 +131,39 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
               (!NamedOpIndices.empty() && NamedOpIndices.count(
                 CGI.Operands.getSubOperandNumber(NumberedOp).first)))) {
       ++NumberedOp;
+    }
 
-      if (NumberedOp >= CGI.Operands.back().MIOperandNo +
-                        CGI.Operands.back().MINumOperands) {
-        errs() << "Too few operands in record " << R->getName() <<
-                  " (no match for variable " << VarName << "):\n";
-        errs() << *R;
-        errs() << '\n';
-
-        return;
+    if (NumberedOp >=
+        CGI.Operands.back().MIOperandNo + CGI.Operands.back().MINumOperands) {
+      if (!Target.getInstructionSet()->getValueAsBit(
+              "useDeprecatedPositionallyEncodedOperands")) {
+        PrintError(R, Twine("No operand named ") + VarName + " in record " +
+                          R->getName() +
+                          " (would've given 'too few operands' error with "
+                          "useDeprecatedPositionallyEncodedOperands=true)");
+      } else {
+        PrintError(R, "Too few operands in record " + R->getName() +
+                          " (no match for variable " + VarName + ")");
       }
+      return false;
     }
 
     OpIdx = NumberedOp++;
+
+    if (!Target.getInstructionSet()->getValueAsBit(
+            "useDeprecatedPositionallyEncodedOperands")) {
+      std::pair<unsigned, unsigned> SO =
+          CGI.Operands.getSubOperandNumber(OpIdx);
+      std::string OpName = CGI.Operands[SO.first].Name;
+      PrintError(R, Twine("No operand named ") + VarName + " in record " +
+                        R->getName() + " (would've used positional operand #" +
+                        Twine(SO.first) + " ('" + OpName + "') sub-op #" +
+                        Twine(SO.second) +
+                        " with useDeprecatedPositionallyEncodedOperands=true)");
+      return false;
+    }
   }
-  
+
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
   std::string &EncoderMethodName = CGI.Operands[SO.first].EncoderMethodName;
 
@@ -262,6 +293,7 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
       }
     }
   }
+  return true;
 }
 
 std::string CodeEmitterGen::getInstructionCase(Record *R,
@@ -309,14 +341,25 @@ std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *Enc
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
+  bool Success = true;
   for (const RecordVal &RV : EncodingDef->getValues()) {
     // Ignore fixed fields in the record, we're looking for values like:
     //    bits<5> RST = { ?, ?, ?, ?, ? };
     if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
-    AddCodeToMergeInOperand(R, BI, std::string(RV.getName()), NumberedOp,
-                            NamedOpIndices, Case, Target);
+    Success &=
+        addCodeToMergeInOperand(R, BI, std::string(RV.getName()), NumberedOp,
+                                NamedOpIndices, Case, Target);
+  }
+
+  if (!Success) {
+    // Dump the record, so we can see what's going on...
+    std::string E;
+    raw_string_ostream S(E);
+    S << "Dumping record for previous error:\n";
+    S << *R;
+    PrintNote(E);
   }
 
   StringRef PostEmitter = R->getValueAsString("PostEncoderMethod");
@@ -329,14 +372,6 @@ std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *Enc
   }
   
   return Case;
-}
-
-static std::string
-getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
-  std::string Name = "CEFBS";
-  for (const auto &Feature : FeatureBitset)
-    Name += ("_" + Feature->getName()).str();
-  return Name;
 }
 
 static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
@@ -377,8 +412,8 @@ void CodeEmitterGen::emitInstructionBaseValues(
     // Start by filling in fixed values.
     APInt Value(BitWidth, 0);
     for (unsigned i = 0, e = BI->getNumBits(); i != e; ++i) {
-      if (BitInit *B = dyn_cast<BitInit>(BI->getBit(e - i - 1)))
-        Value |= APInt(BitWidth, (uint64_t)B->getValue()) << (e - i - 1);
+      if (auto *B = dyn_cast<BitInit>(BI->getBit(i)); B && B->getValue())
+        Value.setBit(i);
     }
     o << "    ";
     emitInstBits(o, Value);
@@ -482,14 +517,12 @@ void CodeEmitterGen::run(raw_ostream &o) {
     // Emit initial function code
     if (UseAPInt) {
       int NumWords = APInt::getNumWords(BitWidth);
-      int NumBytes = (BitWidth + 7) / 8;
       o << "  const unsigned opcode = MI.getOpcode();\n"
-        << "  if (Inst.getBitWidth() != " << BitWidth << ")\n"
-        << "    Inst = Inst.zext(" << BitWidth << ");\n"
         << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
         << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-        << "  LoadIntFromMemory(Inst, (const uint8_t *)&InstBits[opcode * "
-        << NumWords << "], " << NumBytes << ");\n"
+        << "  Inst = APInt(" << BitWidth
+        << ", makeArrayRef(InstBits + opcode * " << NumWords << ", " << NumWords
+        << "));\n"
         << "  APInt &Value = Inst;\n"
         << "  APInt &op = Scratch;\n"
         << "  switch (opcode) {\n";
@@ -531,131 +564,6 @@ void CodeEmitterGen::run(raw_ostream &o) {
       o << "  return Value;\n";
     o << "}\n\n";
   }
-
-  const auto &All = SubtargetFeatureInfo::getAll(Records);
-  std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
-  SubtargetFeatures.insert(All.begin(), All.end());
-
-  o << "#ifdef ENABLE_INSTR_PREDICATE_VERIFIER\n"
-    << "#undef ENABLE_INSTR_PREDICATE_VERIFIER\n"
-    << "#include <sstream>\n\n";
-
-  // Emit the subtarget feature enumeration.
-  SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
-                                                           o);
-
-  // Emit the name table for error messages.
-  o << "#ifndef NDEBUG\n";
-  SubtargetFeatureInfo::emitNameTable(SubtargetFeatures, o);
-  o << "#endif // NDEBUG\n";
-
-  // Emit the available features compute function.
-  SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
-      Target.getName(), "MCCodeEmitter", "computeAvailableFeatures",
-      SubtargetFeatures, o);
-
-  std::vector<std::vector<Record *>> FeatureBitsets;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    FeatureBitsets.emplace_back();
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
-      const auto &I = SubtargetFeatures.find(Predicate);
-      if (I != SubtargetFeatures.end())
-        FeatureBitsets.back().push_back(I->second.TheDef);
-    }
-  }
-
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
-    if (A.size() < B.size())
-      return true;
-    if (A.size() > B.size())
-      return false;
-    for (auto Pair : zip(A, B)) {
-      if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
-        return true;
-      if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
-        return false;
-    }
-    return false;
-  });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
-  o << "#ifndef NDEBUG\n"
-    << "// Feature bitsets.\n"
-    << "enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
-    << "  CEFBS_None,\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    o << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
-  }
-  o << "};\n\n"
-    << "static constexpr FeatureBitset FeatureBitsets[] = {\n"
-    << "  {}, // CEFBS_None\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    o << "  {";
-    for (const auto &Feature : FeatureBitset) {
-      const auto &I = SubtargetFeatures.find(Feature);
-      assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
-      o << I->second.getEnumBitName() << ", ";
-    }
-    o << "},\n";
-  }
-  o << "};\n"
-    << "#endif // NDEBUG\n\n";
-
-
-  // Emit the predicate verifier.
-  o << "void " << Target.getName()
-    << "MCCodeEmitter::verifyInstructionPredicates(\n"
-    << "    const MCInst &Inst, const FeatureBitset &AvailableFeatures) const {\n"
-    << "#ifndef NDEBUG\n"
-    << "  static " << getMinimalTypeForRange(FeatureBitsets.size())
-    << " RequiredFeaturesRefs[] = {\n";
-  unsigned InstIdx = 0;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    o << "    CEFBS";
-    unsigned NumPredicates = 0;
-    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
-      const auto &I = SubtargetFeatures.find(Predicate);
-      if (I != SubtargetFeatures.end()) {
-        o << '_' << I->second.TheDef->getName();
-        NumPredicates++;
-      }
-    }
-    if (!NumPredicates)
-      o << "_None";
-    o << ", // " << Inst->TheDef->getName() << " = " << InstIdx << "\n";
-    InstIdx++;
-  }
-  o << "  };\n\n";
-  o << "  assert(Inst.getOpcode() < " << InstIdx << ");\n";
-  o << "  const FeatureBitset &RequiredFeatures = "
-       "FeatureBitsets[RequiredFeaturesRefs[Inst.getOpcode()]];\n";
-  o << "  FeatureBitset MissingFeatures =\n"
-    << "      (AvailableFeatures & RequiredFeatures) ^\n"
-    << "      RequiredFeatures;\n"
-    << "  if (MissingFeatures.any()) {\n"
-    << "    std::ostringstream Msg;\n"
-    << "    Msg << \"Attempting to emit \" << "
-       "MCII.getName(Inst.getOpcode()).str()\n"
-    << "        << \" instruction but the \";\n"
-    << "    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i)\n"
-    << "      if (MissingFeatures.test(i))\n"
-    << "        Msg << SubtargetFeatureNames[i] << \" \";\n"
-    << "    Msg << \"predicate(s) are not met\";\n"
-    << "    report_fatal_error(Msg.str().c_str());\n"
-    << "  }\n"
-    << "#else\n"
-    << "  // Silence unused variable warning on targets that don't use MCII for "
-       "other purposes (e.g. BPF).\n"
-    << "  (void)MCII;\n"
-    << "#endif // NDEBUG\n";
-  o << "}\n";
-  o << "#endif\n";
 }
 
 } // end anonymous namespace

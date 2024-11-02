@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=tahiti -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -start-before=amdgpu-unify-divergent-exit-nodes -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=tahiti -start-before=amdgpu-unify-divergent-exit-nodes -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; --------------------------------------------------------------------------------
 ; rcp_legacy tests

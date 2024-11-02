@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Test the implicitly-generated copy and move constructors since `lazy_split_view` has non-trivial members.
 
@@ -16,12 +15,7 @@
 #include <cassert>
 #include <string_view>
 #include <utility>
-#include "small_string.h"
 #include "types.h"
-
-constexpr bool operator==(const InputView& lhs, const InputView& rhs) {
-  return SmallString(lhs) == SmallString(rhs);
-}
 
 constexpr bool test() {
   // Can copy `lazy_split_view`.

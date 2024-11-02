@@ -17,6 +17,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/StandaloneExecution.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -29,17 +30,19 @@ namespace doc {
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
 
-struct Info;
-struct FunctionInfo;
-struct EnumInfo;
 struct BaseRecordInfo;
+struct EnumInfo;
+struct FunctionInfo;
+struct Info;
+struct TypedefInfo;
 
 enum class InfoType {
   IT_default,
   IT_namespace,
   IT_record,
   IT_function,
-  IT_enum
+  IT_enum,
+  IT_typedef
 };
 
 // A representation of a parsed comment.
@@ -113,19 +116,9 @@ struct CommentInfo {
 };
 
 struct Reference {
-  Reference() = default;
-  Reference(llvm::StringRef Name) : Name(Name) {}
-  // An empty path means the info is in the global namespace because the path is
-  // a composite of the parent namespaces.
-  Reference(llvm::StringRef Name, StringRef Path)
-      : Name(Name), Path(Path), IsInGlobalNamespace(Path.empty()) {}
-  Reference(SymbolID USR, StringRef Name, InfoType IT)
-      : USR(USR), Name(Name), RefType(IT) {}
-  // An empty path means the info is in the global namespace because the path is
-  // a composite of the parent namespaces.
-  Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
-      : USR(USR), Name(Name), RefType(IT), Path(Path),
-        IsInGlobalNamespace(Path.empty()) {}
+  Reference(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
+            InfoType IT = InfoType::IT_default, StringRef Path = StringRef())
+      : USR(USR), Name(Name), RefType(IT), Path(Path) {}
 
   bool operator==(const Reference &Other) const {
     return std::tie(USR, Name, RefType) ==
@@ -149,20 +142,33 @@ struct Reference {
   // Path of directory where the clang-doc generated file will be saved
   // (possibly unresolved)
   llvm::SmallString<128> Path;
-  // Indicates if the info's parent is the global namespace, or if the info is
-  // the global namespace
-  bool IsInGlobalNamespace = false;
+};
+
+// Holds the children of a record or namespace.
+struct ScopeChildren {
+  // Namespaces and Records are references because they will be properly
+  // documented in their own info, while the entirety of Functions and Enums are
+  // included here because they should not have separate documentation from
+  // their scope.
+  //
+  // Namespaces are not syntactically valid as children of records, but making
+  // this general for all possible container types reduces code complexity.
+  std::vector<Reference> Namespaces;
+  std::vector<Reference> Records;
+  std::vector<FunctionInfo> Functions;
+  std::vector<EnumInfo> Enums;
+  std::vector<TypedefInfo> Typedefs;
 };
 
 // A base struct for TypeInfos
 struct TypeInfo {
   TypeInfo() = default;
-  TypeInfo(SymbolID Type, StringRef Field, InfoType IT)
-      : Type(Type, Field, IT) {}
-  TypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path)
-      : Type(Type, Field, IT, Path) {}
-  TypeInfo(llvm::StringRef RefName) : Type(RefName) {}
-  TypeInfo(llvm::StringRef RefName, StringRef Path) : Type(RefName, Path) {}
+  TypeInfo(const Reference &R) : Type(R) {}
+
+  // Convenience constructor for when there is no symbol ID or info type
+  // (normally used for built-in types in tests).
+  TypeInfo(StringRef Name, StringRef Path = StringRef())
+      : Type(SymbolID(), Name, InfoType::IT_default, Path) {}
 
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
 
@@ -172,37 +178,31 @@ struct TypeInfo {
 // Info for field types.
 struct FieldTypeInfo : public TypeInfo {
   FieldTypeInfo() = default;
-  FieldTypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path,
-                llvm::StringRef Name)
-      : TypeInfo(Type, Field, IT, Path), Name(Name) {}
-  FieldTypeInfo(llvm::StringRef RefName, llvm::StringRef Name)
-      : TypeInfo(RefName), Name(Name) {}
-  FieldTypeInfo(llvm::StringRef RefName, StringRef Path, llvm::StringRef Name)
-      : TypeInfo(RefName, Path), Name(Name) {}
+  FieldTypeInfo(const TypeInfo &TI, StringRef Name = StringRef(),
+                StringRef DefaultValue = StringRef())
+      : TypeInfo(TI), Name(Name), DefaultValue(DefaultValue) {}
 
   bool operator==(const FieldTypeInfo &Other) const {
-    return std::tie(Type, Name) == std::tie(Other.Type, Other.Name);
+    return std::tie(Type, Name, DefaultValue) ==
+           std::tie(Other.Type, Other.Name, Other.DefaultValue);
   }
 
   SmallString<16> Name; // Name associated with this info.
+
+  // When used for function parameters, contains the string representing the
+  // expression of the default value, if any.
+  SmallString<16> DefaultValue;
 };
 
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path,
-                 llvm::StringRef Name, AccessSpecifier Access)
-      : FieldTypeInfo(Type, Field, IT, Path, Name), Access(Access) {}
-  MemberTypeInfo(llvm::StringRef RefName, llvm::StringRef Name,
-                 AccessSpecifier Access)
-      : FieldTypeInfo(RefName, Name), Access(Access) {}
-  MemberTypeInfo(llvm::StringRef RefName, StringRef Path, llvm::StringRef Name,
-                 AccessSpecifier Access)
-      : FieldTypeInfo(RefName, Path, Name), Access(Access) {}
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
+      : FieldTypeInfo(TI, Name), Access(Access) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access) ==
-           std::tie(Other.Type, Other.Name, Other.Access);
+    return std::tie(Type, Name, Access, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.Description);
   }
 
   // Access level associated with this info (public, protected, private, none).
@@ -210,14 +210,14 @@ struct MemberTypeInfo : public FieldTypeInfo {
   // with value 0 to be used as the default.
   // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
   AccessSpecifier Access = AccessSpecifier::AS_public;
+
+  std::vector<CommentInfo> Description; // Comment description of this field.
 };
 
 struct Location {
-  Location() = default;
-  Location(int LineNumber, SmallString<16> Filename)
-      : LineNumber(LineNumber), Filename(std::move(Filename)) {}
-  Location(int LineNumber, SmallString<16> Filename, bool IsFileInRootDir)
-      : LineNumber(LineNumber), Filename(std::move(Filename)),
+  Location(int LineNumber = 0, StringRef Filename = StringRef(),
+           bool IsFileInRootDir = false)
+      : LineNumber(LineNumber), Filename(Filename),
         IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
@@ -234,20 +234,17 @@ struct Location {
            std::tie(Other.LineNumber, Other.Filename);
   }
 
-  int LineNumber;               // Line number of this Location.
+  int LineNumber = 0;           // Line number of this Location.
   SmallString<32> Filename;     // File for this Location.
   bool IsFileInRootDir = false; // Indicates if file is inside root directory
 };
 
 /// A base struct for Infos.
 struct Info {
-  Info() = default;
-  Info(InfoType IT) : IT(IT) {}
-  Info(InfoType IT, SymbolID USR) : USR(USR), IT(IT) {}
-  Info(InfoType IT, SymbolID USR, StringRef Name)
-      : USR(USR), IT(IT), Name(Name) {}
-  Info(InfoType IT, SymbolID USR, StringRef Name, StringRef Path)
+  Info(InfoType IT = InfoType::IT_default, SymbolID USR = SymbolID(),
+       StringRef Name = StringRef(), StringRef Path = StringRef())
       : USR(USR), IT(IT), Name(Name), Path(Path) {}
+
   Info(const Info &Other) = delete;
   Info(Info &&Other) = default;
 
@@ -281,31 +278,19 @@ struct Info {
 
 // Info for namespaces.
 struct NamespaceInfo : public Info {
-  NamespaceInfo() : Info(InfoType::IT_namespace) {}
-  NamespaceInfo(SymbolID USR) : Info(InfoType::IT_namespace, USR) {}
-  NamespaceInfo(SymbolID USR, StringRef Name)
-      : Info(InfoType::IT_namespace, USR, Name) {}
-  NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
+  NamespaceInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
+                StringRef Path = StringRef())
       : Info(InfoType::IT_namespace, USR, Name, Path) {}
 
   void merge(NamespaceInfo &&I);
 
-  // Namespaces and Records are references because they will be properly
-  // documented in their own info, while the entirety of Functions and Enums are
-  // included here because they should not have separate documentation from
-  // their scope.
-  std::vector<Reference> ChildNamespaces;
-  std::vector<Reference> ChildRecords;
-  std::vector<FunctionInfo> ChildFunctions;
-  std::vector<EnumInfo> ChildEnums;
+  ScopeChildren Children;
 };
 
 // Info for symbols.
 struct SymbolInfo : public Info {
-  SymbolInfo(InfoType IT) : Info(IT) {}
-  SymbolInfo(InfoType IT, SymbolID USR) : Info(IT, USR) {}
-  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name) : Info(IT, USR, Name) {}
-  SymbolInfo(InfoType IT, SymbolID USR, StringRef Name, StringRef Path)
+  SymbolInfo(InfoType IT, SymbolID USR = SymbolID(),
+             StringRef Name = StringRef(), StringRef Path = StringRef())
       : Info(IT, USR, Name, Path) {}
 
   void merge(SymbolInfo &&I);
@@ -317,8 +302,8 @@ struct SymbolInfo : public Info {
 // TODO: Expand to allow for documenting templating and default args.
 // Info for functions.
 struct FunctionInfo : public SymbolInfo {
-  FunctionInfo() : SymbolInfo(InfoType::IT_function) {}
-  FunctionInfo(SymbolID USR) : SymbolInfo(InfoType::IT_function, USR) {}
+  FunctionInfo(SymbolID USR = SymbolID())
+      : SymbolInfo(InfoType::IT_function, USR) {}
 
   void merge(FunctionInfo &&I);
 
@@ -337,19 +322,21 @@ struct FunctionInfo : public SymbolInfo {
 // friend classes
 // Info for types.
 struct RecordInfo : public SymbolInfo {
-  RecordInfo() : SymbolInfo(InfoType::IT_record) {}
-  RecordInfo(SymbolID USR) : SymbolInfo(InfoType::IT_record, USR) {}
-  RecordInfo(SymbolID USR, StringRef Name)
-      : SymbolInfo(InfoType::IT_record, USR, Name) {}
-  RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
+  RecordInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
+             StringRef Path = StringRef())
       : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
 
   void merge(RecordInfo &&I);
 
-  TagTypeKind TagType = TagTypeKind::TTK_Struct; // Type of this record
-                                                 // (struct, class, union,
-                                                 // interface).
-  bool IsTypeDef = false; // Indicates if record was declared using typedef
+  // Type of this record (struct, class, union, interface).
+  TagTypeKind TagType = TagTypeKind::TTK_Struct;
+
+  // Indicates if the record was declared using a typedef. Things like anonymous
+  // structs in a typedef:
+  //   typedef struct { ... } foo_t;
+  // are converted into records with the typedef as the Name + this flag set.
+  bool IsTypeDef = false;
+
   llvm::SmallVector<MemberTypeInfo, 4>
       Members;                             // List of info about record members.
   llvm::SmallVector<Reference, 4> Parents; // List of base/parent records
@@ -362,12 +349,23 @@ struct RecordInfo : public SymbolInfo {
       Bases; // List of base/parent records; this includes inherited methods and
              // attributes
 
-  // Records are references because they will be properly documented in their
-  // own info, while the entirety of Functions and Enums are included here
-  // because they should not have separate documentation from their scope.
-  std::vector<Reference> ChildRecords;
-  std::vector<FunctionInfo> ChildFunctions;
-  std::vector<EnumInfo> ChildEnums;
+  ScopeChildren Children;
+};
+
+// Info for typedef and using statements.
+struct TypedefInfo : public SymbolInfo {
+  TypedefInfo(SymbolID USR = SymbolID())
+      : SymbolInfo(InfoType::IT_typedef, USR) {}
+
+  void merge(TypedefInfo &&I);
+
+  TypeInfo Underlying;
+
+  // Inidicates if this is a new C++ "using"-style typedef:
+  //   using MyVector = std::vector<int>
+  // False means it's a C-style typedef:
+  //   typedef std::vector<int> MyVector;
+  bool IsUsing = false;
 };
 
 struct BaseRecordInfo : public RecordInfo {
@@ -385,6 +383,30 @@ struct BaseRecordInfo : public RecordInfo {
   bool IsParent = false; // Indicates if this base is a direct parent
 };
 
+// Information for a single possible value of an enumeration.
+struct EnumValueInfo {
+  explicit EnumValueInfo(StringRef Name = StringRef(),
+                         StringRef Value = StringRef("0"),
+                         StringRef ValueExpr = StringRef())
+      : Name(Name), Value(Value), ValueExpr(ValueExpr) {}
+
+  bool operator==(const EnumValueInfo &Other) const {
+    return std::tie(Name, Value, ValueExpr) ==
+           std::tie(Other.Name, Other.Value, Other.ValueExpr);
+  }
+
+  SmallString<16> Name;
+
+  // The computed value of the enumeration constant. This could be the result of
+  // evaluating the ValueExpr, or it could be automatically generated according
+  // to C rules.
+  SmallString<16> Value;
+
+  // Stores the user-supplied initialization expression for this enumeration
+  // constant. This will be empty for implicit enumeration values.
+  SmallString<16> ValueExpr;
+};
+
 // TODO: Expand to allow for documenting templating.
 // Info for types.
 struct EnumInfo : public SymbolInfo {
@@ -393,16 +415,22 @@ struct EnumInfo : public SymbolInfo {
 
   void merge(EnumInfo &&I);
 
-  bool Scoped =
-      false; // Indicates whether this enum is scoped (e.g. enum class).
-  llvm::SmallVector<SmallString<16>, 4> Members; // List of enum members.
+  // Indicates whether this enum is scoped (e.g. enum class).
+  bool Scoped = false;
+
+  // Set to nonempty to the type when this is an explicitly typed enum. For
+  //   enum Foo : short { ... };
+  // this will be "short".
+  llvm::Optional<TypeInfo> BaseType;
+
+  llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
 };
 
 struct Index : public Reference {
   Index() = default;
-  Index(StringRef Name) : Reference(Name) {}
+  Index(StringRef Name) : Reference(SymbolID(), Name) {}
   Index(StringRef Name, StringRef JumpToSection)
-      : Reference(Name), JumpToSection(JumpToSection) {}
+      : Reference(SymbolID(), Name), JumpToSection(JumpToSection) {}
   Index(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
       : Reference(USR, Name, IT, Path) {}
   // This is used to look for a USR in a vector of Indexes using std::find

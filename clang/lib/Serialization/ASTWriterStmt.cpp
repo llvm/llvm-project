@@ -81,8 +81,11 @@ void ASTStmtWriter::VisitNullStmt(NullStmt *S) {
 void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
   VisitStmt(S);
   Record.push_back(S->size());
+  Record.push_back(S->hasStoredFPFeatures());
   for (auto *CS : S->body())
     Record.AddStmt(CS);
+  if (S->hasStoredFPFeatures())
+    Record.push_back(S->getStoredFPFeatures().getAsOpaqueInt());
   Record.AddSourceLocation(S->getLBracLoc());
   Record.AddSourceLocation(S->getRBracLoc());
   Code = serialization::STMT_COMPOUND;
@@ -399,6 +402,7 @@ static void
 addConstraintSatisfaction(ASTRecordWriter &Record,
                           const ASTConstraintSatisfaction &Satisfaction) {
   Record.push_back(Satisfaction.IsSatisfied);
+  Record.push_back(Satisfaction.ContainsErrors);
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
@@ -429,16 +433,13 @@ addSubstitutionDiagnostic(
 void ASTStmtWriter::VisitConceptSpecializationExpr(
         ConceptSpecializationExpr *E) {
   VisitExpr(E);
-  ArrayRef<TemplateArgument> TemplateArgs = E->getTemplateArguments();
-  Record.push_back(TemplateArgs.size());
   Record.AddNestedNameSpecifierLoc(E->getNestedNameSpecifierLoc());
   Record.AddSourceLocation(E->getTemplateKWLoc());
   Record.AddDeclarationNameInfo(E->getConceptNameInfo());
   Record.AddDeclRef(E->getNamedConcept());
   Record.AddDeclRef(E->getFoundDecl());
+  Record.AddDeclRef(E->getSpecializationDecl());
   Record.AddASTTemplateArgumentListInfo(E->getTemplateArgsAsWritten());
-  for (const TemplateArgument &Arg : TemplateArgs)
-    Record.AddTemplateArgument(Arg);
   if (!E->isValueDependent())
     addConstraintSatisfaction(Record, E->getSatisfaction());
 
@@ -2024,8 +2025,13 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
-  Record.AddDeclRef(E->getParameter());
+  Record.AddDeclRef(E->getAssociatedDecl());
   Record.push_back(E->isReferenceParameter());
+  Record.push_back(E->getIndex());
+  if (auto PackIndex = E->getPackIndex())
+    Record.push_back(*PackIndex + 1);
+  else
+    Record.push_back(0);
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
   Code = serialization::EXPR_SUBST_NON_TYPE_TEMPLATE_PARM;
@@ -2034,7 +2040,8 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmPackExpr(
                                           SubstNonTypeTemplateParmPackExpr *E) {
   VisitExpr(E);
-  Record.AddDeclRef(E->getParameterPack());
+  Record.AddDeclRef(E->getAssociatedDecl());
+  Record.push_back(E->getIndex());
   Record.AddTemplateArgument(E->getArgumentPack());
   Record.AddSourceLocation(E->getParameterPackLocation());
   Code = serialization::EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK;
@@ -2298,6 +2305,13 @@ void ASTStmtWriter::VisitOMPParallelMasterDirective(
   Code = serialization::STMT_OMP_PARALLEL_MASTER_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPParallelMaskedDirective(
+    OMPParallelMaskedDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_PARALLEL_MASKED_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPParallelSectionsDirective(
     OMPParallelSectionsDirective *D) {
   VisitStmt(D);
@@ -2318,6 +2332,7 @@ void ASTStmtWriter::VisitOMPAtomicDirective(OMPAtomicDirective *D) {
   VisitOMPExecutableDirective(D);
   Record.writeBool(D->isXLHSInRHSPart());
   Record.writeBool(D->isPostfixUpdate());
+  Record.writeBool(D->isFailOnly());
   Code = serialization::STMT_OMP_ATOMIC_DIRECTIVE;
 }
 
@@ -2379,6 +2394,13 @@ void ASTStmtWriter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   Record.push_back(D->getNumClauses());
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_TASKWAIT_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPErrorDirective(OMPErrorDirective *D) {
+  VisitStmt(D);
+  Record.push_back(D->getNumClauses());
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_ERROR_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPTaskgroupDirective(OMPTaskgroupDirective *D) {
@@ -2450,10 +2472,23 @@ void ASTStmtWriter::VisitOMPMasterTaskLoopDirective(
   Code = serialization::STMT_OMP_MASTER_TASKLOOP_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPMaskedTaskLoopDirective(
+    OMPMaskedTaskLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Record.writeBool(D->hasCancel());
+  Code = serialization::STMT_OMP_MASKED_TASKLOOP_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPMasterTaskLoopSimdDirective(
     OMPMasterTaskLoopSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_MASTER_TASKLOOP_SIMD_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPMaskedTaskLoopSimdDirective(
+    OMPMaskedTaskLoopSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_MASKED_TASKLOOP_SIMD_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPParallelMasterTaskLoopDirective(
@@ -2463,10 +2498,23 @@ void ASTStmtWriter::VisitOMPParallelMasterTaskLoopDirective(
   Code = serialization::STMT_OMP_PARALLEL_MASTER_TASKLOOP_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPParallelMaskedTaskLoopDirective(
+    OMPParallelMaskedTaskLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Record.writeBool(D->hasCancel());
+  Code = serialization::STMT_OMP_PARALLEL_MASKED_TASKLOOP_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPParallelMasterTaskLoopSimdDirective(
     OMPParallelMasterTaskLoopSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_PARALLEL_MASTER_TASKLOOP_SIMD_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPParallelMaskedTaskLoopSimdDirective(
+    OMPParallelMaskedTaskLoopSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_PARALLEL_MASKED_TASKLOOP_SIMD_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPDistributeDirective(OMPDistributeDirective *D) {

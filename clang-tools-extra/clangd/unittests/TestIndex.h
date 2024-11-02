@@ -27,12 +27,24 @@ Symbol func(llvm::StringRef Name);
 Symbol cls(llvm::StringRef Name);
 // Creates an enum symbol.
 Symbol enm(llvm::StringRef Name);
+// Creates an enum constant symbol.
+Symbol enmConstant(llvm::StringRef Name);
 // Creates a variable symbol.
 Symbol var(llvm::StringRef Name);
 // Creates a namespace symbol.
 Symbol ns(llvm::StringRef Name);
 // Create a C++20 concept symbol.
 Symbol conceptSym(llvm::StringRef Name);
+
+// Create an Objective-C symbol.
+Symbol objcSym(llvm::StringRef Name, index::SymbolKind Kind,
+               llvm::StringRef USRPrefix);
+// Create an @interface or @implementation.
+Symbol objcClass(llvm::StringRef Name);
+// Create an @interface or @implementation category.
+Symbol objcCategory(llvm::StringRef Name, llvm::StringRef CategoryName);
+// Create an @protocol.
+Symbol objcProtocol(llvm::StringRef Name);
 
 // Create a slab of symbols with the given qualified names as IDs and names.
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames);

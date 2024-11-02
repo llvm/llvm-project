@@ -150,7 +150,7 @@ namespace Access {
   };
   struct B {
     A a; // expected-note {{would invoke a private 'operator<=>'}}
-    friend std::strong_ordering operator<=>(const B &, const B &) = default; // expected-warning {{deleted}}
+    friend std::strong_ordering operator<=>(const B &, const B &) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 
   class C {
@@ -160,7 +160,7 @@ namespace Access {
   };
   struct D {
     C c; // expected-note {{would invoke a private 'operator=='}}
-    friend std::strong_ordering operator<=>(const D &, const D &) = default; // expected-warning {{deleted}}
+    friend std::strong_ordering operator<=>(const D &, const D &) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 }
 
@@ -225,7 +225,7 @@ namespace Preference {
   struct B {
     B();
     A a;
-    std::strong_ordering operator<=>(const B&) const = default; // expected-error {{call to deleted constructor of 'Preference::A'}}
+    std::strong_ordering operator<=>(const B&) const = default; // expected-error {{call to deleted constructor of 'A'}}
   };
   bool x = B() < B(); // expected-note {{in defaulted three-way comparison operator for 'Preference::B' first required here}}
 }

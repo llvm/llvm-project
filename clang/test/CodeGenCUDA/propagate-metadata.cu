@@ -22,7 +22,7 @@
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
 // RUN:   -fdenormal-fp-math-f32=preserve-sign -o - \
-// RUN:   -fcuda-is-device -menable-unsafe-fp-math -triple nvptx-unknown-unknown \
+// RUN:   -fcuda-is-device -funsafe-math-optimizations -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
 
 // Wrap everything in extern "C" so we don't have to worry about name mangling

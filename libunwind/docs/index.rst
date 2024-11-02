@@ -96,7 +96,7 @@ Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
 * `LLVM Bug Tracker <https://github.com/llvm/llvm-project/labels/libunwind/>`_
-* `cfe-dev Mailing List <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_
+* `Clang Discourse Forums <https://discourse.llvm.org/c/clang/6>`_
 * `cfe-commits Mailing List <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_
 * `Runtimes Forum <https://discourse.llvm.org/tags/c/runtimes>`_
 * `Browse libunwind Sources <https://github.com/llvm/llvm-project/blob/main/libunwind/>`_

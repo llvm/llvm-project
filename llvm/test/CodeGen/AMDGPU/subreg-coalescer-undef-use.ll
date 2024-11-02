@@ -8,7 +8,6 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, float addrspace(1)* %out
 ; CHECK-LABEL: foobar:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, -1, 0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_mov_b32 s2, -1
@@ -26,7 +25,9 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, float addrspace(1)* %out
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
 ; CHECK-NEXT:  ; %bb.2: ; %ife
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; CHECK-NEXT:    s_endpgm
 

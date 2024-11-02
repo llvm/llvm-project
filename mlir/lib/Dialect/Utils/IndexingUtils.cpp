@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 
+#include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 int64_t mlir::linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis) {
@@ -41,4 +43,27 @@ llvm::SmallVector<int64_t, 4> mlir::getI64SubArray(ArrayAttr arrayAttr,
        it != eit; ++it)
     res.push_back((*it).getValue().getSExtValue());
   return res;
+}
+
+mlir::AffineExpr mlir::getLinearAffineExpr(ArrayRef<int64_t> basis,
+                                           mlir::Builder &b) {
+  AffineExpr resultExpr = b.getAffineDimExpr(0);
+  resultExpr = resultExpr * basis[0];
+  for (unsigned i = 1; i < basis.size(); i++)
+    resultExpr = resultExpr + b.getAffineDimExpr(i) * basis[i];
+  return resultExpr;
+}
+
+llvm::SmallVector<mlir::AffineExpr, 4>
+mlir::getDelinearizedAffineExpr(mlir::ArrayRef<int64_t> strides, Builder &b) {
+  AffineExpr resultExpr = b.getAffineDimExpr(0);
+  int64_t rank = strides.size();
+  SmallVector<AffineExpr, 4> vectorOffsets(rank);
+  vectorOffsets[0] = resultExpr.floorDiv(strides[0]);
+  resultExpr = resultExpr % strides[0];
+  for (unsigned i = 1; i < rank; i++) {
+    vectorOffsets[i] = resultExpr.floorDiv(strides[i]);
+    resultExpr = resultExpr % strides[i];
+  }
+  return vectorOffsets;
 }

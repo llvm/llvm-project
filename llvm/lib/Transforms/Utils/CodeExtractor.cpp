@@ -140,7 +140,7 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       if (auto *UBB = CSI->getUnwindDest())
         if (!Result.count(UBB))
           return false;
-      for (auto *HBB : CSI->handlers())
+      for (const auto *HBB : CSI->handlers())
         if (!Result.count(const_cast<BasicBlock*>(HBB)))
           return false;
       continue;
@@ -832,7 +832,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   Module *M = Blocks.front()->getModule();
 
   // This function returns unsigned, outputs will go back by reference.
-  switch (NumExitBlocks) {
+  switch (SwitchCases.size()) {
   case 0:
   case 1:
     RetTy = Type::getVoidTy(Context);
@@ -848,6 +848,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   // Assemble the function's parameter lists.
   std::vector<Type *> ParamTy;
   std::vector<Type *> AggParamTy;
+  const DataLayout &DL = M->getDataLayout();
 
   // Add the types of the input values to the function's argument list
   for (Value *value : inputs) {
@@ -866,7 +867,8 @@ Function *CodeExtractor::constructFunctionDeclaration(
       AggParamTy.push_back(output->getType());
       StructValues.insert(output);
     } else
-      ParamTy.push_back(PointerType::getUnqual(output->getType()));
+      ParamTy.push_back(
+          PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
   }
 
   assert(
@@ -879,7 +881,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   // Concatenate scalar and aggregate params in ParamTy.
   if (!AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
-    ParamTy.push_back(PointerType::getUnqual(StructTy));
+    ParamTy.push_back(PointerType::get(StructTy, DL.getAllocaAddrSpace()));
   }
 
   LLVM_DEBUG({
@@ -917,30 +919,27 @@ Function *CodeExtractor::constructFunctionDeclaration(
       // Those attributes cannot be propagated safely. Explicitly list them
       // here so we get a warning if new attributes are added.
       case Attribute::AllocSize:
-      case Attribute::ArgMemOnly:
       case Attribute::Builtin:
       case Attribute::Convergent:
-      case Attribute::InaccessibleMemOnly:
-      case Attribute::InaccessibleMemOrArgMemOnly:
       case Attribute::JumpTable:
       case Attribute::Naked:
       case Attribute::NoBuiltin:
       case Attribute::NoMerge:
       case Attribute::NoReturn:
       case Attribute::NoSync:
-      case Attribute::ReadNone:
-      case Attribute::ReadOnly:
       case Attribute::ReturnsTwice:
       case Attribute::Speculatable:
       case Attribute::StackAlignment:
       case Attribute::WillReturn:
-      case Attribute::WriteOnly:
       case Attribute::AllocKind:
+      case Attribute::PresplitCoroutine:
+      case Attribute::Memory:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
       case Attribute::Cold:
       case Attribute::DisableSanitizerInstrumentation:
+      case Attribute::FnRetThunkExtern:
       case Attribute::Hot:
       case Attribute::NoRecurse:
       case Attribute::InlineHint:
@@ -976,6 +975,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoCfCheck:
       case Attribute::MustProgress:
       case Attribute::NoProfile:
+      case Attribute::SkipProfile:
         break;
       // These attributes cannot be applied to functions.
       case Attribute::Alignment:
@@ -993,6 +993,8 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoUndef:
       case Attribute::NonNull:
       case Attribute::Preallocated:
+      case Attribute::ReadNone:
+      case Attribute::ReadOnly:
       case Attribute::Returned:
       case Attribute::SExt:
       case Attribute::StructRet:
@@ -1002,6 +1004,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::ZExt:
       case Attribute::ImmArg:
       case Attribute::ByRef:
+      case Attribute::WriteOnly:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1040,9 +1043,9 @@ Function *CodeExtractor::constructFunctionDeclaration(
   // Update the entry count of the function.
   if (BFI) {
     auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
-    if (Count.hasValue())
+    if (Count.has_value())
       newFunction->setEntryCount(
-          ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
+          ProfileCount(Count.value(), Function::PCT_Real)); // FIXME
   }
 
   return newFunction;
@@ -1525,7 +1528,6 @@ void CodeExtractor::recomputeExitBlocks() {
         SwitchCases.push_back(Succ);
     }
   }
-  NumExitBlocks = ExitBlocks.size();
 }
 
 void CodeExtractor::emitFunctionBody(
@@ -1679,8 +1681,8 @@ void CodeExtractor::emitFunctionBody(
       VMap[OldTarget] = NewTarget;
 
     Value *brVal = nullptr;
-    assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
-    switch (NumExitBlocks) {
+    assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch");
+    switch (SwitchCases.size()) {
     case 0:
     case 1:
       break; // No value needed.
@@ -1880,7 +1882,7 @@ CallInst *CodeExtractor::emitReplacerCall(
   // Emit the call to the function
   CallInst *call =
       CallInst::Create(newFunction, params,
-                       NumExitBlocks > 1 ? "targetBlock" : "", codeReplacer);
+          SwitchCases.size() > 1 ? "targetBlock" : "", codeReplacer);
 
   // Set swifterror parameter attributes.
   unsigned ParamIdx = 0;
@@ -1941,7 +1943,7 @@ CallInst *CodeExtractor::emitReplacerCall(
 
   // Now that we've done the deed, simplify the switch instruction.
   Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
-  switch (NumExitBlocks) {
+  switch (SwitchCases.size()) {
   case 0:
     // There are no successors (the block containing the switch itself), which
     // means that previously this was the last part of the function, and hence
@@ -1980,9 +1982,9 @@ CallInst *CodeExtractor::emitReplacerCall(
     // Otherwise, make the default destination of the switch instruction be one
     // of the other successors.
     TheSwitch->setCondition(call);
-    TheSwitch->setDefaultDest(TheSwitch->getSuccessor(NumExitBlocks));
+    TheSwitch->setDefaultDest(TheSwitch->getSuccessor(SwitchCases.size()));
     // Remove redundant case
-    TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks - 1));
+    TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, SwitchCases.size() - 1));
     break;
   }
 
@@ -2085,7 +2087,7 @@ void CodeExtractor::insertReplacerCall(
   }
 
   // Update the branch weights for the exit block.
-  if (BFI && NumExitBlocks > 1)
+  if (BFI && SwitchCases.size() > 1)
     calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
 }
 

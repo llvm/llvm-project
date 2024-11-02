@@ -15,6 +15,7 @@
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/Demangle/Demangle.h"
 
 using namespace llvm;
 using namespace lld;
@@ -45,19 +46,31 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
   return {sym, p.second};
 }
 
+namespace {
+struct DuplicateSymbolDiag {
+  // Pair containing source location and source file
+  const std::pair<std::string, std::string> src1;
+  const std::pair<std::string, std::string> src2;
+  const Symbol *sym;
+
+  DuplicateSymbolDiag(const std::pair<std::string, std::string> src1,
+                      const std::pair<std::string, std::string> src2,
+                      const Symbol *sym)
+      : src1(src1), src2(src2), sym(sym) {}
+};
+SmallVector<DuplicateSymbolDiag> dupSymDiags;
+} // namespace
+
 Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern, bool isThumb,
                                  bool isReferencedDynamically, bool noDeadStrip,
                                  bool isWeakDefCanBeHidden) {
-  Symbol *s;
-  bool wasInserted;
   bool overridesWeakDef = false;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
-  assert(!isWeakDef || (isa<BitcodeFile>(file) && !isec) ||
-         (isa<ObjFile>(file) && file == isec->getFile()));
+  assert(!file || !isa<BitcodeFile>(file) || !isec);
 
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
@@ -83,14 +96,23 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
         }
       } else {
-        error("duplicate symbol: " + name + "\n>>> defined in " +
-              toString(defined->getFile()) + "\n>>> defined in " +
-              toString(file));
+        std::string srcLoc1 = defined->getSourceLocation();
+        std::string srcLoc2 = isec ? isec->getSourceLocation(value) : "";
+        std::string srcFile1 = toString(defined->getFile());
+        std::string srcFile2 = toString(file);
+
+        dupSymDiags.push_back({make_pair(srcLoc1, srcFile1),
+                               make_pair(srcLoc2, srcFile2), defined});
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
       dysym->unreference();
+    } else if (auto *undef = dyn_cast<Undefined>(s)) {
+      // Preserve the original bitcode file name (instead of using the object
+      // file name).
+      if (undef->wasBitcodeSymbol)
+        file = undef->getFile();
     }
     // Defined symbols take priority over other types of symbols, so in case
     // of a name conflict, we fall through to the replaceSymbol() call below.
@@ -109,16 +131,24 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   return defined;
 }
 
+Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
+                                   InputFile *newFile, bool makePrivateExtern) {
+  bool isPrivateExtern = makePrivateExtern || src->privateExtern;
+  return addDefined(target, newFile, src->isec, src->value, src->size,
+                    src->isWeakDef(), isPrivateExtern, src->thumb,
+                    src->referencedDynamically, src->noDeadStrip,
+                    src->weakDefCanBeHidden);
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
                                   bool isWeakRef) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
   if (wasInserted)
-    replaceSymbol<Undefined>(s, name, file, refState);
+    replaceSymbol<Undefined>(s, name, file, refState,
+                             /*wasBitcodeSymbol=*/false);
   else if (auto *lazy = dyn_cast<LazyArchive>(s))
     lazy->fetchArchiveMember();
   else if (isa<LazyObject>(s))
@@ -132,9 +162,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
 
 Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
                                uint32_t align, bool isPrivateExtern) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   if (!wasInserted) {
     if (auto *common = dyn_cast<CommonSymbol>(s)) {
@@ -153,9 +181,7 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
 
 Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
                               bool isTlv) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   RefState refState = RefState::Unreferenced;
   if (!wasInserted) {
@@ -188,9 +214,7 @@ Symbol *SymbolTable::addDynamicLookup(StringRef name) {
 
 Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
                                     const object::Archive::Symbol &sym) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   if (wasInserted) {
     replaceSymbol<LazyArchive>(s, file, sym);
@@ -208,9 +232,7 @@ Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
 }
 
 Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, &file);
+  auto [s, wasInserted] = insert(name, &file);
 
   if (wasInserted) {
     replaceSymbol<LazyObject>(s, file, name);
@@ -254,8 +276,7 @@ static Defined *createBoundarySymbol(const Undefined &sym) {
 
 static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
                                         Boundary which) {
-  StringRef segName, sectName;
-  std::tie(segName, sectName) = segSect.split('$');
+  auto [segName, sectName] = segSect.split('$');
 
   // Attach the symbol to any InputSection that will end up in the right
   // OutputSection -- it doesn't matter which one we pick.
@@ -302,50 +323,289 @@ static void handleSegmentBoundarySymbol(const Undefined &sym, StringRef segName,
     seg->segmentEndSymbols.push_back(createBoundarySymbol(sym));
 }
 
-void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+// Try to find a definition for an undefined symbol.
+// Returns true if a definition was found and no diagnostics are needed.
+static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   // Handle start/end symbols.
   StringRef name = sym.getName();
-  if (name.consume_front("section$start$"))
-    return handleSectionBoundarySymbol(sym, name, Boundary::Start);
-  if (name.consume_front("section$end$"))
-    return handleSectionBoundarySymbol(sym, name, Boundary::End);
-  if (name.consume_front("segment$start$"))
-    return handleSegmentBoundarySymbol(sym, name, Boundary::Start);
-  if (name.consume_front("segment$end$"))
-    return handleSegmentBoundarySymbol(sym, name, Boundary::End);
+  if (name.consume_front("section$start$")) {
+    handleSectionBoundarySymbol(sym, name, Boundary::Start);
+    return true;
+  }
+  if (name.consume_front("section$end$")) {
+    handleSectionBoundarySymbol(sym, name, Boundary::End);
+    return true;
+  }
+  if (name.consume_front("segment$start$")) {
+    handleSegmentBoundarySymbol(sym, name, Boundary::Start);
+    return true;
+  }
+  if (name.consume_front("segment$end$")) {
+    handleSegmentBoundarySymbol(sym, name, Boundary::End);
+    return true;
+  }
+
+  // Leave dtrace symbols, since we will handle them when we do the relocation
+  if (name.startswith("___dtrace_"))
+    return true;
 
   // Handle -U.
   if (config->explicitDynamicLookups.count(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());
-    return;
+    return true;
   }
 
   // Handle -undefined.
-  auto message = [source, &sym]() {
-    std::string message = "undefined symbol";
-    if (config->archMultiple)
-      message += (" for arch " + getArchitectureName(config->arch())).str();
-    message += ": " + toString(sym);
-    if (!source.empty())
-      message += "\n>>> referenced by " + source.str();
-    else
-      message += "\n>>> referenced by " + toString(sym.getFile());
-    return message;
-  };
-  switch (config->undefinedSymbolTreatment) {
-  case UndefinedSymbolTreatment::error:
-    error(message());
-    break;
-  case UndefinedSymbolTreatment::warning:
-    warn(message());
-    LLVM_FALLTHROUGH;
-  case UndefinedSymbolTreatment::dynamic_lookup:
-  case UndefinedSymbolTreatment::suppress:
+  if (config->undefinedSymbolTreatment ==
+          UndefinedSymbolTreatment::dynamic_lookup ||
+      config->undefinedSymbolTreatment == UndefinedSymbolTreatment::suppress) {
     symtab->addDynamicLookup(sym.getName());
-    break;
-  case UndefinedSymbolTreatment::unknown:
-    llvm_unreachable("unknown -undefined TREATMENT");
+    return true;
   }
+
+  // We do not return true here, as we still need to print diagnostics.
+  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::warning)
+    symtab->addDynamicLookup(sym.getName());
+
+  return false;
+}
+
+namespace {
+struct UndefinedDiag {
+  struct SectionAndOffset {
+    const InputSection *isec;
+    uint64_t offset;
+  };
+
+  std::vector<SectionAndOffset> codeReferences;
+  std::vector<std::string> otherReferences;
+};
+
+MapVector<const Undefined *, UndefinedDiag> undefs;
+}
+
+void macho::reportPendingDuplicateSymbols() {
+  for (const auto &duplicate : dupSymDiags) {
+    if (!config->deadStripDuplicates || duplicate.sym->isLive()) {
+      std::string message =
+          "duplicate symbol: " + toString(*duplicate.sym) + "\n>>> defined in ";
+      if (!duplicate.src1.first.empty())
+        message += duplicate.src1.first + "\n>>>            ";
+      message += duplicate.src1.second + "\n>>> defined in ";
+      if (!duplicate.src2.first.empty())
+        message += duplicate.src2.first + "\n>>>            ";
+      error(message + duplicate.src2.second);
+    }
+  }
+}
+
+// Check whether the definition name def is a mangled function name that matches
+// the reference name ref.
+static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
+  llvm::ItaniumPartialDemangler d;
+  std::string name = def.str();
+  if (d.partialDemangle(name.c_str()))
+    return false;
+  char *buf = d.getFunctionName(nullptr, nullptr);
+  if (!buf)
+    return false;
+  bool ret = ref == buf;
+  free(buf);
+  return ret;
+}
+
+// Suggest an alternative spelling of an "undefined symbol" diagnostic. Returns
+// the suggested symbol, which is either in the symbol table, or in the same
+// file of sym.
+static const Symbol *getAlternativeSpelling(const Undefined &sym,
+                                            std::string &pre_hint,
+                                            std::string &post_hint) {
+  DenseMap<StringRef, const Symbol *> map;
+  if (sym.getFile() && sym.getFile()->kind() == InputFile::ObjKind) {
+    // Build a map of local defined symbols.
+    for (const Symbol *s : sym.getFile()->symbols)
+      if (auto *defined = dyn_cast_or_null<Defined>(s))
+        if (!defined->isExternal())
+          map.try_emplace(s->getName(), s);
+  }
+
+  auto suggest = [&](StringRef newName) -> const Symbol * {
+    // If defined locally.
+    if (const Symbol *s = map.lookup(newName))
+      return s;
+
+    // If in the symbol table and not undefined.
+    if (const Symbol *s = symtab->find(newName))
+      if (dyn_cast<Undefined>(s) == nullptr)
+        return s;
+
+    return nullptr;
+  };
+
+  // This loop enumerates all strings of Levenshtein distance 1 as typo
+  // correction candidates and suggests the one that exists as a non-undefined
+  // symbol.
+  StringRef name = sym.getName();
+  for (size_t i = 0, e = name.size(); i != e + 1; ++i) {
+    // Insert a character before name[i].
+    std::string newName = (name.substr(0, i) + "0" + name.substr(i)).str();
+    for (char c = '0'; c <= 'z'; ++c) {
+      newName[i] = c;
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+    if (i == e)
+      break;
+
+    // Substitute name[i].
+    newName = std::string(name);
+    for (char c = '0'; c <= 'z'; ++c) {
+      newName[i] = c;
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+
+    // Transpose name[i] and name[i+1]. This is of edit distance 2 but it is
+    // common.
+    if (i + 1 < e) {
+      newName[i] = name[i + 1];
+      newName[i + 1] = name[i];
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+
+    // Delete name[i].
+    newName = (name.substr(0, i) + name.substr(i + 1)).str();
+    if (const Symbol *s = suggest(newName))
+      return s;
+  }
+
+  // Case mismatch, e.g. Foo vs FOO.
+  for (auto &it : map)
+    if (name.equals_insensitive(it.first))
+      return it.second;
+  for (Symbol *sym : symtab->getSymbols())
+    if (dyn_cast<Undefined>(sym) == nullptr &&
+        name.equals_insensitive(sym->getName()))
+      return sym;
+
+  // The reference may be a mangled name while the definition is not. Suggest a
+  // missing extern "C".
+  if (name.startswith("__Z")) {
+    std::string buf = name.str();
+    llvm::ItaniumPartialDemangler d;
+    if (!d.partialDemangle(buf.c_str()))
+      if (char *buf = d.getFunctionName(nullptr, nullptr)) {
+        const Symbol *s = suggest((Twine("_") + buf).str());
+        free(buf);
+        if (s) {
+          pre_hint = ": extern \"C\" ";
+          return s;
+        }
+      }
+  } else {
+    StringRef name_without_underscore = name;
+    name_without_underscore.consume_front("_");
+    const Symbol *s = nullptr;
+    for (auto &it : map)
+      if (canSuggestExternCForCXX(name_without_underscore, it.first)) {
+        s = it.second;
+        break;
+      }
+    if (!s)
+      for (Symbol *sym : symtab->getSymbols())
+        if (canSuggestExternCForCXX(name_without_underscore, sym->getName())) {
+          s = sym;
+          break;
+        }
+    if (s) {
+      pre_hint = " to declare ";
+      post_hint = " as extern \"C\"?";
+      return s;
+    }
+  }
+
+  return nullptr;
+}
+
+static void reportUndefinedSymbol(const Undefined &sym,
+                                  const UndefinedDiag &locations,
+                                  bool correctSpelling) {
+  std::string message = "undefined symbol";
+  if (config->archMultiple)
+    message += (" for arch " + getArchitectureName(config->arch())).str();
+  message += ": " + toString(sym);
+
+  const size_t maxUndefinedReferences = 3;
+  size_t i = 0;
+  for (const std::string &loc : locations.otherReferences) {
+    if (i >= maxUndefinedReferences)
+      break;
+    message += "\n>>> referenced by " + loc;
+    ++i;
+  }
+
+  for (const UndefinedDiag::SectionAndOffset &loc : locations.codeReferences) {
+    if (i >= maxUndefinedReferences)
+      break;
+    message += "\n>>> referenced by ";
+    std::string src = loc.isec->getSourceLocation(loc.offset);
+    if (!src.empty())
+      message += src + "\n>>>               ";
+    message += loc.isec->getLocation(loc.offset);
+    ++i;
+  }
+
+  size_t totalReferences =
+      locations.otherReferences.size() + locations.codeReferences.size();
+  if (totalReferences > i)
+    message +=
+        ("\n>>> referenced " + Twine(totalReferences - i) + " more times")
+            .str();
+
+  if (correctSpelling) {
+    std::string pre_hint = ": ", post_hint;
+    if (const Symbol *corrected =
+            getAlternativeSpelling(sym, pre_hint, post_hint)) {
+      message +=
+          "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
+      if (corrected->getFile())
+        message += "\n>>> defined in: " + toString(corrected->getFile());
+    }
+  }
+
+  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::error)
+    error(message);
+  else if (config->undefinedSymbolTreatment ==
+           UndefinedSymbolTreatment::warning)
+    warn(message);
+  else
+    assert(false && "diagnostics make sense for -undefined error|warning only");
+}
+
+void macho::reportPendingUndefinedSymbols() {
+  // Enable spell corrector for the first 2 diagnostics.
+  for (const auto &[i, undef] : llvm::enumerate(undefs))
+    reportUndefinedSymbol(*undef.first, undef.second, i < 2);
+
+  // This function is called multiple times during execution. Clear the printed
+  // diagnostics to avoid printing the same things again the next time.
+  undefs.clear();
+}
+
+void macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+  if (recoverFromUndefinedSymbol(sym))
+    return;
+
+  undefs[&sym].otherReferences.push_back(source.str());
+}
+
+void macho::treatUndefinedSymbol(const Undefined &sym, const InputSection *isec,
+                                 uint64_t offset) {
+  if (recoverFromUndefinedSymbol(sym))
+    return;
+
+  undefs[&sym].codeReferences.push_back({isec, offset});
 }
 
 std::unique_ptr<SymbolTable> macho::symtab;

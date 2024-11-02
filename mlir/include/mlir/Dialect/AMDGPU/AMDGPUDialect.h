@@ -21,6 +21,11 @@
 
 #include "mlir/Dialect/AMDGPU/AMDGPUDialect.h.inc"
 
+#include "mlir/Dialect/AMDGPU/AMDGPUEnums.h.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/AMDGPU/AMDGPUAttributes.h.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/AMDGPU.h.inc"
 

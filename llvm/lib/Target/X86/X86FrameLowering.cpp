@@ -660,7 +660,6 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
   const bool HasFP = hasFP(MF);
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86TargetLowering &TLI = *STI.getTargetLowering();
-  const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, Offset);
   const unsigned MovMIOpc = Is64Bit ? X86::MOV64mi32 : X86::MOV32mi;
   const uint64_t StackProbeSize = TLI.getStackProbeSize(MF);
 
@@ -671,16 +670,14 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
   // If the offset is so small it fits within a page, there's nothing to do.
   if (StackProbeSize < Offset + AlignOffset) {
 
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
-                           .addReg(StackPtr)
-                           .addImm(StackProbeSize - AlignOffset)
-                           .setMIFlag(MachineInstr::FrameSetup);
+    uint64_t StackAdjustment = StackProbeSize - AlignOffset;
+    BuildStackAdjustment(MBB, MBBI, DL, -StackAdjustment, /*InEpilogue=*/false)
+        .setMIFlag(MachineInstr::FrameSetup);
     if (!HasFP && NeedsDwarfCFI) {
-      BuildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::createAdjustCfaOffset(
-                   nullptr, StackProbeSize - AlignOffset));
+      BuildCFI(
+          MBB, MBBI, DL,
+          MCCFIInstruction::createAdjustCfaOffset(nullptr, StackAdjustment));
     }
-    MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
 
     addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(MovMIOpc))
                      .setMIFlag(MachineInstr::FrameSetup),
@@ -695,11 +692,8 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
   // natural probes but it implies much more logic and there was very few
   // interesting natural probes to interleave.
   while (CurrentOffset + StackProbeSize < Offset) {
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
-                           .addReg(StackPtr)
-                           .addImm(StackProbeSize)
-                           .setMIFlag(MachineInstr::FrameSetup);
-    MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
+    BuildStackAdjustment(MBB, MBBI, DL, -StackProbeSize, /*InEpilogue=*/false)
+        .setMIFlag(MachineInstr::FrameSetup);
 
     if (!HasFP && NeedsDwarfCFI) {
       BuildCFI(
@@ -717,13 +711,20 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
 
   // No need to probe the tail, it is smaller than a Page.
   uint64_t ChunkSize = Offset - CurrentOffset;
-  MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
-                         .addReg(StackPtr)
-                         .addImm(ChunkSize)
-                         .setMIFlag(MachineInstr::FrameSetup);
+  if (ChunkSize == SlotSize) {
+    // Use push for slot sized adjustments as a size optimization,
+    // like emitSPUpdate does when not probing.
+    unsigned Reg = Is64Bit ? X86::RAX : X86::EAX;
+    unsigned Opc = Is64Bit ? X86::PUSH64r : X86::PUSH32r;
+    BuildMI(MBB, MBBI, DL, TII.get(Opc))
+        .addReg(Reg, RegState::Undef)
+        .setMIFlag(MachineInstr::FrameSetup);
+  } else {
+    BuildStackAdjustment(MBB, MBBI, DL, -ChunkSize, /*InEpilogue=*/false)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
   // No need to adjust Dwarf CFA offset here, the last position of the stack has
   // been defined
-  MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
 }
 
 void X86FrameLowering::emitStackProbeInlineGenericLoop(
@@ -731,6 +732,9 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, uint64_t Offset,
     uint64_t AlignOffset) const {
   assert(Offset && "null offset");
+
+  assert(!MBB.isLiveIn(X86::EFLAGS) &&
+         "Inline stack probe loop will clobber live EFLAGS.");
 
   const bool NeedsDwarfCFI = needsDwarfCFI(MF);
   const bool HasFP = hasFP(MF);
@@ -742,12 +746,8 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   if (AlignOffset) {
     if (AlignOffset < StackProbeSize) {
       // Perform a first smaller allocation followed by a probe.
-      const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, AlignOffset);
-      MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(SUBOpc), StackPtr)
-                             .addReg(StackPtr)
-                             .addImm(AlignOffset)
-                             .setMIFlag(MachineInstr::FrameSetup);
-      MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
+      BuildStackAdjustment(MBB, MBBI, DL, -AlignOffset, /*InEpilogue=*/false)
+          .setMIFlag(MachineInstr::FrameSetup);
 
       addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(MovMIOpc))
                        .setMIFlag(MachineInstr::FrameSetup),
@@ -806,13 +806,9 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   }
 
   // allocate a page
-  {
-    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, StackProbeSize);
-    BuildMI(testMBB, DL, TII.get(SUBOpc), StackPtr)
-        .addReg(StackPtr)
-        .addImm(StackProbeSize)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
+  BuildStackAdjustment(*testMBB, testMBB->end(), DL, -StackProbeSize,
+                       /*InEpilogue=*/false)
+      .setMIFlag(MachineInstr::FrameSetup);
 
   // touch the page
   addRegOffset(BuildMI(testMBB, DL, TII.get(MovMIOpc))
@@ -841,13 +837,11 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   MBB.addSuccessor(testMBB);
 
   // handle tail
-  const unsigned TailOffset = Offset % StackProbeSize;
+  const uint64_t TailOffset = Offset % StackProbeSize;
   MachineBasicBlock::iterator TailMBBIter = tailMBB->begin();
   if (TailOffset) {
-    const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, TailOffset);
-    BuildMI(*tailMBB, TailMBBIter, DL, TII.get(Opc), StackPtr)
-        .addReg(StackPtr)
-        .addImm(TailOffset)
+    BuildStackAdjustment(*tailMBB, TailMBBIter, DL, -TailOffset,
+                         /*InEpilogue=*/false)
         .setMIFlag(MachineInstr::FrameSetup);
   }
 
@@ -878,6 +872,9 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
   assert(STI.isTargetWindowsCoreCLR() && "custom expansion expects CoreCLR");
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   const BasicBlock *LLVM_BB = MBB.getBasicBlock();
+
+  assert(!MBB.isLiveIn(X86::EFLAGS) &&
+         "Inline stack probe loop will clobber live EFLAGS.");
 
   // RAX contains the number of bytes of desired stack adjustment.
   // The handling here assumes this value has already been updated so as to
@@ -1097,9 +1094,9 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
     for (MachineInstr &MI : *LoopMBB) {
       MI.setFlag(MachineInstr::FrameSetup);
     }
-    for (MachineBasicBlock::iterator CMBBI = ContinueMBB->begin();
-         CMBBI != ContinueMBBI; ++CMBBI) {
-      CMBBI->setFlag(MachineInstr::FrameSetup);
+    for (MachineInstr &MI :
+         llvm::make_range(ContinueMBB->begin(), ContinueMBBI)) {
+      MI.setFlag(MachineInstr::FrameSetup);
     }
   }
 }
@@ -1114,6 +1111,9 @@ void X86FrameLowering::emitStackProbeCall(
   if (Is64Bit && IsLargeCodeModel && STI.useIndirectThunkCalls())
     report_fatal_error("Emitting stack probe calls on 64-bit with the large "
                        "code model and indirect thunks not yet implemented.");
+
+  assert(!MBB.isLiveIn(X86::EFLAGS) &&
+         "Stack probe calls will clobber live EFLAGS.");
 
   unsigned CallOp;
   if (Is64Bit)
@@ -1533,7 +1533,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             .addUse(X86::NoRegister);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case SwiftAsyncFramePointerMode::Always:
       BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8), MachineFramePtr)
@@ -2777,7 +2777,7 @@ void X86FrameLowering::emitCatchRetReturnValue(MachineBasicBlock &MBB,
 
   // Record that we've taken the address of CatchRetTarget and no longer just
   // reference it in a terminator.
-  CatchRetTarget->setHasAddressTaken();
+  CatchRetTarget->setMachineBlockAddressTaken();
 }
 
 bool X86FrameLowering::restoreCalleeSavedRegisters(
@@ -3508,6 +3508,13 @@ bool X86FrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   const MachineFunction &MF = *MBB.getParent();
   if (!MBB.isLiveIn(X86::EFLAGS))
     return true;
+
+  // If stack probes have to loop inline or call, that will clobber EFLAGS.
+  // FIXME: we could allow cases that will use emitStackProbeInlineGenericBlock.
+  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
+  const X86TargetLowering &TLI = *STI.getTargetLowering();
+  if (TLI.hasInlineStackProbe(MF) || TLI.hasStackProbeSymbol(MF))
+    return false;
 
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   return !TRI->hasStackRealignment(MF) && !X86FI->hasSwiftAsyncContext();

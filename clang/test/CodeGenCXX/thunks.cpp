@@ -1,18 +1,18 @@
 // Sparc64 doesn't support musttail (yet), so it uses method cloning for
 // variadic thunks. Use it for testing.
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-NONOPT %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=sparc64-pc-linux-gnu -debug-info-kind=standalone -dwarf-version=5 -funwind-tables=2 -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -debug-info-kind=standalone -dwarf-version=5 -funwind-tables=2 -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-NONOPT,CHECK-DBG %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-OPT %s
 
 // Test x86_64, which uses musttail for variadic thunks.
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-TAIL,CHECK-OPT %s
 
 // Finally, reuse these tests for the MS ABI.
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-windows-msvc -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 %s -triple=x86_64-windows-msvc -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=WIN64 %s
 
 
@@ -40,7 +40,7 @@ struct C : A, B {
 //
 // WIN64-LABEL: define dso_local void @"?f@C@Test1@@UEAAXXZ"(
 // WIN64-LABEL: define linkonce_odr dso_local void @"?f@C@Test1@@W7EAAXXZ"(
-// WIN64: getelementptr i8, i8* {{.*}}, i32 -8
+// WIN64: getelementptr i8, ptr {{.*}}, i32 -8
 // WIN64: ret void
 void C::f() { }
 
@@ -87,8 +87,8 @@ struct B : A {
   virtual V2 *f();
 };
 
-// CHECK: define{{.*}} %{{.*}}* @_ZTch0_v0_n24_N5Test31B1fEv(
-// WIN64: define weak_odr dso_local noundef %{{.*}} @"?f@B@Test3@@QEAAPEAUV1@2@XZ"(
+// CHECK: define{{.*}} ptr @_ZTch0_v0_n24_N5Test31B1fEv(
+// WIN64: define weak_odr dso_local noundef ptr @"?f@B@Test3@@QEAAPEAUV1@2@XZ"(
 V2 *B::f() { return 0; }
 
 }
@@ -269,12 +269,12 @@ namespace Test8 {
   struct B { virtual void bar(NonPOD); };
   struct C : A, B { virtual void bar(NonPOD); static void helper(NonPOD); };
 
-  // CHECK: define{{.*}} void @_ZN5Test81C6helperENS_6NonPODE([[NONPODTYPE:%.*]]*
+  // CHECK: define{{.*}} void @_ZN5Test81C6helperENS_6NonPODE(ptr
   void C::helper(NonPOD var) {}
 
   // CHECK-LABEL: define{{.*}} void @_ZThn8_N5Test81C3barENS_6NonPODE(
   // CHECK-DBG-NOT: dbg.declare
-  // CHECK-NOT: load [[NONPODTYPE]], [[NONPODTYPE]]*
+  // CHECK-NOT: load [[NONPODTYPE:%.*]], ptr
   // CHECK-NOT: memcpy
   // CHECK: ret void
   void C::bar(NonPOD var) {}
@@ -327,15 +327,15 @@ namespace Test11 {
   // CHECK-DBG-NOT: dbg.declare
   // CHECK: ret
 
-  // WIN64-LABEL: define dso_local noundef %{{.*}}* @"?f@C@Test11@@UEAAPEAU12@XZ"(i8*
+  // WIN64-LABEL: define dso_local noundef ptr @"?f@C@Test11@@UEAAPEAU12@XZ"(ptr
 
-  // WIN64-LABEL: define weak_odr dso_local noundef %{{.*}}* @"?f@C@Test11@@QEAAPEAUA@2@XZ"(i8*
-  // WIN64: call noundef %{{.*}}* @"?f@C@Test11@@UEAAPEAU12@XZ"(i8* noundef %{{.*}})
+  // WIN64-LABEL: define weak_odr dso_local noundef ptr @"?f@C@Test11@@QEAAPEAUA@2@XZ"(ptr
+  // WIN64: call noundef ptr @"?f@C@Test11@@UEAAPEAU12@XZ"(ptr noundef %{{.*}})
   //
   // Match the vbtable return adjustment.
-  // WIN64: load i32*, i32** %{{[^,]*}}, align 8
-  // WIN64: getelementptr inbounds i32, i32* %{{[^,]*}}, i32 1
-  // WIN64: load i32, i32* %{{[^,]*}}, align 4
+  // WIN64: load ptr, ptr %{{[^,]*}}, align 8
+  // WIN64: getelementptr inbounds i32, ptr %{{[^,]*}}, i32 1
+  // WIN64: load i32, ptr %{{[^,]*}}, align 4
 }
 
 // Varargs thunk test.
@@ -360,8 +360,8 @@ namespace Test12 {
   // are generated.
   // CHECK: define {{.*}} @_ZTchn8_h8_N6Test121C1fEiz
   // CHECK-DBG-NOT: dbg.declare
-  // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -8
-  // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 8
+  // CHECK: getelementptr inbounds i8, ptr {{.*}}, i64 -8
+  // CHECK: getelementptr inbounds i8, ptr {{.*}}, i64 8
 
   // The vtable layout goes:
   // C vtable in A:
@@ -372,16 +372,16 @@ namespace Test12 {
   // FIXME: The weak_odr linkage is probably not necessary and just an artifact
   // of Itanium ABI details.
   // WIN64-LABEL: define dso_local {{.*}} @"?f@C@Test12@@UEAAPEAU12@HZZ"(
-  // WIN64: call noundef %{{.*}}* @"?makeC@Test12@@YAPEAUC@1@XZ"()
+  // WIN64: call noundef ptr @"?makeC@Test12@@YAPEAUC@1@XZ"()
   //
   // This thunk needs return adjustment, clone.
   // WIN64-LABEL: define weak_odr dso_local {{.*}} @"?f@C@Test12@@W7EAAPEAUB@2@HZZ"(
-  // WIN64: call noundef %{{.*}}* @"?makeC@Test12@@YAPEAUC@1@XZ"()
-  // WIN64: getelementptr inbounds i8, i8* %{{.*}}, i32 8
+  // WIN64: call noundef ptr @"?makeC@Test12@@YAPEAUC@1@XZ"()
+  // WIN64: getelementptr inbounds i8, ptr %{{.*}}, i32 8
   //
   // Musttail call back to the A implementation after this adjustment from B to A.
-  // WIN64-LABEL: define linkonce_odr dso_local noundef %{{.*}}* @"?f@C@Test12@@W7EAAPEAU12@HZZ"(
-  // WIN64: getelementptr i8, i8* %{{[^,]*}}, i32 -8
+  // WIN64-LABEL: define linkonce_odr dso_local noundef ptr @"?f@C@Test12@@W7EAAPEAU12@HZZ"(
+  // WIN64: getelementptr i8, ptr %{{[^,]*}}, i32 -8
   // WIN64: musttail call {{.*}} @"?f@C@Test12@@UEAAPEAU12@HZZ"(
   C c;
 }
@@ -406,22 +406,22 @@ namespace Test13 {
   }
   // CHECK: define {{.*}} @_ZTcvn8_n32_v8_n24_N6Test131D4foo1Ev
   // CHECK-DBG-NOT: dbg.declare
-  // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -8
-  // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -32
-  // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 -24
-  // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 8
-  // CHECK: ret %"struct.Test13::D"*
+  // CHECK: getelementptr inbounds i8, ptr {{.*}}, i64 -8
+  // CHECK: getelementptr inbounds i8, ptr {{.*}}, i64 -32
+  // CHECK: getelementptr inbounds i8, ptr {{.*}}, i64 -24
+  // CHECK: getelementptr inbounds i8, ptr {{.*}}, i64 8
+  // CHECK: ret ptr
 
-  // WIN64-LABEL: define weak_odr dso_local noundef %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
+  // WIN64-LABEL: define weak_odr dso_local noundef ptr @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
   //    This adjustment.
-  // WIN64: getelementptr inbounds i8, i8* {{.*}}, i64 -12
+  // WIN64: getelementptr inbounds i8, ptr {{.*}}, i64 -12
   //    Call implementation.
-  // WIN64: call {{.*}} @"?foo1@D@Test13@@UEAAAEAU12@XZ"(i8* {{.*}})
+  // WIN64: call {{.*}} @"?foo1@D@Test13@@UEAAAEAU12@XZ"(ptr {{.*}})
   //    Virtual + nonvirtual return adjustment.
-  // WIN64: load i32*, i32** %{{[^,]*}}, align 8
-  // WIN64: getelementptr inbounds i32, i32* %{{[^,]*}}, i32 1
-  // WIN64: load i32, i32* %{{[^,]*}}, align 4
-  // WIN64: getelementptr inbounds i8, i8* %{{[^,]*}}, i32 %{{[^,]*}}
+  // WIN64: load ptr, ptr %{{[^,]*}}, align 8
+  // WIN64: getelementptr inbounds i32, ptr %{{[^,]*}}, i32 1
+  // WIN64: load i32, ptr %{{[^,]*}}, align 4
+  // WIN64: getelementptr inbounds i8, ptr %{{[^,]*}}, i32 %{{[^,]*}}
 }
 
 namespace Test14 {
@@ -464,7 +464,7 @@ namespace Test15 {
   // If we have musttail, then we emit the thunk as available_externally.
   // CHECK-TAIL: declare void @_ZN6Test151C1fEiz
   // CHECK-TAIL: define available_externally void @_ZThn8_N6Test151C1fEiz({{.*}})
-  // CHECK-TAIL: musttail call void (%"struct.Test15::C"*, i32, ...) @_ZN6Test151C1fEiz({{.*}}, ...)
+  // CHECK-TAIL: musttail call void (ptr, i32, ...) @_ZN6Test151C1fEiz({{.*}}, ...)
 
   // MS C++ ABI doesn't use a thunk, so this case isn't interesting.
 }
@@ -506,13 +506,13 @@ C c;
 // CHECK-CLONE-LABEL: declare void @_ZThn8_N6Test171C1fEPKcz(
 
 // CHECK-TAIL-LABEL: define available_externally void @_ZThn8_N6Test171C1fEPKcz(
-// CHECK-TAIL: getelementptr inbounds i8, i8* %{{.*}}, i64 -8
+// CHECK-TAIL: getelementptr inbounds i8, ptr %{{.*}}, i64 -8
 // CHECK-TAIL: musttail call {{.*}} @_ZN6Test171C1fEPKcz({{.*}}, ...)
 
 // MSVC-LABEL: define linkonce_odr dso_local void @"?f@C@Test17@@G7EAAXPEBDZZ"
-// MSVC-SAME: (%"class.Test17::C"* %this, i8* %[[ARG:[^,]+]], ...)
-// MSVC: getelementptr i8, i8* %{{.*}}, i32 -8
-// MSVC: musttail call void (%"class.Test17::C"*, i8*, ...) @"?f@C@Test17@@EEAAXPEBDZZ"(%"class.Test17::C"* %{{.*}}, i8* noundef %[[ARG]], ...)
+// MSVC-SAME: (ptr %this, ptr %[[ARG:[^,]+]], ...)
+// MSVC: getelementptr i8, ptr %{{.*}}, i32 -8
+// MSVC: musttail call void (ptr, ptr, ...) @"?f@C@Test17@@EEAAXPEBDZZ"(ptr %{{.*}}, ptr noundef %[[ARG]], ...)
 }
 
 /**** The following has to go at the end of the file ****/
@@ -529,7 +529,7 @@ C c;
 // CHECK-NONOPT-LABEL: define linkonce_odr void @_ZThn8_N6Test101C3fooEv
 
 // Checking with opt
-// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(%"struct.Test4B::(anonymous namespace)::C"* noundef %this) unnamed_addr #1 align 2
+// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(ptr noundef %this) unnamed_addr #1 align 2
 
 // This is from Test5:
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test51B1fEv

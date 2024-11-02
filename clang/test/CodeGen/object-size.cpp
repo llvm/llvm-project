@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
 
 // C++-specific tests for __builtin_object_size
 
@@ -35,29 +35,29 @@ void test2() {
   struct B : A {};
   struct C { int i; B bs[1]; } *c;
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1 false)
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1 false)
   gi = __builtin_object_size(&c->bs[0], 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1 false)
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1 false)
   gi = __builtin_object_size(&c->bs[0], 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1 false)
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1 false)
   gi = __builtin_object_size(&c->bs[0], 2);
   // CHECK: store i32 16
   gi = __builtin_object_size(&c->bs[0], 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1 false)
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1 false)
   gi = __builtin_object_size((A*)&c->bs[0], 0);
   // CHECK: store i32 16
   gi = __builtin_object_size((A*)&c->bs[0], 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1 false)
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1 false)
   gi = __builtin_object_size((A*)&c->bs[0], 2);
   // CHECK: store i32 16
   gi = __builtin_object_size((A*)&c->bs[0], 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1 false)
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1 false)
   gi = __builtin_object_size(&c->bs[0].buf[0], 0);
   // CHECK: store i32 16
   gi = __builtin_object_size(&c->bs[0].buf[0], 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1 false)
+  // CHECK: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1 false)
   gi = __builtin_object_size(&c->bs[0].buf[0], 2);
   // CHECK: store i32 16
   gi = __builtin_object_size(&c->bs[0].buf[0], 3);

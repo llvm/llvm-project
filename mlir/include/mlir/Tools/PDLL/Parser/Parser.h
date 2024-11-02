@@ -26,12 +26,16 @@ class Context;
 class Module;
 } // namespace ast
 
-/// Parse an AST module from the main file of the given source manager. An
-/// optional code completion context may be provided to receive code completion
-/// suggestions. If a completion is hit, this method returns a failure.
+/// Parse an AST module from the main file of the given source manager.
+/// `enableDocumentation` is an optional flag that, when set, indicates that the
+/// parser should also include documentation when building the AST when
+/// possible. `codeCompleteContext` is an optional code completion context that
+/// may be provided to receive code completion suggestions. If a completion is
+/// hit, this method returns a failure.
 FailureOr<ast::Module *>
-parsePDLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
-            CodeCompleteContext *codeCompleteContext = nullptr);
+parsePDLLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
+             bool enableDocumentation = false,
+             CodeCompleteContext *codeCompleteContext = nullptr);
 } // namespace pdll
 } // namespace mlir
 

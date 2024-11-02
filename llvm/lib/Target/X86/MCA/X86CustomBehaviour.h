@@ -25,8 +25,6 @@ namespace llvm {
 namespace mca {
 
 class X86InstrPostProcess : public InstrPostProcess {
-  void processWaitCnt(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);
-
   /// Called within X86InstrPostProcess to specify certain instructions
   /// as load and store barriers.
   void setMemBarriers(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);

@@ -38,14 +38,10 @@ define half @freeze_half() {
 ; X86ASM:       # %bb.0:
 ; X86ASM-NEXT:    pushq %rax
 ; X86ASM-NEXT:    .cfi_def_cfa_offset 16
-; X86ASM-NEXT:    xorl %edi, %edi
-; X86ASM-NEXT:    callq __gnu_h2f_ieee@PLT
-; X86ASM-NEXT:    callq __gnu_f2h_ieee@PLT
-; X86ASM-NEXT:    movzwl %ax, %edi
-; X86ASM-NEXT:    callq __gnu_h2f_ieee@PLT
+; X86ASM-NEXT:    callq __extendhfsf2@PLT
 ; X86ASM-NEXT:    addss %xmm0, %xmm0
-; X86ASM-NEXT:    callq __gnu_f2h_ieee@PLT
-; X86ASM-NEXT:    popq %rcx
+; X86ASM-NEXT:    callq __truncsfhf2@PLT
+; X86ASM-NEXT:    popq %rax
 ; X86ASM-NEXT:    .cfi_def_cfa_offset 8
 ; X86ASM-NEXT:    retq
   %y1 = freeze half undef
@@ -63,14 +59,14 @@ define <2 x i32> @freeze_ivec() {
   ret <2 x i32> %t1
 }
 
-define i8* @freeze_ptr() {
+define ptr @freeze_ptr() {
 ; X86ASM-LABEL: freeze_ptr:
 ; X86ASM:       # %bb.0:
 ; X86ASM-NEXT:    addq $4, %rax
 ; X86ASM-NEXT:    retq
-  %y1 = freeze i8* undef
-  %t1 = getelementptr i8, i8* %y1, i64 4
-  ret i8* %t1
+  %y1 = freeze ptr undef
+  %t1 = getelementptr i8, ptr %y1, i64 4
+  ret ptr %t1
 }
 
 define i32 @freeze_struct() {

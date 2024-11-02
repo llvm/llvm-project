@@ -1,45 +1,61 @@
-// Check macro definitions
-// RUN: %clang -target m68k-unknown-linux -m68000 -dM -E %s | FileCheck --check-prefix=CHECK-MX %s
-// CHECK-MX: #define __mc68000 1
-// CHECK-MX: #define __mc68000__ 1
-// CHECK-MX: #define mc68000 1
+// REQUIRES: m68k-registered-target
+// RUN: %clang -target m68k -ffixed-a0 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-A0 < %t %s
+// CHECK-FIXED-A0: "-target-feature" "+reserve-a0"
 
-// RUN: %clang -target m68k-unknown-linux -m68010 -dM -E %s | FileCheck --check-prefix=CHECK-MX10 %s
-// CHECK-MX10: #define __mc68000 1
-// CHECK-MX10: #define __mc68000__ 1
-// CHECK-MX10: #define __mc68010 1
-// CHECK-MX10: #define __mc68010__ 1
-// CHECK-MX10: #define mc68000 1
-// CHECK-MX10: #define mc68010 1
+// RUN: %clang -target m68k -ffixed-a1 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-A1 < %t %s
+// CHECK-FIXED-A1: "-target-feature" "+reserve-a1"
 
-// RUN: %clang -target m68k-unknown-linux -m68020 -dM -E %s | FileCheck --check-prefix=CHECK-MX20 %s
-// CHECK-MX20: #define __mc68000 1
-// CHECK-MX20: #define __mc68000__ 1
-// CHECK-MX20: #define __mc68020 1
-// CHECK-MX20: #define __mc68020__ 1
-// CHECK-MX20: #define mc68000 1
-// CHECK-MX20: #define mc68020 1
+// RUN: %clang -target m68k -ffixed-a2 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-A2 < %t %s
+// CHECK-FIXED-A2: "-target-feature" "+reserve-a2"
 
-// RUN: %clang -target m68k-unknown-linux -m68030 -dM -E %s | FileCheck --check-prefix=CHECK-MX30 %s
-// CHECK-MX30: #define __mc68000 1
-// CHECK-MX30: #define __mc68000__ 1
-// CHECK-MX30: #define __mc68030 1
-// CHECK-MX30: #define __mc68030__ 1
-// CHECK-MX30: #define mc68000 1
-// CHECK-MX30: #define mc68030 1
+// RUN: %clang -target m68k -ffixed-a3 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-A3 < %t %s
+// CHECK-FIXED-A3: "-target-feature" "+reserve-a3"
 
-// RUN: %clang -target m68k-unknown-linux -m68040 -dM -E %s | FileCheck --check-prefix=CHECK-MX40 %s
-// CHECK-MX40: #define __mc68000 1
-// CHECK-MX40: #define __mc68000__ 1
-// CHECK-MX40: #define __mc68040 1
-// CHECK-MX40: #define __mc68040__ 1
-// CHECK-MX40: #define mc68000 1
-// CHECK-MX40: #define mc68040 1
+// RUN: %clang -target m68k -ffixed-a4 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-A4 < %t %s
+// CHECK-FIXED-A4: "-target-feature" "+reserve-a4"
 
-// RUN: %clang -target m68k-unknown-linux -m68060 -dM -E %s | FileCheck --check-prefix=CHECK-MX60 %s
-// CHECK-MX60: #define __mc68000 1
-// CHECK-MX60: #define __mc68000__ 1
-// CHECK-MX60: #define __mc68060 1
-// CHECK-MX60: #define __mc68060__ 1
-// CHECK-MX60: #define mc68000 1
-// CHECK-MX60: #define mc68060 1
+// RUN: %clang -target m68k -ffixed-a5 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-A5 < %t %s
+// CHECK-FIXED-A5: "-target-feature" "+reserve-a5"
+
+// RUN: %clang -target m68k -ffixed-a6 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-A6 < %t %s
+// CHECK-FIXED-A6: "-target-feature" "+reserve-a6"
+
+// RUN: %clang -target m68k -ffixed-d0 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D0 < %t %s
+// CHECK-FIXED-D0: "-target-feature" "+reserve-d0"
+
+// RUN: %clang -target m68k -ffixed-d1 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D1 < %t %s
+// CHECK-FIXED-D1: "-target-feature" "+reserve-d1"
+
+// RUN: %clang -target m68k -ffixed-d2 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D2 < %t %s
+// CHECK-FIXED-D2: "-target-feature" "+reserve-d2"
+
+// RUN: %clang -target m68k -ffixed-d3 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D3 < %t %s
+// CHECK-FIXED-D3: "-target-feature" "+reserve-d3"
+
+// RUN: %clang -target m68k -ffixed-d4 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D4 < %t %s
+// CHECK-FIXED-D4: "-target-feature" "+reserve-d4"
+
+// RUN: %clang -target m68k -ffixed-d5 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D5 < %t %s
+// CHECK-FIXED-D5: "-target-feature" "+reserve-d5"
+
+// RUN: %clang -target m68k -ffixed-d6 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D6 < %t %s
+// CHECK-FIXED-D6: "-target-feature" "+reserve-d6"
+
+// RUN: %clang -target m68k -ffixed-d7 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-FIXED-D7 < %t %s
+// CHECK-FIXED-D7: "-target-feature" "+reserve-d7"
+

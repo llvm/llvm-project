@@ -1,0 +1,16 @@
+## objdump --source w/ explicit .dSYM
+# RUN: dsymutil -f    %p/../../dsymutil/Inputs/basic.macho.x86_64 -o %t1.dSYM         -oso-prepend-path=%p/../../dsymutil
+# RUN: llvm-objdump < %p/../../dsymutil/Inputs/basic.macho.x86_64 - --source  --dsym=%t1.dSYM  --prefix=%p/../../dsymutil | \
+# RUN:   FileCheck --check-prefix=SOURCE %s
+
+## objdump --source w/ auto-detected .dSYM (dir)
+# RUN: cp -f %p/../../dsymutil/Inputs/basic.macho.x86_64 %t2
+# RUN: dsymutil     -oso-prepend-path=%p/../../dsymutil/ %t2
+# RUN: llvm-objdump --source --prefix=%p/../../dsymutil  %t2 | FileCheck --check-prefix=SOURCE %s
+
+## objdump --source w/ auto-detected .dSYM (file)
+# RUN: cp -f %p/../../dsymutil/Inputs/basic.macho.x86_64 %t3
+# RUN: dsymutil -f  -oso-prepend-path=%p/../../dsymutil/ %t3 -o %t3.dSYM
+# RUN: llvm-objdump --source --prefix=%p/../../dsymutil  %t3 | FileCheck --check-prefix=SOURCE %s
+
+# SOURCE: ; int bar(int arg) {

@@ -264,3 +264,26 @@ bb2:
   %r.6 = xor i1 %r.5, %c.6
   ret i1 %r.6
 }
+
+define i1 @test_pr58009_const_zext() {
+entry:
+  %ext.t.1 = zext i1 true to i16
+  %ext.t.2 = zext i1 true to i16
+  %t.1 = icmp uge i16 %ext.t.1, %ext.t.2
+  %f.1 = icmp ugt i16 %ext.t.1, %ext.t.2
+  %res.1 = xor i1 %t.1, %f.1
+
+  %ext.f.1 = zext i1 false to i16
+  %ext.f.2 = zext i1 false to i16
+  %t.2 = icmp uge i16 %ext.f.1, %ext.f.2
+  %f.2 = icmp ugt i16 %ext.f.1, %ext.f.2
+  %res.2 = xor i1 %res.1, %t.2
+  %res.3 = xor i1 %res.2, %f.2
+
+  %t.3 = icmp ult i16 %ext.f.1, %ext.t.2
+  %f.3 = icmp ugt i16 %ext.f.1, %ext.t.2
+  %res.4 = xor i1 %res.3, %t.3
+  %res.5 = xor i1 %res.4, %f.3
+
+  ret i1 %res.5
+}

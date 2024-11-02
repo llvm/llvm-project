@@ -662,8 +662,9 @@ define void @test_struct_hi(i32 %hi) nounwind {
 ; CHECK-LABEL: test_struct_hi:
 ; CHECK: mov w[[IN:[0-9]+]], w0
 ; CHECK: bl _get_int
-; CHECK-FAST-NEXT: mov w0, w0
-; CHECK-NEXT: bfi x0, x[[IN]], #32, #32
+; CHECK-FAST-NEXT: mov w[[DST:[0-9]+]], w0
+; CHECK-FAST-NEXT: orr x0, x[[DST]], x[[IN]], lsl #32
+; CHECK-OPT-NEXT: bfi x0, x[[IN]], #32, #32
 ; CHECK-NEXT: bl _take_pair
   %val.64 = call i64 @get_int()
   %val.32 = trunc i64 %val.64 to i32
@@ -732,11 +733,26 @@ define { [18 x i8] }* @test_gep_nonpow2({ [18 x i8] }* %a0, i32 %a1) {
   ret { [18 x i8] }* %tmp0
 }
 
+define void @test_memset(i64 %in, i8 %value)  {
+; CHECK-LABEL: test_memset:
+; CHECK-DAG: and x8, x0, #0xffffffff
+; CHECK-DAG: lsr x2, x0, #32
+; CHECK-DAG: mov x0, x8
+; CHECK: b _memset
+
+  %ptr.i32 = trunc i64 %in to i32
+  %size.64 = lshr i64 %in, 32
+  %size = trunc i64 %size.64 to i32
+  %ptr = inttoptr i32 %ptr.i32 to i8*
+  tail call void @llvm.memset.p0i8.i32(i8* align 4 %ptr, i8 %value, i32 %size, i1 false)
+  ret void
+}
+
 define void @test_bzero(i64 %in)  {
 ; CHECK-LABEL: test_bzero:
 ; CHECK-DAG: lsr x1, x0, #32
 ; CHECK-DAG: and x0, x0, #0xffffffff
-; CHECK: bl _bzero
+; CHECK: b _bzero
 
   %ptr.i32 = trunc i64 %in to i32
   %size.64 = lshr i64 %in, 32

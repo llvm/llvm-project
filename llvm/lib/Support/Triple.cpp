@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Triple.h"
-#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -170,7 +169,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case loongarch32:
   case loongarch64: return "loongarch";
-  
+
   case dxil:        return "dx";
   }
 }
@@ -259,6 +258,9 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case GNUABIN32: return "gnuabin32";
   case GNUEABI: return "gnueabi";
   case GNUEABIHF: return "gnueabihf";
+  case GNUF32: return "gnuf32";
+  case GNUF64: return "gnuf64";
+  case GNUSF: return "gnusf";
   case GNUX32: return "gnux32";
   case GNUILP32: return "gnu_ilp32";
   case Itanium: return "itanium";
@@ -458,6 +460,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("arm64", Triple::aarch64)
     .Case("arm64_32", Triple::aarch64_32)
     .Case("arm64e", Triple::aarch64)
+    .Case("arm64ec", Triple::aarch64)
     .Case("arm", Triple::arm)
     .Case("armeb", Triple::armeb)
     .Case("thumb", Triple::thumb)
@@ -598,6 +601,9 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("gnuabi64", Triple::GNUABI64)
       .StartsWith("gnueabihf", Triple::GNUEABIHF)
       .StartsWith("gnueabi", Triple::GNUEABI)
+      .StartsWith("gnuf32", Triple::GNUF32)
+      .StartsWith("gnuf64", Triple::GNUF64)
+      .StartsWith("gnusf", Triple::GNUSF)
       .StartsWith("gnux32", Triple::GNUX32)
       .StartsWith("gnu_ilp32", Triple::GNUILP32)
       .StartsWith("code16", Triple::CODE16)
@@ -655,6 +661,9 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "arm64e")
     return Triple::AArch64SubArch_arm64e;
+
+  if (SubArchName == "arm64ec")
+    return Triple::AArch64SubArch_arm64ec;
 
   if (SubArchName.startswith("spirv"))
     return StringSwitch<Triple::SubArchType>(SubArchName)
@@ -978,13 +987,13 @@ std::string Triple::normalize(StringRef Str) {
   // If they are not there already, permute the components into their canonical
   // positions by seeing if they parse as a valid architecture, and if so moving
   // the component to the architecture position etc.
-  for (unsigned Pos = 0; Pos != array_lengthof(Found); ++Pos) {
+  for (unsigned Pos = 0; Pos != std::size(Found); ++Pos) {
     if (Found[Pos])
       continue; // Already in the canonical position.
 
     for (unsigned Idx = 0; Idx != Components.size(); ++Idx) {
       // Do not reparse any components that already matched.
-      if (Idx < array_lengthof(Found) && Found[Idx])
+      if (Idx < std::size(Found) && Found[Idx])
         continue;
 
       // Does this component parse as valid for the target position?
@@ -1032,7 +1041,7 @@ std::string Triple::normalize(StringRef Str) {
         // components to the right.
         for (unsigned i = Pos; !CurrentComponent.empty(); ++i) {
           // Skip over any fixed components.
-          while (i < array_lengthof(Found) && Found[i])
+          while (i < std::size(Found) && Found[i])
             ++i;
           // Place the component at the new position, getting the component
           // that was at this position - it will be moved right.
@@ -1053,7 +1062,7 @@ std::string Triple::normalize(StringRef Str) {
             if (CurrentComponent.empty())
               break;
             // Advance to the next component, skipping any fixed components.
-            while (++i < array_lengthof(Found) && Found[i])
+            while (++i < std::size(Found) && Found[i])
               ;
           }
           // The last component was pushed off the end - append it.
@@ -1061,7 +1070,7 @@ std::string Triple::normalize(StringRef Str) {
             Components.push_back(CurrentComponent);
 
           // Advance Idx to the component's new position.
-          while (++Idx < array_lengthof(Found) && Found[Idx])
+          while (++Idx < std::size(Found) && Found[Idx])
             ;
         } while (Idx < Pos); // Add more until the final position is reached.
       }
@@ -1145,6 +1154,10 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) const {
   case Triple::mips64el:
     if (SubArch == MipsSubArch_r6)
       return "mipsisa64r6el";
+    break;
+  case Triple::aarch64:
+    if (SubArch == AArch64SubArch_arm64ec)
+      return "arm64ec";
     break;
   default:
     break;
@@ -1850,75 +1863,6 @@ VersionTuple Triple::getMinimumSupportedOSVersion() const {
   return VersionTuple();
 }
 
-StringRef Triple::getARMCPUForArch(StringRef MArch) const {
-  if (MArch.empty())
-    MArch = getArchName();
-  MArch = ARM::getCanonicalArchName(MArch);
-
-  // Some defaults are forced.
-  switch (getOS()) {
-  case llvm::Triple::FreeBSD:
-  case llvm::Triple::NetBSD:
-  case llvm::Triple::OpenBSD:
-    if (!MArch.empty() && MArch == "v6")
-      return "arm1176jzf-s";
-    if (!MArch.empty() && MArch == "v7")
-      return "cortex-a8";
-    break;
-  case llvm::Triple::Win32:
-    // FIXME: this is invalid for WindowsCE
-    if (ARM::parseArchVersion(MArch) <= 7)
-      return "cortex-a9";
-    break;
-  case llvm::Triple::IOS:
-  case llvm::Triple::MacOSX:
-  case llvm::Triple::TvOS:
-  case llvm::Triple::WatchOS:
-  case llvm::Triple::DriverKit:
-    if (MArch == "v7k")
-      return "cortex-a7";
-    break;
-  default:
-    break;
-  }
-
-  if (MArch.empty())
-    return StringRef();
-
-  StringRef CPU = ARM::getDefaultCPU(MArch);
-  if (!CPU.empty() && !CPU.equals("invalid"))
-    return CPU;
-
-  // If no specific architecture version is requested, return the minimum CPU
-  // required by the OS and environment.
-  switch (getOS()) {
-  case llvm::Triple::NetBSD:
-    switch (getEnvironment()) {
-    case llvm::Triple::EABI:
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::GNUEABI:
-    case llvm::Triple::GNUEABIHF:
-      return "arm926ej-s";
-    default:
-      return "strongarm";
-    }
-  case llvm::Triple::NaCl:
-  case llvm::Triple::OpenBSD:
-    return "cortex-a8";
-  default:
-    switch (getEnvironment()) {
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::GNUEABIHF:
-    case llvm::Triple::MuslEABIHF:
-      return "arm1176jzf-s";
-    default:
-      return "arm7tdmi";
-    }
-  }
-
-  llvm_unreachable("invalid arch name");
-}
-
 VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
                                               const VersionTuple &Version) {
   switch (OSKind) {
@@ -1926,7 +1870,7 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
     // macOS 10.16 is canonicalized to macOS 11.
     if (Version == VersionTuple(10, 16))
       return VersionTuple(11, 0);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return Version;
   }

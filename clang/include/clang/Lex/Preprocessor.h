@@ -67,7 +67,6 @@ namespace clang {
 class CodeCompletionHandler;
 class CommentHandler;
 class DirectoryEntry;
-class DirectoryLookup;
 class EmptylineHandler;
 class ExternalPreprocessorSource;
 class FileEntry;
@@ -165,6 +164,7 @@ class Preprocessor {
   IdentifierInfo *Ident__has_feature;              // __has_feature
   IdentifierInfo *Ident__has_extension;            // __has_extension
   IdentifierInfo *Ident__has_builtin;              // __has_builtin
+  IdentifierInfo *Ident__has_constexpr_builtin;    // __has_constexpr_builtin
   IdentifierInfo *Ident__has_attribute;            // __has_attribute
   IdentifierInfo *Ident__has_include;              // __has_include
   IdentifierInfo *Ident__has_include_next;         // __has_include_next
@@ -179,6 +179,8 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_vendor;         // __is_target_vendor
   IdentifierInfo *Ident__is_target_os;             // __is_target_os
   IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
+  IdentifierInfo *Ident__is_target_variant_os;
+  IdentifierInfo *Ident__is_target_variant_environment;
   IdentifierInfo *Ident__FLT_EVAL_METHOD__;        // __FLT_EVAL_METHOD
 
   // Weak, only valid (and set) while InMacroArgs is true.
@@ -313,14 +315,14 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The module import path that we're currently processing.
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> ModuleImportPath;
+  /// The import path for named module that we're currently processing.
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> NamedModuleImportPath;
 
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
   /// A position within a C++20 import-seq.
-  class ImportSeq {
+  class StdCXXImportSeq {
   public:
     enum State : int {
       // Positive values represent a number of unclosed brackets.
@@ -330,7 +332,7 @@ private:
       AfterImportSeq = -3,
     };
 
-    ImportSeq(State S) : S(S) {}
+    StdCXXImportSeq(State S) : S(S) {}
 
     /// Saw any kind of open bracket.
     void handleOpenBracket() {
@@ -385,6 +387,7 @@ private:
 
     bool atTopLevel() { return S <= 0; }
     bool afterImportSeq() { return S == AfterImportSeq; }
+    bool afterTopLevelSeq() { return S == AfterTopLevelTokenSeq; }
 
   private:
     State S;
@@ -395,7 +398,68 @@ private:
   };
 
   /// Our current position within a C++20 import-seq.
-  ImportSeq ImportSeqState = ImportSeq::AfterTopLevelTokenSeq;
+  StdCXXImportSeq StdCXXImportSeqState = StdCXXImportSeq::AfterTopLevelTokenSeq;
+
+  /// Track whether we are in a Global Module Fragment
+  class TrackGMF {
+  public:
+    enum GMFState : int {
+      GMFActive = 1,
+      MaybeGMF = 0,
+      BeforeGMFIntroducer = -1,
+      GMFAbsentOrEnded = -2,
+    };
+
+    TrackGMF(GMFState S) : S(S) {}
+
+    /// Saw a semicolon.
+    void handleSemi() {
+      // If it is immediately after the first instance of the module keyword,
+      // then that introduces the GMF.
+      if (S == MaybeGMF)
+        S = GMFActive;
+    }
+
+    /// Saw an 'export' identifier.
+    void handleExport() {
+      // The presence of an 'export' keyword always ends or excludes a GMF.
+      S = GMFAbsentOrEnded;
+    }
+
+    /// Saw an 'import' identifier.
+    void handleImport(bool AfterTopLevelTokenSeq) {
+      // If we see this before any 'module' kw, then we have no GMF.
+      if (AfterTopLevelTokenSeq && S == BeforeGMFIntroducer)
+        S = GMFAbsentOrEnded;
+    }
+
+    /// Saw a 'module' identifier.
+    void handleModule(bool AfterTopLevelTokenSeq) {
+      // This was the first module identifier and not preceded by any token
+      // that would exclude a GMF.  It could begin a GMF, but only if directly
+      // followed by a semicolon.
+      if (AfterTopLevelTokenSeq && S == BeforeGMFIntroducer)
+        S = MaybeGMF;
+      else
+        S = GMFAbsentOrEnded;
+    }
+
+    /// Saw any other token.
+    void handleMisc() {
+      // We saw something other than ; after the 'module' kw, so not a GMF.
+      if (S == MaybeGMF)
+        S = GMFAbsentOrEnded;
+    }
+
+    bool inGMF() { return S == GMFActive; }
+
+  private:
+    /// Track the transitions into and out of a Global Module Fragment,
+    /// if one is present.
+    GMFState S;
+  };
+
+  TrackGMF TrackGMFState = TrackGMF::BeforeGMFIntroducer;
 
   /// Whether the module import expects an identifier next. Otherwise,
   /// it expects a '.' or ';'.
@@ -517,7 +581,7 @@ private:
 
     bool hasRecordedPreamble() const { return !ConditionalStack.empty(); }
 
-    bool reachedEOFWhileSkipping() const { return SkipInfo.hasValue(); }
+    bool reachedEOFWhileSkipping() const { return SkipInfo.has_value(); }
 
     void clearSkipInfo() { SkipInfo.reset(); }
 
@@ -799,6 +863,10 @@ private:
   /// The files that have been included.
   IncludedFilesSet IncludedFiles;
 
+  /// The set of top-level modules that affected preprocessing, but were not
+  /// imported.
+  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
+
   /// The set of known macros exported from modules.
   llvm::FoldingSet<ModuleMacro> ModuleMacros;
 
@@ -943,14 +1011,17 @@ private:
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
 
-  struct MacroInfoChain {
-    MacroInfo MI;
-    MacroInfoChain *Next;
-  };
+  /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
+  /// This is used to guard against calling this function recursively.
+  ///
+  /// See comments at the use-site for more context about why it is needed.
+  bool SkippingExcludedConditionalBlock = false;
 
-  /// MacroInfos are managed as a chain for easy disposal.  This is the head
-  /// of that list.
-  MacroInfoChain *MIChainHead = nullptr;
+  /// Keeps track of skipped range mappings that were recorded while skipping
+  /// excluded conditional directives. It maps the source buffer pointer at
+  /// the beginning of a skipped block, to the number of bytes that should be
+  /// skipped.
+  llvm::DenseMap<const char *, unsigned> RecordedSkippedRanges;
 
   void updateOutOfDateIdentifier(IdentifierInfo &II) const;
 
@@ -1258,6 +1329,23 @@ public:
 
   /// \}
 
+  /// Mark the given clang module as affecting the current clang module or translation unit.
+  void markClangModuleAsAffecting(Module *M) {
+    assert(M->isModuleMapModule());
+    if (!BuildingSubmoduleStack.empty()) {
+      if (M != BuildingSubmoduleStack.back().M)
+        BuildingSubmoduleStack.back().M->AffectingClangModules.insert(M);
+    } else {
+      AffectingClangModules.insert(M);
+    }
+  }
+
+  /// Get the set of top-level clang modules that affected preprocessing, but were not
+  /// imported.
+  const llvm::SmallSetVector<Module *, 2> &getAffectingClangModules() const {
+    return AffectingClangModules;
+  }
+
   /// Mark the file as included.
   /// Returns true if this is the first time the file was included.
   bool markIncluded(const FileEntry *File) {
@@ -1279,6 +1367,11 @@ public:
   /// return the last one defined.
   StringRef getLastMacroWithSpelling(SourceLocation Loc,
                                      ArrayRef<TokenValue> Tokens) const;
+
+  /// Get the predefines for this processor.
+  /// Used by some third-party tools to inspect and add predefines (see
+  /// https://github.com/llvm/llvm-project/issues/57483).
+  const std::string &getPredefines() const { return Predefines; }
 
   /// Set the predefines for this Preprocessor.
   ///
@@ -2131,6 +2224,9 @@ public:
   /// Retrieves the module that we're currently building, if any.
   Module *getCurrentModule();
 
+  /// Retrieves the module whose implementation we're current compiling, if any.
+  Module *getCurrentModuleImplementation();
+
   /// Allocate a new MacroInfo object with the provided SourceLocation.
   MacroInfo *AllocateMacroInfo(SourceLocation L);
 
@@ -2155,7 +2251,8 @@ public:
              ConstSearchDirIterator *CurDir, SmallVectorImpl<char> *SearchPath,
              SmallVectorImpl<char> *RelativePath,
              ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped,
-             bool *IsFrameworkFound, bool SkipCache = false);
+             bool *IsFrameworkFound, bool SkipCache = false,
+             bool OpenFile = true, bool CacheFailures = true);
 
   /// Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
@@ -2243,10 +2340,7 @@ private:
   ///
   /// \param Tok - Token that represents the directive
   /// \param Directive - String reference for the directive name
-  /// \param EndLoc - End location for fixit
-  void SuggestTypoedDirective(const Token &Tok,
-                              StringRef Directive,
-                              const SourceLocation &EndLoc) const;
+  void SuggestTypoedDirective(const Token &Tok, StringRef Directive) const;
 
   /// We just read a \#if or related directive and decided that the
   /// subsequent tokens are in the \#if'd out portion of the
@@ -2405,6 +2499,7 @@ private:
       None,
       ModuleBegin,
       ModuleImport,
+      HeaderUnitImport,
       SkippedModuleImport,
       Failure,
     } Kind;
@@ -2452,7 +2547,7 @@ public:
   /// Find the module that owns the source or header file that
   /// \p Loc points to. If the location is in a file that was included
   /// into a module, or is outside any module, returns nullptr.
-  Module *getModuleForLocation(SourceLocation Loc);
+  Module *getModuleForLocation(SourceLocation Loc, bool AllowTextual);
 
   /// We want to produce a diagnostic at location IncLoc concerning an
   /// unreachable effect at location MLoc (eg, where a desired entity was

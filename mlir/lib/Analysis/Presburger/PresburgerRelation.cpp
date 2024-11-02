@@ -21,6 +21,13 @@ PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
   unionInPlace(disjunct);
 }
 
+void PresburgerRelation::setSpace(const PresburgerSpace &oSpace) {
+  assert(space.getNumLocalVars() == 0 && "no locals should be present");
+  space = oSpace;
+  for (IntegerRelation &disjunct : disjuncts)
+    disjunct.setSpaceExceptLocals(space);
+}
+
 unsigned PresburgerRelation::getNumDisjuncts() const {
   return disjuncts.size();
 }
@@ -61,9 +68,9 @@ PresburgerRelation::unionSet(const PresburgerRelation &set) const {
 }
 
 /// A point is contained in the union iff any of the parts contain the point.
-bool PresburgerRelation::containsPoint(ArrayRef<int64_t> point) const {
+bool PresburgerRelation::containsPoint(ArrayRef<MPInt> point) const {
   return llvm::any_of(disjuncts, [&](const IntegerRelation &disjunct) {
-    return (disjunct.containsPoint(point));
+    return (disjunct.containsPointNoLocal(point));
   });
 }
 
@@ -114,19 +121,30 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
 ///
 /// For every eq `coeffs == 0` there are two possible ineqs to index into.
 /// The first is coeffs >= 0 and the second is coeffs <= 0.
-static SmallVector<int64_t, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
-                                                    unsigned idx) {
+static SmallVector<MPInt, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
+                                                  unsigned idx) {
   assert(idx < rel.getNumInequalities() + 2 * rel.getNumEqualities() &&
          "idx out of bounds!");
   if (idx < rel.getNumInequalities())
     return llvm::to_vector<8>(rel.getInequality(idx));
 
   idx -= rel.getNumInequalities();
-  ArrayRef<int64_t> eqCoeffs = rel.getEquality(idx / 2);
+  ArrayRef<MPInt> eqCoeffs = rel.getEquality(idx / 2);
 
   if (idx % 2 == 0)
     return llvm::to_vector<8>(eqCoeffs);
   return getNegatedCoeffs(eqCoeffs);
+}
+
+PresburgerRelation PresburgerRelation::computeReprWithOnlyDivLocals() const {
+  if (hasOnlyDivLocals())
+    return *this;
+
+  // The result is just the union of the reprs of the disjuncts.
+  PresburgerRelation result(getSpace());
+  for (const IntegerRelation &disjunct : disjuncts)
+    result.unionInPlace(disjunct.computeReprWithOnlyDivLocals());
+  return result;
 }
 
 /// Return the set difference b \ s.
@@ -167,8 +185,11 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
   if (b.isEmptyByGCDTest())
     return PresburgerRelation::getEmpty(b.getSpaceWithoutLocals());
 
+  if (!s.hasOnlyDivLocals())
+    return getSetDifference(b, s.computeReprWithOnlyDivLocals());
+
   // Remove duplicate divs up front here to avoid existing
-  // divs disappearing in the call to mergeLocalIds below.
+  // divs disappearing in the call to mergeLocalVars below.
   b.removeDuplicateDivs();
 
   PresburgerRelation result =
@@ -210,7 +231,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       // No frame for this level yet, so we have just recursed into this level.
       IntegerRelation sI = s.getDisjunct(level - 1);
       // Remove the duplicate divs up front to avoid them possibly disappearing
-      // in the call to mergeLocalIds below.
+      // in the call to mergeLocalVars below.
       sI.removeDuplicateDivs();
 
       // Below, we append some additional constraints and ids to b. We want to
@@ -221,30 +242,35 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       // Similarly, we also want to rollback simplex to its original state.
       unsigned initialSnapshot = simplex.getSnapshot();
 
-      // Find out which inequalities of sI correspond to division inequalities
-      // for the local variables of sI.
-      std::vector<MaybeLocalRepr> repr(sI.getNumLocalIds());
-      sI.getLocalReprs(repr);
-
       // Add sI's locals to b, after b's locals. Only those locals of sI which
       // do not already exist in b will be added. (i.e., duplicate divisions
       // will not be added.) Also add b's locals to sI, in such a way that both
       // have the same locals in the same order in the end.
-      b.mergeLocalIds(sI);
+      b.mergeLocalVars(sI);
+
+      // Find out which inequalities of sI correspond to division inequalities
+      // for the local variables of sI.
+      //
+      // Careful! This has to be done after the merge above; otherwise, the
+      // dividends won't contain the new ids inserted during the merge.
+      std::vector<MaybeLocalRepr> repr(sI.getNumLocalVars());
+      DivisionRepr divs = sI.getLocalReprs(&repr);
 
       // Mark which inequalities of sI are division inequalities and add all
       // such inequalities to b.
       llvm::SmallBitVector canIgnoreIneq(sI.getNumInequalities() +
                                          2 * sI.getNumEqualities());
-      for (MaybeLocalRepr &maybeRepr : repr) {
+      for (unsigned i = initBCounts.getSpace().getNumLocalVars(),
+                    e = sI.getNumLocalVars();
+           i < e; ++i) {
         assert(
-            maybeRepr &&
+            repr[i] &&
             "Subtraction is not supported when a representation of the local "
             "variables of the subtrahend cannot be found!");
 
-        if (maybeRepr.kind == ReprKind::Inequality) {
-          unsigned lb = maybeRepr.repr.inequalityPair.lowerBoundIdx;
-          unsigned ub = maybeRepr.repr.inequalityPair.upperBoundIdx;
+        if (repr[i].kind == ReprKind::Inequality) {
+          unsigned lb = repr[i].repr.inequalityPair.lowerBoundIdx;
+          unsigned ub = repr[i].repr.inequalityPair.upperBoundIdx;
 
           b.addInequality(sI.getInequality(lb));
           b.addInequality(sI.getInequality(ub));
@@ -254,20 +280,36 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
           canIgnoreIneq[lb] = true;
           canIgnoreIneq[ub] = true;
         } else {
-          assert(maybeRepr.kind == ReprKind::Equality &&
+          assert(repr[i].kind == ReprKind::Equality &&
                  "ReprKind isn't inequality so should be equality");
-          unsigned idx = maybeRepr.repr.equalityIdx;
-          b.addEquality(sI.getEquality(idx));
-          // We can ignore both inequalities corresponding to this equality.
-          unsigned offset = sI.getNumInequalities();
-          canIgnoreIneq[offset + 2 * idx] = true;
-          canIgnoreIneq[offset + 2 * idx + 1] = true;
+
+          // Consider the case (x) : (x = 3e + 1), where e is a local.
+          // Its complement is (x) : (x = 3e) or (x = 3e + 2).
+          //
+          // This can be computed by considering the set to be
+          // (x) : (x = 3*(x floordiv 3) + 1).
+          //
+          // Now there are no equalities defining divisions; the division is
+          // defined by the standard division equalities for e = x floordiv 3,
+          // i.e., 0 <= x - 3*e <= 2.
+          // So now as before, we add these division inequalities to b. The
+          // equality is now just an ordinary constraint that must be considered
+          // in the remainder of the algorithm. The division inequalities must
+          // need not be considered, same as above, and they automatically will
+          // not be because they were never a part of sI; we just infer them
+          // from the equality and add them only to b.
+          b.addInequality(
+              getDivLowerBound(divs.getDividend(i), divs.getDenom(i),
+                               sI.getVarKindOffset(VarKind::Local) + i));
+          b.addInequality(
+              getDivUpperBound(divs.getDividend(i), divs.getDenom(i),
+                               sI.getVarKindOffset(VarKind::Local) + i));
         }
       }
 
       unsigned offset = simplex.getNumConstraints();
       unsigned numLocalsAdded =
-          b.getNumLocalIds() - initBCounts.getSpace().getNumLocalIds();
+          b.getNumLocalVars() - initBCounts.getSpace().getNumLocalVars();
       simplex.appendVariable(numLocalsAdded);
 
       unsigned snapshotBeforeIntersect = simplex.getSnapshot();
@@ -291,16 +333,29 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
         continue;
       }
 
-      simplex.detectRedundant();
-
       // Equalities are added to simplex as a pair of inequalities.
       unsigned totalNewSimplexInequalities =
           2 * sI.getNumEqualities() + sI.getNumInequalities();
+      // Look for redundant constraints among the constraints of sI. We don't
+      // care about redundant constraints in `b` at this point.
+      //
+      // When there are two copies of a constraint in `simplex`, i.e., among the
+      // constraints of `b` and `sI`, only one of them can be marked redundant.
+      // (Assuming no other constraint makes these redundant.)
+      //
+      // In a case where there is one copy in `b` and one in `sI`, we want the
+      // one in `sI` to be marked, not the one in `b`. Therefore, it's not
+      // enough to ignore the constraints of `b` when checking which
+      // constraints `detectRedundant` has marked redundant; we explicitly tell
+      // `detectRedundant` to only mark constraints from `sI` as being
+      // redundant.
+      simplex.detectRedundant(offset, totalNewSimplexInequalities);
       for (unsigned j = 0; j < totalNewSimplexInequalities; j++)
         canIgnoreIneq[j] = simplex.isMarkedRedundant(offset + j);
       simplex.rollback(snapshotBeforeIntersect);
 
-      SmallVector<unsigned, 8> ineqsToProcess(totalNewSimplexInequalities);
+      SmallVector<unsigned, 8> ineqsToProcess;
+      ineqsToProcess.reserve(totalNewSimplexInequalities);
       for (unsigned i = 0; i < totalNewSimplexInequalities; ++i)
         if (!canIgnoreIneq[i])
           ineqsToProcess.push_back(i);
@@ -334,7 +389,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
         // state before adding this complement constraint, and add s_ij to b.
         simplex.rollback(frame.simplexSnapshot);
         b.truncate(frame.bCounts);
-        SmallVector<int64_t, 8> ineq =
+        SmallVector<MPInt, 8> ineq =
             getIneqCoeffsFromIdx(frame.sI, *frame.lastIneqProcessed);
         b.addInequality(ineq);
         simplex.addInequality(ineq);
@@ -352,7 +407,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       frame.simplexSnapshot = simplex.getSnapshot();
 
       unsigned idx = frame.ineqsToProcess.back();
-      SmallVector<int64_t, 8> ineq =
+      SmallVector<MPInt, 8> ineq =
           getComplementIneq(getIneqCoeffsFromIdx(frame.sI, idx));
       b.addInequality(ineq);
       simplex.addInequality(ineq);
@@ -404,10 +459,10 @@ bool PresburgerRelation::isIntegerEmpty() const {
   return llvm::all_of(disjuncts, std::mem_fn(&IntegerRelation::isIntegerEmpty));
 }
 
-bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
+bool PresburgerRelation::findIntegerSample(SmallVectorImpl<MPInt> &sample) {
   // A sample exists iff any of the disjuncts contains a sample.
   for (const IntegerRelation &disjunct : disjuncts) {
-    if (Optional<SmallVector<int64_t, 8>> opt = disjunct.findIntegerSample()) {
+    if (Optional<SmallVector<MPInt, 8>> opt = disjunct.findIntegerSample()) {
       sample = std::move(*opt);
       return true;
     }
@@ -415,13 +470,13 @@ bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
   return false;
 }
 
-Optional<uint64_t> PresburgerRelation::computeVolume() const {
-  assert(getNumSymbolIds() == 0 && "Symbols are not yet supported!");
+Optional<MPInt> PresburgerRelation::computeVolume() const {
+  assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
   // The sum of the volumes of the disjuncts is a valid overapproximation of the
   // volume of their union, even if they overlap.
-  uint64_t result = 0;
+  MPInt result(0);
   for (const IntegerRelation &disjunct : disjuncts) {
-    Optional<uint64_t> volume = disjunct.computeVolume();
+    Optional<MPInt> volume = disjunct.computeVolume();
     if (!volume)
       return {};
     result += *volume;
@@ -456,20 +511,20 @@ private:
 
   /// The list of all inversed equalities during typing. This ensures that
   /// the constraints exist even after the typing function has concluded.
-  SmallVector<SmallVector<int64_t, 2>, 2> negEqs;
+  SmallVector<SmallVector<MPInt, 2>, 2> negEqs;
 
   /// `redundantIneqsA` is the inequalities of `a` that are redundant for `b`
   /// (similarly for `cuttingIneqsA`, `redundantIneqsB`, and `cuttingIneqsB`).
-  SmallVector<ArrayRef<int64_t>, 2> redundantIneqsA;
-  SmallVector<ArrayRef<int64_t>, 2> cuttingIneqsA;
+  SmallVector<ArrayRef<MPInt>, 2> redundantIneqsA;
+  SmallVector<ArrayRef<MPInt>, 2> cuttingIneqsA;
 
-  SmallVector<ArrayRef<int64_t>, 2> redundantIneqsB;
-  SmallVector<ArrayRef<int64_t>, 2> cuttingIneqsB;
+  SmallVector<ArrayRef<MPInt>, 2> redundantIneqsB;
+  SmallVector<ArrayRef<MPInt>, 2> cuttingIneqsB;
 
   /// Given a Simplex `simp` and one of its inequalities `ineq`, check
   /// that the facet of `simp` where `ineq` holds as an equality is contained
   /// within `a`.
-  bool isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp);
+  bool isFacetContained(ArrayRef<MPInt> ineq, Simplex &simp);
 
   /// Removes redundant constraints from `disjunct`, adds it to `disjuncts` and
   /// removes the disjuncts at position `i` and `j`. Updates `simplices` to
@@ -493,13 +548,13 @@ private:
   /// Types the inequality `ineq` according to its `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeInequality(ArrayRef<int64_t> ineq, Simplex &simp);
+  LogicalResult typeInequality(ArrayRef<MPInt> ineq, Simplex &simp);
 
   /// Types the equality `eq`, i.e. for `eq` == 0, types both `eq` >= 0 and
   /// -`eq` >= 0 according to their `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeEquality(ArrayRef<int64_t> eq, Simplex &simp);
+  LogicalResult typeEquality(ArrayRef<MPInt> eq, Simplex &simp);
 
   /// Replaces the element at position `i` with the last element and erases
   /// the last element for both `disjuncts` and `simplices`.
@@ -576,10 +631,10 @@ PresburgerRelation SetCoalescer::coalesce() {
 /// Given a Simplex `simp` and one of its inequalities `ineq`, check
 /// that all inequalities of `cuttingIneqsB` are redundant for the facet of
 /// `simp` where `ineq` holds as an equality is contained within `a`.
-bool SetCoalescer::isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp) {
+bool SetCoalescer::isFacetContained(ArrayRef<MPInt> ineq, Simplex &simp) {
   SimplexRollbackScopeExit scopeExit(simp);
   simp.addEquality(ineq);
-  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<int64_t> curr) {
+  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<MPInt> curr) {
     return simp.isRedundantInequality(curr);
   });
 }
@@ -641,23 +696,23 @@ LogicalResult SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
   /// redundant ones are, so only the cutting ones remain to be checked.
   Simplex &simp = simplices[i];
   IntegerRelation &disjunct = disjuncts[i];
-  if (llvm::any_of(cuttingIneqsA, [this, &simp](ArrayRef<int64_t> curr) {
+  if (llvm::any_of(cuttingIneqsA, [this, &simp](ArrayRef<MPInt> curr) {
         return !isFacetContained(curr, simp);
       }))
     return failure();
   IntegerRelation newSet(disjunct.getSpace());
 
-  for (ArrayRef<int64_t> curr : redundantIneqsA)
+  for (ArrayRef<MPInt> curr : redundantIneqsA)
     newSet.addInequality(curr);
 
-  for (ArrayRef<int64_t> curr : redundantIneqsB)
+  for (ArrayRef<MPInt> curr : redundantIneqsB)
     newSet.addInequality(curr);
 
   addCoalescedDisjunct(i, j, newSet);
   return success();
 }
 
-LogicalResult SetCoalescer::typeInequality(ArrayRef<int64_t> ineq,
+LogicalResult SetCoalescer::typeInequality(ArrayRef<MPInt> ineq,
                                            Simplex &simp) {
   Simplex::IneqType type = simp.findIneqType(ineq);
   if (type == Simplex::IneqType::Redundant)
@@ -669,11 +724,11 @@ LogicalResult SetCoalescer::typeInequality(ArrayRef<int64_t> ineq,
   return success();
 }
 
-LogicalResult SetCoalescer::typeEquality(ArrayRef<int64_t> eq, Simplex &simp) {
+LogicalResult SetCoalescer::typeEquality(ArrayRef<MPInt> eq, Simplex &simp) {
   if (typeInequality(eq, simp).failed())
     return failure();
   negEqs.push_back(getNegatedCoeffs(eq));
-  ArrayRef<int64_t> inv(negEqs.back());
+  ArrayRef<MPInt> inv(negEqs.back());
   if (typeInequality(inv, simp).failed())
     return failure();
   return success();
@@ -695,7 +750,7 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   /// Handling of local ids is not yet implemented, so these cases are
   /// skipped.
   /// TODO: implement local id support.
-  if (a.getNumLocalIds() != 0 || b.getNumLocalIds() != 0)
+  if (a.getNumLocalVars() != 0 || b.getNumLocalVars() != 0)
     return failure();
   Simplex &simpA = simplices[i];
   Simplex &simpB = simplices[j];
@@ -755,6 +810,12 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
 
 PresburgerRelation PresburgerRelation::coalesce() const {
   return SetCoalescer(*this).coalesce();
+}
+
+bool PresburgerRelation::hasOnlyDivLocals() const {
+  return llvm::all_of(disjuncts, [](const IntegerRelation &rel) {
+    return rel.hasOnlyDivLocals();
+  });
 }
 
 void PresburgerRelation::print(raw_ostream &os) const {

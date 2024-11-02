@@ -9,10 +9,10 @@
 
 # RUN: llvm-mc -triple=mips64-unknown-linux-gnuabin32 \
 # RUN:         -position-independent -filetype=obj -o - %s \
-# RUN:   | llvm-objdump -d -r - | FileCheck --check-prefix=OBJ32 %s
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck --check-prefix=OBJ32 %s
 # RUN: llvm-mc -triple=mips64-unknown-linux-gnu \
 # RUN:         -position-independent -filetype=obj -o - %s \
-# RUN:   | llvm-objdump -d -r - | FileCheck --check-prefix=OBJ64 %s
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck --check-prefix=OBJ64 %s
 
 # ASM-PIC32:  .text
 # ASM-PIC32:  .cplocal $4

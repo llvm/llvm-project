@@ -26,8 +26,7 @@ define void @f1() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16** [[TMP3]] to <2 x i16*>*
 ; CHECK-NEXT:    store <2 x i16*> <i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0), i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0)>, <2 x i16*>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 2
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 2, 2
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[BB3:%.*]], label [[SCALAR_PH]]

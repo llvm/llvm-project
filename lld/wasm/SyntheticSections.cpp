@@ -88,7 +88,7 @@ void DylinkSection::writeBody() {
   // so that knows not to report an error for such symbols.
   std::vector<const Symbol *> importInfo;
   std::vector<const Symbol *> exportInfo;
-  for (const Symbol *sym : symtab->getSymbols()) {
+  for (const Symbol *sym : symtab->symbols()) {
     if (sym->isLive()) {
       if (sym->isExported() && sym->isTLS() && isa<DefinedData>(sym)) {
         exportInfo.push_back(sym);
@@ -124,8 +124,8 @@ void DylinkSection::writeBody() {
 
     for (const Symbol *sym : importInfo) {
       LLVM_DEBUG(llvm::dbgs() << "imports info: " << toString(*sym) << "\n");
-      StringRef module = sym->importModule.getValueOr(defaultModule);
-      StringRef name = sym->importName.getValueOr(sym->getName());
+      StringRef module = sym->importModule.value_or(defaultModule);
+      StringRef name = sym->importName.value_or(sym->getName());
       writeStr(sub.os, module, "import module");
       writeStr(sub.os, name, "import name");
       writeUleb128(sub.os, sym->flags, "sym flags");
@@ -162,7 +162,7 @@ void TypeSection::writeBody() {
 uint32_t ImportSection::getNumImports() const {
   assert(isSealed);
   uint32_t numImports = importedSymbols.size() + gotSymbols.size();
-  if (config->importMemory)
+  if (config->memoryImport.has_value())
     ++numImports;
   return numImports;
 }
@@ -184,8 +184,8 @@ void ImportSection::addGOTEntry(Symbol *sym) {
 
 void ImportSection::addImport(Symbol *sym) {
   assert(!isSealed);
-  StringRef module = sym->importModule.getValueOr(defaultModule);
-  StringRef name = sym->importName.getValueOr(sym->getName());
+  StringRef module = sym->importModule.value_or(defaultModule);
+  StringRef name = sym->importName.value_or(sym->getName());
   if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
     ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
     auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
@@ -232,12 +232,12 @@ void ImportSection::writeBody() {
 
   writeUleb128(os, getNumImports(), "import count");
 
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
 
-  if (config->importMemory) {
+  if (config->memoryImport) {
     WasmImport import;
-    import.Module = defaultModule;
-    import.Field = "memory";
+    import.Module = config->memoryImport.value().first;
+    import.Field = config->memoryImport.value().second;
     import.Kind = WASM_EXTERNAL_MEMORY;
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;
@@ -254,8 +254,8 @@ void ImportSection::writeBody() {
 
   for (const Symbol *sym : importedSymbols) {
     WasmImport import;
-    import.Field = sym->importName.getValueOr(sym->getName());
-    import.Module = sym->importModule.getValueOr(defaultModule);
+    import.Field = sym->importName.value_or(sym->getName());
+    import.Module = sym->importModule.value_or(defaultModule);
 
     if (auto *functionSym = dyn_cast<FunctionSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_FUNCTION;
@@ -357,7 +357,7 @@ void MemorySection::writeBody() {
     flags |= WASM_LIMITS_FLAG_HAS_MAX;
   if (config->sharedMemory)
     flags |= WASM_LIMITS_FLAG_IS_SHARED;
-  if (config->is64.getValueOr(false))
+  if (config->is64.value_or(false))
     flags |= WASM_LIMITS_FLAG_IS_64;
   writeUleb128(os, flags, "memory limits flags");
   writeUleb128(os, numMemoryPages, "initial pages");
@@ -415,7 +415,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
   assert(!config->extendedConst);
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
@@ -465,7 +465,7 @@ void GlobalSection::writeBody() {
     writeGlobalType(os, g->getType());
     writeInitExpr(os, g->getInitExpr());
   }
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   uint8_t itype = is64 ? WASM_TYPE_I64 : WASM_TYPE_I32;
   for (const Symbol *sym : internalGotSymbols) {
     bool mutable_ = false;
@@ -569,8 +569,8 @@ void ElemSection::writeBody() {
   if (config->isPic) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
     initExpr.Inst.Value.Global =
-        (config->is64.getValueOr(false) ? WasmSym::tableBase32
-                                        : WasmSym::tableBase)
+        (config->is64.value_or(false) ? WasmSym::tableBase32
+                                      : WasmSym::tableBase)
             ->getGlobalIndex();
   } else {
     initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;
@@ -597,10 +597,9 @@ void ElemSection::writeBody() {
 
 DataCountSection::DataCountSection(ArrayRef<OutputSegment *> segments)
     : SyntheticSection(llvm::wasm::WASM_SEC_DATACOUNT),
-      numSegments(std::count_if(segments.begin(), segments.end(),
-                                [](OutputSegment *const segment) {
-                                  return segment->requiredInBinary();
-                                })) {}
+      numSegments(llvm::count_if(segments, [](OutputSegment *const segment) {
+        return segment->requiredInBinary();
+      })) {}
 
 void DataCountSection::writeBody() {
   writeUleb128(bodyOutputStream, numSegments, "data count");
@@ -735,7 +734,7 @@ unsigned NameSection::numNamedFunctions() const {
   unsigned numNames = out.importSec->getNumImportedFunctions();
 
   for (const InputFunction *f : out.functionSec->inputFunctions)
-    if (!f->getName().empty() || !f->getDebugName().empty())
+    if (!f->name.empty() || !f->debugName.empty())
       ++numNames;
 
   return numNames;
@@ -779,12 +778,12 @@ void NameSection::writeBody() {
       }
     }
     for (const InputFunction *f : out.functionSec->inputFunctions) {
-      if (!f->getName().empty()) {
+      if (!f->name.empty()) {
         writeUleb128(sub.os, f->getFunctionIndex(), "func index");
-        if (!f->getDebugName().empty()) {
-          writeStr(sub.os, f->getDebugName(), "symbol name");
+        if (!f->debugName.empty()) {
+          writeStr(sub.os, f->debugName, "symbol name");
         } else {
-          writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
+          writeStr(sub.os, maybeDemangleSymbol(f->name), "symbol name");
         }
       }
     }
@@ -844,8 +843,7 @@ void ProducersSection::addInfo(const WasmProducerInfo &info) {
        {std::make_pair(&info.Languages, &languages),
         std::make_pair(&info.Tools, &tools), std::make_pair(&info.SDKs, &sDKs)})
     for (auto &producer : *producers.first)
-      if (producers.second->end() ==
-          llvm::find_if(*producers.second,
+      if (llvm::none_of(*producers.second,
                         [&](std::pair<std::string, std::string> seen) {
                           return seen.first == producer.first;
                         }))

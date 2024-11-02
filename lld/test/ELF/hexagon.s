@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %S/Inputs/hexagon.s -o %t1.o
 # RUN: ld.lld %t.o %t1.o -o %t
-# RUN: llvm-objdump -d %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
 
 # Note: 131584 == 0x20200
 # R_HEX_32_6_X

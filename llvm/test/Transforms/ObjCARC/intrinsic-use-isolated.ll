@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc-contract -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 ; This file makes sure that clang.arc.used is removed even if no other ARC
 ; interesting calls are in the module.

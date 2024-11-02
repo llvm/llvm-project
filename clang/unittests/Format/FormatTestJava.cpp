@@ -584,6 +584,17 @@ TEST_F(FormatTestJava, AlignsBlockComments) {
                    "  void f() {}"));
 }
 
+TEST_F(FormatTestJava, AlignDeclarations) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  verifyFormat("private final String[]       args;\n"
+               "private final A_ParserHelper parserHelper;\n"
+               "private final int            numOfCmdArgs;\n"
+               "private int                  numOfCmdArgs;\n"
+               "private String[]             args;",
+               Style);
+}
+
 TEST_F(FormatTestJava, KeepsDelimitersOnOwnLineInJavaDocComments) {
   EXPECT_EQ("/**\n"
             " * javadoc line 1\n"

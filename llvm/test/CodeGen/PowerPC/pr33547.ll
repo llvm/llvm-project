@@ -27,24 +27,23 @@ define void @main() {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 L.entry:
-  tail call void @testFunc(i64* bitcast (i8* getelementptr inbounds (%struct.STATICS1, %struct.STATICS1* @.STATICS1, i64 0, i32 0, i64 124) to i64*), i64* bitcast (i32* @.C302_MAIN_ to i64*))
+  tail call void @testFunc(ptr getelementptr inbounds (%struct.STATICS1, ptr @.STATICS1, i64 0, i32 0, i64 124), ptr @.C302_MAIN_)
   ret void
 }
 
 ; Function Attrs: noinline norecurse nounwind readonly
-define signext i32 @ifunc_(i64* nocapture readonly %i) {
+define signext i32 @ifunc_(ptr nocapture readonly %i) {
 ; CHECK-LABEL: ifunc_:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    lwa 3, 0(3)
 ; CHECK-NEXT:    blr
 L.entry:
-  %0 = bitcast i64* %i to i32*
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %0 = load i32, ptr %i, align 4
+  ret i32 %0
 }
 
 ; Function Attrs: noinline norecurse nounwind
-define void @testFunc(i64* nocapture %r, i64* nocapture readonly %k) {
+define void @testFunc(ptr nocapture %r, ptr nocapture readonly %k) {
 ; CHECK-LABEL: testFunc:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    mflr 0
@@ -86,9 +85,8 @@ define void @testFunc(i64* nocapture %r, i64* nocapture readonly %k) {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 L.entry:
-  %0 = bitcast i64* %k to i32*
-  %1 = load i32, i32* %0, align 4
-  switch i32 %1, label %L.LB3_307 [
+  %0 = load i32, ptr %k, align 4
+  switch i32 %0, label %L.LB3_307 [
     i32 1, label %L.LB3_307.sink.split
     i32 3, label %L.LB3_307.sink.split
     i32 4, label %L.LB3_321.split
@@ -108,8 +106,7 @@ L.LB3_321.split:                                  ; preds = %L.entry
 
 L.LB3_307.sink.split:                             ; preds = %L.LB3_321.split, %L.entry, %L.entry, %L.entry
   %.sink = phi i32 [ 5, %L.LB3_321.split ], [ -3, %L.entry ], [ -3, %L.entry ], [ -3, %L.entry ]
-  %2 = bitcast i64* %r to i32*
-  store i32 %.sink, i32* %2, align 4
+  store i32 %.sink, ptr %r, align 4
   br label %L.LB3_307
 
 L.LB3_307:                                        ; preds = %L.LB3_307.sink.split, %L.entry

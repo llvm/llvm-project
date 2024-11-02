@@ -10,7 +10,7 @@
 
 ; RUN: not --crash opt -print-on-crash -print-module-scope -passes=trigger-crash < %s 2>&1 | FileCheck %s --check-prefix=CHECK_MODULE
 
-; RUN: not --crash opt -print-on-crash -print-module-scope -passes=trigger-crash -filter-passes=TriggerCrashPass < %s 2>&1 | FileCheck %s --check-prefix=CHECK_MODULE
+; RUN: not --crash opt -print-on-crash -print-module-scope -passes=trigger-crash -filter-passes=trigger-crash < %s 2>&1 | FileCheck %s --check-prefix=CHECK_MODULE
 
 ; RUN: not --crash opt -print-on-crash -print-module-scope -passes=trigger-crash -filter-passes=blah < %s 2>&1 | FileCheck %s --check-prefix=CHECK_FILTERED
 

@@ -308,8 +308,8 @@ bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
   const auto comparison =
     SVB.evalBinOp(State, Opc, NL1, NL2, SVB.getConditionType());
 
-  assert(comparison.getAs<DefinedSVal>() &&
-    "Symbol comparison must be a `DefinedSVal`");
+  assert(isa<DefinedSVal>(comparison) &&
+         "Symbol comparison must be a `DefinedSVal`");
 
   return !State->assume(comparison.castAs<DefinedSVal>(), false);
 }

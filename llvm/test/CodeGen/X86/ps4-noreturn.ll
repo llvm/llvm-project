@@ -1,10 +1,11 @@
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  | FileCheck %s
 
 declare i32 @personality(...)
 
 ; Check that after the (implicitly noreturn) unwind call, there is
 ; another instruction. It was easy to produce 'ud2' so we check for that.
-define void @foo1() personality i32 (...)* @personality {
+define void @foo1() personality ptr @personality {
 ; CHECK-LABEL: foo1:
 ; CHECK: .cfi_startproc
 ; CHECK: callq bar
@@ -19,8 +20,8 @@ define void @foo1() personality i32 (...)* @personality {
 normal:
     ret void
 catch:
-    %1 = landingpad { i8*, i32 } cleanup
-    resume { i8*, i32 } %1
+    %1 = landingpad { ptr, i32 } cleanup
+    resume { ptr, i32 } %1
 }
 
 declare void @bar() #0

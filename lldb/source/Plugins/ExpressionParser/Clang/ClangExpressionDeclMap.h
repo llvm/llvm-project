@@ -353,7 +353,7 @@ private:
   /// The following values contain layout information for the materialized
   /// struct, but are not specific to a single materialization
   struct StructVars {
-    StructVars() : m_result_name(), m_object_pointer_type(nullptr, nullptr) {}
+    StructVars() = default;
 
     lldb::offset_t m_struct_alignment =
         0;                    ///< The alignment of the struct in bytes.
@@ -364,8 +364,6 @@ private:
                /// added since).
     ConstString
         m_result_name; ///< The name of the result variable ($1, for example)
-    TypeFromUser m_object_pointer_type; ///< The type of the "this" variable, if
-                                        ///one exists
   };
 
   std::unique_ptr<StructVars> m_struct_vars;
@@ -533,6 +531,23 @@ private:
                         TypeFromParser *parser_type = nullptr);
 
   /// Use the NameSearchContext to generate a Decl for the given LLDB
+  /// ValueObject, and put it in the list of found entities.
+  ///
+  /// Helper function used by the other AddOneVariable APIs.
+  ///
+  /// \param[in,out] context
+  ///     The NameSearchContext to use when constructing the Decl.
+  ///
+  /// \param[in] pt
+  ///     The CompilerType of the variable we're adding a Decl for.
+  ///
+  /// \param[in] var
+  ///     The LLDB ValueObject that needs a Decl.
+  ClangExpressionVariable::ParserVars *
+  AddExpressionVariable(NameSearchContext &context, TypeFromParser const &pt,
+                        lldb::ValueObjectSP valobj);
+
+  /// Use the NameSearchContext to generate a Decl for the given LLDB
   /// Variable, and put it in the Tuple list.
   ///
   /// \param[in] context
@@ -545,6 +560,20 @@ private:
   ///     The LLDB ValueObject for that variable.
   void AddOneVariable(NameSearchContext &context, lldb::VariableSP var,
                       lldb::ValueObjectSP valobj);
+
+  /// Use the NameSearchContext to generate a Decl for the given ValueObject
+  /// and put it in the list of found entities.
+  ///
+  /// \param[in,out] context
+  ///     The NameSearchContext to use when constructing the Decl.
+  ///
+  /// \param[in] valobj
+  ///     The ValueObject that needs a Decl.
+  ///
+  /// \param[in] valobj_provider Callback that fetches a ValueObjectSP
+  ///            from the specified frame
+  void AddOneVariable(NameSearchContext &context, lldb::ValueObjectSP valobj,
+                      ValueObjectProviderTy valobj_provider);
 
   /// Use the NameSearchContext to generate a Decl for the given persistent
   /// variable, and put it in the list of found entities.

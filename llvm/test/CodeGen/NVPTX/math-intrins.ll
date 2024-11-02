@@ -19,6 +19,8 @@ declare float @llvm.nearbyint.f32(float) #0
 declare double @llvm.nearbyint.f64(double) #0
 declare float @llvm.rint.f32(float) #0
 declare double @llvm.rint.f64(double) #0
+declare float @llvm.roundeven.f32(float) #0
+declare double @llvm.roundeven.f64(double) #0
 declare float @llvm.trunc.f32(float) #0
 declare double @llvm.trunc.f64(double) #0
 declare float @llvm.fabs.f32(float) #0
@@ -152,6 +154,29 @@ define float @rint_float_ftz(float %a) #1 {
 define double @rint_double(double %a) {
   ; CHECK: cvt.rni.f64.f64
   %b = call double @llvm.rint.f64(double %a)
+  ret double %b
+}
+
+; ---- roundeven ----
+
+; CHECK-LABEL: roundeven_float
+define float @roundeven_float(float %a) {
+  ; CHECK: cvt.rni.f32.f32
+  %b = call float @llvm.roundeven.f32(float %a)
+  ret float %b
+}
+
+; CHECK-LABEL: roundeven_float_ftz
+define float @roundeven_float_ftz(float %a) #1 {
+  ; CHECK: cvt.rni.ftz.f32.f32
+  %b = call float @llvm.roundeven.f32(float %a)
+  ret float %b
+}
+
+; CHECK-LABEL: roundeven_double
+define double @roundeven_double(double %a) {
+  ; CHECK: cvt.rni.f64.f64
+  %b = call double @llvm.roundeven.f64(double %a)
   ret double %b
 }
 

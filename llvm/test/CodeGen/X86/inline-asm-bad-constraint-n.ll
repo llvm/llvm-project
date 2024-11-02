@@ -4,7 +4,7 @@
 
 ; CHECK: error: constraint 'n' expects an integer constant expression
 define void @foo() {
-  %a = getelementptr i32, i32* @x, i32 1
-  call void asm sideeffect "foo $0", "n"(i32* %a) nounwind
+  %a = getelementptr i32, ptr @x, i32 1
+  call void asm sideeffect "foo $0", "n"(ptr %a) nounwind
   ret void
 }

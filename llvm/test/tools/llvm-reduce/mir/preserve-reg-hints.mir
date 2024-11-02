@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS: S_NOP 0

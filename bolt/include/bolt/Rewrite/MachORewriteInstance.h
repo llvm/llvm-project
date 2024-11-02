@@ -46,6 +46,7 @@ class MachORewriteInstance {
   void processProfileDataPreCFG();
   void processProfileData();
 
+  static StringRef getNewSecPrefix() { return ".bolt.new"; }
   static StringRef getOrgSecPrefix() { return ".bolt.org"; }
 
   void mapInstrumentationSection(StringRef SectionName);

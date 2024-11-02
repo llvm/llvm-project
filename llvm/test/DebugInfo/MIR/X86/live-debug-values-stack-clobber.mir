@@ -32,12 +32,17 @@
 #
 # CHECK:       ![[ANUM:[0-9]+]] = !DILocalVariable(name: "a"
 # CHECK:       ![[BNUM:[0-9]+]] = !DILocalVariable(name: "b"
+# CHECK:       ![[CNUM:[0-9]+]] = !DILocalVariable(name: "c"
 #
 # These variables should be spilt,
 # CHECK-LABEL: bb.1.if.end:
 # CHECK:       MOV64mr $rsp, 1, $noreg, 16, $noreg, killed renamable $rsi
+# CHECK-NEXT:  DBG_VALUE_LIST ![[CNUM]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 16, DW_OP_deref
+# CHECK-SAME:  $rsp, $rdi
 # CHECK-NEXT:  DBG_VALUE $rsp, 0, ![[BNUM]], !DIExpression(
 # CHECK-NEXT:  MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rdi
+# CHECK-NEXT:  DBG_VALUE_LIST ![[CNUM]], !DIExpression({{[^)]+}}DW_OP_LLVM_arg, 1, DW_OP_plus_uconst, 8, DW_OP_deref
+# CHECK-SAME:  $rsp, $rsp
 # CHECK-NEXT:  DBG_VALUE $rsp, 0, ![[ANUM]], !DIExpression(
 # CHECK-NEXT:  INLINEASM
 #
@@ -45,6 +50,7 @@
 # CHECK-LABEL: bb.3.if.end3:
 # CHECK:       CALL64pcrel32 @sum
 # CHECK-NEXT:  MOV64mr $rsp, 1, $noreg, 8, $noreg, $rax
+# CHECK-NEXT:  DBG_VALUE_LIST ![[CNUM]], !DIExpression({{[^)]*}}), $noreg, $noreg
 # CHECK-NEXT:  DBG_VALUE $noreg, $noreg, ![[ANUM]], !DIExpression()
 # CHECK-NEXT:  INLINEASM
 
@@ -92,7 +98,7 @@
   !16 = !{!17, !18, !19}
   !17 = !DILocalVariable(name: "a", arg: 1, scope: !12, file: !3, line: 15, type: !15)
   !18 = !DILocalVariable(name: "b", arg: 2, scope: !12, file: !3, line: 15, type: !15)
-  !19 = !DILocalVariable(name: "quux", scope: !12, file: !3, line: 23, type: !7)
+  !19 = !DILocalVariable(name: "c", scope: !12, file: !3, line: 23, type: !7)
   !28 = !DILocation(line: 1, column: 1, scope: !12)
 
 ...
@@ -144,6 +150,7 @@ body:             |
     DBG_VALUE $rdi, $noreg, !17, !DIExpression(), debug-location !28
     DBG_VALUE $rsi, $noreg, !18, !DIExpression(), debug-location !28
     DBG_VALUE $rsi, $noreg, !18, !DIExpression(), debug-location !28
+    DBG_VALUE_LIST !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rsi, $rdi, debug-location !28
     frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp, debug-location !28
     frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp, debug-location !28
     frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp, debug-location !28

@@ -2,8 +2,8 @@
 
 ; CHECK-LABEL: f:
 ; CHECK:       addl $-2, %eax         # encoding: [0x83,0xc0,0xfe]
-define i32 @f(i32* %y) {
-  %x = load i32, i32* %y
+define i32 @f(ptr %y) {
+  %x = load i32, ptr %y
   %dec = add i32 %x, -2
   ret i32 %dec
 }

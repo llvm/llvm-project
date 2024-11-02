@@ -11,17 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 
-#include "PassDetail.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/GPU/Passes.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/Pass/Pass.h"
 
-#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.cpp.inc"
-#include "mlir/Dialect/GPU/ParallelLoopMapperEnums.cpp.inc"
+namespace mlir {
+#define GEN_PASS_DEF_GPUMAPPARALLELLOOPSPASS
+#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
+} // namespace mlir
 
 namespace mlir {
 
@@ -29,22 +30,13 @@ using scf::ParallelOp;
 
 StringRef gpu::getMappingAttrName() { return "mapping"; }
 
-gpu::ParallelLoopDimMapping
-gpu::getParallelLoopDimMappingAttr(Processor processor, AffineMap map,
-                                   AffineMap bound) {
-  MLIRContext *context = map.getContext();
-  OpBuilder builder(context);
-  return ParallelLoopDimMapping::get(
-      ProcessorAttr::get(builder.getContext(), processor),
-      AffineMapAttr::get(map), AffineMapAttr::get(bound), context);
-}
-
-LogicalResult gpu::setMappingAttr(ParallelOp ploopOp,
-                                  ArrayRef<ParallelLoopDimMapping> mapping) {
+LogicalResult
+gpu::setMappingAttr(ParallelOp ploopOp,
+                    ArrayRef<ParallelLoopDimMappingAttr> mapping) {
   // Verify that each processor is mapped to only once.
   llvm::DenseSet<gpu::Processor> specifiedMappings;
   for (auto dimAttr : mapping) {
-    gpu::Processor processor = getProcessor(dimAttr);
+    gpu::Processor processor = dimAttr.getProcessor();
     if (processor != gpu::Processor::Sequential &&
         specifiedMappings.count(processor))
       return ploopOp.emitError(
@@ -123,10 +115,10 @@ static void mapParallelOp(ParallelOp parallelOp,
 
   MLIRContext *ctx = parallelOp.getContext();
   Builder b(ctx);
-  SmallVector<ParallelLoopDimMapping, 4> attrs;
+  SmallVector<ParallelLoopDimMappingAttr, 4> attrs;
   attrs.reserve(parallelOp.getNumLoops());
   for (int i = 0, e = parallelOp.getNumLoops(); i < e; ++i) {
-    attrs.push_back(getParallelLoopDimMappingAttr(
+    attrs.push_back(b.getAttr<ParallelLoopDimMappingAttr>(
         getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
         b.getDimIdentityMap()));
   }
@@ -142,7 +134,7 @@ static void mapParallelOp(ParallelOp parallelOp,
 
 namespace {
 struct GpuMapParallelLoopsPass
-    : public GpuMapParallelLoopsPassBase<GpuMapParallelLoopsPass> {
+    : public impl::GpuMapParallelLoopsPassBase<GpuMapParallelLoopsPass> {
   void runOnOperation() override {
     for (Region &region : getOperation()->getRegions()) {
       region.walk([](ParallelOp parallelOp) { mapParallelOp(parallelOp); });

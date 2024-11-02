@@ -194,7 +194,7 @@ getprogpath(char ret[PATH_MAX], const char *bin)
 
 /// GetMainExecutable - Return the path to the main executable, given the
 /// value of argv[0] from program startup.
-std::string getMainExecutable(const char *argv0, void *MainAddr) {
+std::string getMainExecutableImpl(const char *argv0, void *MainAddr) {
 #if defined(__APPLE__)
   // On OS X the executable path is saved to the stack by dyld. Reading it
   // from there is much faster than calling dladdr, especially for large
@@ -1273,18 +1273,19 @@ static std::error_code remove_directories_impl(const T &Entry,
   while (Begin != End) {
     auto &Item = *Begin;
     ErrorOr<basic_file_status> st = Item.status();
-    if (!st && !IgnoreErrors)
-      return st.getError();
+    if (st) {
+      if (is_directory(*st)) {
+        EC = remove_directories_impl(Item, IgnoreErrors);
+        if (EC && !IgnoreErrors)
+          return EC;
+      }
 
-    if (is_directory(*st)) {
-      EC = remove_directories_impl(Item, IgnoreErrors);
+      EC = fs::remove(Item.path(), true);
       if (EC && !IgnoreErrors)
         return EC;
+    } else if (!IgnoreErrors) {
+      return st.getError();
     }
-
-    EC = fs::remove(Item.path(), true);
-    if (EC && !IgnoreErrors)
-      return EC;
 
     Begin.increment(EC);
     if (EC && !IgnoreErrors)

@@ -5,8 +5,9 @@
 define i8 @test1(i32 %a, i8* %pa) {
 ; CHECK-BE-LABEL: test1:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    str w0, [x1]
-; CHECK-BE-NEXT:    ldrb w0, [x1]
+; CHECK-BE-NEXT:    mov w8, w0
+; CHECK-BE-NEXT:    lsr w0, w0, #24
+; CHECK-BE-NEXT:    str w8, [x1]
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-LE-LABEL: test1:

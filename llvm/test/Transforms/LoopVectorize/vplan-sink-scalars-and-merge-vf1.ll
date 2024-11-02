@@ -31,7 +31,6 @@ define void @sink_with_sideeffects(i1 %c, i8* %ptr) {
 ; CHECK-NEXT:   pred.store.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK ir<%c>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: ir<%c>
 
 ; CHECK:      pred.store.if:
 ; CHECK-NEXT:   CLONE store ir<%tmp5>, ir<%tmp2>

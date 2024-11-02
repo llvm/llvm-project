@@ -19,15 +19,10 @@ entry:
   %zero = alloca %struct.S, align 16
   %e = alloca %struct.S, align 16
   %s = alloca %struct.S, align 16
-  %0 = bitcast %struct.S* %zero to i8*
-  %1 = bitcast %struct.S* %e to i8*
-  %2 = bitcast %struct.S* %e to <4 x i32>*
-  %3 = load <4 x i32>, <4 x i32>* %2, align 16
-  %vecext.i = extractelement <4 x i32> %3, i32 0
-  %4 = bitcast %struct.S* %s to i8*
-  %5 = bitcast %struct.S* %s to <4 x i32>*
-  %6 = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> undef, i32 %vecext.i)
-  store <4 x i32> %6, <4 x i32>* %5, align 16
+  %0 = load <4 x i32>, ptr %e, align 16
+  %vecext.i = extractelement <4 x i32> %0, i32 0
+  %1 = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> undef, i32 %vecext.i)
+  store <4 x i32> %1, ptr %s, align 16
   ret void
 }
 attributes #2 = { "target-features"="+sse4.1" }

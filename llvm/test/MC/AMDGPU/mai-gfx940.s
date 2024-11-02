@@ -468,6 +468,102 @@ v_mfma_f32_32x32x4xf32 a[0:15], v[2:3], v[4:5], a[18:33]
 // GFX940: v_mfma_f32_32x32x4_xf32 a[0:15], v[2:3], v[4:5], a[18:33] ; encoding: [0x00,0x80,0xbf,0xd3,0x02,0x09,0x4a,0x04]
 // GFX90A: error: instruction not supported on this GPU
 
+v_mfma_f32_16x16x32_bf8_bf8 v[0:3], v[2:3], v[4:5], v[0:3]
+// GFX940: v_mfma_f32_16x16x32_bf8_bf8 v[0:3], v[2:3], v[4:5], v[0:3] ; encoding: [0x00,0x00,0xf0,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_bf8_bf8 a[0:3], v[2:3], v[4:5], a[0:3]
+// GFX940: v_mfma_f32_16x16x32_bf8_bf8 a[0:3], v[2:3], v[4:5], a[0:3] ; encoding: [0x00,0x80,0xf0,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_bf8_bf8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5
+// GFX940: v_mfma_f32_16x16x32_bf8_bf8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5 ; encoding: [0x00,0x80,0xf0,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_bf8_fp8 v[0:3], v[2:3], v[4:5], v[0:3]
+// GFX940: v_mfma_f32_16x16x32_bf8_fp8 v[0:3], v[2:3], v[4:5], v[0:3] ; encoding: [0x00,0x00,0xf1,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_bf8_fp8 a[0:3], v[2:3], v[4:5], a[0:3]
+// GFX940: v_mfma_f32_16x16x32_bf8_fp8 a[0:3], v[2:3], v[4:5], a[0:3] ; encoding: [0x00,0x80,0xf1,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_bf8_fp8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5
+// GFX940: v_mfma_f32_16x16x32_bf8_fp8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5 ; encoding: [0x00,0x80,0xf1,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_fp8_bf8 v[0:3], v[2:3], v[4:5], v[0:3]
+// GFX940: v_mfma_f32_16x16x32_fp8_bf8 v[0:3], v[2:3], v[4:5], v[0:3] ; encoding: [0x00,0x00,0xf2,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_fp8_bf8 a[0:3], v[2:3], v[4:5], a[0:3]
+// GFX940: v_mfma_f32_16x16x32_fp8_bf8 a[0:3], v[2:3], v[4:5], a[0:3] ; encoding: [0x00,0x80,0xf2,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_fp8_bf8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5
+// GFX940: v_mfma_f32_16x16x32_fp8_bf8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5 ; encoding: [0x00,0x80,0xf2,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_fp8_fp8 v[0:3], v[2:3], v[4:5], v[0:3]
+// GFX940: v_mfma_f32_16x16x32_fp8_fp8 v[0:3], v[2:3], v[4:5], v[0:3] ; encoding: [0x00,0x00,0xf3,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_fp8_fp8 a[0:3], v[2:3], v[4:5], a[0:3]
+// GFX940: v_mfma_f32_16x16x32_fp8_fp8 a[0:3], v[2:3], v[4:5], a[0:3] ; encoding: [0x00,0x80,0xf3,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x32_fp8_fp8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5
+// GFX940: v_mfma_f32_16x16x32_fp8_fp8 a[0:3], v[2:3], v[4:5], a[0:3] blgp:5 ; encoding: [0x00,0x80,0xf3,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_bf8_bf8 v[0:15], v[2:3], v[4:5], v[0:15]
+// GFX940: v_mfma_f32_32x32x16_bf8_bf8 v[0:15], v[2:3], v[4:5], v[0:15] ; encoding: [0x00,0x00,0xf4,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_bf8_bf8 a[0:15], v[2:3], v[4:5], a[0:15]
+// GFX940: v_mfma_f32_32x32x16_bf8_bf8 a[0:15], v[2:3], v[4:5], a[0:15] ; encoding: [0x00,0x80,0xf4,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_bf8_bf8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5
+// GFX940: v_mfma_f32_32x32x16_bf8_bf8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5 ; encoding: [0x00,0x80,0xf4,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_bf8_fp8 v[0:15], v[2:3], v[4:5], v[0:15]
+// GFX940: v_mfma_f32_32x32x16_bf8_fp8 v[0:15], v[2:3], v[4:5], v[0:15] ; encoding: [0x00,0x00,0xf5,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_bf8_fp8 a[0:15], v[2:3], v[4:5], a[0:15]
+// GFX940: v_mfma_f32_32x32x16_bf8_fp8 a[0:15], v[2:3], v[4:5], a[0:15] ; encoding: [0x00,0x80,0xf5,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_bf8_fp8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5
+// GFX940: v_mfma_f32_32x32x16_bf8_fp8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5 ; encoding: [0x00,0x80,0xf5,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_fp8_bf8 v[0:15], v[2:3], v[4:5], v[0:15]
+// GFX940: v_mfma_f32_32x32x16_fp8_bf8 v[0:15], v[2:3], v[4:5], v[0:15] ; encoding: [0x00,0x00,0xf6,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_fp8_bf8 a[0:15], v[2:3], v[4:5], a[0:15]
+// GFX940: v_mfma_f32_32x32x16_fp8_bf8 a[0:15], v[2:3], v[4:5], a[0:15] ; encoding: [0x00,0x80,0xf6,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_fp8_bf8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5
+// GFX940: v_mfma_f32_32x32x16_fp8_bf8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5 ; encoding: [0x00,0x80,0xf6,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_fp8_fp8 v[0:15], v[2:3], v[4:5], v[0:15]
+// GFX940: v_mfma_f32_32x32x16_fp8_fp8 v[0:15], v[2:3], v[4:5], v[0:15] ; encoding: [0x00,0x00,0xf7,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_fp8_fp8 a[0:15], v[2:3], v[4:5], a[0:15]
+// GFX940: v_mfma_f32_32x32x16_fp8_fp8 a[0:15], v[2:3], v[4:5], a[0:15] ; encoding: [0x00,0x80,0xf7,0xd3,0x02,0x09,0x02,0x04]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x16_fp8_fp8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5
+// GFX940: v_mfma_f32_32x32x16_fp8_fp8 a[0:15], v[2:3], v[4:5], a[0:15] blgp:5 ; encoding: [0x00,0x80,0xf7,0xd3,0x02,0x09,0x02,0xa4]
+// GFX90A: error: instruction not supported on this GPU
+
 //===----------------------------------------------------------------------===//
 // SMFMAC opcodes.
 //===----------------------------------------------------------------------===//
@@ -520,6 +616,70 @@ v_smfmac_i32_32x32x32_i8 a[10:25], v[2:3], a[4:7], v11
 // GFX940: v_smfmac_i32_32x32x32_i8 a[10:25], v[2:3], a[4:7], v11 ; encoding: [0x0a,0x80,0xec,0xd3,0x02,0x09,0x2e,0x14]
 // GFX90A: error: instruction not supported on this GPU
 
+v_smfmac_f32_16x16x64_bf8_bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_bf8_bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xf8,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64_bf8_bf8 a[0:3], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_16x16x64_bf8_bf8 a[0:3], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xf8,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64_bf8_fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_bf8_fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xf9,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64_bf8_fp8 a[0:3], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_16x16x64_bf8_fp8 a[0:3], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xf9,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64_fp8_bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_fp8_bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfa,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64_fp8_bf8 a[0:3], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_16x16x64_fp8_bf8 a[0:3], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xfa,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64_fp8_fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_fp8_fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfb,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64_fp8_fp8 a[0:3], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_16x16x64_fp8_fp8 a[0:3], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xfb,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_bf8_bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_bf8_bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfc,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_bf8_bf8 a[0:15], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_32x32x32_bf8_bf8 a[0:15], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xfc,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_bf8_fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_bf8_fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfd,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_bf8_fp8 a[0:15], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_32x32x32_bf8_fp8 a[0:15], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xfd,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_fp8_bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_fp8_bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfe,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_fp8_bf8 a[0:15], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_32x32x32_fp8_bf8 a[0:15], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xfe,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_fp8_fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_fp8_fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xff,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32_fp8_fp8 a[0:15], v[2:3], a[4:7], v1
+// GFX940: v_smfmac_f32_32x32x32_fp8_fp8 a[0:15], v[2:3], a[4:7], v1 ; encoding: [0x00,0x80,0xff,0xd3,0x02,0x09,0x06,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
 //===----------------------------------------------------------------------===//
 // SMFMAC aliases.
 //===----------------------------------------------------------------------===//
@@ -546,4 +706,36 @@ v_smfmac_i32_16x16x64i8 v[10:13], a[2:3], v[4:7], v8 cbsz:3 abid:1
 
 v_smfmac_i32_32x32x32i8 a[10:25], v[2:3], a[4:7], v11
 // GFX940: v_smfmac_i32_32x32x32_i8 a[10:25], v[2:3], a[4:7], v11 ; encoding: [0x0a,0x80,0xec,0xd3,0x02,0x09,0x2e,0x14]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64bf8bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_bf8_bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xf8,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64bf8fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_bf8_fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xf9,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64fp8bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_fp8_bf8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfa,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_16x16x64fp8fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_16x16x64_fp8_fp8 v[0:3], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfb,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32bf8bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_bf8_bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfc,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32bf8fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_bf8_fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfd,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32fp8bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_fp8_bf8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xfe,0xd3,0x02,0x09,0x06,0x0c]
+// GFX90A: error: instruction not supported on this GPU
+
+v_smfmac_f32_32x32x32fp8fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1
+// GFX940: v_smfmac_f32_32x32x32_fp8_fp8 v[0:15], a[2:3], v[4:7], v1 cbsz:3 abid:1 ; encoding: [0x00,0x0b,0xff,0xd3,0x02,0x09,0x06,0x0c]
 // GFX90A: error: instruction not supported on this GPU

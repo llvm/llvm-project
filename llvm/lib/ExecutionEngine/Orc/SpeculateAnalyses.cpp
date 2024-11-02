@@ -295,7 +295,7 @@ SpeculateQuery::ResultTy SequenceBBQuery::operator()(Function &F) {
   else
     SequencedBlocks = queryCFG(F, CallerBlocks);
 
-  for (auto BB : SequencedBlocks)
+  for (const auto *BB : SequencedBlocks)
     findCalles(BB, Calles);
 
   CallerAndCalles.insert({F.getName(), std::move(Calles)});

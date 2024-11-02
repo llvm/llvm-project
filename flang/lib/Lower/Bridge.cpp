@@ -15,6 +15,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertExpr.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/HostAssociations.h"
@@ -27,12 +28,14 @@
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Optimizer/Builder/Runtime/Derived.h"
+#include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -77,6 +80,29 @@ struct IncrementLoopInfo {
 
   bool isStructured() const { return !headerBlock; }
 
+  /// \return true if for this do loop its do-variable's value
+  /// is represented as the block argument of the do loop's
+  /// region. In this case the data type of the block argument
+  /// matches the original data type of the do-variable as written
+  /// in user code, and the value is adjusted using the step value
+  /// on each iteration of the do loop.
+  ///
+  /// When do-variable's data type is an integer type shorter
+  /// than IndexType, processing the do-variable separately
+  /// from the do loop's iteration index allows getting rid
+  /// of type casts, which can make backend optimizations easier.
+  /// In particular, computing the do variable value from
+  /// the iteration index may introduce chains like trunc->arith->sext,
+  /// which may be optimized into sequences of shift operations
+  /// in InstCombine, which then prevents vectorizer from recognizing
+  /// unit-strided accesses.
+  ///
+  /// We could have disabled the extra iteration variable usage
+  /// for cases when its data type is not shorter than IndexType,
+  /// but this requires having proper DataLayout set up for the enclosing
+  /// module. This is currently blocked by llvm-project#57230 issue.
+  bool doVarIsALoopArg() const { return isStructured() && !isUnordered; }
+
   mlir::Type getLoopVariableType() const {
     assert(loopVariable && "must be set");
     return fir::unwrapRefType(loopVariable.getType());
@@ -87,7 +113,10 @@ struct IncrementLoopInfo {
   const Fortran::lower::SomeExpr *lowerExpr;
   const Fortran::lower::SomeExpr *upperExpr;
   const Fortran::lower::SomeExpr *stepExpr;
+  const Fortran::lower::SomeExpr *maskExpr = nullptr;
   bool isUnordered; // do concurrent, forall
+  llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> sharedSymList;
   mlir::Value loopVariable = nullptr;
   mlir::Value stepValue = nullptr; // possible uses in multiple blocks
 
@@ -98,6 +127,7 @@ struct IncrementLoopInfo {
   bool hasRealControl = false;
   mlir::Value tripVariable = nullptr;
   mlir::Block *headerBlock = nullptr; // loop entry and test block
+  mlir::Block *maskBlock = nullptr;   // concurrent loop mask block
   mlir::Block *bodyBlock = nullptr;   // first loop body block
   mlir::Block *exitBlock = nullptr;   // loop exit target block
 };
@@ -162,7 +192,7 @@ private:
   llvm::SmallSetVector<Fortran::semantics::SymbolRef, 64> seen;
 };
 
-using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo>;
+using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -175,7 +205,8 @@ namespace {
 class FirConverter : public Fortran::lower::AbstractConverter {
 public:
   explicit FirConverter(Fortran::lower::LoweringBridge &bridge)
-      : bridge{bridge}, foldingContext{bridge.createFoldingContext()} {}
+      : Fortran::lower::AbstractConverter(bridge.getLoweringOptions()),
+        bridge{bridge}, foldingContext{bridge.createFoldingContext()} {}
   virtual ~FirConverter() = default;
 
   /// Convert the PFT to FIR.
@@ -195,9 +226,12 @@ public:
     //  - Define module variables and OpenMP/OpenACC declarative construct so
     //    that they are available before lowering any function that may use
     //    them.
+    bool hasMainProgram = false;
     for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
       std::visit(Fortran::common::visitors{
                      [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                       if (f.isMainProgram())
+                         hasMainProgram = true;
                        declareFunction(f);
                      },
                      [&](Fortran::lower::pft::ModuleLikeUnit &m) {
@@ -234,6 +268,22 @@ public:
     /// processed.
     createGlobalOutsideOfFunctionLowering(
         [&]() { runtimeTypeInfoConverter.createTypeInfoGlobals(*this); });
+
+    // Create the list of any environment defaults for the runtime to set. The
+    // runtime default list is only created if there is a main program to ensure
+    // it only happens once and to provide consistent results if multiple files
+    // are compiled separately.
+    if (hasMainProgram)
+      createGlobalOutsideOfFunctionLowering([&]() {
+        // FIXME: Ideally, this would create a call to a runtime function
+        // accepting the list of environment defaults. That way, we would not
+        // need to add an extern pointer to the runtime and said pointer would
+        // not need to be generated even if no defaults are specified.
+        // However, generating main or changing when the runtime reads
+        // environment variables is required to do so.
+        fir::runtime::genEnvironmentDefaults(*builder, toLocation(),
+                                             bridge.getEnvironmentDefaults());
+      });
   }
 
   /// Declare a function.
@@ -313,6 +363,13 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
+  fir::ExtendedValue
+  getSymbolExtendedValue(const Fortran::semantics::Symbol &sym) override final {
+    Fortran::lower::SymbolBox sb = localSymbols.lookupSymbol(sym);
+    assert(sb && "symbol box not found");
+    return sb.toExtendedValue();
+  }
+
   mlir::Value impliedDoBinding(llvm::StringRef name) override final {
     mlir::Value val = localSymbols.lookupImpliedDo(name);
     if (!val)
@@ -361,23 +418,87 @@ public:
     return iter->second;
   }
 
-  fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
-                                 Fortran::lower::StatementContext &context,
-                                 mlir::Location *loc = nullptr) override final {
-    return Fortran::lower::createSomeExtendedAddress(
-        loc ? *loc : toLocation(), *this, expr, localSymbols, context);
+  fir::ExtendedValue
+  translateToExtendedValue(mlir::Location loc, hlfir::FortranEntity entity,
+                           Fortran::lower::StatementContext &context) {
+    auto [exv, exvCleanup] =
+        hlfir::translateToExtendedValue(loc, getFirOpBuilder(), entity);
+    if (exvCleanup)
+      context.attachCleanup(*exvCleanup);
+    return exv;
   }
+
+  fir::ExtendedValue
+  genExprAddr(const Fortran::lower::SomeExpr &expr,
+              Fortran::lower::StatementContext &context,
+              mlir::Location *locPtr = nullptr) override final {
+    mlir::Location loc = locPtr ? *locPtr : toLocation();
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
+          loc, *this, expr, localSymbols, context);
+      if (fir::FortranVariableOpInterface variable =
+              loweredExpr.getIfVariable())
+        if (!variable.isBox())
+          return translateToExtendedValue(loc, loweredExpr, context);
+      TODO(loc, "lower expr that is not a scalar or explicit shape array "
+                "variable to HLFIR address");
+    }
+    return Fortran::lower::createSomeExtendedAddress(loc, *this, expr,
+                                                     localSymbols, context);
+  }
+
   fir::ExtendedValue
   genExprValue(const Fortran::lower::SomeExpr &expr,
                Fortran::lower::StatementContext &context,
-               mlir::Location *loc = nullptr) override final {
-    return Fortran::lower::createSomeExtendedExpression(
-        loc ? *loc : toLocation(), *this, expr, localSymbols, context);
+               mlir::Location *locPtr = nullptr) override final {
+    mlir::Location loc = locPtr ? *locPtr : toLocation();
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
+          loc, *this, expr, localSymbols, context);
+      fir::ExtendedValue exv =
+          translateToExtendedValue(loc, loweredExpr, context);
+      // Load scalar references to integer, logical, real, or complex value
+      // to an mlir value, dereference allocatable and pointers, and get rid
+      // of fir.box that are no needed or create a copy into contiguous memory.
+      return exv.match(
+          [&](const fir::UnboxedValue &box) -> fir::ExtendedValue {
+            if (mlir::Type elementType = fir::dyn_cast_ptrEleTy(box.getType()))
+              if (fir::isa_trivial(elementType))
+                return getFirOpBuilder().create<fir::LoadOp>(loc, box);
+            return box;
+          },
+          [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+            return box;
+          },
+          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            return box;
+          },
+          [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
+            return box;
+          },
+          [&](const auto &) -> fir::ExtendedValue {
+            TODO(loc, "lower descriptor designator to HLFIR value");
+          });
+    }
+    return Fortran::lower::createSomeExtendedExpression(loc, *this, expr,
+                                                        localSymbols, context);
   }
 
   fir::ExtendedValue
   genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
              Fortran::lower::StatementContext &stmtCtx) override final {
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
+          loc, *this, expr, localSymbols, stmtCtx);
+      if (fir::FortranVariableOpInterface variable =
+              loweredExpr.getIfVariable())
+        if (variable.isBoxValue() || !variable.isBoxAddress()) {
+          auto exv = translateToExtendedValue(loc, loweredExpr, stmtCtx);
+          return fir::factory::createBoxValue(getFirOpBuilder(), loc, exv);
+        }
+      TODO(loc,
+           "lower expression value or pointer and allocatable to HLFIR box");
+    }
     return Fortran::lower::createBoxValue(loc, *this, expr, localSymbols,
                                           stmtCtx);
   }
@@ -457,48 +578,112 @@ public:
         [&](const auto &) -> fir::ExtendedValue {
           mlir::Value temp =
               allocate(fir::factory::getExtents(loc, *builder, hexv),
-                       fir::getTypeParams(hexv));
+                       fir::factory::getTypeParams(loc, *builder, hexv));
           return fir::substBase(hexv, temp);
         });
 
+    // Replace all uses of the original with the clone/copy,
+    // esepcially for loop bounds (that uses the variable being privatised)
+    // since loop bounds use old values that need to be fixed by using the
+    // new copied value.
+    // Not able to use replaceAllUsesWith() because uses outside
+    // the loop body should not use the clone.
+    // FIXME: Call privatization before the loop operation.
+    mlir::Region &curRegion = getFirOpBuilder().getRegion();
+    mlir::Value oldVal = fir::getBase(hexv);
+    mlir::Value cloneVal = fir::getBase(exv);
+    for (auto &oper : curRegion.getOps()) {
+      for (unsigned int ii = 0; ii < oper.getNumOperands(); ++ii) {
+        if (oper.getOperand(ii) == oldVal) {
+          oper.setOperand(ii, cloneVal);
+        }
+      }
+    }
     return bindIfNewSymbol(sym, exv);
   }
 
-  void
-  copyHostAssociateVar(const Fortran::semantics::Symbol &sym) override final {
+  void copyHostAssociateVar(
+      const Fortran::semantics::Symbol &sym,
+      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) override final {
     // 1) Fetch the original copy of the variable.
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
     const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
-    Fortran::lower::SymbolBox hsb = lookupSymbol(hsym);
+    Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
+    assert(hsb && "Host symbol box not found");
     fir::ExtendedValue hexv = getExtendedValue(hsb);
 
-    // 2) Create a copy that will mask the original.
-    createHostAssociateVarClone(sym);
-    Fortran::lower::SymbolBox sb = lookupSymbol(sym);
+    // 2) Fetch the copied one that will mask the original.
+    Fortran::lower::SymbolBox sb = shallowLookupSymbol(sym);
+    assert(sb && "Host-associated symbol box not found");
+    assert(hsb.getAddr() != sb.getAddr() &&
+           "Host and associated symbol boxes are the same");
     fir::ExtendedValue exv = getExtendedValue(sb);
 
     // 3) Perform the assignment.
+    mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+    if (copyAssignIP && copyAssignIP->isSet())
+      builder->restoreInsertionPoint(*copyAssignIP);
+    else
+      builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+
+    fir::ExtendedValue lhs, rhs;
+    if (copyAssignIP && copyAssignIP->isSet() &&
+        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
+      // lastprivate case
+      lhs = hexv;
+      rhs = exv;
+    } else {
+      lhs = exv;
+      rhs = hexv;
+    }
+
     mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::createSomeArrayAssignment(*this, exv, hexv, localSymbols,
+      Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
                                                 stmtCtx);
       stmtCtx.finalize();
     } else if (hexv.getBoxOf<fir::CharBoxValue>()) {
-      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(exv, hexv);
+      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
     } else if (hexv.getBoxOf<fir::MutableBoxValue>()) {
       TODO(loc, "firstprivatisation of allocatable variables");
     } else {
-      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(hexv));
-      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(exv));
+      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
+      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
     }
+
+    if (copyAssignIP && copyAssignIP->isSet() &&
+        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate))
+      builder->restoreInsertionPoint(insPt);
   }
 
   //===--------------------------------------------------------------------===//
   // Utility methods
   //===--------------------------------------------------------------------===//
+
+  void collectSymbolSet(
+      Fortran::lower::pft::Evaluation &eval,
+      llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
+      Fortran::semantics::Symbol::Flag flag, bool collectSymbols,
+      bool checkHostAssociatedSymbols) override final {
+    auto addToList = [&](const Fortran::semantics::Symbol &sym) {
+      std::function<void(const Fortran::semantics::Symbol &, bool)>
+          insertSymbols = [&](const Fortran::semantics::Symbol &oriSymbol,
+                              bool collectSymbol) {
+            if (collectSymbol && oriSymbol.test(flag))
+              symbolSet.insert(&oriSymbol);
+            if (checkHostAssociatedSymbols)
+              if (const auto *details{
+                      oriSymbol
+                          .detailsIf<Fortran::semantics::HostAssocDetails>()})
+                insertSymbols(details->symbol(), true);
+          };
+      insertSymbols(sym, collectSymbols);
+    };
+    Fortran::lower::pft::visitAllSymbols(eval, addToList);
+  }
 
   mlir::Location getCurrentLocation() override final { return toLocation(); }
 
@@ -586,6 +771,15 @@ private:
     return {};
   }
 
+  /// Find the symbol in one level up of symbol map such as for host-association
+  /// in OpenMP code or return null.
+  Fortran::lower::SymbolBox
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::lower::SymbolBox v = localSymbols.lookupOneLevelUpSymbol(sym))
+      return v;
+    return {};
+  }
+
   /// Add the symbol to the local map and return `true`. If the symbol is
   /// already in the map and \p forced is `false`, the map is not updated.
   /// Instead the value `false` is returned.
@@ -617,9 +811,24 @@ private:
   }
 
   /// Generate the address of loop variable \p sym.
+  /// If \p sym is not mapped yet, allocate local storage for it.
   mlir::Value genLoopVariableAddress(mlir::Location loc,
-                                     const Fortran::semantics::Symbol &sym) {
-    assert(lookupSymbol(sym) && "loop control variable must already be in map");
+                                     const Fortran::semantics::Symbol &sym,
+                                     bool isUnordered) {
+    if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
+        sym.has<Fortran::semantics::UseDetails>()) {
+      if (!shallowLookupSymbol(sym)) {
+        // Do concurrent loop variables are not mapped yet since they are local
+        // to the Do concurrent scope (same for OpenMP loops).
+        auto newVal = builder->createTemporary(loc, genType(sym),
+                                               toStringRef(sym.name()));
+        bindIfNewSymbol(sym, newVal);
+        return newVal;
+      }
+    }
+    auto entry = lookupSymbol(sym);
+    (void)entry;
+    assert(entry && "loop control variable must already be in map");
     Fortran::lower::StatementContext stmtCtx;
     return fir::getBase(
         genExprAddr(Fortran::evaluate::AsGenericExpr(sym).value(), stmtCtx));
@@ -720,11 +929,13 @@ private:
     Fortran::lower::SymbolBox resultSymBox = lookupSymbol(resultSym);
     mlir::Location loc = toLocation();
     if (!resultSymBox) {
-      mlir::emitError(loc, "failed lowering function return");
+      mlir::emitError(loc, "internal error when processing function return");
       return;
     }
     mlir::Value resultVal = resultSymBox.match(
         [&](const fir::CharBoxValue &x) -> mlir::Value {
+          if (Fortran::semantics::IsBindCProcedure(functionSymbol))
+            return builder->create<fir::LoadOp>(loc, x.getBuffer());
           return fir::factory::CharacterExprHelper{*builder, loc}
               .createEmboxChar(x.getBuffer(), x.getLen());
         },
@@ -939,8 +1150,7 @@ private:
     for (Fortran::parser::Label label :
          std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
       if (labelSet.count(label) &&
-          std::find(indexList.begin(), indexList.end(), label) ==
-              indexList.end()) { // ignore duplicates
+          !llvm::is_contained(indexList, label)) { // ignore duplicates
         addLabel(label);
       }
     }
@@ -952,6 +1162,34 @@ private:
     // unit that violates the program requirement above.
     blockList.push_back(eval.nonNopSuccessor().block); // default
     builder->create<fir::SelectOp>(loc, selectExpr, indexList, blockList);
+  }
+
+  /// Collect DO CONCURRENT or FORALL loop control information.
+  IncrementLoopNestInfo getConcurrentControl(
+      const Fortran::parser::ConcurrentHeader &header,
+      const std::list<Fortran::parser::LocalitySpec> &localityList = {}) {
+    IncrementLoopNestInfo incrementLoopNestInfo;
+    for (const Fortran::parser::ConcurrentControl &control :
+         std::get<std::list<Fortran::parser::ConcurrentControl>>(header.t))
+      incrementLoopNestInfo.emplace_back(
+          *std::get<0>(control.t).symbol, std::get<1>(control.t),
+          std::get<2>(control.t), std::get<3>(control.t), /*isUnordered=*/true);
+    IncrementLoopInfo &info = incrementLoopNestInfo.back();
+    info.maskExpr = Fortran::semantics::GetExpr(
+        std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(header.t));
+    for (const Fortran::parser::LocalitySpec &x : localityList) {
+      if (const auto *localInitList =
+              std::get_if<Fortran::parser::LocalitySpec::LocalInit>(&x.u))
+        for (const Fortran::parser::Name &x : localInitList->v)
+          info.localInitSymList.push_back(x.symbol);
+      if (const auto *sharedList =
+              std::get_if<Fortran::parser::LocalitySpec::Shared>(&x.u))
+        for (const Fortran::parser::Name &x : sharedList->v)
+          info.sharedSymList.push_back(x.symbol);
+      if (std::get_if<Fortran::parser::LocalitySpec::Local>(&x.u))
+        TODO(toLocation(), "do concurrent locality specs not implemented");
+    }
+    return incrementLoopNestInfo;
   }
 
   /// Generate FIR for a DO construct.  There are six variants:
@@ -1010,7 +1248,34 @@ private:
         info.exitBlock = exitBlock;
       }
     } else {
-      TODO(toLocation(), "infinite/unstructured loop/concurrent loop");
+      const auto *concurrent =
+          std::get_if<Fortran::parser::LoopControl::Concurrent>(
+              &loopControl->u);
+      assert(concurrent && "invalid DO loop variant");
+      incrementLoopNestInfo = getConcurrentControl(
+          std::get<Fortran::parser::ConcurrentHeader>(concurrent->t),
+          std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent->t));
+      if (unstructuredContext) {
+        maybeStartBlock(preheaderBlock);
+        for (IncrementLoopInfo &info : incrementLoopNestInfo) {
+          // The original loop body provides the body and latch blocks of the
+          // innermost dimension.  The (first) body block of a non-innermost
+          // dimension is the preheader block of the immediately enclosed
+          // dimension.  The latch block of a non-innermost dimension is the
+          // exit block of the immediately enclosed dimension.
+          auto createNextExitBlock = [&]() {
+            // Create unstructured loop exit blocks, outermost to innermost.
+            return exitBlock = insertBlock(exitBlock);
+          };
+          bool isInnermost = &info == &incrementLoopNestInfo.back();
+          bool isOutermost = &info == &incrementLoopNestInfo.front();
+          info.headerBlock = isOutermost ? headerBlock : createNextBeginBlock();
+          info.bodyBlock = isInnermost ? bodyBlock : createNextBeginBlock();
+          info.exitBlock = isOutermost ? exitBlock : createNextExitBlock();
+          if (info.maskExpr)
+            info.maskBlock = createNextBeginBlock();
+        }
+      }
     }
 
     // Increment loop begin code.  (Infinite/while code was already generated.)
@@ -1046,24 +1311,67 @@ private:
         return builder->createRealConstant(loc, controlType, 1u);
       return builder->createIntegerConstant(loc, controlType, 1); // step
     };
+    auto handleLocalitySpec = [&](IncrementLoopInfo &info) {
+      // Generate Local Init Assignments
+      for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
+        const auto *hostDetails =
+            sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+        assert(hostDetails && "missing local_init variable host variable");
+        const Fortran::semantics::Symbol &hostSym = hostDetails->symbol();
+        (void)hostSym;
+        TODO(loc, "do concurrent locality specs not implemented");
+      }
+      // Handle shared locality spec
+      for (const Fortran::semantics::Symbol *sym : info.sharedSymList) {
+        const auto *hostDetails =
+            sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+        assert(hostDetails && "missing shared variable host variable");
+        const Fortran::semantics::Symbol &hostSym = hostDetails->symbol();
+        copySymbolBinding(hostSym, *sym);
+      }
+    };
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
-      info.loopVariable = genLoopVariableAddress(loc, info.loopVariableSym);
+      info.loopVariable =
+          genLoopVariableAddress(loc, info.loopVariableSym, info.isUnordered);
       mlir::Value lowerValue = genControlValue(info.lowerExpr, info);
       mlir::Value upperValue = genControlValue(info.upperExpr, info);
       info.stepValue = genControlValue(info.stepExpr, info);
 
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
+        mlir::Value doVarInit = nullptr;
+        if (info.doVarIsALoopArg())
+          doVarInit = builder->createConvert(loc, info.getLoopVariableType(),
+                                             lowerValue);
+
         info.doLoop = builder->create<fir::DoLoopOp>(
             loc, lowerValue, upperValue, info.stepValue, info.isUnordered,
-            /*finalCountValue=*/!info.isUnordered);
+            /*finalCountValue=*/!info.isUnordered,
+            doVarInit ? mlir::ValueRange{doVarInit} : mlir::ValueRange{});
         builder->setInsertionPointToStart(info.doLoop.getBody());
-        // Update the loop variable value, as it may have non-index references.
-        mlir::Value value = builder->createConvert(
-            loc, info.getLoopVariableType(), info.doLoop.getInductionVar());
+        mlir::Value value;
+        if (!doVarInit) {
+          // Update the loop variable value, as it may have non-index
+          // references.
+          value = builder->createConvert(loc, info.getLoopVariableType(),
+                                         info.doLoop.getInductionVar());
+        } else {
+          // The loop variable value is the region's argument rather
+          // than the DoLoop's index value.
+          value = info.doLoop.getRegionIterArgs()[0];
+        }
         builder->create<fir::StoreOp>(loc, value, info.loopVariable);
-        // TODO: Mask expr
-        // TODO: handle Locality Spec
+        if (info.maskExpr) {
+          Fortran::lower::StatementContext stmtCtx;
+          mlir::Value maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
+          stmtCtx.finalize();
+          mlir::Value maskCondCast =
+              builder->createConvert(loc, builder->getI1Type(), maskCond);
+          auto ifOp = builder->create<fir::IfOp>(loc, maskCondCast,
+                                                 /*withElseRegion=*/false);
+          builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
+        }
+        handleLocalitySpec(info);
         continue;
       }
 
@@ -1087,21 +1395,46 @@ private:
         tripCount =
             builder->create<mlir::arith::DivSIOp>(loc, diff2, info.stepValue);
       }
+      if (forceLoopToExecuteOnce) { // minimum tripCount is 1
+        mlir::Value one =
+            builder->createIntegerConstant(loc, tripCount.getType(), 1);
+        auto cond = builder->create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, tripCount, one);
+        tripCount =
+            builder->create<mlir::arith::SelectOp>(loc, cond, one, tripCount);
+      }
       info.tripVariable = builder->createTemporary(loc, tripCount.getType());
       builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
       builder->create<fir::StoreOp>(loc, lowerValue, info.loopVariable);
 
       // Unstructured loop header - generate loop condition and mask.
+      // Note - Currently there is no way to tag a loop as a concurrent loop.
       startBlock(info.headerBlock);
       tripCount = builder->create<fir::LoadOp>(loc, info.tripVariable);
       mlir::Value zero =
           builder->createIntegerConstant(loc, tripCount.getType(), 0);
       auto cond = builder->create<mlir::arith::CmpIOp>(
           loc, mlir::arith::CmpIPredicate::sgt, tripCount, zero);
-      // TODO: mask expression
-      genFIRConditionalBranch(cond, info.bodyBlock, info.exitBlock);
-      if (&info != &incrementLoopNestInfo.back()) // not innermost
-        startBlock(info.bodyBlock); // preheader block of enclosed dimension
+      if (info.maskExpr) {
+        genFIRConditionalBranch(cond, info.maskBlock, info.exitBlock);
+        startBlock(info.maskBlock);
+        mlir::Block *latchBlock = getEval().getLastNestedEvaluation().block;
+        assert(latchBlock && "missing masked concurrent loop latch block");
+        Fortran::lower::StatementContext stmtCtx;
+        mlir::Value maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
+        stmtCtx.finalize();
+        genFIRConditionalBranch(maskCond, info.bodyBlock, latchBlock);
+      } else {
+        genFIRConditionalBranch(cond, info.bodyBlock, info.exitBlock);
+        if (&info != &incrementLoopNestInfo.back()) // not innermost
+          startBlock(info.bodyBlock); // preheader block of enclosed dimension
+      }
+      if (!info.localInitSymList.empty()) {
+        mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
+        builder->setInsertionPointToStart(info.bodyBlock);
+        handleLocalitySpec(info);
+        builder->restoreInsertionPoint(insertPt);
+      }
     }
   }
 
@@ -1117,16 +1450,37 @@ private:
         // End fir.do_loop.
         if (!info.isUnordered) {
           builder->setInsertionPointToEnd(info.doLoop.getBody());
-          mlir::Value result = builder->create<mlir::arith::AddIOp>(
-              loc, info.doLoop.getInductionVar(), info.doLoop.getStep());
-          builder->create<fir::ResultOp>(loc, result);
+          llvm::SmallVector<mlir::Value, 2> results;
+          results.push_back(builder->create<mlir::arith::AddIOp>(
+              loc, info.doLoop.getInductionVar(), info.doLoop.getStep()));
+          if (info.doVarIsALoopArg()) {
+            // If we use an extra iteration variable of the same data
+            // type as the original do-variable, we have to increment
+            // it by the step value. Note that the step has 'index'
+            // type, so we need to cast it, first.
+            mlir::Value stepCast = builder->createConvert(
+                loc, info.getLoopVariableType(), info.doLoop.getStep());
+            mlir::Value doVarValue =
+                builder->create<fir::LoadOp>(loc, info.loopVariable);
+            results.push_back(builder->create<mlir::arith::AddIOp>(
+                loc, doVarValue, stepCast));
+          }
+          builder->create<fir::ResultOp>(loc, results);
         }
         builder->setInsertionPointAfter(info.doLoop);
         if (info.isUnordered)
           continue;
         // The loop control variable may be used after loop execution.
-        mlir::Value lcv = builder->createConvert(
-            loc, info.getLoopVariableType(), info.doLoop.getResult(0));
+        mlir::Value lcv = nullptr;
+        if (info.doVarIsALoopArg()) {
+          // Final do-variable value is the second result of the DoLoop.
+          assert(info.doLoop.getResults().size() == 2 &&
+                 "invalid do-variable handling");
+          lcv = info.doLoop.getResult(1);
+        } else {
+          lcv = builder->createConvert(loc, info.getLoopVariableType(),
+                                       info.doLoop.getResult(0));
+        }
         builder->create<fir::StoreOp>(loc, lcv, info.loopVariable);
         continue;
       }
@@ -1320,7 +1674,7 @@ private:
         auto lp = builder->create<fir::DoLoopOp>(
             loc, lb, ub, by, /*unordered=*/true,
             /*finalCount=*/false, explicitIterSpace.getInnerArgs());
-        if (!loops.empty() || !outermost)
+        if ((!loops.empty() || !outermost) && !lp.getRegionIterArgs().empty())
           builder->create<fir::ResultOp>(loc, lp.getResults());
         explicitIterSpace.setInnerArgs(lp.getRegionIterArgs());
         builder->setInsertionPointToStart(lp.getBody());
@@ -1418,12 +1772,12 @@ private:
   }
 
   void genFIR(const Fortran::parser::CompilerDirective &) {
-    TODO(toLocation(), "CompilerDirective lowering");
+    mlir::emitWarning(toLocation(), "ignoring all compiler directives");
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    genOpenACCConstruct(*this, getEval(), acc);
+    genOpenACCConstruct(*this, bridge.getSemanticsContext(), getEval(), acc);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
     builder->restoreInsertionPoint(insertPt);
@@ -1452,11 +1806,12 @@ private:
     // no collapse requested.
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
     if (ompLoop) {
-      const auto &wsLoopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
+      loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
           std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
       int64_t collapseValue =
-          Fortran::lower::getCollapseValue(wsLoopOpClauseList);
+          Fortran::lower::getCollapseValue(*loopOpClauseList);
 
       curEval = &curEval->getFirstNestedEvaluation();
       for (int64_t i = 1; i < collapseValue; i++) {
@@ -1466,6 +1821,10 @@ private:
 
     for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
+
+    if (ompLoop)
+      genOpenMPReduction(*this, *loopOpClauseList);
+
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
   }
@@ -1587,8 +1946,11 @@ private:
     // Generate a sequence of case value comparisons and branches.
     auto caseValue = valueList.begin();
     auto caseBlock = blockList.begin();
-    for (mlir::Attribute attr : attrList) {
-      if (attr.isa<mlir::UnitAttr>()) {
+    bool skipFinalization = false;
+    for (const auto &attr : llvm::enumerate(attrList)) {
+      if (attr.value().isa<mlir::UnitAttr>()) {
+        if (attrList.size() == 1)
+          stmtCtx.finalize();
         genFIRBranch(*caseBlock++);
         break;
       }
@@ -1605,16 +1967,30 @@ private:
             charHelper.createUnboxChar(rhs);
         mlir::Value &rhsAddr = rhsVal.first;
         mlir::Value &rhsLen = rhsVal.second;
-        return fir::runtime::genCharCompare(*builder, loc, pred, lhsAddr,
-                                            lhsLen, rhsAddr, rhsLen);
+        mlir::Value result = fir::runtime::genCharCompare(
+            *builder, loc, pred, lhsAddr, lhsLen, rhsAddr, rhsLen);
+        if (stmtCtx.workListIsEmpty() || skipFinalization)
+          return result;
+        if (attr.index() == attrList.size() - 2) {
+          stmtCtx.finalize();
+          return result;
+        }
+        fir::IfOp ifOp = builder->create<fir::IfOp>(loc, result,
+                                                    /*withElseRegion=*/false);
+        builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
+        stmtCtx.finalizeAndKeep();
+        builder->setInsertionPointAfter(ifOp);
+        return result;
       };
       mlir::Block *newBlock = insertBlock(*caseBlock);
-      if (attr.isa<fir::ClosedIntervalAttr>()) {
+      if (attr.value().isa<fir::ClosedIntervalAttr>()) {
         mlir::Block *newBlock2 = insertBlock(*caseBlock);
+        skipFinalization = true;
         mlir::Value cond =
             genCond(*caseValue++, mlir::arith::CmpIPredicate::sge);
         genFIRConditionalBranch(cond, newBlock, newBlock2);
         builder->setInsertionPointToEnd(newBlock);
+        skipFinalization = false;
         mlir::Value cond2 =
             genCond(*caseValue++, mlir::arith::CmpIPredicate::sle);
         genFIRConditionalBranch(cond2, *caseBlock++, newBlock2);
@@ -1622,12 +1998,13 @@ private:
         continue;
       }
       mlir::arith::CmpIPredicate pred;
-      if (attr.isa<fir::PointIntervalAttr>()) {
+      if (attr.value().isa<fir::PointIntervalAttr>()) {
         pred = mlir::arith::CmpIPredicate::eq;
-      } else if (attr.isa<fir::LowerBoundAttr>()) {
+      } else if (attr.value().isa<fir::LowerBoundAttr>()) {
         pred = mlir::arith::CmpIPredicate::sge;
       } else {
-        assert(attr.isa<fir::UpperBoundAttr>() && "unexpected predicate");
+        assert(attr.value().isa<fir::UpperBoundAttr>() &&
+               "unexpected predicate");
         pred = mlir::arith::CmpIPredicate::sle;
       }
       mlir::Value cond = genCond(*caseValue++, pred);
@@ -1636,12 +2013,7 @@ private:
     }
     assert(caseValue == valueList.end() && caseBlock == blockList.end() &&
            "select case list mismatch");
-    // Clean-up the selector at the end of the construct if it is a temporary
-    // (which is possible with characters).
-    mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    builder->setInsertionPointToEnd(eval.parentConstruct->constructExit->block);
-    stmtCtx.finalize();
-    builder->restoreInsertionPoint(insertPt);
+    assert(stmtCtx.workListIsEmpty() && "statement context must be empty");
   }
 
   fir::ExtendedValue
@@ -1682,56 +2054,56 @@ private:
 
   void genFIR(const Fortran::parser::BlockConstruct &blockConstruct) {
     setCurrentPositionAt(blockConstruct);
-    TODO(toLocation(), "BlockConstruct lowering");
+    TODO(toLocation(), "BlockConstruct implementation");
   }
   void genFIR(const Fortran::parser::BlockStmt &) {
-    TODO(toLocation(), "BlockStmt lowering");
+    TODO(toLocation(), "BlockStmt implementation");
   }
   void genFIR(const Fortran::parser::EndBlockStmt &) {
-    TODO(toLocation(), "EndBlockStmt lowering");
+    TODO(toLocation(), "EndBlockStmt implementation");
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
-    TODO(toLocation(), "ChangeTeamConstruct lowering");
+    TODO(toLocation(), "ChangeTeamConstruct implementation");
   }
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    TODO(toLocation(), "ChangeTeamStmt lowering");
+    TODO(toLocation(), "ChangeTeamStmt implementation");
   }
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    TODO(toLocation(), "EndChangeTeamStmt lowering");
+    TODO(toLocation(), "EndChangeTeamStmt implementation");
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
     setCurrentPositionAt(criticalConstruct);
-    TODO(toLocation(), "CriticalConstruct lowering");
+    TODO(toLocation(), "CriticalConstruct implementation");
   }
   void genFIR(const Fortran::parser::CriticalStmt &) {
-    TODO(toLocation(), "CriticalStmt lowering");
+    TODO(toLocation(), "CriticalStmt implementation");
   }
   void genFIR(const Fortran::parser::EndCriticalStmt &) {
-    TODO(toLocation(), "EndCriticalStmt lowering");
+    TODO(toLocation(), "EndCriticalStmt implementation");
   }
 
   void genFIR(const Fortran::parser::SelectRankConstruct &selectRankConstruct) {
     setCurrentPositionAt(selectRankConstruct);
-    TODO(toLocation(), "SelectRankConstruct lowering");
+    TODO(toLocation(), "SelectRankConstruct implementation");
   }
   void genFIR(const Fortran::parser::SelectRankStmt &) {
-    TODO(toLocation(), "SelectRankStmt lowering");
+    TODO(toLocation(), "SelectRankStmt implementation");
   }
   void genFIR(const Fortran::parser::SelectRankCaseStmt &) {
-    TODO(toLocation(), "SelectRankCaseStmt lowering");
+    TODO(toLocation(), "SelectRankCaseStmt implementation");
   }
 
   void genFIR(const Fortran::parser::SelectTypeConstruct &selectTypeConstruct) {
     setCurrentPositionAt(selectTypeConstruct);
-    TODO(toLocation(), "SelectTypeConstruct lowering");
+    TODO(toLocation(), "SelectTypeConstruct implementation");
   }
   void genFIR(const Fortran::parser::SelectTypeStmt &) {
-    TODO(toLocation(), "SelectTypeStmt lowering");
+    TODO(toLocation(), "SelectTypeStmt implementation");
   }
   void genFIR(const Fortran::parser::TypeGuardStmt &) {
-    TODO(toLocation(), "TypeGuardStmt lowering");
+    TODO(toLocation(), "TypeGuardStmt implementation");
   }
 
   //===--------------------------------------------------------------------===//
@@ -1905,9 +2277,15 @@ private:
   /// pointer assignment.)
   void genArrayAssignment(
       const Fortran::evaluate::Assignment &assign,
-      Fortran::lower::StatementContext &stmtCtx,
+      Fortran::lower::StatementContext &localStmtCtx,
       llvm::Optional<llvm::SmallVector<mlir::Value>> lbounds = llvm::None,
       llvm::Optional<llvm::SmallVector<mlir::Value>> ubounds = llvm::None) {
+
+    Fortran::lower::StatementContext &stmtCtx =
+        explicitIterationSpace()
+            ? explicitIterSpace.stmtContext()
+            : (implicitIterationSpace() ? implicitIterSpace.stmtContext()
+                                        : localStmtCtx);
     if (Fortran::lower::isWholeAllocatable(assign.lhs)) {
       // Assignment to allocatables may require the lhs to be
       // deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
@@ -1917,14 +2295,14 @@ private:
       return;
     }
 
-    if (lbounds.hasValue()) {
+    if (lbounds) {
       // Array of POINTER entities, with elemental assignment.
       if (!Fortran::lower::isWholePointer(assign.lhs))
         fir::emitFatalError(toLocation(), "pointer assignment to non-pointer");
 
       Fortran::lower::createArrayOfPointerAssignment(
           *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
-          lbounds.getValue(), ubounds, localSymbols, stmtCtx);
+          *lbounds, ubounds, localSymbols, stmtCtx);
       return;
     }
 
@@ -1947,9 +2325,7 @@ private:
     // implied by the lhs array expression.
     Fortran::lower::createAnyMaskedArrayAssignment(
         *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
-        localSymbols,
-        explicitIterationSpace() ? explicitIterSpace.stmtContext()
-                                 : implicitIterSpace.stmtContext());
+        localSymbols, stmtCtx);
   }
 
 #if !defined(NDEBUG)
@@ -2023,7 +2399,7 @@ private:
                     lengthParams.push_back(charBox->getLen());
                   else if (fir::isDerivedWithLenParameters(rhs))
                     TODO(loc, "assignment to derived type allocatable with "
-                              "length parameters");
+                              "LEN parameters");
                   lhsRealloc = fir::factory::genReallocIfNeeded(
                       *builder, loc, *lhsMutableBox,
                       /*shape=*/llvm::None, lengthParams);
@@ -2066,9 +2442,9 @@ private:
               }
               if (lhsIsWholeAllocatable)
                 fir::factory::finalizeRealloc(
-                    *builder, loc, lhsMutableBox.getValue(),
+                    *builder, loc, lhsMutableBox.value(),
                     /*lbounds=*/llvm::None, /*takeLboundsIfRealloc=*/false,
-                    lhsRealloc.getValue());
+                    lhsRealloc.value());
             },
 
             // [2] User defined assignment. If the context is a scalar
@@ -2092,9 +2468,16 @@ private:
               std::optional<Fortran::evaluate::DynamicType> rhsType =
                   assign.rhs.GetType();
               // Polymorphic lhs/rhs may need more care. See F2018 10.2.2.3.
-              if ((lhsType && lhsType->IsPolymorphic()) ||
+              // If the pointer object is not polymorphic (7.3.2.3) and the
+              // pointer target is polymorphic with dynamic type that differs
+              // from its declared type, the assignment target is the ancestor
+              // component of the pointer target that has the type of the
+              // pointer object. Otherwise, the assignment target is the pointer
+              // target.
+              if ((lhsType && !lhsType->IsPolymorphic()) &&
                   (rhsType && rhsType->IsPolymorphic()))
-                TODO(loc, "pointer assignment involving polymorphic entity");
+                TODO(loc, "non-polymorphic pointer assignment with polymorphic "
+                          "entity on rhs");
 
               llvm::SmallVector<mlir::Value> lbounds;
               for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)
@@ -2397,9 +2780,34 @@ private:
                eval.getLastNestedEvaluation()
                    .lexicalSuccessor->isIntermediateConstructStmt())
         successor = eval.constructExit;
+      else if (eval.isConstructStmt() &&
+               eval.lexicalSuccessor == eval.controlSuccessor)
+        // empty construct block
+        successor = eval.parentConstruct->constructExit;
       if (successor && successor->block)
         genFIRBranch(successor->block);
     }
+  }
+
+  void mapCPtrArgByValue(const Fortran::semantics::Symbol &sym,
+                         mlir::Value val) {
+    mlir::Type symTy = Fortran::lower::translateSymbolToFIRType(*this, sym);
+    mlir::Location loc = toLocation();
+    mlir::Value res = builder->create<fir::AllocaOp>(loc, symTy);
+    mlir::Value resAddr =
+        fir::factory::genCPtrOrCFunptrAddr(*builder, loc, res, symTy);
+    mlir::Value argAddrVal =
+        builder->createConvert(loc, fir::unwrapRefType(resAddr.getType()), val);
+    builder->create<fir::StoreOp>(loc, argAddrVal, resAddr);
+    addSymbol(sym, res);
+  }
+
+  void mapTrivialByValue(const Fortran::semantics::Symbol &sym,
+                         mlir::Value val) {
+    mlir::Location loc = toLocation();
+    mlir::Value res = builder->create<fir::AllocaOp>(loc, val.getType());
+    builder->create<fir::StoreOp>(loc, val, res);
+    addSymbol(sym, res);
   }
 
   /// Map mlir function block arguments to the corresponding Fortran dummy
@@ -2411,6 +2819,8 @@ private:
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
     auto mapPassedEntity = [&](const auto arg) {
       if (arg.passBy == PassBy::AddressAndLength) {
+        if (callee.characterize().IsBindC())
+          return;
         // TODO: now that fir call has some attributes regarding character
         // return, PassBy::AddressAndLength should be retired.
         mlir::Location loc = toLocation();
@@ -2420,6 +2830,20 @@ private:
         addSymbol(arg.entity->get(), box);
       } else {
         if (arg.entity.has_value()) {
+          if (arg.passBy == PassBy::Value) {
+            mlir::Type argTy = arg.firArgument.getType();
+            if (argTy.isa<fir::RecordType>())
+              TODO(toLocation(), "derived type argument passed by value");
+            if (Fortran::semantics::IsBuiltinCPtr(arg.entity->get()) &&
+                Fortran::lower::isCPtrArgByValueType(argTy)) {
+              mapCPtrArgByValue(arg.entity->get(), arg.firArgument);
+              return;
+            }
+            if (fir::isa_trivial(argTy)) {
+              mapTrivialByValue(arg.entity->get(), arg.firArgument);
+              return;
+            }
+          }
           addSymbol(arg.entity->get(), arg.firArgument);
         } else {
           assert(funit.parentHasHostAssoc());
@@ -2447,6 +2871,10 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
+    if (var.hasSymbol() &&
+        var.getSymbol().test(
+            Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+      Fortran::lower::genThreadprivateOp(*this, var);
   }
 
   /// Prepare to translate a new function
@@ -2456,6 +2884,7 @@ private:
     mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
     builder = new fir::FirOpBuilder(func, bridge.getKindMap());
     assert(builder && "FirOpBuilder did not instantiate");
+    builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     builder->setInsertionPointToStart(&func.front());
     func.setVisibility(mlir::SymbolTable::Visibility::Public);
 
@@ -2523,12 +2952,16 @@ private:
     // is not something that fits well with equivalence lowering.
     for (const Fortran::lower::pft::Variable &altResult :
          deferredFuncResultList) {
-      if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
-              passedResult = callee.getPassedResult())
-        addSymbol(altResult.getSymbol(), resultArg.getAddr());
       Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
-                                          stmtCtx, primaryFuncResultStorage);
+      if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
+              passedResult = callee.getPassedResult()) {
+        addSymbol(altResult.getSymbol(), resultArg.getAddr());
+        Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
+                                            stmtCtx);
+      } else {
+        Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
+                                            stmtCtx, primaryFuncResultStorage);
+      }
     }
 
     // If this is a host procedure with host associations, then create the tuple
@@ -2655,6 +3088,8 @@ private:
         mlir::FunctionType::get(context, llvm::None, llvm::None));
     func.addEntryBlock();
     builder = new fir::FirOpBuilder(func, bridge.getKindMap());
+    assert(builder && "FirOpBuilder did not instantiate");
+    builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();
@@ -2688,10 +3123,10 @@ private:
     if (!funit.isMainProgram()) {
       const Fortran::semantics::Symbol &procSymbol =
           funit.getSubprogramSymbol();
-      if (procSymbol.owner().IsSubmodule()) {
-        TODO(toLocation(), "support submodules");
-        return;
-      }
+      if (procSymbol.owner().IsSubmodule())
+        TODO(toLocation(), "support for submodules");
+      if (Fortran::semantics::IsSeparateModuleProcedureInterface(&procSymbol))
+        TODO(toLocation(), "separate module procedure");
     }
     setCurrentPosition(funit.getStartingSourceLoc());
     for (int entryIndex = 0, last = funit.entryPointList.size();
@@ -2995,7 +3430,7 @@ private:
 
 Fortran::evaluate::FoldingContext
 Fortran::lower::LoweringBridge::createFoldingContext() const {
-  return {getDefaultKinds(), getIntrinsicTable()};
+  return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics()};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -3018,12 +3453,18 @@ void Fortran::lower::LoweringBridge::parseSourceFile(llvm::SourceMgr &srcMgr) {
 
 Fortran::lower::LoweringBridge::LoweringBridge(
     mlir::MLIRContext &context,
+    Fortran::semantics::SemanticsContext &semanticsContext,
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
     const Fortran::evaluate::IntrinsicProcTable &intrinsics,
+    const Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
-    fir::KindMapping &kindMap)
-    : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
-      context{context}, kindMap{kindMap} {
+    fir::KindMapping &kindMap,
+    const Fortran::lower::LoweringOptions &loweringOptions,
+    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults)
+    : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
+      intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
+      cooked{&cooked}, context{context}, kindMap{kindMap},
+      loweringOptions{loweringOptions}, envDefaults{envDefaults} {
   // Register the diagnostic handler.
   context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
     llvm::raw_ostream &os = llvm::errs();

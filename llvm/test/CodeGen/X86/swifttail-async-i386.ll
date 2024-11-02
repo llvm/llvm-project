@@ -11,12 +11,12 @@ define swifttailcc void @swifttail() {
   ret void
 }
 
-declare swifttailcc void @swiftself(i8* swiftself)
+declare swifttailcc void @swiftself(ptr swiftself)
 
-define swifttailcc void @swifttail2(i8* %arg) {
+define swifttailcc void @swifttail2(ptr %arg) {
 ; CHECK-LABEL: swifttail2:
 ; CHECK: movl {{.*}}, %ecx
 ; CHECK: jmp _swiftself
-  tail call swifttailcc void @swiftself(i8* swiftself %arg)
+  tail call swifttailcc void @swiftself(ptr swiftself %arg)
   ret void
 }

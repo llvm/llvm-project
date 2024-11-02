@@ -319,7 +319,7 @@ bool AppleObjCRuntime::AppleIsModuleObjCLibrary(const ModuleSP &module_sp) {
 // we use the version of Foundation to make assumptions about the ObjC runtime
 // on a target
 uint32_t AppleObjCRuntime::GetFoundationVersion() {
-  if (!m_Foundation_major.hasValue()) {
+  if (!m_Foundation_major) {
     const ModuleList &modules = m_process->GetTarget().GetImages();
     for (uint32_t idx = 0; idx < modules.GetSize(); idx++) {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
@@ -333,7 +333,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
     }
     return LLDB_INVALID_MODULE_VERSION;
   } else
-    return m_Foundation_major.getValue();
+    return *m_Foundation_major;
 }
 
 void AppleObjCRuntime::GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
@@ -503,7 +503,7 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 /// \param msg The message to add to the log.
 /// \return An invalid ThreadSP to be returned from
 ///         GetBacktraceThreadFromException.
-LLVM_NODISCARD
+[[nodiscard]]
 static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
   Log *log = GetLog(LLDBLog::Language);
   LLDB_LOG(log, "Failed getting backtrace from exception: {0}", msg);

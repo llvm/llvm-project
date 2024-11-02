@@ -257,6 +257,15 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Pseudo instructions used by KCFI.
+//===----------------------------------------------------------------------===//
+let
+  Defs = [R10, EFLAGS] in {
+def KCFI_CHECK : PseudoI<
+  (outs), (ins GR64:$ptr, i32imm:$type), []>, Sched<[]>;
+}
+
+//===----------------------------------------------------------------------===//
 // Pseudo instructions used by address sanitizer.
 //===----------------------------------------------------------------------===//
 let
@@ -562,12 +571,14 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
   let Predicates = [HasMMX] in
     defm _VR64   : CMOVrr_PSEUDO<VR64, x86mmx>;
 
-  defm _FR16X    : CMOVrr_PSEUDO<FR16X, f16>;
   let Predicates = [HasSSE1,NoAVX512] in
     defm _FR32   : CMOVrr_PSEUDO<FR32, f32>;
-  let Predicates = [HasSSE2,NoAVX512] in
+  let Predicates = [HasSSE2,NoAVX512] in {
+    defm _FR16   : CMOVrr_PSEUDO<FR16, f16>;
     defm _FR64   : CMOVrr_PSEUDO<FR64, f64>;
+  }
   let Predicates = [HasAVX512] in {
+    defm _FR16X  : CMOVrr_PSEUDO<FR16X, f16>;
     defm _FR32X  : CMOVrr_PSEUDO<FR32X, f32>;
     defm _FR64X  : CMOVrr_PSEUDO<FR64X, f64>;
   }
@@ -790,9 +801,9 @@ def X86lock_sub_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 0));
 }]>;
 
-let Predicates = [UseIncDec] in {
-  let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
-      SchedRW = [WriteALURMW]  in {
+let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    SchedRW = [WriteALURMW]  in {
+  let Predicates = [UseIncDec] in {
     def LOCK_INC8m  : I<0xFE, MRM0m, (outs), (ins i8mem :$dst),
                         "inc{b}\t$dst",
                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i8 1)))]>,
@@ -805,10 +816,6 @@ let Predicates = [UseIncDec] in {
                         "inc{l}\t$dst",
                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i32 1)))]>,
                         OpSize32, LOCK;
-    def LOCK_INC64m : RI<0xFF, MRM0m, (outs), (ins i64mem:$dst),
-                         "inc{q}\t$dst",
-                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i64 1)))]>,
-                         LOCK;
 
     def LOCK_DEC8m  : I<0xFE, MRM1m, (outs), (ins i8mem :$dst),
                         "dec{b}\t$dst",
@@ -822,20 +829,33 @@ let Predicates = [UseIncDec] in {
                         "dec{l}\t$dst",
                         [(set EFLAGS, (X86lock_sub_nocf addr:$dst, (i32 1)))]>,
                         OpSize32, LOCK;
+  }
+
+  let Predicates = [UseIncDec, In64BitMode] in {
+    def LOCK_INC64m : RI<0xFF, MRM0m, (outs), (ins i64mem:$dst),
+                         "inc{q}\t$dst",
+                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i64 1)))]>,
+                         LOCK;
     def LOCK_DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst),
                          "dec{q}\t$dst",
                          [(set EFLAGS, (X86lock_sub_nocf addr:$dst, (i64 1)))]>,
                          LOCK;
   }
+}
 
+let Predicates = [UseIncDec] in {
   // Additional patterns for -1 constant.
   def : Pat<(X86lock_add addr:$dst, (i8  -1)), (LOCK_DEC8m  addr:$dst)>;
   def : Pat<(X86lock_add addr:$dst, (i16 -1)), (LOCK_DEC16m addr:$dst)>;
   def : Pat<(X86lock_add addr:$dst, (i32 -1)), (LOCK_DEC32m addr:$dst)>;
-  def : Pat<(X86lock_add addr:$dst, (i64 -1)), (LOCK_DEC64m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i8  -1)), (LOCK_INC8m  addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i16 -1)), (LOCK_INC16m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i32 -1)), (LOCK_INC32m addr:$dst)>;
+}
+
+let Predicates = [UseIncDec, In64BitMode] in {
+  // Additional patterns for -1 constant.
+  def : Pat<(X86lock_add addr:$dst, (i64 -1)), (LOCK_DEC64m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i64 -1)), (LOCK_INC64m addr:$dst)>;
 }
 
@@ -1527,44 +1547,6 @@ def : Pat<(xor GR16:$src1, -32768),
           (ADD16ri GR16:$src1, -32768)>;
 def : Pat<(xor GR32:$src1, -2147483648),
           (ADD32ri GR32:$src1, -2147483648)>;
-}
-
-//===----------------------------------------------------------------------===//
-// Pattern match SUB as XOR
-//===----------------------------------------------------------------------===//
-
-// An immediate in the LHS of a subtract can't be encoded in the instruction.
-// If there is no possibility of a borrow we can use an XOR instead of a SUB
-// to enable the immediate to be folded.
-// TODO: Move this to a DAG combine?
-
-def sub_is_xor : PatFrag<(ops node:$lhs, node:$rhs), (sub node:$lhs, node:$rhs),[{
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-    KnownBits Known = CurDAG->computeKnownBits(N->getOperand(1));
-
-    // If all possible ones in the RHS are set in the LHS then there can't be
-    // a borrow and we can use xor.
-    return (~Known.Zero).isSubsetOf(CN->getAPIntValue());
-  }
-
-  return false;
-}]>;
-
-let AddedComplexity = 5 in {
-def : Pat<(sub_is_xor imm:$src2, GR8:$src1),
-          (XOR8ri GR8:$src1, imm:$src2)>;
-def : Pat<(sub_is_xor i16immSExt8:$src2, GR16:$src1),
-          (XOR16ri8 GR16:$src1, i16immSExt8:$src2)>;
-def : Pat<(sub_is_xor imm:$src2, GR16:$src1),
-          (XOR16ri GR16:$src1, imm:$src2)>;
-def : Pat<(sub_is_xor i32immSExt8:$src2, GR32:$src1),
-          (XOR32ri8 GR32:$src1, i32immSExt8:$src2)>;
-def : Pat<(sub_is_xor imm:$src2, GR32:$src1),
-          (XOR32ri GR32:$src1, imm:$src2)>;
-def : Pat<(sub_is_xor i64immSExt8:$src2, GR64:$src1),
-          (XOR64ri8 GR64:$src1, i64immSExt8:$src2)>;
-def : Pat<(sub_is_xor i64immSExt32:$src2, GR64:$src1),
-          (XOR64ri32 GR64:$src1, i64immSExt32:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//

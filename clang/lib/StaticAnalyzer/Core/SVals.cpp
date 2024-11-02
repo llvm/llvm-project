@@ -109,6 +109,14 @@ SymbolRef SVal::getAsSymbol(bool IncludeBaseRegions) const {
   return getAsLocSymbol(IncludeBaseRegions);
 }
 
+const llvm::APSInt *SVal::getAsInteger() const {
+  if (auto CI = getAs<nonloc::ConcreteInt>())
+    return &CI->getValue();
+  if (auto CI = getAs<loc::ConcreteInt>())
+    return &CI->getValue();
+  return nullptr;
+}
+
 const MemRegion *SVal::getAsRegion() const {
   if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>())
     return X->getRegion();
@@ -136,6 +144,8 @@ public:
   }
   template <class ConcreteInt> QualType VisitConcreteInt(ConcreteInt CI) {
     const llvm::APSInt &Value = CI.getValue();
+    if (1 == Value.getBitWidth())
+      return Context.BoolTy;
     return Context.getIntTypeForBitwidth(Value.getBitWidth(), Value.isSigned());
   }
   QualType VisitLocConcreteInt(loc::ConcreteInt CI) {
@@ -250,20 +260,6 @@ bool SVal::isConstant(int I) const {
 
 bool SVal::isZeroConstant() const {
   return isConstant(0);
-}
-
-//===----------------------------------------------------------------------===//
-// Transfer function dispatch for Non-Locs.
-//===----------------------------------------------------------------------===//
-
-nonloc::ConcreteInt
-nonloc::ConcreteInt::evalComplement(SValBuilder &svalBuilder) const {
-  return svalBuilder.makeIntVal(~getValue());
-}
-
-nonloc::ConcreteInt
-nonloc::ConcreteInt::evalMinus(SValBuilder &svalBuilder) const {
-  return svalBuilder.makeIntVal(-getValue());
 }
 
 //===----------------------------------------------------------------------===//

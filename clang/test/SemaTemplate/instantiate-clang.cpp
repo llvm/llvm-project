@@ -18,7 +18,15 @@ struct ExtVectorAccess0 {
 template struct ExtVectorAccess0<double2>;
 template struct ExtVectorAccess0<double4>;
 
-typedef __attribute__(( ext_vector_type(2) )) double double2;
+template<typename T>
+struct ExtVectorAccess1 {
+  void f(T *v1, double4 *v2) {
+    v1->xy = v2->yx;
+  }
+};
+
+template struct ExtVectorAccess1<double2>;
+template struct ExtVectorAccess1<double4>;
 
 template<typename T, typename U, int N, int M>
 struct ShuffleVector0 {

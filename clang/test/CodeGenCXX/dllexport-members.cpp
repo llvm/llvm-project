@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc   -fms-compatibility -fms-compatibility-version=18 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=MSC --check-prefix=M32 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-msvc -fms-compatibility -fms-compatibility-version=18 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=MSC --check-prefix=M64 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-msvc   -fms-compatibility -fms-compatibility-version=19 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=M32VS2015 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-msvc -fms-compatibility -fms-compatibility-version=19 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=M64VS2015 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i686-windows-gnu                       -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=GNU --check-prefix=G32 %s
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-gnu                     -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=GNU --check-prefix=G64 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc   -fms-compatibility -fms-compatibility-version=18 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=MSC --check-prefix=M32 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -fms-compatibility -fms-compatibility-version=18 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=MSC --check-prefix=M64 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc   -fms-compatibility -fms-compatibility-version=19 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=M32VS2015 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -fms-compatibility -fms-compatibility-version=19 -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=M64VS2015 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-gnu                       -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=GNU --check-prefix=G32 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-gnu                     -emit-llvm -std=c++1y -O0 -o - %s | FileCheck --check-prefix=GNU --check-prefix=G64 %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Exported {};
@@ -26,22 +26,22 @@ extern "C" void free(void* p);
 struct ExportMembers {
   struct Nested;
 
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?normalDef@ExportMembers@@QAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?normalDef@ExportMembers@@QEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInclass@ExportMembers@@QAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInclass@ExportMembers@@QEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDef@ExportMembers@@QAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDef@ExportMembers@@QEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDecl@ExportMembers@@QAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDecl@ExportMembers@@QEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers9normalDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers9normalDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers13normalInclassEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers13normalInclassEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers15normalInlineDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers15normalInlineDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers16normalInlineDeclEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers16normalInlineDeclEv(%struct.ExportMembers* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?normalDef@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?normalDef@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInclass@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInclass@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDef@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDef@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDecl@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDecl@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers9normalDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers9normalDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers13normalInclassEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers13normalInclassEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers15normalInlineDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers15normalInlineDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers16normalInlineDeclEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers16normalInlineDeclEv(ptr {{[^,]*}} %this)
   // M32-DAG: define linkonce_odr dso_local       x86_thiscallcc void @"?referencedNonExportedInClass@ExportMembers@@QAEXXZ"
   __declspec(dllexport)                void normalDef();
   __declspec(dllexport)                void normalInclass() { referencedNonExportedInClass(); }
@@ -49,22 +49,22 @@ struct ExportMembers {
   __declspec(dllexport)         inline void normalInlineDecl();
                                        void referencedNonExportedInClass() {}
 
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?virtualDef@ExportMembers@@UAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?virtualDef@ExportMembers@@UEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInclass@ExportMembers@@UAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInclass@ExportMembers@@UEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDef@ExportMembers@@UAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDef@ExportMembers@@UEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDecl@ExportMembers@@UAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDecl@ExportMembers@@UEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers10virtualDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers10virtualDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers14virtualInclassEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers14virtualInclassEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers16virtualInlineDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers16virtualInlineDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers17virtualInlineDeclEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers17virtualInlineDeclEv(%struct.ExportMembers* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?virtualDef@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?virtualDef@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInclass@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInclass@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDef@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDef@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDecl@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDecl@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers10virtualDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers10virtualDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers14virtualInclassEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers14virtualInclassEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers16virtualInlineDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers16virtualInlineDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers17virtualInlineDeclEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers17virtualInlineDeclEv(ptr {{[^,]*}} %this)
   __declspec(dllexport) virtual        void virtualDef();
   __declspec(dllexport) virtual        void virtualInclass() {}
   __declspec(dllexport) virtual        void virtualInlineDef();
@@ -83,30 +83,30 @@ struct ExportMembers {
   __declspec(dllexport) static         void staticInlineDef();
   __declspec(dllexport) static  inline void staticInlineDecl();
 
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?protectedDef@ExportMembers@@IAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?protectedDef@ExportMembers@@IEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers12protectedDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers12protectedDefEv(%struct.ExportMembers* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?protectedDef@ExportMembers@@IAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?protectedDef@ExportMembers@@IEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers12protectedDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers12protectedDefEv(ptr {{[^,]*}} %this)
   // MSC-DAG: define          dso_local dllexport                void @"?protectedStaticDef@ExportMembers@@KAXXZ"()
   // GNU-DAG: define          dso_local dllexport                void @_ZN13ExportMembers18protectedStaticDefEv()
 protected:
   __declspec(dllexport)                void protectedDef();
   __declspec(dllexport) static         void protectedStaticDef();
 
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?privateDef@ExportMembers@@AAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?privateDef@ExportMembers@@AEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers10privateDefEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers10privateDefEv(%struct.ExportMembers* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?privateDef@ExportMembers@@AAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?privateDef@ExportMembers@@AEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers10privateDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers10privateDefEv(ptr {{[^,]*}} %this)
   // MSC-DAG: define          dso_local dllexport                void @"?privateStaticDef@ExportMembers@@CAXXZ"()
   // GNU-DAG: define          dso_local dllexport                void @_ZN13ExportMembers16privateStaticDefEv()
 private:
   __declspec(dllexport)                void privateDef();
   __declspec(dllexport) static         void privateStaticDef();
 
-  // M32-DAG: define          dso_local x86_thiscallcc void @"?ignored@ExportMembers@@QAEXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local                void @"?ignored@ExportMembers@@QEAAXXZ"(%struct.ExportMembers* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local x86_thiscallcc void @_ZN13ExportMembers7ignoredEv(%struct.ExportMembers* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local                void @_ZN13ExportMembers7ignoredEv(%struct.ExportMembers* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local x86_thiscallcc void @"?ignored@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local                void @"?ignored@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local x86_thiscallcc void @_ZN13ExportMembers7ignoredEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local                void @_ZN13ExportMembers7ignoredEv(ptr {{[^,]*}} %this)
 public:
   void ignored();
 
@@ -154,43 +154,43 @@ constexpr int ExportMembers::ConstexprField;
 
 // Export individual members of a nested class.
 struct ExportMembers::Nested {
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?normalDef@Nested@ExportMembers@@QAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?normalDef@Nested@ExportMembers@@QEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInclass@Nested@ExportMembers@@QAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInclass@Nested@ExportMembers@@QEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDef@Nested@ExportMembers@@QAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDef@Nested@ExportMembers@@QEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDecl@Nested@ExportMembers@@QAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDecl@Nested@ExportMembers@@QEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested9normalDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested9normalDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested13normalInclassEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested13normalInclassEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested15normalInlineDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested15normalInlineDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested16normalInlineDeclEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested16normalInlineDeclEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?normalDef@Nested@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?normalDef@Nested@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInclass@Nested@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInclass@Nested@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDef@Nested@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDef@Nested@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?normalInlineDecl@Nested@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?normalInlineDecl@Nested@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested9normalDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested9normalDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested13normalInclassEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested13normalInclassEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested15normalInlineDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested15normalInlineDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested16normalInlineDeclEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested16normalInlineDeclEv(ptr {{[^,]*}} %this)
   __declspec(dllexport)                void normalDef();
   __declspec(dllexport)                void normalInclass() {}
   __declspec(dllexport)                void normalInlineDef();
   __declspec(dllexport)         inline void normalInlineDecl();
 
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?virtualDef@Nested@ExportMembers@@UAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?virtualDef@Nested@ExportMembers@@UEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInclass@Nested@ExportMembers@@UAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInclass@Nested@ExportMembers@@UEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDef@Nested@ExportMembers@@UAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDef@Nested@ExportMembers@@UEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDecl@Nested@ExportMembers@@UAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDecl@Nested@ExportMembers@@UEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested10virtualDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested10virtualDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested14virtualInclassEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested14virtualInclassEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested16virtualInlineDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested16virtualInlineDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested17virtualInlineDeclEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested17virtualInlineDeclEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?virtualDef@Nested@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?virtualDef@Nested@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInclass@Nested@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInclass@Nested@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDef@Nested@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDef@Nested@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"?virtualInlineDecl@Nested@ExportMembers@@UAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"?virtualInlineDecl@Nested@ExportMembers@@UEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested10virtualDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested10virtualDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested14virtualInclassEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested14virtualInclassEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested16virtualInlineDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested16virtualInlineDefEv(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested17virtualInlineDeclEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN13ExportMembers6Nested17virtualInlineDeclEv(ptr {{[^,]*}} %this)
   __declspec(dllexport) virtual        void virtualDef();
   __declspec(dllexport) virtual        void virtualInclass() {}
   __declspec(dllexport) virtual        void virtualInlineDef();
@@ -209,30 +209,30 @@ struct ExportMembers::Nested {
   __declspec(dllexport) static         void staticInlineDef();
   __declspec(dllexport) static  inline void staticInlineDecl();
 
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?protectedDef@Nested@ExportMembers@@IAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?protectedDef@Nested@ExportMembers@@IEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested12protectedDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested12protectedDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?protectedDef@Nested@ExportMembers@@IAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?protectedDef@Nested@ExportMembers@@IEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested12protectedDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested12protectedDefEv(ptr {{[^,]*}} %this)
   // MSC-DAG: define          dso_local dllexport                void @"?protectedStaticDef@Nested@ExportMembers@@KAXXZ"()
   // GNU-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested18protectedStaticDefEv()
 protected:
   __declspec(dllexport)                void protectedDef();
   __declspec(dllexport) static         void protectedStaticDef();
 
-  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?privateDef@Nested@ExportMembers@@AAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local dllexport                void @"?privateDef@Nested@ExportMembers@@AEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested10privateDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested10privateDefEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local dllexport x86_thiscallcc void @"?privateDef@Nested@ExportMembers@@AAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local dllexport                void @"?privateDef@Nested@ExportMembers@@AEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN13ExportMembers6Nested10privateDefEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested10privateDefEv(ptr {{[^,]*}} %this)
   // MSC-DAG: define          dso_local dllexport                void @"?privateStaticDef@Nested@ExportMembers@@CAXXZ"()
   // GNU-DAG: define          dso_local dllexport                void @_ZN13ExportMembers6Nested16privateStaticDefEv()
 private:
   __declspec(dllexport)                void privateDef();
   __declspec(dllexport) static         void privateStaticDef();
 
-  // M32-DAG: define          dso_local x86_thiscallcc void @"?ignored@Nested@ExportMembers@@QAEXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // M64-DAG: define          dso_local                void @"?ignored@Nested@ExportMembers@@QEAAXXZ"(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G32-DAG: define          dso_local x86_thiscallcc void @_ZN13ExportMembers6Nested7ignoredEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
-  // G64-DAG: define          dso_local                void @_ZN13ExportMembers6Nested7ignoredEv(%"struct.ExportMembers::Nested"* {{[^,]*}} %this)
+  // M32-DAG: define          dso_local x86_thiscallcc void @"?ignored@Nested@ExportMembers@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define          dso_local                void @"?ignored@Nested@ExportMembers@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define          dso_local x86_thiscallcc void @_ZN13ExportMembers6Nested7ignoredEv(ptr {{[^,]*}} %this)
+  // G64-DAG: define          dso_local                void @_ZN13ExportMembers6Nested7ignoredEv(ptr {{[^,]*}} %this)
 public:
   void ignored();
 
@@ -280,48 +280,48 @@ constexpr int ExportMembers::Nested::ConstexprField;
 
 // Export special member functions.
 struct ExportSpecials {
-  // M32-DAG: define dso_local dllexport x86_thiscallcc %struct.ExportSpecials* @"??0ExportSpecials@@QAE@XZ"(%struct.ExportSpecials* {{[^,]*}} returned {{[^,]*}} %this)
-  // M64-DAG: define dso_local dllexport                %struct.ExportSpecials* @"??0ExportSpecials@@QEAA@XZ"(%struct.ExportSpecials* {{[^,]*}} returned {{[^,]*}} %this)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC1Ev(%struct.ExportSpecials* {{[^,]*}} %this)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC1Ev(%struct.ExportSpecials* {{[^,]*}} %this)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC2Ev(%struct.ExportSpecials* {{[^,]*}} %this)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC2Ev(%struct.ExportSpecials* {{[^,]*}} %this)
+  // M32-DAG: define dso_local dllexport x86_thiscallcc ptr @"??0ExportSpecials@@QAE@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+  // M64-DAG: define dso_local dllexport                ptr @"??0ExportSpecials@@QEAA@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC1Ev(ptr {{[^,]*}} %this)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC1Ev(ptr {{[^,]*}} %this)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC2Ev(ptr {{[^,]*}} %this)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC2Ev(ptr {{[^,]*}} %this)
   __declspec(dllexport) ExportSpecials();
 
-  // M32-DAG: define dso_local dllexport x86_thiscallcc void @"??1ExportSpecials@@QAE@XZ"(%struct.ExportSpecials* {{[^,]*}} %this)
-  // M64-DAG: define dso_local dllexport                void @"??1ExportSpecials@@QEAA@XZ"(%struct.ExportSpecials* {{[^,]*}} %this)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsD1Ev(%struct.ExportSpecials* {{[^,]*}} %this)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsD1Ev(%struct.ExportSpecials* {{[^,]*}} %this)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsD2Ev(%struct.ExportSpecials* {{[^,]*}} %this)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsD2Ev(%struct.ExportSpecials* {{[^,]*}} %this)
+  // M32-DAG: define dso_local dllexport x86_thiscallcc void @"??1ExportSpecials@@QAE@XZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define dso_local dllexport                void @"??1ExportSpecials@@QEAA@XZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsD1Ev(ptr {{[^,]*}} %this)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsD1Ev(ptr {{[^,]*}} %this)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsD2Ev(ptr {{[^,]*}} %this)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsD2Ev(ptr {{[^,]*}} %this)
   __declspec(dllexport) ~ExportSpecials();
 
-  // M32-DAG: define dso_local dllexport x86_thiscallcc %struct.ExportSpecials* @"??0ExportSpecials@@QAE@ABU0@@Z"(%struct.ExportSpecials* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M64-DAG: define dso_local dllexport                %struct.ExportSpecials* @"??0ExportSpecials@@QEAA@AEBU0@@Z"(%struct.ExportSpecials* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC1ERKS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC1ERKS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC2ERKS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC2ERKS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M32-DAG: define dso_local dllexport x86_thiscallcc ptr @"??0ExportSpecials@@QAE@ABU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M64-DAG: define dso_local dllexport                ptr @"??0ExportSpecials@@QEAA@AEBU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC1ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC1ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC2ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC2ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
   __declspec(dllexport) ExportSpecials(const ExportSpecials&);
 
-  // M32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @"??4ExportSpecials@@QAEAAU0@ABU0@@Z"(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @"??4ExportSpecials@@QEAAAEAU0@AEBU0@@Z"(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @_ZN14ExportSpecialsaSERKS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @_ZN14ExportSpecialsaSERKS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportSpecials@@QAEAAU0@ABU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportSpecials@@QEAAAEAU0@AEBU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN14ExportSpecialsaSERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN14ExportSpecialsaSERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
   __declspec(dllexport) ExportSpecials& operator=(const ExportSpecials&);
 
-  // M32-DAG: define dso_local dllexport x86_thiscallcc %struct.ExportSpecials* @"??0ExportSpecials@@QAE@$$QAU0@@Z"(%struct.ExportSpecials* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M64-DAG: define dso_local dllexport                %struct.ExportSpecials* @"??0ExportSpecials@@QEAA@$$QEAU0@@Z"(%struct.ExportSpecials* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC1EOS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC1EOS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC2EOS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC2EOS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M32-DAG: define dso_local dllexport x86_thiscallcc ptr @"??0ExportSpecials@@QAE@$$QAU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M64-DAG: define dso_local dllexport                ptr @"??0ExportSpecials@@QEAA@$$QEAU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC1EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC1EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN14ExportSpecialsC2EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G64-DAG: define dso_local dllexport                void @_ZN14ExportSpecialsC2EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
   __declspec(dllexport) ExportSpecials(ExportSpecials&&);
 
-  // M32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @"??4ExportSpecials@@QAEAAU0@$$QAU0@@Z"(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @"??4ExportSpecials@@QEAAAEAU0@$$QEAU0@@Z"(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @_ZN14ExportSpecialsaSEOS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // G64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportSpecials* @_ZN14ExportSpecialsaSEOS_(%struct.ExportSpecials* {{[^,]*}} %this, %struct.ExportSpecials* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportSpecials@@QAEAAU0@$$QAU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportSpecials@@QEAAAEAU0@$$QEAU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN14ExportSpecialsaSEOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // G64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN14ExportSpecialsaSEOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
   __declspec(dllexport) ExportSpecials& operator=(ExportSpecials&&);
 };
 ExportSpecials::ExportSpecials() {}
@@ -334,8 +334,8 @@ ExportSpecials& ExportSpecials::operator=(ExportSpecials&&) { return *this; }
 
 // Export class with inline special member functions.
 struct ExportInlineSpecials {
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportInlineSpecials* @"??0ExportInlineSpecials@@QAE@XZ"(%struct.ExportInlineSpecials* {{[^,]*}} returned {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                %struct.ExportInlineSpecials* @"??0ExportInlineSpecials@@QEAA@XZ"(
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportInlineSpecials@@QAE@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportInlineSpecials@@QEAA@XZ"(
   // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN20ExportInlineSpecialsC1Ev(
   // G64-DAG: define weak_odr dso_local dllexport                void @_ZN20ExportInlineSpecialsC1Ev(
   __declspec(dllexport) ExportInlineSpecials() {}
@@ -346,28 +346,28 @@ struct ExportInlineSpecials {
   // G64-DAG: define weak_odr dso_local dllexport                void @_ZN20ExportInlineSpecialsD1Ev(
   __declspec(dllexport) ~ExportInlineSpecials() {}
 
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportInlineSpecials* @"??0ExportInlineSpecials@@QAE@ABU0@@Z"(
-  // M64-DAG: define weak_odr dso_local dllexport                %struct.ExportInlineSpecials* @"??0ExportInlineSpecials@@QEAA@AEBU0@@Z"(
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportInlineSpecials@@QAE@ABU0@@Z"(
+  // M64-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportInlineSpecials@@QEAA@AEBU0@@Z"(
   // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN20ExportInlineSpecialsC1ERKS_(
   // G64-DAG: define weak_odr dso_local dllexport                void @_ZN20ExportInlineSpecialsC1ERKS_(
   __declspec(dllexport) inline ExportInlineSpecials(const ExportInlineSpecials&);
 
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @"??4ExportInlineSpecials@@QAEAAU0@ABU0@@Z"(
-  // M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @"??4ExportInlineSpecials@@QEAAAEAU0@AEBU0@@Z"(
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @_ZN20ExportInlineSpecialsaSERKS_(
-  // G64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @_ZN20ExportInlineSpecialsaSERKS_(
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportInlineSpecials@@QAEAAU0@ABU0@@Z"(
+  // M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportInlineSpecials@@QEAAAEAU0@AEBU0@@Z"(
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN20ExportInlineSpecialsaSERKS_(
+  // G64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN20ExportInlineSpecialsaSERKS_(
   __declspec(dllexport) ExportInlineSpecials& operator=(const ExportInlineSpecials&);
 
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportInlineSpecials* @"??0ExportInlineSpecials@@QAE@$$QAU0@@Z"(
-  // M64-DAG: define weak_odr dso_local dllexport                %struct.ExportInlineSpecials* @"??0ExportInlineSpecials@@QEAA@$$QEAU0@@Z"(
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportInlineSpecials@@QAE@$$QAU0@@Z"(
+  // M64-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportInlineSpecials@@QEAA@$$QEAU0@@Z"(
   // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN20ExportInlineSpecialsC1EOS_(
   // G64-DAG: define weak_odr dso_local dllexport                void @_ZN20ExportInlineSpecialsC1EOS_(
   __declspec(dllexport) ExportInlineSpecials(ExportInlineSpecials&&) {}
 
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @"??4ExportInlineSpecials@@QAEAAU0@$$QAU0@@Z"(
-  // M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @"??4ExportInlineSpecials@@QEAAAEAU0@$$QEAU0@@Z"(
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @_ZN20ExportInlineSpecialsaSEOS_(
-  // G64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportInlineSpecials* @_ZN20ExportInlineSpecialsaSEOS_(
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportInlineSpecials@@QAEAAU0@$$QAU0@@Z"(
+  // M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportInlineSpecials@@QEAAAEAU0@$$QEAU0@@Z"(
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN20ExportInlineSpecialsaSEOS_(
+  // G64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN20ExportInlineSpecialsaSEOS_(
   __declspec(dllexport) ExportInlineSpecials& operator=(ExportInlineSpecials&&) { return *this; }
 };
 ExportInlineSpecials::ExportInlineSpecials(const ExportInlineSpecials&) {}
@@ -384,74 +384,74 @@ struct ExportDefaultedDefs {
   __declspec(dllexport) ExportDefaultedDefs& operator=(ExportDefaultedDefs&&);
 };
 
-// M32-DAG: define dso_local dllexport x86_thiscallcc %struct.ExportDefaultedDefs* @"??0ExportDefaultedDefs@@QAE@XZ"(%struct.ExportDefaultedDefs* {{[^,]*}} returned {{[^,]*}} %this)
-// M64-DAG: define dso_local dllexport                %struct.ExportDefaultedDefs* @"??0ExportDefaultedDefs@@QEAA@XZ"(%struct.ExportDefaultedDefs* {{[^,]*}} returned {{[^,]*}} %this)
-// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC1Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC1Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC2Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC2Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
+// M32-DAG: define dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedDefs@@QAE@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+// M64-DAG: define dso_local dllexport                ptr @"??0ExportDefaultedDefs@@QEAA@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC1Ev(ptr {{[^,]*}} %this)
+// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC1Ev(ptr {{[^,]*}} %this)
+// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC2Ev(ptr {{[^,]*}} %this)
+// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC2Ev(ptr {{[^,]*}} %this)
 __declspec(dllexport) ExportDefaultedDefs::ExportDefaultedDefs() = default;
 
-// M32-DAG: define dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedDefs@@QAE@XZ"(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// M64-DAG: define dso_local dllexport                void @"??1ExportDefaultedDefs@@QEAA@XZ"(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsD1Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsD1Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsD2Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
-// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsD2Ev(%struct.ExportDefaultedDefs* {{[^,]*}} %this)
+// M32-DAG: define dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedDefs@@QAE@XZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define dso_local dllexport                void @"??1ExportDefaultedDefs@@QEAA@XZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsD1Ev(ptr {{[^,]*}} %this)
+// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsD1Ev(ptr {{[^,]*}} %this)
+// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsD2Ev(ptr {{[^,]*}} %this)
+// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsD2Ev(ptr {{[^,]*}} %this)
 ExportDefaultedDefs::~ExportDefaultedDefs() = default;
 
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportDefaultedDefs* @"??0ExportDefaultedDefs@@QAE@ABU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// M64-DAG: define weak_odr dso_local dllexport                %struct.ExportDefaultedDefs* @"??0ExportDefaultedDefs@@QEAA@AEBU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC1ERKS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN19ExportDefaultedDefsC1ERKS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC2ERKS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN19ExportDefaultedDefsC2ERKS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedDefs@@QAE@ABU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M64-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedDefs@@QEAA@AEBU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC1ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN19ExportDefaultedDefsC1ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC2ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN19ExportDefaultedDefsC2ERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 __declspec(dllexport) ExportDefaultedDefs::ExportDefaultedDefs(const ExportDefaultedDefs&) = default;
 
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @"??4ExportDefaultedDefs@@QAEAAU0@ABU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @"??4ExportDefaultedDefs@@QEAAAEAU0@AEBU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @_ZN19ExportDefaultedDefsaSERKS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @_ZN19ExportDefaultedDefsaSERKS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportDefaultedDefs@@QAEAAU0@ABU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportDefaultedDefs@@QEAAAEAU0@AEBU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN19ExportDefaultedDefsaSERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN19ExportDefaultedDefsaSERKS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 inline ExportDefaultedDefs& ExportDefaultedDefs::operator=(const ExportDefaultedDefs&) = default;
 
-// M32-DAG: define dso_local dllexport x86_thiscallcc %struct.ExportDefaultedDefs* @"??0ExportDefaultedDefs@@QAE@$$QAU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// M64-DAG: define dso_local dllexport                %struct.ExportDefaultedDefs* @"??0ExportDefaultedDefs@@QEAA@$$QEAU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC1EOS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC1EOS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC2EOS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC2EOS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M32-DAG: define dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedDefs@@QAE@$$QAU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M64-DAG: define dso_local dllexport                ptr @"??0ExportDefaultedDefs@@QEAA@$$QEAU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC1EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC1EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G32-DAG: define dso_local dllexport x86_thiscallcc void @_ZN19ExportDefaultedDefsC2EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G64-DAG: define dso_local dllexport                void @_ZN19ExportDefaultedDefsC2EOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 __declspec(dllexport) ExportDefaultedDefs::ExportDefaultedDefs(ExportDefaultedDefs&&) = default;
 
-// M32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @"??4ExportDefaultedDefs@@QAEAAU0@$$QAU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// M64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @"??4ExportDefaultedDefs@@QEAAAEAU0@$$QEAU0@@Z"(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @_ZN19ExportDefaultedDefsaSEOS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-// G64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedDefs* @_ZN19ExportDefaultedDefsaSEOS_(%struct.ExportDefaultedDefs* {{[^,]*}} %this, %struct.ExportDefaultedDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportDefaultedDefs@@QAEAAU0@$$QAU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// M64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportDefaultedDefs@@QEAAAEAU0@$$QEAU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G32-DAG: define dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN19ExportDefaultedDefsaSEOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+// G64-DAG: define dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN19ExportDefaultedDefsaSEOS_(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 ExportDefaultedDefs& ExportDefaultedDefs::operator=(ExportDefaultedDefs&&) = default;
 
 
 // Export defaulted member function definitions declared inside class.
 struct ExportDefaultedInclassDefs {
   __declspec(dllexport) ExportDefaultedInclassDefs() = default;
-  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this)
-  // M64VS2013-DAG: define weak_odr dso_local dllexport                %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this)
-  // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this)
-  // M64VS2015-NOT: define weak_odr dso_local dllexport                %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this)
+  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+  // M64VS2013-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+  // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
+  // M64VS2015-NOT: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@XZ"(ptr {{[^,]*}} returned {{[^,]*}} %this)
 
   __declspec(dllexport) ~ExportDefaultedInclassDefs() = default;
-  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* %this)
-  // M64VS2013-DAG: define weak_odr dso_local dllexport                void @"??1ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* %this)
-  // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* %this)
-  // M64VS2015-NOT: define weak_odr dso_local dllexport                void @"??1ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* %this)
+  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedInclassDefs@@QAE@XZ"(ptr %this)
+  // M64VS2013-DAG: define weak_odr dso_local dllexport                void @"??1ExportDefaultedInclassDefs@@QEAA@XZ"(ptr %this)
+  // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc void @"??1ExportDefaultedInclassDefs@@QAE@XZ"(ptr %this)
+  // M64VS2015-NOT: define weak_odr dso_local dllexport                void @"??1ExportDefaultedInclassDefs@@QEAA@XZ"(ptr %this)
 
   __declspec(dllexport) ExportDefaultedInclassDefs(const ExportDefaultedInclassDefs&) = default;
-  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedInclassDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M64VS2013-DAG: define weak_odr dso_local dllexport                %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedInclassDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedInclassDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M64VS2015-NOT: define weak_odr dso_local dllexport                %struct.ExportDefaultedInclassDefs* @"??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} returned {{[^,]*}} %this, %struct.ExportDefaultedInclassDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M32VS2013-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M64VS2013-DAG: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M32VS2015-NOT: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M64VS2015-NOT: define weak_odr dso_local dllexport                ptr @"??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 
   __declspec(dllexport) ExportDefaultedInclassDefs& operator=(const ExportDefaultedInclassDefs&) = default;
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedInclassDefs* @"??4ExportDefaultedInclassDefs@@QAEAAU0@ABU0@@Z"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} %this, %struct.ExportDefaultedInclassDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
-  // M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.ExportDefaultedInclassDefs* @"??4ExportDefaultedInclassDefs@@QEAAAEAU0@AEBU0@@Z"(%struct.ExportDefaultedInclassDefs* {{[^,]*}} %this, %struct.ExportDefaultedInclassDefs* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportDefaultedInclassDefs@@QAEAAU0@ABU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
+  // M64-DAG: define weak_odr dso_local dllexport                nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4ExportDefaultedInclassDefs@@QEAAAEAU0@AEBU0@@Z"(ptr {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0)
 };
 
 
@@ -463,28 +463,28 @@ struct ExportAlloc {
   __declspec(dllexport) void operator delete[](void*);
 };
 
-// M32-DAG: define dso_local dllexport i8* @"??2ExportAlloc@@SAPAXI@Z"(i32 %n)
-// M64-DAG: define dso_local dllexport i8* @"??2ExportAlloc@@SAPEAX_K@Z"(i64 %n)
-// G32-DAG: define dso_local dllexport i8* @_ZN11ExportAllocnwEj(i32 %n)
-// G64-DAG: define dso_local dllexport i8* @_ZN11ExportAllocnwEy(i64 %n)
+// M32-DAG: define dso_local dllexport ptr @"??2ExportAlloc@@SAPAXI@Z"(i32 %n)
+// M64-DAG: define dso_local dllexport ptr @"??2ExportAlloc@@SAPEAX_K@Z"(i64 %n)
+// G32-DAG: define dso_local dllexport ptr @_ZN11ExportAllocnwEj(i32 %n)
+// G64-DAG: define dso_local dllexport ptr @_ZN11ExportAllocnwEy(i64 %n)
 void* ExportAlloc::operator new(__SIZE_TYPE__ n) { return malloc(n); }
 
-// M32-DAG: define dso_local dllexport i8* @"??_UExportAlloc@@SAPAXI@Z"(i32 %n)
-// M64-DAG: define dso_local dllexport i8* @"??_UExportAlloc@@SAPEAX_K@Z"(i64 %n)
-// G32-DAG: define dso_local dllexport i8* @_ZN11ExportAllocnaEj(i32 %n)
-// G64-DAG: define dso_local dllexport i8* @_ZN11ExportAllocnaEy(i64 %n)
+// M32-DAG: define dso_local dllexport ptr @"??_UExportAlloc@@SAPAXI@Z"(i32 %n)
+// M64-DAG: define dso_local dllexport ptr @"??_UExportAlloc@@SAPEAX_K@Z"(i64 %n)
+// G32-DAG: define dso_local dllexport ptr @_ZN11ExportAllocnaEj(i32 %n)
+// G64-DAG: define dso_local dllexport ptr @_ZN11ExportAllocnaEy(i64 %n)
 void* ExportAlloc::operator new[](__SIZE_TYPE__ n) { return malloc(n); }
 
-// M32-DAG: define dso_local dllexport void @"??3ExportAlloc@@SAXPAX@Z"(i8* %p)
-// M64-DAG: define dso_local dllexport void @"??3ExportAlloc@@SAXPEAX@Z"(i8* %p)
-// G32-DAG: define dso_local dllexport void @_ZN11ExportAllocdlEPv(i8* %p)
-// G64-DAG: define dso_local dllexport void @_ZN11ExportAllocdlEPv(i8* %p)
+// M32-DAG: define dso_local dllexport void @"??3ExportAlloc@@SAXPAX@Z"(ptr %p)
+// M64-DAG: define dso_local dllexport void @"??3ExportAlloc@@SAXPEAX@Z"(ptr %p)
+// G32-DAG: define dso_local dllexport void @_ZN11ExportAllocdlEPv(ptr %p)
+// G64-DAG: define dso_local dllexport void @_ZN11ExportAllocdlEPv(ptr %p)
 void ExportAlloc::operator delete(void* p) { free(p); }
 
-// M32-DAG: define dso_local dllexport void @"??_VExportAlloc@@SAXPAX@Z"(i8* %p)
-// M64-DAG: define dso_local dllexport void @"??_VExportAlloc@@SAXPEAX@Z"(i8* %p)
-// G32-DAG: define dso_local dllexport void @_ZN11ExportAllocdaEPv(i8* %p)
-// G64-DAG: define dso_local dllexport void @_ZN11ExportAllocdaEPv(i8* %p)
+// M32-DAG: define dso_local dllexport void @"??_VExportAlloc@@SAXPAX@Z"(ptr %p)
+// M64-DAG: define dso_local dllexport void @"??_VExportAlloc@@SAXPEAX@Z"(ptr %p)
+// G32-DAG: define dso_local dllexport void @_ZN11ExportAllocdaEPv(ptr %p)
+// G64-DAG: define dso_local dllexport void @_ZN11ExportAllocdaEPv(ptr %p)
 void ExportAlloc::operator delete[](void* p) { free(p); }
 
 
@@ -501,10 +501,10 @@ struct MemFunTmpl {
 
 // Export implicit instantiation of an exported member function template.
 void useMemFunTmpl() {
-  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UImplicitInst_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-  // M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UImplicitInst_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI21ImplicitInst_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI21ImplicitInst_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+  // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UImplicitInst_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+  // M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UImplicitInst_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+  // G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI21ImplicitInst_ExportedEEvv(ptr {{[^,]*}} %this)
+  // G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI21ImplicitInst_ExportedEEvv(ptr {{[^,]*}} %this)
   MemFunTmpl().exportedNormal<ImplicitInst_Exported>();
 
   // MSC-DAG: define weak_odr dso_local dllexport                void @"??$exportedStatic@UImplicitInst_Exported@@@MemFunTmpl@@SAXXZ"()
@@ -515,10 +515,10 @@ void useMemFunTmpl() {
 
 // Export explicit instantiation declaration of an exported member function
 // template.
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitDecl_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UExplicitDecl_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI21ExplicitDecl_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI21ExplicitDecl_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitDecl_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UExplicitDecl_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI21ExplicitDecl_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI21ExplicitDecl_ExportedEEvv(ptr {{[^,]*}} %this)
 extern template void MemFunTmpl::exportedNormal<ExplicitDecl_Exported>();
        template void MemFunTmpl::exportedNormal<ExplicitDecl_Exported>();
 
@@ -530,10 +530,10 @@ extern template void MemFunTmpl::exportedStatic<ExplicitDecl_Exported>();
 
 // Export explicit instantiation definition of an exported member function
 // template.
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitInst_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UExplicitInst_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI21ExplicitInst_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI21ExplicitInst_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitInst_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UExplicitInst_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI21ExplicitInst_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI21ExplicitInst_ExportedEEvv(ptr {{[^,]*}} %this)
 template void MemFunTmpl::exportedNormal<ExplicitInst_Exported>();
 
 // MSC-DAG: define weak_odr dso_local dllexport                void @"??$exportedStatic@UExplicitInst_Exported@@@MemFunTmpl@@SAXXZ"()
@@ -542,16 +542,16 @@ template void MemFunTmpl::exportedStatic<ExplicitInst_Exported>();
 
 
 // Export specialization of an exported member function template.
-// M32-DAG: define          dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define          dso_local dllexport                void @"??$exportedNormal@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI25ExplicitSpec_Def_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define          dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI25ExplicitSpec_Def_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define          dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define          dso_local dllexport                void @"??$exportedNormal@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI25ExplicitSpec_Def_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define          dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI25ExplicitSpec_Def_ExportedEEvv(ptr {{[^,]*}} %this)
 template<> __declspec(dllexport) void MemFunTmpl::exportedNormal<ExplicitSpec_Def_Exported>() {}
 
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI31ExplicitSpec_InlineDef_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI31ExplicitSpec_InlineDef_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$exportedNormal@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define weak_odr dso_local dllexport                void @"??$exportedNormal@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI31ExplicitSpec_InlineDef_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl14exportedNormalI31ExplicitSpec_InlineDef_ExportedEEvv(ptr {{[^,]*}} %this)
 template<> __declspec(dllexport) inline void MemFunTmpl::exportedNormal<ExplicitSpec_InlineDef_Exported>() {}
 
 // MSC-DAG: define          dso_local dllexport                void @"??$exportedStatic@UExplicitSpec_Def_Exported@@@MemFunTmpl@@SAXXZ"()
@@ -565,10 +565,10 @@ template<> __declspec(dllexport) inline void MemFunTmpl::exportedStatic<Explicit
 
 // Not exporting specialization of an exported member function template without
 // explicit dso_local dllexport.
-// M32-DAG: define          dso_local x86_thiscallcc void @"??$exportedNormal@UExplicitSpec_NotExported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define          dso_local                void @"??$exportedNormal@UExplicitSpec_NotExported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define          dso_local x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI24ExplicitSpec_NotExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define          dso_local                void @_ZN10MemFunTmpl14exportedNormalI24ExplicitSpec_NotExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define          dso_local x86_thiscallcc void @"??$exportedNormal@UExplicitSpec_NotExported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define          dso_local                void @"??$exportedNormal@UExplicitSpec_NotExported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define          dso_local x86_thiscallcc void @_ZN10MemFunTmpl14exportedNormalI24ExplicitSpec_NotExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define          dso_local                void @_ZN10MemFunTmpl14exportedNormalI24ExplicitSpec_NotExportedEEvv(ptr {{[^,]*}} %this)
 template<> void MemFunTmpl::exportedNormal<ExplicitSpec_NotExported>() {}
 
 // M32-DAG: define          dso_local                void @"??$exportedStatic@UExplicitSpec_NotExported@@@MemFunTmpl@@SAXXZ"()
@@ -578,10 +578,10 @@ template<> void MemFunTmpl::exportedStatic<ExplicitSpec_NotExported>() {}
 
 // Export explicit instantiation declaration of a non-exported member function
 // template.
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitDecl_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define weak_odr dso_local dllexport                void @"??$normalDef@UExplicitDecl_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI21ExplicitDecl_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI21ExplicitDecl_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitDecl_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define weak_odr dso_local dllexport                void @"??$normalDef@UExplicitDecl_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI21ExplicitDecl_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI21ExplicitDecl_ExportedEEvv(ptr {{[^,]*}} %this)
 extern template __declspec(dllexport) void MemFunTmpl::normalDef<ExplicitDecl_Exported>();
        template __declspec(dllexport) void MemFunTmpl::normalDef<ExplicitDecl_Exported>();
 
@@ -593,10 +593,10 @@ extern template __declspec(dllexport) void MemFunTmpl::staticDef<ExplicitDecl_Ex
 
 // Export explicit instantiation definition of a non-exported member function
 // template.
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitInst_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define weak_odr dso_local dllexport                void @"??$normalDef@UExplicitInst_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI21ExplicitInst_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI21ExplicitInst_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitInst_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define weak_odr dso_local dllexport                void @"??$normalDef@UExplicitInst_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI21ExplicitInst_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI21ExplicitInst_ExportedEEvv(ptr {{[^,]*}} %this)
 template __declspec(dllexport) void MemFunTmpl::normalDef<ExplicitInst_Exported>();
 
 // MSC-DAG: define weak_odr dso_local dllexport                void @"??$staticDef@UExplicitInst_Exported@@@MemFunTmpl@@SAXXZ"()
@@ -605,14 +605,14 @@ template __declspec(dllexport) void MemFunTmpl::staticDef<ExplicitInst_Exported>
 
 
 // Export specialization of a non-exported member function template.
-// M32-DAG: define          dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define          dso_local dllexport                void @"??$normalDef@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QAEXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// M64-DAG: define weak_odr dso_local dllexport                void @"??$normalDef@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QEAAXXZ"(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI25ExplicitSpec_Def_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define          dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI25ExplicitSpec_Def_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI31ExplicitSpec_InlineDef_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
-// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI31ExplicitSpec_InlineDef_ExportedEEvv(%struct.MemFunTmpl* {{[^,]*}} %this)
+// M32-DAG: define          dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define          dso_local dllexport                void @"??$normalDef@UExplicitSpec_Def_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??$normalDef@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QAEXXZ"(ptr {{[^,]*}} %this)
+// M64-DAG: define weak_odr dso_local dllexport                void @"??$normalDef@UExplicitSpec_InlineDef_Exported@@@MemFunTmpl@@QEAAXXZ"(ptr {{[^,]*}} %this)
+// G32-DAG: define          dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI25ExplicitSpec_Def_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define          dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI25ExplicitSpec_Def_ExportedEEvv(ptr {{[^,]*}} %this)
+// G32-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @_ZN10MemFunTmpl9normalDefI31ExplicitSpec_InlineDef_ExportedEEvv(ptr {{[^,]*}} %this)
+// G64-DAG: define weak_odr dso_local dllexport                void @_ZN10MemFunTmpl9normalDefI31ExplicitSpec_InlineDef_ExportedEEvv(ptr {{[^,]*}} %this)
 template<> __declspec(dllexport) void MemFunTmpl::normalDef<ExplicitSpec_Def_Exported>() {}
 template<> __declspec(dllexport) inline void MemFunTmpl::normalDef<ExplicitSpec_InlineDef_Exported>() {}
 
@@ -679,3 +679,21 @@ template __declspec(dllexport) const int MemVarTmpl::StaticVar<ExplicitInst_Expo
 // MSC-DAG: @"??$StaticVar@UExplicitSpec_Def_Exported@@@MemVarTmpl@@2HB" = weak_odr dso_local dllexport constant i32 1, comdat, align 4
 // GNU-DAG: @_ZN10MemVarTmpl9StaticVarI25ExplicitSpec_Def_ExportedEE        = dso_local dllexport constant i32 1, align 4
 template<> __declspec(dllexport) const int MemVarTmpl::StaticVar<ExplicitSpec_Def_Exported> = 1;
+
+
+//===----------------------------------------------------------------------===//
+// Class template members
+//===----------------------------------------------------------------------===//
+
+template <typename> struct ClassTmplMem {
+  void __declspec(dllexport) exportedNormal();
+  static void __declspec(dllexport) exportedStatic();
+};
+// MSVC exports explicit specialization of exported class template member function; MinGW does not.
+// M32-DAG: define dso_local dllexport x86_thiscallcc void @"?exportedNormal@?$ClassTmplMem@H@@QAEXXZ"
+// G32-DAG: define dso_local           x86_thiscallcc void @_ZN12ClassTmplMemIiE14exportedNormalEv
+template<> void ClassTmplMem<int>::exportedNormal() {}
+
+// M32-DAG: define dso_local dllexport void @"?exportedStatic@?$ClassTmplMem@H@@SAXXZ"
+// G32-DAG: define dso_local           void @_ZN12ClassTmplMemIiE14exportedStaticEv
+template<> void ClassTmplMem<int>::exportedStatic() {}

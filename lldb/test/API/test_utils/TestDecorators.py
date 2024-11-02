@@ -3,8 +3,6 @@ from lldbsuite.test.decorators import *
 
 
 class TestDecorators(Base):
-
-    mydir = Base.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(debug_info="dwarf")

@@ -14,12 +14,15 @@
 #include "AArch64.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "aarch64-post-select-optimize"
 
@@ -42,6 +45,9 @@ public:
 
 private:
   bool optimizeNZCVDefs(MachineBasicBlock &MBB);
+  bool doPeepholeOpts(MachineBasicBlock &MBB);
+  /// Look for cross regclass copies that can be trivially eliminated.
+  bool foldSimpleCrossClassCopies(MachineInstr &MI);
 };
 } // end anonymous namespace
 
@@ -72,6 +78,62 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
   case AArch64::SUBSWri:
     return AArch64::SUBWri;
   }
+}
+
+bool AArch64PostSelectOptimize::doPeepholeOpts(MachineBasicBlock &MBB) {
+  bool Changed = false;
+  for (auto &MI : make_early_inc_range(make_range(MBB.begin(), MBB.end()))) {
+    Changed |= foldSimpleCrossClassCopies(MI);
+  }
+  return Changed;
+}
+
+bool AArch64PostSelectOptimize::foldSimpleCrossClassCopies(MachineInstr &MI) {
+  auto *MF = MI.getMF();
+  auto &MRI = MF->getRegInfo();
+
+  if (!MI.isCopy())
+    return false;
+
+  if (MI.getOperand(1).getSubReg())
+    return false; // Don't deal with subreg copies
+
+  Register Src = MI.getOperand(1).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+
+  if (Src.isPhysical() || Dst.isPhysical())
+    return false;
+
+  const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
+  const TargetRegisterClass *DstRC = MRI.getRegClass(Dst);
+
+  if (SrcRC == DstRC)
+    return false;
+
+
+  if (SrcRC->hasSubClass(DstRC)) {
+    // This is the case where the source class is a superclass of the dest, so
+    // if the copy is the only user of the source, we can just constrain the
+    // source reg to the dest class.
+
+    if (!MRI.hasOneNonDBGUse(Src))
+      return false; // Only constrain single uses of the source.
+
+    // Constrain to dst reg class as long as it's not a weird class that only
+    // has a few registers.
+    if (!MRI.constrainRegClass(Src, DstRC, /* MinNumRegs */ 25))
+      return false;
+  } else if (DstRC->hasSubClass(SrcRC)) {
+    // This is the inverse case, where the destination class is a superclass of
+    // the source. Here, if the copy is the only user, we can just constrain
+    // the user of the copy to use the smaller class of the source.
+  } else {
+    return false;
+  }
+
+  MRI.replaceRegWith(Dst, Src);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
@@ -178,8 +240,10 @@ bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
          "Expected a selected MF");
 
   bool Changed = false;
-  for (auto &BB : MF)
+  for (auto &BB : MF) {
     Changed |= optimizeNZCVDefs(BB);
+    Changed |= doPeepholeOpts(BB);
+  }
   return Changed;
 }
 

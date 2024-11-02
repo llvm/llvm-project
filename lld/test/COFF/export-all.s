@@ -7,8 +7,8 @@
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s --check-prefix=CHECK-RVA
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
-# CHECK: Name:
-# CHECK-NEXT: Name: comdatFunc
+# CHECK:      Name:
+# CHECK-SAME:       comdatFunc
 # CHECK-NEXT: Name: dataSym
 # CHECK-NEXT: Name: foobar
 # CHECK-EMPTY:

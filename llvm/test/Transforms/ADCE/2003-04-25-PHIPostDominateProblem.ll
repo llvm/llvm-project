@@ -28,7 +28,7 @@ else:           ; preds = %no_exit
 
 endif:          ; preds = %else, %then
         %k.0 = phi i32 [ %dec, %else ], [ 0, %then ]            ; <i32> [#uses=1]
-        store i32 2, i32* null
+        store i32 2, ptr null
         br label %loopentry
 
 return:         ; preds = %loopentry

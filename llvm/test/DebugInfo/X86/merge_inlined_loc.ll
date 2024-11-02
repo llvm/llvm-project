@@ -44,7 +44,7 @@
 ; Function Attrs: uwtable
 define dso_local void @_Z2f1v() local_unnamed_addr !dbg !7 {
 entry:
-  %0 = load i8, i8* @b, align 1, !dbg !10, !tbaa !14, !range !18
+  %0 = load i8, ptr @b, align 1, !dbg !10, !tbaa !14, !range !18
   %tobool.i = icmp eq i8 %0, 0, !dbg !10
   br i1 %tobool.i, label %if.else.i, label %if.then.i, !dbg !19
 

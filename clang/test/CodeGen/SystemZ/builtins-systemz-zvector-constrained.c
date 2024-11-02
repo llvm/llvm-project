@@ -1,9 +1,9 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -target-cpu z13 -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -target-cpu z13 -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
@@ -222,12 +222,12 @@ void test_float(void) {
   // CHECK-ASM: vfsqdb
 
   vd = vec_ld2f(cptrf);
-  // CHECK: [[VAL:%[^ ]+]] = load <2 x float>, <2 x float>* %{{.*}}
+  // CHECK: [[VAL:%[^ ]+]] = load <2 x float>, ptr %{{.*}}
   // CHECK: call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float> [[VAL]], metadata !{{.*}})
   // (emulated)
   vec_st2f(vd, ptrf);
   // CHECK: [[VAL:%[^ ]+]] = tail call <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
-  // CHECK: store <2 x float> [[VAL]], <2 x float>* %{{.*}}
+  // CHECK: store <2 x float> [[VAL]], ptr %{{.*}}
   // (emulated)
 
   vd = vec_ctd(vsl, 0);

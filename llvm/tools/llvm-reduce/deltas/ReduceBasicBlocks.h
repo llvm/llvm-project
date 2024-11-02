@@ -1,4 +1,4 @@
-//===- ReduceArguments.h - Specialized Delta Pass -------------------------===//
+//===- ReduceArguments.h - Specialized Delta Pass ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce uninteresting Arguments from defined functions.
+// to reduce uninteresting BasicBlocks from defined functions.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEBASICBLOCKS_H
@@ -19,6 +19,7 @@
 
 namespace llvm {
 void reduceBasicBlocksDeltaPass(TestRunner &Test);
+void reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

@@ -92,10 +92,8 @@ bool isStdin(SVal Val, const ASTContext &ACtx) {
     return false;
 
   // Get it's symbol and find the declaration region it's pointing to.
-  const auto *Sm = dyn_cast<SymbolRegionValue>(SymReg->getSymbol());
-  if (!Sm)
-    return false;
-  const auto *DeclReg = dyn_cast<DeclRegion>(Sm->getRegion());
+  const auto *DeclReg =
+      dyn_cast_or_null<DeclRegion>(SymReg->getSymbol()->getOriginRegion());
   if (!DeclReg)
     return false;
 
@@ -154,7 +152,7 @@ Optional<SVal> getTaintedPointeeOrPointer(const CheckerContext &C, SVal Arg) {
 
 bool isTaintedOrPointsToTainted(const Expr *E, const ProgramStateRef &State,
                                 CheckerContext &C) {
-  return getTaintedPointeeOrPointer(C, C.getSVal(E)).hasValue();
+  return getTaintedPointeeOrPointer(C, C.getSVal(E)).has_value();
 }
 
 /// ArgSet is used to describe arguments relevant for taint detection or
@@ -175,15 +173,6 @@ public:
   }
 
   bool isEmpty() const { return DiscreteArgs.empty() && !VariadicIndex; }
-
-  ArgVecTy ArgsUpTo(ArgIdxTy LastArgIdx) const {
-    ArgVecTy Args;
-    for (ArgIdxTy I = ReturnValueIndex; I <= LastArgIdx; ++I) {
-      if (contains(I))
-        Args.push_back(I);
-    }
-    return Args;
-  }
 
 private:
   ArgVecTy DiscreteArgs;
@@ -340,11 +329,6 @@ private:
 
 class GenericTaintChecker : public Checker<check::PreCall, check::PostCall> {
 public:
-  static void *getTag() {
-    static int Tag;
-    return &Tag;
-  }
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 
@@ -748,7 +732,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   }
 
   GenericTaintRuleParser::RulesContTy Rules{
-      ConfigParser.parseConfiguration(Option, std::move(Config.getValue()))};
+      ConfigParser.parseConfiguration(Option, std::move(*Config))};
 
   DynamicTaintRules.emplace(std::make_move_iterator(Rules.begin()),
                             std::make_move_iterator(Rules.end()));
@@ -840,7 +824,7 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
   /// Check for taint sinks.
   ForEachCallArg([this, &Checker, &C, &State](ArgIdxTy I, const Expr *E, SVal) {
     if (SinkArgs.contains(I) && isTaintedOrPointsToTainted(E, State, C))
-      Checker.generateReportIfTainted(E, SinkMsg.getValueOr(MsgCustomSink), C);
+      Checker.generateReportIfTainted(E, SinkMsg.value_or(MsgCustomSink), C);
   });
 
   /// Check for taint filters.
@@ -866,7 +850,7 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
     return;
 
   const auto WouldEscape = [](SVal V, QualType Ty) -> bool {
-    if (!V.getAs<Loc>())
+    if (!isa<Loc>(V))
       return false;
 
     const bool IsNonConstRef = Ty->isReferenceType() && !Ty.isConstQualified();

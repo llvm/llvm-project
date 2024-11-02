@@ -13,61 +13,61 @@ define float @ldexp_f32_undef_undef() {
 ; constant or not.
 define void @ldexp_f32_exp0(float %x) {
 ; CHECK-LABEL: @ldexp_f32_exp0(
-; CHECK-NEXT:    store volatile float [[X:%.*]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float [[X]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[X:%.*]], ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float [[X]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[ONE:%.*]] = call float @llvm.amdgcn.ldexp.f32(float [[X]], i32 1)
-; CHECK-NEXT:    store volatile float [[ONE]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[ONE]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %zero = call float @llvm.amdgcn.ldexp.f32(float %x, i32 0)
-  store volatile float %zero, float addrspace(1)* undef
+  store volatile float %zero, ptr addrspace(1) undef
 
   %undef = call float @llvm.amdgcn.ldexp.f32(float %x, i32 undef)
-  store volatile float %undef, float addrspace(1)* undef
+  store volatile float %undef, ptr addrspace(1) undef
 
   %one = call float @llvm.amdgcn.ldexp.f32(float %x, i32 1)
-  store volatile float %one, float addrspace(1)* undef
+  store volatile float %one, ptr addrspace(1) undef
   ret void
 }
 
 ; Test variable exponent but zero or undef value.
 define void @ldexp_f32_val0(i32 %y) {
 ; CHECK-LABEL: @ldexp_f32_val0(
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float -0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %zero = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 %y)
-  store volatile float %zero, float addrspace(1)* undef
+  store volatile float %zero, ptr addrspace(1) undef
 
   %neg.zero = call float @llvm.amdgcn.ldexp.f32(float -0.0, i32 %y)
-  store volatile float %neg.zero, float addrspace(1)* undef
+  store volatile float %neg.zero, ptr addrspace(1) undef
 
   %undef = call float @llvm.amdgcn.ldexp.f32(float undef, i32 %y)
-  store volatile float %undef, float addrspace(1)* undef
+  store volatile float %undef, ptr addrspace(1) undef
   ret void
 }
 
 define void @ldexp_f32_val_infinity(i32 %y) {
 ; CHECK-LABEL: @ldexp_f32_val_infinity(
-; CHECK-NEXT:    store volatile float 0x7FF0000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF0000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF0000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF0000000000000, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float 0x7FF0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xFFF0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x7FF0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xFFF0000000000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %inf = call float @llvm.amdgcn.ldexp.f32(float 0x7ff0000000000000, i32 %y)
-  store volatile float %inf, float addrspace(1)* undef
+  store volatile float %inf, ptr addrspace(1) undef
 
   %neg.inf = call float @llvm.amdgcn.ldexp.f32(float 0xfff0000000000000, i32 %y)
-  store volatile float %neg.inf, float addrspace(1)* undef
+  store volatile float %neg.inf, ptr addrspace(1) undef
 
   %inf.zero = call float @llvm.amdgcn.ldexp.f32(float 0x7ff0000000000000, i32 0)
-  store volatile float %inf.zero, float addrspace(1)* undef
+  store volatile float %inf.zero, ptr addrspace(1) undef
 
   %neg.inf.zero = call float @llvm.amdgcn.ldexp.f32(float 0xfff0000000000000, i32 0)
-  store volatile float %neg.inf.zero, float addrspace(1)* undef
+  store volatile float %neg.inf.zero, ptr addrspace(1) undef
 
   ret void
 }
@@ -76,23 +76,23 @@ define void @ldexp_f32_val_infinity(i32 %y) {
 ; Technically this depends on the ieee_mode in the mode register.
 define void @ldexp_f32_val_nan(i32 %y) {
 ; CHECK-LABEL: @ldexp_f32_val_nan(
-; CHECK-NEXT:    store volatile float 0x7FF8001000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF8000100000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF8000020000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFFFFFFFE0000000, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float 0x7FF8001000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xFFF8000100000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x7FF8000020000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xFFFFFFFFE0000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %plus.qnan = call float @llvm.amdgcn.ldexp.f32(float 0x7ff0001000000000, i32 %y)
-  store volatile float %plus.qnan, float addrspace(1)* undef
+  store volatile float %plus.qnan, ptr addrspace(1) undef
 
   %neg.qnan = call float @llvm.amdgcn.ldexp.f32(float 0xfff0000100000000, i32 %y)
-  store volatile float %neg.qnan, float addrspace(1)* undef
+  store volatile float %neg.qnan, ptr addrspace(1) undef
 
   %plus.snan = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0000020000000, i32 %y)
-  store volatile float %plus.snan, float addrspace(1)* undef
+  store volatile float %plus.snan, ptr addrspace(1) undef
 
   %neg.snan = call float @llvm.amdgcn.ldexp.f32(float 0xFFF7FFFFE0000000, i32 %y)
-  store volatile float %neg.snan, float addrspace(1)* undef
+  store volatile float %neg.snan, ptr addrspace(1) undef
 
   ret void
 }
@@ -100,65 +100,65 @@ define void @ldexp_f32_val_nan(i32 %y) {
 define void @ldexp_f32_val_nan_strictfp(i32 %y) #0 {
 ; CHECK-LABEL: @ldexp_f32_val_nan_strictfp(
 ; CHECK-NEXT:    [[PLUS_QNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0001000000000, i32 [[Y:%.*]]) [[ATTR0:#.*]]
-; CHECK-NEXT:    store volatile float [[PLUS_QNAN]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[PLUS_QNAN]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[NEG_QNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0xFFF0000100000000, i32 [[Y]]) [[ATTR0]]
-; CHECK-NEXT:    store volatile float [[NEG_QNAN]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[NEG_QNAN]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[PLUS_SNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0000020000000, i32 [[Y]]) [[ATTR0]]
-; CHECK-NEXT:    store volatile float [[PLUS_SNAN]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[PLUS_SNAN]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[NEG_SNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0xFFF7FFFFE0000000, i32 [[Y]]) [[ATTR0]]
-; CHECK-NEXT:    store volatile float [[NEG_SNAN]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[NEG_SNAN]], ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %plus.qnan = call float @llvm.amdgcn.ldexp.f32(float 0x7ff0001000000000, i32 %y) #0
-  store volatile float %plus.qnan, float addrspace(1)* undef
+  store volatile float %plus.qnan, ptr addrspace(1) undef
 
   %neg.qnan = call float @llvm.amdgcn.ldexp.f32(float 0xfff0000100000000, i32 %y) #0
-  store volatile float %neg.qnan, float addrspace(1)* undef
+  store volatile float %neg.qnan, ptr addrspace(1) undef
 
   %plus.snan = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0000020000000, i32 %y) #0
-  store volatile float %plus.snan, float addrspace(1)* undef
+  store volatile float %plus.snan, ptr addrspace(1) undef
 
   %neg.snan = call float @llvm.amdgcn.ldexp.f32(float 0xFFF7FFFFE0000000, i32 %y) #0
-  store volatile float %neg.snan, float addrspace(1)* undef
+  store volatile float %neg.snan, ptr addrspace(1) undef
 
   %undef = call float @llvm.amdgcn.ldexp.f32(float undef, i32 %y) #0
-  store volatile float %undef, float addrspace(1)* undef
+  store volatile float %undef, ptr addrspace(1) undef
 
   ret void
 }
 
 define void @ldexp_f32_0() {
 ; CHECK-LABEL: @ldexp_f32_0(
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float -0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %zero = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 0)
-  store volatile float %zero, float addrspace(1)* undef
+  store volatile float %zero, ptr addrspace(1) undef
 
   %neg.zero = call float @llvm.amdgcn.ldexp.f32(float -0.0, i32 0)
-  store volatile float %neg.zero, float addrspace(1)* undef
+  store volatile float %neg.zero, ptr addrspace(1) undef
 
   %one = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 1)
-  store volatile float %one, float addrspace(1)* undef
+  store volatile float %one, ptr addrspace(1) undef
 
   %min.exp = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 -126)
-  store volatile float %min.exp, float addrspace(1)* undef
+  store volatile float %min.exp, ptr addrspace(1) undef
 
   %min.exp.sub1 = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 -127)
-  store volatile float %min.exp.sub1, float addrspace(1)* undef
+  store volatile float %min.exp.sub1, ptr addrspace(1) undef
 
   %max.exp = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 127)
-  store volatile float %max.exp, float addrspace(1)* undef
+  store volatile float %max.exp, ptr addrspace(1) undef
 
   %max.exp.plus1 = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 128)
-  store volatile float %max.exp.plus1, float addrspace(1)* undef
+  store volatile float %max.exp.plus1, ptr addrspace(1) undef
 
   ret void
 }
@@ -166,114 +166,114 @@ define void @ldexp_f32_0() {
 ; Should be able to ignore strictfp in this case
 define void @ldexp_f32_0_strictfp(float %x) #0 {
 ; CHECK-LABEL: @ldexp_f32_0_strictfp(
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float -0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -0.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[UNKNOWN_ZERO:%.*]] = call float @llvm.amdgcn.ldexp.f32(float [[X:%.*]], i32 0) [[ATTR0]]
-; CHECK-NEXT:    store volatile float [[UNKNOWN_ZERO]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[UNKNOWN_ZERO]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[UNKNOWN_UNDEF:%.*]] = call float @llvm.amdgcn.ldexp.f32(float [[X]], i32 undef) [[ATTR0]]
-; CHECK-NEXT:    store volatile float [[UNKNOWN_UNDEF]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[UNKNOWN_UNDEF]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[DENORMAL_0:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 0) [[ATTR0]]
-; CHECK-NEXT:    store volatile float [[DENORMAL_0]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[DENORMAL_0]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[DENORMAL_1:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 1) [[ATTR0]]
-; CHECK-NEXT:    store volatile float [[DENORMAL_1]], float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float [[DENORMAL_1]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %zero = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 0) #0
-  store volatile float %zero, float addrspace(1)* undef
+  store volatile float %zero, ptr addrspace(1) undef
 
   %neg.zero = call float @llvm.amdgcn.ldexp.f32(float -0.0, i32 0) #0
-  store volatile float %neg.zero, float addrspace(1)* undef
+  store volatile float %neg.zero, ptr addrspace(1) undef
 
   %one = call float @llvm.amdgcn.ldexp.f32(float 0.0, i32 1) #0
-  store volatile float %one, float addrspace(1)* undef
+  store volatile float %one, ptr addrspace(1) undef
 
   %unknown.zero = call float @llvm.amdgcn.ldexp.f32(float %x, i32 0) #0
-  store volatile float %unknown.zero, float addrspace(1)* undef
+  store volatile float %unknown.zero, ptr addrspace(1) undef
 
   %unknown.undef = call float @llvm.amdgcn.ldexp.f32(float %x, i32 undef) #0
-  store volatile float %unknown.undef, float addrspace(1)* undef
+  store volatile float %unknown.undef, ptr addrspace(1) undef
 
   %denormal.0 = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 0) #0
-  store volatile float %denormal.0, float addrspace(1)* undef
+  store volatile float %denormal.0, ptr addrspace(1) undef
 
   %denormal.1 = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 1) #0
-  store volatile float %denormal.1, float addrspace(1)* undef
+  store volatile float %denormal.1, ptr addrspace(1) undef
 
   ret void
 }
 
 define void @ldexp_f32() {
 ; CHECK-LABEL: @ldexp_f32(
-; CHECK-NEXT:    store volatile float 2.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 4.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 8.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 5.000000e-01, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x3810000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x3800000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x47E0000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF0000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float -2.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float -4.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float -8.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float -5.000000e-01, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xB810000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xB800000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xC7E0000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF0000000000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x44D5000000000000, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float 2.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 4.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 8.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 5.000000e-01, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x3810000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x3800000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x47E0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x7FF0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -2.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -4.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -8.000000e+00, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -5.000000e-01, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xB810000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xB800000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xC7E0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0xFFF0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x44D5000000000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %one.one = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 1)
-  store volatile float %one.one, float addrspace(1)* undef
+  store volatile float %one.one, ptr addrspace(1) undef
 
   %one.two = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 2)
-  store volatile float %one.two, float addrspace(1)* undef
+  store volatile float %one.two, ptr addrspace(1) undef
 
   %one.three = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 3)
-  store volatile float %one.three, float addrspace(1)* undef
+  store volatile float %one.three, ptr addrspace(1) undef
 
   %one.negone = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 -1)
-  store volatile float %one.negone, float addrspace(1)* undef
+  store volatile float %one.negone, ptr addrspace(1) undef
 
   %one.min.exp = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 -126)
-  store volatile float %one.min.exp, float addrspace(1)* undef
+  store volatile float %one.min.exp, ptr addrspace(1) undef
 
   %one.min.exp.sub1 = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 -127)
-  store volatile float %one.min.exp.sub1, float addrspace(1)* undef
+  store volatile float %one.min.exp.sub1, ptr addrspace(1) undef
 
   %one.max.exp = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 127)
-  store volatile float %one.max.exp, float addrspace(1)* undef
+  store volatile float %one.max.exp, ptr addrspace(1) undef
 
   %one.max.exp.plus1 = call float @llvm.amdgcn.ldexp.f32(float 1.0, i32 128)
-  store volatile float %one.max.exp.plus1, float addrspace(1)* undef
+  store volatile float %one.max.exp.plus1, ptr addrspace(1) undef
 
   %neg.one.one = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 1)
-  store volatile float %neg.one.one, float addrspace(1)* undef
+  store volatile float %neg.one.one, ptr addrspace(1) undef
 
   %neg.one.two = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 2)
-  store volatile float %neg.one.two, float addrspace(1)* undef
+  store volatile float %neg.one.two, ptr addrspace(1) undef
 
   %neg.one.three = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 3)
-  store volatile float %neg.one.three, float addrspace(1)* undef
+  store volatile float %neg.one.three, ptr addrspace(1) undef
 
   %neg.one.negone = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 -1)
-  store volatile float %neg.one.negone, float addrspace(1)* undef
+  store volatile float %neg.one.negone, ptr addrspace(1) undef
 
   %neg.one.min.exp = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 -126)
-  store volatile float %neg.one.min.exp, float addrspace(1)* undef
+  store volatile float %neg.one.min.exp, ptr addrspace(1) undef
 
   %neg.one.min.exp.sub1 = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 -127)
-  store volatile float %neg.one.min.exp.sub1, float addrspace(1)* undef
+  store volatile float %neg.one.min.exp.sub1, ptr addrspace(1) undef
 
   %neg.one.max.exp = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 127)
-  store volatile float %neg.one.max.exp, float addrspace(1)* undef
+  store volatile float %neg.one.max.exp, ptr addrspace(1) undef
 
   %neg.one.max.exp.plus1 = call float @llvm.amdgcn.ldexp.f32(float -1.0, i32 128)
-  store volatile float %neg.one.max.exp.plus1, float addrspace(1)* undef
+  store volatile float %neg.one.max.exp.plus1, ptr addrspace(1) undef
 
   %fortytwo.seven = call float @llvm.amdgcn.ldexp.f32(float 42.0, i32 73)
-  store volatile float %fortytwo.seven, float addrspace(1)* undef
+  store volatile float %fortytwo.seven, ptr addrspace(1) undef
 
   ret void
 }
@@ -283,53 +283,53 @@ define void @ldexp_f32() {
 ; considers this.
 define void @ldexp_f32_denormal() {
 ; CHECK-LABEL: @ldexp_f32_denormal(
-; CHECK-NEXT:    store volatile float 0x380FFFFFC0000000, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    store volatile float 0x381FFFFFC0000000, float addrspace(1)* undef, align 4
+; CHECK-NEXT:    store volatile float 0x380FFFFFC0000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float 0x381FFFFFC0000000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %denormal.0 = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 0)
-  store volatile float %denormal.0, float addrspace(1)* undef
+  store volatile float %denormal.0, ptr addrspace(1) undef
 
   %denormal.1 = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 1)
-  store volatile float %denormal.1, float addrspace(1)* undef
+  store volatile float %denormal.1, ptr addrspace(1) undef
 
   ret void
 }
 
 define void @ldexp_f64() {
 ; CHECK-LABEL: @ldexp_f64(
-; CHECK-NEXT:    store volatile double 2.000000e+00, double addrspace(1)* undef, align 8
-; CHECK-NEXT:    store volatile double 4.000000e+00, double addrspace(1)* undef, align 8
-; CHECK-NEXT:    store volatile double 0x44D5000000000000, double addrspace(1)* undef, align 8
+; CHECK-NEXT:    store volatile double 2.000000e+00, ptr addrspace(1) undef, align 8
+; CHECK-NEXT:    store volatile double 4.000000e+00, ptr addrspace(1) undef, align 8
+; CHECK-NEXT:    store volatile double 0x44D5000000000000, ptr addrspace(1) undef, align 8
 ; CHECK-NEXT:    ret void
 ;
   %one.one = call double @llvm.amdgcn.ldexp.f64(double 1.0, i32 1)
-  store volatile double %one.one, double addrspace(1)* undef
+  store volatile double %one.one, ptr addrspace(1) undef
 
   %one.two = call double @llvm.amdgcn.ldexp.f64(double 1.0, i32 2)
-  store volatile double %one.two, double addrspace(1)* undef
+  store volatile double %one.two, ptr addrspace(1) undef
 
   %fortytwo.seven = call double @llvm.amdgcn.ldexp.f64(double 42.0, i32 73)
-  store volatile double %fortytwo.seven, double addrspace(1)* undef
+  store volatile double %fortytwo.seven, ptr addrspace(1) undef
 
   ret void
 }
 
 define void @ldexp_f16() {
 ; CHECK-LABEL: @ldexp_f16(
-; CHECK-NEXT:    store volatile half 0xH4000, half addrspace(1)* undef, align 2
-; CHECK-NEXT:    store volatile half 0xH4400, half addrspace(1)* undef, align 2
-; CHECK-NEXT:    store volatile half 0xH7C00, half addrspace(1)* undef, align 2
+; CHECK-NEXT:    store volatile half 0xH4000, ptr addrspace(1) undef, align 2
+; CHECK-NEXT:    store volatile half 0xH4400, ptr addrspace(1) undef, align 2
+; CHECK-NEXT:    store volatile half 0xH7C00, ptr addrspace(1) undef, align 2
 ; CHECK-NEXT:    ret void
 ;
   %one.one = call half @llvm.amdgcn.ldexp.f16(half 1.0, i32 1)
-  store volatile half %one.one, half addrspace(1)* undef
+  store volatile half %one.one, ptr addrspace(1) undef
 
   %one.two = call half @llvm.amdgcn.ldexp.f16(half 1.0, i32 2)
-  store volatile half %one.two, half addrspace(1)* undef
+  store volatile half %one.two, ptr addrspace(1) undef
 
   %fortytwo.seven = call half @llvm.amdgcn.ldexp.f16(half 42.0, i32 73)
-  store volatile half %fortytwo.seven, half addrspace(1)* undef
+  store volatile half %fortytwo.seven, ptr addrspace(1) undef
 
   ret void
 }

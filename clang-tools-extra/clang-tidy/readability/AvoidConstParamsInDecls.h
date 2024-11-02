@@ -20,13 +20,18 @@ namespace readability {
 class AvoidConstParamsInDecls : public ClangTidyCheck {
 public:
   AvoidConstParamsInDecls(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  const bool IgnoreMacros;
 };
 
 } // namespace readability

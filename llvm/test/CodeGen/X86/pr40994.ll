@@ -15,9 +15,8 @@ define <8 x i8> @foo(<16 x i8> %a) {
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %v = alloca i8, i32 8, align 16
-  call void @llvm.masked.compressstore.v16i8(<16 x i8> %a, i8* %v, <16 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>)
-  %ptr = bitcast i8* %v to <8 x i8>*
-  %out = load <8 x i8>, <8 x i8>* %ptr
+  call void @llvm.masked.compressstore.v16i8(<16 x i8> %a, ptr %v, <16 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>)
+  %out = load <8 x i8>, ptr %v
   ret <8 x i8> %out
 }
-declare void @llvm.masked.compressstore.v16i8(<16 x i8>, i8*, <16 x i1>) #0
+declare void @llvm.masked.compressstore.v16i8(<16 x i8>, ptr, <16 x i1>) #0

@@ -473,3 +473,27 @@ def testFunctionType():
     print("INPUTS:", func.inputs)
     # CHECK: RESULTS: [Type(index)]
     print("RESULTS:", func.results)
+
+
+# CHECK-LABEL: TEST: testOpaqueType
+@run
+def testOpaqueType():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    opaque = OpaqueType.get("dialect", "type")
+    # CHECK: opaque type: !dialect.type
+    print("opaque type:", opaque)
+    # CHECK: dialect namespace: dialect
+    print("dialect namespace:", opaque.dialect_namespace)
+    # CHECK: data: type
+    print("data:", opaque.data)
+
+
+# CHECK-LABEL: TEST: testShapedTypeConstants
+# Tests that ShapedType exposes magic value constants.
+@run
+def testShapedTypeConstants():
+  # CHECK: <class 'int'>
+  print(type(ShapedType.get_dynamic_size()))
+  # CHECK: <class 'int'>
+  print(type(ShapedType.get_dynamic_stride_or_offset()))

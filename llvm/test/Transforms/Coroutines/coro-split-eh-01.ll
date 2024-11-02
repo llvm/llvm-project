@@ -2,7 +2,7 @@
 ; and retains it in the start function.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define i8* @f2(i1 %val) "coroutine.presplit"="1" personality i32 4 {
+define i8* @f2(i1 %val) presplitcoroutine personality i32 4 {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %hdl = call i8* @llvm.coro.begin(token %id, i8* null)

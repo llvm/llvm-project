@@ -59,6 +59,10 @@ bool InstructionSelector::isObviouslySafeToFold(MachineInstr &MI,
       std::next(MI.getIterator()) == IntoMI.getIterator())
     return true;
 
+  // Convergent instructions cannot be moved in the CFG.
+  if (MI.isConvergent() && MI.getParent() != IntoMI.getParent())
+    return false;
+
   return !MI.mayLoadOrStore() && !MI.mayRaiseFPException() &&
          !MI.hasUnmodeledSideEffects() && MI.implicit_operands().empty();
 }

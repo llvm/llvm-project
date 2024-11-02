@@ -32,7 +32,7 @@ namespace __llvm_libc {
 namespace internal {
 
 // We don't need to treat denormal
-INLINE_FMA static inline float log(double x) {
+static inline float log(double x) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
 
   using FPBits = typename fputil::FPBits<double>;
@@ -77,7 +77,6 @@ INLINE_FMA static inline float log(double x) {
 
 } // namespace internal
 
-INLINE_FMA
 LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);

@@ -27,4 +27,5 @@ if [[ ! -d "${MONOREPO_ROOT}/libcxx/utils/ci" ]]; then
     exit 1
 fi
 docker pull ldionne/libcxx-builder
-docker run -it --volume "${MONOREPO_ROOT}:/llvm" --workdir "/llvm" --cap-add=SYS_PTRACE ldionne/libcxx-builder bash
+docker run -it --volume "${MONOREPO_ROOT}:/llvm" --workdir "/llvm" --cap-add=SYS_PTRACE ldionne/libcxx-builder \
+    bash -c 'git config --global --add safe.directory /llvm ; exec bash'

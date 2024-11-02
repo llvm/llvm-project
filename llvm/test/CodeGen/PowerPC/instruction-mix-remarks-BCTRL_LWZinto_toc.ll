@@ -10,7 +10,7 @@
 ; CHECK:  - String:          "\n"
 
 
-define void @callThroughPtrWithArgs(void (i32, i16, i64)* nocapture) {
+define void @callThroughPtrWithArgs(ptr nocapture) {
   tail call void %0(i32 signext 1, i16 zeroext 2, i64 3)
   ret void
 }

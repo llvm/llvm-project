@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "flang/Optimizer/CodeGen/CodeGen.h"
+
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
-#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -18,6 +18,11 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace fir {
+#define GEN_PASS_DEF_BOXEDPROCEDUREPASS
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-procedure-pointer"
 
@@ -62,12 +67,11 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
+      if (llvm::is_contained(visitedTypes, recTy))
+        return false;
       bool result = false;
       visitedTypes.push_back(recTy);
       for (auto t : recTy.getTypeList()) {
-        if (llvm::any_of(visitedTypes,
-                         [&](mlir::Type rt) { return rt == recTy; }))
-          continue;
         if (needsConversion(t.second)) {
           result = true;
           break;
@@ -85,9 +89,10 @@ public:
     return false;
   }
 
-  BoxprocTypeRewriter() {
+  BoxprocTypeRewriter(mlir::Location location) : loc{location} {
     addConversion([](mlir::Type ty) { return ty; });
-    addConversion([](BoxProcType boxproc) { return boxproc.getEleTy(); });
+    addConversion(
+        [&](BoxProcType boxproc) { return convertType(boxproc.getEleTy()); });
     addConversion([&](mlir::TupleType tupTy) {
       llvm::SmallVector<mlir::Type> memTys;
       for (auto ty : tupTy.getTypes())
@@ -117,14 +122,21 @@ public:
       // TODO: add ty.getLayoutMap() as needed.
       return SequenceType::get(ty.getShape(), convertType(ty.getEleTy()));
     });
-    addConversion([&](RecordType ty) {
+    addConversion([&](RecordType ty) -> mlir::Type {
+      if (!needsConversion(ty))
+        return ty;
       // FIR record types can have recursive references, so conversion is a bit
       // more complex than the other types. This conversion is not needed
       // presently, so just emit a TODO message. Need to consider the uniqued
-      // name of the record, etc.
+      // name of the record, etc. Also, fir::RecordType::get returns the
+      // existing type being translated. So finalize() will not change it, and
+      // the translation would not do anything. So the type needs to be mutated,
+      // and this might require special care to comply with MLIR infrastructure.
+
+      // TODO: this will be needed to support derived type containing procedure
+      // pointer components.
       fir::emitFatalError(
-          mlir::UnknownLoc::get(ty.getContext()),
-          "not yet implemented: record type with a boxproc type");
+          loc, "not yet implemented: record type with a boxproc type");
       return RecordType::get(ty.getContext(), "*fixme*");
     });
     addArgumentMaterialization(materializeProcedure);
@@ -141,8 +153,11 @@ public:
                                      inputs[0]);
   }
 
+  void setLocation(mlir::Location location) { loc = location; }
+
 private:
   llvm::SmallVector<mlir::Type> visitedTypes;
+  mlir::Location loc;
 };
 
 /// A `boxproc` is an abstraction for a Fortran procedure reference. Typically,
@@ -159,7 +174,8 @@ private:
 /// the frame pointer during execution. In LLVM IR, the frame pointer is
 /// designated with the `nest` attribute. The thunk's address will then be used
 /// as the call target instead of the original function's address directly.
-class BoxedProcedurePass : public BoxedProcedurePassBase<BoxedProcedurePass> {
+class BoxedProcedurePass
+    : public fir::impl::BoxedProcedurePassBase<BoxedProcedurePass> {
 public:
   BoxedProcedurePass() { options = {true}; }
   BoxedProcedurePass(bool useThunks) { options = {useThunks}; }
@@ -170,9 +186,10 @@ public:
     if (options.useThunks) {
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
-      BoxprocTypeRewriter typeConverter;
+      BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
       mlir::Dialect *firDialect = context->getLoadedDialect("fir");
       getModule().walk([&](mlir::Operation *op) {
+        typeConverter.setLocation(op->getLoc());
         if (auto addr = mlir::dyn_cast<BoxAddrOp>(op)) {
           auto ty = addr.getVal().getType();
           if (typeConverter.needsConversion(ty) ||
@@ -209,7 +226,8 @@ public:
           if (embox.getHost()) {
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
-            FirOpBuilder builder(rewriter, getKindMapping(module));
+            fir::KindMapping kindMap = getKindMapping(module);
+            FirOpBuilder builder(rewriter, kindMap);
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
@@ -239,12 +257,10 @@ public:
             rewriter.setInsertionPoint(mem);
             auto toTy = typeConverter.convertType(unwrapRefType(ty));
             bool isPinned = mem.getPinned();
-            llvm::StringRef uniqName;
-            if (mem.getUniqName().hasValue())
-              uniqName = mem.getUniqName().getValue();
-            llvm::StringRef bindcName;
-            if (mem.getBindcName().hasValue())
-              bindcName = mem.getBindcName().getValue();
+            llvm::StringRef uniqName =
+                mem.getUniqName().value_or(llvm::StringRef());
+            llvm::StringRef bindcName =
+                mem.getBindcName().value_or(llvm::StringRef());
             rewriter.replaceOpWithNewOp<AllocaOp>(
                 mem, toTy, uniqName, bindcName, isPinned, mem.getTypeparams(),
                 mem.getShape());
@@ -254,12 +270,10 @@ public:
           if (typeConverter.needsConversion(ty)) {
             rewriter.setInsertionPoint(mem);
             auto toTy = typeConverter.convertType(unwrapRefType(ty));
-            llvm::StringRef uniqName;
-            if (mem.getUniqName().hasValue())
-              uniqName = mem.getUniqName().getValue();
-            llvm::StringRef bindcName;
-            if (mem.getBindcName().hasValue())
-              bindcName = mem.getBindcName().getValue();
+            llvm::StringRef uniqName =
+                mem.getUniqName().value_or(llvm::StringRef());
+            llvm::StringRef bindcName =
+                mem.getBindcName().value_or(llvm::StringRef());
             rewriter.replaceOpWithNewOp<AllocMemOp>(
                 mem, toTy, uniqName, bindcName, mem.getTypeparams(),
                 mem.getShape());
@@ -295,7 +309,7 @@ public:
             auto toTy = typeConverter.convertType(ty);
             auto toOnTy = typeConverter.convertType(onTy);
             rewriter.replaceOpWithNewOp<LenParamIndexOp>(
-                mem, toTy, index.getFieldId(), toOnTy);
+                mem, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
           }
         } else if (op->getDialect() == firDialect) {
           rewriter.startRootUpdate(op);

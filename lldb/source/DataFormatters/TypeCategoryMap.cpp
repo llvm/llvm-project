@@ -154,14 +154,15 @@ bool TypeCategoryMap::Get(uint32_t pos, ValueSP &entry) {
 }
 
 bool TypeCategoryMap::AnyMatches(
-    ConstString type_name, TypeCategoryImpl::FormatCategoryItems items,
-    bool only_enabled, const char **matching_category,
+    const FormattersMatchCandidate &candidate_type,
+    TypeCategoryImpl::FormatCategoryItems items, bool only_enabled,
+    const char **matching_category,
     TypeCategoryImpl::FormatCategoryItems *matching_type) {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
 
   MapIterator pos, end = m_map.end();
   for (pos = m_map.begin(); pos != end; pos++) {
-    if (pos->second->AnyMatches(type_name, items, only_enabled,
+    if (pos->second->AnyMatches(candidate_type, items, only_enabled,
                                 matching_category, matching_type))
       return true;
   }

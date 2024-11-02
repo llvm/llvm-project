@@ -5,8 +5,6 @@ from lldbsuite.test.decorators import *
 
 class TestProcessHandle(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIfWindows
     def test_process_handle(self):
@@ -36,7 +34,7 @@ class TestProcessHandle(TestBase):
 
         process.Continue()
         
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
         
         # Check that we preserved the setting:

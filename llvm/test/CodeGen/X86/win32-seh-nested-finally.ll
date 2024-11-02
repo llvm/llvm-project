@@ -3,7 +3,7 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc"
 
-define void @nested_finally() #0 personality i8* bitcast (i32 (...)* @_except_handler3 to i8*) {
+define void @nested_finally() #0 personality ptr @_except_handler3 {
 entry:
   invoke void @f(i32 1) #3
           to label %invoke.cont unwind label %ehcleanup

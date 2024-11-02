@@ -91,10 +91,9 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T2-NEXT:    eor.w r3, r1, r12
 ; CHECK-T2-NEXT:    eors r1, r2
 ; CHECK-T2-NEXT:    bics r1, r3
-; CHECK-T2-NEXT:    cmp r1, #0
-; CHECK-T2-NEXT:    mov.w r1, #-2147483648
 ; CHECK-T2-NEXT:    it mi
 ; CHECK-T2-NEXT:    asrmi r0, r2, #31
+; CHECK-T2-NEXT:    mov.w r1, #-2147483648
 ; CHECK-T2-NEXT:    it mi
 ; CHECK-T2-NEXT:    eormi.w r2, r1, r2, asr #31
 ; CHECK-T2-NEXT:    mov r1, r2
@@ -108,10 +107,9 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-ARM-NEXT:    eor r3, r1, r2
 ; CHECK-ARM-NEXT:    adc r2, r1, r2
 ; CHECK-ARM-NEXT:    eor r1, r1, r2
-; CHECK-ARM-NEXT:    bic r1, r1, r3
-; CHECK-ARM-NEXT:    cmp r1, #0
-; CHECK-ARM-NEXT:    mov r1, #-2147483648
+; CHECK-ARM-NEXT:    bics r1, r1, r3
 ; CHECK-ARM-NEXT:    asrmi r0, r2, #31
+; CHECK-ARM-NEXT:    mov r1, #-2147483648
 ; CHECK-ARM-NEXT:    eormi r2, r1, r2, asr #31
 ; CHECK-ARM-NEXT:    mov r1, r2
 ; CHECK-ARM-NEXT:    bx lr

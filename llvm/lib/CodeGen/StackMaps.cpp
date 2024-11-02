@@ -365,7 +365,7 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   });
 
   for (auto I = LiveOuts.begin(), E = LiveOuts.end(); I != E; ++I) {
-    for (auto II = std::next(I); II != E; ++II) {
+    for (auto *II = std::next(I); II != E; ++II) {
       if (I->DwarfRegNum != II->DwarfRegNum) {
         // Skip all the now invalid entries.
         I = --II;
@@ -721,7 +721,7 @@ void StackMaps::serializeToStackMapSection() {
   // Create the section.
   MCSection *StackMapSection =
       OutContext.getObjectFileInfo()->getStackMapSection();
-  OS.SwitchSection(StackMapSection);
+  OS.switchSection(StackMapSection);
 
   // Emit a dummy symbol to force section inclusion.
   OS.emitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_StackMaps")));
@@ -732,7 +732,7 @@ void StackMaps::serializeToStackMapSection() {
   emitFunctionFrameRecords(OS);
   emitConstantPoolEntries(OS);
   emitCallsiteEntries(OS);
-  OS.AddBlankLine();
+  OS.addBlankLine();
 
   // Clean up.
   CSInfos.clear();

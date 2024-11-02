@@ -69,6 +69,10 @@ Symbol enm(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Enum, "@E@\\0");
 }
 
+Symbol enmConstant(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::EnumConstant, "@\\0");
+}
+
 Symbol var(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Variable, "@\\0");
 }
@@ -79,6 +83,33 @@ Symbol ns(llvm::StringRef Name) {
 
 Symbol conceptSym(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Concept, "@CT@\\0");
+}
+
+Symbol objcSym(llvm::StringRef Name, index::SymbolKind Kind,
+               llvm::StringRef USRPrefix) {
+  Symbol Sym;
+  std::string USR = USRPrefix.str() + Name.str();
+  Sym.Name = Name;
+  Sym.Scope = "";
+  Sym.ID = SymbolID(USR);
+  Sym.SymInfo.Kind = Kind;
+  Sym.SymInfo.Lang = index::SymbolLanguage::ObjC;
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
+  Sym.Origin = SymbolOrigin::Static;
+  return Sym;
+}
+
+Symbol objcClass(llvm::StringRef Name) {
+  return objcSym(Name, index::SymbolKind::Class, "objc(cs)");
+}
+
+Symbol objcCategory(llvm::StringRef Name, llvm::StringRef CategoryName) {
+  std::string USRPrefix = ("objc(cy)" + Name + "@").str();
+  return objcSym(CategoryName, index::SymbolKind::Extension, USRPrefix);
+}
+
+Symbol objcProtocol(llvm::StringRef Name) {
+  return objcSym(Name, index::SymbolKind::Protocol, "objc(pl)");
 }
 
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames) {

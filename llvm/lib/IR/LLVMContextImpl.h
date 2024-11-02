@@ -70,6 +70,7 @@ class RemarkStreamer;
 }
 template <typename T> class StringMapEntry;
 class StringRef;
+class TypedPointerType;
 class ValueHandleBase;
 
 using DenseMapAPIntKeyInfo = DenseMapInfo<APInt>;
@@ -687,7 +688,7 @@ template <> struct MDNodeKeyImpl<DIFile> {
   unsigned getHashValue() const {
     return hash_combine(Filename, Directory, Checksum ? Checksum->Kind : 0,
                         Checksum ? Checksum->Value : nullptr,
-                        Source.getValueOr(nullptr));
+                        Source.value_or(nullptr));
   }
 };
 
@@ -1386,8 +1387,8 @@ public:
   Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
   /// The percentage of difference between profiling branch weights and
-  // llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
-  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  /// llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
+  Optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
   bool MisExpectWarningRequested = false;
 
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
@@ -1484,6 +1485,7 @@ public:
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
   DenseMap<Type *, PointerType *> PointerTypes; // Pointers in AddrSpace = 0
   DenseMap<std::pair<Type *, unsigned>, PointerType *> ASPointerTypes;
+  DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
@@ -1497,11 +1499,19 @@ public:
   /// Collection of metadata used in this context.
   DenseMap<const Value *, MDAttachments> ValueMetadata;
 
+  /// Map DIAssignID -> Instructions with that attachment.
+  /// Managed by Instruction via Instruction::updateDIAssignIDMapping.
+  /// Query using the at:: functions defined in DebugInfo.h.
+  DenseMap<DIAssignID *, SmallVector<Instruction *, 1>> AssignmentIDToInstrs;
+
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;
 
   /// Collection of per-GlobalValue partitions used in this context.
   DenseMap<const GlobalValue *, StringRef> GlobalValuePartitions;
+
+  DenseMap<const GlobalValue *, GlobalValue::SanitizerMetadata>
+      GlobalValueSanitizerMetadata;
 
   /// DiscriminatorTable - This table maps file:line locations to an
   /// integer representing the next DWARF path discriminator to assign to
@@ -1567,8 +1577,6 @@ public:
   bool getOpaquePointers();
   bool hasOpaquePointersValue();
   void setOpaquePointers(bool OP);
-
-  llvm::Any TargetDataStorage;
 
 private:
   Optional<bool> OpaquePointers;

@@ -242,17 +242,20 @@ class AnalysisRun:
             return
 
         # Extract the HTML reports, if they exists.
-        if 'HTMLDiagnostics_files' in data['diagnostics'][0]:
-            htmlFiles = []
-            for d in data['diagnostics']:
+        htmlFiles = []
+        for d in data['diagnostics']:
+            if 'HTMLDiagnostics_files' in d:
                 # FIXME: Why is this named files, when does it have multiple
                 # files?
                 assert len(d['HTMLDiagnostics_files']) == 1
                 htmlFiles.append(d.pop('HTMLDiagnostics_files')[0])
-        else:
-            htmlFiles = [None] * len(data['diagnostics'])
+            else:
+                htmlFiles.append(None)
 
         report = AnalysisReport(self, data.pop('files'))
+        # Python 3.10 offers zip(..., strict=True). The following assertion
+        # mimics it.
+        assert len(data['diagnostics']) == len(htmlFiles)
         diagnostics = [AnalysisDiagnostic(d, report, h)
                        for d, h in zip(data.pop('diagnostics'), htmlFiles)]
 

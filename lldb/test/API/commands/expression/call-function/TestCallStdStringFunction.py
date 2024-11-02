@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class ExprCommandCallFunctionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         compiler="icc",
         bugnumber="llvm.org/pr14437, fails with ICC 13.1")

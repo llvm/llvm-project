@@ -96,6 +96,9 @@ ds_write_src2_b64 v1
 image_gather4 v[5:8], v1, s[8:15], s[12:15]
 // GFX90A: error: instruction not supported on this GPU
 
+image_gather4h v[251:254], v[1:2], s[8:15], s[12:15] dmask:0x1
+// GFX90A: error: instruction not supported on this GPU
+
 image_get_lod v5, v1, s[8:15], s[12:15]
 // GFX90A: error: instruction not supported on this GPU
 

@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo(i8* %dst, i8* %src, i8* %dst2, i8* %src2, i32* %a, i32 %n) !prof !27 {
+define void @foo(ptr %dst, ptr %src, ptr %dst2, ptr %src2, ptr %a, i32 %n) !prof !27 {
 entry:
   br label %for.cond
 
@@ -22,36 +22,36 @@ for.body:
 for.cond1:
   %j.0 = phi i32 [ 0, %for.body ], [ %inc, %for.inc ]
   %idx.ext = sext i32 %i.0 to i64
-  %add.ptr = getelementptr inbounds i32, i32* %a, i64 %idx.ext
-  %0 = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %a, i64 %idx.ext
+  %0 = load i32, ptr %add.ptr, align 4
   %cmp2 = icmp slt i32 %j.0, %0
   br i1 %cmp2, label %for.body3, label %for.end, !prof !29
 
 for.body3:
   %add = add nsw i32 %i.0, 1
   %conv = sext i32 %add to i64
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i1 false), !prof !30
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i1 false), !prof !31
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %conv, i1 false), !prof !30
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src2, i64 %conv, i1 false), !prof !31
   br label %for.inc
 
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL:.*]] [
 ; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 0, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 0, i1 false)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i1 false), !prof [[NEWVP:![0-9]+]]
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %conv, i1 false), !prof [[NEWVP:![0-9]+]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL]]
 ; MEMOP_OPT: [[MERGE_LABEL]]:
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL2:.*]] [
 ; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL2:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL2]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 0, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src2, i64 0, i1 false)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL2]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i1 false), !prof [[NEWVP]]
+; MEMOP_OPT:   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src2, i64 %conv, i1 false), !prof [[NEWVP]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2]]
 ; MEMOP_OPT: [[MERGE_LABEL2]]:
 ; MEMOP_OPT:   br label %for.inc
@@ -73,7 +73,7 @@ for.end6:
 
 declare void @consume(i32 %v1, i32 %v2)
 
-define void @foo_memcmp_bcmp(i8* %dst, i8* %src, i8* %dst2, i8* %src2, i32* %a, i32 %n) !prof !27 {
+define void @foo_memcmp_bcmp(ptr %dst, ptr %src, ptr %dst2, ptr %src2, ptr %a, i32 %n) !prof !27 {
 entry:
   br label %for.cond
 
@@ -88,16 +88,16 @@ for.body:
 for.cond1:
   %j.0 = phi i32 [ 0, %for.body ], [ %inc, %for.inc ]
   %idx.ext = sext i32 %i.0 to i64
-  %add.ptr = getelementptr inbounds i32, i32* %a, i64 %idx.ext
-  %0 = load i32, i32* %add.ptr, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %a, i64 %idx.ext
+  %0 = load i32, ptr %add.ptr, align 4
   %cmp2 = icmp slt i32 %j.0, %0
   br i1 %cmp2, label %for.body3, label %for.end, !prof !29
 
 for.body3:
   %add = add nsw i32 %i.0, 1
   %conv = sext i32 %add to i64
-  %memcmp = call i32 @memcmp(i8* %dst, i8* %src, i64 %conv), !prof !30
-  %bcmp = call i32 @bcmp(i8* %dst2, i8* %src2, i64 %conv), !prof !31
+  %memcmp = call i32 @memcmp(ptr %dst, ptr %src, i64 %conv), !prof !30
+  %bcmp = call i32 @bcmp(ptr %dst2, ptr %src2, i64 %conv), !prof !31
   call void @consume(i32 %memcmp, i32 %bcmp)
   br label %for.inc
 
@@ -105,10 +105,10 @@ for.body3:
 ; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]]
 ; MEMOP_OPT: [[CASE_1_LABEL]]:
-; MEMOP_OPT:   %[[RV:.*]] = call i32 @memcmp(i8* %dst, i8* %src, i64 0)
+; MEMOP_OPT:   %[[RV:.*]] = call i32 @memcmp(ptr %dst, ptr %src, i64 0)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL]]:
-; MEMOP_OPT:   %[[RVD:.*]] = call i32 @memcmp(i8* %dst, i8* %src, i64 %conv), !prof [[NEWVP:![0-9]+]]
+; MEMOP_OPT:   %[[RVD:.*]] = call i32 @memcmp(ptr %dst, ptr %src, i64 %conv), !prof [[NEWVP:![0-9]+]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL]]
 ; MEMOP_OPT: [[MERGE_LABEL]]:
 ; MEMOP_OPT:  %[[PHI:.*]] = phi i32 [ %[[RVD]], %[[DEFAULT_LABEL]] ], [ %[[RV]], %[[CASE_1_LABEL]] ]
@@ -116,10 +116,10 @@ for.body3:
 ; MEMOP_OPT:    i64 0, label %[[CASE_1_LABEL2:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]]
 ; MEMOP_OPT: [[CASE_1_LABEL2]]:
-; MEMOP_OPT:   %[[RV2:.*]] = call i32 @bcmp(i8* %dst2, i8* %src2, i64 0)
+; MEMOP_OPT:   %[[RV2:.*]] = call i32 @bcmp(ptr %dst2, ptr %src2, i64 0)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL2]]:
-; MEMOP_OPT:   %[[RVD2:.*]] = call i32 @bcmp(i8* %dst2, i8* %src2, i64 %conv), !prof [[NEWVP]]
+; MEMOP_OPT:   %[[RVD2:.*]] = call i32 @bcmp(ptr %dst2, ptr %src2, i64 %conv), !prof [[NEWVP]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2]]
 ; MEMOP_OPT: [[MERGE_LABEL2]]:
 ; MEMOP_OPT:   %[[PHI2:.*]] = phi i32 [ %[[RVD2]], %[[DEFAULT_LABEL2]] ], [ %[[RV2]], %[[CASE_1_LABEL2]] ]
@@ -181,14 +181,14 @@ for.end6:
 !30 = !{!"VP", i32 1, i64 556, i64 0, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
 !31 = !{!"VP", i32 1, i64 556, i64 0, i64 99, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66, i64 5, i64 55, i64 6, i64 44, i64 7, i64 33, i64 8, i64 22}
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
+declare void @llvm.lifetime.start(i64, ptr nocapture)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
 
-declare i32 @memcmp(i8*, i8*, i64)
-declare i32 @bcmp(i8*, i8*, i64)
+declare i32 @memcmp(ptr, ptr, i64)
+declare i32 @bcmp(ptr, ptr, i64)
 
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.end(i64, ptr nocapture)
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            pgo-memop-opt

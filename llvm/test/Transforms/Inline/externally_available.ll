@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -inline -S | FileCheck %s
 
 define available_externally i32 @test_function() {
 ; CHECK-NOT: @test_function

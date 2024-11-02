@@ -14,7 +14,6 @@
 #include <__iterator/iterator_traits.h> // iter_reference_t
 #include <__memory/addressof.h>
 #include <__utility/forward.h>
-#include <concepts>                     // constructible_from
 #include <optional>
 #include <type_traits>
 
@@ -24,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 namespace ranges {
   // __non_propagating_cache is a helper type that allows storing an optional value in it,
@@ -107,7 +106,7 @@ namespace ranges {
   struct __empty_cache { };
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

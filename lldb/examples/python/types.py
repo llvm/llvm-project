@@ -9,8 +9,6 @@
 #   (lldb) command script import /path/to/cmdtemplate.py
 #----------------------------------------------------------------------
 
-from __future__ import print_function
-
 import platform
 import os
 import re

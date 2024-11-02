@@ -1,9 +1,9 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-define void @test (float %b, <8 x float> * %p)  {
+define void @test (float %b, ptr %p)  {
 ; CHECK: extractelement
 ; CHECK: fptosi
-  %1 = load <8 x float> , <8 x float> * %p
+  %1 = load <8 x float> , ptr %p
   %2 = bitcast <8 x float> %1 to <8 x i32>
   %3 = bitcast <8 x i32> %2 to <8 x float>
   %a = fptosi <8 x float> %3 to <8 x i32>
@@ -12,7 +12,7 @@ define void @test (float %b, <8 x float> * %p)  {
   %6 = extractelement <8 x i32> %a, i32 %5
   %7 = insertelement <8 x i32> undef, i32 %6, i32 7
   %8 = sitofp <8 x i32> %7 to <8 x float>
-  store <8 x float> %8, <8 x float>* %p
+  store <8 x float> %8, ptr %p
   ret void    
 }
 

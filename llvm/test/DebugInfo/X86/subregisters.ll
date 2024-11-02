@@ -41,13 +41,12 @@ target triple = "x86_64-apple-macosx10.9.0"
 @main.myBar = private unnamed_addr constant %struct.bar { i32 3, i32 4 }, align 4
 
 ; Function Attrs: noinline nounwind ssp uwtable
-define void @doSomething(%struct.bar* nocapture readonly %b) #0 !dbg !4 {
+define void @doSomething(ptr nocapture readonly %b) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.bar* %b, metadata !15, metadata !DIExpression()), !dbg !25
-  %a1 = getelementptr inbounds %struct.bar, %struct.bar* %b, i64 0, i32 0, !dbg !26
-  %0 = load i32, i32* %a1, align 4, !dbg !26, !tbaa !27
+  tail call void @llvm.dbg.value(metadata ptr %b, metadata !15, metadata !DIExpression()), !dbg !25
+  %0 = load i32, ptr %b, align 4, !dbg !26, !tbaa !27
   tail call void @llvm.dbg.value(metadata i32 %0, metadata !16, metadata !DIExpression()), !dbg !26
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %0) #4, !dbg !32
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %0) #4, !dbg !32
   ret void, !dbg !33
 }
 
@@ -55,16 +54,15 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare i32 @printf(i8* nocapture readonly, ...) #2
+declare i32 @printf(ptr nocapture readonly, ...) #2
 
 ; Function Attrs: nounwind ssp uwtable
 define i32 @main() #3 !dbg !17 {
 entry:
   %myBar = alloca i64, align 8, !dbg !34
-  %tmpcast = bitcast i64* %myBar to %struct.bar*, !dbg !34
-  tail call void @llvm.dbg.declare(metadata %struct.bar* %tmpcast, metadata !21, metadata !DIExpression()), !dbg !34
-  store i64 17179869187, i64* %myBar, align 8, !dbg !34
-  call void @doSomething(%struct.bar* %tmpcast), !dbg !35
+  tail call void @llvm.dbg.declare(metadata ptr %myBar, metadata !21, metadata !DIExpression()), !dbg !34
+  store i64 17179869187, ptr %myBar, align 8, !dbg !34
+  call void @doSomething(ptr %myBar), !dbg !35
   ret i32 0, !dbg !36
 }
 

@@ -1,18 +1,18 @@
 ; Test -asan-with-ifunc flag.
 ;
-; RUN: opt -passes='asan-pipeline' -S -asan-with-ifunc=0 < %s | \
+; RUN: opt -passes=asan -S -asan-with-ifunc=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOIFUNC
-; RUN: opt -passes='asan-pipeline' -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 < %s | \
+; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC
-; RUN: opt -passes='asan-pipeline' -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=1 < %s | \
+; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=1 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC-NOREMAT
 
 ; Pre-Lollipop Android does not support ifunc.
-; RUN: opt -passes='asan-pipeline' -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android20 < %s | \
+; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android20 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOIFUNC
-; RUN: opt -passes='asan-pipeline' -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android < %s | \
+; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOIFUNC
-; RUN: opt -passes='asan-pipeline' -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android21 < %s | \
+; RUN: opt -passes=asan -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 -mtriple=armv7-linux-android21 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"

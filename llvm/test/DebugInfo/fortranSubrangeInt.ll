@@ -16,7 +16,7 @@ source_filename = "fortsubrange.ll"
 define void @MAIN_() !dbg !5 {
 L.entry:
   %"arr$sd1_349" = alloca [16 x i64], align 8
-  call void @llvm.dbg.declare(metadata [16 x i64]* %"arr$sd1_349", metadata !8, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_349", metadata !8, metadata !DIExpression()), !dbg !13
   ret void, !dbg !14
 }
 

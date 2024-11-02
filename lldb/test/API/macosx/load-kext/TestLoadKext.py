@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 class LoadKextTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_load_kext(self):
         """Test that lldb can load a kext binary."""
 

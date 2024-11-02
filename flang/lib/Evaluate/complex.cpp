@@ -47,11 +47,30 @@ template <typename R>
 ValueWithRealFlags<Complex<R>> Complex<R>::Divide(
     const Complex &that, Rounding rounding) const {
   // (a + ib)/(c + id) -> [(a+ib)*(c-id)] / [(c+id)*(c-id)]
-  //   -> [ac+bd+i(bc-ad)] / (cc+dd)
+  //   -> [ac+bd+i(bc-ad)] / (cc+dd)  -- note (cc+dd) is real
   //   -> ((ac+bd)/(cc+dd)) + i((bc-ad)/(cc+dd))
-  // but to avoid overflows, scale by d/c if c>=d, else c/d
-  Part scale; // <= 1.0
   RealFlags flags;
+  Part cc{that.re_.Multiply(that.re_, rounding).AccumulateFlags(flags)};
+  Part dd{that.im_.Multiply(that.im_, rounding).AccumulateFlags(flags)};
+  Part ccPdd{cc.Add(dd, rounding).AccumulateFlags(flags)};
+  if (!flags.test(RealFlag::Overflow) && !flags.test(RealFlag::Underflow)) {
+    // den = (cc+dd) did not overflow or underflow; try the naive
+    // sequence without scaling to avoid extra roundings.
+    Part ac{re_.Multiply(that.re_, rounding).AccumulateFlags(flags)};
+    Part ad{re_.Multiply(that.im_, rounding).AccumulateFlags(flags)};
+    Part bc{im_.Multiply(that.re_, rounding).AccumulateFlags(flags)};
+    Part bd{im_.Multiply(that.im_, rounding).AccumulateFlags(flags)};
+    Part acPbd{ac.Add(bd, rounding).AccumulateFlags(flags)};
+    Part bcSad{bc.Subtract(ad, rounding).AccumulateFlags(flags)};
+    Part re{acPbd.Divide(ccPdd, rounding).AccumulateFlags(flags)};
+    Part im{bcSad.Divide(ccPdd, rounding).AccumulateFlags(flags)};
+    if (!flags.test(RealFlag::Overflow) && !flags.test(RealFlag::Underflow)) {
+      return {Complex{re, im}, flags};
+    }
+  }
+  // Scale numerator and denominator by d/c (if c>=d) or c/d (if c<d)
+  flags.clear();
+  Part scale; // will be <= 1.0 in magnitude
   bool cGEd{that.re_.ABS().Compare(that.im_.ABS()) != Relation::Less};
   if (cGEd) {
     scale = that.im_.Divide(that.re_, rounding).AccumulateFlags(flags);

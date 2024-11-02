@@ -24,10 +24,10 @@ using namespace mlir;
 namespace mlir {
 void registerToLLVMIRTranslation() {
   TranslateFromMLIRRegistration registration(
-      "mlir-to-llvmir",
-      [](ModuleOp module, raw_ostream &output) {
+      "mlir-to-llvmir", "translate mlir to llvmir",
+      [](Operation *op, raw_ostream &output) {
         llvm::LLVMContext llvmContext;
-        auto llvmModule = translateModuleToLLVMIR(module, llvmContext);
+        auto llvmModule = translateModuleToLLVMIR(op, llvmContext);
         if (!llvmModule)
           return failure();
 

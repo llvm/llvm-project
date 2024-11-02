@@ -233,6 +233,13 @@ static cl::opt<bool> PredicateWidenableBranchGuards(
              "expressed as widenable branches to deoptimize blocks"),
     cl::init(true));
 
+static cl::opt<bool> InsertAssumesOfPredicatedGuardsConditions(
+    "loop-predication-insert-assumes-of-predicated-guards-conditions",
+    cl::Hidden,
+    cl::desc("Whether or not we should insert assumes of conditions of "
+             "predicated guards"),
+    cl::init(true));
+
 namespace {
 /// Represents an induction variable check:
 ///   icmp Pred, <induction variable>, <loop invariant limit>
@@ -275,7 +282,8 @@ class LoopPredication {
   /// which is that an expression *can be made* invariant via SCEVExpander.
   /// Thus, this version is only suitable for finding an insert point to be be
   /// passed to SCEVExpander!
-  Instruction *findInsertPt(Instruction *User, ArrayRef<const SCEV*> Ops);
+  Instruction *findInsertPt(const SCEVExpander &Expander, Instruction *User,
+                            ArrayRef<const SCEV *> Ops);
 
   /// Return true if the value is known to produce a single fixed value across
   /// all iterations on which it executes.  Note that this does not imply
@@ -418,12 +426,13 @@ Value *LoopPredication::expandCheck(SCEVExpander &Expander,
       return Builder.getFalse();
   }
 
-  Value *LHSV = Expander.expandCodeFor(LHS, Ty, findInsertPt(Guard, {LHS}));
-  Value *RHSV = Expander.expandCodeFor(RHS, Ty, findInsertPt(Guard, {RHS}));
+  Value *LHSV =
+      Expander.expandCodeFor(LHS, Ty, findInsertPt(Expander, Guard, {LHS}));
+  Value *RHSV =
+      Expander.expandCodeFor(RHS, Ty, findInsertPt(Expander, Guard, {RHS}));
   IRBuilder<> Builder(findInsertPt(Guard, {LHSV, RHSV}));
   return Builder.CreateICmp(Pred, LHSV, RHSV);
 }
-
 
 // Returns true if its safe to truncate the IV to RangeCheckType.
 // When the IV type is wider than the range operand type, we can still do loop
@@ -516,14 +525,15 @@ Instruction *LoopPredication::findInsertPt(Instruction *Use,
   return Preheader->getTerminator();
 }
 
-Instruction *LoopPredication::findInsertPt(Instruction *Use,
-                                           ArrayRef<const SCEV*> Ops) {
+Instruction *LoopPredication::findInsertPt(const SCEVExpander &Expander,
+                                           Instruction *Use,
+                                           ArrayRef<const SCEV *> Ops) {
   // Subtlety: SCEV considers things to be invariant if the value produced is
   // the same across iterations.  This is not the same as being able to
   // evaluate outside the loop, which is what we actually need here.
   for (const SCEV *Op : Ops)
     if (!SE->isLoopInvariant(Op, L) ||
-        !isSafeToExpandAt(Op, Preheader->getTerminator(), *SE))
+        !Expander.isSafeToExpandAt(Op, Preheader->getTerminator()))
       return Use;
   return Preheader->getTerminator();
 }
@@ -559,7 +569,7 @@ bool LoopPredication::isLoopInvariantValue(const SCEV* S) {
   if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S))
     if (const auto *LI = dyn_cast<LoadInst>(U->getValue()))
       if (LI->isUnordered() && L->hasLoopInvariantOperands(LI))
-        if (AA->pointsToConstantMemory(LI->getOperand(0)) ||
+        if (!isModSet(AA->getModRefInfoMask(LI->getOperand(0))) ||
             LI->hasMetadata(LLVMContext::MD_invariant_load))
           return true;
   return false;
@@ -589,8 +599,8 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
-  if (!isSafeToExpandAt(LatchStart, Guard, *SE) ||
-      !isSafeToExpandAt(LatchLimit, Guard, *SE)) {
+  if (!Expander.isSafeToExpandAt(LatchStart, Guard) ||
+      !Expander.isSafeToExpandAt(LatchLimit, Guard)) {
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
@@ -632,8 +642,8 @@ Optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
-  if (!isSafeToExpandAt(LatchStart, Guard, *SE) ||
-      !isSafeToExpandAt(LatchLimit, Guard, *SE)) {
+  if (!Expander.isSafeToExpandAt(LatchStart, Guard) ||
+      !Expander.isSafeToExpandAt(LatchLimit, Guard)) {
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
   }
@@ -753,17 +763,17 @@ unsigned LoopPredication::collectChecks(SmallVectorImpl<Value *> &Checks,
   // resulting list of subconditions in Checks vector.
   SmallVector<Value *, 4> Worklist(1, Condition);
   SmallPtrSet<Value *, 4> Visited;
+  Visited.insert(Condition);
   Value *WideableCond = nullptr;
   do {
     Value *Condition = Worklist.pop_back_val();
-    if (!Visited.insert(Condition).second)
-      continue;
-
     Value *LHS, *RHS;
     using namespace llvm::PatternMatch;
     if (match(Condition, m_And(m_Value(LHS), m_Value(RHS)))) {
-      Worklist.push_back(LHS);
-      Worklist.push_back(RHS);
+      if (Visited.insert(LHS).second)
+        Worklist.push_back(LHS);
+      if (Visited.insert(RHS).second)
+        Worklist.push_back(RHS);
       continue;
     }
 
@@ -777,7 +787,7 @@ unsigned LoopPredication::collectChecks(SmallVectorImpl<Value *> &Checks,
     if (ICmpInst *ICI = dyn_cast<ICmpInst>(Condition)) {
       if (auto NewRangeCheck = widenICmpRangeCheck(ICI, Expander,
                                                    Guard)) {
-        Checks.push_back(NewRangeCheck.getValue());
+        Checks.push_back(*NewRangeCheck);
         NumWidened++;
         continue;
       }
@@ -814,6 +824,10 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
   Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = Guard->getOperand(0);
   Guard->setOperand(0, AllChecks);
+  if (InsertAssumesOfPredicatedGuardsConditions) {
+    Builder.SetInsertPoint(&*++BasicBlock::iterator(Guard));
+    Builder.CreateAssumption(OldCond);
+  }
   RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
 
   LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
@@ -825,6 +839,12 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   assert(isGuardAsWidenableBranch(BI) && "Must be!");
   LLVM_DEBUG(dbgs() << "Processing guard:\n");
   LLVM_DEBUG(BI->dump());
+
+  Value *Cond, *WC;
+  BasicBlock *IfTrueBB, *IfFalseBB;
+  bool Parsed = parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB);
+  assert(Parsed && "Must be able to parse widenable branch");
+  (void)Parsed;
 
   TotalConsidered++;
   SmallVector<Value *, 4> Checks;
@@ -840,6 +860,10 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = BI->getCondition();
   BI->setCondition(AllChecks);
+  if (InsertAssumesOfPredicatedGuardsConditions) {
+    Builder.SetInsertPoint(IfTrueBB, IfTrueBB->getFirstInsertionPt());
+    Builder.CreateAssumption(Cond);
+  }
   RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
   assert(isGuardAsWidenableBranch(BI) &&
          "Stopped being a guard after transform?");
@@ -1159,7 +1183,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   const SCEV *MinEC = getMinAnalyzeableBackedgeTakenCount(*SE, *DT, L);
   if (isa<SCEVCouldNotCompute>(MinEC) || MinEC->getType()->isPointerTy() ||
       !SE->isLoopInvariant(MinEC, L) ||
-      !isSafeToExpandAt(MinEC, WidenableBR, *SE))
+      !Rewriter.isSafeToExpandAt(MinEC, WidenableBR))
     return ChangedLoop;
 
   // Subtlety: We need to avoid inserting additional uses of the WC.  We know
@@ -1198,7 +1222,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount) ||
         ExitCount->getType()->isPointerTy() ||
-        !isSafeToExpandAt(ExitCount, WidenableBR, *SE))
+        !Rewriter.isSafeToExpandAt(ExitCount, WidenableBR))
       continue;
 
     const bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));

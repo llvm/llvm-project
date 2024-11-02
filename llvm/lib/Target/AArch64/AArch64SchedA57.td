@@ -33,7 +33,8 @@ def CortexA57Model : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
-                                                    SMEUnsupported.F);
+                                                    SMEUnsupported.F,
+                                                    [HasMTE]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -459,9 +460,9 @@ def : InstRW<[A57Write_5cyc_2V], (instregex "^(FACGE|FACGT|FCMEQ|FCMGE|FCMGT|FCM
 // ASIMD FP convert, long and narrow
 def : InstRW<[A57Write_8cyc_3V], (instregex "^FCVT(L|N|XN)v")>;
 // ASIMD FP convert, other, D-form
-def : InstRW<[A57Write_5cyc_1V], (instregex "^[FVSU]CVT([AMNPZ][SU])?(_Int)?(v2f32|v1i32|v2i32|v1i64)")>;
+def : InstRW<[A57Write_5cyc_1V], (instregex "^[FSU]CVT([AMNPZ][SU])?(_Int)?(v2f32|v1i32|v2i32|v1i64)")>;
 // ASIMD FP convert, other, Q-form
-def : InstRW<[A57Write_5cyc_2V], (instregex "^[FVSU]CVT([AMNPZ][SU])?(_Int)?(v4f32|v2f64|v4i32|v2i64)")>;
+def : InstRW<[A57Write_5cyc_2V], (instregex "^[FSU]CVT([AMNPZ][SU])?(_Int)?(v4f32|v2f64|v4i32|v2i64)")>;
 
 // ASIMD FP divide, D-form, F32
 def : InstRW<[A57Write_17cyc_1W], (instregex "FDIVv2f32")>;

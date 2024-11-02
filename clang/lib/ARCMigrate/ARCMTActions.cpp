@@ -39,7 +39,7 @@ ModifyAction::ModifyAction(std::unique_ptr<FrontendAction> WrappedAction)
 bool MigrateAction::BeginInvocation(CompilerInstance &CI) {
   if (arcmt::migrateWithTemporaryFiles(
           CI.getInvocation(), getCurrentInput(), CI.getPCHContainerOperations(),
-          CI.getDiagnostics().getClient(), MigrateDir, EmitPremigrationARCErros,
+          CI.getDiagnostics().getClient(), MigrateDir, EmitPremigrationARCErrors,
           PlistOut))
     return false; // errors, stop the action.
 
@@ -53,7 +53,7 @@ MigrateAction::MigrateAction(std::unique_ptr<FrontendAction> WrappedAction,
                              StringRef plistOut,
                              bool emitPremigrationARCErrors)
   : WrapperFrontendAction(std::move(WrappedAction)), MigrateDir(migrateDir),
-    PlistOut(plistOut), EmitPremigrationARCErros(emitPremigrationARCErrors) {
+    PlistOut(plistOut), EmitPremigrationARCErrors(emitPremigrationARCErrors) {
   if (MigrateDir.empty())
     MigrateDir = "."; // user current directory if none is given.
 }

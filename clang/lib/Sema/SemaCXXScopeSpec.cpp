@@ -121,7 +121,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
             // entering the context, and that can't happen in a SFINAE context.
             assert(!isSFINAEContext() &&
                    "partial specialization scope specifier in SFINAE context?");
-            if (!hasVisibleDeclaration(PartialSpec))
+            if (!hasReachableDefinition(PartialSpec))
               diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
                                     MissingImportKind::PartialSpecialization,
                                     /*Recover*/true);
@@ -243,8 +243,8 @@ bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
   if (EnumD->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasVisibleDefinition(EnumD, &SuggestedDef,
-                              /*OnlyNeedComplete*/false)) {
+    if (!hasReachableDefinition(EnumD, &SuggestedDef,
+                                /*OnlyNeedComplete*/ false)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.
       bool TreatAsComplete = !isSFINAEContext();
@@ -828,10 +828,14 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   }
 
   if (!Found.empty()) {
-    if (TypeDecl *TD = Found.getAsSingle<TypeDecl>())
+    if (TypeDecl *TD = Found.getAsSingle<TypeDecl>()) {
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
           << Context.getTypeDeclType(TD) << getLangOpts().CPlusPlus;
-    else {
+    } else if (Found.getAsSingle<TemplateDecl>()) {
+      ParsedType SuggestedType;
+      DiagnoseUnknownTypeName(IdInfo.Identifier, IdInfo.IdentifierLoc, S, &SS,
+                              SuggestedType);
+    } else {
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
           << IdInfo.Identifier << getLangOpts().CPlusPlus;
       if (NamedDecl *ND = Found.getAsSingle<NamedDecl>())
@@ -850,7 +854,6 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 
 bool Sema::ActOnCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool EnteringContext, CXXScopeSpec &SS,
-                                       bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
   if (SS.isInvalid())
@@ -928,10 +931,9 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
     // Handle a dependent template specialization for which we cannot resolve
     // the template name.
     assert(DTN->getQualifier() == SS.getScopeRep());
-    QualType T = Context.getDependentTemplateSpecializationType(ETK_None,
-                                                          DTN->getQualifier(),
-                                                          DTN->getIdentifier(),
-                                                                TemplateArgs);
+    QualType T = Context.getDependentTemplateSpecializationType(
+        ETK_None, DTN->getQualifier(), DTN->getIdentifier(),
+        TemplateArgs.arguments());
 
     // Create source-location information for this type.
     TypeLocBuilder Builder;

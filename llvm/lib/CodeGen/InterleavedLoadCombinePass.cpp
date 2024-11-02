@@ -171,10 +171,10 @@ class Polynomial {
   };
 
   /// Number of Error Bits e
-  unsigned ErrorMSBs;
+  unsigned ErrorMSBs = (unsigned)-1;
 
   /// Value
-  Value *V;
+  Value *V = nullptr;
 
   /// Coefficient B
   SmallVector<std::pair<BOps, APInt>, 4> B;
@@ -183,7 +183,7 @@ class Polynomial {
   APInt A;
 
 public:
-  Polynomial(Value *V) : ErrorMSBs((unsigned)-1), V(V) {
+  Polynomial(Value *V) : V(V) {
     IntegerType *Ty = dyn_cast<IntegerType>(V->getType());
     if (Ty) {
       ErrorMSBs = 0;
@@ -193,12 +193,12 @@ public:
   }
 
   Polynomial(const APInt &A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(nullptr), A(A) {}
+      : ErrorMSBs(ErrorMSBs), A(A) {}
 
   Polynomial(unsigned BitWidth, uint64_t A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(nullptr), A(BitWidth, A) {}
+      : ErrorMSBs(ErrorMSBs), A(BitWidth, A) {}
 
-  Polynomial() : ErrorMSBs((unsigned)-1), V(nullptr) {}
+  Polynomial() = default;
 
   /// Increment and clamp the number of undefined bits.
   void incErrorMSBs(unsigned amt) {
@@ -528,8 +528,8 @@ public:
     if (B.size() != o.B.size())
       return false;
 
-    auto ob = o.B.begin();
-    for (auto &b : B) {
+    auto *ob = o.B.begin();
+    for (const auto &b : B) {
       if (b != *ob)
         return false;
       ob++;
@@ -1154,7 +1154,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   // Test if all participating instruction will be dead after the
   // transformation. If intermediate results are used, no performance gain can
   // be expected. Also sum the cost of the Instructions beeing left dead.
-  for (auto &I : Is) {
+  for (const auto &I : Is) {
     // Compute the old cost
     InstructionCost += TTI.getInstructionCost(I, CostKind);
 
@@ -1182,7 +1182,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   // that the corresponding defining access dominates first LI. This guarantees
   // that there are no aliasing stores in between the loads.
   auto FMA = MSSA.getMemoryAccess(First);
-  for (auto LI : LIs) {
+  for (auto *LI : LIs) {
     auto MADef = MSSA.getMemoryAccess(LI)->getDefiningAccess();
     if (!MSSA.dominates(MADef, FMA))
       return false;
@@ -1224,7 +1224,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   auto MSSAU = MemorySSAUpdater(&MSSA);
   MemoryUse *MSSALoad = cast<MemoryUse>(MSSAU.createMemoryAccessBefore(
       LI, nullptr, MSSA.getMemoryAccess(InsertionPoint)));
-  MSSAU.insertUse(MSSALoad);
+  MSSAU.insertUse(MSSALoad, /*RenameUses=*/ true);
 
   // Create the final SVIs and replace all uses.
   int i = 0;

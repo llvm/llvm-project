@@ -15,32 +15,32 @@ define i32 @test_bswap(i32 %a) nounwind {
   ret i32 %tmp4
 }
 
-define void @powi(double %V, double *%P) {
+define void @powi(double %V, ptr%P) {
 ; CHECK-LABEL: @powi(
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile double [[V:%.*]], double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double [[V:%.*]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.powi.f64.i32(double %V, i32 0) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
 
   %C = tail call double @llvm.powi.f64.i32(double %V, i32 1) nounwind
-  store volatile double %C, double* %P
+  store volatile double %C, ptr %P
 
   ret void
 }
 
-define void @powi_i16(float %V, float *%P) {
+define void @powi_i16(float %V, ptr%P) {
 ; CHECK-LABEL: @powi_i16(
-; CHECK-NEXT:    store volatile float 1.000000e+00, float* [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile float [[V:%.*]], float* [[P]], align 4
+; CHECK-NEXT:    store volatile float 1.000000e+00, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile float [[V:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call float @llvm.powi.f32.i16(float %V, i16 0) nounwind
-  store volatile float %B, float* %P
+  store volatile float %B, ptr %P
 
   %C = tail call float @llvm.powi.f32.i16(float %V, i16 1) nounwind
-  store volatile float %C, float* %P
+  store volatile float %C, ptr %P
 
   ret void
 }

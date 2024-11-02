@@ -97,7 +97,7 @@ def MIMG {
 class mimgopc <int gfx11, int gfx10m, int vi = gfx10m, int si = gfx10m> {
   field bits<8> GFX11 = gfx11;
   field bits<8> GFX10M = gfx10m; // GFX10minus for all but atomics
-  field bits<8> VI = vi; // VI is only used for atomic instructions
+  field bits<8> VI = vi; // VI is only used for atomic/sampler/gather instructions
   field bits<8> SI = si; // SI is only used for atomic instructions
   bit HAS_GFX11 = !ne(gfx11, MIMG.NOP);
   bit HAS_GFX10M = !ne(gfx10m, MIMG.NOP);
@@ -872,7 +872,7 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0>
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
                            RegisterClass src_rc, string dns="">
-  : MIMG_gfx6789 <op.GFX10M, (outs dst_rc:$vdata), dns> {
+  : MIMG_gfx6789 <op.VI, (outs dst_rc:$vdata), dns> {
   let InOperandList = !con((ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
@@ -981,15 +981,19 @@ class MIMGAddrSizes_dw_range<list<int> range> {
   int Max = !if(!empty(!tail(range)), Min, !head(!tail(range)));
 }
 
-class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample> {
+class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16> {
   // List of all possible numbers of address words, taking all combinations of
   // A16 and image dimension into account (note: no MSAA, since this is for
   // sample/gather ops).
   list<int> AllNumAddrWords =
     !foreach(dw, !if(sample.Gradients,
-                     !if(!eq(sample.LodOrClamp, ""),
-                         [2, 3, 4, 5, 6, 7, 8, 9],
-                         [2, 3, 4, 5, 6, 7, 8, 9, 10]),
+                     !if(isG16,
+                         !if(!eq(sample.LodOrClamp, ""),
+                             [2, 3, 4, 5, 6, 7],
+                             [2, 3, 4, 5, 6, 7, 8]),
+                         !if(!eq(sample.LodOrClamp, ""),
+                             [2, 3, 4, 5, 6, 7, 8, 9],
+                             [2, 3, 4, 5, 6, 7, 8, 9, 10])),
                      !if(!eq(sample.LodOrClamp, ""),
                          [1, 2, 3],
                          [1, 2, 3, 4])),
@@ -1028,8 +1032,8 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample> {
 multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
                                     AMDGPUSampleVariant sample, RegisterClass dst_rc,
                                     bit enableDisasm = 0,
-                                    bit ExtendedImageInst = 1> {
-  foreach addr = MIMG_Sampler_AddrSizes<sample>.MachineInstrs in {
+                                    bit ExtendedImageInst = 1, bit isG16 = 0> {
+  foreach addr = MIMG_Sampler_AddrSizes<sample, isG16>.MachineInstrs in {
     let VAddrDwords = addr.NumWords in {
       if op.HAS_GFX10M then {
         def _V # addr.NumWords
@@ -1051,7 +1055,7 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
     }
   }
 
-  foreach addr = MIMG_Sampler_AddrSizes<sample>.NSAInstrs in {
+  foreach addr = MIMG_Sampler_AddrSizes<sample, isG16>.NSAInstrs in {
     let VAddrDwords = addr.NumWords in {
       if op.HAS_GFX10M then {
         def _V # addr.NumWords # _nsa_gfx10
@@ -1087,15 +1091,15 @@ multiclass MIMG_Sampler <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME), WQM = wqm,
       mayLoad = !not(isGetLod) in {
     let VDataDwords = 1 in
-    defm _V1 : MIMG_Sampler_Src_Helper<op, asm, sample, VGPR_32, 1, ExtendedImageInst>;
+    defm _V1 : MIMG_Sampler_Src_Helper<op, asm, sample, VGPR_32, 1, ExtendedImageInst, isG16>;
     let VDataDwords = 2 in
-    defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_64, 0, ExtendedImageInst>;
+    defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_64, 0, ExtendedImageInst, isG16>;
     let VDataDwords = 3 in
-    defm _V3 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_96, 0, ExtendedImageInst>;
+    defm _V3 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_96, 0, ExtendedImageInst, isG16>;
     let VDataDwords = 4 in
-    defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128, 0, ExtendedImageInst>;
+    defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128, 0, ExtendedImageInst, isG16>;
     let VDataDwords = 5 in
-    defm _V5 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_160, 0, ExtendedImageInst>;
+    defm _V5 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_160, 0, ExtendedImageInst, isG16>;
   }
 }
 
@@ -1325,7 +1329,9 @@ defm IMAGE_GATHER4_C_L_O        : MIMG_Gather <mimgopc<MIMG.NOP, 0x5c>, AMDGPUSa
 defm IMAGE_GATHER4_C_B_O        : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x5d>, AMDGPUSample_c_b_o>;
 defm IMAGE_GATHER4_C_B_CL_O     : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x5e>, AMDGPUSample_c_b_cl_o>;
 defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x5f>, AMDGPUSample_c_lz_o>;
-//defm IMAGE_GATHER4H             : MIMG_Gather_WQM <mimgopc<0x90, 0x61>, ?>;
+
+let SubtargetPredicate = isGFX9Plus in
+defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x61, 0x42>, AMDGPUSample, 1, "image_gather4h">;
 
 defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
 
@@ -1361,7 +1367,7 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, 0xef>, AMDGPUS
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 
-let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_BEncoding] in
+let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_AEncoding] in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
 let OtherPredicates = [HasGFX10_AEncoding] in

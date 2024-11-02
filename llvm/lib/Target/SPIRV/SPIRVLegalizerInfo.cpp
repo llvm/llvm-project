@@ -145,6 +145,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
       .legalIf(all(typeInSet(0, allWritablePtrs), typeInSet(1, allPtrs)));
 
+  getActionDefinitionsBuilder(G_MEMSET).legalIf(
+      all(typeInSet(0, allWritablePtrs), typeInSet(1, allIntScalars)));
+
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
       .legalForCartesianProduct(allPtrs, allPtrs);
 
@@ -223,8 +226,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Pointer-handling.
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
-  // Control-flow.
-  getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
+  // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
 
   getActionDefinitionsBuilder({G_FPOW,
                                G_FEXP,
@@ -254,6 +257,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_FPOWI).legalForCartesianProduct(
       allFloatScalarsAndVectors, allIntScalarsAndVectors);
+
+  if (ST.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
+    getActionDefinitionsBuilder(G_FLOG10).legalFor(allFloatScalarsAndVectors);
+
+    getActionDefinitionsBuilder(
+        {G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTLZ, G_CTLZ_ZERO_UNDEF})
+        .legalForCartesianProduct(allIntScalarsAndVectors,
+                                  allIntScalarsAndVectors);
+
+    // Struct return types become a single scalar, so cannot easily legalize.
+    getActionDefinitionsBuilder({G_SMULH, G_UMULH}).alwaysLegal();
+  }
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

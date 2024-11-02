@@ -9,8 +9,6 @@ from lldbsuite.test.decorators import *
 
 class LongTypesTestCase(AbstractBase.GenericTester):
 
-    mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
     def test_long_type(self):
         """Test that long-type variables are displayed correctly."""
         self.build_and_run('long.cpp', ['long'])

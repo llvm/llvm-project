@@ -128,7 +128,7 @@ OPTIONS
  Do not output any ``.gcov`` files. Summary information is still
  displayed.
 
-.. option:: -o=<DIR|FILE>, --object-directory=<DIR>, --object-file=<FILE>
+.. option:: -o <DIR|FILE>, --object-directory=<DIR>, --object-file=<FILE>
 
  Find objects in DIR or based on FILE's path. If you specify a particular
  object file, the coverage data files are expected to have the same base name
@@ -150,7 +150,7 @@ OPTIONS
  Only dump files with relative paths or absolute paths with the prefix specified
  by ``-s``.
 
-.. option:: -s=<string>
+.. option:: -s <string>
 
  Source prefix to elide.
 
@@ -270,13 +270,6 @@ OPTIONS
  Show code coverage only for functions listed in the given file. Each line in
  the file should start with `allowlist_fun:`, immediately followed by the name
  of the function to accept. This name can be a wildcard expression.
-
-.. option:: -name-whitelist=<FILE>
-
- Show code coverage only for functions listed in the given file. Each line in
- the file should start with `whitelist_fun:`, immediately followed by the name
- of the function to accept. This name can be a wildcard expression. This option
- will be deprecated for `-name-allowlist=<FILE>` in future releases.
 
 .. option:: -name-regex=<PATTERN>
 

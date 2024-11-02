@@ -27,6 +27,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 
+#include <cmath>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "lower-expect-intrinsic"
@@ -164,7 +166,7 @@ static void handlePhiDef(CallInst *Expect) {
   // Executes the recorded operations on input 'Value'.
   auto ApplyOperations = [&](const APInt &Value) {
     APInt Result = Value;
-    for (auto Op : llvm::reverse(Operations)) {
+    for (auto *Op : llvm::reverse(Operations)) {
       switch (Op->getOpcode()) {
       case Instruction::Xor:
         Result ^= cast<ConstantInt>(Op->getOperand(1))->getValue();

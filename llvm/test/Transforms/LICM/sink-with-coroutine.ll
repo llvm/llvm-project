@@ -16,11 +16,11 @@ define i64 @licm(i64 %n) #0 {
 ; CHECK-NEXT:    i8 0, label [[AWAIT_READY]]
 ; CHECK-NEXT:    ]
 ; CHECK:       await.ready:
-; CHECK-NEXT:    store i64 1, i64* [[P]], align 4
+; CHECK-NEXT:    store i64 1, ptr [[P]], align 4
 ; CHECK-NEXT:    [[T6:%.*]] = icmp ult i64 [[T5]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[T6]], label [[LOOP]], label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.coro.end(i8* null, i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.coro.end(ptr null, i1 false)
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:
@@ -39,14 +39,14 @@ loop:
   ]
 
 await.ready:
-  store i64 1, i64* %p
+  store i64 1, ptr %p
   %t6 = icmp ult i64 %t5, %n
   br i1 %t6, label %loop, label %bb2
 
 bb2:
-  %res = call i1 @llvm.coro.end(i8* null, i1 false)
+  %res = call i1 @llvm.coro.end(ptr null, i1 false)
   ret i64 0
 }
 
 declare i8  @llvm.coro.suspend(token, i1)
-declare i1  @llvm.coro.end(i8*, i1)
+declare i1  @llvm.coro.end(ptr, i1)

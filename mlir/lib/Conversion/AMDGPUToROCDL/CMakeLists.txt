@@ -1,5 +1,6 @@
 add_mlir_conversion_library(MLIRAMDGPUToROCDL
   AMDGPUToROCDL.cpp
+  Chipset.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/AMDGPUToROCDL
@@ -12,9 +13,9 @@ add_mlir_conversion_library(MLIRAMDGPUToROCDL
 
   LINK_LIBS PUBLIC
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
-  MLIRROCDLIR
-  MLIRAMDGPU
+  MLIRLLVMDialect
+  MLIRROCDLDialect
+  MLIRAMDGPUDialect
   MLIRPass
   MLIRTransforms
   )

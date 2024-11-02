@@ -1470,7 +1470,8 @@ define i64 @PR28745() {
 ; LE-LABEL: @PR28745(
 ; LE-NEXT:    ret i64 0
 ;
-  %b = zext i32 extractvalue ({ i32 } select (i1 icmp eq (i16 extractelement (<2 x i16> bitcast (<1 x i32> <i32 1> to <2 x i16>), i32 0), i16 0), { i32 } { i32 1 }, { i32 } zeroinitializer), 0) to i64
+  %e = extractvalue { i32 } select (i1 icmp eq (i16 extractelement (<2 x i16> bitcast (<1 x i32> <i32 1> to <2 x i16>), i32 0), i16 0), { i32 } { i32 1 }, { i32 } zeroinitializer), 0
+  %b = zext i32 %e to i64
   ret i64 %b
 }
 

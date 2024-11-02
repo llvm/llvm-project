@@ -11,9 +11,11 @@
 # RUN: echo '#!/bin/sh' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ "$0" = "%t.dir/bin/my_driver.sh" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'args="$*"' >> %t.dir/bin/my_driver.sh
+# Check that clangd preserves certain flags like `-nostdinc` from
+# original invocation in compile_commands.json.
 # RUN: echo '[ -z "${args##*"-nostdinc"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ -z "${args##*"-isysroot=/isysroot"*}" ] || exit' >> %t.dir/bin/my_driver.sh
-# RUN: echo 'echo " $* " | grep " --sysroot /my/sysroot/path " || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"--sysroot /my/sysroot/path"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'echo line to ignore >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "Target: arm-linux-gnueabihf\r\n" >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "#include <...> search starts here:\r\n" >&2' >> %t.dir/bin/my_driver.sh
@@ -38,7 +40,9 @@
 # RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %t.test.1 > %t.test
 
 # Bless the mock driver we've just created so that clangd can execute it.
-# RUN: clangd -lit-test -query-driver="**.test,**.sh" < %t.test | FileCheck -strict-whitespace %t.test
+# Note: include clangd's stderr in the FileCheck input with "2>&1" so that we
+# can match output lines like "ASTWorker building file"
+# RUN: clangd -lit-test -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
 ---
 {
@@ -53,10 +57,25 @@
     }
   }
 }
+# Look for the "ASTWorker building file" line so that the subsequent diagnostics
+# that are matches are for the C++ source file and not a config file.
+# CHECK: ASTWorker building file
 # CHECK:   "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:   "params": {
 # CHECK-NEXT:     "diagnostics": [],
+# CHECK-NEXT:     "uri": "file://{{.*}}/the-file.cpp",
 ---
 {"jsonrpc":"2.0","id":10000,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}
+
+# Generate a different compile_commands.json which does not point to the mock driver
+# RUN: echo '[{"directory": "%/t.dir", "command": "gcc the-file.cpp -nostdinc --sysroot /my/sysroot/path -isysroot=/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
+
+# Generate a clangd config file which points to the mock driver instead
+# RUN: echo 'CompileFlags:' > %t.dir/.clangd
+# RUN: echo '  Compiler: my_driver.sh' >> %t.dir/.clangd
+
+# Run clangd a second time, to make sure it picks up the driver name from the config file
+# Note, we need to pass -enable-config because -lit-test otherwise disables it
+# RUN: clangd -lit-test -enable-config -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test

@@ -28,7 +28,7 @@ mlir::func::FuncOp fir::factory::getLlvmMemcpy(fir::FirOpBuilder &builder) {
   auto memcpyTy =
       mlir::FunctionType::get(builder.getContext(), args, llvm::None);
   return builder.addNamedFunction(builder.getUnknownLoc(),
-                                  "llvm.memcpy.p0i8.p0i8.i64", memcpyTy);
+                                  "llvm.memcpy.p0.p0.i64", memcpyTy);
 }
 
 mlir::func::FuncOp fir::factory::getLlvmMemmove(fir::FirOpBuilder &builder) {
@@ -38,7 +38,7 @@ mlir::func::FuncOp fir::factory::getLlvmMemmove(fir::FirOpBuilder &builder) {
   auto memmoveTy =
       mlir::FunctionType::get(builder.getContext(), args, llvm::None);
   return builder.addNamedFunction(builder.getUnknownLoc(),
-                                  "llvm.memmove.p0i8.p0i8.i64", memmoveTy);
+                                  "llvm.memmove.p0.p0.i64", memmoveTy);
 }
 
 mlir::func::FuncOp fir::factory::getLlvmMemset(fir::FirOpBuilder &builder) {
@@ -48,7 +48,7 @@ mlir::func::FuncOp fir::factory::getLlvmMemset(fir::FirOpBuilder &builder) {
   auto memsetTy =
       mlir::FunctionType::get(builder.getContext(), args, llvm::None);
   return builder.addNamedFunction(builder.getUnknownLoc(),
-                                  "llvm.memset.p0i8.p0i8.i64", memsetTy);
+                                  "llvm.memset.p0.p0.i64", memsetTy);
 }
 
 mlir::func::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {

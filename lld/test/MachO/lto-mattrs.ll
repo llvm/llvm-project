@@ -4,14 +4,15 @@
 ;; Verify that LTO behavior can be tweaked using -mattr.
 
 ; RUN: %lld -mcpu haswell -mllvm -mattr=+fma %t.o -o %t.dylib -dylib
-; RUN: llvm-objdump -d --section="__text" --no-leading-addr --no-show-raw-insn %t.dylib | FileCheck %s --check-prefix=FMA
+; RUN: llvm-objdump --no-print-imm-hex -d --section="__text" --no-leading-addr --no-show-raw-insn %t.dylib | FileCheck %s --check-prefix=FMA
 
 ; RUN: %lld -mcpu haswell -mllvm -mattr=-fma %t.o -o %t.dylib -dylib
-; RUN: llvm-objdump -d --section="__text" --no-leading-addr --no-show-raw-insn %t.dylib | FileCheck %s --check-prefix=NO-FMA
+; RUN: llvm-objdump --no-print-imm-hex -d --section="__text" --no-leading-addr --no-show-raw-insn %t.dylib | FileCheck %s --check-prefix=NO-FMA
 
 ; FMA:      <_foo>:
 ; FMA-NEXT: vrcpss       %xmm0, %xmm0, %xmm1
-; FMA-NEXT: vfmsub213ss  [[#]](%rip), %xmm1, %xmm0
+; FMA-NEXT: vfmsub213ss  [[#]](%rip), %xmm1, %xmm0 ## xmm0 = (xmm1 * xmm0) - mem
+; FMA-NEXT:                                        ## 0x
 ; FMA-NEXT: vfnmadd132ss %xmm1, %xmm1, %xmm0
 ; FMA-NEXT: retq
 

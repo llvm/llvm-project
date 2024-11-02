@@ -57,12 +57,32 @@ tablegen("IntrinsicsBPF") {
   td_file = "Intrinsics.td"
 }
 
+tablegen("IntrinsicsDirectX") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsDirectX.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=dx",
+  ]
+  td_file = "Intrinsics.td"
+}
+
 tablegen("IntrinsicsHexagon") {
   visibility = [ ":public_tablegen" ]
   output_name = "IntrinsicsHexagon.h"
   args = [
     "-gen-intrinsic-enums",
     "-intrinsic-prefix=hexagon",
+  ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicsLoongArch") {
+  visibility = [ ":public_tablegen" ]
+  output_name = "IntrinsicsLoongArch.h"
+  args = [
+    "-gen-intrinsic-enums",
+    "-intrinsic-prefix=loongarch",
   ]
   td_file = "Intrinsics.td"
 }
@@ -185,7 +205,9 @@ group("public_tablegen") {
     ":IntrinsicsAMDGPU",
     ":IntrinsicsARM",
     ":IntrinsicsBPF",
+    ":IntrinsicsDirectX",
     ":IntrinsicsHexagon",
+    ":IntrinsicsLoongArch",
     ":IntrinsicsMips",
     ":IntrinsicsNVPTX",
     ":IntrinsicsPowerPC",

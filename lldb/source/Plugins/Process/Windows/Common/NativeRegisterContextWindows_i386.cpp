@@ -37,8 +37,8 @@ static const uint32_t g_gpr_regnums_i386[] = {
 };
 
 static const RegisterSet g_reg_sets_i386[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_i386) - 1, g_gpr_regnums_i386},
+    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_i386) - 1,
+     g_gpr_regnums_i386},
 };
 
 enum { k_num_register_sets = 1 };

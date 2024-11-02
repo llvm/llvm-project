@@ -4,4 +4,4 @@ struct Foo {
   static constexpr auto Bar = ;
 };
 
-// CHECK: -VarDecl {{.*}} invalid Bar 'const auto' static constexpr
+// CHECK: -VarDecl {{.*}} invalid Bar 'const auto' static {{(inline )?}}constexpr

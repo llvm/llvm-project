@@ -67,6 +67,10 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
       ArgName = InDI->getArgNameStr(i-NumDefs);
     }
 
+    DagInit *SubArgDag = dyn_cast<DagInit>(ArgInit);
+    if (SubArgDag)
+      ArgInit = SubArgDag->getOperator();
+
     DefInit *Arg = dyn_cast<DefInit>(ArgInit);
     if (!Arg)
       PrintFatalError(R->getLoc(), "Illegal operand for the '" + R->getName() +
@@ -132,6 +136,36 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
                           Twine(i) +
                           " has the same name as a previous operand!");
 
+    if (SubArgDag) {
+      if (SubArgDag->getNumArgs() != NumOps) {
+        PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
+                                         "', operand #" + Twine(i) + " has " +
+                                         Twine(SubArgDag->getNumArgs()) +
+                                         " sub-arg names, expected " +
+                                         Twine(NumOps) + ".");
+      }
+
+      for (unsigned j = 0; j < NumOps; ++j) {
+        if (!isa<UnsetInit>(SubArgDag->getArg(j)))
+          PrintFatalError(R->getLoc(),
+                          "In instruction '" + R->getName() + "', operand #" +
+                              Twine(i) + " sub-arg #" + Twine(j) +
+                              " has unexpected operand (expected only $name).");
+
+        StringRef SubArgName = SubArgDag->getArgNameStr(j);
+        if (SubArgName.empty())
+          PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
+                                           "', operand #" + Twine(i) +
+                                           " has no name!");
+        if (!OperandNames.insert(std::string(SubArgName)).second)
+          PrintFatalError(R->getLoc(),
+                          "In instruction '" + R->getName() + "', operand #" +
+                              Twine(i) + " sub-arg #" + Twine(j) +
+                              " has the same name as a previous operand!");
+        SubOpAliases[SubArgName] = std::make_pair(MIOperandNo, j);
+      }
+    }
+
     OperandList.emplace_back(
         Rec, std::string(ArgName), std::string(PrintMethod),
         std::string(EncoderMethod), OperandNamespace + "::" + OperandType,
@@ -175,6 +209,17 @@ bool CGIOperandList::hasOperandNamed(StringRef Name, unsigned &OpIdx) const {
   return false;
 }
 
+bool CGIOperandList::hasSubOperandAlias(
+    StringRef Name, std::pair<unsigned, unsigned> &SubOp) const {
+  assert(!Name.empty() && "Cannot search for operand with no name!");
+  auto SubOpIter = SubOpAliases.find(Name);
+  if (SubOpIter != SubOpAliases.end()) {
+    SubOp = SubOpIter->second;
+    return true;
+  }
+  return false;
+}
+
 std::pair<unsigned,unsigned>
 CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
   if (Op.empty() || Op[0] != '$')
@@ -195,7 +240,21 @@ CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
     OpName = OpName.substr(0, DotIdx);
   }
 
-  unsigned OpIdx = getOperandNamed(OpName);
+  unsigned OpIdx;
+
+  if (std::pair<unsigned, unsigned> SubOp; hasSubOperandAlias(OpName, SubOp)) {
+    // Found a name for a piece of an operand, just return it directly.
+    if (!SubOpName.empty()) {
+      PrintFatalError(
+          TheDef->getLoc(),
+          TheDef->getName() +
+              ": Cannot use dotted suboperand name within suboperand '" +
+              OpName + "'");
+    }
+    return SubOp;
+  }
+
+  OpIdx = getOperandNamed(OpName);
 
   if (SubOpName.empty()) {  // If no suboperand name was specified:
     // If one was needed, throw.
@@ -511,9 +570,9 @@ FlattenAsmStringVariants(StringRef Cur, unsigned Variant) {
   return Res;
 }
 
-bool CodeGenInstruction::isOperandImpl(unsigned i,
+bool CodeGenInstruction::isOperandImpl(StringRef OpListName, unsigned i,
                                        StringRef PropertyName) const {
-  DagInit *ConstraintList = TheDef->getValueAsDag("InOperandList");
+  DagInit *ConstraintList = TheDef->getValueAsDag(OpListName);
   if (!ConstraintList || i >= ConstraintList->getNumArgs())
     return false;
 

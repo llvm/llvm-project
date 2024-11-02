@@ -5,7 +5,7 @@
 define <8 x i8> @load_factor2(<16 x i8>* %ptr) {
 ; CHECK-LABEL: load_factor2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg2e8.v v7, (a0)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -19,7 +19,7 @@ define <8 x i8> @load_factor2(<16 x i8>* %ptr) {
 define <8 x i8> @load_factor3(<24 x i8>* %ptr) {
 ; CHECK-LABEL: load_factor3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e8.v v6, (a0)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v6_v7_v8
 ; CHECK-NEXT:    ret
@@ -34,7 +34,7 @@ define <8 x i8> @load_factor3(<24 x i8>* %ptr) {
 define <8 x i8> @load_factor4(<32 x i8>* %ptr) {
 ; CHECK-LABEL: load_factor4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e8.v v5, (a0)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v5_v6_v7_v8
 ; CHECK-NEXT:    ret
@@ -50,7 +50,7 @@ define <8 x i8> @load_factor4(<32 x i8>* %ptr) {
 define <8 x i8> @load_factor5(<40 x i8>* %ptr) {
 ; CHECK-LABEL: load_factor5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg5e8.v v4, (a0)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret
@@ -67,7 +67,7 @@ define <8 x i8> @load_factor5(<40 x i8>* %ptr) {
 define <8 x i8> @load_factor6(<48 x i8>* %ptr) {
 ; CHECK-LABEL: load_factor6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg6e8.v v3, (a0)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v3_v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret
@@ -85,7 +85,7 @@ define <8 x i8> @load_factor6(<48 x i8>* %ptr) {
 define <8 x i8> @load_factor7(<56 x i8>* %ptr) {
 ; CHECK-LABEL: load_factor7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg7e8.v v2, (a0)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v2_v3_v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret
@@ -104,7 +104,7 @@ define <8 x i8> @load_factor7(<56 x i8>* %ptr) {
 define <8 x i8> @load_factor8(<64 x i8>* %ptr) {
 ; CHECK-LABEL: load_factor8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e8.v v1, (a0)
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v1_v2_v3_v4_v5_v6_v7_v8
 ; CHECK-NEXT:    ret

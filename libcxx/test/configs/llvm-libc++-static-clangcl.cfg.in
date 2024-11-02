@@ -11,7 +11,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib -L %{lib} -llibc++ -lmsvcrt -lmsvcprt -loldnames'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env PATH=%{lib} -- '
+    '%{executor} --execdir %T -- '
 ))
 
 import os, site

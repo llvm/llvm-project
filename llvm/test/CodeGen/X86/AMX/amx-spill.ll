@@ -28,30 +28,25 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl $buf, %r8d
+; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
-; CHECK-NEXT:    movabsq $64, %rcx
-; CHECK-NEXT:    tilestored %tmm1, -64(%rsp,%rcx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm3
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm4
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm2
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm5
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm0
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
+; CHECK-NEXT:    movabsq $64, %r8
+; CHECK-NEXT:    tilestored %tmm1, -64(%rsp,%r8) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm3
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm4
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm2
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm5
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm0
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm6
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm7
-; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
-; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movl $buf2, %ecx
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm6
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm7
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
-; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    tdpbssd %tmm7, %tmm6, %tmm1
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tileloadd -64(%rsp,%rax), %tmm7 # 1024-byte Folded Reload
@@ -65,26 +60,26 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %6 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %7 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %8 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %9 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %10 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
+  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, ptr @buf, i64 32)
+  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, ptr @buf, i64 32)
+  %6 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, ptr @buf, i64 32)
+  %7 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, ptr @buf, i64 32)
+  %8 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, ptr @buf, i64 32)
+  %9 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, ptr @buf, i64 32)
+  %10 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %2, i16 %2, ptr @buf, i64 32)
   %11 = icmp eq i32 %0, 0
   br i1 %11, label %16, label %12
 
 12:                                               ; preds = %3
-  %13 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %1, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %14 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %15 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
+  %13 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %1, ptr @buf, i64 32)
+  %14 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, ptr @buf, i64 32)
+  %15 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, ptr @buf, i64 32)
   br label %20
 
 16:                                               ; preds = %3
-  %17 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %1, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
-  %18 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
-  %19 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
+  %17 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %1, ptr @buf2, i64 32)
+  %18 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, ptr @buf2, i64 32)
+  %19 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %1, i16 %2, ptr @buf2, i64 32)
   br label %20
 
 20:                                               ; preds = %16, %12
@@ -95,10 +90,10 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
   %25 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %1, i16 %2, i16 %2, x86_amx %6, x86_amx %24, x86_amx %5)
   %26 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %1, i16 %2, i16 %2, x86_amx %8, x86_amx %25, x86_amx %7)
   %27 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %2, i16 %2, i16 %2, x86_amx %10, x86_amx %26, x86_amx %9)
-  tail call void @llvm.x86.tilestored64.internal(i16 %2, i16 %2, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %27)
+  tail call void @llvm.x86.tilestored64.internal(i16 %2, i16 %2, ptr @buf, i64 32, x86_amx %27)
   ret void
 }
 
-declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)

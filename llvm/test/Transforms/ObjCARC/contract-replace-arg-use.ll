@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc-contract -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
 declare i8* @foo1()

@@ -113,7 +113,7 @@ declare void @_ZdlPv(i8*) local_unnamed_addr #8
 ; Function Attrs: argmemonly nounwind readonly
 declare i8* @llvm.coro.free(token, i8* nocapture readonly) #1
 
-attributes #0 = { noinline ssp uwtable mustprogress "coroutine.presplit"="1" "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
+attributes #0 = { noinline ssp uwtable mustprogress presplitcoroutine "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
 attributes #1 = { argmemonly nounwind readonly }
 attributes #2 = { nounwind }
 attributes #3 = { nobuiltin nofree allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }

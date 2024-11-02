@@ -766,19 +766,32 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__algorithm/search.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__iterator/back_insert_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__locale>
+#include <__memory_resource/polymorphic_allocator.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <compare>
+#include <cstring>
 #include <deque>
-#include <initializer_list>
-#include <iterator>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <version>
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [re.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -817,7 +830,7 @@ enum syntax_option_type
     multiline  = 1 << 10
 };
 
-inline _LIBCPP_CONSTEXPR
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR
 syntax_option_type __get_grammar(syntax_option_type __g)
 {
 #ifdef _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
@@ -990,8 +1003,8 @@ class _LIBCPP_EXCEPTION_ABI regex_error
 public:
     explicit regex_error(regex_constants::error_type __ecode);
     regex_error(const regex_error&) _NOEXCEPT = default;
-    virtual ~regex_error() _NOEXCEPT;
-     _LIBCPP_INLINE_VISIBILITY
+    ~regex_error() _NOEXCEPT override;
+    _LIBCPP_INLINE_VISIBILITY
     regex_constants::error_type code() const {return __code_;}
 };
 
@@ -1314,9 +1327,9 @@ regex_traits<_CharT>::isctype(char_type __c, char_class_type __m) const
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-bool __is_07(unsigned char c)
+bool __is_07(unsigned char __c)
 {
-    return (c & 0xF8u) ==
+    return (__c & 0xF8u) ==
 #if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
         0xF0;
 #else
@@ -1325,9 +1338,9 @@ bool __is_07(unsigned char c)
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-bool __is_89(unsigned char c)
+bool __is_89(unsigned char __c)
 {
-    return (c & 0xFEu) ==
+    return (__c & 0xFEu) ==
 #if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
         0xF8;
 #else
@@ -1336,12 +1349,12 @@ bool __is_89(unsigned char c)
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned char __to_lower(unsigned char c)
+unsigned char __to_lower(unsigned char __c)
 {
 #if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
-    return c & 0xBF;
+    return __c & 0xBF;
 #else
-    return c | 0x20;
+    return __c | 0x20;
 #endif
 }
 
@@ -1491,7 +1504,7 @@ public:
     explicit __owns_one_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual ~__owns_one_state();
+    ~__owns_one_state() override;
 };
 
 template <class _CharT>
@@ -2041,9 +2054,9 @@ __word_boundary<_CharT, _Traits>::__exec(__state& __s) const
 
 template <class _CharT>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-bool __is_eol(_CharT c)
+bool __is_eol(_CharT __c)
 {
-    return c == '\r' || c == '\n';
+    return __c == '\r' || __c == '\n';
 }
 
 template <class _CharT>
@@ -2180,7 +2193,7 @@ public:
     __match_any_but_newline(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    void __exec(__state&) const override;
 };
 
 template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<char>::__exec(__state&) const;
@@ -2732,12 +2745,7 @@ public:
 
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-             __is_cpp17_input_iterator  <_InputIterator>::value &&
-            !__is_cpp17_forward_iterator<_InputIterator>::value,
-            basic_regex&
-        >::type
+        typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value, basic_regex&>::type
         assign(_InputIterator __first, _InputIterator __last,
                             flag_type __f = regex_constants::ECMAScript)
         {
@@ -2952,7 +2960,7 @@ private:
         __parse_awk_escape(_ForwardIterator __first, _ForwardIterator __last,
                           basic_string<_CharT>* __str = nullptr);
 
-    bool __test_back_ref(_CharT c);
+    bool __test_back_ref(_CharT);
 
     _LIBCPP_INLINE_VISIBILITY
     void __push_l_anchor();
@@ -4771,9 +4779,9 @@ basic_regex<_CharT, _Traits>::__parse_egrep(_ForwardIterator __first,
 
 template <class _CharT, class _Traits>
 bool
-basic_regex<_CharT, _Traits>::__test_back_ref(_CharT c)
+basic_regex<_CharT, _Traits>::__test_back_ref(_CharT __c)
 {
-    unsigned __val = __traits_.value(c, 10);
+    unsigned __val = __traits_.value(__c, 10);
     if (__val >= 1 && __val <= 9)
     {
         if (__val > mark_count())
@@ -5721,7 +5729,7 @@ match_results<_BidirectionalIterator, _Allocator>::swap(match_results& __m)
 }
 
 template <class _BidirectionalIterator, class _Allocator>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const match_results<_BidirectionalIterator, _Allocator>& __x,
            const match_results<_BidirectionalIterator, _Allocator>& __y)
 {
@@ -6213,7 +6221,7 @@ regex_search(const basic_string<_Cp, _ST, _SA>&& __s,
 // regex_match
 
 template <class _BidirectionalIterator, class _Allocator, class _CharT, class _Traits>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 regex_match(_BidirectionalIterator __first, _BidirectionalIterator __last,
             match_results<_BidirectionalIterator, _Allocator>& __m,
             const basic_regex<_CharT, _Traits>& __e,
@@ -6726,7 +6734,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
 
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 regex_replace(_OutputIterator __output_iter,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e, const _CharT* __fmt,
@@ -6831,6 +6839,33 @@ regex_replace(const _CharT* __s,
 
 _LIBCPP_END_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr {
+template <class _BidirT>
+using match_results = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
+
+using cmatch  = match_results<const char*>;
+using smatch  = match_results<std::pmr::string::const_iterator>;
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wcmatch = match_results<const wchar_t*>;
+using wsmatch = match_results<std::pmr::wstring::const_iterator>;
+#endif
+} // namespace pmr
+_LIBCPP_END_NAMESPACE_STD
+#endif
+
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
+#  include <concepts>
+#  include <iosfwd>
+#  include <iterator>
+#  include <new>
+#  include <typeinfo>
+#  include <utility>
+#endif
 
 #endif // _LIBCPP_REGEX

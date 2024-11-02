@@ -1,7 +1,7 @@
 ; Induction variable pass is doing bad things with pointer induction vars, 
 ; trying to do arithmetic on them directly.
 ;
-; RUN: opt < %s -indvars
+; RUN: opt < %s -passes=indvars
 ;
 define void @test(i32 %A, i32 %S, i8* %S.upgrd.1) {
 ; <label>:0

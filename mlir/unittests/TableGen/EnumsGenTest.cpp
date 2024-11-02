@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 
 #include "gmock/gmock.h"
 
@@ -142,10 +141,10 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForPrimaryGroupBitEnum) {
 }
 
 TEST(EnumsGenTest, GeneratedOperator) {
-  EXPECT_TRUE(bitEnumContains(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3,
-                              BitEnumWithNone::Bit0));
-  EXPECT_FALSE(bitEnumContains(BitEnumWithNone::Bit0 & BitEnumWithNone::Bit3,
-                               BitEnumWithNone::Bit0));
+  EXPECT_TRUE(bitEnumContainsAll(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3,
+                                 BitEnumWithNone::Bit0));
+  EXPECT_FALSE(bitEnumContainsAll(BitEnumWithNone::Bit0 & BitEnumWithNone::Bit3,
+                                  BitEnumWithNone::Bit0));
 }
 
 TEST(EnumsGenTest, GeneratedSymbolToCustomStringFn) {

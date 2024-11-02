@@ -76,7 +76,11 @@ static lto::Config createConfig() {
     c.RelocModel = Reloc::Static;
   else
     c.RelocModel = Reloc::PIC_;
+#ifndef NDEBUG
+  c.DisableVerify = false;
+#else
   c.DisableVerify = true;
+#endif
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = config->ltoo;
   c.CPU = getCPUStr();

@@ -16,7 +16,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -56,7 +55,8 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     Private,  // sycl_private
     Generic,  // ptr32_sptr
     Generic,  // ptr32_uptr
-    Generic   // ptr64
+    Generic,  // ptr64
+    Generic,  // hlsl_groupshared
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
@@ -72,14 +72,15 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     Constant, // cuda_constant
     Local,    // cuda_shared
     // SYCL address space values for this map are dummy
-    Generic,  // sycl_global
-    Generic,  // sycl_global_device
-    Generic,  // sycl_global_host
-    Generic,  // sycl_local
-    Generic,  // sycl_private
-    Generic,  // ptr32_sptr
-    Generic,  // ptr32_uptr
-    Generic   // ptr64
+    Generic, // sycl_global
+    Generic, // sycl_global_device
+    Generic, // sycl_global_host
+    Generic, // sycl_local
+    Generic, // sycl_private
+    Generic, // ptr32_sptr
+    Generic, // ptr32_uptr
+    Generic, // ptr64
+    Generic, // hlsl_groupshared
 
 };
 } // namespace targets
@@ -234,7 +235,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot5-insts"] = true;
       Features["dot6-insts"] = true;
       Features["dot7-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX1013:
     case GK_GFX1010:
       Features["dl-insts"] = true;
@@ -250,30 +251,31 @@ bool AMDGPUTargetInfo::initFeatureMap(
       break;
     case GK_GFX940:
       Features["gfx940-insts"] = true;
-      LLVM_FALLTHROUGH;
+      Features["fp8-insts"] = true;
+      [[fallthrough]];
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX908:
       Features["dot3-insts"] = true;
       Features["dot4-insts"] = true;
       Features["dot5-insts"] = true;
       Features["dot6-insts"] = true;
       Features["mai-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX906:
       Features["dl-insts"] = true;
       Features["dot1-insts"] = true;
       Features["dot2-insts"] = true;
       Features["dot7-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX90C:
     case GK_GFX909:
     case GK_GFX904:
     case GK_GFX902:
     case GK_GFX900:
       Features["gfx9-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX810:
     case GK_GFX805:
     case GK_GFX803:
@@ -283,7 +285,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["s-memrealtime"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX705:
     case GK_GFX704:
     case GK_GFX703:
@@ -292,7 +294,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX700:
       Features["ci-insts"] = true;
       Features["flat-address-space"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX602:
     case GK_GFX601:
     case GK_GFX600:
@@ -418,8 +420,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__amdgcn_processor__",
                           Twine("\"") + Twine(CanonName) + Twine("\""));
       Builder.defineMacro("__amdgcn_target_id__",
-                          Twine("\"") + Twine(getTargetID().getValue()) +
-                              Twine("\""));
+                          Twine("\"") + Twine(*getTargetID()) + Twine("\""));
       for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
         auto Loc = OffloadArchFeatures.find(F);
         if (Loc != OffloadArchFeatures.end()) {
@@ -462,9 +463,13 @@ void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {
   // supported by AMDGPU. Therefore keep its own format for these two types.
   auto SaveLongDoubleFormat = LongDoubleFormat;
   auto SaveFloat128Format = Float128Format;
+  auto SaveLongDoubleWidth = LongDoubleWidth;
+  auto SaveLongDoubleAlign = LongDoubleAlign;
   copyAuxTarget(Aux);
   LongDoubleFormat = SaveLongDoubleFormat;
   Float128Format = SaveFloat128Format;
+  LongDoubleWidth = SaveLongDoubleWidth;
+  LongDoubleAlign = SaveLongDoubleAlign;
   // For certain builtin types support on the host target, claim they are
   // support to pass the compilation of the host code during the device-side
   // compilation.

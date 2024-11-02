@@ -1012,7 +1012,7 @@ private:
         I.getParent()->getFirstInsertionPt() == I.getParent()->end())
       return PI.setAborted(&I);
 
-    // TODO: We could use SimplifyInstruction here to fold PHINodes and
+    // TODO: We could use simplifyInstruction here to fold PHINodes and
     // SelectInsts. However, doing so requires to change the current
     // dead-operand-tracking mechanism. For instance, suppose neither loading
     // from %U nor %other traps. Then "load (select undef, %U, %other)" does not
@@ -1210,8 +1210,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   BasicBlock *BB = PN.getParent();
   Align MaxAlign;
   uint64_t APWidth = DL.getIndexTypeSizeInBits(PN.getType());
-  APInt MaxSize(APWidth, 0);
-  bool HaveLoad = false;
+  Type *LoadType = nullptr;
   for (User *U : PN.users()) {
     LoadInst *LI = dyn_cast<LoadInst>(U);
     if (!LI || !LI->isSimple())
@@ -1223,20 +1222,26 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     if (LI->getParent() != BB)
       return false;
 
+    if (LoadType) {
+      if (LoadType != LI->getType())
+        return false;
+    } else {
+      LoadType = LI->getType();
+    }
+
     // Ensure that there are no instructions between the PHI and the load that
     // could store.
     for (BasicBlock::iterator BBI(PN); &*BBI != LI; ++BBI)
       if (BBI->mayWriteToMemory())
         return false;
 
-    uint64_t Size = DL.getTypeStoreSize(LI->getType()).getFixedSize();
     MaxAlign = std::max(MaxAlign, LI->getAlign());
-    MaxSize = MaxSize.ult(Size) ? APInt(APWidth, Size) : MaxSize;
-    HaveLoad = true;
   }
 
-  if (!HaveLoad)
+  if (!LoadType)
     return false;
+
+  APInt LoadSize = APInt(APWidth, DL.getTypeStoreSize(LoadType).getFixedSize());
 
   // We can only transform this if it is safe to push the loads into the
   // predecessor blocks. The only thing to watch out for is that we can't put
@@ -1259,7 +1264,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, MaxSize, DL, TI))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize, DL, TI))
       continue;
 
     return false;
@@ -1847,6 +1852,34 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   return true;
 }
 
+/// Test whether a vector type is viable for promotion.
+///
+/// This implements the necessary checking for \c isVectorPromotionViable over
+/// all slices of the alloca for the given VectorType.
+static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
+                                        const DataLayout &DL) {
+  uint64_t ElementSize =
+      DL.getTypeSizeInBits(VTy->getElementType()).getFixedSize();
+
+  // While the definition of LLVM vectors is bitpacked, we don't support sizes
+  // that aren't byte sized.
+  if (ElementSize % 8)
+    return false;
+  assert((DL.getTypeSizeInBits(VTy).getFixedSize() % 8) == 0 &&
+         "vector size not a multiple of element size?");
+  ElementSize /= 8;
+
+  for (const Slice &S : P)
+    if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL))
+      return false;
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL))
+      return false;
+
+  return true;
+}
+
 /// Test whether the given alloca partitioning and range of slices can be
 /// promoted to a vector.
 ///
@@ -1939,31 +1972,8 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
     CandidateTys.resize(1);
   }
 
-  // Try each vector type, and return the one which works.
-  auto CheckVectorTypeForPromotion = [&](VectorType *VTy) {
-    uint64_t ElementSize =
-        DL.getTypeSizeInBits(VTy->getElementType()).getFixedSize();
-
-    // While the definition of LLVM vectors is bitpacked, we don't support sizes
-    // that aren't byte sized.
-    if (ElementSize % 8)
-      return false;
-    assert((DL.getTypeSizeInBits(VTy).getFixedSize() % 8) == 0 &&
-           "vector size not a multiple of element size?");
-    ElementSize /= 8;
-
-    for (const Slice &S : P)
-      if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL))
-        return false;
-
-    for (const Slice *S : P.splitSliceTails())
-      if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL))
-        return false;
-
-    return true;
-  };
   for (VectorType *VTy : CandidateTys)
-    if (CheckVectorTypeForPromotion(VTy))
+    if (checkVectorTypeForPromotion(P, VTy, DL))
       return VTy;
 
   return nullptr;
@@ -2733,10 +2743,9 @@ private:
     Type *SplatIntTy = Type::getIntNTy(VTy->getContext(), Size * 8);
     V = IRB.CreateMul(
         IRB.CreateZExt(V, SplatIntTy, "zext"),
-        ConstantExpr::getUDiv(
-            Constant::getAllOnesValue(SplatIntTy),
-            ConstantExpr::getZExt(Constant::getAllOnesValue(V->getType()),
-                                  SplatIntTy)),
+        IRB.CreateUDiv(Constant::getAllOnesValue(SplatIntTy),
+                       IRB.CreateZExt(Constant::getAllOnesValue(V->getType()),
+                                      SplatIntTy)),
         "isplat");
     return V;
   }
@@ -2886,7 +2895,7 @@ private:
     assert((IsDest && II.getRawDest() == OldPtr) ||
            (!IsDest && II.getRawSource() == OldPtr));
 
-    MaybeAlign SliceAlign = getSliceAlign();
+    Align SliceAlign = getSliceAlign();
 
     // For unsplit intrinsics, we simply modify the source and destination
     // pointers in place. This isn't just an optimization, it is a matter of
@@ -3742,20 +3751,15 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
 /// the following:
 ///
 ///   %a = alloca [12 x i8]
-///   %gep1 = getelementptr [12 x i8]* %a, i32 0, i32 0
-///   %gep2 = getelementptr [12 x i8]* %a, i32 0, i32 4
-///   %gep3 = getelementptr [12 x i8]* %a, i32 0, i32 8
-///   %iptr1 = bitcast i8* %gep1 to i64*
-///   %iptr2 = bitcast i8* %gep2 to i64*
-///   %fptr1 = bitcast i8* %gep1 to float*
-///   %fptr2 = bitcast i8* %gep2 to float*
-///   %fptr3 = bitcast i8* %gep3 to float*
-///   store float 0.0, float* %fptr1
-///   store float 1.0, float* %fptr2
-///   %v = load i64* %iptr1
-///   store i64 %v, i64* %iptr2
-///   %f1 = load float* %fptr2
-///   %f2 = load float* %fptr3
+///   %gep1 = getelementptr i8, ptr %a, i32 0
+///   %gep2 = getelementptr i8, ptr %a, i32 4
+///   %gep3 = getelementptr i8, ptr %a, i32 8
+///   store float 0.0, ptr %gep1
+///   store float 1.0, ptr %gep2
+///   %v = load i64, ptr %gep1
+///   store i64 %v, ptr %gep2
+///   %f1 = load float, ptr %gep2
+///   %f2 = load float, ptr %gep3
 ///
 /// Here we want to form 3 partitions of the alloca, each 4 bytes large, and
 /// promote everything so we recover the 2 SSA values that should have been
@@ -4247,26 +4251,45 @@ AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
   Type *SliceTy = nullptr;
+  VectorType *SliceVecTy = nullptr;
   const DataLayout &DL = AI.getModule()->getDataLayout();
   std::pair<Type *, IntegerType *> CommonUseTy =
       findCommonType(P.begin(), P.end(), P.endOffset());
   // Do all uses operate on the same type?
   if (CommonUseTy.first)
-    if (DL.getTypeAllocSize(CommonUseTy.first).getFixedSize() >= P.size())
+    if (DL.getTypeAllocSize(CommonUseTy.first).getFixedSize() >= P.size()) {
       SliceTy = CommonUseTy.first;
+      SliceVecTy = dyn_cast<VectorType>(SliceTy);
+    }
   // If not, can we find an appropriate subtype in the original allocated type?
   if (!SliceTy)
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size()))
       SliceTy = TypePartitionTy;
+
   // If still not, can we use the largest bitwidth integer type used?
   if (!SliceTy && CommonUseTy.second)
-    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedSize() >= P.size())
+    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedSize() >= P.size()) {
       SliceTy = CommonUseTy.second;
+      SliceVecTy = dyn_cast<VectorType>(SliceTy);
+    }
   if ((!SliceTy || (SliceTy->isArrayTy() &&
                     SliceTy->getArrayElementType()->isIntegerTy())) &&
-      DL.isLegalInteger(P.size() * 8))
+      DL.isLegalInteger(P.size() * 8)) {
     SliceTy = Type::getIntNTy(*C, P.size() * 8);
+  }
+
+  // If the common use types are not viable for promotion then attempt to find
+  // another type that is viable.
+  if (SliceVecTy && !checkVectorTypeForPromotion(P, SliceVecTy, DL))
+    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
+                                                 P.beginOffset(), P.size())) {
+      VectorType *TypePartitionVecTy = dyn_cast<VectorType>(TypePartitionTy);
+      if (TypePartitionVecTy &&
+          checkVectorTypeForPromotion(P, TypePartitionVecTy, DL))
+        SliceTy = TypePartitionTy;
+    }
+
   if (!SliceTy)
     SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
   assert(DL.getTypeAllocSize(SliceTy).getFixedSize() >= P.size());
@@ -4297,7 +4320,7 @@ AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     // the alloca's alignment unconstrained.
     const bool IsUnconstrained = Alignment <= DL.getABITypeAlign(SliceTy);
     NewAI = new AllocaInst(
-        SliceTy, AI.getType()->getAddressSpace(), nullptr,
+        SliceTy, AI.getAddressSpace(), nullptr,
         IsUnconstrained ? DL.getPrefTypeAlign(SliceTy) : Alignment,
         AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()), &AI);
     // Copy the old AI debug location over to the new one.

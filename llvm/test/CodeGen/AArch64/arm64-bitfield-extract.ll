@@ -964,9 +964,9 @@ entry:
 define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 ; LLC-LABEL: test_ignored_rightbits:
 ; LLC:       // %bb.0:
-; LLC-NEXT:    and w0, w0, #0x7
-; LLC-NEXT:    bfi w0, w1, #3, #4
-; LLC-NEXT:    bfi w0, w0, #8, #7
+; LLC-NEXT:    and w8, w0, #0x7
+; LLC-NEXT:    bfi w8, w1, #3, #4
+; LLC-NEXT:    orr w0, w8, w8, lsl #8
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @test_ignored_rightbits(
 ; OPT-NEXT:    [[POSITIONED_FIELD:%.*]] = shl i32 [[IN:%.*]], 3
@@ -1000,8 +1000,8 @@ define void @sameOperandBFI(i64 %src, i64 %src2, i16 *%ptr) {
 ; LLC-NEXT:    lsr x8, x0, #47
 ; LLC-NEXT:    and w9, w1, #0x3
 ; LLC-NEXT:    bfi w9, w8, #2, #2
-; LLC-NEXT:    bfi w9, w9, #4, #4
-; LLC-NEXT:    strh w9, [x2]
+; LLC-NEXT:    orr w8, w9, w9, lsl #4
+; LLC-NEXT:    strh w8, [x2]
 ; LLC-NEXT:  .LBB30_2: // %end
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @sameOperandBFI(

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -loop-vectorize -debug-only=loop-vectorize -mcpu=skylake %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -debug-only=loop-vectorize -mcpu=skylake %s 2>&1 | FileCheck %s
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-linux-gnu"
 

@@ -28,6 +28,19 @@ class GreedyRewriteConfig;
 // Passes
 //===----------------------------------------------------------------------===//
 
+#define GEN_PASS_DECL_CANONICALIZER
+#define GEN_PASS_DECL_CONTROLFLOWSINK
+#define GEN_PASS_DECL_CSEPASS
+#define GEN_PASS_DECL_LOOPINVARIANTCODEMOTION
+#define GEN_PASS_DECL_STRIPDEBUGINFO
+#define GEN_PASS_DECL_PRINTOPSTATS
+#define GEN_PASS_DECL_INLINER
+#define GEN_PASS_DECL_SCCP
+#define GEN_PASS_DECL_SYMBOLDCE
+#define GEN_PASS_DECL_SYMBOLPRIVATIZE
+#define GEN_PASS_DECL_TOPOLOGICALSORT
+#include "mlir/Transforms/Passes.h.inc"
+
 /// Creates an instance of the Canonicalizer pass, configured with default
 /// settings (which can be overridden by pass options on the command line).
 std::unique_ptr<Pass> createCanonicalizerPass();
@@ -60,7 +73,11 @@ std::unique_ptr<Pass> createStripDebugInfoPass();
 
 /// Creates a pass which prints the list of ops and the number of occurrences in
 /// the module.
-std::unique_ptr<Pass> createPrintOpStatsPass();
+std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os = llvm::errs());
+
+/// Creates a pass which prints the list of ops and the number of occurrences in
+/// the module with the output format option.
+std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os, bool printAsJSON);
 
 /// Creates a pass which inlines calls and callable operations as defined by
 /// the CallGraph.

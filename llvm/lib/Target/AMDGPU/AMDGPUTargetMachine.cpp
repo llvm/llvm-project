@@ -16,17 +16,19 @@
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUExportClustering.h"
-#include "AMDGPUMFMAIGroupLP.h"
+#include "AMDGPUIGroupLP.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
+#include "GCNVOPDUtils.h"
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -272,6 +274,18 @@ static cl::opt<bool> EnableSIModeRegisterPass(
   cl::init(true),
   cl::Hidden);
 
+// Enable GFX11+ s_delay_alu insertion
+static cl::opt<bool>
+    EnableInsertDelayAlu("amdgpu-enable-delay-alu",
+                         cl::desc("Enable s_delay_alu insertion"),
+                         cl::init(true), cl::Hidden);
+
+// Enable GFX11+ VOPD
+static cl::opt<bool>
+    EnableVOPD("amdgpu-enable-vopd",
+               cl::desc("Enable VOPD, dual issue of VALU in wave32"),
+               cl::init(true), cl::Hidden);
+
 // Option is used in lit tests to prevent deadcoding of patterns inspected.
 static cl::opt<bool>
 EnableDCEInRA("amdgpu-dce-in-ra",
@@ -312,6 +326,11 @@ static cl::opt<bool> EnablePromoteKernelArguments(
     "amdgpu-enable-promote-kernel-arguments",
     cl::desc("Enable promotion of flat kernel pointer arguments to global"),
     cl::Hidden, cl::init(true));
+
+static cl::opt<bool> EnableMaxIlpSchedStrategy(
+    "amdgpu-enable-max-ilp-scheduling-strategy",
+    cl::desc("Enable scheduling strategy to maximize ILP for a single wave."),
+    cl::Hidden, cl::init(false));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
@@ -361,8 +380,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUReplaceLDSUseWithPointerPass(*PR);
   initializeAMDGPULowerModuleLDSPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
+  initializeAMDGPURewriteUndefForPHIPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
+  initializeAMDGPUReleaseVGPRsPass(*PR);
+  initializeAMDGPUInsertDelayAluPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
@@ -375,6 +397,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIPreAllocateWWMRegsPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeSIPostRABundlerPass(*PR);
+  initializeGCNCreateVOPDPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
@@ -396,20 +419,34 @@ static ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C) {
 
 static ScheduleDAGInstrs *
 createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG =
     new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxOccupancySchedStrategy>(C));
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createMFMAIGroupLPDAGMutation());
+  if (ST.shouldClusterStores())
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createIGroupLPDAGMutation());
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
 }
 
 static ScheduleDAGInstrs *
+createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
+  ScheduleDAGMILive *DAG =
+      new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxILPSchedStrategy>(C));
+  DAG->addMutation(createIGroupLPDAGMutation());
+  return DAG;
+}
+
+static ScheduleDAGInstrs *
 createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto DAG = new GCNIterativeScheduler(C,
     GCNIterativeScheduler::SCHEDULE_LEGACYMAXOCCUPANCY);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.shouldClusterStores())
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
 }
 
@@ -420,9 +457,12 @@ static ScheduleDAGInstrs *createMinRegScheduler(MachineSchedContext *C) {
 
 static ScheduleDAGInstrs *
 createIterativeILPMachineScheduler(MachineSchedContext *C) {
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto DAG = new GCNIterativeScheduler(C,
     GCNIterativeScheduler::SCHEDULE_ILP);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.shouldClusterStores())
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   return DAG;
 }
@@ -437,19 +477,23 @@ GCNMaxOccupancySchedRegistry("gcn-max-occupancy",
                              createGCNMaxOccupancyMachineScheduler);
 
 static MachineSchedRegistry
-IterativeGCNMaxOccupancySchedRegistry("gcn-max-occupancy-experimental",
-  "Run GCN scheduler to maximize occupancy (experimental)",
-  createIterativeGCNMaxOccupancyMachineScheduler);
+    GCNMaxILPSchedRegistry("gcn-max-ilp", "Run GCN scheduler to maximize ilp",
+                           createGCNMaxILPMachineScheduler);
 
-static MachineSchedRegistry
-GCNMinRegSchedRegistry("gcn-minreg",
-  "Run GCN iterative scheduler for minimal register usage (experimental)",
-  createMinRegScheduler);
+static MachineSchedRegistry IterativeGCNMaxOccupancySchedRegistry(
+    "gcn-iterative-max-occupancy-experimental",
+    "Run GCN scheduler to maximize occupancy (experimental)",
+    createIterativeGCNMaxOccupancyMachineScheduler);
 
-static MachineSchedRegistry
-GCNILPSchedRegistry("gcn-ilp",
-  "Run GCN iterative scheduler for ILP scheduling (experimental)",
-  createIterativeILPMachineScheduler);
+static MachineSchedRegistry GCNMinRegSchedRegistry(
+    "gcn-iterative-minreg",
+    "Run GCN iterative scheduler for minimal register usage (experimental)",
+    createMinRegScheduler);
+
+static MachineSchedRegistry GCNILPSchedRegistry(
+    "gcn-iterative-ilp",
+    "Run GCN iterative scheduler for ILP scheduling (experimental)",
+    createIterativeILPMachineScheduler);
 
 static StringRef computeDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::r600) {
@@ -894,11 +938,17 @@ public:
 
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+    ScheduleDAGMI *DAG = new GCNPostScheduleDAGMILive(
+        C, std::make_unique<PostGenericScheduler>(C),
+        /*RemoveKillFlags=*/true);
     const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
     DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+    if (ST.shouldClusterStores())
+      DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
-    DAG->addMutation(createMFMAIGroupLPDAGMutation());
+    DAG->addMutation(createIGroupLPDAGMutation());
+    if (isPassEnabled(EnableVOPD, CodeGenOpt::Less))
+      DAG->addMutation(createVOPDPairingMutation());
     return DAG;
   }
 
@@ -953,7 +1003,6 @@ void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
 void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
   addPass(createLICMPass());
   addPass(createSeparateConstOffsetFromGEPPass());
-  addPass(createSpeculativeExecutionPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
   addPass(createStraightLineStrengthReducePass());
@@ -1100,8 +1149,11 @@ bool AMDGPUPassConfig::addGCPasses() {
 
 llvm::ScheduleDAGInstrs *
 AMDGPUPassConfig::createMachineScheduler(MachineSchedContext *C) const {
+  const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG = createGenericSchedLive(C);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.shouldClusterStores())
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
 }
 
@@ -1114,6 +1166,10 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   if (ST.enableSIScheduler())
     return createSIMachineScheduler(C);
+
+  if (EnableMaxIlpSchedStrategy)
+    return createGCNMaxILPMachineScheduler(C);
+
   return createGCNMaxOccupancyMachineScheduler(C);
 }
 
@@ -1143,6 +1199,10 @@ bool GCNPassConfig::addPreISel() {
   addPass(createAMDGPUAnnotateUniformValues());
   if (!LateCFGStructurize) {
     addPass(createSIAnnotateControlFlowPass());
+    // TODO: Move this right after structurizeCFG to avoid extra divergence
+    // analysis. This depends on stopping SIAnnotateControlFlow from making
+    // control flow modifications.
+    addPass(createAMDGPURewriteUndefForPHIPass());
   }
   addPass(createLCSSAPass());
 
@@ -1375,6 +1435,8 @@ void GCNPassConfig::addPreSched2() {
 }
 
 void GCNPassConfig::addPreEmitPass() {
+  if (isPassEnabled(EnableVOPD, CodeGenOpt::Less))
+    addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIInsertWaitcntsPass());
 
@@ -1397,6 +1459,13 @@ void GCNPassConfig::addPreEmitPass() {
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
   addPass(&PostRAHazardRecognizerID);
+
+  if (getOptLevel() > CodeGenOpt::Less)
+    addPass(&AMDGPUReleaseVGPRsID);
+
+  if (isPassEnabled(EnableInsertDelayAlu, CodeGenOpt::Less))
+    addPass(&AMDGPUInsertDelayAluID);
+
   addPass(&BranchRelaxationPassID);
 }
 
@@ -1512,7 +1581,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
       Arg = ArgDescriptor::createStack(A->StackOffset);
     // Check and apply the optional mask.
     if (A->Mask)
-      Arg = ArgDescriptor::createArg(Arg, A->Mask.getValue());
+      Arg = ArgDescriptor::createArg(Arg, *A->Mask);
 
     MFI->NumUserSGPRs += UserSGPRs;
     MFI->NumSystemSGPRs += SystemSGPRs;
@@ -1540,6 +1609,9 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
        parseAndCheckArgument(YamlMFI.ArgInfo->PrivateSegmentSize,
                              AMDGPU::SGPR_32RegClass,
                              MFI->ArgInfo.PrivateSegmentSize, 0, 0) ||
+       parseAndCheckArgument(YamlMFI.ArgInfo->LDSKernelId,
+                             AMDGPU::SGPR_32RegClass,
+                             MFI->ArgInfo.LDSKernelId, 0, 1) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkGroupIDX,
                              AMDGPU::SGPR_32RegClass, MFI->ArgInfo.WorkGroupIDX,
                              0, 1) ||

@@ -39,10 +39,8 @@ constexpr void test(const CharT* fmt) {
   static_assert(
       !std::is_move_assignable_v<std::basic_format_parse_context<CharT> >);
 
-  ASSERT_NOEXCEPT(
-      std::basic_format_parse_context{std::basic_string_view<CharT>{}});
-  ASSERT_NOEXCEPT(
-      std::basic_format_parse_context{std::basic_string_view<CharT>{}, 42});
+  ASSERT_NOEXCEPT(std::basic_format_parse_context{std::basic_string_view<CharT>{}});
+  ASSERT_NOEXCEPT(std::basic_format_parse_context{std::basic_string_view<CharT>{}, 42});
 
   {
     std::basic_format_parse_context<CharT> context(fmt);
@@ -63,10 +61,8 @@ constexpr bool test() {
 #ifndef TEST_HAS_NO_CHAR8_T
   test(u8"abc");
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
   test(u"abc");
   test(U"abc");
-#endif
 
   return true;
 }

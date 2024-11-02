@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions | FileCheck %s --check-prefixes=CHECK,CHECK-PRE17
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -std=c++17 -Wno-dynamic-exception-spec -emit-llvm -o - -fcxx-exceptions -fexceptions | FileCheck %s --check-prefixes=CHECK,CHECK-17
+// RUN: %clang_cc1 %std_cxx98-14 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions | FileCheck %s --check-prefixes=CHECK,CHECK-PRE17
+// RUN: %clang_cc1 %std_cxx17- -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -Wno-dynamic-exception-spec -emit-llvm -o - -fcxx-exceptions -fexceptions | FileCheck %s --check-prefixes=CHECK,CHECK-17
 
 void external();
 

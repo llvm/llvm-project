@@ -60,15 +60,14 @@ public:
   const std::vector<std::uint8_t> &data() const { return data_; }
   std::vector<std::uint8_t> &data() { return data_; }
 
-  StaticDataObject &Push(const std::string &);
-  StaticDataObject &Push(const std::u16string &);
-  StaticDataObject &Push(const std::u32string &);
+  StaticDataObject &Push(const std::string &, bool /*ignored*/ = false);
+  StaticDataObject &Push(const std::u16string &, bool bigEndian = false);
+  StaticDataObject &Push(const std::u32string &, bool bigEndian = false);
   std::optional<std::string> AsString() const;
-  std::optional<std::u16string> AsU16String() const;
-  std::optional<std::u32string> AsU32String() const;
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
-
-  static bool bigEndian;
+  std::optional<std::u16string> AsU16String(bool bigEndian = false) const;
+  std::optional<std::u32string> AsU32String(bool bigEndian = false) const;
+  llvm::raw_ostream &AsFortran(
+      llvm::raw_ostream &, bool bigEndian = false) const;
 
 private:
   StaticDataObject() {}

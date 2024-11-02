@@ -1,53 +1,31 @@
-========================================================
-llvm-libc: An ISO C-conformant Standard Library for LLVM
-========================================================
+==================
+The LLVM C Library
+==================
 
-**llvm-libc library is not complete.  If you need a fully functioning libc right
-now, you should continue to use your standard system libc.**
+.. warning::
+  The libc is not complete.  If you need a fully functioning C library right
+  now, you should continue to use your standard system libraries.
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
+Introduction
+============
 
-Goals
-=====
+The libc aspires to a unique place in the software ecosystem.  The goals are:
 
-- C17 and upwards conformant.
-- A modular libc with individual pieces implemented in the "as a
-  library" philosophy of the LLVM project.
-- Ability to layer this libc over the system libc if possible and desired
-  for a platform.
-- Provide POSIX extensions on POSIX compliant platforms.
-- Provide system-specific extensions as appropriate. For example,
-  provide the Linux API on Linux.
-- Designed and developed from the start to work with LLVM tooling, fuzz testing
-  and sanitizer-supported testing.
-- Use source based implementations as far possible rather than
-  assembly. Will try to *fix* the compiler rather than use assembly
-  language workarounds.
-- Extensive unit testing and standards conformance testing.
-
-Why a new C Standard Library?
-=============================
-
-Implementing a libc is no small task and is not be taken lightly. A
-natural question to ask is, "why a new implementation of the C
-standard library?" Some of the major reasons are as follows:
-
-- Rather than being built as a single monolithic codebase, llvm-libc is designed
-  from the beginning to enable picking and choosing pieces.  This allows using
-  it as a minimum overlay for e.g. faster math functions than might be
-  available on the system library.  This is useful where an application may
-  need to access improved CPU support over what's available on the system,
-  or may need guarantees in performance across different installs.
-- Explicit support for building llvm-libc and code with sanitizer compiler
-  options.
+- Fully compliant with current C standards (C17 and upcoming C2x) and POSIX.
+- Easily decomposed and embedded: Supplement or replace system C library
+  functionality easily.  This is useful to get consistent math precision across
+  systems, or updated memory operations for newer microarchitectures.  These
+  pieces will work on Linux, MacOS, Windows, and Fuchsia.
+- The creation of fully static binaries without license implications.
+- Increase whole program optimization opportunities for static binaries through
+  ability to inline math and memory operations.
+- Reduce coding errors by coding in modern C++ through the use of lightweight
+  containers during coding that can be optimized away at runtime.
+- Permit fuzzing and sanitizer instrumentation of user binaries including the
+  libc functions.
+- A complete testsuite that tests both the public interface and internal
+  algorithms.
 - `Fuzzing`__
-- Be useful for research and review.  By avoiding assembly language, using C++
-  iterators, RAII and templates, llvm-libc aims to have clearly
-  readable code and to improve the compiler as needed to ensure that optimal
-  assembly is emitted.
-- Enable fully static compiles.
 
 .. __: https://github.com/llvm/llvm-project/tree/main/libc/fuzzing
 
@@ -55,33 +33,53 @@ Platform Support
 ================
 
 Most development is currently targeting x86_64 and aarch64 on Linux.  Several
-functions in llvm-libc have been tested on Windows.  The Fuchsia platform is
-slowly replacing functions from its bundled libc with functions from llvm-libc.
+functions in the libc have been tested on Windows.  The Fuchsia platform is
+slowly replacing functions from its bundled libc with functions from this
+project.
 
 ABI Compatibility
 =================
 
-llvm-libc is written to be ABI independent.  Interfaces are generated using
+The libc is written to be ABI independent.  Interfaces are generated using
 LLVM's tablegen, so supporting arbitrary ABIs is possible.  In it's initial
-stages llvm-libc is not offering ABI stability in any form.
-
-Other Interesting Documentation
-===============================
+stages there is no ABI stability in any form.
 
 .. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Using
 
-    build_system
-    clang_tidy_checks
-    entrypoints
-    fuzzing
-    ground_truth_specification
-    header_generation
-    implementation_standard
-    api_test
-    layering
-    mechanics_of_public_api
-    redirectors
-    source_layout
-    strings
-    runtimes_build
-    stdio
+   usage_modes
+   overlay_mode
+   fullbuild_mode
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Status
+
+   date_and_time
+   math
+   strings
+   stdio
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Development
+
+   build_and_test
+   developer_guides
+   porting
+   contributing
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: External Links
+
+   Source Code <https://github.com/llvm/llvm-project/tree/main/libc>
+   Bug Reports <https://github.com/llvm/llvm-project/labels/libc>
+   Discourse <https://discourse.llvm.org/c/runtimes/libc>
+   Discord Channel <https://discord.com/channels/636084430946959380/636732994891284500>
+   Buildbot <https://lab.llvm.org/buildbot/#/builders?tags=libc>

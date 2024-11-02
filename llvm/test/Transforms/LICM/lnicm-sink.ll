@@ -22,7 +22,7 @@
 ; to try to make a perfect loop nest. (though y[i] = s; still prevents the 
 ; loop nest from being a perfect loop nest in this test case)
 
-define dso_local double @test(double %x, i32* noalias %y) {
+define dso_local double @test(double %x, ptr noalias %y) {
 entry:
   br label %for.body
 
@@ -48,8 +48,8 @@ for.end:
   %s.1.lcssa = phi i32 [ %call4, %for.body3 ]
   %t.1.lcssa = phi double [ %call, %for.body3 ]
   %idxprom = sext i32 %i.02 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %y, i64 %idxprom
-  store i32 %s.1.lcssa, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %y, i64 %idxprom
+  store i32 %s.1.lcssa, ptr %arrayidx, align 4
   %inc6 = add nsw i32 %i.02, 1
   %cmp = icmp slt i32 %inc6, 10
   br i1 %cmp, label %for.body, label %for.end7
@@ -77,7 +77,7 @@ for.end7:
 ;   return t;
 ; }
 ;
-define dso_local double @test2(double %x, i32* noalias %y) {
+define dso_local double @test2(double %x, ptr noalias %y) {
 entry:
   br label %for.body
 
@@ -114,8 +114,8 @@ for.end:
   %s.1.lcssa = phi i32 [ %s.lcssa.k, %for.end.k ]
   %t.1.lcssa = phi double [ %t.lcssa.k, %for.end.k ]
   %idxprom = sext i32 %i.02 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %y, i64 %idxprom
-  store i32 %s.1.lcssa, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %y, i64 %idxprom
+  store i32 %s.1.lcssa, ptr %arrayidx, align 4
   %inc6 = add nsw i32 %i.02, 1
   %cmp = icmp slt i32 %inc6, 10
   br i1 %cmp, label %for.body, label %for.end7

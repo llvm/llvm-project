@@ -127,7 +127,7 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
       // If the loop is branched to from an indirect terminator, we won't
       // be able to fully transform the loop, because it prohibits
       // edge splitting.
-      if (P->getTerminator()->isIndirectTerminator())
+      if (isa<IndirectBrInst>(P->getTerminator()))
         return nullptr;
 
       // Keep track of it.
@@ -176,7 +176,7 @@ static PHINode *findPHIToPartitionLoops(Loop *L, DominatorTree *DT,
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ) {
     PHINode *PN = cast<PHINode>(I);
     ++I;
-    if (Value *V = SimplifyInstruction(PN, {DL, nullptr, DT, AC})) {
+    if (Value *V = simplifyInstruction(PN, {DL, nullptr, DT, AC})) {
       // This is a degenerate PHI already, don't modify it!
       PN->replaceAllUsesWith(V);
       PN->eraseFromParent();
@@ -231,7 +231,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   // a function call is present until a better alternative becomes
   // available. This is similar to the conservative treatment of
   // convergent function calls in GVNHoist and JumpThreading.
-  for (auto BB : L->blocks()) {
+  for (auto *BB : L->blocks()) {
     for (auto &II : *BB) {
       if (auto CI = dyn_cast<CallBase>(&II)) {
         if (CI->isConvergent()) {
@@ -256,7 +256,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     if (PN->getIncomingValue(i) != PN ||
         !L->contains(PN->getIncomingBlock(i))) {
       // We can't split indirect control flow edges.
-      if (PN->getIncomingBlock(i)->getTerminator()->isIndirectTerminator())
+      if (isa<IndirectBrInst>(PN->getIncomingBlock(i)->getTerminator()))
         return nullptr;
       OuterLoopPreds.push_back(PN->getIncomingBlock(i));
     }
@@ -375,7 +375,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   std::vector<BasicBlock*> BackedgeBlocks;
   for (BasicBlock *P : predecessors(Header)) {
     // Indirect edges cannot be split, so we must fail if we find one.
-    if (P->getTerminator()->isIndirectTerminator())
+    if (isa<IndirectBrInst>(P->getTerminator()))
       return nullptr;
 
     if (P != Preheader) BackedgeBlocks.push_back(P);
@@ -450,8 +450,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   // it from the backedge and add it to BEBlock.
   unsigned LoopMDKind = BEBlock->getContext().getMDKindID("llvm.loop");
   MDNode *LoopMD = nullptr;
-  for (unsigned i = 0, e = BackedgeBlocks.size(); i != e; ++i) {
-    Instruction *TI = BackedgeBlocks[i]->getTerminator();
+  for (BasicBlock *BB : BackedgeBlocks) {
+    Instruction *TI = BB->getTerminator();
     if (!LoopMD)
       LoopMD = TI->getMetadata(LoopMDKind);
     TI->setMetadata(LoopMDKind, nullptr);
@@ -597,7 +597,7 @@ ReprocessLoop:
   PHINode *PN;
   for (BasicBlock::iterator I = L->getHeader()->begin();
        (PN = dyn_cast<PHINode>(I++)); )
-    if (Value *V = SimplifyInstruction(PN, {DL, nullptr, DT, AC})) {
+    if (Value *V = simplifyInstruction(PN, {DL, nullptr, DT, AC})) {
       if (SE) SE->forgetValue(PN);
       if (!PreserveLCSSA || LI->replacementPreservesLCSSAForm(PN, V)) {
         PN->replaceAllUsesWith(V);
@@ -649,18 +649,13 @@ ReprocessLoop:
           continue;
         if (!L->makeLoopInvariant(
                 Inst, AnyInvariant,
-                Preheader ? Preheader->getTerminator() : nullptr, MSSAU)) {
+                Preheader ? Preheader->getTerminator() : nullptr, MSSAU, SE)) {
           AllInvariant = false;
           break;
         }
       }
-      if (AnyInvariant) {
+      if (AnyInvariant)
         Changed = true;
-        // The loop disposition of all SCEV expressions that depend on any
-        // hoisted values have also changed.
-        if (SE)
-          SE->forgetLoopDispositions(L);
-      }
       if (!AllInvariant) continue;
 
       // The block has now been cleared of all instructions except for

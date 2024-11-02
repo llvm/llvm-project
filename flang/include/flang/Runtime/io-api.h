@@ -59,6 +59,8 @@ extern "C" {
 //   Cookie cookie{BeginExternalListOutput(DefaultUnit,__FILE__,__LINE__)};
 //   OutputInteger32(cookie, 666);
 //   EndIoStatement(cookie);
+// Formatted I/O with explicit formats can supply the format as a
+// const char * pointer with a length, or with a descriptor.
 
 // Internal I/O initiation
 // Internal I/O can loan the runtime library an optional block of memory
@@ -84,11 +86,13 @@ Cookie IONAME(BeginInternalArrayListInput)(const Descriptor &,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginInternalArrayFormattedOutput)(const Descriptor &,
-    const char *format, std::size_t formatLength, void **scratchArea = nullptr,
+    const char *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
 Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &,
-    const char *format, std::size_t formatLength, void **scratchArea = nullptr,
+    const char *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
@@ -104,12 +108,14 @@ Cookie IONAME(BeginInternalListInput)(const char *internal,
     int sourceLine = 0);
 Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
-    void **scratchArea = nullptr, std::size_t scratchBytes = 0,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
+    std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
-    void **scratchArea = nullptr, std::size_t scratchBytes = 0,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
+    std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 
 // External unit numbers must fit in default integers. When the integer
 // provided as UNIT is of a wider type than the default integer, it could
@@ -133,20 +139,22 @@ Cookie IONAME(BeginExternalListOutput)(ExternalUnit = DefaultUnit,
 Cookie IONAME(BeginExternalListInput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginExternalFormattedOutput)(const char *format, std::size_t,
-    ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    const Descriptor *formatDescriptor = nullptr, ExternalUnit = DefaultUnit,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginExternalFormattedInput)(const char *format, std::size_t,
-    ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    const Descriptor *formatDescriptor = nullptr, ExternalUnit = DefaultUnit,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginUnformattedOutput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginUnformattedInput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // WAIT(ID=)
-Cookie IONAME(BeginWait)(ExternalUnit, AsynchronousId);
+Cookie IONAME(BeginWait)(ExternalUnit, AsynchronousId,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 // WAIT(no ID=)
-Cookie IONAME(BeginWaitAll)(ExternalUnit);
+Cookie IONAME(BeginWaitAll)(
+    ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
 
 // Other I/O statements
 Cookie IONAME(BeginClose)(
@@ -194,7 +202,8 @@ Cookie IONAME(BeginInquireIoLength)(
 void IONAME(EnableHandlers)(Cookie, bool hasIoStat = false, bool hasErr = false,
     bool hasEnd = false, bool hasEor = false, bool hasIoMsg = false);
 
-// ASYNCHRONOUS='YES' or 'NO' with no ID= on READ/WRITE/OPEN
+// ASYNCHRONOUS='YES' or 'NO' on READ/WRITE/OPEN
+// Use GetAsynchronousId() to handle ID=.
 bool IONAME(SetAsynchronous)(Cookie, const char *, std::size_t);
 
 // Control list options.  These return false on a error that the
@@ -306,8 +315,8 @@ std::size_t IONAME(GetIoLength)(Cookie);
 // end-of-record/file condition is present.
 void IONAME(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
 
-// TODO: for ID= on READ/WRITE(ASYNCHRONOUS='YES')
-// int IONAME(GetAsynchronousId)(Cookie);
+// Defines ID= on READ/WRITE(ASYNCHRONOUS='YES')
+int IONAME(GetAsynchronousId)(Cookie);
 
 // INQUIRE() specifiers are mostly identified by their NUL-terminated
 // case-insensitive names.

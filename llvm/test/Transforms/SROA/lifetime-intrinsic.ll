@@ -17,18 +17,14 @@ define i16 @with_lifetime(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %arr = alloca %i32x2, align 4
-  %p = bitcast %i32x2* %arr to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %p)
-  %p0 = getelementptr inbounds %i32x2, %i32x2* %arr, i64 0, i32 0, i32 0
-  %p1 = getelementptr inbounds %i32x2, %i32x2* %arr, i64 0, i32 0, i32 1
-  store i32 %a, i32* %p0, align 4
-  store i32 %b, i32* %p1, align 4
-  %p0_i16 = bitcast %i32x2* %arr to i16*
-  %s0 = load i16, i16* %p0_i16, align 4
-  %p1_i16 = bitcast i32* %p1 to i16*
-  %s2 = load i16, i16* %p1_i16, align 4
+  call void @llvm.lifetime.start.p0(i64 8, ptr %arr)
+  %p1 = getelementptr inbounds %i32x2, ptr %arr, i64 0, i32 0, i32 1
+  store i32 %a, ptr %arr, align 4
+  store i32 %b, ptr %p1, align 4
+  %s0 = load i16, ptr %arr, align 4
+  %s2 = load i16, ptr %p1, align 4
   %ret = add i16 %s0, %s2
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %p)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %arr)
   ret i16 %ret
 }
 
@@ -44,21 +40,18 @@ define i16 @no_lifetime(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %arr = alloca %i32x2, align 4
-  %p0 = getelementptr inbounds %i32x2, %i32x2* %arr, i64 0, i32 0, i32 0
-  %p1 = getelementptr inbounds %i32x2, %i32x2* %arr, i64 0, i32 0, i32 1
-  store i32 %a, i32* %p0, align 4
-  store i32 %b, i32* %p1, align 4
-  %p0_i16 = bitcast %i32x2* %arr to i16*
-  %s0 = load i16, i16* %p0_i16, align 4
-  %p1_i16 = bitcast i32* %p1 to i16*
-  %s2 = load i16, i16* %p1_i16, align 4
+  %p1 = getelementptr inbounds %i32x2, ptr %arr, i64 0, i32 0, i32 1
+  store i32 %a, ptr %arr, align 4
+  store i32 %b, ptr %p1, align 4
+  %s0 = load i16, ptr %arr, align 4
+  %s2 = load i16, ptr %p1, align 4
   %ret = add i16 %s0, %s2
   ret i16 %ret
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 attributes #0 = { alwaysinline nounwind }
 attributes #1 = { argmemonly nounwind }

@@ -44,7 +44,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 20
 
 namespace ranges {
 
@@ -488,10 +488,10 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()() const noexcept { return empty_view<tuple<>>{}; }
 
   template <class... _Ranges>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ranges&&... rs) const
-      noexcept(noexcept(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(rs)...)))
-          -> decltype(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(rs)...)) {
-    return zip_view<all_t<_Ranges>...>(std::forward<_Ranges>(rs)...);
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ranges&&... __rs) const
+      noexcept(noexcept(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...)))
+          -> decltype(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...)) {
+    return zip_view<all_t<_Ranges>...>(std::forward<_Ranges>(__rs)...);
   }
 };
 
@@ -502,7 +502,7 @@ inline namespace __cpo {
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 20
 
 _LIBCPP_END_NAMESPACE_STD
 

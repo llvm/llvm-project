@@ -302,7 +302,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     ITInst.addOperand(MCOperand::createImm(ITState.Mask));
     Out.emitInstruction(ITInst, getSTI());
 
-    // Emit the conditonal instructions
+    // Emit the conditional instructions
     assert(PendingConditionalInsts.size() <= 4);
     for (const MCInst &Inst : PendingConditionalInsts) {
       Out.emitInstruction(Inst, getSTI());
@@ -734,7 +734,7 @@ public:
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
 
-  void doBeforeLabelEmit(MCSymbol *Symbol) override;
+  void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
   void onLabelParsed(MCSymbol *Symbol) override;
 };
@@ -6223,7 +6223,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
     // Fall though for the Identifier case that is not a register or a
     // special name.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AsmToken::LParen:  // parenthesized expressions like (_strcmp-4)
   case AsmToken::Integer: // things like 1f and 2b as a branch targets
@@ -6290,7 +6290,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return false;
     }
     // w/ a ':' after the '#', it's just like a plain ':'.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();
@@ -8273,6 +8273,26 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error (Operands[3]->getStartLoc(),
                     "Qd register and Qn register can't be identical");
     }
+    if (Operands[3]->getReg() == Operands[5]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qm register can't be identical");
+    }
+    break;
+  }
+  case ARM::MVE_VREV64_8:
+  case ARM::MVE_VREV64_16:
+  case ARM::MVE_VREV64_32:
+  case ARM::MVE_VQDMULL_qr_s32bh:
+  case ARM::MVE_VQDMULL_qr_s32th: {
+    if (Operands[3]->getReg() == Operands[4]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qn register can't be identical");
+    }
+    break;
+  }
+  case ARM::MVE_VCADDi32:
+  case ARM::MVE_VCADDf32:
+  case ARM::MVE_VHCADDs32: {
     if (Operands[3]->getReg() == Operands[5]->getReg()) {
       return Error (Operands[3]->getStartLoc(),
                     "Qd register and Qm register can't be identical");
@@ -11162,8 +11182,7 @@ bool ARMAsmParser::parseLiteralValues(unsigned Size, SMLoc L) {
 /// parseDirectiveThumb
 ///  ::= .thumb
 bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive") ||
-      check(!hasThumb(), L, "target does not support Thumb mode"))
+  if (parseEOL() || check(!hasThumb(), L, "target does not support Thumb mode"))
     return true;
 
   if (!isThumb())
@@ -11176,8 +11195,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
 /// parseDirectiveARM
 ///  ::= .arm
 bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive") ||
-      check(!hasARM(), L, "target does not support ARM mode"))
+  if (parseEOL() || check(!hasARM(), L, "target does not support ARM mode"))
     return true;
 
   if (isThumb())
@@ -11186,7 +11204,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   return false;
 }
 
-void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol) {
+void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
   // We need to flush the current implicit IT block on a label, because it is
   // not legal to branch into an IT block.
   flushPendingInstructions(getStreamer());
@@ -11216,15 +11234,13 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
           Parser.getTok().getIdentifier());
       getParser().getStreamer().emitThumbFunc(Func);
       Parser.Lex();
-      if (parseToken(AsmToken::EndOfStatement,
-                     "unexpected token in '.thumb_func' directive"))
+      if (parseEOL())
         return true;
       return false;
     }
   }
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.thumb_func' directive"))
+  if (parseEOL())
     return true;
 
   // .thumb_func implies .thumb
@@ -11253,7 +11269,7 @@ bool ARMAsmParser::parseDirectiveSyntax(SMLoc L) {
             "'.syntax divided' arm assembly not supported") ||
       check(Mode != "unified" && Mode != "UNIFIED", L,
             "unrecognized syntax mode in .syntax directive") ||
-      parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+      parseEOL())
     return true;
 
   // TODO tell the MC streamer the mode
@@ -11275,7 +11291,7 @@ bool ARMAsmParser::parseDirectiveCode(SMLoc L) {
   }
   Parser.Lex();
 
-  if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+  if (parseEOL())
     return true;
 
   if (Val == 16) {
@@ -11306,8 +11322,7 @@ bool ARMAsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   SMLoc SRegLoc, ERegLoc;
   if (check(ParseRegister(Reg, SRegLoc, ERegLoc), SRegLoc,
             "register name expected") ||
-      parseToken(AsmToken::EndOfStatement,
-                 "unexpected input in .req directive."))
+      parseEOL())
     return true;
 
   if (RegisterReqs.insert(std::make_pair(Name, Reg)).first->second != Reg)
@@ -11325,10 +11340,7 @@ bool ARMAsmParser::parseDirectiveUnreq(SMLoc L) {
     return Error(L, "unexpected input in .unreq directive.");
   RegisterReqs.erase(Parser.getTok().getIdentifier().lower());
   Parser.Lex(); // Eat the identifier.
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected input in '.unreq' directive"))
-    return true;
-  return false;
+  return parseEOL();
 }
 
 // After changing arch/CPU, try to put the ARM/Thumb mode back to what it was
@@ -11389,11 +11401,11 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
     StringRef Name = Parser.getTok().getIdentifier();
     Optional<unsigned> Ret = ELFAttrs::attrTypeFromString(
         Name, ARMBuildAttrs::getARMAttributeTags());
-    if (!Ret.hasValue()) {
+    if (!Ret) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
     }
-    Tag = Ret.getValue();
+    Tag = *Ret;
     Parser.Lex();
   } else {
     const MCExpr *AttrExpr;
@@ -11447,16 +11459,23 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
       return true;
   }
 
+  std::string EscapedValue;
   if (IsStringValue) {
     if (Parser.getTok().isNot(AsmToken::String))
       return Error(Parser.getTok().getLoc(), "bad string constant");
 
-    StringValue = Parser.getTok().getStringContents();
-    Parser.Lex();
+    if (Tag == ARMBuildAttrs::also_compatible_with) {
+      if (Parser.parseEscapedString(EscapedValue))
+        return Error(Parser.getTok().getLoc(), "bad escaped string constant");
+
+      StringValue = EscapedValue;
+    } else {
+      StringValue = Parser.getTok().getStringContents();
+      Parser.Lex();
+    }
   }
 
-  if (Parser.parseToken(AsmToken::EndOfStatement,
-                        "unexpected token in '.eabi_attribute' directive"))
+  if (Parser.parseEOL())
     return true;
 
   if (IsIntegerValue && IsStringValue) {
@@ -11512,8 +11531,7 @@ bool ARMAsmParser::parseDirectiveFPU(SMLoc L) {
 /// parseDirectiveFnStart
 ///  ::= .fnstart
 bool ARMAsmParser::parseDirectiveFnStart(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.fnstart' directive"))
+  if (parseEOL())
     return true;
 
   if (UC.hasFnStart()) {
@@ -11534,8 +11552,7 @@ bool ARMAsmParser::parseDirectiveFnStart(SMLoc L) {
 /// parseDirectiveFnEnd
 ///  ::= .fnend
 bool ARMAsmParser::parseDirectiveFnEnd(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.fnend' directive"))
+  if (parseEOL())
     return true;
   // Check the ordering of unwind directives
   if (!UC.hasFnStart())
@@ -11551,8 +11568,7 @@ bool ARMAsmParser::parseDirectiveFnEnd(SMLoc L) {
 /// parseDirectiveCantUnwind
 ///  ::= .cantunwind
 bool ARMAsmParser::parseDirectiveCantUnwind(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.cantunwind' directive"))
+  if (parseEOL())
     return true;
 
   UC.recordCantUnwind(L);
@@ -11587,8 +11603,7 @@ bool ARMAsmParser::parseDirectivePersonality(SMLoc L) {
   StringRef Name(Parser.getTok().getIdentifier());
   Parser.Lex();
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.personality' directive"))
+  if (parseEOL())
     return true;
 
   UC.recordPersonality(L);
@@ -11620,8 +11635,7 @@ bool ARMAsmParser::parseDirectivePersonality(SMLoc L) {
 /// parseDirectiveHandlerData
 ///  ::= .handlerdata
 bool ARMAsmParser::parseDirectiveHandlerData(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.handlerdata' directive"))
+  if (parseEOL())
     return true;
 
   UC.recordHandlerData(L);
@@ -11719,8 +11733,7 @@ bool ARMAsmParser::parseDirectivePad(SMLoc L) {
   if (!CE)
     return Error(ExLoc, "pad offset must be an immediate");
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.pad' directive"))
+  if (parseEOL())
     return true;
 
   getTargetStreamer().emitPad(CE->getValue());
@@ -11741,8 +11754,7 @@ bool ARMAsmParser::parseDirectiveRegSave(SMLoc L, bool IsVector) {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
 
   // Parse the register list
-  if (parseRegisterList(Operands, true, true) ||
-      parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+  if (parseRegisterList(Operands, true, true) || parseEOL())
     return true;
   ARMOperand &Op = (ARMOperand &)*Operands[0];
   if (!IsVector && !Op.isRegList())
@@ -11825,7 +11837,7 @@ bool ARMAsmParser::parseDirectiveInst(SMLoc Loc, char Suffix) {
 /// parseDirectiveLtorg
 ///  ::= .ltorg | .pool
 bool ARMAsmParser::parseDirectiveLtorg(SMLoc L) {
-  if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+  if (parseEOL())
     return true;
   getTargetStreamer().emitCurrentConstantPool();
   return false;
@@ -11834,7 +11846,7 @@ bool ARMAsmParser::parseDirectiveLtorg(SMLoc L) {
 bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
 
-  if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+  if (parseEOL())
     return true;
 
   if (!Section) {
@@ -11859,9 +11871,7 @@ bool ARMAsmParser::parseDirectivePersonalityIndex(SMLoc L) {
 
   const MCExpr *IndexExpression;
   SMLoc IndexLoc = Parser.getTok().getLoc();
-  if (Parser.parseExpression(IndexExpression) ||
-      parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.personalityindex' directive")) {
+  if (Parser.parseExpression(IndexExpression) || parseEOL()) {
     return true;
   }
 
@@ -11962,11 +11972,10 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
                             MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
   Lex();
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.tlsdescseq' directive"))
+  if (parseEOL())
     return true;
 
-  getTargetStreamer().AnnotateTLSDescriptorSequence(SRE);
+  getTargetStreamer().annotateTLSDescriptorSequence(SRE);
   return false;
 }
 
@@ -12004,8 +12013,7 @@ bool ARMAsmParser::parseDirectiveMovSP(SMLoc L) {
     Offset = CE->getValue();
   }
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.movsp' directive"))
+  if (parseEOL())
     return true;
 
   getTargetStreamer().emitMovSP(SPReg, Offset);
@@ -12092,8 +12100,7 @@ bool ARMAsmParser::parseDirectiveSEHAllocStack(SMLoc L, bool Wide) {
 bool ARMAsmParser::parseDirectiveSEHSaveRegs(SMLoc L, bool Wide) {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
 
-  if (parseRegisterList(Operands) ||
-      parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+  if (parseRegisterList(Operands) || parseEOL())
     return true;
   ARMOperand &Op = (ARMOperand &)*Operands[0];
   if (!Op.isRegList())
@@ -12135,8 +12142,7 @@ bool ARMAsmParser::parseDirectiveSEHSaveSP(SMLoc L) {
 bool ARMAsmParser::parseDirectiveSEHSaveFRegs(SMLoc L) {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
 
-  if (parseRegisterList(Operands) ||
-      parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+  if (parseRegisterList(Operands) || parseEOL())
     return true;
   ARMOperand &Op = (ARMOperand &)*Operands[0];
   if (!Op.isDPRRegList())
@@ -12558,8 +12564,7 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
   SMLoc ExtLoc = Parser.getTok().getLoc();
   Lex();
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.arch_extension' directive"))
+  if (parseEOL())
     return true;
 
   if (Name == "nocrypto") {

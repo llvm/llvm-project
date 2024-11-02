@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 struct A;
 
@@ -9,7 +9,7 @@ struct B {
 
 void B::f() { }
 
-// CHECK-LABEL: define{{.*}} i32 @_ZN1D1gEv(%struct.D* {{[^,]*}} %this)
+// CHECK-LABEL: define{{.*}} i32 @_ZN1D1gEv(ptr {{[^,]*}} %this)
 // CHECK: declare void @_ZN1B1gEv()
 
 struct C;

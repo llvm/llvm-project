@@ -46,8 +46,10 @@
 !19 = !{i32 7, !"max", !"max"}
 
 ; Check that any 'min' module flags are valid.
-; CHECK: invalid value for 'min' module flag (expected constant integer)
+; CHECK: invalid value for 'min' module flag (expected constant non-negative integer)
 !20 = !{i32 8, !"min", !"min"}
+; CHECK: invalid value for 'min' module flag (expected constant non-negative integer)
+!21 = !{i32 8, !"min", i32 -1}
 
 ; Check that any 'require' module flags are valid.
 ; CHECK: invalid requirement on flag, flag is not present in module
@@ -62,4 +64,4 @@
 
 !llvm.module.flags = !{
   !0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15,
-  !16, !17, !18, !19, !20 }
+  !16, !17, !18, !19, !20, !21 }

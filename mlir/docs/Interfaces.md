@@ -8,6 +8,8 @@ to account for the semantics of every operation, or be overly conservative.
 Without care, this can result in code with special-cases for each supported
 operation type. To combat this, MLIR provides a concept of `interfaces`.
 
+[TOC]
+
 ## Motivation
 
 Interfaces provide a generic way of interacting with the IR. The goal is to be
@@ -396,7 +398,7 @@ comprised of the following components:
     -   Additional C++ code that is injected into the declarations of both the
         interface and the trait class. This allows for defining methods and more
         that are exposed on both the interface and the trait class, e.g. to inject
-        utilties on both the interface and the derived entity implementing the
+        utilities on both the interface and the derived entity implementing the
         interface (e.g. attribute, operation, etc.).
     -   In non-static methods, `$_attr`/`$_op`/`$_type`
         (depending on the type of interface) may be used to refer to an

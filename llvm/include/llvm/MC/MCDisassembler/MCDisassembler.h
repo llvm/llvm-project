@@ -171,6 +171,29 @@ public:
   // It should help move much of the target specific code from llvm-objdump to
   // respective target disassemblers.
 
+  /// Suggest a distance to skip in a buffer of data to find the next
+  /// place to look for the start of an instruction. For example, if
+  /// all instructions have a fixed alignment, this might advance to
+  /// the next multiple of that alignment.
+  ///
+  /// If not overridden, the default is 1.
+  ///
+  /// \param Address  - The address, in the memory space of region, of the
+  ///                   starting point (typically the first byte of something
+  ///                   that did not decode as a valid instruction at all).
+  /// \param Bytes    - A reference to the actual bytes at Address. May be
+  ///                   needed in order to determine the width of an
+  ///                   unrecognized instruction (e.g. in Thumb this is a simple
+  ///                   consistent criterion that doesn't require knowing the
+  ///                   specific instruction). The caller can pass as much data
+  ///                   as they have available, and the function is required to
+  ///                   make a reasonable default choice if not enough data is
+  ///                   available to make a better one.
+  /// \return         - A number of bytes to skip. Must always be greater than
+  ///                   zero. May be greater than the size of Bytes.
+  virtual uint64_t suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
+                                      uint64_t Address) const;
+
 private:
   MCContext &Ctx;
 

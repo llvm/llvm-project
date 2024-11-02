@@ -43,9 +43,9 @@ target_link_libraries(toyc-ch6
     MLIRExecutionEngine
     MLIRIR
     MLIRLLVMCommonConversion
-    MLIRLLVMIR
+    MLIRLLVMDialect
     MLIRLLVMToLLVMIRTranslation
-    MLIRMemRef
+    MLIRMemRefDialect
     MLIRParser
     MLIRPass
     MLIRSideEffectInterfaces

@@ -6,7 +6,7 @@
 # RUN: ld.lld -pie --script %t/script %t.o -o %t.exe
 # RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=RELOCS-SHARED %s
 # RUN: llvm-readobj -r %t.exe | FileCheck --check-prefix=RELOCS-PIE %s
-# RUN: llvm-objdump --no-show-raw-insn -d %t.so | FileCheck --check-prefix=DISAS %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t.so | FileCheck --check-prefix=DISAS %s
 
 ## Check if the R_AARCH64_LD64_GOTPAGE_LO15 generates the GOT entries.
 # RELOCS-SHARED:      Relocations [

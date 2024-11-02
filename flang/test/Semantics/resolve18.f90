@@ -11,7 +11,7 @@ end module
 module m2
   use m1
   implicit none
-  !ERROR: 'foo' may not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
+  !WARNING: 'foo' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
   interface foo
     module procedure s
   end interface

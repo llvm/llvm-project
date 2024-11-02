@@ -14,7 +14,7 @@ declare void @consume.i8(i8*)
 ; wouldn't live across suspend point.
 ; This test whether or not %testval would be put on the frame by ignoring the
 ; partial lifetime markers.
-define void @foo(%i8.array** %to_store) "coroutine.presplit"="1" {
+define void @foo(%i8.array** %to_store) presplitcoroutine {
 entry:
   %testval = alloca %i8.array
   %subrange = getelementptr inbounds %i8.array, %i8.array* %testval, i64 0, i32 0, i64 50

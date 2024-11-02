@@ -48,12 +48,12 @@ cl::opt<bool> llvm::ForcePGSO(
     cl::desc("Force the (profiled-guided) size optimizations. "));
 
 cl::opt<int> llvm::PgsoCutoffInstrProf(
-    "pgso-cutoff-instr-prof", cl::Hidden, cl::init(950000), cl::ZeroOrMore,
+    "pgso-cutoff-instr-prof", cl::Hidden, cl::init(950000),
     cl::desc("The profile guided size optimization profile summary cutoff "
              "for instrumentation profile."));
 
 cl::opt<int> llvm::PgsoCutoffSampleProf(
-    "pgso-cutoff-sample-prof", cl::Hidden, cl::init(990000), cl::ZeroOrMore,
+    "pgso-cutoff-sample-prof", cl::Hidden, cl::init(990000),
     cl::desc("The profile guided size optimization profile summary cutoff "
              "for sample profile."));
 

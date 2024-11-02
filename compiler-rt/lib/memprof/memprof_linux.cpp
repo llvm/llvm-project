@@ -69,12 +69,6 @@ uptr FindDynamicShadowStart() {
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
-void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
-  ucontext_t *ucp = (ucontext_t *)context;
-  *stack = (uptr)ucp->uc_stack.ss_sp;
-  *ssize = ucp->uc_stack.ss_size;
-}
-
 void *MemprofDlSymNext(const char *sym) { return dlsym(RTLD_NEXT, sym); }
 
 } // namespace __memprof

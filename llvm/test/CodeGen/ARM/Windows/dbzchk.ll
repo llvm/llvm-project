@@ -131,9 +131,9 @@ attributes #0 = { optsize }
 ; CHECK-CFG-DAG: t__brkdiv0
 
 ; CHECK-CFG-ASM-LABEL: h:
-; CHECK-CFG-ASM: cbz r{{[0-9]}}, .LBB2_4
+; CHECK-CFG-ASM: cbz r{{[0-9]}}, .LBB2_5
 ; CHECK-CFG-ASM: bl __rt_udiv
-; CHECK-CFG-ASM-LABEL: .LBB2_4:
+; CHECK-CFG-ASM-LABEL: .LBB2_5:
 ; CHECK-CFG-ASM: __brkdiv0
 
 ; RUN: llc -O1 -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK

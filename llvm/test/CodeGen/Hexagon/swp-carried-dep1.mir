@@ -80,7 +80,7 @@ body:             |
     %23:intregs = COPY %0
     J2_loop0r %bb.2, %23, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
 
-  bb.2 (address-taken):
+  bb.2 (machine-block-address-taken):
     successors: %bb.3, %bb.2
 
     %3:intregs = PHI %2, %bb.1, %10, %bb.2

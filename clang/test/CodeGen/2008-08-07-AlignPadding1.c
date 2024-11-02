@@ -1,4 +1,4 @@
-/* RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
+/* RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
 
 The FE must generate padding here both at the end of each PyG_Head and
 between array elements.  Reduced from Python. */
@@ -22,7 +22,7 @@ struct gc_generation {
 
 // The idea is that there are 6 undefs in this structure initializer to cover
 // the padding between elements.
-// CHECK: @generations ={{.*}} global [3 x %struct.gc_generation] [%struct.gc_generation { %union._gc_head { %struct.anon { %union._gc_head* getelementptr inbounds ([3 x %struct.gc_generation], [3 x %struct.gc_generation]* @generations, i32 0, i32 0, i32 0), %union._gc_head* getelementptr inbounds ([3 x %struct.gc_generation], [3 x %struct.gc_generation]* @generations, i32 0, i32 0, i32 0), i64 0 }, [8 x i8] undef }, i32 700, i32 0, [8 x i8] undef }, %struct.gc_generation { %union._gc_head { %struct.anon { %union._gc_head* bitcast (i8* getelementptr (i8, i8* bitcast ([3 x %struct.gc_generation]* @generations to i8*), i64 48) to %union._gc_head*), %union._gc_head* bitcast (i8* getelementptr (i8, i8* bitcast ([3 x %struct.gc_generation]* @generations to i8*), i64 48) to %union._gc_head*), i64 0 }, [8 x i8] undef }, i32 10, i32 0, [8 x i8] undef }, %struct.gc_generation { %union._gc_head { %struct.anon { %union._gc_head* bitcast (i8* getelementptr (i8, i8* bitcast ([3 x %struct.gc_generation]* @generations to i8*), i64 96) to %union._gc_head*), %union._gc_head* bitcast (i8* getelementptr (i8, i8* bitcast ([3 x %struct.gc_generation]* @generations to i8*), i64 96) to %union._gc_head*), i64 0 }, [8 x i8] undef }, i32 10, i32 0, [8 x i8] undef }]
+// CHECK: @generations ={{.*}} global [3 x %struct.gc_generation] [%struct.gc_generation { %union._gc_head { %struct.anon { ptr @generations, ptr @generations, i64 0 }, [8 x i8] undef }, i32 700, i32 0, [8 x i8] undef }, %struct.gc_generation { %union._gc_head { %struct.anon { ptr getelementptr (i8, ptr @generations, i64 48), ptr getelementptr (i8, ptr @generations, i64 48), i64 0 }, [8 x i8] undef }, i32 10, i32 0, [8 x i8] undef }, %struct.gc_generation { %union._gc_head { %struct.anon { ptr getelementptr (i8, ptr @generations, i64 96), ptr getelementptr (i8, ptr @generations, i64 96), i64 0 }, [8 x i8] undef }, i32 10, i32 0, [8 x i8] undef }]
 /* linked lists of container objects */
 struct gc_generation generations[3] = {
         /* PyGC_Head,                           threshold,      count */

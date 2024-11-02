@@ -93,6 +93,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strcoll_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strcoll_test.cpp
+  DEPENDS
+    libc.src.string.strcoll
+)
+
+add_libc_unittest(
   strcpy_test
   SUITE
     libc_string_unittests
@@ -121,6 +131,27 @@ add_libc_unittest(
   DEPENDS
     libc.include.stdlib
     libc.src.string.strdup
+)
+
+add_libc_unittest(
+  strerror_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strerror_test.cpp
+  DEPENDS
+    libc.src.string.strerror
+)
+
+
+add_libc_unittest(
+  strerror_r_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strerror_r_test.cpp
+  DEPENDS
+    libc.src.string.strerror_r
 )
 
 add_libc_unittest(
@@ -222,6 +253,16 @@ add_libc_unittest(
     strrchr_test.cpp
   DEPENDS
     libc.src.string.strrchr
+)
+
+add_libc_unittest(
+  strsignal_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strsignal_test.cpp
+  DEPENDS
+    libc.src.string.strsignal
 )
 
 add_libc_unittest(

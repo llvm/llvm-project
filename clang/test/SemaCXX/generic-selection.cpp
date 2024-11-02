@@ -69,3 +69,24 @@ void unreachable_associations(const int i, const Test t) {
       default : 3
     ) == 2, "we had better pick const Test, not Test!"); // C++-specific result
 }
+
+namespace GH55562 {
+struct S { // expected-note {{declared here}}
+  int i;
+};
+
+void func(struct S s) {
+  // We would previously reject this because the parser thought 'struct S :'
+  // was the start of a definition (with a base class specifier); it's not, it
+  // is an elaborated type specifier followed by the association's value and
+  // it should work the same as in C.
+  (void)_Generic(s, struct S : 1);
+
+  // The rest of these cases test that we still produce a reasonable diagnostic
+  // when referencing an unknown type or trying to define a type in other ways.
+  (void)_Generic(s, struct T : 1);            // expected-error {{type 'struct T' in generic association incomplete}}
+  (void)_Generic(s, struct U { int a; } : 1); // expected-error {{'U' cannot be defined in a type specifier}}
+  (void)_Generic(s, struct V : S);            // expected-error {{'S' does not refer to a value}}
+  (void)_Generic(s, struct W : S { int b; } : 1); // expected-error {{expected '(' for function-style cast or type construction}}
+}
+} // namespace GH55562

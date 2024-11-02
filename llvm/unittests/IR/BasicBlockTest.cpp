@@ -169,23 +169,6 @@ TEST(BasicBlockTest, ComesBefore) {
   EXPECT_FALSE(Ret->comesBefore(Ret));
 }
 
-TEST(BasicBlockTest, EmptyPhi) {
-  LLVMContext Ctx;
-
-  Module *M = new Module("MyModule", Ctx);
-  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
-  Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
-
-  BasicBlock *BB1 = BasicBlock::Create(Ctx, "", F);
-  ReturnInst::Create(Ctx, BB1);
-
-  Type *Ty = Type::getInt32PtrTy(Ctx);
-  BasicBlock *BB2 = BasicBlock::Create(Ctx, "", F);
-  PHINode::Create(Ty, 0, "", BB2);
-  ReturnInst::Create(Ctx, BB2);
-  EXPECT_FALSE(verifyModule(*M, &errs()));
-}
-
 class InstrOrderInvalidationTest : public ::testing::Test {
 protected:
   void SetUp() override {

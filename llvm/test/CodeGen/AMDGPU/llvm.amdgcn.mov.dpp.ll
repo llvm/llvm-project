@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,PREGFX10,PREGFX10-OPT %s
 ; RUN: llc -O0 -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-NOOPT,PREGFX10,PREGFX10-NOOPT %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT %s
 
 ; FIXME: The register allocator / scheduler should be able to avoid these hazards.
 

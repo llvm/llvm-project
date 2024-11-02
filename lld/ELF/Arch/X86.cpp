@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -37,14 +38,7 @@ public:
                 uint64_t val) const override;
 
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
 };
 } // namespace
 
@@ -77,9 +71,6 @@ int X86::getTlsGdRelaxSkip(RelType type) const {
 
 RelExpr X86::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
-  if (type == R_386_TLS_IE || type == R_386_TLS_GOTIE)
-    config->hasTlsIe = true;
-
   switch (type) {
   case R_386_8:
   case R_386_16:
@@ -353,8 +344,7 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (rel.type == R_386_TLS_GD) {
     // Convert
     //   leal x@tlsgd(, %ebx, 1), %eax
@@ -387,8 +377,7 @@ void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (rel.type == R_386_TLS_GD) {
     // Convert
     //   leal x@tlsgd(, %ebx, 1), %eax
@@ -421,8 +410,7 @@ void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
@@ -459,8 +447,7 @@ void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   write32le(loc, val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                         uint64_t val) const {
+static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (rel.type == R_386_TLS_LDO_32) {
     write32le(loc, val);
     return;
@@ -479,6 +466,37 @@ void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
       0x8d, 0x74, 0x26, 0x00,             // leal 0(%esi,1),%esi
   };
   memcpy(loc - 2, inst, sizeof(inst));
+}
+
+void X86::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  for (const Relocation &rel : sec.relocations) {
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr),
+        32);
+    switch (rel.expr) {
+    case R_RELAX_TLS_GD_TO_IE_GOTPLT:
+      relaxTlsGdToIe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_GD_TO_LE:
+    case R_RELAX_TLS_GD_TO_LE_NEG:
+      relaxTlsGdToLe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_LD_TO_LE:
+      relaxTlsLdToLe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_IE_TO_LE:
+      relaxTlsIeToLe(loc, rel, val);
+      continue;
+    default:
+      relocate(loc, rel, val);
+      break;
+    }
+  }
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT

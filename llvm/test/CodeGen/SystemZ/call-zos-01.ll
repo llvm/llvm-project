@@ -38,9 +38,9 @@ entry:
 
 ; CHECK-LABEL: call_ptr:
 ; CHECK: lgr 1, 2
-define i32 @call_ptr(i32* %p1, i32* %p2) {
+define i32 @call_ptr(ptr %p1, ptr %p2) {
 entry:
-  %retval = call i32 (i32*) @pass_ptr(i32* %p2)
+  %retval = call i32 (ptr) @pass_ptr(ptr %p2)
   ret i32 %retval
 }
 
@@ -86,7 +86,7 @@ entry:
 }
 
 ; CHECK-LABEL: pass_integrals0:
-; CHECK: ag  2, 2328(4)
+; CHECK: ag  2, 2200(4)
 ; CHECK-NEXT: lgr 3, 2
 define signext i64 @pass_integrals0(i64 signext %arg0, i32 signext %arg1, i16 signext %arg2, i64 signext %arg3) {
 entry:
@@ -188,4 +188,4 @@ define i64 @pass_floats0(fp128 %arg0, fp128 %arg1, double %arg2) {
 }
 
 declare i64 @pass_floats1(double %arg0, fp128 %arg1)
-declare i32 @pass_ptr(i32* %arg)
+declare i32 @pass_ptr(ptr %arg)

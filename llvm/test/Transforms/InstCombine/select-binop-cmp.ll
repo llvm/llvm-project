@@ -1226,12 +1226,12 @@ define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
 ; loops.
 define i32 @select_replace_constexpr(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_constexpr(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], ptrtoint (i32* @g to i32)
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], ptrtoint (ptr @g to i32)
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[ADD]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
-  %c = icmp eq i32 %x, ptrtoint (i32* @g to i32)
+  %c = icmp eq i32 %x, ptrtoint (ptr @g to i32)
   %add = add i32 %x, %y
   %s = select i1 %c, i32 %add, i32 %z
   ret i32 %s

@@ -320,9 +320,8 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   Instruction *StackEntry =
       AtEntry.CreateAlloca(ConcreteStackEntryTy, nullptr, "gc_frame");
 
-  while (isa<AllocaInst>(IP))
-    ++IP;
-  AtEntry.SetInsertPoint(IP->getParent(), IP);
+  AtEntry.SetInsertPointPastAllocas(&F);
+  IP = AtEntry.GetInsertPoint();
 
   // Initialize the map pointer and load the current head of the shadow stack.
   Instruction *CurrentHead =
@@ -361,7 +360,7 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
 
   // For each instruction that escapes...
   EscapeEnumerator EE(F, "gc_cleanup", /*HandleExceptions=*/true,
-                      DTU.hasValue() ? DTU.getPointer() : nullptr);
+                      DTU ? DTU.getPointer() : nullptr);
   while (IRBuilder<> *AtExit = EE.Next()) {
     // Pop the entry from the shadow stack. Don't reuse CurrentHead from
     // AtEntry, since that would make the value live for the entire function.

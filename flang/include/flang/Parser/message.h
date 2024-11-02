@@ -29,9 +29,9 @@
 
 namespace Fortran::parser {
 
-// Use "..."_err_en_US, "..."_warn_en_US, "..."_port_en_US, and "..."_en_US
-// string literals to define the static text and fatality of a message.
-//
+// Use "..."_err_en_US, "..."_warn_en_US, "..."_port_en_US, "..."_because_en_US,
+// "..."_todo_en_US, and "..."_en_US string literals to define the static text
+// and severity of a message or attachment.
 enum class Severity {
   Error, // fatal error that prevents code and module file generation
   Warning, // likely problem
@@ -80,6 +80,10 @@ constexpr MessageFixedText operator""_warn_en_US(
 constexpr MessageFixedText operator""_port_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Portability};
+}
+constexpr MessageFixedText operator""_because_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::Because};
 }
 constexpr MessageFixedText operator""_todo_en_US(
     const char str[], std::size_t n) {
@@ -341,6 +345,17 @@ public:
 
   template <typename... A> Message *Say(A &&...args) {
     return Say(at_, std::forward<A>(args)...);
+  }
+
+  Message *Say(Message &&msg) {
+    if (messages_ != nullptr) {
+      if (contextMessage_) {
+        msg.SetContext(contextMessage_.get());
+      }
+      return &messages_->Say(std::move(msg));
+    } else {
+      return nullptr;
+    }
   }
 
 private:

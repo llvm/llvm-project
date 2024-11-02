@@ -52,7 +52,7 @@ std::string SubtargetFeatures::getString() const {
 }
 
 void SubtargetFeatures::print(raw_ostream &OS) const {
-  for (auto &F : Features)
+  for (const auto &F : Features)
     OS << F << " ";
   OS << "\n";
 }

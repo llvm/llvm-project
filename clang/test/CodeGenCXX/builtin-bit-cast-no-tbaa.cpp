@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -O3 -std=c++2a -S -emit-llvm -o - -disable-llvm-passes -triple x86_64-apple-macos10.14 %s | FileCheck %s
+// RUN: %clang_cc1 -O3 -std=c++2a -S -emit-llvm -o - -disable-llvm-passes -triple x86_64-apple-macos10.14 %s | FileCheck %s
 
 void test_scalar() {
   // CHECK-LABEL: define{{.*}} void @_Z11test_scalarv
   __builtin_bit_cast(float, 42);
 
-  // CHECK: load float, float* {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA:.*]]
+  // CHECK: load float, ptr {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA:.*]]
 }
 
 void test_scalar2() {
@@ -12,11 +12,11 @@ void test_scalar2() {
   struct S {int m;};
   __builtin_bit_cast(int, S{42});
 
-  // CHECK: load i32, i32* {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA]]
+  // CHECK: load i32, ptr {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA]]
 }
 
 int test_same_type(int &r) {
-  // CHECK: load i32, i32* {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA]]
+  // CHECK: load i32, ptr {{.*}}, align 4, !tbaa ![[MAY_ALIAS_TBAA]]
   return __builtin_bit_cast(int, r);
 }
 

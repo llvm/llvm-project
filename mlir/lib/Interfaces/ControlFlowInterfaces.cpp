@@ -8,8 +8,8 @@
 
 #include <utility>
 
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -97,15 +97,7 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   SmallVector<RegionSuccessor, 2> successors;
-  unsigned numInputs;
-  if (sourceNo) {
-    Region &srcRegion = op->getRegion(sourceNo.getValue());
-    numInputs = srcRegion.getNumArguments();
-  } else {
-    numInputs = op->getNumOperands();
-  }
-  SmallVector<Attribute, 2> operands(numInputs, nullptr);
-  regionInterface.getSuccessorRegions(sourceNo, operands, successors);
+  regionInterface.getSuccessorRegions(sourceNo, successors);
 
   for (RegionSuccessor &succ : successors) {
     Optional<unsigned> succRegionNo;
@@ -115,20 +107,20 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
     auto printEdgeName = [&](InFlightDiagnostic &diag) -> InFlightDiagnostic & {
       diag << "from ";
       if (sourceNo)
-        diag << "Region #" << sourceNo.getValue();
+        diag << "Region #" << sourceNo.value();
       else
         diag << "parent operands";
 
       diag << " to ";
       if (succRegionNo)
-        diag << "Region #" << succRegionNo.getValue();
+        diag << "Region #" << succRegionNo.value();
       else
         diag << "parent results";
       return diag;
     };
 
     Optional<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
-    if (!sourceTypes.hasValue())
+    if (!sourceTypes.has_value())
       continue;
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
@@ -160,25 +152,12 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   auto inputTypesFromParent = [&](Optional<unsigned> regionNo) -> TypeRange {
-    if (regionNo.hasValue()) {
-      return regionInterface.getSuccessorEntryOperands(regionNo.getValue())
-          .getTypes();
-    }
-
-    // If the successor of a parent op is the parent itself
-    // RegionBranchOpInterface does not have an API to query what the entry
-    // operands will be in that case. Vend out the result types of the op in
-    // that case so that type checking succeeds for this case.
-    return op->getResultTypes();
+    return regionInterface.getSuccessorEntryOperands(regionNo).getTypes();
   };
 
   // Verify types along control flow edges originating from the parent.
   if (failed(verifyTypesAlongAllEdges(op, llvm::None, inputTypesFromParent)))
     return failure();
-
-  // RegionBranchOpInterface should not be implemented by Ops that do not have
-  // attached regions.
-  assert(op->getNumRegions() != 0);
 
   auto areTypesCompatible = [&](TypeRange lhs, TypeRange rhs) {
     if (lhs.size() != rhs.size())
@@ -325,6 +304,27 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
 bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
   Region *region = &getOperation()->getRegion(index);
   return isRegionReachable(region, region);
+}
+
+void RegionBranchOpInterface::getSuccessorRegions(
+    Optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+  unsigned numInputs = 0;
+  if (index) {
+    // If the predecessor is a region, get the number of operands from an
+    // exiting terminator in the region.
+    for (Block &block : getOperation()->getRegion(*index)) {
+      Operation *terminator = block.getTerminator();
+      if (getRegionBranchSuccessorOperands(terminator, *index)) {
+        numInputs = terminator->getNumOperands();
+        break;
+      }
+    }
+  } else {
+    // Otherwise, use the number of parent operation operands.
+    numInputs = getOperation()->getNumOperands();
+  }
+  SmallVector<Attribute, 2> operands(numInputs, nullptr);
+  getSuccessorRegions(index, operands, regions);
 }
 
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {

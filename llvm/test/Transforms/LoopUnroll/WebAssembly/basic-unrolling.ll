@@ -203,7 +203,7 @@ define hidden void @dont_unroll_call(i32* nocapture %a, i32* nocapture readonly 
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I1]], [[I]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_013]]
 ; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    call void (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 [[I_013]], i32 [[MUL]])
+; CHECK-NEXT:    call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 [[I_013]], i32 [[MUL]])
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_013]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
@@ -224,7 +224,7 @@ for.body:                                         ; preds = %for.body, %entry
   %mul = mul nsw i32 %i1, %i
   %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.013
   store i32 %mul, i32* %arrayidx2, align 4
-  call void (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 %i.013, i32 %mul)
+  call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 %i.013, i32 %mul)
   %inc = add nuw i32 %i.013, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
@@ -300,4 +300,4 @@ attributes #0 = { optsize }
 attributes #1 = { minsize }
 
 @.str = private unnamed_addr constant [12 x i8] c"a[%d] = %d\0A\00", align 1
-declare void @printf(i8* nocapture readonly, ...)
+declare i32 @printf(i8* nocapture readonly, ...)

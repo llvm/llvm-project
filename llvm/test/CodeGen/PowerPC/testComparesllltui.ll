@@ -67,7 +67,7 @@ define void @test_llltui_store(i32 zeroext %a, i32 zeroext %b) {
 entry:
   %cmp = icmp ult i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @glob, align 4
+  store i32 %conv, ptr @glob, align 4
   ret void
 }
 
@@ -84,7 +84,7 @@ define void @test_llltui_sext_store(i32 zeroext %a, i32 zeroext %b) {
 entry:
   %cmp = icmp ult i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob, align 4
+  store i32 %sub, ptr @glob, align 4
   ret void
 }
 
@@ -98,7 +98,7 @@ define void @test_llltui_z_store(i32 zeroext %a) {
 ; CHECK-NEXT:    stw r4, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  store i32 0, i32* @glob, align 4
+  store i32 0, ptr @glob, align 4
   ret void
 }
 
@@ -112,7 +112,7 @@ define void @test_llltui_sext_z_store(i32 zeroext %a) {
 ; CHECK-NEXT:    stw r4, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  store i32 0, i32* @glob, align 4
+  store i32 0, ptr @glob, align 4
   ret void
 }
 

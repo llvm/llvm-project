@@ -168,18 +168,18 @@ define   <4 x double> @_ss4xdouble_maskz(double %a, <4 x i32> %mask1) {
   ret <4 x double> %r
 }
 
-define <2 x double> @test_v2f64_broadcast_fold(<2 x double> *%a0, <2 x double> %a1) {
+define <2 x double> @test_v2f64_broadcast_fold(ptr%a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_v2f64_broadcast_fold:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %1 = load <2 x double>, <2 x double> *%a0, align 16
+  %1 = load <2 x double>, ptr%a0, align 16
   %2 = shufflevector <2 x double> %1, <2 x double> undef, <2 x i32> zeroinitializer
   %3 = fadd <2 x double> %2, %a1
   ret <2 x double> %3
 }
 
-define <2 x double> @test_v2f64_broadcast_fold_mask(<2 x double> *%a0, <2 x double> %a1, <2 x i64> %mask1, <2 x double> %a2) {
+define <2 x double> @test_v2f64_broadcast_fold_mask(ptr%a0, <2 x double> %a1, <2 x i64> %mask1, <2 x double> %a2) {
 ; CHECK-LABEL: test_v2f64_broadcast_fold_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vptestmq %xmm1, %xmm1, %k1
@@ -187,7 +187,7 @@ define <2 x double> @test_v2f64_broadcast_fold_mask(<2 x double> *%a0, <2 x doub
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %mask = icmp ne <2 x i64> %mask1, zeroinitializer
-  %1 = load <2 x double>, <2 x double> *%a0, align 16
+  %1 = load <2 x double>, ptr%a0, align 16
   %2 = shufflevector <2 x double> %1, <2 x double> undef, <2 x i32> zeroinitializer
   %3 = fadd <2 x double> %2, %a1
   %4 = select <2 x i1> %mask, <2 x double> %3, <2 x double> %a2

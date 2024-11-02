@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -mcpu=mvp -filetype=obj %s -o %t.o
 ; RUN: yaml2obj %S/Inputs/globals.yaml -o %t_globals.o
 ; RUN: wasm-ld -print-gc-sections -o %t1.wasm %t.o %t_globals.o | \
 ; RUN:     FileCheck %s -check-prefix=PRINT-GC

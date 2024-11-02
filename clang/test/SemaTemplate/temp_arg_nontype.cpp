@@ -398,7 +398,7 @@ namespace partial_order_different_types {
 
 namespace partial_order_references {
   // FIXME: The standard does not appear to consider the second specialization
-  // to be more more specialized than the first! The problem is that deducing
+  // to be more specialized than the first! The problem is that deducing
   // an 'int&' parameter from an argument 'R' results in a type mismatch,
   // because the parameter has a reference type and the argument is an
   // expression and thus does not have reference type. We resolve this by

@@ -60,7 +60,7 @@
 // Basic Block Labels
 // ==================
 //
-// With -fbasic-block-sections=labels, we emit the offsets of BB addresses of
+// With -fbasic-block-sections=labels, we encode the offsets of BB addresses of
 // every function into the .llvm_bb_addr_map section. Along with the function
 // symbols, this allows for mapping of virtual addresses in PMU profiles back to
 // the corresponding basic blocks. This logic is implemented in AsmPrinter. This
@@ -221,7 +221,7 @@ assignSections(MachineFunction &MF,
       // set every basic block's section ID equal to its number (basic block
       // id). This further ensures that basic blocks are ordered canonically.
       MBB.setSectionID({static_cast<unsigned int>(MBB.getNumber())});
-    } else if (FuncBBClusterInfo[MBB.getNumber()].hasValue())
+    } else if (FuncBBClusterInfo[MBB.getNumber()])
       MBB.setSectionID(FuncBBClusterInfo[MBB.getNumber()]->ClusterID);
     else {
       // BB goes into the special cold section if it is not specified in the
@@ -234,9 +234,8 @@ assignSections(MachineFunction &MF,
       // If we already have one cluster containing eh_pads, this must be updated
       // to ExceptionSectionID. Otherwise, we set it equal to the current
       // section ID.
-      EHPadsSectionID = EHPadsSectionID.hasValue()
-                            ? MBBSectionID::ExceptionSectionID
-                            : MBB.getSectionID();
+      EHPadsSectionID = EHPadsSectionID ? MBBSectionID::ExceptionSectionID
+                                        : MBB.getSectionID();
     }
   }
 
@@ -245,7 +244,7 @@ assignSections(MachineFunction &MF,
   if (EHPadsSectionID == MBBSectionID::ExceptionSectionID)
     for (auto &MBB : MF)
       if (MBB.isEHPad())
-        MBB.setSectionID(EHPadsSectionID.getValue());
+        MBB.setSectionID(*EHPadsSectionID);
 }
 
 void llvm::sortBasicBlocksAndUpdateBranches(
@@ -269,8 +268,8 @@ void llvm::sortBasicBlocksAndUpdateBranches(
 // If the exception section begins with a landing pad, that landing pad will
 // assume a zero offset (relative to @LPStart) in the LSDA. However, a value of
 // zero implies "no landing pad." This function inserts a NOP just before the EH
-// pad label to ensure a nonzero offset. Returns true if padding is not needed.
-static bool avoidZeroOffsetLandingPad(MachineFunction &MF) {
+// pad label to ensure a nonzero offset.
+void llvm::avoidZeroOffsetLandingPad(MachineFunction &MF) {
   for (auto &MBB : MF) {
     if (MBB.isBeginSection() && MBB.isEHPad()) {
       MachineBasicBlock::iterator MI = MBB.begin();
@@ -279,10 +278,8 @@ static bool avoidZeroOffsetLandingPad(MachineFunction &MF) {
       MCInst Nop = MF.getSubtarget().getInstrInfo()->getNop();
       BuildMI(MBB, MI, DebugLoc(),
               MF.getSubtarget().getInstrInfo()->get(Nop.getOpcode()));
-      return false;
     }
   }
-  return true;
 }
 
 // This checks if the source of this function has drifted since this binary was
@@ -298,7 +295,7 @@ static bool hasInstrProfHashMismatch(MachineFunction &MF) {
   auto *Existing = MF.getFunction().getMetadata(LLVMContext::MD_annotation);
   if (Existing) {
     MDTuple *Tuple = cast<MDTuple>(Existing);
-    for (auto &N : Tuple->operands())
+    for (const auto &N : Tuple->operands())
       if (cast<MDString>(N.get())->getString() == MetadataName)
         return true;
   }

@@ -21,7 +21,7 @@ namespace readability {
 /// Alternatively, a list of destination suffixes can be provided.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-uppercase-literal-suffix.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/uppercase-literal-suffix.html
 class UppercaseLiteralSuffixCheck : public ClangTidyCheck {
 public:
   UppercaseLiteralSuffixCheck(StringRef Name, ClangTidyContext *Context);

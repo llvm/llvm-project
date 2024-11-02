@@ -12,7 +12,7 @@
 ; - CHECK-SHIFT2 makes sure that %b is shifted into the high part of the word
 ;   before being used, and that the low bits are set to 1.  This sequence is
 ;   independent of the other loop prologue instructions.
-define i8 @f1(i8 *%src, i8 %b) {
+define i8 @f1(ptr %src, i8 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0
 ; CHECK: l [[OLD:%r[0-9]+]], 0([[RISBG]])
@@ -41,12 +41,12 @@ define i8 @f1(i8 *%src, i8 %b) {
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw and i8 *%src, i8 %b seq_cst
+  %res = atomicrmw and ptr %src, i8 %b seq_cst
   ret i8 %res
 }
 
 ; Check the minimum signed value.  We AND the rotated word with 0x80ffffff.
-define i8 @f2(i8 *%src) {
+define i8 @f2(ptr %src) {
 ; CHECK-LABEL: f2:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0
 ; CHECK-DAG: sll %r2, 3
@@ -70,12 +70,12 @@ define i8 @f2(i8 *%src) {
 ;
 ; CHECK-SHIFT2-LABEL: f2:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw and i8 *%src, i8 -128 seq_cst
+  %res = atomicrmw and ptr %src, i8 -128 seq_cst
   ret i8 %res
 }
 
 ; Check ANDs of -2 (-1 isn't useful).  We AND the rotated word with 0xfeffffff.
-define i8 @f3(i8 *%src) {
+define i8 @f3(ptr %src) {
 ; CHECK-LABEL: f3:
 ; CHECK: nilh [[ROT]], 65279
 ; CHECK: br %r14
@@ -84,12 +84,12 @@ define i8 @f3(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f3:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw and i8 *%src, i8 -2 seq_cst
+  %res = atomicrmw and ptr %src, i8 -2 seq_cst
   ret i8 %res
 }
 
 ; Check ANDs of 1.  We AND the rotated word with 0x01ffffff.
-define i8 @f4(i8 *%src) {
+define i8 @f4(ptr %src) {
 ; CHECK-LABEL: f4:
 ; CHECK: nilh [[ROT]], 511
 ; CHECK: br %r14
@@ -98,12 +98,12 @@ define i8 @f4(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f4:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw and i8 *%src, i8 1 seq_cst
+  %res = atomicrmw and ptr %src, i8 1 seq_cst
   ret i8 %res
 }
 
 ; Check the maximum signed value.  We AND the rotated word with 0x7fffffff.
-define i8 @f5(i8 *%src) {
+define i8 @f5(ptr %src) {
 ; CHECK-LABEL: f5:
 ; CHECK: nilh [[ROT]], 32767
 ; CHECK: br %r14
@@ -112,13 +112,13 @@ define i8 @f5(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f5:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw and i8 *%src, i8 127 seq_cst
+  %res = atomicrmw and ptr %src, i8 127 seq_cst
   ret i8 %res
 }
 
 ; Check ANDs of a large unsigned value.  We AND the rotated word with
 ; 0xfdffffff.
-define i8 @f6(i8 *%src) {
+define i8 @f6(ptr %src) {
 ; CHECK-LABEL: f6:
 ; CHECK: nilh [[ROT]], 65023
 ; CHECK: br %r14
@@ -127,6 +127,6 @@ define i8 @f6(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f6:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw and i8 *%src, i8 253 seq_cst
+  %res = atomicrmw and ptr %src, i8 253 seq_cst
   ret i8 %res
 }

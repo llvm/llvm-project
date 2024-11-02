@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "environment.h"
+#include "environment-default-list.h"
 #include "memory.h"
 #include "tools.h"
 #include <cstdio>
@@ -14,9 +15,37 @@
 #include <cstring>
 #include <limits>
 
+#ifdef _WIN32
+extern char **_environ;
+#else
+extern char **environ;
+#endif
+
 namespace Fortran::runtime {
 
 ExecutionEnvironment executionEnvironment;
+
+static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
+  if (!envDefaults) {
+    return;
+  }
+
+  for (int itemIndex = 0; itemIndex < envDefaults->numItems; ++itemIndex) {
+    const char *name = envDefaults->item[itemIndex].name;
+    const char *value = envDefaults->item[itemIndex].value;
+#ifdef _WIN32
+    if (auto *x{std::getenv(name)}) {
+      continue;
+    }
+    if (_putenv_s(name, value) != 0) {
+#else
+    if (setenv(name, value, /*overwrite=*/0) == -1) {
+#endif
+      Fortran::runtime::Terminator{__FILE__, __LINE__}.Crash(
+          std::strerror(errno));
+    }
+  }
+}
 
 std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
   static const char *keywords[]{
@@ -37,11 +66,16 @@ std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
   }
 }
 
-void ExecutionEnvironment::Configure(
-    int ac, const char *av[], const char *env[]) {
+void ExecutionEnvironment::Configure(int ac, const char *av[],
+    const char *env[], const EnvironmentDefaultList *envDefaults) {
   argc = ac;
   argv = av;
-  envp = env;
+  SetEnvironmentDefaults(envDefaults);
+#ifdef _WIN32
+  envp = _environ;
+#else
+  envp = environ;
+#endif
   listDirectedOutputLineLengthLimit = 79; // PGI default
   defaultOutputRoundingMode =
       decimal::FortranRounding::RoundNearest; // RP(==RN)

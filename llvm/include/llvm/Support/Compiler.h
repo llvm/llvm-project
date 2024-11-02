@@ -113,8 +113,9 @@
 /// LLVM_EXTERNAL_VISIBILITY - classes, functions, and variables marked with
 /// this attribute will be made public and visible outside of any shared library
 /// they are linked in to.
-#if __has_attribute(visibility) && !defined(__MINGW32__) &&                    \
-    !defined(__CYGWIN__) && !defined(_WIN32)
+#if __has_attribute(visibility) &&                                             \
+    (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
+     (defined(__MINGW32__) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
 #if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
 #define LLVM_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
@@ -138,21 +139,10 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
-/// LLVM_NODISCARD - Warn if a type or return value is discarded.
-
-// Use the 'nodiscard' attribute in C++17 or newer mode.
-#if defined(__cplusplus) && __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(nodiscard)
-#define LLVM_NODISCARD [[nodiscard]]
-#elif LLVM_HAS_CPP_ATTRIBUTE(clang::warn_unused_result)
-#define LLVM_NODISCARD [[clang::warn_unused_result]]
-// Clang in C++14 mode claims that it has the 'nodiscard' attribute, but also
-// warns in the pedantic mode that 'nodiscard' is a C++17 extension (PR33518).
-// Use the 'nodiscard' attribute in C++14 mode only with GCC.
-// TODO: remove this workaround when PR33518 is resolved.
-#elif defined(__GNUC__) && LLVM_HAS_CPP_ATTRIBUTE(nodiscard)
-#define LLVM_NODISCARD [[nodiscard]]
+#if defined(__clang__)
+#define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
 #else
-#define LLVM_NODISCARD
+#define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
 // Indicate that a non-static, non-const C++ member function reinitializes
@@ -431,6 +421,14 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 # define LLVM_ADDRESS_SANITIZER_BUILD 0
 # define __asan_poison_memory_region(p, size)
 # define __asan_unpoison_memory_region(p, size)
+#endif
+
+/// \macro LLVM_HWADDRESS_SANITIZER_BUILD
+/// Whether LLVM itself is built with HWAddressSanitizer instrumentation.
+#if __has_feature(hwaddress_sanitizer)
+#define LLVM_HWADDRESS_SANITIZER_BUILD 1
+#else
+#define LLVM_HWADDRESS_SANITIZER_BUILD 0
 #endif
 
 /// \macro LLVM_THREAD_SANITIZER_BUILD

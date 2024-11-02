@@ -77,7 +77,7 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
   auto getSavingAddress = [&](llvm::Value *value) {
     auto *AI = cast<llvm::AllocaInst>(value);
     return Address(value, AI->getAllocatedType(),
-                   CharUnits::fromQuantity(AI->getAlignment()));
+                   CharUnits::fromQuantity(AI->getAlign().value()));
   };
   switch (K) {
   case ScalarLiteral:

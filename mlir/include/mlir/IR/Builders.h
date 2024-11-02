@@ -59,6 +59,7 @@ public:
                        Attribute metadata = Attribute());
 
   // Types.
+  FloatType getFloat8E5M2Type();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getF32Type();
@@ -69,7 +70,10 @@ public:
   IndexType getIndexType();
 
   IntegerType getI1Type();
+  IntegerType getI2Type();
+  IntegerType getI4Type();
   IntegerType getI8Type();
+  IntegerType getI16Type();
   IntegerType getI32Type();
   IntegerType getI64Type();
   IntegerType getIntegerType(unsigned width);
@@ -78,10 +82,17 @@ public:
   TupleType getTupleType(TypeRange elementTypes);
   NoneType getNoneType();
 
-  /// Get or construct an instance of the type 'ty' with provided arguments.
+  /// Get or construct an instance of the type `Ty` with provided arguments.
   template <typename Ty, typename... Args>
-  Ty getType(Args... args) {
-    return Ty::get(context, args...);
+  Ty getType(Args &&...args) {
+    return Ty::get(context, std::forward<Args>(args)...);
+  }
+
+  /// Get or construct an instance of the attribute `Attr` with provided
+  /// arguments.
+  template <typename Attr, typename... Args>
+  Attr getAttr(Args &&...args) {
+    return Attr::get(context, std::forward<Args>(args)...);
   }
 
   // Attributes.
@@ -129,6 +140,15 @@ public:
   DenseIntElementsAttr getI32TensorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64TensorAttr(ArrayRef<int64_t> values);
   DenseIntElementsAttr getIndexTensorAttr(ArrayRef<int64_t> values);
+
+  /// Tensor-typed DenseArrayAttr getters.
+  DenseBoolArrayAttr getDenseBoolArrayAttr(ArrayRef<bool> values);
+  DenseI8ArrayAttr getDenseI8ArrayAttr(ArrayRef<int8_t> values);
+  DenseI16ArrayAttr getDenseI16ArrayAttr(ArrayRef<int16_t> values);
+  DenseI32ArrayAttr getDenseI32ArrayAttr(ArrayRef<int32_t> values);
+  DenseI64ArrayAttr getDenseI64ArrayAttr(ArrayRef<int64_t> values);
+  DenseF32ArrayAttr getDenseF32ArrayAttr(ArrayRef<float> values);
+  DenseF64ArrayAttr getDenseF64ArrayAttr(ArrayRef<double> values);
 
   ArrayAttr getAffineMapArrayAttr(ArrayRef<AffineMap> values);
   ArrayAttr getBoolArrayAttr(ArrayRef<bool> values);
@@ -466,8 +486,7 @@ public:
 
   /// Overload to create or fold a single result operation.
   template <typename OpTy, typename... Args>
-  typename std::enable_if<OpTy::template hasTrait<OpTrait::OneResult>(),
-                          Value>::type
+  std::enable_if_t<OpTy::template hasTrait<OpTrait::OneResult>(), Value>
   createOrFold(Location location, Args &&...args) {
     SmallVector<Value, 1> results;
     createOrFold<OpTy>(results, location, std::forward<Args>(args)...);
@@ -476,8 +495,7 @@ public:
 
   /// Overload to create or fold a zero result operation.
   template <typename OpTy, typename... Args>
-  typename std::enable_if<OpTy::template hasTrait<OpTrait::ZeroResults>(),
-                          OpTy>::type
+  std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
   createOrFold(Location location, Args &&...args) {
     auto op = create<OpTy>(location, std::forward<Args>(args)...);
     SmallVector<Value, 0> unused;

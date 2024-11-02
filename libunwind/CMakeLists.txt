@@ -49,7 +49,7 @@ option(LIBUNWIND_INCLUDE_TESTS "Build the libunwind tests." ${LLVM_INCLUDE_TESTS
 option(LIBUNWIND_IS_BAREMETAL "Build libunwind for baremetal targets." OFF)
 option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requires locking dl_iterate_phdr." OFF)
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
-option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." OFF)
+option(LIBUNWIND_INSTALL_HEADERS "Install the libunwind headers." ON)
 
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -60,10 +60,6 @@ cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
-set(LIBUNWIND_TEST_LINKER_FLAGS "" CACHE STRING
-    "Additional linker flags for test programs.")
-set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
-    "Additional compiler flags for test programs.")
 
 # TODO: Remove this after branching for LLVM 15
 if(LIBUNWIND_SYSROOT OR LIBUNWIND_TARGET_TRIPLE OR LIBUNWIND_GCC_TOOLCHAIN)
@@ -115,6 +111,9 @@ set(LIBUNWIND_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE PATH
 set(LIBUNWIND_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path where built libunwind runtime libraries should be installed.")
 
+set(LIBUNWIND_SHARED_OUTPUT_NAME "unwind" CACHE STRING "Output name for the shared libunwind runtime library.")
+set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind" CACHE STRING "Output name for the static libunwind runtime library.")
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
@@ -161,10 +160,10 @@ add_compile_flags_if_supported(-Werror=return-type)
 if (LIBUNWIND_ENABLE_CET)
   add_compile_flags_if_supported(-fcf-protection=full)
   add_compile_flags_if_supported(-mshstk)
-  if (NOT LIBUNWIND_SUPPORTS_FCF_PROTECTION_EQ_FULL_FLAG)
+  if (NOT CXX_SUPPORTS_FCF_PROTECTION_EQ_FULL_FLAG)
     message(SEND_ERROR "Compiler doesn't support CET -fcf-protection option!")
   endif()
-  if (NOT LIBUNWIND_SUPPORTS_MSHSTK_FLAG)
+  if (NOT CXX_SUPPORTS_MSHSTK_FLAG)
     message(SEND_ERROR "Compiler doesn't support CET -mshstk option!")
   endif()
 endif()

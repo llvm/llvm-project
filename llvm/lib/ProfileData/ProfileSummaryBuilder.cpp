@@ -19,7 +19,7 @@
 using namespace llvm;
 
 cl::opt<bool> UseContextLessSummary(
-    "profile-summary-contextless", cl::Hidden, cl::init(false), cl::ZeroOrMore,
+    "profile-summary-contextless", cl::Hidden,
     cl::desc("Merge context profiles before calculating thresholds."));
 
 // The following two parameters determine the threshold for a count to be
@@ -30,25 +30,25 @@ cl::opt<bool> UseContextLessSummary(
 // threshold for determining cold count (everything <= this threshold is
 // considered cold).
 cl::opt<int> ProfileSummaryCutoffHot(
-    "profile-summary-cutoff-hot", cl::Hidden, cl::init(990000), cl::ZeroOrMore,
+    "profile-summary-cutoff-hot", cl::Hidden, cl::init(990000),
     cl::desc("A count is hot if it exceeds the minimum count to"
              " reach this percentile of total counts."));
 
 cl::opt<int> ProfileSummaryCutoffCold(
-    "profile-summary-cutoff-cold", cl::Hidden, cl::init(999999), cl::ZeroOrMore,
+    "profile-summary-cutoff-cold", cl::Hidden, cl::init(999999),
     cl::desc("A count is cold if it is below the minimum count"
              " to reach this percentile of total counts."));
 
 cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold(
     "profile-summary-huge-working-set-size-threshold", cl::Hidden,
-    cl::init(15000), cl::ZeroOrMore,
+    cl::init(15000),
     cl::desc("The code working set size is considered huge if the number of"
              " blocks required to reach the -profile-summary-cutoff-hot"
              " percentile exceeds this count."));
 
 cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold(
     "profile-summary-large-working-set-size-threshold", cl::Hidden,
-    cl::init(12500), cl::ZeroOrMore,
+    cl::init(12500),
     cl::desc("The code working set size is considered large if the number of"
              " blocks required to reach the -profile-summary-cutoff-hot"
              " percentile exceeds this count."));
@@ -56,12 +56,12 @@ cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold(
 // The next two options override the counts derived from summary computation and
 // are useful for debugging purposes.
 cl::opt<uint64_t> ProfileSummaryHotCount(
-    "profile-summary-hot-count", cl::ReallyHidden, cl::ZeroOrMore,
+    "profile-summary-hot-count", cl::ReallyHidden,
     cl::desc("A fixed hot count that overrides the count derived from"
              " profile-summary-cutoff-hot"));
 
 cl::opt<uint64_t> ProfileSummaryColdCount(
-    "profile-summary-cold-count", cl::ReallyHidden, cl::ZeroOrMore,
+    "profile-summary-cold-count", cl::ReallyHidden,
     cl::desc("A fixed cold count that overrides the count derived from"
              " profile-summary-cutoff-cold"));
 
@@ -93,6 +93,10 @@ void InstrProfSummaryBuilder::addRecord(const InstrProfRecord &R) {
   // instrumentation profiles.
   // Eventually MaxFunctionCount will become obsolete and this can be
   // removed.
+
+  if (R.getCountPseudoKind() != InstrProfRecord::NotPseudo)
+    return;
+
   addEntryCount(R.Counts[0]);
   for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
     addInternalCount(R.Counts[I]);
@@ -220,22 +224,17 @@ std::unique_ptr<ProfileSummary> InstrProfSummaryBuilder::getSummary() {
 }
 
 void InstrProfSummaryBuilder::addEntryCount(uint64_t Count) {
+  assert(Count <= getInstrMaxCountValue() &&
+         "Count value should be less than the max count value.");
   NumFunctions++;
-
-  // Skip invalid count.
-  if (Count == (uint64_t)-1)
-    return;
-
   addCount(Count);
   if (Count > MaxFunctionCount)
     MaxFunctionCount = Count;
 }
 
 void InstrProfSummaryBuilder::addInternalCount(uint64_t Count) {
-  // Skip invalid count.
-  if (Count == (uint64_t)-1)
-    return;
-
+  assert(Count <= getInstrMaxCountValue() &&
+         "Count value should be less than the max count value.");
   addCount(Count);
   if (Count > MaxInternalBlockCount)
     MaxInternalBlockCount = Count;

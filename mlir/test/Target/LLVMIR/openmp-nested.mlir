@@ -38,4 +38,4 @@ module {
 
 // CHECK: define internal void @[[inner1]]
 // CHECK: %[[structArg:.+]] = alloca { ptr }
-// CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @3, i32 1, ptr @[[inner2:.+]], ptr %[[structArg]])
+// CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @[[inner2:.+]], ptr %[[structArg]])

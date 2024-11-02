@@ -7,7 +7,7 @@
 ; RUN:           -r %t.bc,tinkywinky,p \
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc
-; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
+; RUN: cat %t.yaml | FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE
 
 ; Check low threshold allows remarks to emit.
 ; RUN: rm -f %t.t300.yaml
@@ -17,7 +17,7 @@
 ; RUN:           -r %t.bc,tinkywinky,p \
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc
-; RUN: FileCheck %s -check-prefix=YAML < %t.t300.yaml
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.t300.yaml
 
 ; Check high threshold disallows remarks to emit.
 ; RUN: rm -f %t.t301.yaml
@@ -52,8 +52,31 @@
 ; RUN:           -r %t.bc,patatino,px \
 ; RUN:           -r %t.bc,main,px -o %t.o %t.bc 2>&1 | count 0
 
+; Check that remarks are annotated with LTO phase information with `-annotate-inline-phase`.
+; RUN: rm -f %t.yaml
+; RUN: llvm-lto2 run -pass-remarks-output=%t.yaml \
+; RUN:           -pass-remarks-with-hotness \
+; RUN:           -annotate-inline-phase \
+; RUN:           -r %t.bc,tinkywinky,p \
+; RUN:           -r %t.bc,patatino,px \
+; RUN:           -r %t.bc,main,px -o %t.o %t.bc
+; RUN: cat %t.yaml | FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE
+
+; Run again with `-annotate-inline-phase`.
+; RUN: rm -f %t.t300.yaml
+; RUN: llvm-lto2 run -pass-remarks-output=%t.t300.yaml \
+; RUN:           -pass-remarks-with-hotness \
+; RUN:           -pass-remarks-hotness-threshold=300 \
+; RUN:           -annotate-inline-phase \
+; RUN:           -r %t.bc,tinkywinky,p \
+; RUN:           -r %t.bc,patatino,px \
+; RUN:           -r %t.bc,main,px -o %t.o %t.bc
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t.t300.yaml
+
 ; YAML: --- !Passed
-; YAML-NEXT: Pass:            inline
+; YAML-NO-ANNOTATE-NEXT: Pass:            inline
+; YAML-ANNOTATE-NEXT: Pass:            postlink-cgscc-inline
+
 ; YAML-NEXT: Name:            Inlined
 ; YAML-NEXT: Function:        main
 ; YAML-NEXT: Hotness:         300

@@ -1,7 +1,6 @@
 ! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '50' was not found
-! CHECK-NOT: error: Label '55' is in a construct that prevents its use as a branch target here
-! CHECK: Label '55' is in a construct that prevents its use as a branch target here
+! CHECK: warning: Label '55' is in a construct that should not be used as a branch target here
 ! CHECK: Label '70' is not a branch target
 ! CHECK: Control flow use of '70'
 ! CHECK: error: Label '80' is in a construct that prevents its use as a branch target here

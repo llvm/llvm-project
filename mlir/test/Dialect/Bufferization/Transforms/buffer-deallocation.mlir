@@ -706,12 +706,12 @@ func.func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
 
 // CHECK-LABEL: func @subview
 func.func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
-  %0 = memref.alloc() : memref<64x4xf32, offset: 0, strides: [4, 1]>
+  %0 = memref.alloc() : memref<64x4xf32, strided<[4, 1], offset: 0>>
   %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
-    memref<64x4xf32, offset: 0, strides: [4, 1]>
-  to memref<?x?xf32, offset: ?, strides: [?, ?]>
+    memref<64x4xf32, strided<[4, 1], offset: 0>>
+  to memref<?x?xf32, strided<[?, ?], offset: ?>>
   test.copy(%1, %arg2) :
-    (memref<?x?xf32, offset: ?, strides: [?, ?]>, memref<?x?xf32>)
+    (memref<?x?xf32, strided<[?, ?], offset: ?>>, memref<?x?xf32>)
   return
 }
 
@@ -1296,5 +1296,21 @@ func.func @while_three_arg(%arg0: index) {
 // CHECK-DAG: memref.dealloc %[[WHILE]]#1
 // CHECK-DAG: memref.dealloc %[[WHILE]]#2
 // CHECK-NEXT: return
+  return
+}
+
+// -----
+
+func.func @select_aliases(%arg0: index, %arg1: memref<?xi8>, %arg2: i1) {
+  // CHECK: memref.alloc
+  // CHECK: memref.alloc
+  // CHECK: arith.select
+  // CHECK: test.copy
+  // CHECK: memref.dealloc
+  // CHECK: memref.dealloc
+  %0 = memref.alloc(%arg0) : memref<?xi8>
+  %1 = memref.alloc(%arg0) : memref<?xi8>
+  %2 = arith.select %arg2, %0, %1 : memref<?xi8>
+  test.copy(%2, %arg1) : (memref<?xi8>, memref<?xi8>)
   return
 }

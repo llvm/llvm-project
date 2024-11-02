@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S %s -o - | FileCheck %s
+; RUN: opt -passes=indvars -S %s -o - | FileCheck %s
 
 ; When bailing out in rewriteLoopExitValues() you would be left with a PHI node
 ; that was not deleted, and the IndVar pass would return an incorrect modified

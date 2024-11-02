@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -triple=i686-apple-darwin9 -verify -DVERIFY
-// expected-no-diagnostics
 
 #ifndef __has_feature
 #error Should have __has_feature
@@ -41,4 +40,30 @@
 
 #if __has_builtin(__builtin_insanity)
 #error Clang should not have this
+#endif
+
+// Check __has_constexpr_builtin
+#if  !__has_constexpr_builtin(__builtin_fmax) || \
+     !__has_constexpr_builtin(__builtin_fmin)
+#error Clang should have these constexpr builtins
+#endif
+
+#if  __has_constexpr_builtin(__builtin_cbrt)
+#error This builtin should not be constexpr in Clang
+#endif
+
+#if  __has_constexpr_builtin(__builtin_insanity)
+#error This is not a builtin in Clang
+#endif
+
+// expected-error@+1 {{missing '(' after '__has_constexpr_builtin'}} expected-error@+1 {{expected value}}
+#if __has_constexpr_builtin
+#endif
+
+// expected-error@+1 {{builtin feature check macro requires a parenthesized identifier}}
+#if  __has_constexpr_builtin("__builtin_fmax")
+#endif
+
+// expected-error@+1 {{too many arguments}}
+#if __has_constexpr_builtin(__builtin_fmax, __builtin_fmin)
 #endif

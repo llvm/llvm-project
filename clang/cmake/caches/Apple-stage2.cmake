@@ -1,7 +1,7 @@
 # This file sets up a CMakeCache for Apple-style stage2 bootstrap. It is
 # specified by the stage1 build.
 
-set(LLVM_TARGETS_TO_BUILD X86 ARM AArch64 CACHE STRING "") 
+set(LLVM_TARGETS_TO_BUILD X86 ARM AArch64 CACHE STRING "")
 set(PACKAGE_VENDOR Apple CACHE STRING "")
 set(CLANG_VENDOR_UTI com.apple.clang CACHE STRING "")
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "")
@@ -36,10 +36,6 @@ if(LLVM_ENABLE_LTO AND NOT LLVM_ENABLE_LTO STREQUAL "THIN")
 endif()
 set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
 
-set(LIBCXX_INSTALL_LIBRARY OFF CACHE BOOL "")
-set(LIBCXX_INSTALL_HEADERS ON CACHE BOOL "")
-set(LIBCXX_INCLUDE_TESTS OFF CACHE BOOL "")
-set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
 set(LLVM_LTO_VERSION_OFFSET 3000 CACHE STRING "")
 
 # Generating Xcode toolchains is useful for developers wanting to build and use
@@ -74,11 +70,18 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   LTO
   clang-format
   clang-resource-headers
-  cxx-headers
   Remarks
   ${LLVM_TOOLCHAIN_TOOLS}
   ${LLVM_TOOLCHAIN_UTILITIES}
   CACHE STRING "")
+
+# Build the libc++ headers
+set(LLVM_ENABLE_RUNTIMES "libcxx;libcxxabi" CACHE STRING "")
+set(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS cxx-headers CACHE STRING "")
+set(LIBCXX_INSTALL_LIBRARY OFF CACHE BOOL "")
+set(LIBCXX_INSTALL_HEADERS ON CACHE BOOL "")
+set(LIBCXX_INCLUDE_TESTS OFF CACHE BOOL "")
+set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
 
 # test args
 

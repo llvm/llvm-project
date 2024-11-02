@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -std=c++11 -O1 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -std=c++11 -O1 -disable-llvm-passes %s -o - | FileCheck %s
 
 namespace test1 {
   // CHECK-DAG: define linkonce_odr void @_ZN5test11fIZNS_1gEvE1SEEvT_(
@@ -212,7 +212,7 @@ namespace test16 {
 
 namespace test17 {
   // CHECK-DAG: @_ZZN6test173fooILi42EEEPivE3bar = linkonce_odr
-  // CHECK-DAG: define weak_odr noundef i32* @_ZN6test173fooILi42EEEPiv(
+  // CHECK-DAG: define weak_odr noundef ptr @_ZN6test173fooILi42EEEPiv(
   template<int I>
   int *foo() {
     static int bar;

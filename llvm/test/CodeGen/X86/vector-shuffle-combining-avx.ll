@@ -39,7 +39,7 @@ define <4 x float> @combine_vpermilvar_4f32_movddup(<4 x float> %a0) {
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 1, i32 0, i32 1>)
   ret <4 x float> %1
 }
-define <4 x float> @combine_vpermilvar_4f32_movddup_load(<4 x float> *%a0) {
+define <4 x float> @combine_vpermilvar_4f32_movddup_load(ptr%a0) {
 ; X86-LABEL: combine_vpermilvar_4f32_movddup_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -50,7 +50,7 @@ define <4 x float> @combine_vpermilvar_4f32_movddup_load(<4 x float> *%a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
-  %1 = load <4 x float>, <4 x float> *%a0
+  %1 = load <4 x float>, ptr%a0
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %1, <4 x i32> <i32 0, i32 1, i32 0, i32 1>)
   ret <4 x float> %2
 }
@@ -181,7 +181,7 @@ define <8 x float> @combine_vpermilvar_8f32_movddup(<8 x float> %a0) {
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>)
   ret <8 x float> %1
 }
-define <8 x float> @combine_vpermilvar_8f32_movddup_load(<8 x float> *%a0) {
+define <8 x float> @combine_vpermilvar_8f32_movddup_load(ptr%a0) {
 ; X86-LABEL: combine_vpermilvar_8f32_movddup_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -192,7 +192,7 @@ define <8 x float> @combine_vpermilvar_8f32_movddup_load(<8 x float> *%a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
 ; X64-NEXT:    retq
-  %1 = load <8 x float>, <8 x float> *%a0
+  %1 = load <8 x float>, ptr%a0
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %1, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>)
   ret <8 x float> %2
 }
@@ -424,15 +424,15 @@ define void @PR39483() {
 ; X64-AVX512-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; X64-AVX512-NEXT:    vmovups %ymm0, (%rax)
 entry:
-  %wide.vec = load <24 x float>, <24 x float>* null, align 4
+  %wide.vec = load <24 x float>, ptr null, align 4
   %strided.vec18 = shufflevector <24 x float> %wide.vec, <24 x float> undef, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
   %0 = fmul <8 x float> %strided.vec18, zeroinitializer
   %1 = fadd <8 x float> zeroinitializer, %0
-  store <8 x float> %1, <8 x float>* undef, align 16
+  store <8 x float> %1, ptr undef, align 16
   unreachable
 }
 
-define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x double>* noalias %out0, <4 x double>* noalias %out1, <4 x double>* noalias %out2) {
+define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr noalias %out0, ptr noalias %out1, ptr noalias %out2) {
 ; X86-AVX1-LABEL: PR48908:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -578,12 +578,12 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
   %t0 = shufflevector <4 x double> %v0, <4 x double> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   %t1 = shufflevector <4 x double> %v1, <4 x double> %v2, <4 x i32> <i32 1, i32 2, i32 4, i32 5>
   %r0 = shufflevector <4 x double> %t0, <4 x double> %t1, <4 x i32> <i32 0, i32 3, i32 6, i32 1>
-  store <4 x double> %r0, <4 x double>* %out0, align 32
+  store <4 x double> %r0, ptr %out0, align 32
   %r1 = shufflevector <4 x double> %t0, <4 x double> %t1, <4 x i32> <i32 4, i32 7, i32 2, i32 5>
-  store <4 x double> %r1, <4 x double>* %out1, align 32
+  store <4 x double> %r1, ptr %out1, align 32
   %t2 = shufflevector <4 x double> %v0, <4 x double> %v1, <4 x i32> <i32 3, i32 7, i32 undef, i32 undef>
   %r2 = shufflevector <4 x double> %t2, <4 x double> %v2, <4 x i32> <i32 6, i32 0, i32 1, i32 7>
-  store <4 x double> %r2, <4 x double>* %out2, align 32
+  store <4 x double> %r2, ptr %out2, align 32
   ret void
 }
 

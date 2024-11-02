@@ -83,7 +83,7 @@ RegisterContextPOSIX_s390x::RegisterContextPOSIX_s390x(
     : RegisterContext(thread, concrete_frame_idx) {
   m_register_info_up.reset(register_info);
 
-  switch (register_info->m_target_arch.GetMachine()) {
+  switch (register_info->GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::systemz:
     m_reg_info.num_registers = k_num_registers_s390x;
     m_reg_info.num_gpr_registers = k_num_gpr_registers_s390x;
@@ -151,7 +151,7 @@ size_t RegisterContextPOSIX_s390x::GetRegisterSetCount() {
 
 const RegisterSet *RegisterContextPOSIX_s390x::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {
-    switch (m_register_info_up->m_target_arch.GetMachine()) {
+    switch (m_register_info_up->GetTargetArchitecture().GetMachine()) {
     case llvm::Triple::systemz:
       return &g_reg_sets_s390x[set];
     default:

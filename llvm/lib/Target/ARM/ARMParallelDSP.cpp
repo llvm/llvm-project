@@ -367,13 +367,12 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
 
   // Record any writes that may alias a load.
   const auto Size = LocationSize::beforeOrAfterPointer();
-  for (auto Write : Writes) {
-    for (auto Read : Loads) {
+  for (auto *Write : Writes) {
+    for (auto *Read : Loads) {
       MemoryLocation ReadLoc =
         MemoryLocation(Read->getPointerOperand(), Size);
 
-      if (!isModOrRefSet(intersectModRef(AA->getModRefInfo(Write, ReadLoc),
-          ModRefInfo::ModRef)))
+      if (!isModOrRefSet(AA->getModRefInfo(Write, ReadLoc)))
         continue;
       if (Write->comesBefore(Read))
         RAWDeps[Read].insert(Write);
@@ -390,7 +389,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
     if (RAWDeps.count(Dominated)) {
       InstSet &WritesBefore = RAWDeps[Dominated];
 
-      for (auto Before : WritesBefore) {
+      for (auto *Before : WritesBefore) {
         // We can't move the second load backward, past a write, to merge
         // with the first load.
         if (Dominator->comesBefore(Before))
@@ -458,6 +457,10 @@ bool ARMParallelDSP::Search(Value *V, BasicBlock *BB, Reduction &R) {
 
     if (ValidLHS && ValidRHS)
       return true;
+
+    // Ensure we don't add the root as the incoming accumulator.
+    if (R.getRoot() == I)
+      return false;
 
     return R.InsertAcc(I);
   }
@@ -535,6 +538,7 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
       InsertParallelMACs(R);
       Changed = true;
       AllAdds.insert(R.getAdds().begin(), R.getAdds().end());
+      LLVM_DEBUG(dbgs() << "BB after inserting parallel MACs:\n" << BB);
     }
   }
 

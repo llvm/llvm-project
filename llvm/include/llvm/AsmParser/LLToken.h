@@ -141,6 +141,8 @@ enum Kind {
   kw_arm_aapcs_vfpcc,
   kw_aarch64_vector_pcs,
   kw_aarch64_sve_vector_pcs,
+  kw_aarch64_sme_preservemost_from_x0,
+  kw_aarch64_sme_preservemost_from_x2,
   kw_msp430_intrcc,
   kw_avr_intrcc,
   kw_avr_signalcc,
@@ -180,6 +182,18 @@ enum Kind {
 #define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME) \
   kw_##DISPLAY_NAME,
 #include "llvm/IR/Attributes.inc"
+
+  // Memory attribute:
+  kw_read,
+  kw_write,
+  kw_readwrite,
+  kw_argmem,
+  kw_inaccessiblemem,
+
+  // Legacy memory attributes:
+  kw_argmemonly,
+  kw_inaccessiblememonly,
+  kw_inaccessiblemem_or_argmemonly,
 
   kw_type,
   kw_opaque,
@@ -221,6 +235,8 @@ enum Kind {
   kw_min,
   kw_umax,
   kw_umin,
+  kw_fmax,
+  kw_fmin,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -390,6 +406,16 @@ enum Kind {
   kw_byte,
   kw_bit,
   kw_varFlags,
+
+  // GV's with __attribute__((no_sanitize("address"))), or things in
+  // -fsanitize-ignorelist when built with ASan.
+  kw_no_sanitize_address,
+  // GV's with __attribute__((no_sanitize("hwaddress"))), or things in
+  // -fsanitize-ignorelist when built with HWASan.
+  kw_no_sanitize_hwaddress,
+  // GV's where the clang++ frontend (when ASan is used) notes that this is
+  // dynamically initialized, and thus needs ODR detection.
+  kw_sanitize_address_dyninit,
 
   // Unsigned Valued tokens (UIntVal).
   LabelID,    // 42:

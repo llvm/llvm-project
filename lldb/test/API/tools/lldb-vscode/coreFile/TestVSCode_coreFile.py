@@ -3,7 +3,6 @@ Test lldb-vscode coreFile attaching
 """
 
 
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +12,6 @@ import os
 
 
 class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
     @skipIfRemote

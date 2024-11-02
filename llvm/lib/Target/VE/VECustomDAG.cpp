@@ -84,7 +84,7 @@ Optional<unsigned> getVVPOpcode(unsigned Opcode) {
 
 bool maySafelyIgnoreMask(SDValue Op) {
   auto VVPOpc = getVVPOpcode(Op->getOpcode());
-  auto Opc = VVPOpc.getValueOr(Op->getOpcode());
+  auto Opc = VVPOpc.value_or(Op->getOpcode());
 
   switch (Opc) {
   case VEISD::VVP_SDIV:

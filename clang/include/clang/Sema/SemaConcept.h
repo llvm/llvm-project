@@ -28,7 +28,7 @@ class Sema;
 
 struct AtomicConstraint {
   const Expr *ConstraintExpr;
-  Optional<MutableArrayRef<TemplateArgumentLoc>> ParameterMapping;
+  Optional<ArrayRef<TemplateArgumentLoc>> ParameterMapping;
 
   AtomicConstraint(Sema &S, const Expr *ConstraintExpr) :
       ConstraintExpr(ConstraintExpr) { };

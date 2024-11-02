@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx -mcpu=corei7-avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx512vl -mcpu=skx | FileCheck %s --check-prefixes=AVX,AVX512VL
 
-define dso_local double @t1(float* nocapture %x) nounwind readonly ssp {
+define dso_local double @t1(ptr nocapture %x) nounwind readonly ssp {
 ; SSE-LABEL: t1:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -18,12 +18,12 @@ define dso_local double @t1(float* nocapture %x) nounwind readonly ssp {
 ; AVX-NEXT:    retq
 entry:
 
-  %0 = load float, float* %x, align 4
+  %0 = load float, ptr %x, align 4
   %1 = fpext float %0 to double
   ret double %1
 }
 
-define dso_local float @t2(double* nocapture %x) nounwind readonly ssp optsize {
+define dso_local float @t2(ptr nocapture %x) nounwind readonly ssp optsize {
 ; SSE-LINUX-LABEL: t2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    cvtsd2ss (%rdi), %xmm0
@@ -39,12 +39,12 @@ define dso_local float @t2(double* nocapture %x) nounwind readonly ssp optsize {
 ; AVX-NEXT:    vcvtsd2ss (%rcx), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load double, double* %x, align 8
+  %0 = load double, ptr %x, align 8
   %1 = fptrunc double %0 to float
   ret float %1
 }
 
-define dso_local float @squirtf(float* %x) nounwind {
+define dso_local float @squirtf(ptr %x) nounwind {
 ; SSE-LABEL: squirtf:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -57,12 +57,12 @@ define dso_local float @squirtf(float* %x) nounwind {
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load float, float* %x
+  %z = load float, ptr %x
   %t = call float @llvm.sqrt.f32(float %z)
   ret float %t
 }
 
-define dso_local double @squirt(double* %x) nounwind {
+define dso_local double @squirt(ptr %x) nounwind {
 ; SSE-LABEL: squirt:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -75,12 +75,12 @@ define dso_local double @squirt(double* %x) nounwind {
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load double, double* %x
+  %z = load double, ptr %x
   %t = call double @llvm.sqrt.f64(double %z)
   ret double %t
 }
 
-define dso_local float @squirtf_size(float* %x) nounwind optsize {
+define dso_local float @squirtf_size(ptr %x) nounwind optsize {
 ; SSE-LINUX-LABEL: squirtf_size:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    sqrtss (%rdi), %xmm0
@@ -96,12 +96,12 @@ define dso_local float @squirtf_size(float* %x) nounwind optsize {
 ; AVX-NEXT:    vsqrtss (%rcx), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load float, float* %x
+  %z = load float, ptr %x
   %t = call float @llvm.sqrt.f32(float %z)
   ret float %t
 }
 
-define dso_local double @squirt_size(double* %x) nounwind optsize {
+define dso_local double @squirt_size(ptr %x) nounwind optsize {
 ; SSE-LINUX-LABEL: squirt_size:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    sqrtsd (%rdi), %xmm0
@@ -117,7 +117,7 @@ define dso_local double @squirt_size(double* %x) nounwind optsize {
 ; AVX-NEXT:    vsqrtsd (%rcx), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %z = load double, double* %x
+  %z = load double, ptr %x
   %t = call double @llvm.sqrt.f64(double %z)
   ret double %t
 }
@@ -271,7 +271,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; to avoid cyclic dependence on a write to the same register in a
 ; previous iteration.
 
-define i64 @loopdep2(i64* nocapture %x, double* nocapture %y) nounwind {
+define i64 @loopdep2(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-LINUX-LABEL: loopdep2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movq (%rdi), %rax
@@ -309,22 +309,22 @@ define i64 @loopdep2(i64* nocapture %x, double* nocapture %y) nounwind {
 ; SSE-WIN-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-WIN-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-WIN-NEXT:    movq (%rcx), %rax
-; SSE-WIN-NEXT:    movl $1, %r8d
+; SSE-WIN-NEXT:    movl $1, %ecx
 ; SSE-WIN-NEXT:    .p2align 4, 0x90
 ; SSE-WIN-NEXT:  .LBB7_1: # %loop
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    xorps %xmm0, %xmm0
-; SSE-WIN-NEXT:    cvtsi2sd %r8, %xmm0
+; SSE-WIN-NEXT:    cvtsi2sd %rcx, %xmm0
 ; SSE-WIN-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE-WIN-NEXT:    #APP
 ; SSE-WIN-NEXT:    #NO_APP
 ; SSE-WIN-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; SSE-WIN-NEXT:    # xmm0 = mem[0],zero
 ; SSE-WIN-NEXT:    addsd (%rdx), %xmm0
-; SSE-WIN-NEXT:    cvttsd2si %xmm0, %rcx
-; SSE-WIN-NEXT:    addq %rcx, %rax
-; SSE-WIN-NEXT:    incq %r8
-; SSE-WIN-NEXT:    cmpq $156250000, %r8 # imm = 0x9502F90
+; SSE-WIN-NEXT:    cvttsd2si %xmm0, %r8
+; SSE-WIN-NEXT:    addq %r8, %rax
+; SSE-WIN-NEXT:    incq %rcx
+; SSE-WIN-NEXT:    cmpq $156250000, %rcx # imm = 0x9502F90
 ; SSE-WIN-NEXT:    jne .LBB7_1
 ; SSE-WIN-NEXT:  # %bb.2: # %ret
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
@@ -354,22 +354,22 @@ define i64 @loopdep2(i64* nocapture %x, double* nocapture %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    movq (%rcx), %rax
-; AVX-NEXT:    movl $1, %r8d
+; AVX-NEXT:    movl $1, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB7_1: # %loop
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vcvtsi2sd %r8, %xmm1, %xmm0
+; AVX-NEXT:    vcvtsi2sd %rcx, %xmm1, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    #NO_APP
 ; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; AVX-NEXT:    # xmm0 = mem[0],zero
 ; AVX-NEXT:    vaddsd (%rdx), %xmm0, %xmm0
-; AVX-NEXT:    vcvttsd2si %xmm0, %rcx
-; AVX-NEXT:    addq %rcx, %rax
-; AVX-NEXT:    incq %r8
-; AVX-NEXT:    cmpq $156250000, %r8 # imm = 0x9502F90
+; AVX-NEXT:    vcvttsd2si %xmm0, %r8
+; AVX-NEXT:    addq %r8, %rax
+; AVX-NEXT:    incq %rcx
+; AVX-NEXT:    cmpq $156250000, %rcx # imm = 0x9502F90
 ; AVX-NEXT:    jne .LBB7_1
 ; AVX-NEXT:  # %bb.2: # %ret
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
@@ -385,14 +385,14 @@ define i64 @loopdep2(i64* nocapture %x, double* nocapture %y) nounwind {
 ; AVX-NEXT:    addq $184, %rsp
 ; AVX-NEXT:    retq
 entry:
-  %vx = load i64, i64* %x
+  %vx = load i64, ptr %x
   br label %loop
 loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]
   %s1 = phi i64 [ %vx, %entry ], [ %s2, %loop ]
   %fi = sitofp i64 %i to double
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
-  %vy = load double, double* %y
+  %vy = load double, ptr %y
   %fipy = fadd double %fi, %vy
   %iipy = fptosi double %fipy to i64
   %s2 = add i64 %s1, %iipy
@@ -472,38 +472,38 @@ define dso_local void @loopdep3() {
 ; SSE-WIN-NEXT:    movaps %xmm6, (%rsp) # 16-byte Spill
 ; SSE-WIN-NEXT:    .seh_savexmm %xmm6, 0
 ; SSE-WIN-NEXT:    .seh_endprologue
-; SSE-WIN-NEXT:    xorl %r9d, %r9d
-; SSE-WIN-NEXT:    leaq v(%rip), %r8
-; SSE-WIN-NEXT:    leaq x(%rip), %r10
-; SSE-WIN-NEXT:    leaq y(%rip), %r11
-; SSE-WIN-NEXT:    leaq z(%rip), %rax
-; SSE-WIN-NEXT:    leaq w(%rip), %rdx
+; SSE-WIN-NEXT:    xorl %eax, %eax
+; SSE-WIN-NEXT:    leaq v(%rip), %rcx
+; SSE-WIN-NEXT:    leaq x(%rip), %rdx
+; SSE-WIN-NEXT:    leaq y(%rip), %r8
+; SSE-WIN-NEXT:    leaq z(%rip), %r9
+; SSE-WIN-NEXT:    leaq w(%rip), %r10
 ; SSE-WIN-NEXT:    .p2align 4, 0x90
 ; SSE-WIN-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; SSE-WIN-NEXT:    # =>This Loop Header: Depth=1
 ; SSE-WIN-NEXT:    # Child Loop BB8_2 Depth 2
-; SSE-WIN-NEXT:    movq %r8, %rcx
+; SSE-WIN-NEXT:    movq %rcx, %r11
 ; SSE-WIN-NEXT:    xorl %esi, %esi
 ; SSE-WIN-NEXT:    .p2align 4, 0x90
 ; SSE-WIN-NEXT:  .LBB8_2: # %for.body3
 ; SSE-WIN-NEXT:    # Parent Loop BB8_1 Depth=1
 ; SSE-WIN-NEXT:    # => This Inner Loop Header: Depth=2
 ; SSE-WIN-NEXT:    xorps %xmm0, %xmm0
-; SSE-WIN-NEXT:    cvtsi2sdl (%rcx), %xmm0
-; SSE-WIN-NEXT:    mulsd (%rsi,%r10), %xmm0
-; SSE-WIN-NEXT:    mulsd (%rsi,%r11), %xmm0
-; SSE-WIN-NEXT:    mulsd (%rsi,%rax), %xmm0
-; SSE-WIN-NEXT:    movsd %xmm0, (%rsi,%rdx)
+; SSE-WIN-NEXT:    cvtsi2sdl (%r11), %xmm0
+; SSE-WIN-NEXT:    mulsd (%rsi,%rdx), %xmm0
+; SSE-WIN-NEXT:    mulsd (%rsi,%r8), %xmm0
+; SSE-WIN-NEXT:    mulsd (%rsi,%r9), %xmm0
+; SSE-WIN-NEXT:    movsd %xmm0, (%rsi,%r10)
 ; SSE-WIN-NEXT:    #APP
 ; SSE-WIN-NEXT:    #NO_APP
 ; SSE-WIN-NEXT:    addq $8, %rsi
-; SSE-WIN-NEXT:    addq $4, %rcx
+; SSE-WIN-NEXT:    addq $4, %r11
 ; SSE-WIN-NEXT:    cmpq $8192, %rsi # imm = 0x2000
 ; SSE-WIN-NEXT:    jne .LBB8_2
 ; SSE-WIN-NEXT:  # %bb.3: # %for.inc14
 ; SSE-WIN-NEXT:    # in Loop: Header=BB8_1 Depth=1
-; SSE-WIN-NEXT:    incl %r9d
-; SSE-WIN-NEXT:    cmpl $100000, %r9d # imm = 0x186A0
+; SSE-WIN-NEXT:    incl %eax
+; SSE-WIN-NEXT:    cmpl $100000, %eax # imm = 0x186A0
 ; SSE-WIN-NEXT:    jne .LBB8_1
 ; SSE-WIN-NEXT:  # %bb.4: # %for.end16
 ; SSE-WIN-NEXT:    movaps (%rsp), %xmm6 # 16-byte Reload
@@ -548,38 +548,38 @@ define dso_local void @loopdep3() {
 ; AVX-NEXT:    vmovaps %xmm6, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    .seh_savexmm %xmm6, 0
 ; AVX-NEXT:    .seh_endprologue
-; AVX-NEXT:    xorl %r9d, %r9d
-; AVX-NEXT:    leaq v(%rip), %r8
-; AVX-NEXT:    leaq x(%rip), %r10
-; AVX-NEXT:    leaq y(%rip), %r11
-; AVX-NEXT:    leaq z(%rip), %rax
-; AVX-NEXT:    leaq w(%rip), %rdx
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    leaq v(%rip), %rcx
+; AVX-NEXT:    leaq x(%rip), %rdx
+; AVX-NEXT:    leaq y(%rip), %r8
+; AVX-NEXT:    leaq z(%rip), %r9
+; AVX-NEXT:    leaq w(%rip), %r10
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; AVX-NEXT:    # =>This Loop Header: Depth=1
 ; AVX-NEXT:    # Child Loop BB8_2 Depth 2
-; AVX-NEXT:    movq %r8, %rcx
+; AVX-NEXT:    movq %rcx, %r11
 ; AVX-NEXT:    xorl %esi, %esi
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB8_2: # %for.body3
 ; AVX-NEXT:    # Parent Loop BB8_1 Depth=1
 ; AVX-NEXT:    # => This Inner Loop Header: Depth=2
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vcvtsi2sdl (%rcx), %xmm0, %xmm0
-; AVX-NEXT:    vmulsd (%rsi,%r10), %xmm0, %xmm0
-; AVX-NEXT:    vmulsd (%rsi,%r11), %xmm0, %xmm0
-; AVX-NEXT:    vmulsd (%rsi,%rax), %xmm0, %xmm0
-; AVX-NEXT:    vmovsd %xmm0, (%rsi,%rdx)
+; AVX-NEXT:    vcvtsi2sdl (%r11), %xmm0, %xmm0
+; AVX-NEXT:    vmulsd (%rsi,%rdx), %xmm0, %xmm0
+; AVX-NEXT:    vmulsd (%rsi,%r8), %xmm0, %xmm0
+; AVX-NEXT:    vmulsd (%rsi,%r9), %xmm0, %xmm0
+; AVX-NEXT:    vmovsd %xmm0, (%rsi,%r10)
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    #NO_APP
 ; AVX-NEXT:    addq $8, %rsi
-; AVX-NEXT:    addq $4, %rcx
+; AVX-NEXT:    addq $4, %r11
 ; AVX-NEXT:    cmpq $8192, %rsi # imm = 0x2000
 ; AVX-NEXT:    jne .LBB8_2
 ; AVX-NEXT:  # %bb.3: # %for.inc14
 ; AVX-NEXT:    # in Loop: Header=BB8_1 Depth=1
-; AVX-NEXT:    incl %r9d
-; AVX-NEXT:    cmpl $100000, %r9d # imm = 0x186A0
+; AVX-NEXT:    incl %eax
+; AVX-NEXT:    cmpl $100000, %eax # imm = 0x186A0
 ; AVX-NEXT:    jne .LBB8_1
 ; AVX-NEXT:  # %bb.4: # %for.end16
 ; AVX-NEXT:    vmovaps (%rsp), %xmm6 # 16-byte Reload
@@ -605,20 +605,20 @@ for.cond1.preheader:                              ; preds = %for.inc14, %entry
 
 for.body3:
   %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx = getelementptr inbounds [1024 x i32], [1024 x i32]* @v, i64 0, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [1024 x i32], ptr @v, i64 0, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %conv = sitofp i32 %0 to double
-  %arrayidx5 = getelementptr inbounds [1024 x double], [1024 x double]* @x, i64 0, i64 %indvars.iv
-  %1 = load double, double* %arrayidx5, align 8
+  %arrayidx5 = getelementptr inbounds [1024 x double], ptr @x, i64 0, i64 %indvars.iv
+  %1 = load double, ptr %arrayidx5, align 8
   %mul = fmul double %conv, %1
-  %arrayidx7 = getelementptr inbounds [1024 x double], [1024 x double]* @y, i64 0, i64 %indvars.iv
-  %2 = load double, double* %arrayidx7, align 8
+  %arrayidx7 = getelementptr inbounds [1024 x double], ptr @y, i64 0, i64 %indvars.iv
+  %2 = load double, ptr %arrayidx7, align 8
   %mul8 = fmul double %mul, %2
-  %arrayidx10 = getelementptr inbounds [1024 x double], [1024 x double]* @z, i64 0, i64 %indvars.iv
-  %3 = load double, double* %arrayidx10, align 8
+  %arrayidx10 = getelementptr inbounds [1024 x double], ptr @z, i64 0, i64 %indvars.iv
+  %3 = load double, ptr %arrayidx10, align 8
   %mul11 = fmul double %mul8, %3
-  %arrayidx13 = getelementptr inbounds [1024 x double], [1024 x double]* @w, i64 0, i64 %indvars.iv
-  store double %mul11, double* %arrayidx13, align 8
+  %arrayidx13 = getelementptr inbounds [1024 x double], ptr @w, i64 0, i64 %indvars.iv
+  store double %mul11, ptr %arrayidx13, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
@@ -1109,7 +1109,7 @@ top:
 ; avoid a cyclic dependence on a write to the same register in a previous
 ; iteration, especially when we cannot zero out the undef register because it
 ; is alive.
-define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
+define i64 @loopclearence(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; SSE-LINUX-LABEL: loopclearence:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movq (%rdi), %rax
@@ -1154,12 +1154,12 @@ define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
 ; SSE-WIN-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-WIN-NEXT:    movaps %xmm8, (%rsp) # 16-byte Spill
 ; SSE-WIN-NEXT:    movq (%rcx), %rax
-; SSE-WIN-NEXT:    movl $1, %r8d
+; SSE-WIN-NEXT:    movl $1, %ecx
 ; SSE-WIN-NEXT:    .p2align 4, 0x90
 ; SSE-WIN-NEXT:  .LBB12_1: # %loop
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    xorps %xmm4, %xmm4
-; SSE-WIN-NEXT:    cvtsi2sd %r8, %xmm4
+; SSE-WIN-NEXT:    cvtsi2sd %rcx, %xmm4
 ; SSE-WIN-NEXT:    #APP
 ; SSE-WIN-NEXT:    #NO_APP
 ; SSE-WIN-NEXT:    #APP
@@ -1175,10 +1175,10 @@ define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
 ; SSE-WIN-NEXT:    #APP
 ; SSE-WIN-NEXT:    #NO_APP
 ; SSE-WIN-NEXT:    addsd (%rdx), %xmm4
-; SSE-WIN-NEXT:    cvttsd2si %xmm4, %rcx
-; SSE-WIN-NEXT:    addq %rcx, %rax
-; SSE-WIN-NEXT:    incq %r8
-; SSE-WIN-NEXT:    cmpq $156250000, %r8 # imm = 0x9502F90
+; SSE-WIN-NEXT:    cvttsd2si %xmm4, %r8
+; SSE-WIN-NEXT:    addq %r8, %rax
+; SSE-WIN-NEXT:    incq %rcx
+; SSE-WIN-NEXT:    cmpq $156250000, %rcx # imm = 0x9502F90
 ; SSE-WIN-NEXT:    jne .LBB12_1
 ; SSE-WIN-NEXT:  # %bb.2: # %ret
 ; SSE-WIN-NEXT:    movaps (%rsp), %xmm8 # 16-byte Reload
@@ -1204,11 +1204,11 @@ define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
 ; AVX-NEXT:    vmovaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    movq (%rcx), %rax
-; AVX-NEXT:    movl $1, %r8d
+; AVX-NEXT:    movl $1, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB12_1: # %loop
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    vcvtsi2sd %r8, %xmm5, %xmm4
+; AVX-NEXT:    vcvtsi2sd %rcx, %xmm5, %xmm4
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    #NO_APP
 ; AVX-NEXT:    #APP
@@ -1224,10 +1224,10 @@ define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    #NO_APP
 ; AVX-NEXT:    vaddsd (%rdx), %xmm4, %xmm0
-; AVX-NEXT:    vcvttsd2si %xmm0, %rcx
-; AVX-NEXT:    addq %rcx, %rax
-; AVX-NEXT:    incq %r8
-; AVX-NEXT:    cmpq $156250000, %r8 # imm = 0x9502F90
+; AVX-NEXT:    vcvttsd2si %xmm0, %r8
+; AVX-NEXT:    addq %r8, %rax
+; AVX-NEXT:    incq %rcx
+; AVX-NEXT:    cmpq $156250000, %rcx # imm = 0x9502F90
 ; AVX-NEXT:    jne .LBB12_1
 ; AVX-NEXT:  # %bb.2: # %ret
 ; AVX-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
@@ -1241,7 +1241,7 @@ define i64 @loopclearence(i64* nocapture %x, double* nocapture %y) nounwind {
 ; AVX-NEXT:    addq $136, %rsp
 ; AVX-NEXT:    retq
 entry:
-  %vx = load i64, i64* %x
+  %vx = load i64, ptr %x
   br label %loop
 loop:
   %i = phi i64 [ 1, %entry ], [ %inc, %loop ]
@@ -1254,7 +1254,7 @@ loop:
   tail call void asm sideeffect "", "~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{dirflag},~{fpsr},~{flags}"()
   tail call void asm sideeffect "", "~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{dirflag},~{fpsr},~{flags}"()
-  %vy = load double, double* %y
+  %vy = load double, ptr %y
   %fipy = fadd double %fi, %vy
   %iipy = fptosi double %fipy to i64
   %s2 = add i64 %s1, %iipy
@@ -1269,7 +1269,7 @@ ret:
 ; complicated loop structures. This example is the inner loop from
 ; julia> a = falses(10000); a[1:4:end] = true
 ; julia> linspace(1.0,2.0,10000)[a]
-define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c2, double %c3, double %c4, i64 %size) {
+define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, double %c2, double %c3, double %c4, i64 %size) {
 ; SSE-LINUX-LABEL: loopclearance2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    #APP
@@ -1286,34 +1286,34 @@ define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1,
 ; SSE-LINUX-NEXT:    #NO_APP
 ; SSE-LINUX-NEXT:    #APP
 ; SSE-LINUX-NEXT:    #NO_APP
-; SSE-LINUX-NEXT:    movl $1, %r8d
+; SSE-LINUX-NEXT:    movl $1, %eax
 ; SSE-LINUX-NEXT:    xorl %ecx, %ecx
 ; SSE-LINUX-NEXT:    .p2align 4, 0x90
 ; SSE-LINUX-NEXT:  .LBB13_1: # %inner_loop
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE-LINUX-NEXT:    movq %rcx, %rax
-; SSE-LINUX-NEXT:    shrq $6, %rcx
-; SSE-LINUX-NEXT:    movq (%rsi,%rcx,8), %rcx
-; SSE-LINUX-NEXT:    btq %rax, %rcx
-; SSE-LINUX-NEXT:    leaq 1(%rax), %rcx
+; SSE-LINUX-NEXT:    movq %rcx, %r8
+; SSE-LINUX-NEXT:    shrq $6, %r8
+; SSE-LINUX-NEXT:    movq (%rsi,%r8,8), %r8
+; SSE-LINUX-NEXT:    btq %rcx, %r8
+; SSE-LINUX-NEXT:    leaq 1(%rcx), %rcx
 ; SSE-LINUX-NEXT:    jae .LBB13_1
 ; SSE-LINUX-NEXT:  # %bb.2: # %loop_end
 ; SSE-LINUX-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; SSE-LINUX-NEXT:    leaq 1(%r8), %r9
+; SSE-LINUX-NEXT:    leaq 1(%rax), %r8
 ; SSE-LINUX-NEXT:    xorps %xmm4, %xmm4
-; SSE-LINUX-NEXT:    cvtsi2sd %r9, %xmm4
+; SSE-LINUX-NEXT:    cvtsi2sd %r8, %xmm4
 ; SSE-LINUX-NEXT:    movapd %xmm0, %xmm5
 ; SSE-LINUX-NEXT:    subsd %xmm4, %xmm5
 ; SSE-LINUX-NEXT:    mulsd %xmm1, %xmm5
-; SSE-LINUX-NEXT:    leaq -1(%rcx), %rax
+; SSE-LINUX-NEXT:    leaq -1(%rcx), %r9
 ; SSE-LINUX-NEXT:    xorps %xmm4, %xmm4
-; SSE-LINUX-NEXT:    cvtsi2sd %rax, %xmm4
+; SSE-LINUX-NEXT:    cvtsi2sd %r9, %xmm4
 ; SSE-LINUX-NEXT:    mulsd %xmm2, %xmm4
 ; SSE-LINUX-NEXT:    addsd %xmm5, %xmm4
 ; SSE-LINUX-NEXT:    divsd %xmm3, %xmm4
-; SSE-LINUX-NEXT:    movsd %xmm4, -8(%rdi,%r8,8)
-; SSE-LINUX-NEXT:    movq %r9, %r8
-; SSE-LINUX-NEXT:    cmpq %r9, %rdx
+; SSE-LINUX-NEXT:    movsd %xmm4, -8(%rdi,%rax,8)
+; SSE-LINUX-NEXT:    movq %r8, %rax
+; SSE-LINUX-NEXT:    cmpq %r8, %rdx
 ; SSE-LINUX-NEXT:    jge .LBB13_1
 ; SSE-LINUX-NEXT:  # %bb.3: # %loopdone
 ; SSE-LINUX-NEXT:    retq
@@ -1341,7 +1341,7 @@ define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1,
 ; SSE-WIN-NEXT:    movaps %xmm7, (%rsp) # 16-byte Spill
 ; SSE-WIN-NEXT:    .seh_savexmm %xmm7, 0
 ; SSE-WIN-NEXT:    .seh_endprologue
-; SSE-WIN-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; SSE-WIN-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; SSE-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-WIN-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-WIN-NEXT:    #APP
@@ -1358,35 +1358,34 @@ define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1,
 ; SSE-WIN-NEXT:    #NO_APP
 ; SSE-WIN-NEXT:    #APP
 ; SSE-WIN-NEXT:    #NO_APP
-; SSE-WIN-NEXT:    movl $1, %r9d
-; SSE-WIN-NEXT:    xorl %r11d, %r11d
+; SSE-WIN-NEXT:    movl $1, %r8d
+; SSE-WIN-NEXT:    xorl %r9d, %r9d
 ; SSE-WIN-NEXT:    .p2align 4, 0x90
 ; SSE-WIN-NEXT:  .LBB13_1: # %inner_loop
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE-WIN-NEXT:    movq %r11, %r10
-; SSE-WIN-NEXT:    movq %r11, %rax
-; SSE-WIN-NEXT:    shrq $6, %rax
-; SSE-WIN-NEXT:    movq (%rdx,%rax,8), %rax
-; SSE-WIN-NEXT:    btq %r11, %rax
-; SSE-WIN-NEXT:    leaq 1(%r11), %r11
+; SSE-WIN-NEXT:    movq %r9, %r10
+; SSE-WIN-NEXT:    shrq $6, %r10
+; SSE-WIN-NEXT:    movq (%rdx,%r10,8), %r10
+; SSE-WIN-NEXT:    btq %r9, %r10
+; SSE-WIN-NEXT:    leaq 1(%r9), %r9
 ; SSE-WIN-NEXT:    jae .LBB13_1
 ; SSE-WIN-NEXT:  # %bb.2: # %loop_end
 ; SSE-WIN-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; SSE-WIN-NEXT:    leaq 1(%r9), %r10
+; SSE-WIN-NEXT:    leaq 1(%r8), %r10
 ; SSE-WIN-NEXT:    xorps %xmm4, %xmm4
 ; SSE-WIN-NEXT:    cvtsi2sd %r10, %xmm4
 ; SSE-WIN-NEXT:    movapd %xmm2, %xmm5
 ; SSE-WIN-NEXT:    subsd %xmm4, %xmm5
 ; SSE-WIN-NEXT:    mulsd %xmm3, %xmm5
-; SSE-WIN-NEXT:    leaq -1(%r11), %rax
+; SSE-WIN-NEXT:    leaq -1(%r9), %r11
 ; SSE-WIN-NEXT:    xorps %xmm4, %xmm4
-; SSE-WIN-NEXT:    cvtsi2sd %rax, %xmm4
+; SSE-WIN-NEXT:    cvtsi2sd %r11, %xmm4
 ; SSE-WIN-NEXT:    mulsd %xmm1, %xmm4
 ; SSE-WIN-NEXT:    addsd %xmm5, %xmm4
 ; SSE-WIN-NEXT:    divsd %xmm0, %xmm4
-; SSE-WIN-NEXT:    movsd %xmm4, -8(%rcx,%r9,8)
-; SSE-WIN-NEXT:    movq %r10, %r9
-; SSE-WIN-NEXT:    cmpq %r10, %r8
+; SSE-WIN-NEXT:    movsd %xmm4, -8(%rcx,%r8,8)
+; SSE-WIN-NEXT:    movq %r10, %r8
+; SSE-WIN-NEXT:    cmpq %r10, %rax
 ; SSE-WIN-NEXT:    jge .LBB13_1
 ; SSE-WIN-NEXT:  # %bb.3: # %loopdone
 ; SSE-WIN-NEXT:    movaps (%rsp), %xmm7 # 16-byte Reload
@@ -1425,7 +1424,7 @@ define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1,
 ; AVX1-NEXT:    vmovaps %xmm7, (%rsp) # 16-byte Spill
 ; AVX1-NEXT:    .seh_savexmm %xmm7, 0
 ; AVX1-NEXT:    .seh_endprologue
-; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX1-NEXT:    #APP
@@ -1442,32 +1441,31 @@ define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1,
 ; AVX1-NEXT:    #NO_APP
 ; AVX1-NEXT:    #APP
 ; AVX1-NEXT:    #NO_APP
-; AVX1-NEXT:    movl $1, %r9d
-; AVX1-NEXT:    xorl %r11d, %r11d
+; AVX1-NEXT:    movl $1, %r8d
+; AVX1-NEXT:    xorl %r9d, %r9d
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB13_1: # %inner_loop
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX1-NEXT:    movq %r11, %r10
-; AVX1-NEXT:    movq %r11, %rax
-; AVX1-NEXT:    shrq $6, %rax
-; AVX1-NEXT:    movq (%rdx,%rax,8), %rax
-; AVX1-NEXT:    btq %r11, %rax
-; AVX1-NEXT:    leaq 1(%r11), %r11
+; AVX1-NEXT:    movq %r9, %r10
+; AVX1-NEXT:    shrq $6, %r10
+; AVX1-NEXT:    movq (%rdx,%r10,8), %r10
+; AVX1-NEXT:    btq %r9, %r10
+; AVX1-NEXT:    leaq 1(%r9), %r9
 ; AVX1-NEXT:    jae .LBB13_1
 ; AVX1-NEXT:  # %bb.2: # %loop_end
 ; AVX1-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; AVX1-NEXT:    leaq 1(%r9), %r10
+; AVX1-NEXT:    leaq 1(%r8), %r10
 ; AVX1-NEXT:    vcvtsi2sd %r10, %xmm6, %xmm4
 ; AVX1-NEXT:    vsubsd %xmm4, %xmm2, %xmm4
 ; AVX1-NEXT:    vmulsd %xmm3, %xmm4, %xmm4
-; AVX1-NEXT:    leaq -1(%r11), %rax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm6, %xmm5
+; AVX1-NEXT:    leaq -1(%r9), %r11
+; AVX1-NEXT:    vcvtsi2sd %r11, %xmm6, %xmm5
 ; AVX1-NEXT:    vmulsd %xmm1, %xmm5, %xmm5
 ; AVX1-NEXT:    vaddsd %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vdivsd %xmm0, %xmm4, %xmm4
-; AVX1-NEXT:    vmovsd %xmm4, -8(%rcx,%r9,8)
-; AVX1-NEXT:    movq %r10, %r9
-; AVX1-NEXT:    cmpq %r10, %r8
+; AVX1-NEXT:    vmovsd %xmm4, -8(%rcx,%r8,8)
+; AVX1-NEXT:    movq %r10, %r8
+; AVX1-NEXT:    cmpq %r10, %rax
 ; AVX1-NEXT:    jge .LBB13_1
 ; AVX1-NEXT:  # %bb.3: # %loopdone
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm7 # 16-byte Reload
@@ -1507,7 +1505,7 @@ define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1,
 ; AVX512VL-NEXT:    .seh_savexmm %xmm7, 0
 ; AVX512VL-NEXT:    .seh_endprologue
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX512VL-NEXT:    #APP
 ; AVX512VL-NEXT:    #NO_APP
@@ -1523,32 +1521,31 @@ define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1,
 ; AVX512VL-NEXT:    #NO_APP
 ; AVX512VL-NEXT:    #APP
 ; AVX512VL-NEXT:    #NO_APP
-; AVX512VL-NEXT:    movl $1, %r9d
-; AVX512VL-NEXT:    xorl %r11d, %r11d
+; AVX512VL-NEXT:    movl $1, %r8d
+; AVX512VL-NEXT:    xorl %r9d, %r9d
 ; AVX512VL-NEXT:    .p2align 4, 0x90
 ; AVX512VL-NEXT:  .LBB13_1: # %inner_loop
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512VL-NEXT:    movq %r11, %r10
-; AVX512VL-NEXT:    movq %r11, %rax
-; AVX512VL-NEXT:    shrq $6, %rax
-; AVX512VL-NEXT:    movq (%rdx,%rax,8), %rax
-; AVX512VL-NEXT:    btq %r11, %rax
-; AVX512VL-NEXT:    leaq 1(%r11), %r11
+; AVX512VL-NEXT:    movq %r9, %r10
+; AVX512VL-NEXT:    shrq $6, %r10
+; AVX512VL-NEXT:    movq (%rdx,%r10,8), %r10
+; AVX512VL-NEXT:    btq %r9, %r10
+; AVX512VL-NEXT:    leaq 1(%r9), %r9
 ; AVX512VL-NEXT:    jae .LBB13_1
 ; AVX512VL-NEXT:  # %bb.2: # %loop_end
 ; AVX512VL-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; AVX512VL-NEXT:    leaq 1(%r9), %r10
+; AVX512VL-NEXT:    leaq 1(%r8), %r10
 ; AVX512VL-NEXT:    vcvtsi2sd %r10, %xmm6, %xmm4
 ; AVX512VL-NEXT:    vsubsd %xmm4, %xmm2, %xmm4
 ; AVX512VL-NEXT:    vmulsd %xmm3, %xmm4, %xmm4
-; AVX512VL-NEXT:    leaq -1(%r11), %rax
-; AVX512VL-NEXT:    vcvtsi2sd %rax, %xmm6, %xmm5
+; AVX512VL-NEXT:    leaq -1(%r9), %r11
+; AVX512VL-NEXT:    vcvtsi2sd %r11, %xmm6, %xmm5
 ; AVX512VL-NEXT:    vmulsd %xmm1, %xmm5, %xmm5
 ; AVX512VL-NEXT:    vaddsd %xmm5, %xmm4, %xmm4
 ; AVX512VL-NEXT:    vdivsd %xmm0, %xmm4, %xmm4
-; AVX512VL-NEXT:    vmovsd %xmm4, -8(%rcx,%r9,8)
-; AVX512VL-NEXT:    movq %r10, %r9
-; AVX512VL-NEXT:    cmpq %r10, %r8
+; AVX512VL-NEXT:    vmovsd %xmm4, -8(%rcx,%r8,8)
+; AVX512VL-NEXT:    movq %r10, %r8
+; AVX512VL-NEXT:    cmpq %r10, %rax
 ; AVX512VL-NEXT:    jge .LBB13_1
 ; AVX512VL-NEXT:  # %bb.3: # %loopdone
 ; AVX512VL-NEXT:    vmovaps (%rsp), %xmm7 # 16-byte Reload
@@ -1582,8 +1579,8 @@ loop:
 inner_loop:
   %phi = phi i64 [ %phi_k, %loop ], [ %nextk, %inner_loop ]
   %idx = lshr i64 %phi, 6
-  %inputptr = getelementptr i64, i64* %x, i64 %idx
-  %input = load i64, i64* %inputptr, align 8
+  %inputptr = getelementptr i64, ptr %x, i64 %idx
+  %input = load i64, ptr %inputptr, align 8
   %masked = and i64 %phi, 63
   %shiftedmasked = shl i64 1, %masked
   %maskedinput = and i64 %input, %shiftedmasked
@@ -1605,8 +1602,8 @@ loop_end:
   %add2 = fadd double %mul, %mul2
   %div = fdiv double %add2, %c4
   %prev_j = add i64 %phi_j, -1
-  %outptr = getelementptr double, double* %y, i64 %prev_j
-  store double %div, double* %outptr, align 8
+  %outptr = getelementptr double, ptr %y, i64 %prev_j
+  store double %div, ptr %outptr, align 8
   %done = icmp slt i64 %size, %nexti
   br i1 %done, label %loopdone, label %loop
 

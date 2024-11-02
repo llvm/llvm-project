@@ -8,7 +8,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+prefer-256-bit | FileCheck %s --check-prefix=AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,-prefer-256-bit | FileCheck %s --check-prefix=AVX512BW
 
-define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8 x i32>* %b) {
+define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(ptr %a, ptr %b) {
 ; AVX256VL-LABEL: shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX256VL:       # %bb.0:
 ; AVX256VL-NEXT:    vmovdqa (%rdi), %ymm0
@@ -119,8 +119,8 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 
-  %a1 = load <8 x i32>, <8 x i32>* %a
-  %b1 = load <8 x i32>, <8 x i32>* %b
+  %a1 = load <8 x i32>, ptr %a
+  %b1 = load <8 x i32>, ptr %b
   %a2 = icmp eq <8 x i32> %a1, zeroinitializer
   %b2 = icmp eq <8 x i32> %b1, zeroinitializer
   %c = shufflevector <8 x i1> %a2, <8 x i1> %b2, <16 x i32> <i32 3, i32 6, i32 10, i32 12, i32 3, i32 7, i32 7, i32 0, i32 3, i32 6, i32 1, i32 13, i32 3, i32 11, i32 7, i32 0>

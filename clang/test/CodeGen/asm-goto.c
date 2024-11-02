@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
 
 int test1(int cond) {
   // CHECK-LABEL: define{{.*}} i32 @test1(
@@ -55,14 +55,14 @@ label_true:
 
 int test4(int out1, int out2) {
   // CHECK-LABEL: define{{.*}} i32 @test4(
-  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${5:l}", "={si},={di},r,0,1,i,i
+  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${5:l}", "={si},={di},r,0,1,!i,!i
   // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
   // CHECK-LABEL: asm.fallthrough:
   if (out1 < out2)
     asm volatile goto("jne %l5" : "+S"(out1), "+D"(out2) : "r"(out1) :: label_true, loop);
   else
     asm volatile goto("jne %l7" : "+S"(out1), "+D"(out2) : "r"(out1), "r"(out2) :: label_true, loop);
-  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${7:l}", "={si},={di},r,r,0,1,i,i
+  // CHECK: callbr { i32, i32 } asm sideeffect "jne ${7:l}", "={si},={di},r,r,0,1,!i,!i
   // CHECK: to label %asm.fallthrough2 [label %label_true, label %loop]
   // CHECK-LABEL: asm.fallthrough2:
   return out1 + out2;
@@ -74,7 +74,7 @@ label_true:
 
 int test5(int addr, int size, int limit) {
   // CHECK-LABEL: define{{.*}} i32 @test5(
-  // CHECK: callbr i32 asm "add $1,$0 ; jc ${4:l} ; cmp $2,$0 ; ja ${4:l} ; ", "=r,imr,imr,0,i
+  // CHECK: callbr i32 asm "add $1,$0 ; jc ${4:l} ; cmp $2,$0 ; ja ${4:l} ; ", "=r,imr,imr,0,!i
   // CHECK: to label %asm.fallthrough [label %t_err]
   // CHECK-LABEL: asm.fallthrough:
   asm goto(
@@ -92,7 +92,7 @@ t_err:
 
 int test6(int out1) {
   // CHECK-LABEL: define{{.*}} i32 @test6(
-  // CHECK: callbr i32 asm sideeffect "testl $0, $0; testl $1, $1; jne ${3:l}", "={si},r,0,i,i,{{.*}} i8* blockaddress(@test6, %label_true), i8* blockaddress(@test6, %landing)
+  // CHECK: callbr i32 asm sideeffect "testl $0, $0; testl $1, $1; jne ${3:l}", "={si},r,0,!i,!i,{{.*}}
   // CHECK: to label %asm.fallthrough [label %label_true, label %landing]
   // CHECK-LABEL: asm.fallthrough:
   // CHECK-LABEL: landing:
@@ -109,8 +109,8 @@ label_true:
 // is $2 (or rather ${2:l} because of the l output template) in the emitted asm
 // string, not $1.
 void *test7(void) {
-  // CHECK-LABEL: define{{.*}} i8* @test7(
-  // CHECK: %1 = callbr i8* asm "# $0\0A\09# ${2:l}", "=r,0,i,~{dirflag},~{fpsr},~{flags}"(i8* %0, i8* blockaddress(@test7, %foo))
+  // CHECK-LABEL: define{{.*}} ptr @test7(
+  // CHECK: %1 = callbr ptr asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(ptr %0)
   // CHECK-NEXT: to label %asm.fallthrough [label %foo]
   void *p = &&foo;
   asm goto ("# %0\n\t# %l2":"+r"(p):::foo);
@@ -121,8 +121,8 @@ foo:
 // test8 - the same as test7, but this time we use symbolic names rather than
 // numbered outputs.
 void *test8(void) {
-  // CHECK-LABEL: define{{.*}} i8* @test8(
-  // CHECK: %1 = callbr i8* asm "# $0\0A\09# ${2:l}", "=r,0,i,~{dirflag},~{fpsr},~{flags}"(i8* %0, i8* blockaddress(@test8, %foo))
+  // CHECK-LABEL: define{{.*}} ptr @test8(
+  // CHECK: %1 = callbr ptr asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(ptr %0)
   // CHECK-NEXT: to label %asm.fallthrough [label %foo]
   void *p = &&foo;
   asm goto ("# %0\n\t# %l[foo]":"+r"(p):::foo);

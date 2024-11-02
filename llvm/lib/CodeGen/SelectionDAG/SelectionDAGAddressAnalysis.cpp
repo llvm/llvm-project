@@ -96,7 +96,7 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
   if (!(BasePtr0.getBase().getNode() && BasePtr1.getBase().getNode()))
     return false;
   int64_t PtrDiff;
-  if (NumBytes0.hasValue() && NumBytes1.hasValue() &&
+  if (NumBytes0 && NumBytes1 &&
       BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
     // If the size of memory access is unknown, do not use it to analysis.
     // One example of unknown size memory access is to load/store scalable

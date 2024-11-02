@@ -8,7 +8,7 @@ define <512 x i8> @bitcast_1024B(<256 x i16> %a, <512 x i8> %b) {
 ; VLEN256:       # %bb.0:
 ; VLEN256-NEXT:    addi a1, a0, 256
 ; VLEN256-NEXT:    li a2, 256
-; VLEN256-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
+; VLEN256-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; VLEN256-NEXT:    vle8.v v24, (a0)
 ; VLEN256-NEXT:    vle8.v v0, (a1)
 ; VLEN256-NEXT:    vadd.vv v8, v24, v8
@@ -18,14 +18,14 @@ define <512 x i8> @bitcast_1024B(<256 x i16> %a, <512 x i8> %b) {
 ; VLEN512-LABEL: bitcast_1024B:
 ; VLEN512:       # %bb.0:
 ; VLEN512-NEXT:    li a0, 512
-; VLEN512-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
+; VLEN512-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; VLEN512-NEXT:    vadd.vv v8, v16, v8
 ; VLEN512-NEXT:    ret
 ;
 ; VLEN1024-LABEL: bitcast_1024B:
 ; VLEN1024:       # %bb.0:
 ; VLEN1024-NEXT:    li a0, 512
-; VLEN1024-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; VLEN1024-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; VLEN1024-NEXT:    vadd.vv v8, v12, v8
 ; VLEN1024-NEXT:    ret
   %c = bitcast <256 x i16> %a to <512 x i8>

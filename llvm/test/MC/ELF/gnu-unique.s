@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=x86_64 %s | FileCheck %s --check-prefix=ASM
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-readelf -h -s %t | FileCheck %s --check-prefix=OBJ
-# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
+# RUN: llvm-objdump --no-print-imm-hex -d -r --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
 
 # ASM: .type unique,@gnu_unique_object
 

@@ -34,8 +34,7 @@
 
 using namespace llvm;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 class ICF {
 public:
@@ -233,10 +232,10 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> fn) {
   size_t boundaries[numShards + 1];
   boundaries[0] = 0;
   boundaries[numShards] = chunks.size();
-  parallelForEachN(1, numShards, [&](size_t i) {
+  parallelFor(1, numShards, [&](size_t i) {
     boundaries[i] = findBoundary((i - 1) * step, chunks.size());
   });
-  parallelForEachN(1, numShards + 1, [&](size_t i) {
+  parallelFor(1, numShards + 1, [&](size_t i) {
     if (boundaries[i - 1] < boundaries[i]) {
       forEachClassRange(boundaries[i - 1], boundaries[i], fn);
     }
@@ -322,5 +321,4 @@ void doICF(COFFLinkerContext &ctx, ICFLevel icfLevel) {
   ICF(ctx, icfLevel).run();
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

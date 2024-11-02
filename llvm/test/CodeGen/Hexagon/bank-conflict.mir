@@ -107,7 +107,7 @@ body:             |
     $r4 = A2_tfrsi 10
     J2_loop0r %bb.1, killed $r0, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
 
-  bb.1 (address-taken):
+  bb.1 (machine-block-address-taken):
     successors: %bb.2(0x80000000)
     liveins: $lc0:0x00000004, $r2:0x00000001, $r3:0x00000001, $r4:0x00000001, $sa0:0x00000004
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s | FileCheck %s
 
 // PR4610
 #pragma pack(4)
@@ -53,7 +53,7 @@ struct S4
   int e;
 } s4;
 
-// CHECK: [[struct_ref:%[a-zA-Z0-9_.]+]] = type { [[struct_ref]]* }
+// CHECK: [[struct_ref:%[a-zA-Z0-9_.]+]] = type { ptr }
 // CHECK: [[struct_S:%[a-zA-Z0-9_.]+]] = type { [3 x i8], [[struct_T:%[a-zA-Z0-9_.]+]], [[struct_T2:%[a-zA-Z0-9_.]+]] }
 // CHECK: [[struct_T]] = type <{ i8, i32 }>
 // CHECK: [[struct_T2]] = type { i8, i32 }

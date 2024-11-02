@@ -220,6 +220,9 @@ public:
   /// Prevents intended crashes when using #pragma clang __debug. For testing.
   bool DisablePragmaDebugCrash = false;
 
+  /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
+  Optional<uint64_t> SourceDateEpoch;
+
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
 

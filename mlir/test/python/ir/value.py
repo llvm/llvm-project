@@ -37,6 +37,21 @@ def testOpResultOwner():
     assert op.result.owner == op
 
 
+# CHECK-LABEL: TEST: testBlockArgOwner
+@run
+def testBlockArgOwner():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(
+      r"""
+    func.func @foo(%arg0: f32) {
+      return
+    }""", ctx)
+  func = module.body.operations[0]
+  block = func.regions[0].blocks[0]
+  assert block.arguments[0].owner == block
+
+
 # CHECK-LABEL: TEST: testValueIsInstance
 @run
 def testValueIsInstance():

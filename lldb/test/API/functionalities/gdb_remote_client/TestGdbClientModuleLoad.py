@@ -3,7 +3,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
-from lldbsuite.support import seven
 
 class MyResponder(MockGDBServerResponder):
     """
@@ -79,8 +78,6 @@ class MyResponder(MockGDBServerResponder):
             return "start:ef1000;size:ffffffffff10f000"
 
 class TestGdbClientModuleLoad(GDBRemoteTestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfXmlSupportMissing
     def test_android_app_process(self):

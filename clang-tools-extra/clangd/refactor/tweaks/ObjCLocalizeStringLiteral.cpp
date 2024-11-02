@@ -30,7 +30,7 @@ namespace {
 ///   NSLocalizedString(@"description", @"")
 class ObjCLocalizeStringLiteral : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
   llvm::StringLiteral kind() const override {
     return CodeAction::REFACTOR_KIND;
   }

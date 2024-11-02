@@ -40,6 +40,12 @@ class Intrinsic<list<LLVMType> ret_types,
 // ... this intrinsic.
 def int_random_gen   : Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
+// CHECK: static AttributeSet getIntrinsicFnAttributeSet(
+// CHECK: case 0:
+// CHECK-NEXT: return AttributeSet::get(C, {
+// CHECK-NEXT: Attribute::get(C, Attribute::NoUnwind),
+// CHECK-NEXT: });
+
 // CHECK: 1, // llvm.random.gen
 // CHECK: case 1:
-// CHECK-NEXT: Atts[] = {Attribute::NoUnwind}
+// CHECK-NEXT: AS[0] = {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, 0)};

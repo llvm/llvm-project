@@ -28,7 +28,7 @@ namespace {
 /// b)");
 class RawStringLiteral : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
 
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
@@ -46,7 +46,7 @@ REGISTER_TWEAK(RawStringLiteral)
 static bool isNormalString(const StringLiteral &Str, SourceLocation Cursor,
                           SourceManager &SM) {
   // All chunks must be normal ASCII strings, not u8"..." etc.
-  if (!Str.isAscii())
+  if (!Str.isOrdinary())
     return false;
   SourceLocation LastTokenBeforeCursor;
   for (auto I = Str.tokloc_begin(), E = Str.tokloc_end(); I != E; ++I) {

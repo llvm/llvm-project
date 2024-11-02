@@ -225,7 +225,7 @@ void SHA1::update(ArrayRef<uint8_t> Data) {
   // Fast buffer filling for large inputs.
   while (Data.size() >= BLOCK_LENGTH) {
     assert(InternalState.BufferOffset == 0);
-    static_assert(BLOCK_LENGTH % 4 == 0, "");
+    static_assert(BLOCK_LENGTH % 4 == 0);
     constexpr size_t BLOCK_LENGTH_32 = BLOCK_LENGTH / 4;
     for (size_t I = 0; I < BLOCK_LENGTH_32; ++I)
       InternalState.Buffer.L[I] = support::endian::read32be(&Data[I * 4]);
@@ -288,7 +288,7 @@ std::array<uint8_t, 20> SHA1::final() {
     std::array<uint32_t, HASH_LENGTH / 4> HashResult;
     std::array<uint8_t, HASH_LENGTH> ReturnResult;
   };
-  static_assert(sizeof(HashResult) == sizeof(ReturnResult), "");
+  static_assert(sizeof(HashResult) == sizeof(ReturnResult));
   final(HashResult);
   return ReturnResult;
 }

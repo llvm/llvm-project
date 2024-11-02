@@ -14,10 +14,61 @@
 // LoongArch specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+// Target-independent type requirements, but with target-specific formats.
+def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                       SDTCisVT<1, i32>]>;
+def SDT_CallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i32>,
+                                   SDTCisVT<1, i32>]>;
+
+// Target-dependent type requirements.
+def SDT_LoongArchCall : SDTypeProfile<0, -1, [SDTCisVT<0, GRLenVT>]>;
+def SDT_LoongArchIntBinOpW : SDTypeProfile<1, 2, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
+]>;
+
+def SDT_LoongArchBStrIns: SDTypeProfile<1, 4, [
+  SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<3>,
+  SDTCisSameAs<3, 4>
+]>;
+
+def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
+  SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<2, 3>
+]>;
+
+def SDT_LoongArchDBAR : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
+
 // TODO: Add LoongArch specific DAG Nodes
+// Target-independent nodes, but with target-specific formats.
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
 // Target-dependent nodes.
+def loongarch_call : SDNode<"LoongArchISD::CALL", SDT_LoongArchCall,
+                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                             SDNPVariadic]>;
 def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
+def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+def loongarch_rotl_w : SDNode<"LoongArchISD::ROTL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crc_w_d_w
+    : SDNode<"LoongArchISD::CRC_W_D_W", SDT_LoongArchIntBinOpW>;
+def loongarch_bstrins
+    : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
+def loongarch_bstrpick
+    : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
+def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
+def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
+def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
+def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
+def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
+def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
+def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchDBAR,
+                             [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -38,11 +89,15 @@ class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
 }
 
+// A parameterized register class alternative to i32imm/i64imm from Target.td.
+def grlenimm : Operand<GRLenVT>;
+
 def uimm2 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<2>;
 }
 
-def uimm2_plus1 : Operand<GRLenVT> {
+def uimm2_plus1 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isUInt<2>(Imm - 1);}]> {
   let ParserMatchClass = UImmAsmOperand<2, "plus1">;
   let EncoderMethod = "getImmOpValueSub1";
   let DecoderMethod = "decodeUImmOperand<2, 1>";
@@ -52,11 +107,11 @@ def uimm3 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<3>;
 }
 
-def uimm5 : Operand<GRLenVT> {
+def uimm5 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
 }
 
-def uimm6 : Operand<GRLenVT> {
+def uimm6 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<6>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<6>;
 }
 
@@ -64,24 +119,47 @@ def uimm8 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<8>;
 }
 
-def uimm12 : Operand<GRLenVT> {
+class UImm12Operand : Operand<GRLenVT>,
+                      ImmLeaf <GRLenVT, [{return isUInt<12>(Imm);}]> {
+  let DecoderMethod = "decodeUImmOperand<12>";
+}
+
+def uimm12 : UImm12Operand {
   let ParserMatchClass = UImmAsmOperand<12>;
+}
+
+def uimm12_ori : UImm12Operand {
+  let ParserMatchClass = UImmAsmOperand<12, "ori">;
 }
 
 def uimm14 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<14>;
 }
 
-def uimm15 : Operand<GRLenVT> {
+def uimm15 : Operand<GRLenVT>,
+             ImmLeaf <GRLenVT, [{return isUInt<15>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<15>;
 }
 
-def simm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isInt<12>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<12>;
+class SImm12Operand : Operand<GRLenVT>,
+                      ImmLeaf <GRLenVT, [{return isInt<12>(Imm);}]> {
   let DecoderMethod = "decodeSImmOperand<12>";
 }
 
-def simm14_lsl2 : Operand<GRLenVT> {
+def simm12 : SImm12Operand {
+  let ParserMatchClass = SImmAsmOperand<12>;
+}
+
+def simm12_addlike : SImm12Operand {
+  let ParserMatchClass = SImmAsmOperand<12, "addlike">;
+}
+
+def simm12_lu52id : SImm12Operand {
+  let ParserMatchClass = SImmAsmOperand<12, "lu52id">;
+}
+
+def simm14_lsl2 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isShiftedInt<14,2>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<14, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<14, 2>";
@@ -92,28 +170,105 @@ def simm16 : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<16>";
 }
 
-def simm16_lsl2 : Operand<GRLenVT> {
+def simm16_lsl2 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isInt<16>(Imm>>2);}]> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<16, 2>";
 }
 
-def simm20 : Operand<GRLenVT> {
-  let ParserMatchClass = SImmAsmOperand<20>;
+def simm16_lsl2_br : Operand<OtherVT> {
+  let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
+  let EncoderMethod = "getImmOpValueAsr2";
+  let DecoderMethod = "decodeSImmOperand<16, 2>";
+}
+
+class SImm20Operand : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<20>";
 }
 
-def simm21_lsl2 : Operand<GRLenVT> {
+def simm20 : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20>;
+}
+
+def simm20_pcalau12i : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcalau12i">;
+}
+
+def simm20_lu12iw : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "lu12iw">;
+}
+
+def simm20_lu32id : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "lu32id">;
+}
+
+def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<21, 2>";
 }
 
-def simm26_lsl2 : Operand<GRLenVT> {
-  let ParserMatchClass = SImmAsmOperand<26, "lsl2">;
+def SImm26OperandB: AsmOperandClass {
+  let Name = "SImm26OperandB";
+  let PredicateMethod = "isSImm26Operand";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidSImm26Operand";
+  let ParserMethod = "parseImmediate";
+}
+
+// A symbol or an imm used in B/PseudoBR.
+def simm26_b : Operand<OtherVT> {
+  let ParserMatchClass = SImm26OperandB;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
 }
+
+def SImm26OperandBL: AsmOperandClass {
+  let Name = "SImm26OperandBL";
+  let PredicateMethod = "isSImm26Operand";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidSImm26Operand";
+  let ParserMethod = "parseSImm26Operand";
+}
+
+// A symbol or an imm used in BL/PseudoCALL.
+def simm26_bl : Operand<GRLenVT> {
+  let ParserMatchClass = SImm26OperandBL;
+  let EncoderMethod = "getImmOpValueAsr2";
+  let DecoderMethod = "decodeSImmOperand<26, 2>";
+}
+
+// Standalone (codegen-only) immleaf patterns.
+
+// A 12-bit signed immediate plus one where the imm range will be [-2047, 2048].
+def simm12_plus1 : ImmLeaf<GRLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+
+// Return the negation of an immediate value.
+def NegImm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// FP immediate patterns.
+def fpimm0    : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm1    : PatLeaf<(fpimm), [{return N->isExactlyValue(+1.0);}]>;
+
+// Return an immediate subtracted from 32.
+def ImmSubFrom32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
+def NonFIBaseAddr : ComplexPattern<iPTR, 1, "selectNonFIBaseAddr">;
+
+def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
+                      (fma node:$fj, node:$fk, node:$fa), [{
+  return N->getFlags().hasNoSignedZeros();
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
@@ -159,7 +314,7 @@ class RDTIME_2R<bits<22> op, string opstr>
     : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins), opstr, "$rd, $rj">;
 
 class BrCC_2RI16<bits<6> op, string opstr>
-    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2:$imm16), opstr,
+    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2_br:$imm16), opstr,
                "$rj, $rd, $imm16"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -171,7 +326,7 @@ class BrCCZ_1RI21<bits<6> op, string opstr>
   let isTerminator = 1;
 }
 class Br_I26<bits<6> op, string opstr>
-    : FmtI26<op, (outs), (ins simm26_lsl2:$imm26), opstr, "$imm26"> {
+    : FmtI26<op, (outs), (ins simm26_b:$imm26), opstr, "$imm26"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
@@ -180,7 +335,7 @@ let mayLoad = 1 in {
 class LOAD_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
 class LOAD_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12:$imm12), opstr,
+    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12_addlike:$imm12), opstr,
                "$rd, $rj, $imm12">;
 class LOAD_2RI14<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
@@ -192,14 +347,14 @@ class STORE_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs), (ins GPR:$rd, GPR:$rj, GPR:$rk), opstr,
             "$rd, $rj, $rk">;
 class STORE_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12:$imm12), opstr,
+    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12_addlike:$imm12), opstr,
                "$rd, $rj, $imm12">;
 class STORE_2RI14<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14), opstr,
                "$rd, $rj, $imm14">;
 } // mayStore = 1
 
-let mayLoad = 1, mayStore = 1 in
+let mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
 class AM_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPR:$rj), opstr, "$rd, $rk, $rj">;
 
@@ -226,16 +381,16 @@ class IOCSRWR<bits<22> op, string opstr>
 // Arithmetic Operation Instructions
 def ADD_W : ALU_3R<0b00000000000100000, "add.w">;
 def SUB_W : ALU_3R<0b00000000000100010, "sub.w">;
-def ADDI_W : ALU_2RI12<0b0000001010, "addi.w", simm12>;
+def ADDI_W : ALU_2RI12<0b0000001010, "addi.w", simm12_addlike>;
 def ALSL_W : ALU_3RI2<0b000000000000010, "alsl.w", uimm2_plus1>;
-def LU12I_W : ALU_1RI20<0b0001010, "lu12i.w", simm20>;
+def LU12I_W : ALU_1RI20<0b0001010, "lu12i.w", simm20_lu12iw>;
 def SLT  : ALU_3R<0b00000000000100100, "slt">;
 def SLTU : ALU_3R<0b00000000000100101, "sltu">;
 def SLTI  : ALU_2RI12<0b0000001000, "slti", simm12>;
 def SLTUI : ALU_2RI12<0b0000001001, "sltui", simm12>;
 def PCADDI    : ALU_1RI20<0b0001100, "pcaddi", simm20>;
 def PCADDU12I : ALU_1RI20<0b0001110, "pcaddu12i", simm20>;
-def PCALAU12I : ALU_1RI20<0b0001101, "pcalau12i", simm20>;
+def PCALAU12I : ALU_1RI20<0b0001101, "pcalau12i", simm20_pcalau12i>;
 def AND  : ALU_3R<0b00000000000101001, "and">;
 def OR   : ALU_3R<0b00000000000101010, "or">;
 def NOR  : ALU_3R<0b00000000000101000, "nor">;
@@ -243,15 +398,17 @@ def XOR  : ALU_3R<0b00000000000101011, "xor">;
 def ANDN : ALU_3R<0b00000000000101101, "andn">;
 def ORN  : ALU_3R<0b00000000000101100, "orn">;
 def ANDI : ALU_2RI12<0b0000001101, "andi", uimm12>;
-def ORI  : ALU_2RI12<0b0000001110, "ori", uimm12>;
+def ORI  : ALU_2RI12<0b0000001110, "ori", uimm12_ori>;
 def XORI : ALU_2RI12<0b0000001111, "xori", uimm12>;
 def MUL_W   : ALU_3R<0b00000000000111000, "mul.w">;
 def MULH_W  : ALU_3R<0b00000000000111001, "mulh.w">;
 def MULH_WU : ALU_3R<0b00000000000111010, "mulh.wu">;
+let usesCustomInserter = true in {
 def DIV_W   : ALU_3R<0b00000000001000000, "div.w">;
 def MOD_W   : ALU_3R<0b00000000001000001, "mod.w">;
 def DIV_WU  : ALU_3R<0b00000000001000010, "div.wu">;
 def MOD_WU  : ALU_3R<0b00000000001000011, "mod.wu">;
+} // usesCustomInserter = true
 
 // Bit-shift Instructions
 def SLL_W  : ALU_3R<0b00000000000101110, "sll.w">;
@@ -297,8 +454,8 @@ def BEQZ : BrCCZ_1RI21<0b010000, "beqz">;
 def BNEZ : BrCCZ_1RI21<0b010001, "bnez">;
 def B : Br_I26<0b010100, "b">;
 
-let isCall = 1 in
-def BL : FmtI26<0b010101, (outs), (ins simm26_lsl2:$imm26), "bl", "$imm26">;
+let isCall = 1, Defs=[R1] in
+def BL : FmtI26<0b010101, (outs), (ins simm26_bl:$imm26), "bl", "$imm26">;
 def JIRL : Fmt2RI16<0b010011, (outs GPR:$rd),
                     (ins GPR:$rj, simm16_lsl2:$imm16), "jirl",
                     "$rd, $rj, $imm16">;
@@ -337,26 +494,28 @@ let Predicates = [IsLA64] in {
 // Arithmetic Operation Instructions for 64-bits
 def ADD_D : ALU_3R<0b00000000000100001, "add.d">;
 def SUB_D : ALU_3R<0b00000000000100011, "sub.d">;
-def ADDI_D : ALU_2RI12<0b0000001011, "addi.d", simm12>;
+def ADDI_D : ALU_2RI12<0b0000001011, "addi.d", simm12_addlike>;
 def ADDU16I_D : ALU_2RI16<0b000100, "addu16i.d", simm16>;
 def ALSL_WU : ALU_3RI2<0b000000000000011, "alsl.wu", uimm2_plus1>;
 def ALSL_D  : ALU_3RI2<0b000000000010110, "alsl.d", uimm2_plus1>;
 let Constraints = "$rd = $dst" in {
 def LU32I_D : Fmt1RI20<0b0001011, (outs GPR:$dst),
-                       (ins GPR:$rd, simm20:$imm20), "lu32i.d",
+                       (ins GPR:$rd, simm20_lu32id:$imm20), "lu32i.d",
                        "$rd, $imm20">;
 }
-def LU52I_D : ALU_2RI12<0b0000001100, "lu52i.d", simm12>;
+def LU52I_D : ALU_2RI12<0b0000001100, "lu52i.d", simm12_lu52id>;
 def PCADDU18I : ALU_1RI20<0b0001111, "pcaddu18i", simm20>;
 def MUL_D     : ALU_3R<0b00000000000111011, "mul.d">;
 def MULH_D    : ALU_3R<0b00000000000111100, "mulh.d">;
 def MULH_DU   : ALU_3R<0b00000000000111101, "mulh.du">;
 def MULW_D_W  : ALU_3R<0b00000000000111110, "mulw.d.w">;
 def MULW_D_WU : ALU_3R<0b00000000000111111, "mulw.d.wu">;
+let usesCustomInserter = true in {
 def DIV_D     : ALU_3R<0b00000000001000100, "div.d">;
 def MOD_D     : ALU_3R<0b00000000001000101, "mod.d">;
 def DIV_DU    : ALU_3R<0b00000000001000110, "div.du">;
 def MOD_DU    : ALU_3R<0b00000000001000111, "mod.du">;
+} // usesCustomInserter = true
 
 // Bit-shift Instructions for 64-bits
 def SLL_D  : ALU_3R<0b00000000000110001, "sll.d">;
@@ -501,6 +660,8 @@ class PatGprGpr<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(OpNode GPR:$rj, GPR:$rk), (Inst GPR:$rj, GPR:$rk)>;
 class PatGprGpr_32<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(sext_inreg (OpNode GPR:$rj, GPR:$rk), i32), (Inst GPR:$rj, GPR:$rk)>;
+class PatGpr<SDPatternOperator OpNode, LAInst Inst>
+    : Pat<(OpNode GPR:$rj), (Inst GPR:$rj)>;
 
 class PatGprImm<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
     : Pat<(OpNode GPR:$rj, ImmOpnd:$imm),
@@ -509,34 +670,669 @@ class PatGprImm_32<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
     : Pat<(sext_inreg (OpNode GPR:$rj, ImmOpnd:$imm), i32),
           (Inst GPR:$rj, ImmOpnd:$imm)>;
 
+/// Predicates
+def AddLike: PatFrags<(ops node:$A, node:$B),
+                      [(add node:$A, node:$B), (or node:$A, node:$B)], [{
+    return N->getOpcode() == ISD::ADD || isOrEquivalentToAdd(N);
+}]>;
+
+/// Simple arithmetic operations
+
+// Match both a plain shift and one where the shift amount is masked (this is
+// typically introduced when the legalizer promotes the shift amount and
+// zero-extends it). For LoongArch, the mask is unnecessary as shifts in the
+// base ISA only read the least significant 5 bits (LA32) or 6 bits (LA64).
+def shiftMaskGRLen
+    : ComplexPattern<GRLenVT, 1, "selectShiftMaskGRLen", [], [], 0>;
+def shiftMask32 : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
+
+def sexti32 : ComplexPattern<i64, 1, "selectSExti32">;
+def zexti32 : ComplexPattern<i64, 1, "selectZExti32">;
+
+class shiftop<SDPatternOperator operator>
+    : PatFrag<(ops node:$val, node:$count),
+              (operator node:$val, (GRLenVT (shiftMaskGRLen node:$count)))>;
+class shiftopw<SDPatternOperator operator>
+    : PatFrag<(ops node:$val, node:$count),
+              (operator node:$val, (i64 (shiftMask32 node:$count)))>;
+
+let Predicates = [IsLA32] in {
+def : PatGprGpr<add, ADD_W>;
+def : PatGprImm<add, ADDI_W, simm12>;
+def : PatGprGpr<sub, SUB_W>;
+def : PatGprGpr<sdiv, DIV_W>;
+def : PatGprGpr<udiv, DIV_WU>;
+def : PatGprGpr<srem, MOD_W>;
+def : PatGprGpr<urem, MOD_WU>;
+def : PatGprGpr<mul, MUL_W>;
+def : PatGprGpr<mulhs, MULH_W>;
+def : PatGprGpr<mulhu, MULH_WU>;
+def : PatGprGpr<rotr, ROTR_W>;
+def : PatGprImm<rotr, ROTRI_W, uimm5>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : PatGprGpr<add, ADD_D>;
+def : PatGprGpr_32<add, ADD_W>;
+def : PatGprImm<add, ADDI_D, simm12>;
+def : PatGprImm_32<add, ADDI_W, simm12>;
+def : PatGprGpr<sub, SUB_D>;
+def : PatGprGpr_32<sub, SUB_W>;
+def : PatGprGpr<sdiv, DIV_D>;
+def : PatGprGpr<udiv, DIV_DU>;
+def : PatGprGpr<srem, MOD_D>;
+def : PatGprGpr<urem, MOD_DU>;
+def : PatGprGpr<rotr, ROTR_D>;
+def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
+def : PatGprImm<rotr, ROTRI_D, uimm6>;
+def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
+def : Pat<(loongarch_rotl_w GPR:$rj, uimm5:$imm),
+          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
+def : Pat<(sext_inreg (loongarch_rotl_w GPR:$rj, uimm5:$imm), i32),
+          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
+// TODO: Select "_W[U]" instructions for i32xi32 if only lower 32 bits of the
+// product are used.
+def : PatGprGpr<mul, MUL_D>;
+def : PatGprGpr<mulhs, MULH_D>;
+def : PatGprGpr<mulhu, MULH_DU>;
+// Select MULW_D_W for calculating the full 64 bits product of i32xi32 signed
+// multiplication.
+def : Pat<(i64 (mul (sext_inreg GPR:$rj, i32), (sext_inreg GPR:$rk, i32))),
+          (MULW_D_W GPR:$rj, GPR:$rk)>;
+// Select MULW_D_WU for calculating the full 64 bits product of i32xi32
+// unsigned multiplication.
+def : Pat<(i64 (mul (loongarch_bstrpick GPR:$rj, (i64 31), (i64 0)),
+                    (loongarch_bstrpick GPR:$rk, (i64 31), (i64 0)))),
+          (MULW_D_WU GPR:$rj, GPR:$rk)>;
+} // Predicates = [IsLA64]
+
 def : PatGprGpr<and, AND>;
+def : PatGprImm<and, ANDI, uimm12>;
 def : PatGprGpr<or, OR>;
+def : PatGprImm<or, ORI, uimm12>;
 def : PatGprGpr<xor, XOR>;
+def : PatGprImm<xor, XORI, uimm12>;
+def : Pat<(not GPR:$rj), (NOR GPR:$rj, R0)>;
+def : Pat<(not (or GPR:$rj, GPR:$rk)), (NOR GPR:$rj, GPR:$rk)>;
+def : Pat<(or GPR:$rj, (not GPR:$rk)), (ORN GPR:$rj, GPR:$rk)>;
+def : Pat<(and GPR:$rj, (not GPR:$rk)), (ANDN GPR:$rj, GPR:$rk)>;
+
+/// Traps
+
+// We lower `trap` to `amswap.w rd:$r0, rk:$r1, rj:$r0`, as this is guaranteed
+// to trap with an INE (non-existent on LA32, explicitly documented to INE on
+// LA64). And the resulting signal is different from `debugtrap` like on some
+// other existing ports so programs/porters might have an easier time.
+def PseudoUNIMP : Pseudo<(outs), (ins), [(trap)]>,
+                  PseudoInstExpansion<(AMSWAP_W R0, R1, R0)>;
+
+// We lower `debugtrap` to `break 0`, as this is guaranteed to exist and work,
+// even for LA32 Primary. Also, because so far the ISA does not provide a
+// specific trap instruction/kind exclusively for alerting the debugger,
+// every other project uses the generic immediate of 0 for this.
+def : Pat<(debugtrap), (BREAK 0)>;
+
+/// Bit counting operations
+
+let Predicates = [IsLA64] in {
+def : PatGpr<ctlz, CLZ_D>;
+def : PatGpr<cttz, CTZ_D>;
+def : Pat<(ctlz (not GPR:$rj)), (CLO_D GPR:$rj)>;
+def : Pat<(cttz (not GPR:$rj)), (CTO_D GPR:$rj)>;
+def : PatGpr<loongarch_clzw, CLZ_W>;
+def : PatGpr<loongarch_ctzw, CTZ_W>;
+def : Pat<(loongarch_clzw (not GPR:$rj)), (CLO_W GPR:$rj)>;
+def : Pat<(loongarch_ctzw (not GPR:$rj)), (CTO_W GPR:$rj)>;
+} // Predicates = [IsLA64]
+
+let Predicates = [IsLA32] in {
+def : PatGpr<ctlz, CLZ_W>;
+def : PatGpr<cttz, CTZ_W>;
+def : Pat<(ctlz (not GPR:$rj)), (CLO_W GPR:$rj)>;
+def : Pat<(cttz (not GPR:$rj)), (CTO_W GPR:$rj)>;
+} // Predicates = [IsLA32]
+
+/// FrameIndex calculations
+let Predicates = [IsLA32] in {
+def : Pat<(AddLike (i32 BaseAddr:$rj), simm12:$imm12),
+          (ADDI_W (i32 BaseAddr:$rj), simm12:$imm12)>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(AddLike (i64 BaseAddr:$rj), simm12:$imm12),
+          (ADDI_D (i64 BaseAddr:$rj), simm12:$imm12)>;
+} // Predicates = [IsLA64]
+
+/// Shifted addition
+let Predicates = [IsLA32] in {
+def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+          (ALSL_W GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+          (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+def : Pat<(loongarch_bstrpick (add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+                              (i64 31), (i64 0)),
+          (ALSL_WU GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+} // Predicates = [IsLA64]
+
+/// Shift
+
+let Predicates = [IsLA32] in {
+def : PatGprGpr<shiftop<shl>, SLL_W>;
+def : PatGprGpr<shiftop<sra>, SRA_W>;
+def : PatGprGpr<shiftop<srl>, SRL_W>;
+def : PatGprImm<shl, SLLI_W, uimm5>;
+def : PatGprImm<sra, SRAI_W, uimm5>;
+def : PatGprImm<srl, SRLI_W, uimm5>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : PatGprGpr<shiftopw<loongarch_sll_w>, SLL_W>;
+def : PatGprGpr<shiftopw<loongarch_sra_w>, SRA_W>;
+def : PatGprGpr<shiftopw<loongarch_srl_w>, SRL_W>;
+def : PatGprGpr<shiftop<shl>, SLL_D>;
+def : PatGprGpr<shiftop<sra>, SRA_D>;
+def : PatGprGpr<shiftop<srl>, SRL_D>;
+def : PatGprImm<shl, SLLI_D, uimm6>;
+def : PatGprImm<sra, SRAI_D, uimm6>;
+def : PatGprImm<srl, SRLI_D, uimm6>;
+} // Predicates = [IsLA64]
+
+/// sext and zext
+
+def : Pat<(sext_inreg GPR:$rj, i8), (EXT_W_B GPR:$rj)>;
+def : Pat<(sext_inreg GPR:$rj, i16), (EXT_W_H GPR:$rj)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
+} // Predicates = [IsLA64]
+
+/// Setcc
+
+def : PatGprGpr<setlt, SLT>;
+def : PatGprImm<setlt, SLTI, simm12>;
+def : PatGprGpr<setult, SLTU>;
+def : PatGprImm<setult, SLTUI, simm12>;
+
+// Define pattern expansions for setcc operations that aren't directly
+// handled by a LoongArch instruction.
+def : Pat<(seteq GPR:$rj, 0), (SLTUI GPR:$rj, 1)>;
+def : Pat<(seteq GPR:$rj, GPR:$rk), (SLTUI (XOR GPR:$rj, GPR:$rk), 1)>;
+let Predicates = [IsLA32] in {
+def : Pat<(seteq GPR:$rj, simm12_plus1:$imm12),
+          (SLTUI (ADDI_W GPR:$rj, (NegImm simm12_plus1:$imm12)), 1)>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(seteq GPR:$rj, simm12_plus1:$imm12),
+          (SLTUI (ADDI_D GPR:$rj, (NegImm simm12_plus1:$imm12)), 1)>;
+} // Predicates = [IsLA64]
+def : Pat<(setne GPR:$rj, 0), (SLTU R0, GPR:$rj)>;
+def : Pat<(setne GPR:$rj, GPR:$rk), (SLTU R0, (XOR GPR:$rj, GPR:$rk))>;
+let Predicates = [IsLA32] in {
+def : Pat<(setne GPR:$rj, simm12_plus1:$imm12),
+          (SLTU R0, (ADDI_W GPR:$rj, (NegImm simm12_plus1:$imm12)))>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(setne GPR:$rj, simm12_plus1:$imm12),
+          (SLTU R0, (ADDI_D GPR:$rj, (NegImm simm12_plus1:$imm12)))>;
+} // Predicates = [IsLA64]
+def : Pat<(setugt GPR:$rj, GPR:$rk), (SLTU GPR:$rk, GPR:$rj)>;
+def : Pat<(setuge GPR:$rj, GPR:$rk), (XORI (SLTU GPR:$rj, GPR:$rk), 1)>;
+def : Pat<(setule GPR:$rj, GPR:$rk), (XORI (SLTU GPR:$rk, GPR:$rj), 1)>;
+def : Pat<(setgt GPR:$rj, GPR:$rk), (SLT GPR:$rk, GPR:$rj)>;
+def : Pat<(setge GPR:$rj, GPR:$rk), (XORI (SLT GPR:$rj, GPR:$rk), 1)>;
+def : Pat<(setle GPR:$rj, GPR:$rk), (XORI (SLT GPR:$rk, GPR:$rj), 1)>;
+
+/// Select
+
+def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
+          (OR (MASKEQZ GPR:$t, GPR:$cond), (MASKNEZ GPR:$f, GPR:$cond))>;
 
 /// Branches and jumps
+
+class BccPat<PatFrag CondOp, LAInst Inst>
+    : Pat<(brcond (GRLenVT (CondOp GPR:$rj, GPR:$rd)), bb:$imm16),
+          (Inst GPR:$rj, GPR:$rd, bb:$imm16)>;
+
+def : BccPat<seteq, BEQ>;
+def : BccPat<setne, BNE>;
+def : BccPat<setlt, BLT>;
+def : BccPat<setge, BGE>;
+def : BccPat<setult, BLTU>;
+def : BccPat<setuge, BGEU>;
+
+class BccSwapPat<PatFrag CondOp, LAInst InstBcc>
+    : Pat<(brcond (GRLenVT (CondOp GPR:$rd, GPR:$rj)), bb:$imm16),
+          (InstBcc GPR:$rj, GPR:$rd, bb:$imm16)>;
+
+// Condition codes that don't have matching LoongArch branch instructions, but
+// are trivially supported by swapping the two input operands.
+def : BccSwapPat<setgt, BLT>;
+def : BccSwapPat<setle, BGE>;
+def : BccSwapPat<setugt, BLTU>;
+def : BccSwapPat<setule, BGEU>;
+
+// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// condition was calculated elsewhere).
+def : Pat<(brcond GPR:$rj, bb:$imm21), (BNEZ GPR:$rj, bb:$imm21)>;
+
+def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm21),
+          (BEQZ GPR:$rj, bb:$imm21)>;
+def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm21),
+          (BNEZ GPR:$rj, bb:$imm21)>;
+
+let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+def PseudoBR : Pseudo<(outs), (ins simm26_b:$imm26), [(br bb:$imm26)]>,
+               PseudoInstExpansion<(B simm26_b:$imm26)>;
+
+let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+def PseudoBRIND : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+                  PseudoInstExpansion<(JIRL R0, GPR:$rj, simm16_lsl2:$imm16)>;
+
+def : Pat<(brind GPR:$rj), (PseudoBRIND GPR:$rj, 0)>;
+def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
+          (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
+
+let isCall = 1, Defs = [R1] in
+def PseudoCALL : Pseudo<(outs), (ins simm26_bl:$func)> {
+  let AsmString = "bl\t$func";
+}
+
+def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
+def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+
+let isCall = 1, Defs = [R1] in
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
+                                [(loongarch_call GPR:$rj)]>,
+                         PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
 
-/// LA32 patterns
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoLA_TLS_LE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src)>;
+
+/// BSTRINS and BSTRPICK
 
 let Predicates = [IsLA32] in {
-def : PatGprGpr<add, ADD_W>;
-def : PatGprImm<add, ADDI_W, simm12>;
+def : Pat<(loongarch_bstrins GPR:$rd, GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
+          (BSTRINS_W GPR:$rd, GPR:$rj, uimm5:$msbd, uimm5:$lsbd)>;
+def : Pat<(loongarch_bstrpick GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
+          (BSTRPICK_W GPR:$rj, uimm5:$msbd, uimm5:$lsbd)>;
 } // Predicates = [IsLA32]
 
-/// LA64 patterns
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_bstrins GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
+          (BSTRINS_D GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
+def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
+          (BSTRPICK_D GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
+} // Predicates = [IsLA64]
+
+/// Byte-swapping and bit-reversal
+
+def : Pat<(loongarch_revb_2h GPR:$rj), (REVB_2H GPR:$rj)>;
+def : Pat<(loongarch_bitrev_4b GPR:$rj), (BITREV_4B GPR:$rj)>;
+
+let Predicates = [IsLA32] in {
+def : Pat<(bswap GPR:$rj), (ROTRI_W (REVB_2H GPR:$rj), 16)>;
+def : Pat<(bitreverse GPR:$rj), (BITREV_W GPR:$rj)>;
+def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_4B GPR:$rj)>;
+def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
+} // Predicates = [IsLA32]
 
 let Predicates = [IsLA64] in {
-def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
-
-def : PatGprGpr<add, ADD_D>;
-def : PatGprGpr_32<add, ADD_W>;
-
-def : PatGprImm<add, ADDI_D, simm12>;
-def : PatGprImm_32<add, ADDI_W, simm12>;
+def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
+def : Pat<(bswap GPR:$rj), (REVB_D GPR:$rj)>;
+def : Pat<(loongarch_bitrev_w GPR:$rj), (BITREV_W GPR:$rj)>;
+def : Pat<(bitreverse GPR:$rj), (BITREV_D GPR:$rj)>;
+def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_8B GPR:$rj)>;
+def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_8B GPR:$rj)>;
 } // Predicates = [IsLA64]
+
+/// Loads
+
+multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
+  def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
+  def : Pat<(vt (LoadOp (AddLike BaseAddr:$rj, simm12:$imm12))),
+            (Inst BaseAddr:$rj, simm12:$imm12)>;
+}
+
+defm : LdPat<sextloadi8, LD_B>;
+defm : LdPat<extloadi8, LD_B>;
+defm : LdPat<sextloadi16, LD_H>;
+defm : LdPat<extloadi16, LD_H>;
+defm : LdPat<load, LD_W>, Requires<[IsLA32]>;
+defm : LdPat<zextloadi8, LD_BU>;
+defm : LdPat<zextloadi16, LD_HU>;
+let Predicates = [IsLA64] in {
+defm : LdPat<sextloadi32, LD_W, i64>;
+defm : LdPat<extloadi32, LD_W, i64>;
+defm : LdPat<zextloadi32, LD_WU, i64>;
+defm : LdPat<load, LD_D, i64>;
+} // Predicates = [IsLA64]
+
+// LA64 register-register-addressed loads
+let Predicates = [IsLA64] in {
+class RegRegLdPat<PatFrag LoadOp, LAInst Inst, ValueType vt>
+  : Pat<(vt (LoadOp (add NonFIBaseAddr:$rj, GPR:$rk))),
+        (Inst NonFIBaseAddr:$rj, GPR:$rk)>;
+
+def : RegRegLdPat<extloadi8, LDX_B, i64>;
+def : RegRegLdPat<sextloadi8, LDX_B, i64>;
+def : RegRegLdPat<zextloadi8, LDX_BU, i64>;
+def : RegRegLdPat<extloadi16, LDX_H, i64>;
+def : RegRegLdPat<sextloadi16, LDX_H, i64>;
+def : RegRegLdPat<zextloadi16, LDX_HU, i64>;
+def : RegRegLdPat<extloadi32, LDX_W, i64>;
+def : RegRegLdPat<sextloadi32, LDX_W, i64>;
+def : RegRegLdPat<zextloadi32, LDX_WU, i64>;
+def : RegRegLdPat<load, LDX_D, i64>;
+} // Predicates = [IsLA64]
+
+/// Stores
+
+multiclass StPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                 ValueType vt> {
+  def : Pat<(StoreOp (vt StTy:$rd), BaseAddr:$rj),
+            (Inst StTy:$rd, BaseAddr:$rj, 0)>;
+  def : Pat<(StoreOp (vt StTy:$rd), (AddLike BaseAddr:$rj, simm12:$imm12)),
+            (Inst StTy:$rd, BaseAddr:$rj, simm12:$imm12)>;
+}
+
+defm : StPat<truncstorei8, ST_B, GPR, GRLenVT>;
+defm : StPat<truncstorei16, ST_H, GPR, GRLenVT>;
+defm : StPat<store, ST_W, GPR, i32>, Requires<[IsLA32]>;
+let Predicates = [IsLA64] in {
+defm : StPat<truncstorei32, ST_W, GPR, i64>;
+defm : StPat<store, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
+let Predicates = [IsLA64] in {
+def : Pat<(i64 (sextloadi32 (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
+          (LDPTR_W BaseAddr:$rj, simm14_lsl2:$imm14)>;
+def : Pat<(i64 (load (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
+          (LDPTR_D BaseAddr:$rj, simm14_lsl2:$imm14)>;
+def : Pat<(truncstorei32 (i64 GPR:$rd),
+                         (AddLike BaseAddr:$rj, simm14_lsl2:$imm14)),
+          (STPTR_W GPR:$rd, BaseAddr:$rj, simm14_lsl2:$imm14)>;
+def : Pat<(store (i64 GPR:$rd), (AddLike BaseAddr:$rj, simm14_lsl2:$imm14)),
+          (STPTR_D GPR:$rd, BaseAddr:$rj, simm14_lsl2:$imm14)>;
+} // Predicates = [IsLA64]
+
+// LA64 register-register-addressed stores
+let Predicates = [IsLA64] in {
+class RegRegStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                  ValueType vt>
+  : Pat<(StoreOp (vt StTy:$rd), (add NonFIBaseAddr:$rj, GPR:$rk)),
+        (Inst StTy:$rd, NonFIBaseAddr:$rj, GPR:$rk)>;
+
+def : RegRegStPat<truncstorei8, STX_B, GPR, i64>;
+def : RegRegStPat<truncstorei16, STX_H, GPR, i64>;
+def : RegRegStPat<truncstorei32, STX_W, GPR, i64>;
+def : RegRegStPat<store, STX_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
+/// Atomic loads and stores
+
+def : Pat<(atomic_fence timm, timm), (DBAR 0)>;
+
+defm : LdPat<atomic_load_8, LD_B>;
+defm : LdPat<atomic_load_16, LD_H>;
+defm : LdPat<atomic_load_32, LD_W>;
+
+class release_seqcst_store<PatFrag base>
+    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
+  return isReleaseOrStronger(Ordering);
+}]>;
+
+class unordered_monotonic_store<PatFrag base>
+    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
+  return !isReleaseOrStronger(Ordering);
+}]>;
+
+def atomic_store_release_seqcst_32 : release_seqcst_store<atomic_store_32>;
+def atomic_store_release_seqcst_64 : release_seqcst_store<atomic_store_64>;
+def atomic_store_unordered_monotonic_32
+    : unordered_monotonic_store<atomic_store_32>;
+def atomic_store_unordered_monotonic_64
+    : unordered_monotonic_store<atomic_store_64>;
+
+/// AtomicStores
+
+multiclass AtomicStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                       ValueType vt> {
+  def : Pat<(StoreOp BaseAddr:$ptr, (vt StTy:$val)),
+            (Inst StTy:$val, BaseAddr:$ptr, 0)>;
+  def : Pat<(StoreOp (AddLike BaseAddr:$ptr, simm12:$imm12), (vt StTy:$val)),
+            (Inst StTy:$val, BaseAddr:$ptr, simm12:$imm12)>;
+}
+
+defm : AtomicStPat<atomic_store_8, ST_B, GPR, GRLenVT>;
+defm : AtomicStPat<atomic_store_16, ST_H, GPR, GRLenVT>;
+defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
+                   Requires<[IsLA32]>;
+
+def PseudoAtomicStoreW : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+                                 PseudoInstExpansion<(AMSWAP_DB_W R0,
+                                                      GPR:$rk, GPR:$rj)>;
+
+def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
+          (PseudoAtomicStoreW GPR:$rj, GPR:$rk)>;
+
+let Predicates = [IsLA64] in {
+def PseudoAtomicStoreD : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+                                 PseudoInstExpansion<(AMSWAP_DB_D R0,
+                                                      GPR:$rk, GPR:$rj)>;
+
+def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
+          (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
+
+defm : LdPat<atomic_load_64, LD_D>;
+defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
+defm : AtomicStPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
+/// Atomic Ops
+
+class PseudoMaskedAM
+    : Pseudo<(outs GPR:$res, GPR:$scratch),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, grlenimm:$ordering)> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoMaskedAtomicSwap32 : PseudoMaskedAM;
+def PseudoMaskedAtomicLoadAdd32 : PseudoMaskedAM;
+def PseudoMaskedAtomicLoadSub32 : PseudoMaskedAM;
+def PseudoMaskedAtomicLoadNand32 : PseudoMaskedAM;
+
+class PseudoAM : Pseudo<(outs GPR:$res, GPR:$scratch),
+                        (ins GPR:$addr, GPR:$incr)> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoAtomicSwap32 : PseudoAM;
+def PseudoAtomicLoadNand32 : PseudoAM;
+def PseudoAtomicLoadNand64 : PseudoAM;
+def PseudoAtomicLoadAdd32 : PseudoAM;
+def PseudoAtomicLoadSub32 : PseudoAM;
+def PseudoAtomicLoadAnd32 : PseudoAM;
+def PseudoAtomicLoadOr32 : PseudoAM;
+def PseudoAtomicLoadXor32 : PseudoAM;
+
+
+class PseudoMaskedAMUMinUMax
+    : Pseudo<(outs GPR:$res, GPR:$scratch1, GPR:$scratch2),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, grlenimm:$ordering)> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch1,"
+                    "@earlyclobber $scratch2";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMUMinUMax;
+def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMUMinUMax;
+
+/// Compare and exchange
+
+class PseudoCmpXchg
+    : Pseudo<(outs GPR:$res, GPR:$scratch),
+             (ins GPR:$addr, GPR:$cmpval, GPR:$newval)> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoCmpXchg32 : PseudoCmpXchg;
+def PseudoCmpXchg64 : PseudoCmpXchg;
+
+def PseudoMaskedCmpXchg32
+    : Pseudo<(outs GPR:$res, GPR:$scratch),
+             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask,
+              grlenimm:$ordering)> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+class AtomicPat<Intrinsic intrin, Pseudo AMInst>
+    : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
+          (AMInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
+
+let Predicates = [IsLA64] in {
+def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i64,
+                PseudoMaskedAtomicSwap32>;
+def : Pat<(atomic_swap_32 GPR:$addr, GPR:$incr),
+          (AMSWAP_DB_W GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_swap_64 GPR:$addr, GPR:$incr),
+          (AMSWAP_DB_D GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_load_add_64 GPR:$rj, GPR:$rk),
+          (AMADD_DB_D GPR:$rk, GPR:$rj)>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_add_i64,
+                PseudoMaskedAtomicLoadAdd32>;
+def : Pat<(atomic_load_sub_32 GPR:$rj, GPR:$rk),
+          (AMADD_DB_W (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_64 GPR:$rj, GPR:$rk),
+          (AMADD_DB_D (SUB_D R0, GPR:$rk), GPR:$rj)>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_sub_i64,
+                PseudoMaskedAtomicLoadSub32>;
+def : Pat<(atomic_load_nand_64 GPR:$rj, GPR:$rk),
+          (PseudoAtomicLoadNand64 GPR:$rj, GPR:$rk)>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_nand_i64,
+                PseudoMaskedAtomicLoadNand32>;
+def : Pat<(atomic_load_add_32 GPR:$rj, GPR:$rk),
+          (AMADD_DB_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_and_32 GPR:$rj, GPR:$rk),
+          (AMAND_DB_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_and_64 GPR:$rj, GPR:$rk),
+          (AMAND_DB_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_or_32 GPR:$rj, GPR:$rk),
+          (AMOR_DB_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_or_64 GPR:$rj, GPR:$rk),
+          (AMOR_DB_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_xor_32 GPR:$rj, GPR:$rk),
+          (AMXOR_DB_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_xor_64 GPR:$rj, GPR:$rk),
+          (AMXOR_DB_D GPR:$rk, GPR:$rj)>;
+
+def : Pat<(atomic_load_umin_32 GPR:$rj, GPR:$rk),
+          (AMMIN_DB_WU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umin_64 GPR:$rj, GPR:$rk),
+          (AMMIN_DB_DU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umax_32 GPR:$rj, GPR:$rk),
+          (AMMAX_DB_WU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umax_64 GPR:$rj, GPR:$rk),
+          (AMMAX_DB_DU GPR:$rk, GPR:$rj)>;
+
+def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
+                PseudoMaskedAtomicLoadUMax32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
+                PseudoMaskedAtomicLoadUMin32>;
+
+def : Pat<(atomic_cmp_swap_64 GPR:$addr, GPR:$cmp, GPR:$new),
+          (PseudoCmpXchg64 GPR:$addr, GPR:$cmp, GPR:$new)>;
+def : Pat<(int_loongarch_masked_cmpxchg_i64
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
+          (PseudoMaskedCmpXchg32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
+def : Pat<(atomic_cmp_swap_32 GPR:$addr, GPR:$cmp, GPR:$new),
+          (PseudoCmpXchg32 GPR:$addr, GPR:$cmp, GPR:$new)>;
+} // Predicates = [IsLA64]
+
+def : Pat<(atomic_load_nand_32 GPR:$rj, GPR:$rk),
+          (PseudoAtomicLoadNand32 GPR:$rj, GPR:$rk)>;
+
+let Predicates = [IsLA32] in {
+def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i32,
+                PseudoMaskedAtomicSwap32>;
+def : Pat<(atomic_swap_32 GPR:$addr, GPR:$incr),
+          (PseudoAtomicSwap32 GPR:$incr, GPR:$addr)>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_add_i32,
+                PseudoMaskedAtomicLoadAdd32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_sub_i32,
+                PseudoMaskedAtomicLoadSub32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_nand_i32,
+                PseudoMaskedAtomicLoadNand32>;
+def : Pat<(atomic_load_add_32 GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadAdd32 GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_load_sub_32 GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadSub32 GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_load_and_32 GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadAnd32 GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_load_or_32 GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadOr32 GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_load_xor_32 GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadXor32 GPR:$incr, GPR:$addr)>;
+} // Predicates = [IsLA32]
+
+/// Intrinsics
+
+let Predicates = [IsLA32] in {
+def : Pat<(int_loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+
+// CRC Check Instructions
+def : PatGprGpr<loongarch_crc_w_d_w, CRC_W_D_W>;
+} // Predicates = [IsLA64]
+
+/// Other pseudo-instructions
+
+// Pessimistically assume the stack pointer will be clobbered
+let Defs = [R3], Uses = [R3] in {
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+} // Defs = [R3], Uses = [R3]
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
@@ -544,6 +1340,10 @@ def : PatGprImm_32<add, ADDI_W, simm12>;
 
 def : InstAlias<"nop", (ANDI R0, R0, 0)>;
 def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
+// `ret` is supported since binutils commit 20f2e2686c79a5ac (version 2.40 and
+// later).
+def : InstAlias<"ret", (JIRL R0, R1, 0)>;
+def : InstAlias<"jr $rj", (JIRL R0, GPR:$rj, 0)>;
 
 //===----------------------------------------------------------------------===//
 // Basic Floating-Point Instructions

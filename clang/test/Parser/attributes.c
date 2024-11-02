@@ -113,3 +113,10 @@ __attribute__((,,,const)) int PR38352_1(void);
 __attribute__((const,,,)) int PR38352_2(void);
 __attribute__((const,,,const)) int PR38352_3(void);
 __attribute__((,,,const,,,const,,,)) int PR38352_4(void);
+
+// Test that we allow attributes on free-standing decl-specifier-seqs.
+// GCC appears to allow this.
+__attribute__(()) struct t;
+void f5() {
+  __attribute__(()) struct t;
+}

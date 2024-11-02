@@ -65,7 +65,7 @@ ArmUnwindInfo::ArmUnwindInfo(ObjectFile &objfile, SectionSP &arm_exidx,
 
   // Sort the entries in the exidx section. The entries should be sorted inside
   // the section but some old compiler isn't sorted them.
-  llvm::sort(m_exidx_entries.begin(), m_exidx_entries.end());
+  llvm::sort(m_exidx_entries);
 }
 
 ArmUnwindInfo::~ArmUnwindInfo() = default;
@@ -352,8 +352,8 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
 
 const uint8_t *
 ArmUnwindInfo::GetExceptionHandlingTableEntry(const Address &addr) {
-  auto it = std::upper_bound(m_exidx_entries.begin(), m_exidx_entries.end(),
-                             ArmExidxEntry{0, addr.GetFileAddress(), 0});
+  auto it = llvm::upper_bound(m_exidx_entries,
+                              ArmExidxEntry{0, addr.GetFileAddress(), 0});
   if (it == m_exidx_entries.begin())
     return nullptr;
   --it;

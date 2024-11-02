@@ -132,7 +132,7 @@ body:             |
     %14:intregs = COPY %10
     J2_loop0r %bb.3, %14, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
 
-  bb.3.b2 (address-taken):
+  bb.3.b2 (machine-block-address-taken):
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)
 
     %1:intregs = PHI %7, %bb.2, %5, %bb.3, post-instr-symbol <mcsymbol Stage-3_Cycle-0>

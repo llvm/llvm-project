@@ -10,7 +10,7 @@
 // RUN:   .dynstr : { *(.dynstr) } \
 // RUN: }" > %t.script
 // RUN: ld.lld -shared %t1.o %t2.so -o %t.exe -z retpolineplt --script %t.script
-// RUN: llvm-objdump -d -s %t.exe | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d -s %t.exe | FileCheck %s
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:

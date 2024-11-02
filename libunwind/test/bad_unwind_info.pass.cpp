@@ -10,7 +10,7 @@
 // Ensure that libunwind doesn't crash on invalid info; the Linux aarch64
 // sigreturn frame check would previously attempt to access invalid memory in
 // this scenario.
-// REQUIRES: linux && (target={{aarch64-.+}} || target={{x86_64-.+}})
+// REQUIRES: linux && (target={{aarch64-.+}} || target={{s390x-.+}} || target={{x86_64-.+}})
 
 // GCC doesn't support __attribute__((naked)) on AArch64.
 // UNSUPPORTED: gcc
@@ -36,6 +36,20 @@ __attribute__((naked)) void bad_unwind_info() {
           ".cfi_def_cfa_offset 0\n"
           ".cfi_restore x30\n"
           "ret\n");
+#elif defined(__s390x__)
+  __asm__("stmg    %r14,%r15,112(%r15)\n"
+	  "mvghi   104(%r15),4\n"
+          "# purposely use incorrect offset for %r14\n"
+          ".cfi_offset 14, -56\n"
+          ".cfi_offset 15, -40\n"
+          "lay     %r15,-160(%r15)\n"
+          ".cfi_def_cfa_offset 320\n"
+          "brasl   %r14,stepper\n"
+          "lmg     %r14,%r15,272(%r15)\n"
+          ".cfi_restore 15\n"
+          ".cfi_restore 14\n"
+          ".cfi_def_cfa_offset 160\n"
+          "br      %r14\n");
 #elif defined(__x86_64__)
   __asm__("pushq   %rbx\n"
           ".cfi_def_cfa_offset 16\n"
@@ -48,7 +62,7 @@ __attribute__((naked)) void bad_unwind_info() {
           ".cfi_def_cfa_offset 8\n"
           "ret\n");
 #else
-#error This test is only supported on aarch64 or x86-64
+#error This test is only supported on aarch64, s390x, or x86-64
 #endif
 }
 

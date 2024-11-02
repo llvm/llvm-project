@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -gvn -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes=gvn -S < %s | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 
@@ -22,6 +22,6 @@ entry:
 declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>) nounwind readonly
 declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>) nounwind
 
-; CHECK: attributes #0 = { argmemonly nocallback nofree nosync nounwind readonly willreturn }
-; CHECK: attributes #1 = { argmemonly nocallback nofree nosync nounwind willreturn writeonly }
+; CHECK: attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes [[ATTR]] = { nounwind }

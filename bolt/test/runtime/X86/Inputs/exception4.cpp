@@ -16,10 +16,6 @@ void foo(int a)
     throw ExcC();
 }
 
-void filter_only(int a) throw (ExcA, ExcB, ExcC, ExcD, ExcE, ExcF) {
-  foo(a);
-}
-
 void never_throws() throw () {
   printf("this statement is cold and should be outlined\n");
 }
@@ -46,7 +42,7 @@ int main(int argc, char **argv)
 
     try {
       try {
-        filter_only(argc);
+        foo(argc);
       } catch (ExcC) {
         printf("caught ExcC\n");
       }

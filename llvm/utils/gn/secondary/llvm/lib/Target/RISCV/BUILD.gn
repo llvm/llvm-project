@@ -58,11 +58,13 @@ static_library("LLVMRISCVCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/Transforms/IPO",
   ]
   include_dirs = [ "." ]
   sources = [
     "RISCVAsmPrinter.cpp",
     "RISCVCallLowering.cpp",
+    "RISCVCodeGenPrepare.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
     "RISCVFrameLowering.cpp",
@@ -75,6 +77,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVLegalizerInfo.cpp",
     "RISCVMCInstLower.cpp",
     "RISCVMachineFunctionInfo.cpp",
+    "RISCVMacroFusion.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",
     "RISCVRedundantCopyElimination.cpp",

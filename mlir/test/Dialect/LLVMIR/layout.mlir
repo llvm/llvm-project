@@ -82,12 +82,12 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: size = 8
     "test.data_layout_query"() : () -> !llvm.ptr<i8, 5>
     // CHECK: alignment = 4
-	// CHECK: bitsize = 32
+	  // CHECK: bitsize = 32
     // CHECK: preferred = 8
     // CHECK: size = 4
     "test.data_layout_query"() : () -> !llvm.ptr<3>
     // CHECK: alignment = 8
-	// CHECK: bitsize = 32
+	  // CHECK: bitsize = 32
     // CHECK: preferred = 8
     // CHECK: size = 4
 	"test.data_layout_query"() : () -> !llvm.ptr<4>

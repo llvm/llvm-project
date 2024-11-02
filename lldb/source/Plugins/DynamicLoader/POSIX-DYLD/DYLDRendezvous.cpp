@@ -119,7 +119,7 @@ void DYLDRendezvous::UpdateExecutablePath() {
     if (exe_mod) {
       m_exe_file_spec = exe_mod->GetPlatformFileSpec();
       LLDB_LOGF(log, "DYLDRendezvous::%s exe module executable path set: '%s'",
-                __FUNCTION__, m_exe_file_spec.GetCString());
+                __FUNCTION__, m_exe_file_spec.GetPath().c_str());
     } else {
       LLDB_LOGF(log,
                 "DYLDRendezvous::%s cannot cache exe module path: null "
@@ -190,6 +190,14 @@ bool DYLDRendezvous::IsValid() {
 }
 
 DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
+  // If we have a core file, we will read the current rendezvous state
+  // from the core file's memory into m_current which can be in an inconsistent
+  // state, so we can't rely on its state to determine what we should do. We
+  // always need it to load all of the shared libraries one time when we attach
+  // to a core file.
+  if (IsCoreFile())
+    return eTakeSnapshot;
+
   switch (m_current.state) {
 
   case eConsistent:
@@ -210,14 +218,7 @@ DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
 
   case eAdd:
   case eDelete:
-    // Some versions of the android dynamic linker might send two
-    // notifications with state == eAdd back to back. Ignore them until we
-    // get an eConsistent notification.
-    if (!(m_previous.state == eConsistent ||
-          (m_previous.state == eAdd && m_current.state == eDelete)))
-      return eNoAction;
-
-    return eTakeSnapshot;
+    return eNoAction;
   }
 
   return eNoAction;
@@ -229,9 +230,9 @@ bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
   if (action == eNoAction)
     return false;
 
+  m_added_soentries.clear();
+  m_removed_soentries.clear();
   if (action == eTakeSnapshot) {
-    m_added_soentries.clear();
-    m_removed_soentries.clear();
     // We already have the loaded list from the previous update so no need to
     // find all the modules again.
     if (!m_loaded_modules.m_list.empty())
@@ -260,11 +261,11 @@ bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
 }
 
 bool DYLDRendezvous::UpdateSOEntries() {
+  m_added_soentries.clear();
+  m_removed_soentries.clear();
   switch (GetAction()) {
   case eTakeSnapshot:
     m_soentries.clear();
-    m_added_soentries.clear();
-    m_removed_soentries.clear();
     return TakeSnapshot(m_soentries);
   case eAddModules:
     return AddSOEntries();
@@ -403,8 +404,7 @@ bool DYLDRendezvous::AddSOEntries() {
 
     UpdateFileSpecIfNecessary(entry);
 
-    pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
-    if (pos == m_soentries.end()) {
+    if (!llvm::is_contained(m_soentries, entry)) {
       m_soentries.push_back(entry);
       m_added_soentries.push_back(entry);
     }
@@ -423,8 +423,7 @@ bool DYLDRendezvous::RemoveSOEntries() {
     return false;
 
   for (iterator I = begin(); I != end(); ++I) {
-    pos = std::find(entry_list.begin(), entry_list.end(), *I);
-    if (pos == entry_list.end())
+    if (!llvm::is_contained(entry_list, *I))
       m_removed_soentries.push_back(*I);
   }
 
@@ -665,11 +664,15 @@ void DYLDRendezvous::DumpToLog(Log *log) const {
     log->PutCString("DYLDRendezvous SOEntries:");
 
   for (int i = 1; I != E; ++I, ++i) {
-    LLDB_LOGF(log, "\n   SOEntry [%d] %s", i, I->file_spec.GetCString());
+    LLDB_LOGF(log, "\n   SOEntry [%d] %s", i, I->file_spec.GetPath().c_str());
     LLDB_LOGF(log, "      Base : %" PRIx64, I->base_addr);
     LLDB_LOGF(log, "      Path : %" PRIx64, I->path_addr);
     LLDB_LOGF(log, "      Dyn  : %" PRIx64, I->dyn_addr);
     LLDB_LOGF(log, "      Next : %" PRIx64, I->next);
     LLDB_LOGF(log, "      Prev : %" PRIx64, I->prev);
   }
+}
+
+bool DYLDRendezvous::IsCoreFile() const {
+  return !m_process->IsLiveDebugSession();
 }

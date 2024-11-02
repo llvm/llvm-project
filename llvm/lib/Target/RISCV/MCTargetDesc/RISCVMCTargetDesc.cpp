@@ -33,6 +33,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "RISCVGenInstrInfo.inc"
 
 #define GET_REGINFO_MC_DESC

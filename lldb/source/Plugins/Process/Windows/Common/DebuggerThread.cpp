@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/HostProcessWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
@@ -28,6 +29,8 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <psapi.h>
 
 #ifndef STATUS_WX86_BREAKPOINT
 #define STATUS_WX86_BREAKPOINT 0x4000001FL // For WOW64
@@ -409,6 +412,61 @@ DebuggerThread::HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
   return DBG_CONTINUE;
 }
 
+static llvm::Optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
+  // Check that file is not empty as we cannot map a file with zero length.
+  DWORD dwFileSizeHi = 0;
+  DWORD dwFileSizeLo = ::GetFileSize(hFile, &dwFileSizeHi);
+  if (dwFileSizeLo == 0 && dwFileSizeHi == 0)
+    return llvm::None;
+
+  AutoHandle filemap(
+      ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, NULL), nullptr);
+  if (!filemap.IsValid())
+    return llvm::None;
+
+  auto view_deleter = [](void *pMem) { ::UnmapViewOfFile(pMem); };
+  std::unique_ptr<void, decltype(view_deleter)> pMem(
+      ::MapViewOfFile(filemap.get(), FILE_MAP_READ, 0, 0, 1), view_deleter);
+  if (!pMem)
+    return llvm::None;
+
+  std::array<wchar_t, MAX_PATH + 1> mapped_filename;
+  if (!::GetMappedFileNameW(::GetCurrentProcess(), pMem.get(),
+                            mapped_filename.data(), mapped_filename.size()))
+    return llvm::None;
+
+  // A series of null-terminated strings, plus an additional null character
+  std::array<wchar_t, 512> drive_strings;
+  drive_strings[0] = L'\0';
+  if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
+    return llvm::None;
+
+  std::array<wchar_t, 3> drive = {L"_:"};
+  for (const wchar_t *it = drive_strings.data(); *it != L'\0';
+       it += wcslen(it) + 1) {
+    // Copy the drive letter to the template string
+    drive[0] = it[0];
+    std::array<wchar_t, MAX_PATH> device_name;
+    if (::QueryDosDeviceW(drive.data(), device_name.data(),
+                          device_name.size())) {
+      size_t device_name_len = wcslen(device_name.data());
+      if (device_name_len < mapped_filename.size()) {
+        bool match = _wcsnicmp(mapped_filename.data(), device_name.data(),
+                               device_name_len) == 0;
+        if (match && mapped_filename[device_name_len] == L'\\') {
+          // Replace device path with its drive letter
+          std::wstring rebuilt_path(drive.data());
+          rebuilt_path.append(&mapped_filename[device_name_len]);
+          std::string path_utf8;
+          llvm::convertWideToUTF8(rebuilt_path, path_utf8);
+          return path_utf8;
+        }
+      }
+    }
+  }
+  return llvm::None;
+}
+
 DWORD
 DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
@@ -419,6 +477,17 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
              m_process.GetProcessId());
     return DBG_CONTINUE;
   }
+
+  auto on_load_dll = [&](llvm::StringRef path) {
+    FileSpec file_spec(path);
+    ModuleSpec module_spec(file_spec);
+    lldb::addr_t load_addr = reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll);
+
+    LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
+             m_process.GetProcessId(), path, info.lpBaseOfDll);
+
+    m_debug_delegate->OnLoadDll(module_spec, load_addr);
+  };
 
   std::vector<wchar_t> buffer(1);
   DWORD required_size =
@@ -434,14 +503,10 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     if (path_str.startswith("\\\\?\\"))
       path += 4;
 
-    FileSpec file_spec(path);
-    ModuleSpec module_spec(file_spec);
-    lldb::addr_t load_addr = reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll);
-
-    LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
-             m_process.GetProcessId(), path, info.lpBaseOfDll);
-
-    m_debug_delegate->OnLoadDll(module_spec, load_addr);
+    on_load_dll(path);
+  } else if (llvm::Optional<std::string> path =
+                 GetFileNameFromHandleFallback(info.hFile)) {
+    on_load_dll(*path);
   } else {
     LLDB_LOG(
         log,

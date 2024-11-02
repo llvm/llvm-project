@@ -4,7 +4,7 @@
 @g = global i32 20
 
 define void @test_no_read_or_write() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @test_no_read_or_write(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
@@ -13,65 +13,77 @@ entry:
   ret void
 }
 
-define i32 @test_only_read_arg(i32* %ptr) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
+define i32 @test_only_read_arg(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: @test_only_read_arg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:
-  %l = load i32, i32* %ptr
+  %l = load i32, ptr %ptr
+  ret i32 %l
+}
+
+define i32 @test_only_read_arg_already_has_argmemonly(ptr %ptr) argmemonly {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: @test_only_read_arg_already_has_argmemonly(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L]]
+;
+entry:
+  %l = load i32, ptr %ptr
   ret i32 %l
 }
 
 define i32 @test_read_global() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none)
 ; CHECK-LABEL: @test_read_global(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* @g, align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr @g, align 4
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:
-  %l = load i32, i32* @g
+  %l = load i32, ptr @g
   ret i32 %l
 }
 
-define i32 @test_read_loaded_ptr(i32** %ptr) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn
+define i32 @test_read_loaded_ptr(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
 ; CHECK-LABEL: @test_read_loaded_ptr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L:%.*]] = load i32*, i32** [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[L]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[L]], align 4
 ; CHECK-NEXT:    ret i32 [[L_2]]
 ;
 entry:
-  %l = load i32*, i32** %ptr
-  %l.2 = load i32, i32* %l
+  %l = load ptr, ptr %ptr
+  %l.2 = load i32, ptr %l
   ret i32 %l.2
 }
 
-define void @test_only_write_arg(i32* %ptr) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly
+define void @test_only_write_arg(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: @test_only_write_arg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i32 0, i32* %ptr
+  store i32 0, ptr %ptr
   ret void
 }
 
 define void @test_write_global() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
 ; CHECK-LABEL: @test_write_global(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* @g, align 4
+; CHECK-NEXT:    store i32 0, ptr @g, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i32 0, i32* @g
+  store i32 0, ptr @g
   ret void
 }
 
@@ -90,103 +102,146 @@ entry:
 
 declare i32 @fn_readnone() readnone
 
-define void @test_call_readnone(i32* %ptr) {
-; CHECK: Function Attrs: argmemonly writeonly
+define void @test_call_readnone(ptr %ptr) {
+; CHECK: Function Attrs: memory(argmem: write)
 ; CHECK-LABEL: @test_call_readnone(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @fn_readnone()
-; CHECK-NEXT:    store i32 [[C]], i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 [[C]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %c = call i32 @fn_readnone()
-  store i32 %c, i32* %ptr
+  store i32 %c, ptr %ptr
   ret void
 }
 
-declare i32 @fn_argmemonly(i32*) argmemonly
+declare i32 @fn_argmemonly(ptr) argmemonly
 
-define i32 @test_call_argmemonly(i32* %ptr) {
+define i32 @test_call_argmemonly(ptr %ptr) {
+; CHECK: Function Attrs: memory(argmem: readwrite)
 ; CHECK-LABEL: @test_call_argmemonly(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = call i32 @fn_argmemonly(i32* [[PTR:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = call i32 @fn_argmemonly(ptr [[PTR:%.*]])
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
 entry:
-  %c = call i32 @fn_argmemonly(i32* %ptr)
+  %c = call i32 @fn_argmemonly(ptr %ptr)
   ret i32 %c
 }
 
-define i32 @test_call_fn_where_argmemonly_can_be_inferred(i32* %ptr) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
+define i32 @test_call_fn_where_argmemonly_can_be_inferred(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: @test_call_fn_where_argmemonly_can_be_inferred(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = call i32 @test_only_read_arg(i32* [[PTR:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = call i32 @test_only_read_arg(ptr [[PTR:%.*]])
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
 entry:
-  %c = call i32 @test_only_read_arg(i32* %ptr)
+  %c = call i32 @test_only_read_arg(ptr %ptr)
   ret i32 %c
 }
 
-define void @test_memcpy_argonly(i8* %dst, i8* %src) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
+define void @test_memcpy_argonly(ptr %dst, ptr %src) {
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: @test_memcpy_argonly(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 32, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 32, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 @arr = global [32 x i8] zeroinitializer
 
-define void @test_memcpy_src_global(i8* %dst) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn
+define void @test_memcpy_src_global(ptr %dst) {
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; CHECK-LABEL: @test_memcpy_src_global(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BC:%.*]] = bitcast [32 x i8]* @arr to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[BC]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr @arr, i64 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %bc = bitcast [32 x i8]* @arr to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %bc, i64 32, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr @arr, i64 32, i1 false)
   ret void
 }
 
-define void @test_memcpy_dst_global(i8* %src) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn
+define void @test_memcpy_dst_global(ptr %src) {
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; CHECK-LABEL: @test_memcpy_dst_global(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BC:%.*]] = bitcast [32 x i8]* @arr to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[BC]], i8* [[SRC:%.*]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr @arr, ptr [[SRC:%.*]], i64 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %bc = bitcast [32 x i8]* @arr to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %bc, i8* %src, i64 32, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr @arr, ptr %src, i64 32, i1 false)
   ret void
 }
 
-define i32 @test_read_arg_access_alloca(i32* %ptr) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
+define i32 @test_read_arg_access_alloca(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: @test_read_arg_access_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[PTR:%.*]], align 4
-; CHECK-NEXT:    store i32 [[L]], i32* [[A]], align 4
-; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 [[L]], ptr [[A]], align 4
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[L_2]]
 ;
 entry:
   %a = alloca i32
-  %l = load i32, i32* %ptr
-  store i32 %l, i32* %a
-  %l.2 = load i32, i32* %a
+  %l = load i32, ptr %ptr
+  store i32 %l, ptr %a
+  %l.2 = load i32, ptr %a
   ret i32 %l.2
+}
+
+declare void @fn_inaccessiblememonly() inaccessiblememonly
+
+define void @test_inaccessiblememonly() {
+; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
+; CHECK-LABEL: @test_inaccessiblememonly(
+; CHECK-NEXT:    call void @fn_inaccessiblememonly()
+; CHECK-NEXT:    ret void
+;
+  call void @fn_inaccessiblememonly()
+  ret void
+}
+
+define void @test_inaccessiblememonly_readonly() {
+; CHECK: Function Attrs: nofree memory(inaccessiblemem: read)
+; CHECK-LABEL: @test_inaccessiblememonly_readonly(
+; CHECK-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR16:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  call void @fn_inaccessiblememonly() readonly
+  ret void
+}
+
+define void @test_inaccessibleorargmemonly_readonly(ptr %arg) {
+; CHECK: Function Attrs: nofree memory(argmem: read, inaccessiblemem: read)
+; CHECK-LABEL: @test_inaccessibleorargmemonly_readonly(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG:%.*]], align 4
+; CHECK-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR16]]
+; CHECK-NEXT:    ret void
+;
+  load i32, ptr %arg
+  call void @fn_inaccessiblememonly() readonly
+  ret void
+}
+
+define void @test_inaccessibleorargmemonly_readwrite(ptr %arg) {
+; CHECK: Function Attrs: memory(argmem: write, inaccessiblemem: read)
+; CHECK-LABEL: @test_inaccessibleorargmemonly_readwrite(
+; CHECK-NEXT:    store i32 0, ptr [[ARG:%.*]], align 4
+; CHECK-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR16]]
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %arg
+  call void @fn_inaccessiblememonly() readonly
+  ret void
 }

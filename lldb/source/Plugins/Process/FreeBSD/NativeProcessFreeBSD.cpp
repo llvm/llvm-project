@@ -497,6 +497,10 @@ Status NativeProcessFreeBSD::Resume(const ResumeActionList &resume_actions) {
 Status NativeProcessFreeBSD::Halt() {
   Status error;
 
+  // Do not try to stop a process that's already stopped, this may cause
+  // the SIGSTOP to get queued and stop the process again once resumed.
+  if (StateIsStoppedState(m_state, false))
+    return error;
   if (kill(GetID(), SIGSTOP) != 0)
     error.SetErrorToErrno();
   return error;

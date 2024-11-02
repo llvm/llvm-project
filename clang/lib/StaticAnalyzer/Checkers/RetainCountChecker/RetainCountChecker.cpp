@@ -767,7 +767,7 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
         break;
       }
 
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case DoNothing:
       return state;

@@ -64,7 +64,7 @@ header_restrictions = {
 private_headers_still_public_in_modules = [
     '__assert', '__bsd_locale_defaults.h', '__bsd_locale_fallbacks.h', '__config',
     '__config_site.in', '__debug', '__hash_table',
-    '__threading_support', '__tree', '__undef_macros'
+    '__threading_support', '__tree', '__undef_macros', '__verbose_abort'
 ]
 
 def find_script(file):
@@ -113,7 +113,7 @@ def produce(test_file, variables):
 
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
-    return not file.is_dir() and not file.name == 'module.modulemap'
+    return not file.is_dir() and not file.name == 'module.modulemap.in'
 
 def main():
     monorepo_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -136,7 +136,7 @@ def main():
         'private_headers_still_public_in_modules': private_headers_still_public_in_modules
     }
 
-    produce(test.joinpath('libcxx/assertions/headers_declare_assertion_handler.sh.cpp'), variables)
+    produce(test.joinpath('libcxx/assertions/headers_declare_verbose_abort.sh.cpp'), variables)
     produce(test.joinpath('libcxx/clang_tidy.sh.cpp'), variables)
     produce(test.joinpath('libcxx/double_include.sh.cpp'), variables)
     produce(test.joinpath('libcxx/min_max_macros.compile.pass.cpp'), variables)
@@ -144,6 +144,7 @@ def main():
     produce(test.joinpath('libcxx/nasty_macros.compile.pass.cpp'), variables)
     produce(test.joinpath('libcxx/no_assert_include.compile.pass.cpp'), variables)
     produce(test.joinpath('libcxx/private_headers.verify.cpp'), variables)
+    produce(test.joinpath('libcxx/transitive_includes.sh.cpp'), variables)
 
 
 if __name__ == '__main__':

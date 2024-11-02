@@ -394,6 +394,7 @@ struct MappingGo48 {
 0300 0000 0000 - 0700 0000 0000: -
 0700 0000 0000 - 0770 0000 0000: metainfo (memory blocks and sync objects)
 07d0 0000 0000 - 8000 0000 0000: -
+PIE binaries currently not supported, but it should be theoretically possible.
 */
 
 struct MappingGoWindows {

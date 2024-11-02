@@ -10,10 +10,10 @@ target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 target triple = "i386-apple-macosx10.10.0"
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 
 ; Function Attrs: ssp
 define void @foo(i1 %cond1, i1 %cond2) #1 {
@@ -29,12 +29,10 @@ end1:
   ret void
 
 if.else130:                                       ; preds = %bb1
-  %tmp = getelementptr inbounds [8192 x i8], [8192 x i8]* %bitmapBuffer, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 8192, i8* %tmp) #0
-  call void @llvm.lifetime.end.p0i8(i64 8192, i8* %tmp) #0
-  %tmp25 = getelementptr inbounds [8192 x i8], [8192 x i8]* %bitmapBuffer229, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 8192, i8* %tmp25) #0
-  call void @llvm.lifetime.end.p0i8(i64 8192, i8* %tmp25) #0
+  call void @llvm.lifetime.start.p0(i64 8192, ptr %bitmapBuffer) #0
+  call void @llvm.lifetime.end.p0(i64 8192, ptr %bitmapBuffer) #0
+  call void @llvm.lifetime.start.p0(i64 8192, ptr %bitmapBuffer229) #0
+  call void @llvm.lifetime.end.p0(i64 8192, ptr %bitmapBuffer229) #0
   br label %end1
 }
 

@@ -2,9 +2,6 @@
 Test retrieval of SBAddress from function/symbol, disassembly, and SBAddress APIs.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class DisasmAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -52,7 +47,7 @@ class DisasmAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.line1.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -75,7 +70,7 @@ class DisasmAPITestCase(TestBase):
 
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(

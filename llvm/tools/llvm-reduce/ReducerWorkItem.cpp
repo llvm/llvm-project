@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReducerWorkItem.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -14,13 +15,20 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -29,6 +37,8 @@ extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
                                          cl::cat(LLVMReduceOptions));
+
+void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx, const char *ToolName);
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -199,8 +209,10 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
 
-    if (SrcMBB.hasAddressTaken())
-      DstMBB->setHasAddressTaken();
+    if (SrcMBB.isIRBlockAddressTaken())
+      DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
+    if (SrcMBB.isMachineBlockAddressTaken())
+      DstMBB->setMachineBlockAddressTaken();
 
     // FIXME: This is not serialized
     if (SrcMBB.hasLabelMustBeEmitted())
@@ -239,8 +251,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   // Remap the debug info frame index references.
   DstMF->VariableDbgInfos = SrcMF->VariableDbgInfos;
 
-  // FIXME: Need to clone MachineFunctionInfo, which may also depend on frame
-  // index and block mapping.
   // Clone virtual registers
   for (unsigned I = 0, E = SrcMRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
@@ -275,7 +285,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
       auto *DstSuccMBB = Src2DstMBB[SrcSuccMBB];
       DstMBB->addSuccessor(DstSuccMBB, SrcMBB.getSuccProbability(It));
     }
-    for (auto &LI : SrcMBB.liveins())
+
+    for (auto &LI : SrcMBB.liveins_dbg())
       DstMBB->addLiveIn(LI);
 
     // Make sure MRI knows about registers clobbered by unwinder.
@@ -284,6 +295,12 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         DstMRI->addPhysRegsUsedFromRegMask(RegMask);
     }
   }
+
+  DenseSet<const uint32_t *> ConstRegisterMasks;
+
+  // Track predefined/named regmasks which we ignore.
+  for (const uint32_t *Mask : TRI->getRegMasks())
+    ConstRegisterMasks.insert(Mask);
 
   // Clone instructions.
   for (auto &SrcMBB : *SrcMF) {
@@ -303,8 +320,17 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         // Update MBB.
         if (DstMO.isMBB())
           DstMO.setMBB(Src2DstMBB[DstMO.getMBB()]);
-        else if (DstMO.isRegMask())
+        else if (DstMO.isRegMask()) {
           DstMRI->addPhysRegsUsedFromRegMask(DstMO.getRegMask());
+
+          if (!ConstRegisterMasks.count(DstMO.getRegMask())) {
+            uint32_t *DstMask = DstMF->allocateRegMask();
+            std::memcpy(DstMask, SrcMO.getRegMask(),
+                        sizeof(*DstMask) *
+                            MachineOperand::getRegMaskSize(TRI->getNumRegs()));
+            DstMO.setRegMask(DstMask);
+          }
+        }
 
         DstMI->addOperand(DstMO);
       }
@@ -343,23 +369,38 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
   DstMF->setDebugInstrNumberingCount(SrcMF->DebugInstrNumberingCount);
 
+  if (!DstMF->cloneInfoFrom(*SrcMF, Src2DstMBB))
+    report_fatal_error("target does not implement MachineFunctionInfo cloning");
+
+  DstMRI->freezeReservedRegs(*DstMF);
+
   DstMF->verify(nullptr, "", /*AbortOnError=*/true);
   return DstMF;
 }
 
-std::unique_ptr<ReducerWorkItem>
+static void initializeTargetInfo() {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+}
+
+std::pair<std::unique_ptr<ReducerWorkItem>, bool>
 parseReducerWorkItem(const char *ToolName, StringRef Filename,
                      LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
                      bool IsMIR) {
+  bool IsBitcode = false;
   Triple TheTriple;
 
   auto MMM = std::make_unique<ReducerWorkItem>();
 
   if (IsMIR) {
+    initializeTargetInfo();
+
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
     if (std::error_code EC = FileOrErr.getError()) {
       WithColor::error(errs(), ToolName) << EC.message() << '\n';
-      return nullptr;
+      return {nullptr, false};
     }
 
     std::unique_ptr<MIRParser> MParser =
@@ -404,19 +445,34 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
     MMM->M = std::move(M);
   } else {
     SMDiagnostic Err;
-    std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
-    if (!Result) {
-      Err.print(ToolName, errs());
-      return std::unique_ptr<ReducerWorkItem>();
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFileOrSTDIN(Filename);
+    if (std::error_code EC = MB.getError()) {
+      WithColor::error(errs(), ToolName) << Filename << ": " << EC.message() << "\n";
+      return {nullptr, false};
     }
-    MMM->M = std::move(Result);
+
+    if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
+                  (const unsigned char *)(*MB)->getBufferEnd())) {
+      std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
+      if (!Result) {
+        Err.print(ToolName, errs());
+        return {nullptr, false};
+      }
+      MMM->M = std::move(Result);
+    } else {
+      IsBitcode = true;
+      readBitcode(*MMM, MemoryBufferRef(**MB), Ctxt, ToolName);
+
+      if (MMM->LTOInfo->IsThinLTO && MMM->LTOInfo->EnableSplitLTOUnit)
+       initializeTargetInfo();
+    }
   }
   if (verifyReducerWorkItem(*MMM, &errs())) {
     WithColor::error(errs(), ToolName)
         << Filename << " - input module is broken!\n";
-    return std::unique_ptr<ReducerWorkItem>();
+    return {nullptr, false};
   }
-  return MMM;
+  return {std::move(MMM), IsBitcode};
 }
 
 std::unique_ptr<ReducerWorkItem>
@@ -472,16 +528,6 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
              /*ShouldPreserveUseListOrder=*/true);
   }
-}
-
-// FIXME: We might want to use a different metric than "number of
-// bytes in serialized IR" to detect non-progress of the main delta
-// loop
-uint64_t ReducerWorkItem::getIRSize() const {
-  std::string Str;
-  raw_string_ostream SS(Str);
-  print(SS, /*AnnotationWriter=*/nullptr);
-  return Str.length();
 }
 
 /// Try to produce some number that indicates a function is getting smaller /
@@ -553,6 +599,123 @@ uint64_t ReducerWorkItem::computeMIRComplexityScore() const {
     if (auto *MF = MMI->getMachineFunction(F))
       Score += computeMIRComplexityScoreImpl(*MF);
   }
+
+  return Score;
+}
+
+// FIXME: ReduceOperandsSkip has similar function, except it uses larger numbers
+// for more reduced.
+static unsigned classifyReductivePower(const Value *V) {
+  if (auto *C = dyn_cast<ConstantData>(V)) {
+    if (C->isNullValue())
+      return 0;
+    if (C->isOneValue())
+      return 1;
+    if (isa<UndefValue>(V))
+      return 2;
+    return 3;
+  }
+
+  if (isa<GlobalValue>(V))
+    return 4;
+
+  // TODO: Account for expression size
+  if (isa<ConstantExpr>(V))
+    return 5;
+
+  if (isa<Constant>(V))
+    return 1;
+
+  if (isa<Argument>(V))
+    return 6;
+
+  if (isa<Instruction>(V))
+    return 7;
+
+  return 0;
+}
+
+// TODO: Additional flags and attributes may be complexity reducing. If we start
+// adding flags and attributes, they could have negative cost.
+static uint64_t computeIRComplexityScoreImpl(const Function &F) {
+  uint64_t Score = 1; // Count the function itself
+  SmallVector<std::pair<unsigned, MDNode *>> MDs;
+
+  AttributeList Attrs = F.getAttributes();
+  for (AttributeSet AttrSet : Attrs)
+    Score += AttrSet.getNumAttributes();
+
+  for (const BasicBlock &BB : F) {
+    ++Score;
+
+    for (const Instruction &I : BB) {
+      ++Score;
+
+      if (const auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(&I)) {
+        if (OverflowOp->hasNoUnsignedWrap())
+          ++Score;
+        if (OverflowOp->hasNoSignedWrap())
+          ++Score;
+      } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
+        if (GEP->isInBounds())
+          ++Score;
+      } else if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I)) {
+        if (ExactOp->isExact())
+          ++Score;
+      } else if (const auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+        FastMathFlags FMF = FPOp->getFastMathFlags();
+        if (FMF.allowReassoc())
+          ++Score;
+        if (FMF.noNaNs())
+          ++Score;
+        if (FMF.noInfs())
+          ++Score;
+        if (FMF.noSignedZeros())
+          ++Score;
+        if (FMF.allowReciprocal())
+          ++Score;
+        if (FMF.allowContract())
+          ++Score;
+        if (FMF.approxFunc())
+          ++Score;
+      }
+
+      for (const Value *Operand : I.operands()) {
+        ++Score;
+        Score += classifyReductivePower(Operand);
+      }
+
+      I.getAllMetadata(MDs);
+      Score += MDs.size();
+      MDs.clear();
+    }
+  }
+
+  return Score;
+}
+
+uint64_t ReducerWorkItem::computeIRComplexityScore() const {
+  uint64_t Score = 0;
+
+  const Module &M = getModule();
+  Score += M.named_metadata_size();
+
+  SmallVector<std::pair<unsigned, MDNode *>, 32> GlobalMetadata;
+  for (const GlobalVariable &GV : M.globals()) {
+    ++Score;
+
+    if (GV.hasInitializer())
+      ++Score;
+
+    // TODO: Account for linkage?
+
+    GV.getAllMetadata(GlobalMetadata);
+    Score += GlobalMetadata.size();
+    GlobalMetadata.clear();
+  }
+
+  for (const Function &F : M)
+    Score += computeIRComplexityScoreImpl(F);
 
   return Score;
 }

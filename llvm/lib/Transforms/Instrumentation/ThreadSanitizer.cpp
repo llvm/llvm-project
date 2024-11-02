@@ -341,13 +341,13 @@ void ThreadSanitizer::initialize(Module &M) {
   }
 
   MemmoveFn =
-      M.getOrInsertFunction("memmove", Attr, IRB.getInt8PtrTy(),
+      M.getOrInsertFunction("__tsan_memmove", Attr, IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
   MemcpyFn =
-      M.getOrInsertFunction("memcpy", Attr, IRB.getInt8PtrTy(),
+      M.getOrInsertFunction("__tsan_memcpy", Attr, IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
   MemsetFn =
-      M.getOrInsertFunction("memset", Attr, IRB.getInt8PtrTy(),
+      M.getOrInsertFunction("__tsan_memset", Attr, IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
 }
 
@@ -379,7 +379,7 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
       return false;
   }
 
-  // Do not instrument acesses from different address spaces; we cannot deal
+  // Do not instrument accesses from different address spaces; we cannot deal
   // with them.
   if (Addr) {
     Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
@@ -483,10 +483,10 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
 static bool isTsanAtomic(const Instruction *I) {
   // TODO: Ask TTI whether synchronization scope is between threads.
   auto SSID = getAtomicSyncScopeID(I);
-  if (!SSID.hasValue())
+  if (!SSID)
     return false;
   if (isa<LoadInst>(I) || isa<StoreInst>(I))
-    return SSID.getValue() != SyncScope::SingleThread;
+    return SSID.value() != SyncScope::SingleThread;
   return true;
 }
 
@@ -561,12 +561,12 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
   if (ClInstrumentAtomics)
-    for (auto Inst : AtomicAccesses) {
+    for (auto *Inst : AtomicAccesses) {
       Res |= instrumentAtomic(Inst, DL);
     }
 
   if (ClInstrumentMemIntrinsics && SanitizeFunction)
-    for (auto Inst : MemIntrinCalls) {
+    for (auto *Inst : MemIntrinCalls) {
       Res |= instrumentMemIntrinsic(Inst);
     }
 
@@ -636,8 +636,8 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
     return true;
   }
 
-  const unsigned Alignment = IsWrite ? cast<StoreInst>(II.Inst)->getAlignment()
-                                     : cast<LoadInst>(II.Inst)->getAlignment();
+  const Align Alignment = IsWrite ? cast<StoreInst>(II.Inst)->getAlign()
+                                  : cast<LoadInst>(II.Inst)->getAlign();
   const bool IsCompoundRW =
       ClCompoundReadBeforeWrite && (II.Flags & InstructionInfo::kCompoundRW);
   const bool IsVolatile = ClDistinguishVolatile &&
@@ -647,7 +647,7 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
 
   const uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   FunctionCallee OnAccessFunc = nullptr;
-  if (Alignment == 0 || Alignment >= 8 || (Alignment % (TypeSize / 8)) == 0) {
+  if (Alignment >= Align(8) || (Alignment.value() % (TypeSize / 8)) == 0) {
     if (IsCompoundRW)
       OnAccessFunc = TsanCompoundRW[Idx];
     else if (IsVolatile)
@@ -676,7 +676,7 @@ static ConstantInt *createOrdering(IRBuilder<> *IRB, AtomicOrdering ord) {
   switch (ord) {
     case AtomicOrdering::NotAtomic:
       llvm_unreachable("unexpected atomic ordering!");
-    case AtomicOrdering::Unordered:              LLVM_FALLTHROUGH;
+    case AtomicOrdering::Unordered:              [[fallthrough]];
     case AtomicOrdering::Monotonic:              v = 0; break;
     // Not specified yet:
     // case AtomicOrdering::Consume:                v = 1; break;

@@ -2,8 +2,8 @@ include(ExtendPath)
 include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
 
-set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+set(llvm_cmake_builddir "${LLVM_LIBRARY_DIR}/cmake/llvm")
 
 # First for users who use an installed LLVM, create the LLVMExports.cmake file.
 set(LLVM_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
@@ -99,9 +99,12 @@ set(llvm_config_include_buildtree_only_exports)
 
 # For compatibility with projects that include(LLVMConfig)
 # via CMAKE_MODULE_PATH, place API modules next to it.
+# Copy without source permissions because the source could be read-only,
+# but we need to write into the copied folder.
 # This should be removed in the future.
 file(COPY .
   DESTINATION ${llvm_cmake_builddir}
+  NO_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN *.cmake
   PATTERN CMakeFiles EXCLUDE
   )
@@ -173,7 +176,8 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN LLVMConfigExtensions.cmake EXCLUDE
     PATTERN LLVMConfigVersion.cmake EXCLUDE
     PATTERN LLVM-Config.cmake EXCLUDE
-    PATTERN GetHostTriple.cmake EXCLUDE)
+    PATTERN GetHostTriple.cmake EXCLUDE
+    PATTERN llvm-driver-template.cpp.in)
 
   if (NOT LLVM_ENABLE_IDE)
     # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS

@@ -165,7 +165,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
   if (Value *V =
-          SimplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
+          simplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }
@@ -434,7 +434,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     replaceLoadWithValue(ALoad, NewVal);
 
     // Avoid assertions in unreachable code.
-    if (NewVal == ALoad) NewVal = UndefValue::get(NewVal->getType());
+    if (NewVal == ALoad) NewVal = PoisonValue::get(NewVal->getType());
     ALoad->replaceAllUsesWith(NewVal);
     ReplacedLoads[ALoad] = NewVal;
   }

@@ -9,7 +9,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 define void @main() #0 {
 entry:
-  %0 = load <8 x float>, <8 x float>* bitcast ([8 x float]* @b to <8 x float>*), align 32
+  %0 = load <8 x float>, ptr @b, align 32
   %bitcast.i = extractelement <8 x float> %0, i32 0
   %vecinit.i.i = insertelement <4 x float> undef, float %bitcast.i, i32 0
   %vecinit2.i.i = insertelement <4 x float> %vecinit.i.i, float 0.000000e+00, i32 1
@@ -17,7 +17,7 @@ entry:
   %vecinit4.i.i = insertelement <4 x float> %vecinit3.i.i, float 0.000000e+00, i32 3
   %1 = tail call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecinit4.i.i) #2
   %vecext.i.i = extractelement <4 x float> %1, i32 0
-  store float %vecext.i.i, float* getelementptr inbounds ([8 x float], [8 x float]* @e, i64 0, i64 0), align 16
+  store float %vecext.i.i, ptr @e, align 16
   unreachable
 }
 

@@ -8,13 +8,14 @@
 
 #include "NativeRegisterContextLinux.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/RegisterValue.h"
-
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include <sys/uio.h>
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -41,6 +42,7 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
 
   // Check if this is a subregister of a full register.
   const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg_index);
+  assert(reg_info && "Expected valid register info for reg_index.");
   if (reg_info->invalidate_regs &&
       (reg_info->invalidate_regs[0] != LLDB_INVALID_REGNUM)) {
     Status error;
@@ -51,27 +53,29 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
 
     // Read the full register.
     error = ReadRegister(full_reg_info, full_value);
-    if (error.Fail())
+    if (error.Fail()) {
+      // full_reg_info was nullptr, or we couldn't read the register.
       return error;
+    }
 
     lldb::ByteOrder byte_order = GetByteOrder();
     uint8_t dst[RegisterValue::kMaxRegisterByteSize];
 
     // Get the bytes for the full register.
     const uint32_t dest_size = full_value.GetAsMemoryData(
-        full_reg_info, dst, sizeof(dst), byte_order, error);
+        *full_reg_info, dst, sizeof(dst), byte_order, error);
     if (error.Success() && dest_size) {
       uint8_t src[RegisterValue::kMaxRegisterByteSize];
 
       // Get the bytes for the source data.
       const uint32_t src_size = reg_value.GetAsMemoryData(
-          reg_info, src, sizeof(src), byte_order, error);
+          *reg_info, src, sizeof(src), byte_order, error);
       if (error.Success() && src_size && (src_size < dest_size)) {
         // Copy the src bytes to the destination.
         memcpy(dst + (reg_info->byte_offset & 0x1), src, src_size);
         // Set this full register as the value to write.
         value_to_write.SetBytes(dst, full_value.GetByteSize(), byte_order);
-        value_to_write.SetType(full_reg_info);
+        value_to_write.SetType(*full_reg_info);
         reg_to_write = full_reg;
       }
     }
@@ -154,4 +158,20 @@ Status NativeRegisterContextLinux::DoWriteRegisterValue(
 
   return NativeProcessLinux::PtraceWrapper(
       PTRACE_POKEUSER, m_thread.GetID(), reinterpret_cast<void *>(offset), buf);
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitectureViaGPR(lldb::tid_t tid,
+                                                        size_t gpr64_size) {
+  std::unique_ptr<uint8_t[]> data = std::make_unique<uint8_t[]>(gpr64_size);
+  struct iovec iov;
+  iov.iov_base = data.get();
+  iov.iov_len = gpr64_size;
+  unsigned int regset = llvm::ELF::NT_PRSTATUS;
+  Status ST = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
+                                                &iov, sizeof(iov));
+  if (ST.Fail())
+    return ST.ToError();
+  return HostInfo::GetArchitecture(
+      iov.iov_len < gpr64_size ? HostInfo::eArchKind32 : HostInfo::eArchKind64);
 }

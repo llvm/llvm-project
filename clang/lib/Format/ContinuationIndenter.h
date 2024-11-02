@@ -434,7 +434,7 @@ struct LineState {
 
   /// A stack keeping track of properties applying to parenthesis
   /// levels.
-  std::vector<ParenState> Stack;
+  SmallVector<ParenState> Stack;
 
   /// Ignore the stack of \c ParenStates for state comparison.
   ///

@@ -43,6 +43,19 @@ subroutine s02
   end function
 end
 
+subroutine s03
+  interface
+    subroutine sub1(p)
+      procedure(real) :: p
+    end subroutine
+  end interface
+  sf(x) = x + 1.
+  !ERROR: Statement function 'sf' may not be passed as an actual argument
+  call sub1(sf)
+  !ERROR: Statement function 'sf' may not be passed as an actual argument
+  call sub2(sf)
+end
+
 module m01
   procedure(sin) :: elem01
   interface

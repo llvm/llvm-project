@@ -6,8 +6,7 @@
 define i32 @promote_extract_2i32_idx(<vscale x 2 x i32> %a, i32 %idx) {
 ; CHECK-LABEL: promote_extract_2i32_idx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb x0, p0, z0.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -25,8 +24,7 @@ define i8 @split_extract_32i8_idx(<vscale x 32 x i8> %a, i32 %idx) {
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    mov x8, #-1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x9, w0
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1b { z1.b }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
@@ -51,8 +49,7 @@ define i16 @split_extract_16i16_idx(<vscale x 16 x i16> %a, i32 %idx) {
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    mov x8, #-1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x9, w0
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    st1h { z1.h }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
@@ -77,8 +74,7 @@ define i32 @split_extract_8i32_idx(<vscale x 8 x i32> %a, i32 %idx) {
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x9, w0
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmp x9, x8
@@ -103,8 +99,7 @@ define i64 @split_extract_8i64_idx(<vscale x 8 x i64> %a, i32 %idx) {
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x9, w0
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmp x9, x8

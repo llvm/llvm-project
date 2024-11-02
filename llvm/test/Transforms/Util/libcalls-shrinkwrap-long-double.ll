@@ -1,5 +1,3 @@
-; RUN: opt < %s -libcalls-shrinkwrap -S | FileCheck %s
-; New PM
 ; RUN: opt < %s -passes=libcalls-shrinkwrap -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

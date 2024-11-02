@@ -54,6 +54,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -98,6 +99,11 @@ ImplicationSearchThreshold(
   cl::desc("The number of predecessors to search for a stronger "
            "condition to use to thread over a weaker condition"),
   cl::init(3), cl::Hidden);
+
+static cl::opt<unsigned> PhiDuplicateThreshold(
+    "jump-threading-phi-threshold",
+    cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
+    cl::Hidden);
 
 static cl::opt<bool> PrintLVIAfterJumpThreading(
     "print-lvi-after-jump-threading",
@@ -216,7 +222,7 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
     return;
 
   uint64_t TrueWeight, FalseWeight;
-  if (!CondBr->extractProfMetadata(TrueWeight, FalseWeight))
+  if (!extractBranchWeights(*CondBr, TrueWeight, FalseWeight))
     return;
 
   if (TrueWeight + FalseWeight == 0)
@@ -279,7 +285,7 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
     // With PGO, this can be used to refine even existing profile data with
     // context information. This needs to be done after more performance
     // testing.
-    if (PredBr->extractProfMetadata(PredTrueWeight, PredFalseWeight))
+    if (extractBranchWeights(*PredBr, PredTrueWeight, PredFalseWeight))
       continue;
 
     // We can not infer anything useful when BP >= 50%, because BP is the
@@ -346,7 +352,7 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   if (F.hasProfileData()) {
-    LoopInfo LI{DominatorTree(F)};
+    LoopInfo LI{DT};
     BPI.reset(new BranchProbabilityInfo(F, LI, &TLI));
     BFI.reset(new BlockFrequencyInfo(F, *BPI, LI));
   }
@@ -517,8 +523,23 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
                                              Instruction *StopAt,
                                              unsigned Threshold) {
   assert(StopAt->getParent() == BB && "Not an instruction from proper BB?");
+
+  // Do not duplicate the BB if it has a lot of PHI nodes.
+  // If a threadable chain is too long then the number of PHI nodes can add up,
+  // leading to a substantial increase in compile time when rewriting the SSA.
+  unsigned PhiCount = 0;
+  Instruction *FirstNonPHI = nullptr;
+  for (Instruction &I : *BB) {
+    if (!isa<PHINode>(&I)) {
+      FirstNonPHI = &I;
+      break;
+    }
+    if (++PhiCount > PhiDuplicateThreshold)
+      return ~0U;
+  }
+
   /// Ignore PHI nodes, these will be flattened when duplication happens.
-  BasicBlock::const_iterator I(BB->getFirstNonPHI());
+  BasicBlock::const_iterator I(FirstNonPHI);
 
   // FIXME: THREADING will delete values that are just used to compute the
   // branch, so they shouldn't count against the duplication cost.
@@ -560,8 +581,8 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
       if (CI->cannotDuplicate() || CI->isConvergent())
         return ~0U;
 
-    if (TTI->getUserCost(&*I, TargetTransformInfo::TCK_SizeAndLatency)
-            == TargetTransformInfo::TCC_Free)
+    if (TTI->getInstructionCost(&*I, TargetTransformInfo::TCK_SizeAndLatency) ==
+        TargetTransformInfo::TCC_Free)
       continue;
 
     // All other instructions count for at least one unit.
@@ -653,22 +674,25 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I || I->getParent() != BB) {
 
-    // Okay, if this is a live-in value, see if it has a known value at the end
-    // of any of our predecessors.
-    //
-    // FIXME: This should be an edge property, not a block end property.
-    /// TODO: Per PR2563, we could infer value range information about a
-    /// predecessor based on its terminator.
-    //
-    // FIXME: change this to use the more-rich 'getPredicateOnEdge' method if
-    // "I" is a non-local compare-with-a-constant instruction.  This would be
-    // able to handle value inequalities better, for example if the compare is
-    // "X < 4" and "X < 3" is known true but "X < 4" itself is not available.
-    // Perhaps getConstantOnEdge should be smart enough to do this?
+    // Okay, if this is a live-in value, see if it has a known value at the any
+    // edge from our predecessors.
     for (BasicBlock *P : predecessors(BB)) {
+      using namespace PatternMatch;
       // If the value is known by LazyValueInfo to be a constant in a
       // predecessor, use that information to try to thread this block.
       Constant *PredCst = LVI->getConstantOnEdge(V, P, BB, CxtI);
+      // If I is a non-local compare-with-constant instruction, use more-rich
+      // 'getPredicateOnEdge' method. This would be able to handle value
+      // inequalities better, for example if the compare is "X < 4" and "X < 3"
+      // is known true but "X < 4" itself is not available.
+      CmpInst::Predicate Pred;
+      Value *Val;
+      Constant *Cst;
+      if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst)))) {
+        auto Res = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CxtI);
+        if (Res != LazyValueInfo::Unknown)
+          PredCst = ConstantInt::getBool(V->getContext(), Res);
+      }
       if (Constant *KC = getKnownConstant(PredCst, Preference))
         Result.emplace_back(KC, P);
     }
@@ -788,6 +812,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     if (Preference != WantInteger)
       return false;
     if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
+      const DataLayout &DL = BO->getModule()->getDataLayout();
       PredValueInfoTy LHSVals;
       computeValueKnownInPredecessorsImpl(BO->getOperand(0), BB, LHSVals,
                                           WantInteger, RecursionSet, CxtI);
@@ -795,7 +820,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       // Try to use constant folding to simplify the binary operator.
       for (const auto &LHSVal : LHSVals) {
         Constant *V = LHSVal.first;
-        Constant *Folded = ConstantExpr::get(BO->getOpcode(), V, CI);
+        Constant *Folded =
+            ConstantFoldBinaryOpOperands(BO->getOpcode(), V, CI, DL);
 
         if (Constant *KC = getKnownConstant(Folded, WantInteger))
           Result.emplace_back(KC, LHSVal.second);
@@ -831,7 +857,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           LHS = CmpLHS->DoPHITranslation(BB, PredBB);
           RHS = PN->getIncomingValue(i);
         }
-        Value *Res = SimplifyCmpInst(Pred, LHS, RHS, {DL});
+        Value *Res = simplifyCmpInst(Pred, LHS, RHS, {DL});
         if (!Res) {
           if (!isa<Constant>(RHS))
             continue;
@@ -1331,10 +1357,10 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       combineMetadataForCSE(NLoadI, LoadI, false);
     };
 
-    // If the returned value is the load itself, replace with an undef. This can
+    // If the returned value is the load itself, replace with poison. This can
     // only happen in dead loops.
     if (AvailableVal == LoadI)
-      AvailableVal = UndefValue::get(LoadI->getType());
+      AvailableVal = PoisonValue::get(LoadI->getType());
     if (AvailableVal->getType() != LoadI->getType())
       AvailableVal = CastInst::CreateBitOrPointerCast(
           AvailableVal, LoadI->getType(), "", LoadI);
@@ -1457,9 +1483,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // Add all the unavailable predecessors to the PredsToSplit list.
     for (BasicBlock *P : predecessors(LoadBB)) {
       // If the predecessor is an indirect goto, we can't split the edge.
-      // Same for CallBr.
-      if (isa<IndirectBrInst>(P->getTerminator()) ||
-          isa<CallBrInst>(P->getTerminator()))
+      if (isa<IndirectBrInst>(P->getTerminator()))
         return false;
 
       if (!AvailablePredSet.count(P))
@@ -1559,10 +1583,8 @@ findMostPopularDest(BasicBlock *BB,
       DestPopularity[PredToDest.second]++;
 
   // Find the most popular dest.
-  using VT = decltype(DestPopularity)::value_type;
   auto MostPopular = std::max_element(
-      DestPopularity.begin(), DestPopularity.end(),
-      [](const VT &L, const VT &R) { return L.second < R.second; });
+      DestPopularity.begin(), DestPopularity.end(), llvm::less_second());
 
   // Okay, we have finally picked the most popular destination.
   return MostPopular->first;
@@ -1685,9 +1707,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
     }
 
     // If the predecessor ends with an indirect goto, we can't change its
-    // destination. Same for CallBr.
-    if (isa<IndirectBrInst>(Pred->getTerminator()) ||
-        isa<CallBrInst>(Pred->getTerminator()))
+    // destination.
+    if (isa<IndirectBrInst>(Pred->getTerminator()))
       continue;
 
     PredToDestList.emplace_back(Pred, DestBB);
@@ -1924,10 +1945,9 @@ bool JumpThreadingPass::processBranchOnXOR(BinaryOperator *BO) {
   }
 
   // If any of predecessors end with an indirect goto, we can't change its
-  // destination. Same for CallBr.
+  // destination.
   if (any_of(BlocksToFoldInto, [](BasicBlock *Pred) {
-        return isa<IndirectBrInst>(Pred->getTerminator()) ||
-               isa<CallBrInst>(Pred->getTerminator());
+        return isa<IndirectBrInst>(Pred->getTerminator());
       }))
     return false;
 
@@ -2173,6 +2193,9 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   BasicBlock *ZeroPred = nullptr;
   BasicBlock *OnePred = nullptr;
   for (BasicBlock *P : predecessors(PredBB)) {
+    // If PredPred ends with IndirectBrInst, we can't handle it.
+    if (isa<IndirectBrInst>(P->getTerminator()))
+      continue;
     if (ConstantInt *CI = dyn_cast_or_null<ConstantInt>(
             evaluateOnPredecessorEdge(BB, P, Cond))) {
       if (CI->isZero()) {
@@ -2438,7 +2461,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
   // update the edge weight of the result of splitting predecessors.
   DenseMap<BasicBlock *, BlockFrequency> FreqMap;
   if (HasProfileData)
-    for (auto Pred : Preds)
+    for (auto *Pred : Preds)
       FreqMap.insert(std::make_pair(
           Pred, BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, BB)));
 
@@ -2453,10 +2476,10 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
 
   std::vector<DominatorTree::UpdateType> Updates;
   Updates.reserve((2 * Preds.size()) + NewBBs.size());
-  for (auto NewBB : NewBBs) {
+  for (auto *NewBB : NewBBs) {
     BlockFrequency NewBBFreq(0);
     Updates.push_back({DominatorTree::Insert, NewBB, BB});
-    for (auto Pred : predecessors(NewBB)) {
+    for (auto *Pred : predecessors(NewBB)) {
       Updates.push_back({DominatorTree::Delete, Pred, BB});
       Updates.push_back({DominatorTree::Insert, Pred, NewBB});
       if (HasProfileData) // Update frequencies between Pred -> NewBB.
@@ -2664,7 +2687,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     // If this instruction can be simplified after the operands are updated,
     // just use the simplified value instead.  This frequently happens due to
     // phi translation.
-    if (Value *IV = SimplifyInstruction(
+    if (Value *IV = simplifyInstruction(
             New,
             {BB->getModule()->getDataLayout(), TLI, nullptr, nullptr, New})) {
       ValueMapping[&*BI] = IV;

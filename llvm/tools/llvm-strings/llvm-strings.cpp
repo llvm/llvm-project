@@ -64,8 +64,7 @@ public:
 static StringRef ToolName;
 
 static cl::list<std::string> InputFileNames(cl::Positional,
-                                            cl::desc("<input object files>"),
-                                            cl::ZeroOrMore);
+                                            cl::desc("<input object files>"));
 
 static int MinLength = 4;
 static bool PrintFileName;

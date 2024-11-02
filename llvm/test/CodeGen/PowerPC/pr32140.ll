@@ -37,11 +37,11 @@ define dso_local void @bswapStorei64Toi32() {
 ; CHECK-BE-NEXT:    stwbrx 3, 0, 4
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i32, i32* @ai, align 4
+  %0 = load i32, ptr @ai, align 4
   %conv.i = sext i32 %0 to i64
   %or26.i = tail call i64 @llvm.bswap.i64(i64 %conv.i)
   %conv = trunc i64 %or26.i to i32
-  store i32 %conv, i32* @bi, align 4
+  store i32 %conv, ptr @bi, align 4
   ret void
 }
 
@@ -75,11 +75,11 @@ define dso_local void @bswapStorei32Toi16() {
 ; CHECK-BE-NEXT:    sthbrx 3, 0, 4
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i16, i16* @as, align 2
+  %0 = load i16, ptr @as, align 2
   %conv.i = sext i16 %0 to i32
   %or26.i = tail call i32 @llvm.bswap.i32(i32 %conv.i)
   %conv = trunc i32 %or26.i to i16
-  store i16 %conv, i16* @bs, align 2
+  store i16 %conv, ptr @bs, align 2
   ret void
 }
 
@@ -113,11 +113,11 @@ define dso_local void @bswapStorei64Toi16() {
 ; CHECK-BE-NEXT:    sthbrx 3, 0, 4
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i16, i16* @as, align 2
+  %0 = load i16, ptr @as, align 2
   %conv.i = sext i16 %0 to i64
   %or26.i = tail call i64 @llvm.bswap.i64(i64 %conv.i)
   %conv = trunc i64 %or26.i to i16
-  store i16 %conv, i16* @bs, align 2
+  store i16 %conv, ptr @bs, align 2
   ret void
 }
 

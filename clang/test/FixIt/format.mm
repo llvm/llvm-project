@@ -19,11 +19,11 @@ void test_percent_C() {
 
   NSLog(@"%C", wchar_data);  // expected-warning{{format specifies type 'unichar' (aka 'unsigned short') but the argument has type 'wchar_t'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"(unichar)"
-  
+
   NSLog(@"%C", 0x260300);  // expected-warning{{format specifies type 'unichar' (aka 'unsigned short') but the argument has type 'int'}}
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:13}:"%d"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:"(unichar)"
-  
+
   NSLog(@"%C", 0.0); // expected-warning{{format specifies type 'unichar' (aka 'unsigned short') but the argument has type 'double'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:13}:"%f"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:"(unichar)"

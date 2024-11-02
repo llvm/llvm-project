@@ -1450,9 +1450,9 @@ void
 TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
                                             TiedPairList &TiedPairs,
                                             unsigned &Dist) {
-  bool IsEarlyClobber = llvm::find_if(TiedPairs, [MI](auto const &TP) {
-                          return MI->getOperand(TP.second).isEarlyClobber();
-                        }) != TiedPairs.end();
+  bool IsEarlyClobber = llvm::any_of(TiedPairs, [MI](auto const &TP) {
+    return MI->getOperand(TP.second).isEarlyClobber();
+  });
 
   bool RemovedKillFlag = false;
   bool AllUsesCopied = true;
@@ -1657,13 +1657,43 @@ bool TwoAddressInstructionPass::processStatepoint(
     if (RegA == RegB)
       continue;
 
+    // CodeGenPrepare can sink pointer compare past statepoint, which
+    // breaks assumption that statepoint kills tied-use register when
+    // in SSA form (see note in IR/SafepointIRVerifier.cpp). Fall back
+    // to generic tied register handling to avoid assertion failures.
+    // TODO: Recompute LIS/LV information for new range here.
+    if (LIS) {
+      const auto &UseLI = LIS->getInterval(RegB);
+      const auto &DefLI = LIS->getInterval(RegA);
+      if (DefLI.overlaps(UseLI)) {
+        LLVM_DEBUG(dbgs() << "LIS: " << printReg(RegB, TRI, 0)
+                          << " UseLI overlaps with DefLI\n");
+        NeedCopy = true;
+        continue;
+      }
+    } else if (LV && LV->getVarInfo(RegB).findKill(MI->getParent()) != MI) {
+      // Note that MachineOperand::isKill does not work here, because it
+      // is set only on first register use in instruction and for statepoint
+      // tied-use register will usually be found in preceeding deopt bundle.
+      LLVM_DEBUG(dbgs() << "LV: " << printReg(RegB, TRI, 0)
+                        << " not killed by statepoint\n");
+      NeedCopy = true;
+      continue;
+    }
+
     MRI->replaceRegWith(RegA, RegB);
 
     if (LIS) {
       VNInfo::Allocator &A = LIS->getVNInfoAllocator();
       LiveInterval &LI = LIS->getInterval(RegB);
-      for (auto &S : LIS->getInterval(RegA)) {
-        VNInfo *VNI = LI.getNextValue(S.start, A);
+      LiveInterval &Other = LIS->getInterval(RegA);
+      SmallVector<VNInfo *> NewVNIs;
+      for (const VNInfo *VNI : Other.valnos) {
+        assert(VNI->id == NewVNIs.size() && "assumed");
+        NewVNIs.push_back(LI.createValueCopy(VNI, A));
+      }
+      for (auto &S : Other) {
+        VNInfo *VNI = NewVNIs[S.valno->id];
         LiveRange::Segment NewSeg(S.start, S.end, VNI);
         LI.addSegment(NewSeg);
       }
@@ -1676,6 +1706,7 @@ bool TwoAddressInstructionPass::processStatepoint(
       LiveVariables::VarInfo &SrcInfo = LV->getVarInfo(RegB);
       LiveVariables::VarInfo &DstInfo = LV->getVarInfo(RegA);
       SrcInfo.AliveBlocks |= DstInfo.AliveBlocks;
+      DstInfo.AliveBlocks.clear();
       for (auto *KillMI : DstInfo.Kills)
         LV->addVirtualRegisterKilled(RegB, *KillMI, false);
     }
@@ -1857,11 +1888,6 @@ void TwoAddressInstructionPass::
 eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
-  if (MI.getOperand(0).getSubReg() || DstReg.isPhysical() ||
-      !(MI.getNumOperands() & 1)) {
-    LLVM_DEBUG(dbgs() << "Illegal REG_SEQUENCE instruction:" << MI);
-    llvm_unreachable(nullptr);
-  }
 
   SmallVector<Register, 4> OrigRegs;
   if (LIS) {

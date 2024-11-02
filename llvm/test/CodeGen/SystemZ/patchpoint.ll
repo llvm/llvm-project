@@ -14,10 +14,10 @@ entry:
 ; CHECK-NEXT:  bcr     0, %r0
 ; CHECK:       lgr     %r2, [[REG0:%r[0-9]+]]
 ; CHECK:       br      %r14
-  %resolveCall2 = inttoptr i64 559038736 to i8*
-  %result = tail call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 2, i32 10, i8* %resolveCall2, i32 4, i64 %p1, i64 %p2, i64 %p3, i64 %p4)
-  %resolveCall3 = inttoptr i64 559038737 to i8*
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 3, i32 10, i8* %resolveCall3, i32 2, i64 %p1, i64 %result)
+  %resolveCall2 = inttoptr i64 559038736 to ptr
+  %result = tail call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 2, i32 10, ptr %resolveCall2, i32 4, i64 %p1, i64 %p2, i64 %p3, i64 %p4)
+  %resolveCall3 = inttoptr i64 559038737 to ptr
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 3, i32 10, ptr %resolveCall3, i32 2, i64 %p1, i64 %result)
   ret i64 %result
 }
 
@@ -31,7 +31,7 @@ entry:
 ; CHECK:       brasl   %r14, foo@PLT
 ; CHECK-NEXT:  bcr     0, %r0
 ; CHECK:       br      %r14
-  %result = tail call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 9, i32 8, i8* bitcast (i64 (i64, i64)* @foo to i8*), i32 2, i64 %p1, i64 %p2)
+  %result = tail call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 9, i32 8, ptr @foo, i32 2, i64 %p1, i64 %p2)
   ret i64 %result
 }
 
@@ -47,10 +47,10 @@ entry:
 define void @caller_meta_leaf() {
 entry:
   %metadata = alloca i64, i32 3, align 8
-  store i64 11, i64* %metadata
-  store i64 12, i64* %metadata
-  store i64 13, i64* %metadata
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 4, i32 0, i64* %metadata)
+  store i64 11, ptr %metadata
+  store i64 12, ptr %metadata
+  store i64 13, ptr %metadata
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 4, i32 0, ptr %metadata)
   ret void
 }
 
@@ -58,19 +58,19 @@ entry:
 ; <rdar:15390785> Assertion failed: (CI.getNumArgOperands() >= NumArgs + 4)
 ; There is no way to verify this, since it depends on memory allocation.
 ; But I think it's useful to include as a working example.
-define i64 @testLowerConstant(i64 %arg, i64 %tmp2, i64 %tmp10, i64* %tmp33, i64 %tmp79) {
+define i64 @testLowerConstant(i64 %arg, i64 %tmp2, i64 %tmp10, ptr %tmp33, i64 %tmp79) {
 entry:
   %tmp80 = add i64 %tmp79, -16
-  %tmp81 = inttoptr i64 %tmp80 to i64*
-  %tmp82 = load i64, i64* %tmp81, align 8
+  %tmp81 = inttoptr i64 %tmp80 to ptr
+  %tmp82 = load i64, ptr %tmp81, align 8
   tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64 14, i32 6, i64 %arg, i64 %tmp2, i64 %tmp10, i64 %tmp82)
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 15, i32 30, i8* null, i32 3, i64 %arg, i64 %tmp10, i64 %tmp82)
-  %tmp83 = load i64, i64* %tmp33, align 8
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 15, i32 30, ptr null, i32 3, i64 %arg, i64 %tmp10, i64 %tmp82)
+  %tmp83 = load i64, ptr %tmp33, align 8
   %tmp84 = add i64 %tmp83, -24
-  %tmp85 = inttoptr i64 %tmp84 to i64*
-  %tmp86 = load i64, i64* %tmp85, align 8
+  %tmp85 = inttoptr i64 %tmp84 to ptr
+  %tmp86 = load i64, ptr %tmp85, align 8
   tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64 17, i32 6, i64 %arg, i64 %tmp10, i64 %tmp86)
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 18, i32 30, i8* null, i32 3, i64 %arg, i64 %tmp10, i64 %tmp86)
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 18, i32 30, ptr null, i32 3, i64 %arg, i64 %tmp10, i64 %tmp86)
   ret i64 10
 }
 
@@ -81,7 +81,7 @@ entry:
 ; CHECK:      .Ltmp
 ; CHECK:      bcr 0, %r0
 ; CHECK:      br %r14
-  %result = tail call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 2, i8* null, i32 2, i64 %p1, i64 %p2)
+  %result = tail call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 2, ptr null, i32 2, i64 %p1, i64 %p2)
   ret void
 }
 
@@ -92,8 +92,8 @@ entry:
 ; CHECK:        llilf   %r1, 2566957755
 ; CHECK-NEXT:   iihf    %r1, 1432778632
 ; CHECK-NEXT:   basr    %r14, %r1
-  %resolveCall2 = inttoptr i64 6153737369414576827 to i8*
-  %result = tail call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 2, i32 14, i8* %resolveCall2, i32 0)
+  %resolveCall2 = inttoptr i64 6153737369414576827 to ptr
+  %result = tail call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 2, i32 14, ptr %resolveCall2, i32 0)
   ret i64 %result
 }
 
@@ -117,7 +117,7 @@ block0:
   br label %exit
 
 patch1:
-  call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 65536, i8* null, i32 0)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 65536, ptr null, i32 0)
   br label %exit
 
 exit:
@@ -151,5 +151,5 @@ exit:
 
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
-declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
-declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)

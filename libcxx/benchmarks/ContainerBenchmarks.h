@@ -135,6 +135,20 @@ static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
     }
 }
 
+template <class Container, class GenInputs>
+static void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
+    auto in = gen(st.range(0));
+    c.max_load_factor(3.0);
+    c.insert(in.begin(), in.end());
+    benchmark::DoNotOptimize(c);
+    const auto bucket_count = c.bucket_count();
+    while (st.KeepRunning()) {
+        c.rehash(bucket_count + 1);
+        c.rehash(bucket_count);
+        benchmark::ClobberMemory();
+    }
+}
+
 } // end namespace ContainerBenchmarks
 
 #endif // BENCHMARK_CONTAINER_BENCHMARKS_H

@@ -255,7 +255,7 @@ TEST(SourceCodeTest, getAssociatedRange) {
   Visitor.runOverAnnotated(R"cpp(
       #define ATTR __attribute__((deprecated("message")))
       $r[[ATTR
-      // Commment.
+      // Comment.
       int x;]])cpp");
 }
 
@@ -410,7 +410,7 @@ TEST(SourceCodeTest, getAssociatedRangeWithComments) {
   Visit(R"cpp(
       #define ATTR __attribute__((deprecated("message")))
       $r[[ATTR
-      // Commment.
+      // Comment.
       int x;]])cpp");
 }
 
@@ -474,7 +474,7 @@ int c = BAR 3.0;
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_FALSE(getRangeForEdit(Range, *Context).hasValue());
+    EXPECT_FALSE(getRangeForEdit(Range, *Context));
   };
   Visitor.runOver(Code);
 }

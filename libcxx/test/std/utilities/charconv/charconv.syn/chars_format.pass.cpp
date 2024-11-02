@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Note: chars_format is a C++17 feature backported to C++11. Assert isn't
-// allowed in a constexpr function in C++11. To keep the code readable, C++11
-// support is untested.
-// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <charconv>
 

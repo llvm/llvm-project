@@ -60,6 +60,18 @@ func.func @rank(%shape : !shape.shape) {
 
 // -----
 
+// Express `shape.dim` as `tensor.dim` when valid.
+// CHECK-LABEL: @dim
+// CHECK-SAME:  (%[[ARG:.*]]: tensor<2x3xf32>, %[[IDX:.*]]: index) -> index
+func.func @dim(%arg : tensor<2x3xf32>, %idx : index) -> index {
+  // CHECK: %[[RESULT:.*]] = tensor.dim %[[ARG]], %[[IDX]] : tensor<2x3xf32>
+  // CHECK: return %[[RESULT]] : index
+  %result = shape.dim %arg, %idx : tensor<2x3xf32>, index -> index
+  return %result : index
+}
+
+// -----
+
 // Express `get_extent` as `tensor.dim` when it relies directly on the outcome of a
 // `shape_of` operation.
 // CHECK-LABEL: @get_extent_shape_of

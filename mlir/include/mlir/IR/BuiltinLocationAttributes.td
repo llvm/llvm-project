@@ -15,10 +15,11 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
+include "mlir/IR/SubElementInterfaces.td"
 
 // Base class for Builtin dialect location attributes.
-class Builtin_LocationAttr<string name>
-    : AttrDef<Builtin_Dialect, name, [], "::mlir::LocationAttr"> {
+class Builtin_LocationAttr<string name, list<Trait> traits = []>
+    : AttrDef<Builtin_Dialect, name, traits, "::mlir::LocationAttr"> {
   let cppClassName = name;
   let mnemonic = ?;
 }
@@ -27,7 +28,9 @@ class Builtin_LocationAttr<string name>
 // CallSiteLoc
 //===----------------------------------------------------------------------===//
 
-def CallSiteLoc : Builtin_LocationAttr<"CallSiteLoc"> {
+def CallSiteLoc : Builtin_LocationAttr<"CallSiteLoc", [
+    SubElementAttrInterface
+  ]> {
   let summary = "A callsite source location";
   let description = [{
     Syntax:
@@ -104,7 +107,9 @@ def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
 // FusedLoc
 //===----------------------------------------------------------------------===//
 
-def FusedLoc : Builtin_LocationAttr<"FusedLoc"> {
+def FusedLoc : Builtin_LocationAttr<"FusedLoc", [
+    SubElementAttrInterface
+  ]> {
   let summary = "A tuple of other source locations";
   let description = [{
     Syntax:
@@ -143,7 +148,9 @@ def FusedLoc : Builtin_LocationAttr<"FusedLoc"> {
 // NameLoc
 //===----------------------------------------------------------------------===//
 
-def NameLoc : Builtin_LocationAttr<"NameLoc"> {
+def NameLoc : Builtin_LocationAttr<"NameLoc", [
+    SubElementAttrInterface
+  ]> {
   let summary = "A named source location";
   let description = [{
     Syntax:
@@ -180,7 +187,9 @@ def NameLoc : Builtin_LocationAttr<"NameLoc"> {
 // OpaqueLoc
 //===----------------------------------------------------------------------===//
 
-def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
+def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc", [
+    SubElementAttrInterface
+  ]> {
   let summary = "An opaque source location";
   let description = [{
     An instance of this location essentially contains a pointer to some data

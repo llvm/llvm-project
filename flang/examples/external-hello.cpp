@@ -42,7 +42,7 @@ void input1() {
 }
 
 int main(int argc, const char *argv[], const char *envp[]) {
-  RTNAME(ProgramStart)(argc, argv, envp);
+  RTNAME(ProgramStart)(argc, argv, envp, nullptr);
   output1();
   input1();
   RTNAME(PauseStatement)();

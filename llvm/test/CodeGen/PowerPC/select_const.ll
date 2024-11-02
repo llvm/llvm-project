@@ -495,7 +495,7 @@ define i8 @sel_constants_urem_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_urem_constant:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    clrldi 3, 3, 63
-; ALL-NEXT:    subfic 3, 3, 3
+; ALL-NEXT:    xori 3, 3, 3
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = urem i8 %sel, 5
@@ -530,7 +530,7 @@ define i8 @sel_constants_and_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_and_constant:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    clrldi 3, 3, 63
-; ALL-NEXT:    subfic 3, 3, 5
+; ALL-NEXT:    xori 3, 3, 5
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = and i8 %sel, 5

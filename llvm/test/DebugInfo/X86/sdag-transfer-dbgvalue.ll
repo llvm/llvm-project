@@ -28,7 +28,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; DBGVALUE-NEXT: DBG_VALUE %[[REG]]
 
 ; Function Attrs: nofree norecurse nounwind uwtable writeonly
-define dso_local i32 @foo(i32 %a, i32* nocapture %b) local_unnamed_addr !dbg !7 {
+define dso_local i32 @foo(i32 %a, ptr nocapture %b) local_unnamed_addr !dbg !7 {
 entry:
   %add = add nsw i32 %a, 512, !dbg !18
   call void @llvm.dbg.value(metadata i32 %add, metadata !16, metadata !DIExpression()), !dbg !17
@@ -36,7 +36,7 @@ entry:
   br i1 %cmp, label %if.end, label %if.then, !dbg !18
 
 if.then:                                          ; preds = %entry
-  store i32 %a, i32* %b, align 4, !dbg !18
+  store i32 %a, ptr %b, align 4, !dbg !18
   br label %if.end, !dbg !18
 
 if.end:                                           ; preds = %entry, %if.then

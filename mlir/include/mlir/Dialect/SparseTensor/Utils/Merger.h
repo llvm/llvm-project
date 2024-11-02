@@ -14,14 +14,12 @@
 #define MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
 
 namespace mlir {
 namespace sparse_tensor {
-
-/// Dimension level type for a tensor (undef means index does not appear).
-enum Dim { kSparse, kDense, kSingle, kUndef };
 
 /// Tensor expression kind.
 enum Kind {
@@ -32,6 +30,7 @@ enum Kind {
   // Unary operations.
   kAbsF,
   kAbsC,
+  kAbsI,
   kCeilF,
   kFloorF,
   kSqrtF,
@@ -62,6 +61,7 @@ enum Kind {
   kBitCast,
   kBinaryBranch, // semiring unary branch created from a binary op
   kUnary,        // semiring unary op
+  kSelect,       // custom selection criteria
   // Binary operations.
   kMulF,
   kMulC,
@@ -83,6 +83,7 @@ enum Kind {
   kShrU, // unsigned
   kShlI,
   kBinary, // semiring binary op
+  kReduce, // semiring reduction op
 };
 
 /// Children subexpressions of tensor operations.
@@ -114,8 +115,8 @@ struct TensorExp {
   /// this field may be used to cache "hoisted" loop invariant tensor loads.
   Value val;
 
-  /// Code blocks used by semirings. For the case of kUnary and
-  /// kBinary, this holds the original operation with all regions. For
+  /// Code blocks used by semirings. For the case of kUnary, kBinary, kReduce,
+  /// and kSelect, this holds the original operation with all regions. For
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
   Operation *op;
@@ -154,7 +155,9 @@ public:
   /// invariant expressions in the kernel.
   Merger(unsigned t, unsigned l)
       : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
-        hasSparseOut(false), dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
+        hasSparseOut(false),
+        dimTypes(t + 1, std::vector<DimLevelType>(l, DimLevelType::Undef)),
+        loopIdxToDim(t + 1, std::vector<Optional<unsigned>>(l, llvm::None)) {}
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value(),
@@ -219,26 +222,21 @@ public:
   /// Returns true if Li and Lj only differ in dense.
   bool onlyDenseDiff(unsigned i, unsigned j);
 
-  /// Bit translation.
+  /// Bit translation (get tensor ID).
   unsigned tensor(unsigned b) const { return b % numTensors; }
+  /// Bit translation (get loop index).
   unsigned index(unsigned b) const { return b / numTensors; }
-
-  /// Returns true if bit corresponds to queried dim.
-  bool isDim(unsigned b, Dim d) const { return isDim(tensor(b), index(b), d); }
 
   /// Returns true if bit corresponds to index of output tensor.
   bool isOutTensor(unsigned b, unsigned i) const {
     return tensor(b) == outTensor && index(b) == i;
   }
 
-  /// Returns true if tensor access at given index has queried dim.
-  bool isDim(unsigned t, unsigned i, Dim d) const {
-    assert(t < numTensors && i < numLoops);
-    return dims[t][i] == d;
-  }
-
-  /// Returns true if any set bit corresponds to queried dim.
-  bool hasAnyDimOf(const BitVector &bits, Dim d) const;
+  /// Gets tensor ID for the output tensor.
+  unsigned getOutTensorID() const { return outTensor; }
+  /// Gets tensor ID for the synthetic tensor (used for all invariant tensor
+  /// expressions).
+  unsigned getSynTensorID() const { return syntheticTensor; }
 
   /// Returns true if given tensor iterates *only* in the given tensor
   /// expression. For the output tensor, this defines a "simply dynamic"
@@ -246,8 +244,50 @@ public:
   /// sparse vector a.
   bool isSingleCondition(unsigned t, unsigned e) const;
 
-  /// Dimension setter.
-  void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
+  /// Returns true if any set bit corresponds to sparse dimension level type.
+  bool hasAnySparse(const BitVector &bits) const;
+
+  /// Gets the dimension level type of the `t`th tensor on `i`th loop.
+  DimLevelType getDimLevelType(unsigned t, unsigned i) const {
+    assert(t < numTensors && i < numLoops);
+    return dimTypes[t][i];
+  }
+
+  /// Gets the dimension level type of `b`.
+  DimLevelType getDimLevelType(unsigned b) const {
+    return getDimLevelType(tensor(b), index(b));
+  }
+
+  /// Gets the dimension number of the the `t`th tensor on `i`th loop.
+  Optional<unsigned> getDimNum(unsigned t, unsigned i) const {
+    assert(t < numTensors && i < numLoops);
+    return loopIdxToDim[t][i];
+  }
+
+  /// Gets the dimension number of `b`.
+  Optional<unsigned> getDimNum(unsigned b) const {
+    return getDimNum(tensor(b), index(b));
+  }
+
+  /// Sets the dimension and dimension level type of the `t`th tensor on `i`th
+  /// loop.
+  void setDimAndDimLevelType(unsigned t, unsigned i, unsigned dim,
+                             DimLevelType dlt) {
+    assert(isValidDLT(dlt));
+    dimTypes[t][i] = dlt;
+    loopIdxToDim[t][i] = dim;
+  }
+
+  // Iterates the bits of a lattice, for each set bit, converts it into the
+  // corresponding tensor dimension and invokes the callback.
+  void foreachTidDimPairInBits(
+      const BitVector &bits,
+      function_ref<void(unsigned b, unsigned tid, Optional<unsigned> dim,
+                        DimLevelType dlt)>
+          cb) {
+    for (unsigned b : bits.set_bits())
+      cb(b, tensor(b), getDimNum(b), getDimLevelType(b));
+  }
 
   // Has sparse output tensor setter.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
@@ -296,7 +336,11 @@ private:
   const unsigned numTensors;
   const unsigned numLoops;
   bool hasSparseOut;
-  std::vector<std::vector<Dim>> dims;
+  // Map that converts pair<tensor id, loop id> to the corresponding dimension
+  // level type.
+  std::vector<std::vector<DimLevelType>> dimTypes;
+  // Map that converts pair<tensor id, loop id> to the corresponding dimension.
+  std::vector<std::vector<Optional<unsigned>>> loopIdxToDim;
   llvm::SmallVector<TensorExp, 32> tensorExps;
   llvm::SmallVector<LatPoint, 16> latPoints;
   llvm::SmallVector<SmallVector<unsigned, 16>, 8> latSets;

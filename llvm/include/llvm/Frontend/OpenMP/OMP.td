@@ -210,7 +210,7 @@ def OMPC_Depend : Clause<"depend"> {
 }
 def OMPC_Device : Clause<"device"> {
   let clangClass = "OMPDeviceClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpDeviceClause";
 }
 def OMPC_Threads : Clause<"threads"> { let clangClass = "OMPThreadsClause"; }
 def OMPC_Simd : Clause<"simd"> { let clangClass = "OMPSIMDClause"; }
@@ -283,6 +283,7 @@ def OMPC_TaskReduction : Clause<"task_reduction"> {
 }
 def OMPC_InReduction : Clause<"in_reduction"> {
   let clangClass = "OMPInReductionClause";
+  let flangClass = "OmpInReductionClause";
 }
 def OMPC_UnifiedAddress : Clause<"unified_address"> {
   let clangClass = "OMPUnifiedAddressClause";
@@ -298,6 +299,7 @@ def OMPC_DynamicAllocators : Clause<"dynamic_allocators"> {
 }
 def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
   let clangClass = "OMPAtomicDefaultMemOrderClause";
+  let flangClass = "OmpAtomicDefaultMemOrderClause";
 }
 def OMPC_Allocate : Clause<"allocate"> {
   let clangClass = "OMPAllocateClause";
@@ -525,6 +527,7 @@ def OMP_Critical : Directive<"critical"> {
 }
 def OMP_TaskYield : Directive<"taskyield"> {}
 def OMP_Barrier : Directive<"barrier"> {}
+def OMP_Error : Directive<"error"> {}
 def OMP_TaskWait : Directive<"taskwait"> {
   let allowedClauses = [
     VersionedClause<OMPC_Depend, 50>
@@ -582,6 +585,7 @@ def OMP_Target : Directive<"target"> {
     VersionedClause<OMPC_IsDevicePtr>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_InReduction, 50>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_UsesAllocators, 50>
   ];
@@ -611,7 +615,7 @@ def OMP_Cancel : Directive<"cancel"> {
   ];
 }
 def OMP_Requires : Directive<"requires"> {
-  let allowedClauses = [
+  let allowedOnceClauses = [
     VersionedClause<OMPC_UnifiedAddress>,
     VersionedClause<OMPC_UnifiedSharedMemory>,
     // OpenMP 5.2 Spec: If an implementation is not supporting a requirement
@@ -859,6 +863,21 @@ def OMP_ParallelMaster : Directive<"parallel master"> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Allocate>
+  ];
+}
+def OMP_ParallelMasked : Directive<"parallel masked"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NumThreads>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Copyin>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Filter>
   ];
 }
 def OMP_ParallelSections : Directive<"parallel sections"> {
@@ -1627,6 +1646,28 @@ def OMP_MasterTaskloop : Directive<"master taskloop"> {
     VersionedClause<OMPC_Allocate>
   ];
 }
+def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Final>,
+    VersionedClause<OMPC_Untied>,
+    VersionedClause<OMPC_Mergeable>,
+    VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_GrainSize>,
+    VersionedClause<OMPC_NoGroup>,
+    VersionedClause<OMPC_NumTasks>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_InReduction>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Filter>
+  ];
+}
 def OMP_ParallelMasterTaskloop :
     Directive<"parallel master taskloop"> {
   let allowedClauses = [
@@ -1649,6 +1690,31 @@ def OMP_ParallelMasterTaskloop :
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Copyin>
+  ];
+}
+def OMP_ParallelMaskedTaskloop :
+    Directive<"parallel masked taskloop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Final>,
+    VersionedClause<OMPC_Untied>,
+    VersionedClause<OMPC_Mergeable>,
+    VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_GrainSize>,
+    VersionedClause<OMPC_NoGroup>,
+    VersionedClause<OMPC_NumTasks>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_NumThreads>,
+    VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Copyin>,
+    VersionedClause<OMPC_Filter>
   ];
 }
 def OMP_MasterTaskloopSimd : Directive<"master taskloop simd"> {
@@ -1676,6 +1742,34 @@ def OMP_MasterTaskloopSimd : Directive<"master taskloop simd"> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Order, 50>
+  ];
+}
+def OMP_MaskedTaskloopSimd : Directive<"masked taskloop simd"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Final>,
+    VersionedClause<OMPC_Untied>,
+    VersionedClause<OMPC_Mergeable>,
+    VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_Aligned>,
+    VersionedClause<OMPC_SafeLen>,
+    VersionedClause<OMPC_SimdLen>,
+    VersionedClause<OMPC_GrainSize>,
+    VersionedClause<OMPC_NoGroup>,
+    VersionedClause<OMPC_NumTasks>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_InReduction>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_NonTemporal, 50>,
+    VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Filter>
   ];
 }
 def OMP_ParallelMasterTaskloopSimd :
@@ -1706,6 +1800,37 @@ def OMP_ParallelMasterTaskloopSimd :
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Order, 50>
+  ];
+}
+def OMP_ParallelMaskedTaskloopSimd :
+    Directive<"parallel masked taskloop simd"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Final>,
+    VersionedClause<OMPC_Untied>,
+    VersionedClause<OMPC_Mergeable>,
+    VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_GrainSize>,
+    VersionedClause<OMPC_NoGroup>,
+    VersionedClause<OMPC_NumTasks>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_NumThreads>,
+    VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Copyin>,
+    VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_Aligned>,
+    VersionedClause<OMPC_SafeLen>,
+    VersionedClause<OMPC_SimdLen>,
+    VersionedClause<OMPC_NonTemporal, 50>,
+    VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Filter>
   ];
 }
 def OMP_Depobj : Directive<"depobj"> {

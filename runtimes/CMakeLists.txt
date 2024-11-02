@@ -15,14 +15,15 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_ALL_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
+set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
-  "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
+  "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
-  set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
+  set(LLVM_ENABLE_RUNTIMES ${LLVM_DEFAULT_RUNTIMES})
 endif()
 include(SortSubset)
-sort_subset("${LLVM_ALL_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
+sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
 
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
@@ -73,6 +74,26 @@ include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+# CMake omits default compiler include paths, but in runtimes build, we use
+# -nostdinc and -nostdinc++ and control include paths manually so this behavior
+# is undesirable. Filtering CMAKE_{LANG}_IMPLICIT_INCLUDE_DIRECTORIES to remove
+# paths that are inside the build directory disables this behavior.
+#
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/19227 for further details.
+
+function(filter_prefixed list prefix outvar)
+  foreach(str ${list})
+    string(FIND "${str}" "${prefix}" out)
+    if(NOT "${out}" EQUAL 0)
+      list(APPEND result ${str})
+    endif()
+  endforeach()
+  set(${outvar} ${result} PARENT_SCOPE)
+endfunction()
+
+filter_prefixed("${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES)
+filter_prefixed("${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
+filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES)
 
 check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
 if (NOT LLVM_RUNTIMES_LINKING_WORKS)
@@ -111,7 +132,7 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(C "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
@@ -207,6 +228,10 @@ foreach(entry ${runtimes})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
+  # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
+  # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
+  # currently assumes this target exists.
+  add_custom_target(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
   umbrella_lit_testsuite_end(check-runtimes)
@@ -219,15 +244,12 @@ if(LLVM_INCLUDE_TESTS)
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
 
-  if(LLVM_RUNTIMES_TARGET)
-    configure_file(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.cmake)
-  else()
-    configure_file(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
-  endif()
+  get_property(LLVM_RUNTIMES_LIT_TESTSUITES GLOBAL PROPERTY LLVM_RUNTIMES_LIT_TESTSUITES)
+  string(REPLACE ";" "\n" LLVM_RUNTIMES_LIT_TESTSUITES "${LLVM_RUNTIMES_LIT_TESTSUITES}")
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/lit.tests ${LLVM_RUNTIMES_LIT_TESTSUITES})
+else()
+  # Create empty files so the parent build can use these unconditionally.
+  file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/lit.tests)
 endif()
 
 get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)

@@ -4,9 +4,9 @@
 // ------------------------------------------------------------------------- //
 // Invalid element size
 
-udot  z0.s, z1.h, z31.h
+udot  z0.b, z1.h, z31.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: udot  z0.s, z1.h, z31.h
+// CHECK-NEXT: udot  z0.b, z1.h, z31.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 udot  z0.d, z1.b, z31.b

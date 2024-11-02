@@ -581,15 +581,15 @@ define i64 @select_icmp_x_and_8_ne_0_y64_and_not_8(i32 %x, i64 %y) {
 
 ; Don't crash on a pointer or aggregate type.
 
-define i32* @select_icmp_pointers(i32* %x, i32* %y) {
+define ptr @select_icmp_pointers(ptr %x, ptr %y) {
 ; CHECK-LABEL: @select_icmp_pointers(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32* [[X:%.*]], null
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32* [[X]], i32* [[Y:%.*]]
-; CHECK-NEXT:    ret i32* [[SEL]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[X:%.*]], null
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y:%.*]]
+; CHECK-NEXT:    ret ptr [[SEL]]
 ;
-  %cmp = icmp slt i32* %x, null
-  %sel = select i1 %cmp, i32* %x, i32* %y
-  ret i32* %sel
+  %cmp = icmp slt ptr %x, null
+  %sel = select i1 %cmp, ptr %x, ptr %y
+  ret ptr %sel
 }
 
 ; If the condition is known, we don't need to select, but we're not
@@ -621,26 +621,26 @@ define i8 @do_not_assume_sel_cond(i1 %cond, i8 %x, i8 %y) {
   ret i8 %sel
 }
 
-define i32* @select_icmp_eq_0_gep_operand(i32* %base, i64 %n) {
+define ptr @select_icmp_eq_0_gep_operand(ptr %base, i64 %n) {
 ; CHECK-LABEL: @select_icmp_eq_0_gep_operand(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[BASE:%.*]], i64 [[N:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %cond = icmp eq i64 %n, 0
-  %gep = getelementptr i32, i32* %base, i64 %n
-  %r = select i1 %cond, i32* %base, i32* %gep
-  ret i32* %r
+  %gep = getelementptr i32, ptr %base, i64 %n
+  %r = select i1 %cond, ptr %base, ptr %gep
+  ret ptr %r
 }
 
-define i32* @select_icmp_ne_0_gep_operand(i32* %base, i64 %n) {
+define ptr @select_icmp_ne_0_gep_operand(ptr %base, i64 %n) {
 ; CHECK-LABEL: @select_icmp_ne_0_gep_operand(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[BASE:%.*]], i64 [[N:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %cond = icmp ne i64 %n, 0
-  %gep = getelementptr i32, i32* %base, i64 %n
-  %r = select i1 %cond, i32* %gep, i32* %base
-  ret i32* %r
+  %gep = getelementptr i32, ptr %base, i64 %n
+  %r = select i1 %cond, ptr %gep, ptr %base
+  ret ptr %r
 }
 
 define i1 @and_cmps(i32 %x) {
@@ -845,9 +845,9 @@ define i32 @false_undef_false_freeze(i1 %cond, i32 %x) {
 
 define <2 x i32> @false_undef_true_constextpr_vec(i1 %cond) {
 ; CHECK-LABEL: @false_undef_true_constextpr_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 ptrtoint (i32* @g to i32)>
+; CHECK-NEXT:    ret <2 x i32> <i32 ptrtoint (ptr @g to i32), i32 ptrtoint (ptr @g to i32)>
 ;
-  %s = select i1 %cond, <2 x i32> <i32 undef, i32 ptrtoint (i32* @g to i32)>, <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 undef>
+  %s = select i1 %cond, <2 x i32> <i32 undef, i32 ptrtoint (ptr @g to i32)>, <2 x i32> <i32 ptrtoint (ptr @g to i32), i32 undef>
   ret <2 x i32> %s
 }
 
@@ -855,7 +855,7 @@ define i32 @all_constant_true_undef() {
 ; CHECK-LABEL: @all_constant_true_undef(
 ; CHECK-NEXT:    ret i32 1
 ;
-  %s = select i1 ptrtoint (i32 ()* @all_constant_true_undef to i1), i32 undef, i32 1
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef to i1), i32 undef, i32 1
   ret i32 %s
 }
 
@@ -863,7 +863,7 @@ define float @all_constant_false_undef() {
 ; CHECK-LABEL: @all_constant_false_undef(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %s = select i1 ptrtoint (float ()* @all_constant_false_undef to i1), float undef, float 1.0
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef to i1), float undef, float 1.0
   ret float %s
 }
 
@@ -871,7 +871,7 @@ define <2 x i32> @all_constant_true_undef_vec() {
 ; CHECK-LABEL: @all_constant_true_undef_vec(
 ; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 -1>
 ;
-  %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_vec to i1), <2 x i32> undef, <2 x i32> <i32 1, i32 -1>
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef_vec to i1), <2 x i32> undef, <2 x i32> <i32 1, i32 -1>
   ret <2 x i32> %s
 }
 
@@ -879,45 +879,45 @@ define <2 x float> @all_constant_false_undef_vec() {
 ; CHECK-LABEL: @all_constant_false_undef_vec(
 ; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float -1.000000e+00>
 ;
-  %s = select i1 ptrtoint (<2 x float> ()* @all_constant_false_undef_vec to i1), <2 x float> undef, <2 x float> <float 1.0, float -1.0>
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef_vec to i1), <2 x float> undef, <2 x float> <float 1.0, float -1.0>
   ret <2 x float> %s
 }
 
 ; Negative tests. Don't fold if the non-undef operand is a constexpr.
 define i32 @all_constant_false_undef_true_constexpr() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i32), i32 undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i32), i32 undef
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
-  %s = select i1 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i32), i32 undef
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i32), i32 undef
   ret i32 %s
 }
 
 define i32 @all_constant_true_undef_false_constexpr() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i32)
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i32)
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
-  %s = select i1 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i32)
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i32)
   ret i32 %s
 }
 
 ; Negative tests. Don't fold if the non-undef operand is a vector containing a constexpr.
 define <2 x i32> @all_constant_false_undef_true_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
 ; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
-  %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
   ret <2 x i32> %s
 }
 
 define <2 x i32> @all_constant_true_undef_false_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32> <i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32> <i32 -1, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i32)>
 ; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
-  %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32><i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32><i32 -1, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i32)>
   ret <2 x i32> %s
 }
 
@@ -986,6 +986,28 @@ define i32 @select_neutral_add_lhs(i32 %x, i32 %y) {
   ret i32 %sel
 }
 
+define <2 x i32> @select_neutral_add_rhs_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @select_neutral_add_rhs_vec(
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %cmp = icmp ne <2 x i32> %y, zeroinitializer
+  %add = add <2 x i32> %x, %y
+  %sel = select <2 x i1> %cmp, <2 x i32> %add, <2 x i32> %x
+  ret <2 x i32> %sel
+}
+
+define <2 x i32> @select_neutral_add_lhs_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @select_neutral_add_lhs_vec(
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %cmp = icmp ne <2 x i32> %y, zeroinitializer
+  %add = add <2 x i32> %y, %x
+  %sel = select <2 x i1> %cmp, <2 x i32> %add, <2 x i32> %x
+  ret <2 x i32> %sel
+}
+
 define i32 @select_neutral_sub_rhs(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_neutral_sub_rhs(
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
@@ -1020,7 +1042,38 @@ define i32 @select_ctpop_zero(i32 %x) {
   %sel = select i1 %t0, i32 0, i32 %t1
   ret i32 %sel
 }
+
+; FIXME: This is safe to fold.
+define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
+; CHECK-LABEL: @select_ctpop_zero_vec(
+; CHECK-NEXT:    [[T0:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X]])
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[T0]], <2 x i32> zeroinitializer, <2 x i32> [[T1]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %t0 = icmp eq <2 x i32> %x, zeroinitializer
+  %t1 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x)
+  %sel = select <2 x i1> %t0, <2 x i32> zeroinitializer, <2 x i32> %t1
+  ret <2 x i32> %sel
+}
+
+; Negative test: Cannot fold due to cross-lane intrinsic.
+define <2 x i32> @select_vector_reverse(<2 x i32> %x) {
+; CHECK-LABEL: @select_vector_reverse(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[REV:%.*]] = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> [[X]])
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> zeroinitializer, <2 x i32> [[REV]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %cmp = icmp eq <2 x i32> %x, zeroinitializer
+  %rev = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> %x)
+  %sel = select <2 x i1> %cmp, <2 x i32> zeroinitializer, <2 x i32> %rev
+  ret <2 x i32> %sel
+}
+
 declare i32 @llvm.ctpop.i32(i32)
+declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
+declare <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32>)
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @vec_select_no_equivalence(

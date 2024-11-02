@@ -22,8 +22,7 @@ namespace zircon {
 
 AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
   std::string QualifiedName = Node.getQualifiedNameAsString();
-  return llvm::any_of(Names,
-                      [&](StringRef Name) { return QualifiedName == Name; });
+  return llvm::is_contained(Names, QualifiedName);
 }
 
 void TemporaryObjectsCheck::registerMatchers(MatchFinder *Finder) {

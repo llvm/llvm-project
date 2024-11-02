@@ -59,9 +59,11 @@ contains
     x = acos(f5)
   end function
   ! Sanity test: f18 handles C1560 violation by ignoring RESULT
-  function f6() result(f6) !OKI (warning)
+  !WARNING: The function name should not appear in RESULT, references to 'f6' inside the function will be considered as references to the result only
+  function f6() result(f6)
   end function
-  function f7() result(f7) !OKI (warning)
+  !WARNING: The function name should not appear in RESULT, references to 'f7' inside the function will be considered as references to the result only
+  function f7() result(f7)
     real :: x, f7
     !ERROR: Recursive call to 'f7' requires a distinct RESULT in its declaration
     x = acos(f7())

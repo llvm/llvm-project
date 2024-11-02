@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s
+; RUN: opt -passes=objc-arc -S < %s
 ; rdar://12277446
 ; rdar://12480535
 ; rdar://14590914

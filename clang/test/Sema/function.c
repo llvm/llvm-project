@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -verify=c2x -pedantic -Wno-strict-prototypes
 
 // PR1892, PR11354
-void f(double a[restrict][5]) { __typeof(a) x = 10; } // expected-warning {{(aka 'double (*restrict)[5]')}}
+void f(double a[restrict][5]) { __typeof(a) x = 10; } // expected-error {{(aka 'double (*restrict)[5]')}}
 
 int foo (__const char *__path);
 int foo(__const char *__restrict __file);
@@ -117,6 +117,6 @@ void t22(int *ptr, int (*array)[3]) {
 
 void const Bar (void); // ok on decl
 // PR 20146
-void const Bar (void) // also okay on defn per DR 423
+void const Bar (void) // expected-warning {{function cannot return qualified void type 'const void'}}
 {
 }

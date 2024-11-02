@@ -315,15 +315,15 @@ define <3 x i82> @abs_nsw_sext(<3 x i7> %x) {
   ret <3 x i82> %a
 }
 
-define i32 @abs_sext_extra_use(i8 %x, i32* %p) {
+define i32 @abs_sext_extra_use(i8 %x, ptr %p) {
 ; CHECK-LABEL: @abs_sext_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[S]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[S]], i1 false)
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %s = sext i8 %x to i32
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
   ret i32 %a
 }
@@ -399,15 +399,15 @@ define i32 @srem_by_2_int_min_is_poison(i32 %x) {
   ret i32 %r
 }
 
-define <3 x i82> @srem_by_2(<3 x i82> %x, <3 x i82>* %p) {
+define <3 x i82> @srem_by_2(<3 x i82> %x, ptr %p) {
 ; CHECK-LABEL: @srem_by_2(
 ; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], <i82 2, i82 2, i82 2>
-; CHECK-NEXT:    store <3 x i82> [[S]], <3 x i82>* [[P:%.*]], align 32
+; CHECK-NEXT:    store <3 x i82> [[S]], ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], <i82 1, i82 1, i82 1>
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %s = srem <3 x i82> %x, <i82 2, i82 2, i82 2>
-  store <3 x i82> %s, <3 x i82>* %p
+  store <3 x i82> %s, ptr %p
   %r = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 false)
   ret <3 x i82> %r
 }

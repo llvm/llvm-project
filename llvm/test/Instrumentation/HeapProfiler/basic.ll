@@ -1,7 +1,7 @@
 ; Test basic memory profiler instrumentation.
 ;
-; RUN: opt < %s -memprof -memprof-module -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -memprof -memprof-module -memprof-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
+; RUN: opt < %s -passes='function(memprof),memprof-module' -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -passes='function(memprof),memprof-module' -memprof-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
 ; We need the requires since both memprof and memprof-module require reading module level metadata which is done once by the memprof-globals-md analysis
 ; RUN: opt < %s -passes='function(memprof),module(memprof-module)' -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s

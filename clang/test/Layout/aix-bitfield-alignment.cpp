@@ -29,7 +29,7 @@ int b = sizeof(B);
 
 // CHECK:      *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct B
-// CHECK-NEXT:      0:0-0 |   enum Bool b
+// CHECK-NEXT:      0:0-0 |   Bool b
 // CHECK-NEXT:            | [sizeof=4, dsize=4, align=4, preferredalign=4,
 // CHECK-NEXT:            |  nvsize=4, nvalign=4, preferrednvalign=4]
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S -disable-output
+; RUN: opt < %s -passes=indvars -S -disable-output
 
 ; PR5758
 define zeroext i1 @foo() nounwind {

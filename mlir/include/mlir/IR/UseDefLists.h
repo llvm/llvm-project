@@ -20,9 +20,12 @@
 namespace mlir {
 
 class Operation;
-template <typename OperandType> class ValueUseIterator;
-template <typename OperandType> class FilteredValueUseIterator;
-template <typename UseIteratorT, typename OperandType> class ValueUserIterator;
+template <typename OperandType>
+class ValueUseIterator;
+template <typename OperandType>
+class FilteredValueUseIterator;
+template <typename UseIteratorT, typename OperandType>
+class ValueUserIterator;
 
 //===----------------------------------------------------------------------===//
 // IROperand
@@ -77,7 +80,8 @@ protected:
   }
 
   /// Insert this operand into the given use list.
-  template <typename UseListT> void insertInto(UseListT *useList) {
+  template <typename UseListT>
+  void insertInto(UseListT *useList) {
     back = &useList->firstUse;
     nextUse = useList->firstUse;
     if (nextUse)
@@ -164,7 +168,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a single IR object that contains a use list.
-template <typename OperandType> class IRObjectWithUseList {
+template <typename OperandType>
+class IRObjectWithUseList {
 public:
   ~IRObjectWithUseList() {
     assert(use_empty() && "Cannot destroy a value that still has uses!");

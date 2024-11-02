@@ -4,9 +4,9 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
-define <16 x i8> @test_l_v16i8(<16 x i8>* %p) #0 {
+define <16 x i8> @test_l_v16i8(ptr %p) #0 {
 entry:
-  %r = load <16 x i8>, <16 x i8>* %p, align 1
+  %r = load <16 x i8>, ptr %p, align 1
   ret <16 x i8> %r
 
 ; CHECK-NOT: v4i32,ch = llvm.ppc.altivec.lvx{{.*}}<(load (s248) from %ir.p + 4294967281, align 1)>

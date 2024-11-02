@@ -68,7 +68,7 @@ define dso_local void @test_iltsll_store(i64 %a, i64 %b) {
 entry:
   %cmp = icmp slt i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -88,7 +88,7 @@ define dso_local void @test_iltsll_sext_store(i64 %a, i64 %b) {
 entry:
   %cmp = icmp slt i64 %a, %b
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob, align 8
+  store i64 %conv1, ptr @glob, align 8
   ret void
 }
 
@@ -103,6 +103,6 @@ define dso_local void @test_iltsll_sext_z_store(i64 %a) {
 entry:
   %cmp = icmp slt i64 %a, 0
   %conv2 = sext i1 %cmp to i64
-  store i64 %conv2, i64* @glob, align 8
+  store i64 %conv2, ptr @glob, align 8
   ret void
 }

@@ -1,10 +1,16 @@
 // RUN: %clang_cc1 -std=c++98 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++98 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++11 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++11 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++17 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++17 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++2a %s -Wno-parentheses -Wdeprecated -verify=expected,cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++2a %s -Wno-parentheses -Wdeprecated -verify=expected,cxx20 -triple x86_64-linux-gnu -fms-compatibility
 
 // RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS
+// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS -fms-compatibility
 
 #include "Inputs/register.h"
 
@@ -184,6 +190,9 @@ namespace DeprecatedVolatile {
     n *= 3; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
     n /= 2; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
     n %= 42; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
+    n &= 2; // undeprecated as a DR in C++23
+    n |= 2; // undeprecated as a DR in C++23
+    n ^= 2; // undeprecated as a DR in C++23
 
     (void)__is_trivially_assignable(volatile int&, int); // no warning
 

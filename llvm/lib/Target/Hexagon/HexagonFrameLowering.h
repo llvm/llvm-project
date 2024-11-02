@@ -97,7 +97,7 @@ public:
       { Hexagon::R25, -36 }, { Hexagon::R24, -40 }, { Hexagon::D12, -40 },
       { Hexagon::R27, -44 }, { Hexagon::R26, -48 }, { Hexagon::D13, -48 }
     };
-    NumEntries = array_lengthof(Offsets);
+    NumEntries = std::size(Offsets);
     return Offsets;
   }
 
@@ -128,8 +128,6 @@ private:
       BitVector &DoneT, BitVector &DoneF, BitVector &Path) const;
   void insertCFIInstructionsAt(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator At) const;
-
-  void adjustForCalleeSavedRegsSpillCall(MachineFunction &MF) const;
 
   bool expandCopy(MachineBasicBlock &B, MachineBasicBlock::iterator It,
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,

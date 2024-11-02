@@ -7,10 +7,10 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Ensure that only no offset frame indexes are folded into SVE load/stores when
 ; accessing fixed width objects.
-define void @foo(<8 x i64>* %a) #0 {
+define void @foo(ptr %a) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       SelectionDAG has 14 nodes:
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t0: ch,glue = EntryToken
 ; CHECK-NEXT:    t12: nxv2i1 = PTRUE_D TargetConstant:i32<31>
 ; CHECK-NEXT:    t2: i64,ch = CopyFromReg t0, Register:i64 %0
 ; CHECK-NEXT:    t18: nxv2i64,ch = LD1D_IMM<Mem:(volatile load (s512) from %ir.a)> t12, t2, TargetConstant:i64<0>, t0
@@ -22,9 +22,9 @@ define void @foo(<8 x i64>* %a) #0 {
 entry:
   %r0 = alloca <8 x i64>
   %r1 = alloca <8 x i64>
-  %r = load volatile <8 x i64>, <8 x i64>* %a
-  store volatile <8 x i64> %r, <8 x i64>* %r0
-  store volatile <8 x i64> %r, <8 x i64>* %r1
+  %r = load volatile <8 x i64>, ptr %a
+  store volatile <8 x i64> %r, ptr %r0
+  store volatile <8 x i64> %r, ptr %r1
   ret void
 }
 

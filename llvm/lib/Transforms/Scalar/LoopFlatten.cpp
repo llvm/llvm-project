@@ -139,7 +139,7 @@ struct FlattenInfo {
 
   PHINode *NarrowInnerInductionPHI = nullptr; // Holds the old/narrow induction
   PHINode *NarrowOuterInductionPHI = nullptr; // phis, i.e. the Phis before IV
-                                              // has been apllied. Used to skip
+                                              // has been applied. Used to skip
                                               // checks on phi nodes.
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};
@@ -211,8 +211,9 @@ struct FlattenInfo {
     if (!MatchedItCount)
       return false;
 
-    // Look through extends if the IV has been widened.
-    if (Widened &&
+    // Look through extends if the IV has been widened. Don't look through
+    // extends if we already looked through a trunc.
+    if (Widened && IsAdd &&
         (isa<SExtInst>(MatchedItCount) || isa<ZExtInst>(MatchedItCount))) {
       assert(MatchedItCount->getType() == InnerInductionPHI->getType() &&
              "Unexpected type mismatch in types after widening");
@@ -411,7 +412,7 @@ static bool findLoopComponents(
   // pre-header and one from the latch. The incoming latch value is the
   // increment variable.
   Increment =
-      dyn_cast<BinaryOperator>(InductionPHI->getIncomingValueForBlock(Latch));
+      cast<BinaryOperator>(InductionPHI->getIncomingValueForBlock(Latch));
   if (Increment->hasNUsesOrMore(3)) {
     LLVM_DEBUG(dbgs() << "Could not find valid increment\n");
     return false;
@@ -539,7 +540,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
       // they make a net difference of zero.
       if (IterationInstructions.count(&I))
         continue;
-      // The uncoditional branch to the inner loop's header will turn into
+      // The unconditional branch to the inner loop's header will turn into
       // a fall-through, so adds no cost.
       BranchInst *Br = dyn_cast<BranchInst>(&I);
       if (Br && Br->isUnconditional() &&
@@ -551,7 +552,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
                             m_Specific(FI.InnerTripCount))))
         continue;
       InstructionCost Cost =
-          TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+          TTI->getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost " << Cost << ": "; I.dump());
       RepeatedInstrCost += Cost;
     }
@@ -922,7 +923,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
   Changed |= Flatten(LN, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
-                     MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
+                     MSSAU ? MSSAU.getPointer() : nullptr);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -988,7 +989,7 @@ bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
   for (Loop *L : *LI) {
     auto LN = LoopNest::getLoopNest(*L, *SE);
     Changed |= Flatten(*LN, DT, LI, SE, AC, TTI, nullptr,
-                       MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
+                       MSSAU ? MSSAU.getPointer() : nullptr);
   }
   return Changed;
 }

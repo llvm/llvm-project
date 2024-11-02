@@ -5,26 +5,26 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; Tests that the 'nest' parameter attribute causes the relevant parameter to be
 ; passed in the right register (r11 for PPC).
 
-define i8* @nest_receiver(i8* nest %arg) nounwind {
+define ptr @nest_receiver(ptr nest %arg) nounwind {
 ; CHECK-LABEL: nest_receiver:
 ; CHECK: # %bb.0:
 ; CHECK-NEXT: mr 3, 11
 ; CHECK-NEXT: blr
 
-  ret i8* %arg
+  ret ptr %arg
 }
 
-define i8* @nest_caller(i8* %arg) nounwind {
+define ptr @nest_caller(ptr %arg) nounwind {
 ; CHECK-LABEL: nest_caller:
 ; CHECK: mr 11, 3
 ; CHECK-NEXT: bl nest_receiver
 ; CHECK: blr
 
-  %result = call i8* @nest_receiver(i8* nest %arg)
-  ret i8* %result
+  %result = call ptr @nest_receiver(ptr nest %arg)
+  ret ptr %result
 }
 
-define void @test_indirect(i32 ()* nocapture %f, i8* %p) {
+define void @test_indirect(ptr nocapture %f, ptr %p) {
 entry:
 
 ; CHECK-LABEL: test_indirect
@@ -35,8 +35,7 @@ entry:
 ; CHECK: bctrl
 ; CHECK: blr
 
-  %callee.knr.cast = bitcast i32 ()* %f to i32 (i8*)*
-  %call = tail call signext i32 %callee.knr.cast(i8* nest %p)
+  %call = tail call signext i32 %f(ptr nest %p)
   ret void
 }
 

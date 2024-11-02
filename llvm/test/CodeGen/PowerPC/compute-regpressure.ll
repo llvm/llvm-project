@@ -7,7 +7,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 define hidden fastcc void @test() {
 freescalar:
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   br label %if.end420
 
 if.end420:                                        ; preds = %freescalar
@@ -24,7 +24,7 @@ if.then430:                                       ; preds = %free_rv
 
 free_body:                                        ; preds = %if.then430, %free_rv
   %or502 = or i32 undef, 255
-  store i32 %or502, i32* undef, align 4
+  store i32 %or502, ptr undef, align 4
   ret void
 }
 

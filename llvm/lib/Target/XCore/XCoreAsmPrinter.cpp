@@ -110,7 +110,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     return;
 
   const DataLayout &DL = getDataLayout();
-  OutStreamer->SwitchSection(getObjFileLowering().SectionForGlobal(GV, TM));
+  OutStreamer->switchSection(getObjFileLowering().SectionForGlobal(GV, TM));
 
   MCSymbol *GVSym = getSymbol(GV);
   const Constant *C = GV->getInitializer();
@@ -134,7 +134,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     if (GV->hasWeakLinkage() || GV->hasLinkOnceLinkage() ||
         GV->hasCommonLinkage())
       OutStreamer->emitSymbolAttribute(GVSym, MCSA_Weak);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case GlobalValue::InternalLinkage:
   case GlobalValue::PrivateLinkage:
     break;
@@ -256,6 +256,9 @@ bool XCoreAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  XCore_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                        getSubtargetInfo().getFeatureBits());
+
   SmallString<128> Str;
   raw_svector_ostream O(Str);
 

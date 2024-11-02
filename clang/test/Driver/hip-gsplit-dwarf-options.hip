@@ -1,21 +1,21 @@
 // REQUIRES: zlib, amdgpu-registered-target
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu -c \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -c \
 // RUN:   --offload-arch=gfx906:xnack+ %s -nogpulib -nogpuinc \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   -ggdb -gsplit-dwarf 2>&1 | FileCheck %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu -c \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -c \
 // RUN:   -fgpu-rdc --offload-arch=gfx906:xnack+ %s -nogpulib -nogpuinc \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   -ggdb -gsplit-dwarf 2>&1 | FileCheck %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx906:xnack+ %s -nogpulib -nogpuinc \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   -ggdb -gsplit-dwarf 2>&1 | FileCheck %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc --offload-arch=gfx906:xnack+ %s -nogpulib -nogpuinc \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   -ggdb -gsplit-dwarf 2>&1 | FileCheck %s

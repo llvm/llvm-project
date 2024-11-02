@@ -363,6 +363,36 @@ entry:
   ret <4 x float> %b
 }
 
+define arm_aapcs_vfpcc <4 x float> @fadd_v4f32_x2(<4 x float> %x, <4 x float> %y, i32 %n) {
+; CHECK-LABEL: fadd_v4f32_x2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q2, q1
+; CHECK-NEXT:    vadd.f32 q0, q2, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+  %b = fadd <4 x float> %a, %x
+  ret <4 x float> %b
+}
+
+define arm_aapcs_vfpcc <4 x float> @fadd_v4f32_x3(<4 x float> %x, <4 x float> %y, i32 %n) {
+; CHECK-LABEL: fadd_v4f32_x3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.32 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddt.f32 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <4 x i1> @llvm.arm.mve.vctp32(i32 %n)
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+  %b = fadd nsz <4 x float> %a, %x
+  ret <4 x float> %b
+}
+
 define arm_aapcs_vfpcc <8 x half> @fadd_v8f16_x(<8 x half> %x, <8 x half> %y, i32 %n) {
 ; CHECK-LABEL: fadd_v8f16_x:
 ; CHECK:       @ %bb.0: @ %entry
@@ -374,6 +404,36 @@ entry:
   %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
   %a = select <8 x i1> %c, <8 x half> %y, <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>
   %b = fadd <8 x half> %a, %x
+  ret <8 x half> %b
+}
+
+define arm_aapcs_vfpcc <8 x half> @fadd_v8f16_x2(<8 x half> %x, <8 x half> %y, i32 %n) {
+; CHECK-LABEL: fadd_v8f16_x2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q2, q1
+; CHECK-NEXT:    vadd.f16 q0, q2, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
+  %a = select <8 x i1> %c, <8 x half> %y, <8 x half> <half 0x0000, half 0x00000, half 0x00000, half 0x00000, half 0x00000, half 0x00000, half 0x00000, half 0x00000>
+  %b = fadd <8 x half> %a, %x
+  ret <8 x half> %b
+}
+
+define arm_aapcs_vfpcc <8 x half> @fadd_v8f16_x3(<8 x half> %x, <8 x half> %y, i32 %n) {
+; CHECK-LABEL: fadd_v8f16_x3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vctp.16 r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vaddt.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = call <8 x i1> @llvm.arm.mve.vctp16(i32 %n)
+  %a = select <8 x i1> %c, <8 x half> %y, <8 x half> <half 0x0000, half 0x00000, half 0x00000, half 0x00000, half 0x00000, half 0x00000, half 0x00000, half 0x00000>
+  %b = fadd nsz <8 x half> %a, %x
   ret <8 x half> %b
 }
 

@@ -4,7 +4,7 @@
 @a = external dso_local local_unnamed_addr global i32, align 4
 @f = external dso_local local_unnamed_addr global i32, align 4
 
-define void @g(i32* %x, i32* %y, i32* %z) {
+define void @g(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl a(%rip), %eax
@@ -24,19 +24,19 @@ define void @g(i32* %x, i32* %y, i32* %z) {
 ; CHECK-NEXT:    movl %eax, (%rdx)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %1 = tail call i32 asm "", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0)
   %2 = icmp eq i32 %1, 0
   %shl1 = select i1 %2, i32 2, i32 0
-  %3 = load i32, i32* %x, align 4
+  %3 = load i32, ptr %x, align 4
   %or = or i32 %3, %shl1
-  store i32 0, i32* %y, align 4
+  store i32 0, ptr %y, align 4
   %4 = tail call i32 asm "", "=r,~{dirflag},~{fpsr},~{flags}"()
   %notmask = shl nsw i32 -1, %4
   %sub = xor i32 %notmask, -1
-  %5 = load i32, i32* @f, align 4
+  %5 = load i32, ptr @f, align 4
   %and4 = and i32 %5, %sub
   %or6 = or i32 %and4, %or
-  store i32 %or6, i32* %z, align 4
+  store i32 %or6, ptr %z, align 4
   ret void
 }

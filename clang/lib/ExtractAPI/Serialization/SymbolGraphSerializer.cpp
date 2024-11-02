@@ -14,6 +14,7 @@
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Basic/Version.h"
 #include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
@@ -31,14 +32,14 @@ namespace {
 /// at position \p Key.
 void serializeObject(Object &Paren, StringRef Key, Optional<Object> Obj) {
   if (Obj)
-    Paren[Key] = std::move(Obj.getValue());
+    Paren[Key] = std::move(Obj.value());
 }
 
 /// Helper function to inject a JSON array \p Array into object \p Paren at
 /// position \p Key.
 void serializeArray(Object &Paren, StringRef Key, Optional<Array> Array) {
   if (Array)
-    Paren[Key] = std::move(Array.getValue());
+    Paren[Key] = std::move(Array.value());
 }
 
 /// Serialize a \c VersionTuple \p V with the Symbol Graph semantic version
@@ -63,8 +64,8 @@ Optional<Object> serializeSemanticVersion(const VersionTuple &V) {
 
   Object Version;
   Version["major"] = V.getMajor();
-  Version["minor"] = V.getMinor().getValueOr(0);
-  Version["patch"] = V.getSubminor().getValueOr(0);
+  Version["minor"] = V.getMinor().value_or(0);
+  Version["patch"] = V.getSubminor().value_or(0);
   return Version;
 }
 
@@ -135,30 +136,42 @@ Object serializeSourceRange(const PresumedLoc &BeginLoc,
 /// Serialize the availability attributes of a symbol.
 ///
 /// Availability information contains the introduced, deprecated, and obsoleted
-/// versions of the symbol as semantic versions, if not default.
-/// Availability information also contains flags to indicate if the symbol is
-/// unconditionally unavailable or deprecated,
-/// i.e. \c __attribute__((unavailable)) and \c __attribute__((deprecated)).
+/// versions of the symbol for a given domain (roughly corresponds to a
+/// platform) as semantic versions, if not default.  Availability information
+/// also contains flags to indicate if the symbol is unconditionally unavailable
+/// or deprecated, i.e. \c __attribute__((unavailable)) and \c
+/// __attribute__((deprecated)).
 ///
 /// \returns \c None if the symbol has default availability attributes, or
-/// an \c Object containing the formatted availability information.
-Optional<Object> serializeAvailability(const AvailabilityInfo &Avail) {
-  if (Avail.isDefault())
+/// an \c Array containing the formatted availability information.
+Optional<Array> serializeAvailability(const AvailabilitySet &Availabilities) {
+  if (Availabilities.isDefault())
     return None;
 
-  Object Availbility;
-  serializeObject(Availbility, "introducedVersion",
-                  serializeSemanticVersion(Avail.Introduced));
-  serializeObject(Availbility, "deprecatedVersion",
-                  serializeSemanticVersion(Avail.Deprecated));
-  serializeObject(Availbility, "obsoletedVersion",
-                  serializeSemanticVersion(Avail.Obsoleted));
-  if (Avail.isUnavailable())
-    Availbility["isUnconditionallyUnavailable"] = true;
-  if (Avail.isUnconditionallyDeprecated())
-    Availbility["isUnconditionallyDeprecated"] = true;
+  Array AvailabilityArray;
 
-  return Availbility;
+  if (Availabilities.isUnconditionallyDeprecated()) {
+    Object UnconditionallyDeprecated;
+    UnconditionallyDeprecated["domain"] = "*";
+    UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
+    AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
+  }
+
+  // Note unconditionally unavailable records are skipped.
+
+  for (const auto &AvailInfo : Availabilities) {
+    Object Availability;
+    Availability["domain"] = AvailInfo.Domain;
+    serializeObject(Availability, "introducedVersion",
+                    serializeSemanticVersion(AvailInfo.Introduced));
+    serializeObject(Availability, "deprecatedVersion",
+                    serializeSemanticVersion(AvailInfo.Deprecated));
+    serializeObject(Availability, "obsoletedVersion",
+                    serializeSemanticVersion(AvailInfo.Obsoleted));
+    AvailabilityArray.emplace_back(std::move(Availability));
+  }
+
+  return AvailabilityArray;
 }
 
 /// Get the language name string for interface language references.
@@ -351,7 +364,7 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     Kind["displayName"] = "Instance Variable";
     break;
   case APIRecord::RK_ObjCMethod:
-    if (dyn_cast<ObjCMethodRecord>(&Record)->IsInstanceMethod) {
+    if (cast<ObjCMethodRecord>(&Record)->IsInstanceMethod) {
       Kind["identifier"] = AddLangPrefix("method");
       Kind["displayName"] = "Instance Method";
     } else {
@@ -360,8 +373,13 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     }
     break;
   case APIRecord::RK_ObjCProperty:
-    Kind["identifier"] = AddLangPrefix("property");
-    Kind["displayName"] = "Instance Property";
+    if (cast<ObjCPropertyRecord>(&Record)->isClassProperty()) {
+      Kind["identifier"] = AddLangPrefix("type.property");
+      Kind["displayName"] = "Type Property";
+    } else {
+      Kind["identifier"] = AddLangPrefix("property");
+      Kind["displayName"] = "Instance Property";
+    }
     break;
   case APIRecord::RK_ObjCInterface:
     Kind["identifier"] = AddLangPrefix("class");
@@ -463,8 +481,12 @@ Object SymbolGraphSerializer::serializeModule() const {
 }
 
 bool SymbolGraphSerializer::shouldSkip(const APIRecord &Record) const {
+  // Skip explicitly ignored symbols.
+  if (IgnoresList.shouldIgnore(Record.Name))
+    return true;
+
   // Skip unconditionally unavailable symbols
-  if (Record.Availability.isUnconditionallyUnavailable())
+  if (Record.Availabilities.isUnconditionallyUnavailable())
     return true;
 
   // Filter out symbols prefixed with an underscored as they are understood to
@@ -489,8 +511,8 @@ SymbolGraphSerializer::serializeAPIRecord(const RecordTy &Record) const {
   serializeObject(
       Obj, "location",
       serializeSourceLocation(Record.Location, /*IncludeFileURI=*/true));
-  serializeObject(Obj, "availbility",
-                  serializeAvailability(Record.Availability));
+  serializeArray(Obj, "availability",
+                 serializeAvailability(Record.Availabilities));
   serializeObject(Obj, "docComment", serializeDocComment(Record.Comment));
   serializeArray(Obj, "declarationFragments",
                  serializeDeclarationFragments(Record.Declaration));
@@ -537,6 +559,7 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Object Relationship;
   Relationship["source"] = Source.USR;
   Relationship["target"] = Target.USR;
+  Relationship["targetFallback"] = Target.Name;
   Relationship["kind"] = getRelationshipString(Kind);
 
   Relationships.emplace_back(std::move(Relationship));
@@ -615,7 +638,7 @@ void SymbolGraphSerializer::serializeObjCContainerRecord(
       serializeMembers(Record, Category->Methods);
       serializeMembers(Record, Category->Properties);
 
-      // Surface the protocols of the the category to the interface.
+      // Surface the protocols of the category to the interface.
       for (const auto &Protocol : Category->Protocols)
         serializeRelationship(RelationshipKind::ConformsTo, Record, Protocol);
     }

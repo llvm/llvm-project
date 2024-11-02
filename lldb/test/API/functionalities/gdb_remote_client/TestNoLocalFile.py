@@ -8,8 +8,6 @@ class TestNoLocalFile(GDBRemoteTestBase):
     """ Test the case where there is NO local copy of the file
         being debugged.  We shouldn't immediately error out, but
         rather lldb should ask debugserver if it knows about the file. """
-
-    mydir = TestBase.compute_mydir(__file__)
     
     @skipIfXmlSupportMissing
     def test_with_python(self):
@@ -101,6 +99,6 @@ class TestNoLocalFile(GDBRemoteTestBase):
         process = target.Launch(launch_info, error)
 
         self.assertSuccess(error, "Successfully launched.")
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "Should be stopped at entry")
+        self.assertState(process.GetState(), lldb.eStateStopped, "Should be stopped at entry")
         self.assertIsNotNone(self.a_packet_file, "A packet was sent")
         self.assertEqual(self.absent_file, self.a_packet_file, "The A packet file was correct")

@@ -18,8 +18,8 @@ define i32 @main() nounwind {
 ; X64-NEXT:    retq
 entry:
   %a = alloca i32, align 4
-  store i32 1, i32* %a, align 4
-  %0 = load i32, i32* %a, align 4
+  store i32 1, ptr %a, align 4
+  %0 = load i32, ptr %a, align 4
   %or = or i32 1, %0
   %and = and i32 1, %or
   %rem = urem i32 %and, 1

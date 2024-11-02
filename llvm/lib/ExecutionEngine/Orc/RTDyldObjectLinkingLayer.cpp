@@ -108,6 +108,7 @@ void RTDyldObjectLinkingLayer::emit(
   // filter these later.
   auto InternalSymbols = std::make_shared<std::set<StringRef>>();
   {
+    SymbolFlagsMap ExtraSymbolsToClaim;
     for (auto &Sym : (*Obj)->symbols()) {
 
       // Skip file symbols.
@@ -128,6 +129,33 @@ void RTDyldObjectLinkingLayer::emit(
         return;
       }
 
+      // Try to claim responsibility of weak symbols
+      // if AutoClaimObjectSymbols flag is set.
+      if (AutoClaimObjectSymbols &&
+          (*SymFlagsOrErr & object::BasicSymbolRef::SF_Weak)) {
+        auto SymName = Sym.getName();
+        if (!SymName) {
+          ES.reportError(SymName.takeError());
+          R->failMaterialization();
+          return;
+        }
+
+        // Already included in responsibility set, skip it
+        SymbolStringPtr SymbolName = ES.intern(*SymName);
+        if (R->getSymbols().count(SymbolName))
+          continue;
+
+        auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+        if (!SymFlags) {
+          ES.reportError(SymFlags.takeError());
+          R->failMaterialization();
+          return;
+        }
+
+        ExtraSymbolsToClaim[SymbolName] = *SymFlags;
+        continue;
+      }
+
       // Don't include symbols that aren't global.
       if (!(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global)) {
         if (auto SymName = Sym.getName())
@@ -137,6 +165,13 @@ void RTDyldObjectLinkingLayer::emit(
           R->failMaterialization();
           return;
         }
+      }
+    }
+
+    if (!ExtraSymbolsToClaim.empty()) {
+      if (auto Err = R->defineMaterializing(ExtraSymbolsToClaim)) {
+        ES.reportError(std::move(Err));
+        R->failMaterialization();
       }
     }
   }
@@ -235,17 +270,21 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
 
     auto InternedName = getExecutionSession().intern(KV.first);
     auto Flags = KV.second.getFlags();
-
-    // Override object flags and claim responsibility for symbols if
-    // requested.
-    if (OverrideObjectFlags || AutoClaimObjectSymbols) {
-      auto I = R.getSymbols().find(InternedName);
-
-      if (OverrideObjectFlags && I != R.getSymbols().end())
+    auto I = R.getSymbols().find(InternedName);
+    if (I != R.getSymbols().end()) {
+      // Override object flags and claim responsibility for symbols if
+      // requested.
+      if (OverrideObjectFlags)
         Flags = I->second;
-      else if (AutoClaimObjectSymbols && I == R.getSymbols().end())
-        ExtraSymbolsToClaim[InternedName] = Flags;
-    }
+      else {
+        // RuntimeDyld/MCJIT's weak tracking isn't compatible with ORC's. Even
+        // if we're not overriding flags in general we should set the weak flag
+        // according to the MaterializationResponsibility object symbol table.
+        if (I->second.isWeak())
+          Flags |= JITSymbolFlags::Weak;
+      }
+    } else if (AutoClaimObjectSymbols)
+      ExtraSymbolsToClaim[InternedName] = Flags;
 
     Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
   }

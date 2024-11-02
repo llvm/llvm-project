@@ -4,10 +4,10 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind readnone !dbg !5 {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind readnone !dbg !5 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !15, metadata !DIExpression()), !dbg !17
-  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !16, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata ptr %argv, i64 0, metadata !16, metadata !DIExpression()), !dbg !18
   %add = add nsw i32 %argc, 1, !dbg !19
   ret i32 %add, !dbg !19
 }

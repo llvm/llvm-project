@@ -9,7 +9,7 @@
 ; RUN: llc -mtriple i586-intel-elfiamcu -use-ctors < %s | FileCheck %s --check-prefix=MCU-CTORS
 ; RUN: llc -mtriple i586-intel-elfiamcu < %s | FileCheck %s --check-prefix=MCU-INIT-ARRAY
 ; RUN: llc -mtriple x86_64-win32-gnu < %s | FileCheck --check-prefix=COFF-CTOR %s
-@llvm.global_ctors = appending global [5 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @f, i8* null}, { i32, void ()*, i8* } { i32 15, void ()* @g, i8* @v }, { i32, void ()*, i8* } { i32 55555, void ()* @h, i8* @v }, { i32, void ()*, i8* } { i32 65535, void ()* @i, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @j, i8* null }]
+@llvm.global_ctors = appending global [5 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @f, ptr null}, { i32, ptr, ptr } { i32 15, ptr @g, ptr @v }, { i32, ptr, ptr } { i32 55555, ptr @h, ptr @v }, { i32, ptr, ptr } { i32 65535, ptr @i, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @j, ptr null }]
 
 @v = weak_odr global i8 0
 

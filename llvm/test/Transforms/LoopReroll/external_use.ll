@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reroll -S | FileCheck %s
+; RUN: opt < %s -passes=loop-reroll -S | FileCheck %s
 
 ; Check whether rerolling is rejected if values of the base and root
 ; instruction are used outside the loop block.

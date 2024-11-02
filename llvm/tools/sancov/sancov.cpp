@@ -57,6 +57,8 @@ namespace {
 
 // --------- COMMAND LINE FLAGS ---------
 
+cl::OptionCategory Cat("sancov Options");
+
 enum ActionType {
   CoveredFunctionsAction,
   HtmlReportAction,
@@ -84,39 +86,37 @@ cl::opt<ActionType> Action(
                    "REMOVED. Use -symbolize & coverage-report-server.py."),
         clEnumValN(SymbolizeAction, "symbolize",
                    "Produces a symbolized JSON report from binary report."),
-        clEnumValN(MergeAction, "merge", "Merges reports.")));
+        clEnumValN(MergeAction, "merge", "Merges reports.")),
+    cl::cat(Cat));
 
 static cl::list<std::string>
     ClInputFiles(cl::Positional, cl::OneOrMore,
                  cl::desc("<action> <binary files...> <.sancov files...> "
-                          "<.symcov files...>"));
+                          "<.symcov files...>"),
+                 cl::cat(Cat));
 
 static cl::opt<bool> ClDemangle("demangle", cl::init(true),
-                                cl::desc("Print demangled function name."));
+                                cl::desc("Print demangled function name"),
+                                cl::cat(Cat));
 
 static cl::opt<bool>
     ClSkipDeadFiles("skip-dead-files", cl::init(true),
-                    cl::desc("Do not list dead source files in reports."));
+                    cl::desc("Do not list dead source files in reports"),
+                    cl::cat(Cat));
 
-static cl::opt<std::string> ClStripPathPrefix(
-    "strip_path_prefix", cl::init(""),
-    cl::desc("Strip this prefix from file paths in reports."));
+static cl::opt<std::string>
+    ClStripPathPrefix("strip_path_prefix", cl::init(""),
+                      cl::desc("Strip this prefix from file paths in reports"),
+                      cl::cat(Cat));
 
 static cl::opt<std::string>
     ClIgnorelist("ignorelist", cl::init(""),
-                 cl::desc("Ignorelist file (sanitizer ignorelist format)."));
-
-static cl::opt<std::string>
-    ClBlacklist("blacklist", cl::init(""), cl::Hidden,
-                cl::desc("ignorelist file (sanitizer ignorelist format)."));
-
-static cl::opt<bool> ClUseDefaultBlacklist(
-    "use_default_blacklist", cl::init(true), cl::Hidden,
-    cl::desc("Controls if default ignorelist should be used."));
+                 cl::desc("Ignorelist file (sanitizer ignorelist format)"),
+                 cl::cat(Cat));
 
 static cl::opt<bool> ClUseDefaultIgnorelist(
     "use_default_ignorelist", cl::init(true), cl::Hidden,
-    cl::desc("Controls if default ignorelist should be used."));
+    cl::desc("Controls if default ignorelist should be used"), cl::cat(Cat));
 
 static const char *const DefaultIgnorelistStr = "fun:__sanitizer_.*\n"
                                                 "src:/usr/include/.*\n"
@@ -505,7 +505,7 @@ public:
 
 private:
   static std::unique_ptr<SpecialCaseList> createDefaultIgnorelist() {
-    if ((!ClUseDefaultIgnorelist) && (!ClUseDefaultBlacklist))
+    if (!ClUseDefaultIgnorelist)
       return std::unique_ptr<SpecialCaseList>();
     std::unique_ptr<MemoryBuffer> MB =
         MemoryBuffer::getMemBuffer(DefaultIgnorelistStr);
@@ -516,13 +516,8 @@ private:
   }
 
   static std::unique_ptr<SpecialCaseList> createUserIgnorelist() {
-    if ((ClBlacklist.empty()) && ClIgnorelist.empty())
+    if (ClIgnorelist.empty())
       return std::unique_ptr<SpecialCaseList>();
-
-    if (!ClBlacklist.empty())
-      return SpecialCaseList::createOrDie({{ClBlacklist}},
-                                          *vfs::getRealFileSystem());
-
     return SpecialCaseList::createOrDie({{ClIgnorelist}},
                                         *vfs::getRealFileSystem());
   }
@@ -774,10 +769,13 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
     for (uint64_t Index = 0, Size = 0; Index < Section.getSize();
          Index += Size) {
       MCInst Inst;
-      if (!DisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
-                                  SectionAddr + Index, nulls())) {
+      ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
+      uint64_t ThisAddr = SectionAddr + Index;
+      if (!DisAsm->getInstruction(Inst, Size, ThisBytes, ThisAddr, nulls())) {
         if (Size == 0)
-          Size = 1;
+          Size = std::min<uint64_t>(
+              ThisBytes.size(),
+              DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
         continue;
       }
       uint64_t Addr = Index + SectionAddr;
@@ -1149,6 +1147,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
 
 int main(int Argc, char **Argv) {
   llvm::InitLLVM X(Argc, Argv);
+  cl::HideUnrelatedOptions(Cat);
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -Wno-unused-value -fdouble-square-bracket-attributes -verify %s
 
 #define NODEREF __attribute__((noderef))
 
@@ -220,4 +220,25 @@ int test(void) {
   while (*p){}        // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
   do {} while (*p);   // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
   return *p;          // expected-warning{{dereferencing p; was declared with a 'noderef' type}}
+}
+
+// FIXME: Currently, [[]] syntax does not work for the `noderef` atribute.
+// For the time being, test that we consistently diagnose the attribute as
+// ignored.
+// For details see https://github.com/llvm/llvm-project/issues/55790
+void test_standard_syntax() {
+  [[clang::noderef]] int i; // expected-warning {{'noderef' attribute ignored}}
+
+  [[clang::noderef]] int *p1; // expected-warning {{'noderef' attribute ignored}}
+  *p1;
+
+  int *p2 [[clang::noderef]]; // expected-warning {{'noderef' attribute ignored}}
+  *p2;
+
+  int * [[clang::noderef]] p3; // expected-warning {{'noderef' attribute ignored}}
+  *p3;
+
+  typedef int* IntPtr;
+  [[clang::noderef]] IntPtr p4; // expected-warning {{'noderef' attribute ignored}}
+  *p4;
 }

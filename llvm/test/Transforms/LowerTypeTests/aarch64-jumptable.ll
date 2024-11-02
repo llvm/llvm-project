@@ -1,4 +1,4 @@
-; RUN: opt -S -lowertypetests -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck --check-prefixes=AARCH64 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=aarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=AARCH64 %s
 
 ; Test for the jump table generation with branch protection on AArch64
 

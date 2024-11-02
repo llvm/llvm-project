@@ -1,5 +1,5 @@
 ; PR25902: gold plugin crash.
-; RUN: opt -mtriple=i686-pc -S -lowertypetests < %s
+; RUN: opt -mtriple=i686-pc -S -passes=lowertypetests < %s
 
 define void @f(void ()* %p) {
 entry:

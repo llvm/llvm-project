@@ -29,8 +29,7 @@ static SVal conjureOffsetSymbolOnLocation(
     SVal Symbol, SVal Other, Expr* Expression, SValBuilder &svalBuilder,
     unsigned Count, const LocationContext *LCtx) {
   QualType Ty = Expression->getType();
-  if (Other.getAs<Loc>() &&
-      Ty->isIntegralOrEnumerationType() &&
+  if (isa<Loc>(Other) && Ty->isIntegralOrEnumerationType() &&
       Symbol.isUnknown()) {
     return svalBuilder.conjureSymbolVal(Expression, LCtx, Ty, Count);
   }
@@ -372,7 +371,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_IntegralToPointer:
       case CK_PointerToIntegral: {
         SVal V = state->getSVal(Ex, LCtx);
-        if (V.getAs<nonloc::PointerToMember>()) {
+        if (isa<nonloc::PointerToMember>(V)) {
           state = state->BindExpr(CastE, LCtx, UnknownVal());
           Bldr.generateNode(CastE, Pred, state);
           continue;
@@ -525,7 +524,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         }
         // Explicitly proceed with default handler for this case cascade.
       }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       // Various C++ casts that are not handled yet.
       case CK_ToUnion:
       case CK_MatrixCast:
@@ -1002,7 +1001,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
     }
     case UO_Plus:
       assert(!U->isGLValue());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case UO_Deref:
     case UO_Extension: {
       handleUOExtension(I, U, Bldr);

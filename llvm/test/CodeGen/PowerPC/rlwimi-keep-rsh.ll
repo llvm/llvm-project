@@ -19,7 +19,7 @@ entry:
   %tmp6 = and i32 %tmp2, %tmp5
   %tmp7 = shl i32 %c, 8
   %tmp8 = or i32 %tmp6, %tmp7
-  store i32 %tmp8, i32* @foo, align 4
+  store i32 %tmp8, ptr @foo, align 4
   br label %return
 
 return:

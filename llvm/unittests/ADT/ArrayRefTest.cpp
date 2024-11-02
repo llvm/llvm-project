@@ -16,34 +16,27 @@ using namespace llvm;
 
 // Check that the ArrayRef-of-pointer converting constructor only allows adding
 // cv qualifiers (not removing them, or otherwise changing the type)
-static_assert(
-    std::is_convertible<ArrayRef<int *>, ArrayRef<const int *>>::value,
-    "Adding const");
-static_assert(
-    std::is_convertible<ArrayRef<int *>, ArrayRef<volatile int *>>::value,
-    "Adding volatile");
-static_assert(!std::is_convertible<ArrayRef<int *>, ArrayRef<float *>>::value,
+static_assert(std::is_convertible_v<ArrayRef<int *>, ArrayRef<const int *>>,
+              "Adding const");
+static_assert(std::is_convertible_v<ArrayRef<int *>, ArrayRef<volatile int *>>,
+              "Adding volatile");
+static_assert(!std::is_convertible_v<ArrayRef<int *>, ArrayRef<float *>>,
               "Changing pointer of one type to a pointer of another");
-static_assert(
-    !std::is_convertible<ArrayRef<const int *>, ArrayRef<int *>>::value,
-    "Removing const");
-static_assert(
-    !std::is_convertible<ArrayRef<volatile int *>, ArrayRef<int *>>::value,
-    "Removing volatile");
+static_assert(!std::is_convertible_v<ArrayRef<const int *>, ArrayRef<int *>>,
+              "Removing const");
+static_assert(!std::is_convertible_v<ArrayRef<volatile int *>, ArrayRef<int *>>,
+              "Removing volatile");
 
 // Check that we can't accidentally assign a temporary location to an ArrayRef.
 // (Unfortunately we can't make use of the same thing with constructors.)
+static_assert(!std::is_assignable_v<ArrayRef<int *> &, int *>,
+              "Assigning from single prvalue element");
+static_assert(!std::is_assignable_v<ArrayRef<int *> &, int *&&>,
+              "Assigning from single xvalue element");
+static_assert(std::is_assignable_v<ArrayRef<int *> &, int *&>,
+              "Assigning from single lvalue element");
 static_assert(
-    !std::is_assignable<ArrayRef<int *>&, int *>::value,
-    "Assigning from single prvalue element");
-static_assert(
-    !std::is_assignable<ArrayRef<int *>&, int * &&>::value,
-    "Assigning from single xvalue element");
-static_assert(
-    std::is_assignable<ArrayRef<int *>&, int * &>::value,
-    "Assigning from single lvalue element");
-static_assert(
-    !std::is_assignable<ArrayRef<int *>&, std::initializer_list<int *>>::value,
+    !std::is_assignable_v<ArrayRef<int *> &, std::initializer_list<int *>>,
     "Assigning from an initializer list");
 
 namespace {
@@ -229,7 +222,6 @@ TEST(ArrayRefTest, EmptyInitializerList) {
   EXPECT_TRUE(A.empty());
 }
 
-// Test that makeArrayRef works on ArrayRef (no-op)
 TEST(ArrayRefTest, makeArrayRef) {
   static const int A1[] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -262,7 +254,46 @@ TEST(ArrayRefTest, makeArrayRefFromStdArray) {
   }
 }
 
-static_assert(std::is_trivially_copyable<ArrayRef<int>>::value,
+static_assert(std::is_trivially_copyable_v<ArrayRef<int>>,
               "trivially copyable");
+
+TEST(ArrayRefTest, makeMutableArrayRef) {
+  int A = 0;
+  auto AR = makeMutableArrayRef(A);
+  EXPECT_EQ(AR.data(), &A);
+  EXPECT_EQ(AR.size(), (size_t)1);
+
+  AR[0] = 1;
+  EXPECT_EQ(A, 1);
+
+  int B[] = {0, 1, 2, 3};
+  auto BR1 = makeMutableArrayRef(&B[0], 4);
+  auto BR2 = makeMutableArrayRef(B);
+  EXPECT_EQ(BR1.data(), &B[0]);
+  EXPECT_EQ(BR1.size(), (size_t)4);
+  EXPECT_EQ(BR2.data(), &B[0]);
+  EXPECT_EQ(BR2.size(), (size_t)4);
+
+  SmallVector<int> C1;
+  SmallVectorImpl<int> &C2 = C1;
+  C1.resize(5);
+  auto CR1 = makeMutableArrayRef(C1);
+  auto CR2 = makeMutableArrayRef(C2);
+  EXPECT_EQ(CR1.data(), C1.data());
+  EXPECT_EQ(CR1.size(), C1.size());
+  EXPECT_EQ(CR2.data(), C2.data());
+  EXPECT_EQ(CR2.size(), C2.size());
+
+  std::vector<int> D;
+  D.resize(5);
+  auto DR = makeMutableArrayRef(D);
+  EXPECT_EQ(DR.data(), D.data());
+  EXPECT_EQ(DR.size(), D.size());
+
+  std::array<int, 5> E;
+  auto ER = makeMutableArrayRef(E);
+  EXPECT_EQ(ER.data(), E.data());
+  EXPECT_EQ(ER.size(), E.size());
+}
 
 } // end anonymous namespace

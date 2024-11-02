@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=pre-c2x-cpp2b %s
 // RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=c2x-cpp2b %s
 // RUN: %clang_cc1 -x c++ -std=c++2b -fsyntax-only -verify=c2x-cpp2b %s
+// RUN: %clang_cc1 -x c++ -std=c++2b -fsyntax-only %s -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
 
 // id:        pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}
 // ifd:       pre-c2x-cpp2b-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}
@@ -17,8 +18,8 @@
 #id
 #ifd
 #ifde
-#elf
-#elsif
+# elf
+#  elsif
 #elseif
 #elfidef
 #elfindef
@@ -37,6 +38,18 @@
 // elfinndef: c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#elifndef'?}}
 // els:       c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#else'?}}
 // endi:      c2x-cpp2b-warning@-12 {{invalid preprocessing directive, did you mean '#endif'?}}
+
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:4}:"if"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:5}:"if"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:6}:"ifdef"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:3-[[@LINE-24]]:6}:"elif"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:4-[[@LINE-24]]:9}:"elif"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:8}:"elif"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:9}:"elifdef"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:10}:"elifdef"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:11}:"elifndef"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:5}:"else"
+// CHECK: fix-it:{{.*}}:{[[@LINE-24]]:2-[[@LINE-24]]:6}:"endif"
 
 #ifdef UNDEFINED
 #i // no diagnostic

@@ -14,6 +14,7 @@
 #include "DeallocInCategoryCheck.h"
 #include "ForbiddenSubclassingCheck.h"
 #include "MissingHashCheck.h"
+#include "NSDateFormatterCheck.h"
 #include "NSInvocationArgumentLifetimeCheck.h"
 #include "PropertyDeclarationCheck.h"
 #include "SuperSelfCheck.h"
@@ -37,6 +38,7 @@ public:
         "objc-forbidden-subclassing");
     CheckFactories.registerCheck<MissingHashCheck>(
         "objc-missing-hash");
+    CheckFactories.registerCheck<NSDateFormatterCheck>("objc-nsdate-formatter");
     CheckFactories.registerCheck<NSInvocationArgumentLifetimeCheck>(
         "objc-nsinvocation-argument-lifetime");
     CheckFactories.registerCheck<PropertyDeclarationCheck>(

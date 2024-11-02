@@ -26,7 +26,7 @@ class TestDiagnostics(unittest.TestCase):
         # FIXME: We aren't getting notes here for some reason.
         tu = get_tu('#define A x\nvoid *A = 1;\n')
         self.assertEqual(len(tu.diagnostics), 1)
-        self.assertEqual(tu.diagnostics[0].severity, Diagnostic.Warning)
+        self.assertEqual(tu.diagnostics[0].severity, Diagnostic.Error)
         self.assertEqual(tu.diagnostics[0].location.line, 2)
         self.assertEqual(tu.diagnostics[0].location.column, 7)
         self.assertIn('incompatible', tu.diagnostics[0].spelling)
@@ -53,7 +53,7 @@ class TestDiagnostics(unittest.TestCase):
     def test_diagnostic_range(self):
         tu = get_tu('void f() { int i = "a"; }')
         self.assertEqual(len(tu.diagnostics), 1)
-        self.assertEqual(tu.diagnostics[0].severity, Diagnostic.Warning)
+        self.assertEqual(tu.diagnostics[0].severity, Diagnostic.Error)
         self.assertEqual(tu.diagnostics[0].location.line, 1)
         self.assertEqual(tu.diagnostics[0].location.column, 16)
         self.assertRegex(tu.diagnostics[0].spelling,

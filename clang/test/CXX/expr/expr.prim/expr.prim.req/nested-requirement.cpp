@@ -27,7 +27,7 @@ using r4i = X<void>::r4<int>; // expected-error{{constraints not satisfied for c
 
 // C++ [expr.prim.req.nested] Examples
 namespace std_example {
-  template<typename U> concept C1 = sizeof(U) == 1; // expected-note{{because 'sizeof(int) == 1' (4 == 1) evaluated to false}}
+  template<typename U> concept C1 = sizeof(U) == 1; // expected-note{{because 'sizeof(decltype(+t)) == 1' (4 == 1) evaluated to false}}
   template<typename T> concept D =
     requires (T t) {
       requires C1<decltype (+t)>; // expected-note{{because 'decltype(+t)' (aka 'int') does not satisfy 'C1'}}
@@ -43,5 +43,11 @@ namespace std_example {
       requires sizeof(a) == 4; // OK
       requires a == 0; // expected-note{{because 'a == 0' would be invalid: constraint variable 'a' cannot be used in an evaluated context}}
     };
-  static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static_assert failed}}
+  static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static assertion failed}}
 }
+
+template<typename T>
+concept K = requires (T::Type X) {
+  X.next();
+};
+

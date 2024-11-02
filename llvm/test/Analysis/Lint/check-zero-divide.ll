@@ -1,4 +1,4 @@
-; RUN: opt -lint -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=lint -disable-output %s 2>&1 | FileCheck %s
 
 define <2 x i32> @use_vector_sdiv(<2 x i32> %a) nounwind {
   %b = sdiv <2 x i32> %a, <i32 5, i32 8>

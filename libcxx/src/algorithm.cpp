@@ -10,6 +10,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// TODO(varconst): this currently doesn't benefit `ranges::sort` because it uses `ranges::less` instead of `__less`.
+
 template void __sort<__less<char>&, char*>(char*, char*, __less<char>&);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template void __sort<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&);

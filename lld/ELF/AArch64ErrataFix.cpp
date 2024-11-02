@@ -55,7 +55,7 @@ static bool isADRP(uint32_t instr) {
   return (instr & 0x9f000000) == 0x90000000;
 }
 
-// Load and store bit patterns from ARMv8-A ARM ARM.
+// Load and store bit patterns from ARMv8-A.
 // Instructions appear in order of appearance starting from table in
 // C4.1.3 Loads and Stores.
 
@@ -412,7 +412,7 @@ void Patch843419Section::writeTo(uint8_t *buf) {
   write32le(buf, read32le(patchee->rawData.begin() + patcheeOffset));
 
   // Apply any relocation transferred from the original patchee section.
-  relocateAlloc(buf, buf + getSize());
+  target->relocateAlloc(*this, buf);
 
   // Return address is the next instruction after the one we have just copied.
   uint64_t s = getLDSTAddr() + 4;
@@ -439,7 +439,7 @@ void AArch64Err843419Patcher::init() {
   };
 
   // Collect mapping symbols for every executable InputSection.
-  for (ELFFileBase *file : objectFiles) {
+  for (ELFFileBase *file : ctx.objectFiles) {
     for (Symbol *b : file->getLocalSymbols()) {
       auto *def = dyn_cast<Defined>(b);
       if (!def)

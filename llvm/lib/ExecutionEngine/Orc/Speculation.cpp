@@ -85,7 +85,7 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
 
         auto IRNames = QueryAnalysis(Fn);
         // Instrument and register if Query has result
-        if (IRNames.hasValue()) {
+        if (IRNames) {
 
           // Emit globals for each function.
           auto LoadValueTy = Type::getInt8Ty(MContext);
@@ -126,7 +126,7 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
 
           assert(Mutator.GetInsertBlock()->getParent() == &Fn &&
                  "IR builder association mismatch?");
-          S.registerSymbols(internToJITSymbols(IRNames.getValue()),
+          S.registerSymbols(internToJITSymbols(*IRNames),
                             &R->getTargetJITDylib());
         }
       }

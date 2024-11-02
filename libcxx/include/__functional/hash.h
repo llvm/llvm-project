@@ -11,7 +11,8 @@
 
 #include <__config>
 #include <__functional/unary_function.h>
-#include <__tuple>
+#include <__fwd/hash.h>
+#include <__tuple/sfinae_helpers.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -134,7 +135,7 @@ struct __murmur2_or_cityhash<_Size, 64>
     if (__len >= 4) {
       const uint32_t __a = __loadword<uint32_t>(__s);
       const uint32_t __b = __loadword<uint32_t>(__s + __len - 4);
-      return __hash_len_16(__len + (__a << 3), __b);
+      return __hash_len_16(__len + (static_cast<_Size>(__a) << 3), __b);
     }
     if (__len > 0) {
       const unsigned char __a = static_cast<unsigned char>(__s[0]);
@@ -265,18 +266,10 @@ __murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len)
 template <class _Tp, size_t = sizeof(_Tp) / sizeof(size_t)>
 struct __scalar_hash;
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct __scalar_hash<_Tp, 0>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<_Tp, size_t>
-#endif
+    : public __unary_function<_Tp, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
@@ -291,18 +284,10 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     }
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct __scalar_hash<_Tp, 1>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<_Tp, size_t>
-#endif
+    : public __unary_function<_Tp, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
@@ -316,18 +301,10 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     }
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct __scalar_hash<_Tp, 2>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<_Tp, size_t>
-#endif
+    : public __unary_function<_Tp, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
@@ -345,18 +322,10 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     }
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct __scalar_hash<_Tp, 3>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<_Tp, size_t>
-#endif
+    : public __unary_function<_Tp, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
@@ -375,18 +344,10 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     }
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct __scalar_hash<_Tp, 4>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<_Tp, size_t>
-#endif
+    : public __unary_function<_Tp, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
@@ -418,18 +379,10 @@ inline size_t __hash_combine(size_t __lhs, size_t __rhs) _NOEXCEPT {
     return _HashT()(__p);
 }
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash<_Tp*>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<_Tp*, size_t>
-#endif
+    : public __unary_function<_Tp*, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp* argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp* __v) const _NOEXCEPT
     {
@@ -443,234 +396,118 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     }
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<bool>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<bool, size_t>
-#endif
+    : public __unary_function<bool, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef bool argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(bool __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<char, size_t>
-#endif
+    : public __unary_function<char, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef char argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(char __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<signed char>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<signed char, size_t>
-#endif
+    : public __unary_function<signed char, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef signed char argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(signed char __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned char>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<unsigned char, size_t>
-#endif
+    : public __unary_function<unsigned char, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef unsigned char argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(unsigned char __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char8_t>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<char8_t, size_t>
-#endif
+    : public __unary_function<char8_t, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef char8_t argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(char8_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 #endif // !_LIBCPP_HAS_NO_CHAR8_T
 
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char16_t>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<char16_t, size_t>
-#endif
+    : public __unary_function<char16_t, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef char16_t argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(char16_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char32_t>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<char32_t, size_t>
-#endif
+    : public __unary_function<char32_t, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef char32_t argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(char32_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
-
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<wchar_t>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<wchar_t, size_t>
-#endif
+    : public __unary_function<wchar_t, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef wchar_t argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(wchar_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<short>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<short, size_t>
-#endif
+    : public __unary_function<short, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef short argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(short __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned short>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<unsigned short, size_t>
-#endif
+    : public __unary_function<unsigned short, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef unsigned short argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(unsigned short __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<int>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<int, size_t>
-#endif
+    : public __unary_function<int, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef int argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(int __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned int>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<unsigned int, size_t>
-#endif
+    : public __unary_function<unsigned int, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef unsigned int argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(unsigned int __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<long>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<long, size_t>
-#endif
+    : public __unary_function<long, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef long argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(long __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned long>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<unsigned long, size_t>
-#endif
+    : public __unary_function<unsigned long, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef unsigned long argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(unsigned long __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
@@ -781,18 +618,10 @@ struct _LIBCPP_TEMPLATE_VIS hash<long double>
     }
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp, bool = is_enum<_Tp>::value>
 struct _LIBCPP_TEMPLATE_VIS __enum_hash
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public unary_function<_Tp, size_t>
-#endif
+    : public __unary_function<_Tp, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
@@ -814,18 +643,10 @@ struct _LIBCPP_TEMPLATE_VIS hash : public __enum_hash<_Tp>
 
 #if _LIBCPP_STD_VER > 14
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<nullptr_t>
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-  : public unary_function<nullptr_t, size_t>
-#endif
+  : public __unary_function<nullptr_t, size_t>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef nullptr_t argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(nullptr_t) const _NOEXCEPT {
         return 662607004ull;

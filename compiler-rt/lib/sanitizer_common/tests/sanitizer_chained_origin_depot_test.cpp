@@ -68,6 +68,7 @@ TEST(SanitizerCommon, ChainedOriginDepotDifferent) {
 }
 
 TEST(SanitizerCommon, ChainedOriginDepotStats) {
+  chainedOriginDepot.TestOnlyUnmap();
   StackDepotStats stats0 = chainedOriginDepot.GetStats();
 
   u32 new_id;

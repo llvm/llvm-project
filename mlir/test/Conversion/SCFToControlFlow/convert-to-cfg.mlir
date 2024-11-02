@@ -473,7 +473,7 @@ func.func @while_values(%arg0: i32, %arg1: f32) {
     scf.condition(%0) %2, %3 : i64, f64
   } do {
   // CHECK:   ^[[AFTER]](%[[ARG4:.*]]: i64, %[[ARG5:.*]]: f64):
-  ^bb0(%arg2: i64, %arg3: f64):  
+  ^bb0(%arg2: i64, %arg3: f64):
     // CHECK:   cf.br ^[[BEFORE]](%{{.*}}, %{{.*}} : i32, f32)
     scf.yield %c0_i32, %cst : i32, f32
   }
@@ -620,3 +620,30 @@ func.func @func_execute_region_elim_multi_yield() {
 // CHECK:   ^[[bb3]](%[[z:.+]]: i64):
 // CHECK:     "test.bar"(%[[z]])
 // CHECK:     return
+
+// SWITCH-LABEL: @index_switch
+func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
+  // SWITCH: cf.switch %arg0 : index
+  // SWITCH-NEXT: default: ^bb3
+  // SWITCH-NEXT: 0: ^bb1
+  // SWITCH-NEXT: 1: ^bb2
+  %0 = scf.index_switch %i -> i32
+  // SWITCH: ^bb1:
+  case 0 {
+    // SWITCH-NEXT: llvm.br ^bb4(%arg1
+    scf.yield %a : i32
+  }
+  // SWITCH: ^bb2:
+  case 1 {
+    // SWITCH-NEXT: llvm.br ^bb4(%arg2
+    scf.yield %b : i32
+  }
+  // SWITCH: ^bb3:
+  default {
+    // SWITCH-NEXT: llvm.br ^bb4(%arg3
+    scf.yield %c : i32
+  }
+  // SWITCH: ^bb4(%[[V:.*]]: i32
+  // SWITCH-NEXT: return %[[V]]
+  return %0 : i32
+}

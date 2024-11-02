@@ -3,6 +3,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX8 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
 define amdgpu_kernel void @cos_f16(half addrspace(1)* %r, half addrspace(1)* %a) {
 ; GFX6-LABEL: cos_f16:
@@ -66,6 +67,20 @@ define amdgpu_kernel void @cos_f16(half addrspace(1)* %r, half addrspace(1)* %a)
 ; GFX10-NEXT:    v_cos_f16_e32 v1, v1
 ; GFX10-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: cos_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v1, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cos_f16_e32 v1, v1
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %a.val = load half, half addrspace(1)* %a
   %r.val = call half @llvm.cos.f16(half %a.val)
   store half %r.val, half addrspace(1)* %r
@@ -155,6 +170,26 @@ define amdgpu_kernel void @cos_v2f16(<2 x half> addrspace(1)* %r, <2 x half> add
 ; GFX10-NEXT:    v_pack_b32_f16 v1, v2, v1
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: cos_v2f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX11-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_mul_f16_e32 v2, 0.15915494, v2
+; GFX11-NEXT:    v_cos_f16_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cos_f16_e32 v2, v2
+; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    v_pack_b32_f16 v1, v1, v2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
   %r.val = call <2 x half> @llvm.cos.v2f16(<2 x half> %a.val)
   store <2 x half> %r.val, <2 x half> addrspace(1)* %r

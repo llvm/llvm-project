@@ -224,7 +224,7 @@ class DWARFUnit {
   const DWARFSection *AddrOffsetSection;
   DWARFUnit *SU;
   Optional<uint64_t> AddrOffsetSectionBase;
-  bool isLittleEndian;
+  bool IsLittleEndian;
   bool IsDWO;
   const DWARFUnitVector &UnitVector;
 
@@ -252,13 +252,36 @@ class DWARFUnit {
 
   std::shared_ptr<DWARFUnit> DWO;
 
-  uint32_t getDIEIndex(const DWARFDebugInfoEntry *Die) {
+protected:
+  /// Return the index of a \p Die entry inside the unit's DIE vector.
+  ///
+  /// It is illegal to call this method with a DIE that hasn't be
+  /// created by this unit. In other word, it's illegal to call this
+  /// method on a DIE that isn't accessible by following
+  /// children/sibling links starting from this unit's getUnitDIE().
+  uint32_t getDIEIndex(const DWARFDebugInfoEntry *Die) const {
     auto First = DieArray.data();
     assert(Die >= First && Die < First + DieArray.size());
     return Die - First;
   }
 
-protected:
+  /// Return DWARFDebugInfoEntry for the specified index \p Index.
+  const DWARFDebugInfoEntry *getDebugInfoEntry(unsigned Index) const {
+    assert(Index < DieArray.size());
+    return &DieArray[Index];
+  }
+
+  const DWARFDebugInfoEntry *
+  getParentEntry(const DWARFDebugInfoEntry *Die) const;
+  const DWARFDebugInfoEntry *
+  getSiblingEntry(const DWARFDebugInfoEntry *Die) const;
+  const DWARFDebugInfoEntry *
+  getPreviousSiblingEntry(const DWARFDebugInfoEntry *Die) const;
+  const DWARFDebugInfoEntry *
+  getFirstChildEntry(const DWARFDebugInfoEntry *Die) const;
+  const DWARFDebugInfoEntry *
+  getLastChildEntry(const DWARFDebugInfoEntry *Die) const;
+
   const DWARFUnitHeader &getHeader() const { return Header; }
 
   /// Find the unit's contribution to the string offsets table and determine its
@@ -284,6 +307,7 @@ public:
 
   virtual ~DWARFUnit();
 
+  bool isLittleEndian() const { return IsLittleEndian; }
   bool isDWOUnit() const { return IsDWO; }
   DWARFContext& getContext() const { return Context; }
   const DWARFSection &getInfoSection() const { return InfoSection; }
@@ -406,11 +430,11 @@ public:
     return DWARFDie(this, &DieArray[0]);
   }
 
-  DWARFDie getNonSkeletonUnitDIE(bool ExtractUnitDIEOnly = true) {
-    parseDWO();
-    if (DWO)
-      return DWO->getUnitDIE(ExtractUnitDIEOnly);
-    return getUnitDIE(ExtractUnitDIEOnly);
+  DWARFDie getNonSkeletonUnitDIE(bool ExtractUnitDIEOnly = true,
+                                 StringRef DWOAlternativeLocation = {}) {
+    parseDWO(DWOAlternativeLocation);
+    return DWO ? DWO->getUnitDIE(ExtractUnitDIEOnly)
+               : getUnitDIE(ExtractUnitDIEOnly);
   }
 
   const char *getCompilationDir();
@@ -472,14 +496,13 @@ public:
   /// created by this unit. In other word, it's illegal to call this
   /// method on a DIE that isn't accessible by following
   /// children/sibling links starting from this unit's getUnitDIE().
-  uint32_t getDIEIndex(const DWARFDie &D) {
+  uint32_t getDIEIndex(const DWARFDie &D) const {
     return getDIEIndex(D.getDebugInfoEntry());
   }
 
-  /// Return the DIE object at the given index.
+  /// Return the DIE object at the given index \p Index.
   DWARFDie getDIEAtIndex(unsigned Index) {
-    assert(Index < DieArray.size());
-    return DWARFDie(this, &DieArray[Index]);
+    return DWARFDie(this, getDebugInfoEntry(Index));
   }
 
   DWARFDie getParent(const DWARFDebugInfoEntry *Die);
@@ -488,19 +511,26 @@ public:
   DWARFDie getFirstChild(const DWARFDebugInfoEntry *Die);
   DWARFDie getLastChild(const DWARFDebugInfoEntry *Die);
 
-  /// Return the DIE object for a given offset inside the
+  /// Return the DIE object for a given offset \p Offset inside the
   /// unit's DIE vector.
-  ///
-  /// The unit needs to have its DIEs extracted for this method to work.
   DWARFDie getDIEForOffset(uint64_t Offset) {
+    if (Optional<uint32_t> DieIdx = getDIEIndexForOffset(Offset))
+      return DWARFDie(this, &DieArray[*DieIdx]);
+
+    return DWARFDie();
+  }
+
+  /// Return the DIE index for a given offset \p Offset inside the
+  /// unit's DIE vector.
+  Optional<uint32_t> getDIEIndexForOffset(uint64_t Offset) {
     extractDIEsIfNeeded(false);
     auto It =
         llvm::partition_point(DieArray, [=](const DWARFDebugInfoEntry &DIE) {
           return DIE.getOffset() < Offset;
         });
     if (It != DieArray.end() && It->getOffset() == Offset)
-      return DWARFDie(this, &*It);
-    return DWARFDie();
+      return It - DieArray.begin();
+    return None;
   }
 
   uint32_t getLineTableOffset() const {
@@ -539,7 +569,10 @@ private:
 
   /// parseDWO - Parses .dwo file for current compile unit. Returns true if
   /// it was actually constructed.
-  bool parseDWO();
+  /// The \p AlternativeLocation specifies an alternative location to get
+  /// the DWARF context for the DWO object; this is the case when it has
+  /// been moved from its original location.
+  bool parseDWO(StringRef AlternativeLocation = {});
 };
 
 inline bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U) {

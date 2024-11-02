@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.CastToStruct -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.CastToStruct -verify %s
 
 struct s {
   int data;

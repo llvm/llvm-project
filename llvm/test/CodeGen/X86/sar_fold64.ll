@@ -6,9 +6,8 @@
 define i32 @shl48sar47(i64 %a) #0 {
 ; CHECK-LABEL: shl48sar47:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movswq %di, %rax
+; CHECK-NEXT:    movswl %di, %eax
 ; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 48
   %2 = ashr exact i64 %1, 47
@@ -32,9 +31,8 @@ define i32 @shl48sar49(i64 %a) #0 {
 define i32 @shl56sar55(i64 %a) #0 {
 ; CHECK-LABEL: shl56sar55:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsbq %dil, %rax
+; CHECK-NEXT:    movsbl %dil, %eax
 ; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 56
   %2 = ashr exact i64 %1, 55
@@ -101,25 +99,25 @@ define <4 x i32> @all_sign_bit_ashr_vec0(<4 x i32> %x) {
 define <4 x i32> @all_sign_bit_ashr_vec1(<4 x i32> %x) {
 ; SSE-LABEL: all_sign_bit_ashr_vec1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: all_sign_bit_ashr_vec1:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: all_sign_bit_ashr_vec1:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
@@ -161,25 +159,25 @@ define <4 x i32> @all_sign_bit_ashr_vec2(<4 x i32> %x) {
 define <4 x i32> @all_sign_bit_ashr_vec3(<4 x i32> %x) {
 ; SSE-LABEL: all_sign_bit_ashr_vec3:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: all_sign_bit_ashr_vec3:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: all_sign_bit_ashr_vec3:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq

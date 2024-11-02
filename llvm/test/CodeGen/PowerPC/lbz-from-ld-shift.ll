@@ -2,7 +2,7 @@
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs -mtriple=powerpc64--   < %s | FileCheck %s --check-prefixes=BE
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs -mtriple=powerpc64le-- < %s | FileCheck %s --check-prefixes=LE
 
-define signext i32 @test(i32* nocapture readonly %P) nounwind {
+define signext i32 @test(ptr nocapture readonly %P) nounwind {
 ; BE-LABEL: test:
 ; BE:       # %bb.0:
 ; BE-NEXT:    lbz r3, 0(r3)
@@ -12,7 +12,7 @@ define signext i32 @test(i32* nocapture readonly %P) nounwind {
 ; LE:       # %bb.0:
 ; LE-NEXT:    lbz r3, 3(r3)
 ; LE-NEXT:    blr
-  %t0 = load i32, i32* %P, align 4
+  %t0 = load i32, ptr %P, align 4
   %shr = lshr i32 %t0, 24
   ret i32 %shr
 }

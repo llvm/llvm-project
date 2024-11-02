@@ -15,6 +15,6 @@ define i64 @foo() {
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 entry:
-  %value = load atomic i64, i64* @a acquire, align 8
+  %value = load atomic i64, ptr @a acquire, align 8
   ret i64 %value
 }

@@ -36,9 +36,9 @@ f2:
 
   ldr.w r0, =foo
 @ CHECK-ARM: ldr r0, .Ltmp[[TMP2:[0-9]+]]
-@ CHECK-DARWIN-ARM: ldr r0, Ltmp2
+@ CHECK-DARWIN-ARM: ldr r0, Ltmp1
 @ CHECK-THUMB2: ldr.w r0, .Ltmp[[TMP2:[0-9]+]]
-@ CHECK-DARWIN-THUMB2: ldr.w r0, Ltmp2
+@ CHECK-DARWIN-THUMB2: ldr.w r0, Ltmp1
 @ CHECK-THUMB: error: instruction requires: thumb2
 @ CHECK-THUMB-NEXT:  ldr.w r0, =foo
 
@@ -56,12 +56,8 @@ f3:
 @ CHECK-NEXT: .long   65538
 @ CHECK: .Ltmp1:
 @ CHECK-NEXT: .long   foo
-@ CHECK: .Ltmp2:
-@ CHECK-NEXT: .long   foo
 
 @ CHECK-DARWIN: Ltmp0:
 @ CHECK-DARWIN-NEXT: .long   65538
 @ CHECK-DARWIN: Ltmp1:
-@ CHECK-DARWIN-NEXT: .long   foo
-@ CHECK-DARWIN: Ltmp2:
 @ CHECK-DARWIN-NEXT: .long   foo

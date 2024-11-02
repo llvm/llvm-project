@@ -594,20 +594,22 @@ define <2 x float> @fake_fneg_nsz_fadd_constant_vec(<2 x float> %x) {
 
 define float @fneg_nsz_fadd_constant_expr(float %x) {
 ; CHECK-LABEL: @fneg_nsz_fadd_constant_expr(
-; CHECK-NEXT:    [[R:%.*]] = fsub nsz float fneg (float bitcast (i32 ptrtoint (i16* @g to i32) to float)), [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], bitcast (i32 ptrtoint (ptr @g to i32) to float)
+; CHECK-NEXT:    [[R:%.*]] = fneg nsz float [[A]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %a = fadd float %x, bitcast (i32 ptrtoint (i16* @g to i32) to float)
+  %a = fadd float %x, bitcast (i32 ptrtoint (ptr @g to i32) to float)
   %r = fneg nsz float %a
   ret float %r
 }
 
 define float @fake_fneg_nsz_fadd_constant_expr(float %x) {
 ; CHECK-LABEL: @fake_fneg_nsz_fadd_constant_expr(
-; CHECK-NEXT:    [[R:%.*]] = fsub nsz float fneg (float bitcast (i32 ptrtoint (i16* @g to i32) to float)), [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], bitcast (i32 ptrtoint (ptr @g to i32) to float)
+; CHECK-NEXT:    [[R:%.*]] = fneg nsz float [[A]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %a = fadd float %x, bitcast (i32 ptrtoint (i16* @g to i32) to float)
+  %a = fadd float %x, bitcast (i32 ptrtoint (ptr @g to i32) to float)
   %r = fsub nsz float -0.0, %a
   ret float %r
 }

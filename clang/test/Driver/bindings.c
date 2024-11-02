@@ -12,14 +12,14 @@
 // RUN: %clang -target i386-unknown-unknown -ccc-print-bindings -fsyntax-only -x c++ %s 2>&1 | FileCheck %s --check-prefix=CHECK08
 // CHECK08: "clang", inputs: ["{{.*}}bindings.c"], output: (nothing)
 
-// RUN: %clang -target i386-apple-darwin9 -ccc-print-bindings %s -S -arch ppc 2>&1 | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang -target i386-apple-darwin11 -ccc-print-bindings %s -S -arch ppc 2>&1 | FileCheck %s --check-prefix=CHECK11
 // CHECK11: "clang", inputs: ["{{.*}}bindings.c"], output: "bindings.s"
 
 // RUN: %clang -target powerpc-unknown-unknown -ccc-print-bindings %s -S 2>&1 | FileCheck %s --check-prefix=CHECK12
 // CHECK12: "clang", inputs: ["{{.*}}bindings.c"], output: "bindings.s"
 
 // Darwin bindings
-// RUN: %clang -target i386-apple-darwin9 -no-integrated-as -ccc-print-bindings %s 2>&1 | FileCheck %s --check-prefix=CHECK14
+// RUN: %clang -target i386-apple-darwin11 -no-integrated-as -ccc-print-bindings %s 2>&1 | FileCheck %s --check-prefix=CHECK14
 // CHECK14: "clang", inputs: ["{{.*}}bindings.c"], output: "{{.*}}.s"
 // CHECK14: "darwin::Assembler", inputs: ["{{.*}}.s"], output: "{{.*}}.o"
 // CHECK14: "darwin::Linker", inputs: ["{{.*}}.o"], output: "a.out"
@@ -29,5 +29,5 @@
 // CHECK15: "x86_64-unknown-linux-gnu" - "GNU::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"
 
 // Darwin StaticLibTool binding
-// RUN: %clang -target i386-apple-darwin9 -ccc-print-bindings --emit-static-lib %s 2>&1 | FileCheck %s --check-prefix=CHECK16
-// CHECK16: "i386-apple-darwin9" - "darwin::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"
+// RUN: %clang -target i386-apple-darwin11 -ccc-print-bindings --emit-static-lib %s 2>&1 | FileCheck %s --check-prefix=CHECK16
+// CHECK16: "i386-apple-darwin11" - "darwin::StaticLibTool", inputs: ["{{.*}}.o"], output: "a.out"

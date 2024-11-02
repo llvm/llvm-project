@@ -225,8 +225,15 @@ public:
     /// module is imported.
     VisibleWhenImported,
 
+    /// This declaration has an owning module, and is visible to lookups
+    /// that occurs within that module. And it is reachable in other module
+    /// when the owning module is transitively imported.
+    ReachableWhenImported,
+
     /// This declaration has an owning module, but is only visible to
     /// lookups that occur within that module.
+    /// The discarded declarations in global module fragment belongs
+    /// to this group too.
     ModulePrivate
   };
 
@@ -235,8 +242,8 @@ protected:
   /// DeclContext. These pointers form the linked list that is
   /// traversed via DeclContext's decls_begin()/decls_end().
   ///
-  /// The extra two bits are used for the ModuleOwnershipKind.
-  llvm::PointerIntPair<Decl *, 2, ModuleOwnershipKind> NextInContextAndBits;
+  /// The extra three bits are used for the ModuleOwnershipKind.
+  llvm::PointerIntPair<Decl *, 3, ModuleOwnershipKind> NextInContextAndBits;
 
 private:
   friend class DeclContext;
@@ -440,6 +447,14 @@ public:
     return const_cast<Decl*>(this)->getDeclContext();
   }
 
+  /// Return the non transparent context.
+  /// See the comment of `DeclContext::isTransparentContext()` for the
+  /// definition of transparent context.
+  DeclContext *getNonTransparentDeclContext();
+  const DeclContext *getNonTransparentDeclContext() const {
+    return const_cast<Decl *>(this)->getNonTransparentDeclContext();
+  }
+
   /// Find the innermost non-closure ancestor of this declaration,
   /// walking up through blocks, lambdas, etc.  If that ancestor is
   /// not a code context (!isFunctionOrMethod()), returns null.
@@ -458,6 +473,9 @@ public:
   bool isInAnonymousNamespace() const;
 
   bool isInStdNamespace() const;
+
+  // Return true if this is a FileContext Decl.
+  bool isFileContextDecl() const;
 
   ASTContext &getASTContext() const LLVM_READONLY;
 
@@ -621,6 +639,14 @@ public:
   ///   }
   ///   export void B::f2(); // isInExportDeclContext() == true
   bool isInExportDeclContext() const;
+
+  bool isInvisibleOutsideTheOwningModule() const {
+    return getModuleOwnershipKind() > ModuleOwnershipKind::VisibleWhenImported;
+  }
+
+  /// FIXME: Implement discarding declarations actually in global module
+  /// fragment. See [module.global.frag]p3,4 for details.
+  bool isDiscardedInGlobalModuleFragment() const { return false; }
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -799,6 +825,11 @@ public:
     return (int)getModuleOwnershipKind() <= (int)ModuleOwnershipKind::Visible;
   }
 
+  bool isReachable() const {
+    return (int)getModuleOwnershipKind() <=
+           (int)ModuleOwnershipKind::ReachableWhenImported;
+  }
+
   /// Set that this declaration is globally visible, even if it came from a
   /// module that is not visible.
   void setVisibleDespiteOwningModule() {
@@ -900,10 +931,12 @@ public:
 
   /// If this decl is defined inside a function/method/block it returns
   /// the corresponding DeclContext, otherwise it returns null.
-  const DeclContext *getParentFunctionOrMethod() const;
-  DeclContext *getParentFunctionOrMethod() {
-    return const_cast<DeclContext*>(
-                    const_cast<const Decl*>(this)->getParentFunctionOrMethod());
+  const DeclContext *
+  getParentFunctionOrMethod(bool LexicalParent = false) const;
+  DeclContext *getParentFunctionOrMethod(bool LexicalParent = false) {
+    return const_cast<DeclContext *>(
+        const_cast<const Decl *>(this)->getParentFunctionOrMethod(
+            LexicalParent));
   }
 
   /// Retrieves the "canonical" declaration of the given declaration.
@@ -1098,7 +1131,7 @@ public:
   /// Determine whether this is a block-scope declaration with linkage.
   /// This will either be a local variable declaration declared 'extern', or a
   /// local function declaration.
-  bool isLocalExternDecl() {
+  bool isLocalExternDecl() const {
     return IdentifierNamespace & IDNS_LocalExtern;
   }
 
@@ -1596,6 +1629,12 @@ class DeclContext {
     uint64_t IsDefaulted : 1;
     uint64_t IsExplicitlyDefaulted : 1;
     uint64_t HasDefaultedFunctionInfo : 1;
+
+    /// For member functions of complete types, whether this is an ineligible
+    /// special member function or an unselected destructor. See
+    /// [class.mem.special].
+    uint64_t IsIneligibleOrNotSelected : 1;
+
     uint64_t HasImplicitReturnZero : 1;
     uint64_t IsLateTemplateParsed : 1;
 
@@ -1628,10 +1667,14 @@ class DeclContext {
 
     /// Indicates if the function uses Floating Point Constrained Intrinsics
     uint64_t UsesFPIntrin : 1;
+
+    // Indicates this function is a constrained friend, where the constraint
+    // refers to an enclosing template for hte purposes of [temp.friend]p9.
+    uint64_t FriendConstraintRefersToEnclosingTemplate : 1;
   };
 
   /// Number of non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = 27 };
+  enum { NumFunctionDeclBits = 29 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1643,12 +1686,12 @@ class DeclContext {
     /// For the bits in FunctionDeclBitfields.
     uint64_t : NumFunctionDeclBits;
 
-    /// 24 bits to fit in the remaining available space.
+    /// 22 bits to fit in the remaining available space.
     /// Note that this makes CXXConstructorDeclBitfields take
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    uint64_t NumCtorInitializers : 21;
+    uint64_t NumCtorInitializers : 19;
     uint64_t IsInheritingConstructor : 1;
 
     /// Whether this constructor has a trail-allocated explicit specifier.
@@ -1866,6 +1909,10 @@ protected:
 public:
   ~DeclContext();
 
+  // For use when debugging; hasValidDeclKind() will always return true for
+  // a correctly constructed object within its lifetime.
+  bool hasValidDeclKind() const;
+
   Decl::Kind getDeclKind() const {
     return static_cast<Decl::Kind>(DeclContextBits.DeclKind);
   }
@@ -1981,7 +2028,7 @@ public:
   /// Here, E is a transparent context, so its enumerator (Val1) will
   /// appear (semantically) that it is in the same context of E.
   /// Examples of transparent contexts include: enumerations (except for
-  /// C++0x scoped enums), and C++ linkage specifications.
+  /// C++0x scoped enums), C++ linkage specifications and export declaration.
   bool isTransparentContext() const;
 
   /// Determines whether this context or some of its ancestors is a
@@ -2487,6 +2534,8 @@ public:
   static bool classof(const Decl *D);
   static bool classof(const DeclContext *D) { return true; }
 
+  void dumpAsDecl() const;
+  void dumpAsDecl(const ASTContext *Ctx) const;
   void dumpDeclContext() const;
   void dumpLookups() const;
   void dumpLookups(llvm::raw_ostream &OS, bool DumpDecls = false,

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s --check-prefix=WINDOWS
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple x86_64-linux | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-windows-msvc | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-linux | FileCheck %s --check-prefix=LINUX
 
 // Make it possible to pass NULL through variadic functions on platforms where
 // NULL has an integer type that is more narrow than a pointer. On such
@@ -15,9 +15,9 @@ void f(const char *f) {
   v(f, 1, 2, 3, NULL);
   kr(f, 1, 2, 3, 0);
 }
-// WINDOWS: define dso_local void @f(i8* noundef %f)
-// WINDOWS: call void (i8*, ...) @v(i8* {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i64 noundef 0)
-// WINDOWS: call void bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32)*)(i8* noundef {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)
-// LINUX: define{{.*}} void @f(i8* noundef %f)
-// LINUX: call void (i8*, ...) @v(i8* {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)
-// LINUX: call void (i8*, i32, i32, i32, i32, ...) bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32, ...)*)(i8* {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)
+// WINDOWS: define dso_local void @f(ptr noundef %f)
+// WINDOWS: call void (ptr, ...) @v(ptr {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i64 noundef 0)
+// WINDOWS: call void @kr(ptr noundef {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)
+// LINUX: define{{.*}} void @f(ptr noundef %f)
+// LINUX: call void (ptr, ...) @v(ptr {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)
+// LINUX: call void (ptr, i32, i32, i32, i32, ...) @kr(ptr {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)

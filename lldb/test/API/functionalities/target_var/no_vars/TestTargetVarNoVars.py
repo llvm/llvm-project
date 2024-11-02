@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TestTargetVarNoVars(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_target_var_no_vars(self):

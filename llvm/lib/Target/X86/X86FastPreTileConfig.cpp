@@ -374,7 +374,7 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
         // The PHI node is coverted to tileload instruction. Get the stack
         // address from tileload operands.
         MachineInstr *TileLoad = MRI->getVRegDef(InTileReg);
-        assert(TileLoad->getOpcode() == X86::PTILELOADDV);
+        assert(TileLoad && TileLoad->getOpcode() == X86::PTILELOADDV);
         Register InRowReg = TileLoad->getOperand(1).getReg();
         Register InColReg = TileLoad->getOperand(2).getReg();
         Register InStackAddrReg = TileLoad->getOperand(3).getReg();

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument -fxray-always-emit-typedevents -x c++ \
+// RUN: %clang_cc1 -fxray-instrument -fxray-always-emit-typedevents -x c++ \
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck %s
 
@@ -6,5 +6,5 @@
 [[clang::xray_never_instrument]] void neverInstrument() {
   static constexpr char kPhase[] = "never";
   __xray_typedevent(1, kPhase, 5);
-  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, i8*{{.*}}, i32 5)
+  // CHECK: call void @llvm.xray.typedevent(i16 {{.*}}, ptr{{.*}}, i32 5)
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 ; ModuleID = '2004-04-05-InvokeCastCrash.ll'
 	%struct.__false_type = type { i8 }
 	%"struct.__gnu_cxx::_Hashtable_node<const llvm::Constant*>" = type { %"struct.__gnu_cxx::_Hashtable_node<const llvm::Constant*>"*, %"struct.llvm::Constant"* }

@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 ; using copy of this (as it would happen under -O0)
-define i8* @f_copy(i64 %this_arg) "coroutine.presplit"="1" {
+define i8* @f_copy(i64 %this_arg) presplitcoroutine {
 entry:
   %this.addr = alloca i64
   store i64 %this_arg, i64* %this.addr

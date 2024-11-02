@@ -8,7 +8,7 @@ namespace Bob {
 enum A { a, // expected-note{{declared here}}
          b,
          c };
-class C; // expected-note{{previous use}}
+class C;
 enum class D : int;
 enum class D { d,
                e,
@@ -20,11 +20,11 @@ using enum Bob::A;
 #if __cplusplus < 202002
 // expected-warning@-2{{is a C++20 extension}}
 #endif
-using enum Bob::B; // expected-error{{no enum named 'B'}}
+using enum Bob::B; // expected-error{{unknown type name B}}
 #if __cplusplus < 202002
 // expected-warning@-2{{is a C++20 extension}}
 #endif
-using enum Bob::C; // expected-error{{tag type that does not match}}
+using enum Bob::C; // expected-error{{'Bob::C' is not an enumerated type}}
 #if __cplusplus < 202002
 // expected-warning@-2{{is a C++20 extension}}
 #endif
@@ -38,6 +38,16 @@ using enum Bob::D;
 #if __cplusplus < 202002
 // expected-warning@-2{{is a C++20 extension}}
 #endif
+
+void DR2621() {
+  using A_t = Bob::A;
+  using enum A_t;
+#if __cplusplus < 202002
+// expected-warning@-2{{is a C++20 extension}}
+#endif
+  A_t x = a;
+}
+
 } // namespace One
 
 namespace Two {

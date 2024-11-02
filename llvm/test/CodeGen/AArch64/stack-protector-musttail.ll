@@ -64,3 +64,42 @@ define i8* @caller2() ssp {
   %res = bitcast i64* %tmp to i8*
   ret i8* %res
 }
+
+define void @caller3() ssp {
+; CHECK-LABEL: define void @caller3()
+; Prologue:
+; CHECK: @llvm.stackguard
+
+; CHECK: [[GUARD:%.*]] = call i8* @llvm.stackguard()
+; CHECK: [[TOKEN:%.*]] = load volatile i8*, i8** {{%.*}}
+; CHECK: [[TST:%.*]] = icmp eq i8* [[GUARD]], [[TOKEN]]
+; CHECK: br i1 [[TST]]
+
+; CHECK: tail call void @callee()
+; CHECK-NEXT: ret void
+  %var = alloca [2 x i64]
+  store [2 x i64]* %var, [2 x i64]** @var
+  tail call void @callee()
+  ret void
+}
+
+define i8* @caller4() ssp {
+; CHECK-LABEL: define i8* @caller4()
+; Prologue:
+; CHECK: @llvm.stackguard
+
+; CHECK: [[GUARD:%.*]] = call i8* @llvm.stackguard()
+; CHECK: [[TOKEN:%.*]] = load volatile i8*, i8** {{%.*}}
+; CHECK: [[TST:%.*]] = icmp eq i8* [[GUARD]], [[TOKEN]]
+; CHECK: br i1 [[TST]]
+
+; CHECK: [[TMP:%.*]] = tail call i64* @callee2()
+; CHECK-NEXT: [[RES:%.*]] = bitcast i64* [[TMP]] to i8*
+; CHECK-NEXT: ret i8* [[RES]]
+
+  %var = alloca [2 x i64]
+  store [2 x i64]* %var, [2 x i64]** @var
+  %tmp = tail call i64* @callee2()
+  %res = bitcast i64* %tmp to i8*
+  ret i8* %res
+}

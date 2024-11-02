@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class CppDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -118,7 +116,7 @@ class CppDataFormatterTestCase(TestBase):
             substrs=[
                 '(char *) $',
                 ' = ptr = ',
-                ' "1234567890123456789012345678901234567890123456789012345678901234ABC"'])
+                '"1234567890123456789012345678901234567890123456789012345678901234ABC"'])
 
         self.runCmd("type summary add -c TestPoint")
 

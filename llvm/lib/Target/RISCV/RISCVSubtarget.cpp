@@ -15,6 +15,7 @@
 #include "RISCVCallLowering.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVLegalizerInfo.h"
+#include "RISCVMacroFusion.h"
 #include "RISCVRegisterBankInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -43,7 +44,7 @@ static cl::opt<int> RVVVectorBitsMin(
              "with zero meaning no minimum size is assumed. A value of -1 "
              "means use Zvl*b extension. This is primarily used to enable "
              "autovectorization with fixed width vectors."),
-    cl::init(0), cl::Hidden);
+    cl::init(-1), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",
@@ -90,8 +91,8 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                StringRef TuneCPU, StringRef FS,
                                StringRef ABIName, const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      UserReservedRegister(RISCV::NUM_TARGET_REGS),
-      FrameLowering(initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
+      FrameLowering(
+          initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
   CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   Legalizer.reset(new RISCVLegalizerInfo(*this));
@@ -201,6 +202,12 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 }
 
 bool RISCVSubtarget::enableSubRegLiveness() const {
-  // TODO: Enable for for RVV to better handle LMUL>1 and segment load/store.
+  // FIXME: Enable subregister liveness by default for RVV to better handle
+  // LMUL>1 and segment load/store.
   return EnableSubRegLiveness;
+}
+
+void RISCVSubtarget::getPostRAMutations(
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
+  Mutations.push_back(createRISCVMacroFusionDAGMutation());
 }

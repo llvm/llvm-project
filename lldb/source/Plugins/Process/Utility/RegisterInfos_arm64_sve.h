@@ -304,6 +304,8 @@ static uint32_t g_contained_z31[] = {sve_z31, LLDB_INVALID_REGNUM};
 // Default offset SVE Z registers and all corresponding pseudo registers
 // ( S, D and V registers) is zero and will be configured during execution.
 
+// clang-format off
+
 // Defines sve pseudo vector (V) register with 16-byte size
 #define DEFINE_VREG_SVE(vreg, zreg)                                            \
   {                                                                            \
@@ -333,7 +335,6 @@ static uint32_t g_contained_z31[] = {sve_z31, LLDB_INVALID_REGNUM};
   }
 
 static lldb_private::RegisterInfo g_register_infos_arm64_sve_le[] = {
-    // clang-format off
     // DEFINE_GPR64(name, GENERIC KIND)
     DEFINE_GPR64(x0, LLDB_REGNUM_GENERIC_ARG1),
     DEFINE_GPR64(x1, LLDB_REGNUM_GENERIC_ARG2),

@@ -161,13 +161,19 @@ def: Separate<["-"], "j">,
   HelpText<"Alias for --num-threads">,
   Group<grp_general>;
 
+def reproducer: Separate<["--", "-"], "reproducer">,
+  MetaVarName<"<mode>">,
+  HelpText<"Specify the reproducer generation mode. Valid options are 'GenerateOnExit', 'GenerateOnCrash', 'Use', 'Off'.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "reproducer=">, Alias<reproducer>;
+
 def gen_reproducer: F<"gen-reproducer">,
-  HelpText<"Generate a reproducer consisting of the input object files.">,
+  HelpText<"Generate a reproducer consisting of the input object files. Alias for --reproducer=GenerateOnExit.">,
   Group<grp_general>;
 
 def use_reproducer: Separate<["--", "-"], "use-reproducer">,
   MetaVarName<"<path>">,
-  HelpText<"Use the object files from the given reproducer path.">,
+  HelpText<"Use the object files from the given reproducer path. Alias for --reproducer=Use.">,
   Group<grp_general>;
 def: Joined<["--", "-"], "use-reproducer=">, Alias<use_reproducer>;
 

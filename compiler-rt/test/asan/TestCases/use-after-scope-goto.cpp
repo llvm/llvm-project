@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O0 -fsanitize-address-use-after-scope %s -o %t && %run %t
+// RUN: %clangxx_asan -O0 %s -o %t && %run %t
 
 // Function jumps over variable initialization making lifetime analysis
 // ambiguous. Asan should ignore such variable and program must not fail.

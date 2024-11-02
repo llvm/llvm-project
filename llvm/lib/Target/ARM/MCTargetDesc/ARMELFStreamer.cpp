@@ -17,8 +17,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -98,7 +98,7 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitInst(uint32_t Inst, char Suffix = '\0') override;
   void finishAttributeSection() override;
 
-  void AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
   void emitARMWinCFIAllocStack(unsigned Size, bool Wide) override;
@@ -202,7 +202,12 @@ void ARMTargetAsmStreamer::emitTextAttribute(unsigned Attribute,
     OS << "\t.cpu\t" << String.lower();
     break;
   default:
-    OS << "\t.eabi_attribute\t" << Attribute << ", \"" << String << "\"";
+    OS << "\t.eabi_attribute\t" << Attribute << ", \"";
+    if (Attribute == ARMBuildAttrs::also_compatible_with)
+      OS.write_escaped(String);
+    else
+      OS << String;
+    OS << "\"";
     if (IsVerboseAsm) {
       StringRef Name = ELFAttrs::attrTypeAsString(
           Attribute, ARMBuildAttrs::getARMAttributeTags());
@@ -250,8 +255,8 @@ void ARMTargetAsmStreamer::emitFPU(unsigned FPU) {
 
 void ARMTargetAsmStreamer::finishAttributeSection() {}
 
-void
-ARMTargetAsmStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *S) {
+void ARMTargetAsmStreamer::annotateTLSDescriptorSequence(
+    const MCSymbolRefExpr *S) {
   OS << "\t.tlsdescseq\t" << S->getSymbol().getName() << "\n";
 }
 
@@ -415,7 +420,7 @@ private:
   void finishAttributeSection() override;
   void emitLabel(MCSymbol *Symbol) override;
 
-  void AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
   // Reset state between object emissions
@@ -831,10 +836,6 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
     S.setAttributeItem(CPU_arch, ARM::getArchAttr(EmittedArch), false);
 
   switch (Arch) {
-  case ARM::ArchKind::ARMV2:
-  case ARM::ArchKind::ARMV2A:
-  case ARM::ArchKind::ARMV3:
-  case ARM::ArchKind::ARMV3M:
   case ARM::ArchKind::ARMV4:
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     break;
@@ -1090,8 +1091,8 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
     Streamer.emitThumbFunc(Symbol);
 }
 
-void
-ARMTargetELFStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *S) {
+void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
+    const MCSymbolRefExpr *S) {
   getStreamer().EmitFixup(S, FK_Data_4);
 }
 
@@ -1163,7 +1164,7 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
   assert(EHSection && "Failed to get the required EH section");
 
   // Switch to .ARM.extab or .ARM.exidx section
-  SwitchSection(EHSection);
+  switchSection(EHSection);
   emitValueToAlignment(4, 0, 1, 0);
 }
 
@@ -1256,7 +1257,7 @@ void ARMELFStreamer::emitFnEnd() {
   }
 
   // Switch to the section containing FnStart
-  SwitchSection(&FnStart->getSection());
+  switchSection(&FnStart->getSection());
 
   // Clean exception handling frame information
   EHReset();

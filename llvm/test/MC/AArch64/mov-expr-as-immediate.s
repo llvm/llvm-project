@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu %s -filetype=obj -o %t
-// RUN: llvm-objdump --triple aarch64-none-linux-gnu -Dr %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple aarch64-none-linux-gnu -Dr %t | FileCheck %s
 
 0:
 .skip 4

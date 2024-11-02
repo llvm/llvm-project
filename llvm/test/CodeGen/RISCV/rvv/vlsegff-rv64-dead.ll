@@ -8,7 +8,7 @@ declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} @llvm.riscv.vlseg2ff.mask
 define void @test_vlseg2ff_dead_value(i16* %base, i64 %vl, i64* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_dead_value:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sd a0, 0(a2)
@@ -40,7 +40,7 @@ entry:
 define <vscale x 16 x i16> @test_vlseg2ff_dead_vl(i16* %base, i64 %vl) {
 ; CHECK-LABEL: test_vlseg2ff_dead_vl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v4, (a0)
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -67,7 +67,7 @@ entry:
 define void @test_vlseg2ff_dead_all(i16* %base, i64 %vl) {
 ; CHECK-LABEL: test_vlseg2ff_dead_all:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:

@@ -15,6 +15,7 @@
 
 #include <numeric>
 #include <cassert>
+#include <cstdint>
 #include "test_macros.h"
 
 //  Users are not supposed to provide template argument lists for

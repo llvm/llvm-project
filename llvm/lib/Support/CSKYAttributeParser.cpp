@@ -69,10 +69,9 @@ const CSKYAttributeParser::DisplayHandler
 
 Error CSKYAttributeParser::handler(uint64_t tag, bool &handled) {
   handled = false;
-  for (unsigned AHI = 0, AHE = array_lengthof(displayRoutines); AHI != AHE;
-       ++AHI) {
-    if (uint64_t(displayRoutines[AHI].attribute) == tag) {
-      if (Error e = (this->*displayRoutines[AHI].routine)(tag))
+  for (const auto &AH : displayRoutines) {
+    if (uint64_t(AH.attribute) == tag) {
+      if (Error e = (this->*AH.routine)(tag))
         return e;
       handled = true;
       break;

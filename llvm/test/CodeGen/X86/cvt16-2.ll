@@ -2,14 +2,15 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=-avx512fp16 | FileCheck %s -check-prefix=LIBCALL
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512fp16 | FileCheck %s -check-prefix=FP16
 
-define void @test1(float %src, i16* %dest) {
+define void @test1(float %src, ptr %dest) {
 ; LIBCALL-LABEL: test1:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rbx
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; LIBCALL-NEXT:    .cfi_offset %rbx, -16
 ; LIBCALL-NEXT:    movq %rdi, %rbx
-; LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
+; LIBCALL-NEXT:    callq __truncsfhf2@PLT
+; LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
 ; LIBCALL-NEXT:    movw %ax, (%rbx)
 ; LIBCALL-NEXT:    popq %rbx
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
@@ -21,22 +22,22 @@ define void @test1(float %src, i16* %dest) {
 ; FP16-NEXT:    vmovsh %xmm0, (%rdi)
 ; FP16-NEXT:    retq
   %1 = tail call i16 @llvm.convert.to.fp16.f32(float %src)
-  store i16 %1, i16* %dest, align 2
+  store i16 %1, ptr %dest, align 2
   ret void
 }
 
-define float @test2(i16* nocapture %src) {
+define float @test2(ptr nocapture %src) {
 ; LIBCALL-LABEL: test2:
 ; LIBCALL:       # %bb.0:
-; LIBCALL-NEXT:    movzwl (%rdi), %edi
-; LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
+; LIBCALL-NEXT:    pinsrw $0, (%rdi), %xmm0
+; LIBCALL-NEXT:    jmp __extendhfsf2@PLT # TAILCALL
 ;
 ; FP16-LABEL: test2:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    vmovsh (%rdi), %xmm0
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; FP16-NEXT:    retq
-  %1 = load i16, i16* %src, align 2
+  %1 = load i16, ptr %src, align 2
   %2 = tail call float @llvm.convert.from.fp16.f32(i16 %1)
   ret float %2
 }
@@ -46,11 +47,10 @@ define float @test3(float %src) nounwind uwtable readnone {
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
-; LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
-; LIBCALL-NEXT:    movzwl %ax, %edi
+; LIBCALL-NEXT:    callq __truncsfhf2@PLT
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
-; LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
+; LIBCALL-NEXT:    jmp __extendhfsf2@PLT # TAILCALL
 ;
 ; FP16-LABEL: test3:
 ; FP16:       # %bb.0:
@@ -63,13 +63,13 @@ define float @test3(float %src) nounwind uwtable readnone {
 }
 
 ; FIXME: Should it be __extendhfdf2?
-define double @test4(i16* nocapture %src) {
+define double @test4(ptr nocapture %src) {
 ; LIBCALL-LABEL: test4:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
-; LIBCALL-NEXT:    movzwl (%rdi), %edi
-; LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
+; LIBCALL-NEXT:    pinsrw $0, (%rdi), %xmm0
+; LIBCALL-NEXT:    callq __extendhfsf2@PLT
 ; LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm0
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
@@ -80,7 +80,7 @@ define double @test4(i16* nocapture %src) {
 ; FP16-NEXT:    vmovsh (%rdi), %xmm0
 ; FP16-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
 ; FP16-NEXT:    retq
-  %1 = load i16, i16* %src, align 2
+  %1 = load i16, ptr %src, align 2
   %2 = tail call double @llvm.convert.from.fp16.f64(i16 %1)
   ret double %2
 }
@@ -88,7 +88,14 @@ define double @test4(i16* nocapture %src) {
 define i16 @test5(double %src) {
 ; LIBCALL-LABEL: test5:
 ; LIBCALL:       # %bb.0:
-; LIBCALL-NEXT:    jmp __truncdfhf2@PLT # TAILCALL
+; LIBCALL-NEXT:    pushq %rax
+; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
+; LIBCALL-NEXT:    callq __truncdfhf2@PLT
+; LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
+; LIBCALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; LIBCALL-NEXT:    popq %rcx
+; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
+; LIBCALL-NEXT:    retq
 ;
 ; FP16-LABEL: test5:
 ; FP16:       # %bb.0:
@@ -101,15 +108,13 @@ define i16 @test5(double %src) {
 }
 
 ; FIXME: Should it be __extendhfxf2?
-define x86_fp80 @test6(i16* nocapture %src) {
+define x86_fp80 @test6(ptr nocapture %src) {
 ; LIBCALL-LABEL: test6:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
-; LIBCALL-NEXT:    movzwl (%rdi), %edi
-; LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
-; LIBCALL-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
-; LIBCALL-NEXT:    flds {{[0-9]+}}(%rsp)
+; LIBCALL-NEXT:    pinsrw $0, (%rdi), %xmm0
+; LIBCALL-NEXT:    callq __extendhfxf2@PLT
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
 ; LIBCALL-NEXT:    retq
@@ -123,7 +128,7 @@ define x86_fp80 @test6(i16* nocapture %src) {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    .cfi_def_cfa_offset 8
 ; FP16-NEXT:    retq
-  %1 = load i16, i16* %src, align 2
+  %1 = load i16, ptr %src, align 2
   %2 = tail call x86_fp80 @llvm.convert.from.fp16.f80(i16 %1)
   ret x86_fp80 %2
 }
@@ -131,7 +136,16 @@ define x86_fp80 @test6(i16* nocapture %src) {
 define i16 @test7(x86_fp80 %src) {
 ; LIBCALL-LABEL: test7:
 ; LIBCALL:       # %bb.0:
-; LIBCALL-NEXT:    jmp __truncxfhf2@PLT # TAILCALL
+; LIBCALL-NEXT:    subq $24, %rsp
+; LIBCALL-NEXT:    .cfi_def_cfa_offset 32
+; LIBCALL-NEXT:    fldt {{[0-9]+}}(%rsp)
+; LIBCALL-NEXT:    fstpt (%rsp)
+; LIBCALL-NEXT:    callq __truncxfhf2@PLT
+; LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
+; LIBCALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; LIBCALL-NEXT:    addq $24, %rsp
+; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
+; LIBCALL-NEXT:    retq
 ;
 ; FP16-LABEL: test7:
 ; FP16:       # %bb.0:

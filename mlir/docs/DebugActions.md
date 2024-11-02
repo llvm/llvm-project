@@ -1,7 +1,5 @@
 # Debug Actions
 
-[TOC]
-
 This file documents the infrastructure for `Debug Actions`. This is a DEBUG only
 API that allows for external entities to control various aspects of compiler
 execution. This is conceptually similar to something like `DebugCounters` in
@@ -22,6 +20,8 @@ surrounding debug actions is shown below:
 The exact definition of an `external entity` is left opaque, to allow for more
 interesting handlers. The set of possible action queries is detailed in the
 [`action manager`](#debug-action-manager) section below.
+
+[TOC]
 
 ## Debug Action
 
@@ -54,10 +54,12 @@ rewrite patterns.
 /// * The Tag is specified via a static `StringRef getTag()` method.
 /// * The Description is specified via a static `StringRef getDescription()`
 ///   method.
-/// * The parameters for the action are provided via template parameters when
-///   inheriting from `DebugAction`.
+/// * `DebugAction` is a CRTP class, so the first template parameter is the
+///   action type class itself.
+/// * The parameters for the action are provided via additional template
+///   parameters when inheriting from `DebugAction`.
 struct ApplyPatternAction
-    : public DebugAction<Operation *, const Pattern &> {
+    : public DebugAction<ApplyPatternAction, Operation *, const Pattern &> {
   static StringRef getTag() { return "apply-pattern"; }
   static StringRef getDescription() {
     return "Control the application of rewrite patterns";
@@ -95,7 +97,7 @@ usage of the `shouldExecute` query is shown below:
 ```c++
 /// A debug action that allows for controlling the application of patterns.
 struct ApplyPatternAction
-    : public DebugAction<Operation *, const Pattern &> {
+    : public DebugAction<ApplyPatternAction, Operation *, const Pattern &> {
   static StringRef getTag() { return "apply-pattern"; }
   static StringRef getDescription() {
     return "Control the application of rewrite patterns";

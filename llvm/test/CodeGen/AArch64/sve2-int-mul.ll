@@ -7,8 +7,7 @@
 define <vscale x 8 x i16> @mul_i16_imm(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: mul_i16_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255
-; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    mov z1.h, #255 // =0xff
 ; CHECK-NEXT:    mul z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 8 x i16> undef, i16 255, i32 0
@@ -33,8 +32,7 @@ define <vscale x 8 x i16> @mul_i16_imm_neg(<vscale x 8 x i16> %a) {
 define <vscale x 4 x i32> @mul_i32_imm(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: mul_i32_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #255
-; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    mov z1.s, #255 // =0xff
 ; CHECK-NEXT:    mul z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 4 x i32> undef, i32 255, i32 0

@@ -323,7 +323,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   LLDB_LOG(log, "Creating a new result global: \"{0}\" with size {1}",
            m_result_name,
-           m_result_type.GetByteSize(target_sp.get()).getValueOr(0));
+           m_result_type.GetByteSize(target_sp.get()).value_or(0));
 
   // Construct a new result global and set up its metadata
 
@@ -615,29 +615,7 @@ bool IRForTarget::RewriteObjCConstStrings() {
         return false;
       }
 
-      ConstantExpr *nsstring_expr = dyn_cast<ConstantExpr>(nsstring_member);
-
-      if (!nsstring_expr) {
-        LLDB_LOG(log,
-                 "NSString initializer's str element is not a ConstantExpr");
-
-        m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C "
-                              "constant string's string initializer is not "
-                              "constant\n");
-
-        return false;
-      }
-
-      GlobalVariable *cstr_global = nullptr;
-
-      if (nsstring_expr->getOpcode() == Instruction::GetElementPtr) {
-        Constant *nsstring_cstr = nsstring_expr->getOperand(0);
-        cstr_global = dyn_cast<GlobalVariable>(nsstring_cstr);
-      } else if (nsstring_expr->getOpcode() == Instruction::BitCast) {
-        Constant *nsstring_cstr = nsstring_expr->getOperand(0);
-        cstr_global = dyn_cast<GlobalVariable>(nsstring_cstr);
-      }
-
+      auto *cstr_global = dyn_cast<GlobalVariable>(nsstring_member);
       if (!cstr_global) {
         LLDB_LOG(log,
                  "NSString initializer's str element is not a GlobalVariable");
@@ -758,17 +736,16 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   // Unpack the message name from the selector.  In LLVM IR, an objc_msgSend
   // gets represented as
   //
-  // %tmp     = load i8** @"OBJC_SELECTOR_REFERENCES_" ; <i8*> %call    = call
-  // i8* (i8*, i8*, ...)* @objc_msgSend(i8* %obj, i8* %tmp, ...) ; <i8*>
+  //   %sel = load ptr, ptr @OBJC_SELECTOR_REFERENCES_, align 8
+  //   call i8 @objc_msgSend(ptr %obj, ptr %sel, ...)
   //
-  // where %obj is the object pointer and %tmp is the selector.
+  // where %obj is the object pointer and %sel is the selector.
   //
   // @"OBJC_SELECTOR_REFERENCES_" is a pointer to a character array called
   // @"\01L_OBJC_llvm_moduleETH_VAR_NAllvm_moduleE_".
   // @"\01L_OBJC_llvm_moduleETH_VAR_NAllvm_moduleE_" contains the string.
 
-  // Find the pointer's initializer (a ConstantExpr with opcode GetElementPtr)
-  // and get the string from its target
+  // Find the pointer's initializer and get the string from its target.
 
   GlobalVariable *_objc_selector_references_ =
       dyn_cast<GlobalVariable>(load->getPointerOperand());
@@ -778,22 +755,13 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
     return false;
 
   Constant *osr_initializer = _objc_selector_references_->getInitializer();
-
-  ConstantExpr *osr_initializer_expr = dyn_cast<ConstantExpr>(osr_initializer);
-
-  if (!osr_initializer_expr ||
-      osr_initializer_expr->getOpcode() != Instruction::GetElementPtr)
-    return false;
-
-  Value *osr_initializer_base = osr_initializer_expr->getOperand(0);
-
-  if (!osr_initializer_base)
+  if (!osr_initializer)
     return false;
 
   // Find the string's initializer (a ConstantArray) and get the string from it
 
   GlobalVariable *_objc_meth_var_name_ =
-      dyn_cast<GlobalVariable>(osr_initializer_base);
+      dyn_cast<GlobalVariable>(osr_initializer);
 
   if (!_objc_meth_var_name_ || !_objc_meth_var_name_->hasInitializer())
     return false;

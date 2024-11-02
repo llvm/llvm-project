@@ -30,8 +30,9 @@ static bool isArithmeticBccPair(const MachineInstr *FirstMI,
 
   // If we're in CmpOnly mode, we only fuse arithmetic instructions that
   // discard their result.
-  if (CmpOnly && !(FirstMI->getOperand(0).getReg() == AArch64::XZR ||
-                   FirstMI->getOperand(0).getReg() == AArch64::WZR)) {
+  if (CmpOnly && FirstMI->getOperand(0).isReg() &&
+      !(FirstMI->getOperand(0).getReg() == AArch64::XZR ||
+        FirstMI->getOperand(0).getReg() == AArch64::WZR)) {
     return false;
   }
 

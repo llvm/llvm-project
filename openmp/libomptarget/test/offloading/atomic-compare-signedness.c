@@ -18,11 +18,13 @@ int main() {
   // CHECK-NEXT: signed: xs=[[#NUM_THREADS-1]]{{$}}
   int xs = -1;
   int numThreads;
-  #pragma omp target parallel for num_threads(NUM_THREADS_TRY) \
-      map(tofrom:xs, numThreads)
+#pragma omp target parallel for num_threads(NUM_THREADS_TRY)                   \
+    map(tofrom : xs, numThreads)
   for (int i = 0; i < omp_get_num_threads(); ++i) {
-    #pragma omp atomic compare
-    if (xs < i) { xs = i; }
+#pragma omp atomic compare
+    if (xs < i) {
+      xs = i;
+    }
     if (i == 0)
       numThreads = omp_get_num_threads();
   }
@@ -31,11 +33,12 @@ int main() {
 
   // CHECK-NEXT: unsigned: xu=0x0{{$}}
   unsigned xu = UINT_MAX;
-  #pragma omp target parallel for num_threads(NUM_THREADS_TRY) \
-      map(tofrom:xu)
+#pragma omp target parallel for num_threads(NUM_THREADS_TRY) map(tofrom : xu)
   for (int i = 0; i < omp_get_num_threads(); ++i) {
-    #pragma omp atomic compare
-    if (xu > i) { xu = i; }
+#pragma omp atomic compare
+    if (xu > i) {
+      xu = i;
+    }
   }
   printf("unsigned: xu=0x%x\n", xu);
   return 0;

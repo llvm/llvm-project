@@ -410,6 +410,22 @@ Execution Commands
                </td>
          </tr>
 
+         <tr>
+               <td class="header" colspan="2">Show the current frame and source line.</td>
+         </tr>
+         <tr>
+               <td class="content">
+                  <b>(gdb)</b> frame
+               </td>
+               <td class="content">
+                  <b>(lldb)</b> frame select
+                  <br>
+                  <b>(lldb)</b> f
+                  <br>
+                  <b>(lldb)</b> process status
+               </td>
+         </tr>
+
       </tbody>
    </table>
 

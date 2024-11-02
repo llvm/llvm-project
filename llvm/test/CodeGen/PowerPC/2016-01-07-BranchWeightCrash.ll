@@ -2,12 +2,12 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-%struct.buffer_t = type { i64, i8*, [4 x i32], [4 x i32], [4 x i32], i32, i8, i8, [2 x i8] }
+%struct.buffer_t = type { i64, ptr, [4 x i32], [4 x i32], [4 x i32], i32, i8, i8, [2 x i8] }
 
-declare i32 @__f1(i8*, %struct.buffer_t* noalias)
+declare i32 @__f1(ptr, ptr noalias)
 
 ; CHECK-LABEL: f1:
-define i32 @f1(i8* %__user_context, %struct.buffer_t* noalias %f1.buffer) {
+define i32 @f1(ptr %__user_context, ptr noalias %f1.buffer) {
 entry:
   br i1 undef, label %"assert succeeded", label %"assert failed", !prof !1
 
@@ -15,7 +15,7 @@ entry:
   br label %destructor_block
 
 "assert succeeded":                               ; preds = %entry
-  %__f1_result = call i32 @__f1(i8* %__user_context, %struct.buffer_t* %f1.buffer) #5
+  %__f1_result = call i32 @__f1(ptr %__user_context, ptr %f1.buffer) #5
   %0 = icmp eq i32 %__f1_result, 0
   br i1 %0, label %"assert succeeded11", label %"assert failed10", !prof !1
 

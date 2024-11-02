@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | \
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | \
 // RUN: FileCheck --check-prefix=MACHO %s
 
 // CHECK: @_ZN5test11A1aE ={{.*}} constant i32 10, align 4
@@ -48,7 +48,7 @@ namespace test2 {
 
   // CHECK-LABEL: define internal void @__cxx_global_var_init()
   // CHECK:      [[TMP:%.*]] = call noundef i32 @_ZN5test23fooEv()
-  // CHECK-NEXT: store i32 [[TMP]], i32* @_ZN5test212_GLOBAL__N_11AIiE1xE, align 4
+  // CHECK-NEXT: store i32 [[TMP]], ptr @_ZN5test212_GLOBAL__N_11AIiE1xE, align 4
   // CHECK-NEXT: ret void
 }
 
@@ -67,12 +67,12 @@ namespace test3 {
   // CHECK-LABEL: define internal void @__cxx_global_var_init.1() {{.*}} comdat($_ZN5test31AIiE1xE)
   // MACHO-LABEL: define internal void @__cxx_global_var_init.1()
   // MACHO-NOT: comdat
-  // CHECK:      [[GUARDBYTE:%.*]] = load i8, i8* bitcast (i64* @_ZGVN5test31AIiE1xE to i8*)
+  // CHECK:      [[GUARDBYTE:%.*]] = load i8, ptr @_ZGVN5test31AIiE1xE
   // CHECK-NEXT: [[UNINITIALIZED:%.*]] = icmp eq i8 [[GUARDBYTE]], 0
   // CHECK-NEXT: br i1 [[UNINITIALIZED]]
   // CHECK:      [[TMP:%.*]] = call noundef i32 @_ZN5test33fooEv()
-  // CHECK-NEXT: store i32 [[TMP]], i32* @_ZN5test31AIiE1xE, align 4
-  // CHECK-NEXT: store i8 1, i8* bitcast (i64* @_ZGVN5test31AIiE1xE to i8*)
+  // CHECK-NEXT: store i32 [[TMP]], ptr @_ZN5test31AIiE1xE, align 4
+  // CHECK-NEXT: store i8 1, ptr @_ZGVN5test31AIiE1xE
   // CHECK-NEXT: br label
   // CHECK:      ret void
 }
@@ -104,7 +104,7 @@ namespace test5 {
   const int U::k1 = (k0 = 9, 42);
   const int U::k2;
 
-  // CHECK: store i32 9, i32* @_ZN5test51U2k0E
-  // CHECK: store i32 {{.*}}, i32* @_ZN5test51U2k1E
-  // CHECK-NOT: store {{.*}} i32* @_ZN5test51U2k2E
+  // CHECK: store i32 9, ptr @_ZN5test51U2k0E
+  // CHECK: store i32 {{.*}}, ptr @_ZN5test51U2k1E
+  // CHECK-NOT: store {{.*}} ptr @_ZN5test51U2k2E
 }

@@ -1,4 +1,4 @@
-; RUN: opt -S -slp-vectorizer -mtriple=aarch64--linux-gnu -mcpu=generic -pass-remarks=slp-vectorizer -o /dev/null < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64--linux-gnu -mcpu=generic -pass-remarks=slp-vectorizer -o /dev/null < %s 2>&1 | FileCheck %s
 
 define void @f(double* %r, double* %w) {
   %r0 = getelementptr inbounds double, double* %r, i64 0

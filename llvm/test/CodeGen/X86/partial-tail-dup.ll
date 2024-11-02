@@ -12,7 +12,7 @@
 ; CHECK:       %p2
 ; CHECK:       jmp .LBB0_4
 
-define void @test1(i32* %p) !prof !1 {
+define void @test1(ptr %p) !prof !1 {
 entry:
   br label %header
 
@@ -29,7 +29,7 @@ p2:
   br label %dupbb
 
 dupbb:
-  %cond = icmp eq i32* @gvar, %p
+  %cond = icmp eq ptr @gvar, %p
   br i1 %cond, label %header, label %latch, !prof !3
 
 latch:
@@ -60,7 +60,7 @@ end:
 ; CHECK:       %p4
 ; CHECK:       jmp .LBB1_8
 
-define void @test2(i32* %p) !prof !1 {
+define void @test2(ptr %p) !prof !1 {
 entry:
   br label %header
 
@@ -93,7 +93,7 @@ p4:
   br label %dupbb
 
 dupbb:
-  %cond = icmp eq i32* @gvar, %p
+  %cond = icmp eq ptr @gvar, %p
   br i1 %cond, label %bb3, label %bb4, !prof !4
 
 bb3:
@@ -130,7 +130,7 @@ end:
 ; CHECK:       %p3
 ; CHECK:       jne .LBB2_6
 
-define void @test3(i32* %p) !prof !1 {
+define void @test3(ptr %p) !prof !1 {
 entry:
   br label %header
 
@@ -155,7 +155,7 @@ p3:
   br i1 %call2, label %dupbb, label %bb4, !prof !4
 
 dupbb:
-  %cond = icmp eq i32* @gvar, %p
+  %cond = icmp eq ptr @gvar, %p
   br i1 %cond, label %bb3, label %bb4, !prof !4
 
 bb3:

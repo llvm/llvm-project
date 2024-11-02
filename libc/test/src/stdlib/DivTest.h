@@ -34,4 +34,4 @@ public:
 
 #define LIST_DIV_TESTS(IntType, ReturnType, func)                              \
   using LlvmLibcDivTest = DivTest<IntType, ReturnType>;                        \
-  TEST_F(LlvmLibcDivTest, SimpleTest) { simpleTest(func); }
+  TEST_F(LlvmLibcDivTest, SimpleTest##ReturnType) { simpleTest(func); }

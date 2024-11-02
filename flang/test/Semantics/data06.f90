@@ -41,6 +41,7 @@ subroutine s1
   data rp/rfunc/
   procedure(rfunc), pointer :: rpp
   real, target :: rt
+  !WARNING: Procedure pointer 'rpp' in a DATA statement is not standard
   !ERROR: Data object 'rt' may not be used to initialize 'rpp', which is a procedure pointer
   data rpp/rt/
   !ERROR: Initializer for 'rt' must not be a pointer

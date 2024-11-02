@@ -42,7 +42,6 @@ define i64 @selecti32i64(i32 %a) {
 ; CHECK-LABEL: selecti32i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    xori 3, 3, 65535
 ; CHECK-NEXT:    xoris 3, 3, 32767
 ; CHECK-NEXT:    blr
@@ -69,7 +68,6 @@ define i32 @selecti32i32(i32 %a) {
 ; CHECK-LABEL: selecti32i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    xori 3, 3, 84
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %a, -1
@@ -81,7 +79,6 @@ define i8 @selecti32i8(i32 %a) {
 ; CHECK-LABEL: selecti32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    xori 3, 3, 84
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %a, -1
@@ -94,7 +91,6 @@ define i32 @selecti8i32(i8 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    extsb 3, 3
 ; CHECK-NEXT:    srawi 3, 3, 7
-; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    xori 3, 3, 84
 ; CHECK-NEXT:    blr
   %c = icmp sgt i8 %a, -1

@@ -115,8 +115,7 @@ void Symbol::Clear() {
 }
 
 bool Symbol::ValueIsAddress() const {
-  return m_addr_range.GetBaseAddress().GetSection().get() != nullptr ||
-         m_type == eSymbolTypeAbsolute;
+  return (bool)m_addr_range.GetBaseAddress().GetSection();
 }
 
 ConstString Symbol::GetDisplayName() const {
@@ -425,7 +424,7 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
       // Next try and find the module by basename in case environment variables
       // or other runtime trickery causes shared libraries to be loaded from
       // alternate paths
-      module_spec.GetFileSpec().GetDirectory().Clear();
+      module_spec.GetFileSpec().ClearDirectory();
       module_sp = target.GetImages().FindFirstModule(module_spec);
     }
   }
@@ -558,8 +557,9 @@ bool Symbol::GetDisassembly(const ExecutionContext &exe_ctx, const char *flavor,
   if (disassembler_sp) {
     const bool show_address = true;
     const bool show_bytes = false;
-    disassembler_sp->GetInstructionList().Dump(&strm, show_address, show_bytes,
-                                               &exe_ctx);
+    const bool show_control_flow_kind = false;
+    disassembler_sp->GetInstructionList().Dump(
+        &strm, show_address, show_bytes, show_control_flow_kind, &exe_ctx);
     return true;
   }
   return false;

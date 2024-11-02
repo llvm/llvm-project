@@ -15,20 +15,20 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-  store i32 2, i32* getelementptr inbounds (<{ i8, i64, { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, [2 x i8], i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, i8 }, i32 }>, <{ i8, i64, { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, [2 x i8], i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, i8 }, i32 }>* @g_1484, i64 0, i32 2, i32 16)
+  store i32 2, ptr getelementptr inbounds (<{ i8, i64, { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, [2 x i8], i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, i8 }, i32 }>, ptr @g_1484, i64 0, i32 2, i32 16)
   %tmp = icmp slt i32 undef, 3
   br i1 %tmp, label %bb1, label %bb2
 
 bb2:                                              ; preds = %bb1
-  %tmp3 = load i32, i32* getelementptr inbounds (<{ i8, i64, { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, [2 x i8], i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, i8 }, i32 }>, <{ i8, i64, { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, [2 x i8], i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, i8 }, i32 }>* @g_1484, i64 0, i32 2, i32 28)
-  %tmp4 = load i64, i64* @g_672
+  %tmp3 = load i32, ptr getelementptr inbounds (<{ i8, i64, { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, [2 x i8], i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, i8 }, i32 }>, ptr @g_1484, i64 0, i32 2, i32 28)
+  %tmp4 = load i64, ptr @g_672
   %tmp5 = add i64 %tmp4, 1
-  store i64 %tmp5, i64* @g_672
+  store i64 %tmp5, ptr @g_672
   %tmp6 = icmp eq i64 %tmp5, 0
   %tmp7 = zext i1 %tmp6 to i32
   %tmp8 = icmp ult i32 %tmp3, %tmp7
   %tmp9 = zext i1 %tmp8 to i32
-  store i32 %tmp9, i32* @g_295
+  store i32 %tmp9, ptr @g_295
   ret void
 }
 

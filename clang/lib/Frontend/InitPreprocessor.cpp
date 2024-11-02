@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SyncScope.h"
@@ -298,12 +299,12 @@ static void DefineFastIntType(unsigned TypeWidth, bool IsSigned,
 
 /// Get the value the ATOMIC_*_LOCK_FREE macro should have for a type with
 /// the specified properties.
-static const char *getLockFreeValue(unsigned TypeWidth, unsigned TypeAlign,
-                                    unsigned InlineWidth) {
+static const char *getLockFreeValue(unsigned TypeWidth, unsigned InlineWidth) {
   // Fully-aligned, power-of-2 sizes no larger than the inline
   // width will be inlined as lock-free operations.
-  if (TypeWidth == TypeAlign && (TypeWidth & (TypeWidth - 1)) == 0 &&
-      TypeWidth <= InlineWidth)
+  // Note: we do not need to check alignment since _Atomic(T) is always
+  // appropriately-aligned in clang.
+  if ((TypeWidth & (TypeWidth - 1)) == 0 && TypeWidth <= InlineWidth)
     return "2"; // "always lock free"
   // We cannot be certain what operations the lib calls might be
   // able to implement as lock-free on future processors.
@@ -402,15 +403,15 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SHADER_STAGE_LIBRARY",
                         Twine((uint32_t)ShaderStage::Library));
     // The current shader stage itself
-    uint32_t StageInteger = (uint32_t)TI.getTriple().getEnvironment() -
-                            (uint32_t)llvm::Triple::Pixel;
+    uint32_t StageInteger = static_cast<uint32_t>(
+        hlsl::getStageFromEnvironment(TI.getTriple().getEnvironment()));
 
     Builder.defineMacro("__SHADER_TARGET_STAGE", Twine(StageInteger));
     // Add target versions
     if (TI.getTriple().getOS() == llvm::Triple::ShaderModel) {
       VersionTuple Version = TI.getTriple().getOSVersion();
       Builder.defineMacro("__SHADER_TARGET_MAJOR", Twine(Version.getMajor()));
-      unsigned Minor = Version.getMinor() ? *Version.getMinor() : 0;
+      unsigned Minor = Version.getMinor().value_or(0);
       Builder.defineMacro("__SHADER_TARGET_MINOR", Twine(Minor));
     }
     return;
@@ -673,7 +674,11 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 
   // C++20 features.
   if (LangOpts.CPlusPlus20) {
-    //Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
+    // Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
+
+    // P0848 is implemented, but we're still waiting for other concepts
+    // issues to be addressed before bumping __cpp_concepts up to 202002L.
+    // Refer to the discussion of this at https://reviews.llvm.org/D128619.
     Builder.defineMacro("__cpp_concepts", "201907L");
     Builder.defineMacro("__cpp_conditional_explicit", "201806L");
     //Builder.defineMacro("__cpp_consteval", "201811L");
@@ -690,10 +695,17 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_implicit_move", "202011L");
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
-    Builder.defineMacro("__cpp_­multidimensional_­subscript", "202110L");
+    Builder.defineMacro("__cpp_multidimensional_subscript", "202110L");
   }
+
+  // We provide those C++2b features as extensions in earlier language modes, so
+  // we also define their feature test macros.
+  if (LangOpts.CPlusPlus11)
+    Builder.defineMacro("__cpp_static_call_operator", "202207L");
+  Builder.defineMacro("__cpp_named_character_escapes", "202207L");
+
   if (LangOpts.Char8)
-    Builder.defineMacro("__cpp_char8_t", "201811L");
+    Builder.defineMacro("__cpp_char8_t", "202207L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
 
   // TS features.
@@ -822,21 +834,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
       if (version >= VersionTuple(2, 0))
         Builder.defineMacro("__OBJC_GNUSTEP_RUNTIME_ABI__", "20");
       else
-        Builder.defineMacro("__OBJC_GNUSTEP_RUNTIME_ABI__",
-            "1" + Twine(std::min(8U, version.getMinor().getValueOr(0))));
+        Builder.defineMacro(
+            "__OBJC_GNUSTEP_RUNTIME_ABI__",
+            "1" + Twine(std::min(8U, version.getMinor().value_or(0))));
     }
 
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::ObjFW) {
       VersionTuple tuple = LangOpts.ObjCRuntime.getVersion();
-
-      unsigned minor = 0;
-      if (tuple.getMinor().hasValue())
-        minor = tuple.getMinor().getValue();
-
-      unsigned subminor = 0;
-      if (tuple.getSubminor().hasValue())
-        subminor = tuple.getSubminor().getValue();
-
+      unsigned minor = tuple.getMinor().value_or(0);
+      unsigned subminor = tuple.getSubminor().value_or(0);
       Builder.defineMacro("__OBJFW_RUNTIME_ABI__",
                           Twine(tuple.getMajor() * 10000 + minor * 100 +
                                 subminor));
@@ -1148,7 +1154,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #define DEFINE_LOCK_FREE_MACRO(TYPE, Type)                                     \
   Builder.defineMacro(Prefix + #TYPE "_LOCK_FREE",                             \
                       getLockFreeValue(TI.get##Type##Width(),                  \
-                                       TI.get##Type##Align(),                  \
                                        InlineWidthBits));
     DEFINE_LOCK_FREE_MACRO(BOOL, Bool);
     DEFINE_LOCK_FREE_MACRO(CHAR, Char);
@@ -1163,7 +1168,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     DEFINE_LOCK_FREE_MACRO(LLONG, LongLong);
     Builder.defineMacro(Prefix + "POINTER_LOCK_FREE",
                         getLockFreeValue(TI.getPointerWidth(0),
-                                         TI.getPointerAlign(0),
                                          InlineWidthBits));
 #undef DEFINE_LOCK_FREE_MACRO
   };
@@ -1301,8 +1305,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 }
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
-/// environment ready to process a single file. This returns true on error.
-///
+/// environment ready to process a single file.
 void clang::InitializePreprocessor(
     Preprocessor &PP, const PreprocessorOptions &InitOpts,
     const PCHContainerReader &PCHContainerRdr,

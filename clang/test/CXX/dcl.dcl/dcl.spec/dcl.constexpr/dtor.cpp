@@ -29,7 +29,7 @@ namespace contents {
   struct C {
     constexpr ~C() {
       return;
-      Nonlit nl; // cxx2a-error {{variable of non-literal type 'contents::Nonlit' cannot be defined in a constexpr function before C++2b}}
+      Nonlit nl; // cxx2a-error {{variable of non-literal type 'Nonlit' cannot be defined in a constexpr function before C++2b}}
     }
   };
   struct D {
@@ -59,7 +59,7 @@ namespace subobject {
     ~A();
   };
   struct B : A { // expected-note {{here}}
-    constexpr ~B() {} // expected-error {{destructor cannot be declared constexpr because base class 'subobject::A' does not have a constexpr destructor}}
+    constexpr ~B() {} // expected-error {{destructor cannot be declared constexpr because base class 'A' does not have a constexpr destructor}}
   };
   struct C {
     A a; // expected-note {{here}}

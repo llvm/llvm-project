@@ -50,7 +50,7 @@ public:
 
   PlatformDarwinKernel(LazyBool is_ios_debug_session);
 
-  virtual ~PlatformDarwinKernel();
+  ~PlatformDarwinKernel() override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
@@ -153,6 +153,9 @@ protected:
   Status ExamineKextForMatchingUUID(const FileSpec &kext_bundle_path,
                                     const UUID &uuid, const ArchSpec &arch,
                                     lldb::ModuleSP &exe_module_sp);
+
+  bool LoadPlatformBinaryAndSetup(Process *process, lldb::addr_t addr,
+                                  bool notify) override;
 
   // Most of the ivars are assembled under FileSystem::EnumerateDirectory calls
   // where the function being called for each file/directory must be static.

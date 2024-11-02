@@ -245,14 +245,17 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
     for (lldb::ThreadSP thread_sp : m_threads) {
       // This is an optimization...  If we didn't let a thread run in between
       // the previous stop and this one, we shouldn't have to consult it for
-      // ShouldStop.  So just leave it off the list we are going to inspect. On
-      // Linux, if a thread-specific conditional breakpoint was hit, it won't
+      // ShouldStop.  So just leave it off the list we are going to inspect.
+      // If the thread didn't run but had work to do before declaring a public
+      // stop, then also include it.
+      // On Linux, if a thread-specific conditional breakpoint was hit, it won't
       // necessarily be the thread that hit the breakpoint itself that
       // evaluates the conditional expression, so the thread that hit the
       // breakpoint could still be asked to stop, even though it hasn't been
       // allowed to run since the previous stop.
       if (thread_sp->GetTemporaryResumeState() != eStateSuspended ||
-          thread_sp->IsStillAtLastBreakpointHit())
+          thread_sp->IsStillAtLastBreakpointHit()
+          || thread_sp->ShouldRunBeforePublicStop())
         threads_copy.push_back(thread_sp);
     }
 
@@ -300,6 +303,10 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
     thread_sp->GetStopInfo();
   }
 
+  // If a thread needs to finish some job that can be done just on this thread
+  // before broadcastion the stop, it will signal that by returning true for
+  // ShouldRunBeforePublicStop.  This variable gathers the results from that.
+  bool a_thread_needs_to_run = false;
   for (pos = threads_copy.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
 
@@ -329,11 +336,23 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
       did_anybody_stop_for_a_reason |= thread_sp->ThreadStoppedForAReason();
 
     const bool thread_should_stop = thread_sp->ShouldStop(event_ptr);
+
     if (thread_should_stop)
       should_stop |= true;
+    else {
+      bool this_thread_forces_run = thread_sp->ShouldRunBeforePublicStop();
+      a_thread_needs_to_run |= this_thread_forces_run;
+      if (this_thread_forces_run) 
+        LLDB_LOG(log,
+                 "ThreadList::{0} thread: {1:x}, "
+                 "says it needs to run before public stop.",
+                 __FUNCTION__, thread_sp->GetID());
+    }
   }
 
-  if (!should_stop && !did_anybody_stop_for_a_reason) {
+  if (a_thread_needs_to_run) {
+    should_stop = false;
+  } else if (!should_stop && !did_anybody_stop_for_a_reason) {
     should_stop = true;
     LLDB_LOGF(log,
               "ThreadList::%s we stopped but no threads had a stop reason, "
@@ -368,9 +387,17 @@ Vote ThreadList::ShouldReportStop(Event *event_ptr) {
 
   // Run through the threads and ask whether we should report this event. For
   // stopping, a YES vote wins over everything.  A NO vote wins over NO
-  // opinion.
+  // opinion.  The exception is if a thread has work it needs to force before
+  // a public stop, which overrides everyone else's opinion:
   for (pos = m_threads.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
+    if (thread_sp->ShouldRunBeforePublicStop()) {
+      LLDB_LOG(log, "Thread {0:x} has private business to complete, overrode "
+               "the should report stop.", thread_sp->GetID());
+      result = eVoteNo;
+      break;
+    }
+
     const Vote vote = thread_sp->ShouldReportStop(event_ptr);
     switch (vote) {
     case eVoteNoOpinion:
@@ -550,7 +577,13 @@ bool ThreadList::WillResume() {
 
   run_me_only_list.SetStopID(m_process->GetStopID());
 
-  bool run_only_current_thread = false;
+  // One or more threads might want to "Stop Others".  We want to handle all
+  // those requests first.  And if there is a thread that wanted to "resume
+  // before a public stop", let it get the first crack:
+  // There are two special kinds of thread that have priority for "StopOthers":
+  // a "ShouldRunBeforePublicStop thread, or the currently selected thread.  If
+  // we find one satisfying that critereon, put it here.
+  ThreadSP stop_others_thread_sp;
 
   for (pos = m_threads.begin(); pos != end; ++pos) {
     ThreadSP thread_sp(*pos);
@@ -562,17 +595,16 @@ bool ThreadList::WillResume() {
 
       // You can't say "stop others" and also want yourself to be suspended.
       assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
+      run_me_only_list.AddThread(thread_sp);
 
-      if (thread_sp == GetSelectedThread()) {
-        // If the currently selected thread wants to run on its own, always let
-        // it.
-        run_only_current_thread = true;
-        run_me_only_list.Clear();
-        run_me_only_list.AddThread(thread_sp);
+      if (thread_sp == GetSelectedThread())
+        stop_others_thread_sp = thread_sp;
+        
+      if (thread_sp->ShouldRunBeforePublicStop()) {
+        // This takes precedence, so if we find one of these, service it:
+        stop_others_thread_sp = thread_sp;
         break;
       }
-
-      run_me_only_list.AddThread(thread_sp);
     }
   }
 
@@ -593,8 +625,8 @@ bool ThreadList::WillResume() {
   } else {
     ThreadSP thread_to_run;
 
-    if (run_only_current_thread) {
-      thread_to_run = GetSelectedThread();
+    if (stop_others_thread_sp) {
+      thread_to_run = stop_others_thread_sp;
     } else if (run_me_only_list.GetSize(false) == 1) {
       thread_to_run = run_me_only_list.GetThreadAtIndex(0);
     } else {
@@ -607,6 +639,9 @@ bool ThreadList::WillResume() {
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
       if (thread_sp == thread_to_run) {
+        // Note, a thread might be able to fulfil it's plan w/o actually
+        // resuming.  An example of this is a step that changes the current
+        // inlined function depth w/o moving the PC.  Check that here:
         if (!thread_sp->ShouldResume(thread_sp->GetCurrentPlan()->RunState()))
           need_to_resume = false;
       } else
@@ -624,7 +659,7 @@ void ThreadList::DidResume() {
     // Don't clear out threads that aren't going to get a chance to run, rather
     // leave their state for the next time around.
     ThreadSP thread_sp(*pos);
-    if (thread_sp->GetResumeState() != eStateSuspended)
+    if (thread_sp->GetTemporaryResumeState() != eStateSuspended)
       thread_sp->DidResume();
   }
 }

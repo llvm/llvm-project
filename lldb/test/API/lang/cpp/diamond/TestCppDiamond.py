@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_with_sbvalue(self):
         """
@@ -20,6 +18,8 @@ class TestCase(TestBase):
         """
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// breakpoint 1", lldb.SBFileSpec("main.cpp"))
+
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
         j1 = self.frame().FindVariable("j1")
         j1_Derived1 = j1.GetChildAtIndex(0)

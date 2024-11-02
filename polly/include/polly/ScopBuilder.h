@@ -296,7 +296,9 @@ class ScopBuilder final {
   ///
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param Stmt       The parent statement of the instruction
-  void buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt);
+  ///
+  /// @returns True if the access could be built, False otherwise.
+  bool buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt);
 
   /// Finalize all access relations.
   ///

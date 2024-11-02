@@ -32,7 +32,7 @@ int main(int, char**)
     if (std::numeric_limits<long>::max() > std::numeric_limits<int>::max()) {
         size_t idx = 0;
         try {
-            std::stoi("0x100000000", &idx, 16);
+            (void)std::stoi("0x100000000", &idx, 16);
             assert(false);
         } catch (const std::out_of_range&) {
 
@@ -41,7 +41,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoi("", &idx);
+            (void)std::stoi("", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -50,7 +50,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoi("  - 8", &idx);
+            (void)std::stoi("  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -59,7 +59,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoi("a1", &idx);
+            (void)std::stoi("a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -81,7 +81,7 @@ int main(int, char**)
     if (std::numeric_limits<long>::max() > std::numeric_limits<int>::max()) {
         size_t idx = 0;
         try {
-            std::stoi(L"0x100000000", &idx, 16);
+            (void)std::stoi(L"0x100000000", &idx, 16);
             assert(false);
         } catch (const std::out_of_range&) {
 
@@ -90,7 +90,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoi(L"", &idx);
+            (void)std::stoi(L"", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -99,7 +99,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoi(L"  - 8", &idx);
+            (void)std::stoi(L"  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -108,7 +108,7 @@ int main(int, char**)
     {
         size_t idx = 0;
         try {
-            std::stoi(L"a1", &idx);
+            (void)std::stoi(L"a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);

@@ -13,6 +13,7 @@
 #define FORTRAN_RUNTIME_CHARACTER_H_
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
+#include <cstdint>
 
 namespace Fortran::runtime {
 
@@ -97,7 +98,7 @@ std::size_t RTNAME(LenTrim4)(const char32_t *, std::size_t);
 void RTNAME(LenTrim)(Descriptor &result, const Descriptor &, int kind,
     const char *sourceFile = nullptr, int sourceLine = 0);
 void RTNAME(Repeat)(Descriptor &result, const Descriptor &string,
-    std::size_t ncopies, const char *sourceFile = nullptr, int sourceLine = 0);
+    std::int64_t ncopies, const char *sourceFile = nullptr, int sourceLine = 0);
 void RTNAME(Trim)(Descriptor &result, const Descriptor &string,
     const char *sourceFile = nullptr, int sourceLine = 0);
 

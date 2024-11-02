@@ -47,8 +47,7 @@ public:
     for (auto &KV : Segs) {
       assert(KV.second.ContentSize <= std::numeric_limits<size_t>::max());
       FR.Segments.push_back(tpctypes::SegFinalizeRequest{
-          tpctypes::toWireProtectionFlags(
-              toSysMemoryProtectionFlags(KV.first.getMemProt())),
+          KV.first,
           KV.second.Addr,
           alignTo(KV.second.ContentSize + KV.second.ZeroFillSize,
                   Parent.EPC.getPageSize()),

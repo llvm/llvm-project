@@ -3,17 +3,12 @@
 There should be nothing unwanted there and a simpe main.cpp which includes SB*.h
 should compile and link with the LLDB framework."""
 
-from __future__ import print_function
-
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
 class SBDirCheckerCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

@@ -91,8 +91,11 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v256i1:   return "MVT::v256i1";
   case MVT::v512i1:   return "MVT::v512i1";
   case MVT::v1024i1:  return "MVT::v1024i1";
+  case MVT::v2048i1:  return "MVT::v2048i1";
   case MVT::v128i2:   return "MVT::v128i2";
+  case MVT::v256i2:   return "MVT::v256i2";
   case MVT::v64i4:    return "MVT::v64i4";
+  case MVT::v128i4:   return "MVT::v128i4";
   case MVT::v1i8:     return "MVT::v1i8";
   case MVT::v2i8:     return "MVT::v2i8";
   case MVT::v4i8:     return "MVT::v4i8";
@@ -229,6 +232,8 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::nxv2bf16:  return "MVT::nxv2bf16";
   case MVT::nxv4bf16:  return "MVT::nxv4bf16";
   case MVT::nxv8bf16:  return "MVT::nxv8bf16";
+  case MVT::nxv16bf16: return "MVT::nxv16bf16";
+  case MVT::nxv32bf16: return "MVT::nxv32bf16";
   case MVT::nxv1f32:   return "MVT::nxv1f32";
   case MVT::nxv2f32:   return "MVT::nxv2f32";
   case MVT::nxv4f32:   return "MVT::nxv4f32";
@@ -474,13 +479,13 @@ GetInstByName(const char *Name,
   return I->second.get();
 }
 
-static const char *const FixedInstrs[] = {
+static const char *FixedInstrs[] = {
 #define HANDLE_TARGET_OPCODE(OPC) #OPC,
 #include "llvm/Support/TargetOpcodes.def"
     nullptr};
 
 unsigned CodeGenTarget::getNumFixedInstructions() {
-  return array_lengthof(FixedInstrs) - 1;
+  return std::size(FixedInstrs) - 1;
 }
 
 /// Return all of the instructions defined by the target, ordered by
@@ -686,8 +691,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
 
   EnumName = DefName.substr(4);
 
-  if (R->getValue("GCCBuiltinName"))  // Ignore a missing GCCBuiltinName field.
-    GCCBuiltinName = std::string(R->getValueAsString("GCCBuiltinName"));
+  if (R->getValue("ClangBuiltinName"))  // Ignore a missing ClangBuiltinName field.
+    ClangBuiltinName = std::string(R->getValueAsString("ClangBuiltinName"));
   if (R->getValue("MSBuiltinName"))   // Ignore a missing MSBuiltinName field.
     MSBuiltinName = std::string(R->getValueAsString("MSBuiltinName"));
 
@@ -821,7 +826,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   Properties = parseSDPatternOperatorProperties(R);
 
   // Sort the argument attributes for later benefit.
-  llvm::sort(ArgumentAttributes);
+  for (auto &Attrs : ArgumentAttributes)
+    llvm::sort(Attrs);
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
@@ -884,32 +890,35 @@ void CodeGenIntrinsic::setProperty(Record *R) {
     hasSideEffects = true;
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, NoCapture, 0);
+    addArgAttribute(ArgNo, NoCapture);
   } else if (R->isSubClassOf("NoAlias")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, NoAlias, 0);
+    addArgAttribute(ArgNo, NoAlias);
   } else if (R->isSubClassOf("NoUndef")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, NoUndef, 0);
+    addArgAttribute(ArgNo, NoUndef);
+  } else if (R->isSubClassOf("NonNull")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    addArgAttribute(ArgNo, NonNull);
   } else if (R->isSubClassOf("Returned")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, Returned, 0);
+    addArgAttribute(ArgNo, Returned);
   } else if (R->isSubClassOf("ReadOnly")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, ReadOnly, 0);
+    addArgAttribute(ArgNo, ReadOnly);
   } else if (R->isSubClassOf("WriteOnly")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, WriteOnly, 0);
+    addArgAttribute(ArgNo, WriteOnly);
   } else if (R->isSubClassOf("ReadNone")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, ReadNone, 0);
+    addArgAttribute(ArgNo, ReadNone);
   } else if (R->isSubClassOf("ImmArg")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, ImmArg, 0);
+    addArgAttribute(ArgNo, ImmArg);
   } else if (R->isSubClassOf("Align")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Align = R->getValueAsInt("Align");
-    ArgumentAttributes.emplace_back(ArgNo, Alignment, Align);
+    addArgAttribute(ArgNo, Alignment, Align);
   } else
     llvm_unreachable("Unknown property!");
 }
@@ -923,7 +932,17 @@ bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
   // Convert argument index to attribute index starting from `FirstArgIndex`.
-  ArgAttribute Val{ParamIdx + 1, ImmArg, 0};
-  return std::binary_search(ArgumentAttributes.begin(),
-                            ArgumentAttributes.end(), Val);
+  ++ParamIdx;
+  if (ParamIdx >= ArgumentAttributes.size())
+    return false;
+  ArgAttribute Val{ImmArg, 0};
+  return std::binary_search(ArgumentAttributes[ParamIdx].begin(),
+                            ArgumentAttributes[ParamIdx].end(), Val);
+}
+
+void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK,
+                                       uint64_t V) {
+  if (Idx >= ArgumentAttributes.size())
+    ArgumentAttributes.resize(Idx + 1);
+  ArgumentAttributes[Idx].emplace_back(AK, V);
 }

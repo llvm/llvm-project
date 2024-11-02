@@ -125,7 +125,7 @@ define double @fsel_nonzero_false_val(double %x, double %y, double %z) {
 ; AVX-LABEL: fsel_nonzero_false_val:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -153,8 +153,7 @@ define double @fsel_nonzero_true_val(double %x, double %y, double %z) {
 ; AVX-LABEL: fsel_nonzero_true_val:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: fsel_nonzero_true_val:
@@ -180,9 +179,8 @@ define double @fsel_nonzero_constants(double %x, double %y) {
 ; AVX-LABEL: fsel_nonzero_constants:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
+; AVX-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: fsel_nonzero_constants:

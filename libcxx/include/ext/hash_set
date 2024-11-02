@@ -329,7 +329,7 @@ public:
     size_type elems_in_bucket(size_type __n) const {return __table_.bucket_size(__n);}
 
     _LIBCPP_INLINE_VISIBILITY
-    void resize(size_type __n) {__table_.rehash(__n);}
+    void resize(size_type __n) {__table_.__rehash_unique(__n);}
 };
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -337,7 +337,7 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(size_type __n,
         const hasher& __hf, const key_equal& __eql)
     : __table_(__hf, __eql)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -345,7 +345,7 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(size_type __n,
         const hasher& __hf, const key_equal& __eql, const allocator_type& __a)
     : __table_(__hf, __eql, __a)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -363,7 +363,7 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(
         const hasher& __hf, const key_equal& __eql)
     : __table_(__hf, __eql)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
     insert(__first, __last);
 }
 
@@ -374,7 +374,7 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(
         const hasher& __hf, const key_equal& __eql, const allocator_type& __a)
     : __table_(__hf, __eql, __a)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_unique(__n);
     insert(__first, __last);
 }
 
@@ -383,7 +383,7 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(
         const hash_set& __u)
     : __table_(__u.__table_)
 {
-    __table_.rehash(__u.bucket_count());
+    __table_.__rehash_unique(__u.bucket_count());
     insert(__u.begin(), __u.end());
 }
 
@@ -408,7 +408,7 @@ swap(hash_set<_Value, _Hash, _Pred, _Alloc>& __x,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const hash_set<_Value, _Hash, _Pred, _Alloc>& __x,
            const hash_set<_Value, _Hash, _Pred, _Alloc>& __y)
 {
@@ -549,7 +549,7 @@ public:
     size_type elems_in_bucket(size_type __n) const {return __table_.bucket_size(__n);}
 
     _LIBCPP_INLINE_VISIBILITY
-    void resize(size_type __n) {__table_.rehash(__n);}
+    void resize(size_type __n) {__table_.__rehash_multi(__n);}
 };
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -557,7 +557,7 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(
         size_type __n, const hasher& __hf, const key_equal& __eql)
     : __table_(__hf, __eql)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -566,7 +566,7 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(
         const allocator_type& __a)
     : __table_(__hf, __eql, __a)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -584,7 +584,7 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(
         const hasher& __hf, const key_equal& __eql)
     : __table_(__hf, __eql)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
     insert(__first, __last);
 }
 
@@ -595,7 +595,7 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(
         const hasher& __hf, const key_equal& __eql, const allocator_type& __a)
     : __table_(__hf, __eql, __a)
 {
-    __table_.rehash(__n);
+    __table_.__rehash_multi(__n);
     insert(__first, __last);
 }
 
@@ -604,7 +604,7 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(
         const hash_multiset& __u)
     : __table_(__u.__table_)
 {
-    __table_.rehash(__u.bucket_count());
+    __table_.__rehash_multi(__u.bucket_count());
     insert(__u.begin(), __u.end());
 }
 
@@ -629,7 +629,7 @@ swap(hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
            const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
 {
@@ -661,5 +661,10 @@ operator!=(const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 }
 
 } // namespace __gnu_cxx
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <concepts>
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_HASH_SET

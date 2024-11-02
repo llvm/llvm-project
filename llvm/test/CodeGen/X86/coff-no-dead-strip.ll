@@ -7,7 +7,7 @@
 declare x86_vectorcallcc void @l()
 @m = private global i32 0
 
-@llvm.used = appending global [5 x i8*] [i8* bitcast (i32* @i to i8*), i8* bitcast (i32* @j to i8*), i8* bitcast (i32* @k to i8*), i8* bitcast (void ()* @l to i8*), i8* bitcast (i32* @m to i8*)]
+@llvm.used = appending global [5 x ptr] [ptr @i, ptr @j, ptr @k, ptr @l, ptr @m]
 
 ; CHECK: .section .drectve
 ; CHECK-ULP: .ascii " /INCLUDE:_i"

@@ -308,8 +308,7 @@ private:
   SDValue PromoteIntRes_VECTOR_SHUFFLE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SPLICE(SDNode *N);
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
-  SDValue PromoteIntRes_SCALAR_TO_VECTOR(SDNode *N);
-  SDValue PromoteIntRes_SPLAT_VECTOR(SDNode *N);
+  SDValue PromoteIntRes_ScalarOp(SDNode *N);
   SDValue PromoteIntRes_STEP_VECTOR(SDNode *N);
   SDValue PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N);
@@ -377,8 +376,7 @@ private:
   SDValue PromoteIntOp_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue PromoteIntOp_INSERT_SUBVECTOR(SDNode *N);
   SDValue PromoteIntOp_CONCAT_VECTORS(SDNode *N);
-  SDValue PromoteIntOp_SCALAR_TO_VECTOR(SDNode *N);
-  SDValue PromoteIntOp_SPLAT_VECTOR(SDNode *N);
+  SDValue PromoteIntOp_ScalarOp(SDNode *N);
   SDValue PromoteIntOp_SELECT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SETCC(SDNode *N, unsigned OpNo);
@@ -404,6 +402,9 @@ private:
   SDValue PromoteIntOp_VECREDUCE(SDNode *N);
   SDValue PromoteIntOp_VP_REDUCE(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SET_ROUNDING(SDNode *N);
+  SDValue PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
 
@@ -495,6 +496,9 @@ private:
   SDValue ExpandIntOp_RETURNADDR(SDNode *N);
   SDValue ExpandIntOp_ATOMIC_STORE(SDNode *N);
   SDValue ExpandIntOp_SPLAT_VECTOR(SDNode *N);
+  SDValue ExpandIntOp_STACKMAP(SDNode *N, unsigned OpNo);
+  SDValue ExpandIntOp_PATCHPOINT(SDNode *N, unsigned OpNo);
+  SDValue ExpandIntOp_VP_STRIDED(SDNode *N, unsigned OpNo);
 
   void IntegerExpandSetCCOperands(SDValue &NewLHS, SDValue &NewRHS,
                                   ISD::CondCode &CCCode, const SDLoc &dl);
@@ -743,6 +747,8 @@ private:
   SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
   SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_PATCHPOINT(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Scalarization Support: LegalizeVectorTypes.cpp
@@ -856,6 +862,8 @@ private:
   void SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD, SDValue &Lo,
+                                   SDValue &Hi);
   void SplitVecRes_MLOAD(MaskedLoadSDNode *MLD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_Gather(MemSDNode *VPGT, SDValue &Lo, SDValue &Hi,
                           bool SplitSETCC = false);
@@ -885,6 +893,7 @@ private:
   SDValue SplitVecOp_ExtVecInRegOp(SDNode *N);
   SDValue SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo);
+  SDValue SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_Gather(MemSDNode *MGT, unsigned OpNo);
@@ -941,6 +950,7 @@ private:
   SDValue WidenVecRes_INSERT_VECTOR_ELT(SDNode* N);
   SDValue WidenVecRes_LOAD(SDNode* N);
   SDValue WidenVecRes_VP_LOAD(VPLoadSDNode *N);
+  SDValue WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N);
   SDValue WidenVecRes_MLOAD(MaskedLoadSDNode* N);
   SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
   SDValue WidenVecRes_VP_GATHER(VPGatherSDNode* N);
@@ -952,6 +962,7 @@ private:
   SDValue WidenVecRes_STRICT_FSETCC(SDNode* N);
   SDValue WidenVecRes_UNDEF(SDNode *N);
   SDValue WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N);
+  SDValue WidenVecRes_VECTOR_REVERSE(SDNode *N);
 
   SDValue WidenVecRes_Ternary(SDNode *N);
   SDValue WidenVecRes_Binary(SDNode *N);
@@ -978,6 +989,7 @@ private:
   SDValue WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue WidenVecOp_STORE(SDNode* N);
   SDValue WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo);
+  SDValue WidenVecOp_VP_STRIDED_STORE(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_MSTORE(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_MGATHER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_MSCATTER(SDNode* N, unsigned OpNo);

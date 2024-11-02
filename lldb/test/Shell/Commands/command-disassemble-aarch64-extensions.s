@@ -3,11 +3,7 @@
 # This checks that lldb's disassembler enables every extension that an AArch64
 # target could have.
 
-# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnueabihf %s -o %t \
-# RUN: --mattr=+tme,+mte,+crc,+lse,+rdm,+sm4,+sha3,+aes,+dotprod,+fullfp16 \
-# RUN: --mattr=+fp16fml,+sve,+sve2,+sve2-aes,+sve2-sm4,+sve2-sha3,+sve2-bitperm \
-# RUN: --mattr=+spe,+rcpc,+ssbs,+sb,+predres,+bf16,+mops,+hbc,+sme,+sme-i64 \
-# RUN: --mattr=+sme-f64,+flagm,+pauth,+brbe,+ls64,+f64mm,+f32mm,+i8mm,+rand
+# RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnueabihf %s -o %t --mattr=+all
 # RUN: %lldb %t -o "disassemble -n fn" -o exit 2>&1 | FileCheck %s
 
 .globl  fn
@@ -53,6 +49,7 @@ fn:
   addha za0.s, p0/m, p0/m, z0.s       // SME
   fmopa za0.d, p0/m, p0/m, z0.d, z0.d // SMEF64
   addha za0.d, p0/m, p0/m, z0.d       // SMEI64
+  add {z0.h, z1.h}, {z0.h, z1.h}, z0.h // SME2
 lbl:
   bc.eq lbl                           // HBC
   cpyfp [x0]!, [x1]!, x2!             // MOPS
@@ -99,6 +96,7 @@ lbl:
 # CHECK: addha  za0.s, p0/m, p0/m, z0.s
 # CHECK: fmopa  za0.d, p0/m, p0/m, z0.d, z0.d
 # CHECK: addha  za0.d, p0/m, p0/m, z0.d
-# CHECK: bc.eq  0x98
+# CHECK: add    { z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# CHECK: bc.eq  0x9c
 # CHECK: cpyfp  [x0]!, [x1]!, x2!
 # CHECK: mrs    x0, PMCCNTR_EL0

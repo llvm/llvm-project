@@ -68,24 +68,24 @@ define   <16 x float> @_ss16xfloat_maskz(float %a, <16 x i32> %mask1) {
   ret <16 x float> %r
 }
 
-define   <16 x float> @_ss16xfloat_load(float* %a.ptr) {
+define   <16 x float> @_ss16xfloat_load(ptr %a.ptr) {
 ; ALL-LABEL: _ss16xfloat_load:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0
 ; ALL-NEXT:    retq
-  %a = load float, float* %a.ptr
+  %a = load float, ptr %a.ptr
   %b = insertelement <16 x float> undef, float %a, i32 0
   %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
   ret <16 x float> %c
 }
 
-define   <16 x float> @_ss16xfloat_mask_load(float* %a.ptr, <16 x float> %i, <16 x i32> %mask1) {
+define   <16 x float> @_ss16xfloat_mask_load(ptr %a.ptr, <16 x float> %i, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_mask_load:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1}
 ; ALL-NEXT:    retq
-  %a = load float, float* %a.ptr
+  %a = load float, ptr %a.ptr
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
   %b = insertelement <16 x float> undef, float %a, i32 0
   %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
@@ -93,13 +93,13 @@ define   <16 x float> @_ss16xfloat_mask_load(float* %a.ptr, <16 x float> %i, <16
   ret <16 x float> %r
 }
 
-define   <16 x float> @_ss16xfloat_maskz_load(float* %a.ptr, <16 x i32> %mask1) {
+define   <16 x float> @_ss16xfloat_maskz_load(ptr %a.ptr, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_maskz_load:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
-  %a = load float, float* %a.ptr
+  %a = load float, ptr %a.ptr
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
   %b = insertelement <16 x float> undef, float %a, i32 0
   %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
@@ -146,25 +146,25 @@ define   <8 x double> @_sd8xdouble_maskz(double %a, <8 x i32> %mask1) {
   ret <8 x double> %r
 }
 
-define   <8 x double> @_sd8xdouble_load(double* %a.ptr) {
+define   <8 x double> @_sd8xdouble_load(ptr %a.ptr) {
 ; ALL-LABEL: _sd8xdouble_load:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0
 ; ALL-NEXT:    retq
-  %a = load double, double* %a.ptr
+  %a = load double, ptr %a.ptr
   %b = insertelement <8 x double> undef, double %a, i32 0
   %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer
   ret <8 x double> %c
 }
 
-define   <8 x double> @_sd8xdouble_mask_load(double* %a.ptr, <8 x double> %i, <8 x i32> %mask1) {
+define   <8 x double> @_sd8xdouble_mask_load(ptr %a.ptr, <8 x double> %i, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_mask_load:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; ALL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1}
 ; ALL-NEXT:    retq
-  %a = load double, double* %a.ptr
+  %a = load double, ptr %a.ptr
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
   %b = insertelement <8 x double> undef, double %a, i32 0
   %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer
@@ -172,14 +172,14 @@ define   <8 x double> @_sd8xdouble_mask_load(double* %a.ptr, <8 x double> %i, <8
   ret <8 x double> %r
 }
 
-define   <8 x double> @_sd8xdouble_maskz_load(double* %a.ptr, <8 x i32> %mask1) {
+define   <8 x double> @_sd8xdouble_maskz_load(ptr %a.ptr, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_maskz_load:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; ALL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
-  %a = load double, double* %a.ptr
+  %a = load double, ptr %a.ptr
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
   %b = insertelement <8 x double> undef, double %a, i32 0
   %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer

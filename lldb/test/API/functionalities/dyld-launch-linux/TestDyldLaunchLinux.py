@@ -9,7 +9,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class TestLinux64LaunchingViaDynamicLoader(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(oslist=no_match(['linux']))
     @no_debug_info_test
@@ -43,17 +42,16 @@ class TestLinux64LaunchingViaDynamicLoader(TestBase):
         self.assertSuccess(error)
 
         # Stopped on main here.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = process.GetSelectedThread()
         self.assertIn("main", thread.GetFrameAtIndex(0).GetDisplayFunctionName())
         process.Continue()
 
         # Stopped on get_signal_crash function here.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         self.assertIn("get_signal_crash", thread.GetFrameAtIndex(0).GetDisplayFunctionName())
         process.Continue()
 
         # Stopped because of generated signal.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
-        self.assertIn("raise", thread.GetFrameAtIndex(0).GetDisplayFunctionName())
-        self.assertIn("get_signal_crash", thread.GetFrameAtIndex(1).GetDisplayFunctionName())
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        self.assertIn("raise", lldbutil.get_function_names(thread))

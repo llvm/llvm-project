@@ -236,7 +236,9 @@ body:             |
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
 
     ; GCN-LABEL: name: post_bundle_kill
-    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: }
@@ -252,7 +254,9 @@ body:             |
   bb.0:
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
     ; GCN-LABEL: name: post_bundle_kill_other
-    ; GCN: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
@@ -272,7 +276,9 @@ body:             |
   bb.0:
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
     ; GCN-LABEL: name: post_bundle_kill_plus_other
-    ; GCN: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
@@ -291,7 +297,9 @@ body:             |
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
 
     ; GCN-LABEL: name: post_bundle_multi_kill_0
-    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: }
@@ -309,7 +317,9 @@ body:             |
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
 
     ; GCN-LABEL: name: post_bundle_multi_kill_1
-    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: }
@@ -328,7 +338,9 @@ body:             |
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
 
     ; GCN-LABEL: name: post_bundle_kill_and_null_reg_dbginfo
-    ; GCN: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
+    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     ; GCN-NEXT:   DBG_VALUE $noreg, $noreg
     ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec

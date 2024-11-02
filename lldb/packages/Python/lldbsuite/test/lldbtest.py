@@ -4,10 +4,6 @@ LLDB module which provides the abstract base class of lldb test case.
 The concrete subclass can override lldbtest.TestBase in order to inherit the
 common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 
-The subclass should override the attribute mydir in order for the python runtime
-to locate the individual test cases when running as part of a large test suite
-or when running each test case as a separate python invocation.
-
 ./dotest.py provides a test driver which sets up the environment to run the
 entire of part of the test suite .  Example:
 
@@ -52,9 +48,6 @@ import traceback
 
 # Third-party modules
 import unittest2
-from six import add_metaclass
-from six import StringIO as SixStringIO
-import six
 
 # LLDB modules
 import lldb
@@ -289,18 +282,29 @@ class ValueCheck:
 
         test_base.assertSuccess(val.GetError())
 
+        # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
+        pattern_type = type(re.compile(''))
+
         if self.expect_name:
             test_base.assertEqual(self.expect_name, val.GetName(),
                                   this_error_msg)
         if self.expect_value:
-            test_base.assertEqual(self.expect_value, val.GetValue(),
-                                  this_error_msg)
+            if isinstance(self.expect_value, pattern_type):
+                test_base.assertRegex(val.GetValue(), self.expect_value,
+                                      this_error_msg)
+            else:
+                test_base.assertEqual(self.expect_value, val.GetValue(),
+                                      this_error_msg)
         if self.expect_type:
             test_base.assertEqual(self.expect_type, val.GetDisplayTypeName(),
                                   this_error_msg)
         if self.expect_summary:
-            test_base.assertEqual(self.expect_summary, val.GetSummary(),
-                                  this_error_msg)
+            if isinstance(self.expect_summary, pattern_type):
+                test_base.assertRegex(val.GetSummary(), self.expect_summary,
+                                      this_error_msg)
+            else:
+                test_base.assertEqual(self.expect_summary, val.GetSummary(),
+                                      this_error_msg)
         if self.children is not None:
             self.check_value_children(test_base, val, error_msg)
 
@@ -324,7 +328,7 @@ class ValueCheck:
             child_error = "Checking child with index " + str(i) + ":\n" + error_msg
             expected_child.check_value(test_base, actual_child, child_error)
 
-class recording(SixStringIO):
+class recording(io.StringIO):
     """
     A nice little context manager for recording the debugger interactions into
     our session object.  If trace flag is ON, it also emits the interactions
@@ -332,8 +336,8 @@ class recording(SixStringIO):
     """
 
     def __init__(self, test, trace):
-        """Create a SixStringIO instance; record the session obj and trace flag."""
-        SixStringIO.__init__(self)
+        """Create a io.StringIO instance; record the session obj and trace flag."""
+        io.StringIO.__init__(self)
         # The test might not have undergone the 'setUp(self)' phase yet, so that
         # the attribute 'session' might not even exist yet.
         self.session = getattr(test, "session", None) if test else None
@@ -342,7 +346,7 @@ class recording(SixStringIO):
     def __enter__(self):
         """
         Context management protocol on entry to the body of the with statement.
-        Just return the SixStringIO object.
+        Just return the io.StringIO object.
         """
         return self
 
@@ -350,7 +354,7 @@ class recording(SixStringIO):
         """
         Context management protocol on exit from the body of the with statement.
         If trace is ON, it emits the recordings into stderr.  Always add the
-        recordings to our session object.  And close the SixStringIO object, too.
+        recordings to our session object.  And close the io.StringIO object, too.
         """
         if self.trace:
             print(self.getvalue(), file=sys.stderr)
@@ -359,8 +363,7 @@ class recording(SixStringIO):
         self.close()
 
 
-@add_metaclass(abc.ABCMeta)
-class _BaseProcess(object):
+class _BaseProcess(object, metaclass=abc.ABCMeta):
 
     @abc.abstractproperty
     def pid(self):
@@ -397,7 +400,6 @@ class _LocalProcess(_BaseProcess):
             stdout=open(
                 os.devnull) if not self._trace_on else None,
             stdin=PIPE,
-            preexec_fn=lldbplatformutil.enable_attach,
             env=env)
 
     def terminate(self):
@@ -519,9 +521,9 @@ class Base(unittest2.TestCase):
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
         lldb_test_src = configuration.test_src_root
         if not test_file.startswith(lldb_test_src):
-          raise Exception(
-              "Test file '%s' must reside within lldb_test_src "
-              "(which is '%s')." % (test_file, lldb_test_src))
+            raise Exception(
+                "Test file '%s' must reside within lldb_test_src "
+                "(which is '%s')." % (test_file, lldb_test_src))
         return os.path.dirname(os.path.relpath(test_file, start=lldb_test_src))
 
     def TraceOn(self):
@@ -539,7 +541,9 @@ class Base(unittest2.TestCase):
         Do current directory manipulation.
         """
         # Fail fast if 'mydir' attribute is not overridden.
-        if not cls.mydir or len(cls.mydir) == 0:
+        if not cls.mydir:
+            cls.mydir = Base.compute_mydir(sys.modules[cls.__module__].__file__)
+        if not cls.mydir:
             raise Exception("Subclasses must override the 'mydir' attribute.")
 
         # Save old working directory.
@@ -948,7 +952,7 @@ class Base(unittest2.TestCase):
 
         Hooks are executed in a first come first serve manner.
         """
-        if six.callable(hook):
+        if callable(hook):
             with recording(self, traceAlways) as sbuf:
                 print(
                     "Adding tearDown hook:",
@@ -1254,21 +1258,23 @@ class Base(unittest2.TestCase):
         """Returns the architecture of the lldb binary."""
         if not hasattr(self, 'lldbArchitecture'):
 
-            # spawn local process
+            # These two target settings prevent lldb from doing setup that does
+            # nothing but slow down the end goal of printing the architecture.
             command = [
                 lldbtest_config.lldbExec,
-                "-o",
-                "file " + lldbtest_config.lldbExec,
-                "-o",
-                "quit"
+                "-x",
+                "-b",
+                "-o", "settings set target.preload-symbols false",
+                "-o", "settings set target.load-script-from-symbol-file false",
+                "-o", "file " + lldbtest_config.lldbExec,
             ]
 
             output = check_output(command)
-            str = output.decode("utf-8")
+            str = output.decode()
 
             for line in str.splitlines():
                 m = re.search(
-                    "Current executable set to '.*' \\((.*)\\)\\.", line)
+                    r"Current executable set to '.*' \((.*)\)\.", line)
                 if m:
                     self.lldbArchitecture = m.group(1)
                     break
@@ -1408,7 +1414,8 @@ class Base(unittest2.TestCase):
             debug_info=None,
             architecture=None,
             compiler=None,
-            dictionary=None):
+            dictionary=None,
+            make_targets=None):
         """Platform specific way to build binaries."""
         if not architecture and configuration.arch:
             architecture = configuration.arch
@@ -1423,7 +1430,7 @@ class Base(unittest2.TestCase):
 
         module = builder_module()
         command = builder_module().getBuildCommand(debug_info, architecture,
-                compiler, dictionary, testdir, testname)
+                compiler, dictionary, testdir, testname, make_targets)
         if command is None:
             raise Exception("Don't know how to build binary")
 
@@ -1660,14 +1667,16 @@ class LLDBTestCaseFactory(type):
                 # If any debug info categories were explicitly tagged, assume that list to be
                 # authoritative.  If none were specified, try with all debug
                 # info formats.
-                all_dbginfo_categories = set(test_categories.debug_info_categories)
+                all_dbginfo_categories = set(test_categories.debug_info_categories.keys())
                 categories = set(
                     getattr(
                         attrvalue,
                         "categories",
                         [])) & all_dbginfo_categories
                 if not categories:
-                    categories = all_dbginfo_categories
+                    categories = [category for category, can_replicate \
+                                  in test_categories.debug_info_categories.items() \
+                                  if can_replicate]
 
                 for cat in categories:
                     @decorators.add_test_categories([cat])
@@ -1694,19 +1703,13 @@ class LLDBTestCaseFactory(type):
 # methods when a new class is loaded
 
 
-@add_metaclass(LLDBTestCaseFactory)
-class TestBase(Base):
+class TestBase(Base, metaclass=LLDBTestCaseFactory):
     """
     This abstract base class is meant to be subclassed.  It provides default
     implementations for setUpClass(), tearDownClass(), setUp(), and tearDown(),
     among other things.
 
     Important things for test class writers:
-
-        - Overwrite the mydir class attribute, otherwise your test class won't
-          run.  It specifies the relative directory to the top level 'test' so
-          the test harness can change to the correct working directory before
-          running your test.
 
         - The setUp method sets up things to facilitate subsequent interactions
           with the debugger as part of the test.  These include:
@@ -1775,7 +1778,7 @@ class TestBase(Base):
         if self.hasDarwinFramework():
             include_stmt = "'#include <%s>' % os.path.join('LLDB', header)"
         else:
-            include_stmt = "'#include <%s>' % os.path.join('" + public_api_dir + "', header)"
+            include_stmt = "'#include <%s>' % os.path.join(r'" + public_api_dir + "', header)"
         list = [eval(include_stmt) for header in public_headers if (
             header.startswith("SB") and header.endswith(".h"))]
         includes = '\n'.join(list)
@@ -2238,7 +2241,7 @@ FileCheck output:
 
     def expect(
             self,
-            str,
+            string,
             msg=None,
             patterns=None,
             startstr=None,
@@ -2272,9 +2275,9 @@ FileCheck output:
         client is expecting the output of the command not to match the golden
         input.
 
-        Finally, the required argument 'str' represents the lldb command to be
+        Finally, the required argument 'string' represents the lldb command to be
         sent to the command interpreter.  In case the keyword argument 'exe' is
-        set to False, the 'str' is treated as a string to be matched/not-matched
+        set to False, the 'string' is treated as a string to be matched/not-matched
         against the golden input.
         """
         # Catch cases where `expect` has been miscalled. Specifically, prevent
@@ -2288,9 +2291,9 @@ FileCheck output:
             assert False, "expect() missing a matcher argument"
 
         # Check `patterns` and `substrs` are not accidentally given as strings.
-        assert not isinstance(patterns, six.string_types), \
+        assert not isinstance(patterns, str), \
             "patterns must be a collection of strings"
-        assert not isinstance(substrs, six.string_types), \
+        assert not isinstance(substrs, str), \
             "substrs must be a collection of strings"
 
         trace = (True if traceAlways else trace)
@@ -2300,7 +2303,7 @@ FileCheck output:
             # Pass the assert message along since it provides more semantic
             # info.
             self.runCmd(
-                str,
+                string,
                 msg=msg,
                 trace=(
                     True if trace else False),
@@ -2313,13 +2316,13 @@ FileCheck output:
             # If error is True, the API client expects the command to fail!
             if error:
                 self.assertFalse(self.res.Succeeded(),
-                                 "Command '" + str + "' is expected to fail!")
+                                 "Command '" + string + "' is expected to fail!")
         else:
-            # No execution required, just compare str against the golden input.
-            if isinstance(str, lldb.SBCommandReturnObject):
-                output = str.GetOutput()
+            # No execution required, just compare string against the golden input.
+            if isinstance(string, lldb.SBCommandReturnObject):
+                output = string.GetOutput()
             else:
-                output = str
+                output = string
             with recording(self, trace) as sbuf:
                 print("looking at:", output, file=sbuf)
 
@@ -2330,7 +2333,7 @@ FileCheck output:
         # To be used as assert fail message and/or trace content
         log_lines = [
                 "{}:".format("Ran command" if exe else "Checking string"),
-                "\"{}\"".format(str),
+                "\"{}\"".format(string),
                 # Space out command and output
                 "",
         ]
@@ -2358,7 +2361,7 @@ FileCheck output:
             start = 0
             for substr in substrs:
                 index = output[start:].find(substr)
-                start = start + index if ordered and matching else 0
+                start = start + index + len(substr) if ordered and matching else 0
                 matched = index != -1
                 log_lines.append("{} sub string: \"{}\" ({})".format(
                         expecting_str, substr, found_str(matched)))
@@ -2473,6 +2476,29 @@ FileCheck output:
             error = obj.GetCString()
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
+
+    """Assert that a command return object is successful"""
+    def assertCommandReturn(self, obj, msg=None):
+        if not obj.Succeeded():
+            error = obj.GetError()
+            self.fail(self._formatMessage(msg,
+                "'{}' is not success".format(error)))
+            
+    """Assert two states are equal"""
+    def assertState(self, first, second, msg=None):
+        if first != second:
+            error = "{} ({}) != {} ({})".format(
+                lldbutil.state_type_to_str(first), first,
+                lldbutil.state_type_to_str(second), second)
+            self.fail(self._formatMessage(msg, error))
+
+    """Assert two stop reasons are equal"""
+    def assertStopReason(self, first, second, msg=None):
+        if first != second:
+            error = "{} ({}) != {} ({})".format(
+                lldbutil.stop_reason_to_str(first), first,
+                lldbutil.stop_reason_to_str(second), second)
+            self.fail(self._formatMessage(msg, error))
 
     def createTestTarget(self, file_path=None, msg=None,
                          load_dependent_modules=True):

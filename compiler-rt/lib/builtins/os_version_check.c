@@ -307,8 +307,8 @@ static void readSystemProperties(void) {
 }
 
 int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
-  (int32_t) Minor;
-  (int32_t) Subminor;
+  (void) Minor;
+  (void) Subminor;
   static pthread_once_t once = PTHREAD_ONCE_INIT;
   pthread_once(&once, readSystemProperties);
 

@@ -1,7 +1,7 @@
 # Check for the simplification of .rodata loads.
 
 RUN: %clang %cflags %p/Inputs/rodata_simpl_loads.s -o %t.exe
-RUN: llvm-bolt %t.exe -o %t -simplify-rodata-loads
+RUN: llvm-bolt %t.exe -o %t --simplify-rodata-loads
 RUN: FileCheck %s --check-prefix=ORIGINAL --input-file %p/Inputs/rodata_simpl_loads.s
 RUN: llvm-objdump -d %t --print-imm-hex --disassemble-symbols=main | FileCheck %s
 

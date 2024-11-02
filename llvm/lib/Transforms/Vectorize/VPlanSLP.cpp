@@ -343,7 +343,7 @@ SmallVector<VPlanSlp::MultiNodeOpTy, 4> VPlanSlp::reorderMultiNodeOps() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlanSlp::dumpBundle(ArrayRef<VPValue *> Values) {
   dbgs() << " Ops: ";
-  for (auto Op : Values) {
+  for (auto *Op : Values) {
     if (auto *VPInstr = cast_or_null<VPInstruction>(Op))
       if (auto *Instr = VPInstr->getUnderlyingInstr()) {
         dbgs() << *Instr << " | ";
@@ -387,7 +387,7 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
     return markFailed();
 
   assert(getOpcode(Values) && "Opcodes for all values must match");
-  unsigned ValuesOpcode = getOpcode(Values).getValue();
+  unsigned ValuesOpcode = *getOpcode(Values);
 
   SmallVector<VPValue *, 4> CombinedOperands;
   if (areCommutative(Values)) {

@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
@@ -93,6 +91,9 @@ static int stat(const char *path, StatT *buf) {
 static int lstat(const char *path, StatT *buf) {
   return stat_file(path, buf, FILE_FLAG_OPEN_REPARSE_POINT);
 }
+#elif defined(_AIX)
+using TimeSpec = st_timespec_t;
+using StatT = struct stat;
 #else
 using TimeSpec = timespec;
 using StatT = struct stat;
@@ -475,6 +476,7 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
     const file_time_type past_time = now - Minutes(3) - Sec(42) - SubSec(17);
     const file_time_type before_epoch_time =
         epoch_time - Minutes(3) - Sec(42) - SubSec(17);
+    (void)before_epoch_time;
     // FreeBSD has a bug in their utimes implementation where the time is not update
     // when the number of seconds is '-1'.
 #if defined(__FreeBSD__) || defined(__NetBSD__)
@@ -482,6 +484,7 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         epoch_time - Sec(2) - SubSec(17);
 #else
     const file_time_type just_before_epoch_time = epoch_time - SubSec(17);
+    (void)just_before_epoch_time;
 #endif
 
     struct TestCase {
@@ -494,12 +497,19 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         {"file, future_time", file, future_time},
         {"dir, future_time", dir, future_time},
         {"file, past_time", file, past_time},
-        {"dir, past_time", dir, past_time},
+        {"dir, past_time", dir, past_time}
+        // Exclude file time types of before epoch time from testing on AIX
+        // because AIX system call utimensat() does not accept the times
+        // parameter having a negative tv_sec or tv_nsec field.
+#if !defined(_AIX)
+        ,
         {"file, before_epoch_time", file, before_epoch_time},
         {"dir, before_epoch_time", dir, before_epoch_time},
         {"file, just_before_epoch_time", file, just_before_epoch_time},
         {"dir, just_before_epoch_time", dir, just_before_epoch_time}
+#endif
     };
+
     for (const auto& TC : cases) {
         const auto old_times = GetTimes(TC.p);
         file_time_type old_time;

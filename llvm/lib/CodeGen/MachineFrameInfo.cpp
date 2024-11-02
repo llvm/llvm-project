@@ -58,7 +58,7 @@ int MachineFrameInfo::CreateStackObject(uint64_t Size, Align Alignment,
                                 !IsSpillSlot, StackID));
   int Index = (int)Objects.size() - NumFixedObjects - 1;
   assert(Index >= 0 && "Bad frame index!");
-  if (StackID == 0)
+  if (contributesToMaxAlignment(StackID))
     ensureMaxAlignment(Alignment);
   return Index;
 }
@@ -127,7 +127,7 @@ BitVector MachineFrameInfo::getPristineRegs(const MachineFunction &MF) const {
     BV.set(*CSR);
 
   // Saved CSRs are not pristine.
-  for (auto &I : getCalleeSavedInfo())
+  for (const auto &I : getCalleeSavedInfo())
     for (MCSubRegIterator S(I.getReg(), TRI, true); S.isValid(); ++S)
       BV.reset(*S);
 

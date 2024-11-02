@@ -142,9 +142,9 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 "stack-probe-size"="32768" nounwin
 ; CHECK-32-NEXT:    mr r31, r0
 ; CHECK-32-NEXT:    blr
   %a = alloca i32, i32 %n, align 16
-  %b = getelementptr inbounds i32, i32* %a, i64 1198
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 1198
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -288,9 +288,9 @@ define i32 @bar(i32 %n) local_unnamed_addr #0 nounwind {
 ; CHECK-32-NEXT:    blr
   %a = alloca i32, i32 %n, align 16
   %i = add i32 %n, 1024
-  %b = getelementptr inbounds i32, i32* %a, i32 %i
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i32 %i
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -428,9 +428,9 @@ define i32 @f(i32 %n) local_unnamed_addr #0 "stack-probe-size"="65536" nounwind 
 ; CHECK-32-NEXT:    mr r31, r0
 ; CHECK-32-NEXT:    blr
   %a = alloca i32, i32 %n, align 16
-  %b = getelementptr inbounds i32, i32* %a, i64 1198
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 1198
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 

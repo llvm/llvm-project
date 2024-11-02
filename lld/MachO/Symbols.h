@@ -12,8 +12,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Strings.h"
+
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -39,6 +38,7 @@ public:
     DylibKind,
     LazyArchiveKind,
     LazyObjectKind,
+    AliasKind,
   };
 
   virtual ~Symbol() {}
@@ -74,6 +74,7 @@ public:
   bool isInStubs() const { return stubsIndex != UINT32_MAX; }
 
   uint64_t getStubVA() const;
+  uint64_t getLazyPtrVA() const;
   uint64_t getGotVA() const;
   uint64_t getTlvVA() const;
   uint64_t resolveBranchVA() const {
@@ -132,6 +133,12 @@ public:
 
   uint64_t getVA() const override;
 
+  // Returns the object file that this symbol was defined in. This value differs
+  // from `getFile()` if the symbol originated from a bitcode file.
+  ObjFile *getObjectFile() const;
+
+  std::string getSourceLocation();
+
   // Ensure this symbol's pointers to InputSections point to their canonical
   // copies.
   void canonicalize();
@@ -183,6 +190,7 @@ public:
   uint64_t value;
   // size is only calculated for regular (non-bitcode) symbols.
   uint64_t size;
+  // This can be a subsection of either __compact_unwind or __eh_frame.
   ConcatInputSection *unwindEntry = nullptr;
 };
 
@@ -195,8 +203,10 @@ enum class RefState : uint8_t { Unreferenced = 0, Weak = 1, Strong = 2 };
 
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ name, InputFile *file, RefState refState)
-      : Symbol(UndefinedKind, name, file), refState(refState) {
+  Undefined(StringRefZ name, InputFile *file, RefState refState,
+            bool wasBitcodeSymbol)
+      : Symbol(UndefinedKind, name, file), refState(refState),
+        wasBitcodeSymbol(wasBitcodeSymbol) {
     assert(refState != RefState::Unreferenced);
   }
 
@@ -205,6 +215,7 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == UndefinedKind; }
 
   RefState refState : 2;
+  bool wasBitcodeSymbol;
 };
 
 // On Unix, it is traditionally allowed to write variable definitions without
@@ -318,6 +329,26 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
 
+// Represents N_INDR symbols. Note that if we are given valid, linkable inputs,
+// then all AliasSymbol instances will be converted into one of the other Symbol
+// types after `createAliases()` runs.
+class AliasSymbol final : public Symbol {
+public:
+  AliasSymbol(InputFile *file, StringRef name, StringRef aliasedName,
+              bool isPrivateExtern)
+      : Symbol(AliasKind, name, file), privateExtern(isPrivateExtern),
+        aliasedName(aliasedName) {}
+
+  StringRef getAliasedName() const { return aliasedName; }
+
+  static bool classof(const Symbol *s) { return s->kind() == AliasKind; }
+
+  const bool privateExtern;
+
+private:
+  StringRef aliasedName;
+};
+
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
@@ -325,6 +356,7 @@ union SymbolUnion {
   alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
   alignas(LazyArchive) char e[sizeof(LazyArchive)];
   alignas(LazyObject) char f[sizeof(LazyObject)];
+  alignas(AliasSymbol) char g[sizeof(AliasSymbol)];
 };
 
 template <typename T, typename... ArgT>
@@ -343,6 +375,14 @@ T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   return sym;
 }
 
+// Can a symbol's address only be resolved at runtime?
+inline bool needsBinding(const Symbol *sym) {
+  if (isa<DylibSymbol>(sym))
+    return true;
+  if (const auto *defined = dyn_cast<Defined>(sym))
+    return defined->isExternalWeakDef() || defined->interposable;
+  return false;
+}
 } // namespace macho
 
 std::string toString(const macho::Symbol &);

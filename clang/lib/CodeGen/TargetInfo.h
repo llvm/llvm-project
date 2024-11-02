@@ -38,19 +38,32 @@ class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
 class CGBlockInfo;
+class SwiftABIInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
 /// codegeneration issues, like target-specific attributes, builtins and so
 /// on.
 class TargetCodeGenInfo {
-  std::unique_ptr<ABIInfo> Info = nullptr;
+  std::unique_ptr<ABIInfo> Info;
+
+protected:
+  // Target hooks supporting Swift calling conventions. The target must
+  // initialize this field if it claims to support these calling conventions
+  // by returning true from TargetInfo::checkCallingConvention for them.
+  std::unique_ptr<SwiftABIInfo> SwiftInfo;
 
 public:
-  TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info) : Info(std::move(Info)) {}
+  TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info);
   virtual ~TargetCodeGenInfo();
 
   /// getABIInfo() - Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *Info; }
+
+  /// Returns Swift ABI info helper for the target.
+  const SwiftABIInfo &getSwiftABIInfo() const {
+    assert(SwiftInfo && "Swift ABI info has not been initialized");
+    return *SwiftInfo;
+  }
 
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.

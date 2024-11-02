@@ -42,6 +42,8 @@ public:
   StructuredData::DictionarySP GetRegisterInfo() override;
 
   llvm::Optional<std::string> GetRegisterContext() override;
+
+  StructuredData::ArraySP GetExtendedInfo() override;
 };
 } // namespace lldb_private
 

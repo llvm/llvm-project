@@ -4,7 +4,7 @@
 define i64 @i64_test(i64 %i) nounwind readnone {
 ; CHECK-LABEL: i64_test:
 ; CHECK:       SelectionDAG has 9 nodes:
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t0: ch,glue = EntryToken
 ; CHECK-NEXT:    t11: ch,glue = CopyToReg t0, Register:i32 $vgpr0, IMPLICIT_DEF:i32
 ; CHECK-NEXT:    t17: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
 ; CHECK-NEXT:    t13: ch,glue = CopyToReg t11, Register:i32 $vgpr1, t17, t11:1
@@ -20,7 +20,7 @@ define i64 @i32_test(i32 %i) nounwind readnone {
 ; CHECK-LABEL: i32_test:
 ; CHECK:       SelectionDAG has 8 nodes:
 ; CHECK-NEXT:    t5: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t0: ch,glue = EntryToken
 ; CHECK-NEXT:    t7: ch,glue = CopyToReg t0, Register:i32 $vgpr0, t5
 ; CHECK-NEXT:    t9: ch,glue = CopyToReg t7, Register:i32 $vgpr1, t5, t7:1
 ; CHECK-NEXT:    t10: ch = SI_RETURN Register:i32 $vgpr0, Register:i32 $vgpr1, t9, t9:1
@@ -36,7 +36,7 @@ define i64 @i16_test(i16 %i) nounwind readnone {
 ; CHECK-LABEL: i16_test:
 ; CHECK:       SelectionDAG has 8 nodes:
 ; CHECK-NEXT:    t5: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t0: ch,glue = EntryToken
 ; CHECK-NEXT:    t7: ch,glue = CopyToReg t0, Register:i32 $vgpr0, t5
 ; CHECK-NEXT:    t9: ch,glue = CopyToReg t7, Register:i32 $vgpr1, t5, t7:1
 ; CHECK-NEXT:    t10: ch = SI_RETURN Register:i32 $vgpr0, Register:i32 $vgpr1, t9, t9:1
@@ -52,7 +52,7 @@ define i64 @i8_test(i8 %i) nounwind readnone {
 ; CHECK-LABEL: i8_test:
 ; CHECK:       SelectionDAG has 8 nodes:
 ; CHECK-NEXT:    t5: i32 = V_MOV_B32_e32 TargetConstant:i32<0>
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t0: ch,glue = EntryToken
 ; CHECK-NEXT:    t7: ch,glue = CopyToReg t0, Register:i32 $vgpr0, t5
 ; CHECK-NEXT:    t9: ch,glue = CopyToReg t7, Register:i32 $vgpr1, t5, t7:1
 ; CHECK-NEXT:    t10: ch = SI_RETURN Register:i32 $vgpr0, Register:i32 $vgpr1, t9, t9:1

@@ -6,8 +6,9 @@ RUN: link_fdata %p/Inputs/loop_nest.s %t.o %t.fdata --nmtool llvm-nm
 RUN: llvm-strip --strip-unneeded %t.o
 RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-RUN: llvm-bolt %t.exe -o %t -data=%t.fdata \
-RUN: -print-cfg -print-loops -sequential-disassembly -lite=0 2>&1 | FileCheck %s
+RUN: llvm-bolt %t.exe -o %t --data=%t.fdata \
+RUN:   --print-cfg --print-loops --sequential-disassembly --lite=0 \
+RUN:   2>&1 | FileCheck %s
 
 CHECK:      Binary Function "main{{.*}}" after building cfg
 CHECK:      Loop Info for Function "main{{.*}}"

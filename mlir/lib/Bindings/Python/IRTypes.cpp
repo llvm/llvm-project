@@ -301,6 +301,15 @@ public:
           return shape;
         },
         "Returns the shape of the ranked shaped type as a list of integers.");
+    c.def_static(
+        "get_dynamic_size", []() { return mlirShapedTypeGetDynamicSize(); },
+        "Returns the value used to indicate dynamic dimensions in shaped "
+        "types.");
+    c.def_static(
+        "get_dynamic_stride_or_offset",
+        []() { return mlirShapedTypeGetDynamicStrideOrOffset(); },
+        "Returns the value used to indicate dynamic strides or offsets in "
+        "shaped types.");
   }
 
 private:
@@ -608,6 +617,47 @@ public:
   }
 };
 
+static MlirStringRef toMlirStringRef(const std::string &s) {
+  return mlirStringRefCreate(s.data(), s.size());
+}
+
+/// Opaque Type subclass - OpaqueType.
+class PyOpaqueType : public PyConcreteType<PyOpaqueType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAOpaque;
+  static constexpr const char *pyClassName = "OpaqueType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](std::string dialectNamespace, std::string typeData,
+           DefaultingPyMlirContext context) {
+          MlirType type = mlirOpaqueTypeGet(context->get(),
+                                            toMlirStringRef(dialectNamespace),
+                                            toMlirStringRef(typeData));
+          return PyOpaqueType(context->getRef(), type);
+        },
+        py::arg("dialect_namespace"), py::arg("buffer"),
+        py::arg("context") = py::none(),
+        "Create an unregistered (opaque) dialect type.");
+    c.def_property_readonly(
+        "dialect_namespace",
+        [](PyOpaqueType &self) {
+          MlirStringRef stringRef = mlirOpaqueTypeGetDialectNamespace(self);
+          return py::str(stringRef.data, stringRef.length);
+        },
+        "Returns the dialect namespace for the Opaque type as a string.");
+    c.def_property_readonly(
+        "data",
+        [](PyOpaqueType &self) {
+          MlirStringRef stringRef = mlirOpaqueTypeGetData(self);
+          return py::str(stringRef.data, stringRef.length);
+        },
+        "Returns the data for the Opaque type as a string.");
+  }
+};
+
 } // namespace
 
 void mlir::python::populateIRTypes(py::module &m) {
@@ -627,4 +677,5 @@ void mlir::python::populateIRTypes(py::module &m) {
   PyUnrankedMemRefType::bind(m);
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
+  PyOpaqueType::bind(m);
 }

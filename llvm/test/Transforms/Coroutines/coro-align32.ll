@@ -1,7 +1,7 @@
 ; Tests that the coro.align intrinsic could be lowered to correct alignment
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define i8* @f() "coroutine.presplit"="1" {
+define i8* @f() presplitcoroutine {
 entry:
   %x = alloca i64, align 16
   %y = alloca i32, align 32

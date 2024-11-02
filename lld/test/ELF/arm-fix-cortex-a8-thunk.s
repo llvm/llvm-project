@@ -6,7 +6,7 @@
 // RUN:                             *(.text.04) } \
 // RUN:          .text2 0x210000 : { *(.text.05) } } " > %t.script
 // RUN: ld.lld --script %t.script --fix-cortex-a8 --shared -verbose %t.o -o %t2 2>&1
-// RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t2 | FileCheck %s
 
 /// Test cases for Cortex-a8 Erratum 657417 that involve interactions with
 /// range extension thunks. Both erratum fixes and range extension thunks need

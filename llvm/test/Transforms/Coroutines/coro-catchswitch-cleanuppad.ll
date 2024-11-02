@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg<switch-range-to-icmp>,early-cse' -S | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
-define i8* @f2(i1 %val) "coroutine.presplit"="1" personality i32 (...)* @__CxxFrameHandler3 {
+define i8* @f2(i1 %val) presplitcoroutine personality i32 (...)* @__CxxFrameHandler3 {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %valueA = call i32 @f();

@@ -2,9 +2,6 @@
 Test that plugins that load commands work correctly.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class PluginCommandTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)

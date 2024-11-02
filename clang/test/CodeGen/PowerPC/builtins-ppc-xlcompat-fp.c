@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64le-unknown-linux-gnu \
+// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr8 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64-unknown-aix \
+// RUN: %clang_cc1 -triple powerpc64-unknown-aix \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix \
+// RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | FileCheck %s
 
 extern double a;
@@ -14,7 +14,7 @@ extern float e;
 extern float f;
 
 // CHECK-LABEL: @test_fric(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.rint.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -23,7 +23,7 @@ double test_fric() {
 }
 
 // CHECK-LABEL: @test_frim(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.floor.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -32,7 +32,7 @@ double test_frim() {
 }
 
 // CHECK-LABEL: @test_frims(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -41,7 +41,7 @@ float test_frims() {
 }
 
 // CHECK-LABEL: @test_frin(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.round.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -50,7 +50,7 @@ double test_frin() {
 }
 
 // CHECK-LABEL: @test_frins(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -59,7 +59,7 @@ float test_frins() {
 }
 
 // CHECK-LABEL: @test_frip(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.ceil.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -68,7 +68,7 @@ double test_frip() {
 }
 
 // CHECK-LABEL: @test_frips(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -77,7 +77,7 @@ float test_frips() {
 }
 
 // CHECK-LABEL: @test_friz(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.trunc.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -86,7 +86,7 @@ double test_friz() {
 }
 
 // CHECK-LABEL: @test_frizs(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -95,9 +95,9 @@ float test_frizs() {
 }
 
 // CHECK-LABEL: @test_fsel(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @b, align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, double* @c, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @b, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @c, align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.ppc.fsel(double [[TMP0]], double [[TMP1]], double [[TMP2]])
 // CHECK-NEXT:    ret double [[TMP3]]
 //
@@ -106,9 +106,9 @@ double test_fsel() {
 }
 
 // CHECK-LABEL: @test_fsels(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @e, align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, float* @f, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @e, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @f, align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.ppc.fsels(float [[TMP0]], float [[TMP1]], float [[TMP2]])
 // CHECK-NEXT:    ret float [[TMP3]]
 //
@@ -117,7 +117,7 @@ float test_fsels() {
 }
 
 // CHECK-LABEL: @test_frsqrte(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.ppc.frsqrte(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -126,7 +126,7 @@ double test_frsqrte() {
 }
 
 // CHECK-LABEL: @test_frsqrtes(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ppc.frsqrtes(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -135,7 +135,7 @@ float test_frsqrtes() {
 }
 
 // CHECK-LABEL: @test_fsqrt(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sqrt.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -144,7 +144,7 @@ double test_fsqrt() {
 }
 
 // CHECK-LABEL: @test_fsqrts(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.sqrt.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -153,7 +153,7 @@ float test_fsqrts() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_fric(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.rint.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -162,7 +162,7 @@ double test_builtin_ppc_fric() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frim(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.floor.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -171,7 +171,7 @@ double test_builtin_ppc_frim() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frims(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -180,7 +180,7 @@ float test_builtin_ppc_frims() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frin(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.round.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -189,7 +189,7 @@ double test_builtin_ppc_frin() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frins(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -198,7 +198,7 @@ float test_builtin_ppc_frins() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frip(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.ceil.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -207,7 +207,7 @@ double test_builtin_ppc_frip() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frips(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -216,7 +216,7 @@ float test_builtin_ppc_frips() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_friz(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.trunc.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -225,7 +225,7 @@ double test_builtin_ppc_friz() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frizs(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -234,9 +234,9 @@ float test_builtin_ppc_frizs() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_fsel(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, double* @b, align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, double* @c, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @b, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @c, align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.ppc.fsel(double [[TMP0]], double [[TMP1]], double [[TMP2]])
 // CHECK-NEXT:    ret double [[TMP3]]
 //
@@ -245,9 +245,9 @@ double test_builtin_ppc_fsel() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_fsels(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, float* @e, align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load float, float* @f, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @e, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @f, align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.ppc.fsels(float [[TMP0]], float [[TMP1]], float [[TMP2]])
 // CHECK-NEXT:    ret float [[TMP3]]
 //
@@ -256,7 +256,7 @@ float test_builtin_ppc_fsels() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frsqrte(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.ppc.frsqrte(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -265,7 +265,7 @@ double test_builtin_ppc_frsqrte() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_frsqrtes(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ppc.frsqrtes(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //
@@ -274,7 +274,7 @@ float test_builtin_ppc_frsqrtes() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_fsqrt(
-// CHECK:    [[TMP0:%.*]] = load double, double* @a, align 8
+// CHECK:    [[TMP0:%.*]] = load double, ptr @a, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sqrt.f64(double [[TMP0]])
 // CHECK-NEXT:    ret double [[TMP1]]
 //
@@ -283,7 +283,7 @@ double test_builtin_ppc_fsqrt() {
 }
 
 // CHECK-LABEL: @test_builtin_ppc_fsqrts(
-// CHECK:    [[TMP0:%.*]] = load float, float* @d, align 4
+// CHECK:    [[TMP0:%.*]] = load float, ptr @d, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.sqrt.f32(float [[TMP0]])
 // CHECK-NEXT:    ret float [[TMP1]]
 //

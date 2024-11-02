@@ -18,7 +18,7 @@ namespace android {
 /// inotify_init() is better to be replaced by inotify_init1().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-inotify-init.html
 class CloexecInotifyInitCheck : public CloexecCheck {
 public:
   CloexecInotifyInitCheck(StringRef Name, ClangTidyContext *Context)

@@ -25,21 +25,19 @@ define zeroext i1 @opeq1(
 ; X64-NEXT:    cmpq (%rsi), %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
-  %"struct.std::pair"* nocapture readonly dereferenceable(8) %a,
-  %"struct.std::pair"* nocapture readonly dereferenceable(8) %b) local_unnamed_addr nofree nosync {
+  ptr nocapture readonly dereferenceable(8) %a,
+  ptr nocapture readonly dereferenceable(8) %b) local_unnamed_addr nofree nosync {
 entry:
-  %first.i = getelementptr inbounds %"struct.std::pair", %"struct.std::pair"* %a, i64 0, i32 0
-  %0 = load i32, i32* %first.i, align 4
-  %first1.i = getelementptr inbounds %"struct.std::pair", %"struct.std::pair"* %b, i64 0, i32 0
-  %1 = load i32, i32* %first1.i, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %cmp.i = icmp eq i32 %0, %1
   br i1 %cmp.i, label %land.rhs.i, label %opeq1.exit
 
 land.rhs.i:
-  %second.i = getelementptr inbounds %"struct.std::pair", %"struct.std::pair"* %a, i64 0, i32 1
-  %2 = load i32, i32* %second.i, align 4
-  %second2.i = getelementptr inbounds %"struct.std::pair", %"struct.std::pair"* %b, i64 0, i32 1
-  %3 = load i32, i32* %second2.i, align 4
+  %second.i = getelementptr inbounds %"struct.std::pair", ptr %a, i64 0, i32 1
+  %2 = load i32, ptr %second.i, align 4
+  %second2.i = getelementptr inbounds %"struct.std::pair", ptr %b, i64 0, i32 1
+  %3 = load i32, ptr %second2.i, align 4
   %cmp3.i = icmp eq i32 %2, %3
   br label %opeq1.exit
 

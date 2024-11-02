@@ -102,6 +102,8 @@ public:
     lldb::SBValue
     GetFirstValueByName (const char* name) const;
 
+    lldb::SBError GetError();
+
     %extend {
        %nothreadallow;
        std::string lldb::SBValueList::__str__ (){

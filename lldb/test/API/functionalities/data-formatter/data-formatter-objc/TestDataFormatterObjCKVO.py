@@ -21,6 +21,8 @@ class ObjCDataFormatterKVO(ObjCDataFormatterTestCase):
             self, '// Set break point at this line.',
             lldb.SBFileSpec('main.m', False))
 
+        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
+
         # The stop reason of the thread should be breakpoint.
         self.expect(
             "thread list",

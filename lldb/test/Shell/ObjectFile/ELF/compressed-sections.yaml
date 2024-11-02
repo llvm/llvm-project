@@ -16,6 +16,7 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_COMPRESSED ]
     Content:         deadbeefbaadf00d
+## The legacy .zdebug format is not supported.
   - Name:            .zdebug_info
     Type:            SHT_PROGBITS
     Content:         5A4C49420000000000000008789c5330700848286898000009c802c1
@@ -37,8 +38,8 @@ Sections:
 # CHECK-NEXT: Data: ()
 
 # CHECK: Name: .zdebug_info
-# CHECK: dwarf-info
+# CHECK: regular
 # CHECK: File size: 28
 # CHECK: Data: (
-# CHECK-NEXT: 20304050 60708090
+# CHECK-NEXT: 5A4C4942 00000000 00000008 789C5330 70084828 68980000 09C802C1
 # CHECK-NEXT: )

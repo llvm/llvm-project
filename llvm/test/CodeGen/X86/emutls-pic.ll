@@ -11,8 +11,8 @@
 ; NoEMU-NOT: __emutls
 
 ; Use my_emutls_get_address like __emutls_get_address.
-@my_emutls_v_xyz = external global i8*, align 4
-declare i8* @my_emutls_get_address(i8*)
+@my_emutls_v_xyz = external global ptr, align 4
+declare ptr @my_emutls_get_address(ptr)
 
 define i32 @my_get_xyz() {
 ; X86-LABEL: my_get_xyz:
@@ -25,10 +25,9 @@ define i32 @my_get_xyz() {
 ; X64-NEXT: movl (%rax), %eax
 
 entry:
-  %call = call i8* @my_emutls_get_address(i8* bitcast (i8** @my_emutls_v_xyz to i8*))
-  %0 = bitcast i8* %call to i32*
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %call = call ptr @my_emutls_get_address(ptr @my_emutls_v_xyz)
+  %0 = load i32, ptr %call, align 4
+  ret i32 %0
 }
 
 @i = thread_local global i32 15
@@ -37,7 +36,7 @@ entry:
 
 define i32 @f1() {
 entry:
-  %tmp1 = load i32, i32* @i
+  %tmp1 = load i32, ptr @i
   ret i32 %tmp1
 }
 
@@ -52,9 +51,9 @@ entry:
 
 @i2 = external thread_local global i32
 
-define i32* @f2() {
+define ptr @f2() {
 entry:
-  ret i32* @i
+  ret ptr @i
 }
 
 ; X86-LABEL: f2:
@@ -63,7 +62,7 @@ entry:
 
 define i32 @f3() {
 entry:
-  %tmp1 = load i32, i32* @i  ; <i32> [#uses=1]
+  %tmp1 = load i32, ptr @i  ; <i32> [#uses=1]
   ret i32 %tmp1
 }
 
@@ -71,9 +70,9 @@ entry:
 ; X64-LABEL: f3:
 
 
-define i32* @f4() nounwind {
+define ptr @f4() nounwind {
 entry:
-  ret i32* @i
+  ret ptr @i
 }
 
 ; X86-LABEL: f4:
@@ -82,8 +81,8 @@ entry:
 
 define i32 @f5() nounwind {
 entry:
-  %0 = load i32, i32* @j, align 4
-  %1 = load i32, i32* @k, align 4
+  %0 = load i32, ptr @j, align 4
+  %1 = load i32, ptr @k, align 4
   %add = add nsw i32 %0, %1
   ret i32 %add
 }

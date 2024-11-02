@@ -5,7 +5,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 
 declare_args() {
-  # Whether to build everything with coverage information.
+  # Whether to build everything with test coverage information.
   # After building with this, run tests and then run
   #    llvm/utils/prepare-code-coverage-artifact.py \
   #        --compilation-dir=out/gn \
@@ -13,6 +13,20 @@ declare_args() {
   #        out/gn/bin/llvm-undname ...
   # to generate a HTML report for the binaries passed in the last line.
   llvm_build_instrumented_coverage = false
+
+  # Whether to build everything with instrumentation for PGO
+  # After building with this:
+  # 1. Remove old profile data with `rm *.profraw`
+  # 2. Run the built instrumented binaries.
+  #    This will produce *.profraw files in the current working directory.
+  # 3. Run `llvm-profdata merge *.profraw -o llvm.profdata` to merge them.
+  # 4. Then build again, with this set to false, and with
+  #    `llvm_pgo_use = "//llvm.profdata"` set to use the created profile.
+  llvm_pgo_instrument = false
+
+  # If non-empty, path to merged profiling data used for optimization
+  # See documentation for llvm_pgo_instrument for how to create profile data.
+  llvm_pgo_use = ""
 
   # If set, puts relative paths in debug info.
   # Makes the build output independent of the build directory, but makes
@@ -28,6 +42,12 @@ declare_args() {
 
 assert(!llvm_build_instrumented_coverage || is_clang,
        "llvm_build_instrumented_coverage requires clang as host compiler")
+assert(!llvm_pgo_instrument || is_clang,
+       "llvm_pgo_instrument requires clang as host compiler")
+assert(llvm_pgo_use == "" || is_clang,
+       "llvm_pgo_use requires clang as host compiler")
+assert(!llvm_pgo_instrument || llvm_pgo_use == "",
+       "set at most one of llvm_pgo_instrument and llvm_pgo_use")
 
 config("compiler_defaults") {
   defines = []
@@ -52,9 +72,9 @@ config("compiler_defaults") {
     ldflags += [ "-miphoneos-version-min=8.0" ]
   }
   if (current_os == "mac") {
-    asmflags += [ "-mmacosx-version-min=10.10" ]
-    cflags += [ "-mmacosx-version-min=10.10" ]
-    ldflags += [ "-mmacosx-version-min=10.10" ]
+    asmflags += [ "-mmacos-version-min=10.10" ]
+    cflags += [ "-mmacos-version-min=10.10" ]
+    ldflags += [ "-mmacos-version-min=10.10" ]
   }
 
   assert(symbol_level == 0 || symbol_level == 1 || symbol_level == 2,
@@ -117,7 +137,7 @@ config("compiler_defaults") {
       ldflags += [ "-Wl,--color-diagnostics" ]
     }
     cflags_cc += [
-      "-std=c++14",
+      "-std=c++17",
       "-fvisibility-inlines-hidden",
     ]
   } else {
@@ -161,6 +181,7 @@ config("compiler_defaults") {
       "UNICODE",
     ]
     cflags += [ "/EHs-c-" ]
+    cflags_cc += [ "/std:c++17" ]
 
     # The MSVC default value (1 MB) is not enough for parsing recursive C++
     # templates in Clang.
@@ -271,6 +292,23 @@ config("compiler_defaults") {
       ldflags += [ "-fprofile-instr-generate" ]
     }
   }
+  if (llvm_pgo_instrument) {
+    cflags += [ "-fprofile-generate" ]
+    if (current_os != "win") {
+      ldflags += [ "-fprofile-generate" ]
+    }
+  }
+  if (llvm_pgo_use != "") {
+    cflags += [
+      "-fprofile-use=" + rebase_path(llvm_pgo_use, root_build_dir),
+
+      # There are always quite a few diags like
+      #     warning: foo.cpp: Function control flow change detected
+      #              (hash mismatch) [-Wbackend-plugin]
+      # in a PGO build. Since they're not unexpected, silence them.
+      "-Wno-backend-plugin",
+    ]
+  }
 
   # Deterministic build setup, see
   # http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
@@ -334,8 +372,9 @@ config("compiler_defaults") {
       "goma needs a sysroot: run `llvm/utils/sysroot.py make-fake --out-dir=sysroot` and add `sysroot = \"//sysroot\"` to your args.gn")
 
   if (use_ubsan) {
-    assert(is_clang && current_os == "linux",
-           "ubsan only supported on Linux/Clang")
+    assert(is_clang && (current_os == "ios" || current_os == "linux" ||
+                            current_os == "mac"),
+           "ubsan only supported on iOS/Clang, Linux/Clang, or macOS/Clang")
     cflags += [
       "-fsanitize=undefined",
       "-fno-sanitize-recover=all",
@@ -346,7 +385,7 @@ config("compiler_defaults") {
   if (use_asan) {
     assert(is_clang && (current_os == "ios" || current_os == "linux" ||
                             current_os == "mac"),
-           "asan only supported on iOS/Clang, Linux/Clang, and macOS/Clang")
+           "asan only supported on iOS/Clang, Linux/Clang, or macOS/Clang")
     cflags += [ "-fsanitize=address" ]
     ldflags += [ "-fsanitize=address" ]
   }

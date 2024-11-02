@@ -687,7 +687,7 @@ define i1 @ICMP_LONG_ugt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    cmphs16 a0, a2
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 4)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 8
@@ -1016,13 +1016,13 @@ define i1 @ICMP_LONG_uge(i64 %x, i64 %y) {
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    st16.w a0, (sp, 8)
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a0, (sp, 12)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 16
 ; CHECK-NEXT:    rts16
@@ -1345,7 +1345,7 @@ define i1 @ICMP_LONG_ult(i64 %x, i64 %y) {
 ; CHECK-NEXT:    cmphs16 a2, a0
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 4)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 8
@@ -1658,13 +1658,13 @@ define i1 @ICMP_LONG_ule(i64 %x, i64 %y) {
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    st16.w a0, (sp, 8)
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a0, (sp, 12)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 16
 ; CHECK-NEXT:    rts16
@@ -1718,7 +1718,7 @@ define i1 @ICMP_LONG_I_ule(i64 %x) {
 ; CHECK-NEXT:    mvcv16 a1
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    ld16.w a2, (sp, 4)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 8
 ; CHECK-NEXT:    rts16
@@ -2007,10 +2007,10 @@ define i1 @ICMP_LONG_sgt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    cmphs16 a0, a2
 ; CHECK-NEXT:    mvcv16 a1
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -2061,10 +2061,10 @@ define i1 @ICMP_LONG_I_sgt(i64 %x) {
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    st16.w a0, (sp, 4)
 ; CHECK-NEXT:    ld16.w a0, (sp, 8)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    movf32 a0, a2
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -2340,10 +2340,10 @@ define i1 @ICMP_LONG_sge(i64 %x, i64 %y) {
 ; CHECK-NEXT:    cmplt16 a3, a1
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -2389,13 +2389,13 @@ define i1 @ICMP_LONG_I_sge(i64 %x) {
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    st16.w a0, (sp, 8)
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a0, (sp, 12)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 16
 ; CHECK-NEXT:    rts16
@@ -2671,10 +2671,10 @@ define i1 @ICMP_LONG_slt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    cmphs16 a2, a0
 ; CHECK-NEXT:    mvcv16 a1
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -2724,10 +2724,10 @@ define i1 @ICMP_LONG_I_slt(i64 %x) {
 ; CHECK-NEXT:    cmpnei16 a0, 0
 ; CHECK-NEXT:    mvcv16 a1
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -2998,10 +2998,10 @@ define i1 @ICMP_LONG_sle(i64 %x, i64 %y) {
 ; CHECK-NEXT:    cmplt16 a1, a3
 ; CHECK-NEXT:    mvcv16 a0
 ; CHECK-NEXT:    ld16.w a1, (sp, 4)
-; CHECK-NEXT:    btsti32 a1, 0
+; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -3046,10 +3046,10 @@ define i1 @ICMP_LONG_I_sle(i64 %x) {
 ; CHECK-NEXT:    cmphsi16 a0, 2
 ; CHECK-NEXT:    mvcv16 a1
 ; CHECK-NEXT:    ld16.w a0, (sp, 4)
-; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
 ; CHECK-NEXT:    ld16.w a2, (sp, 8)
-; CHECK-NEXT:    btsti32 a2, 0
+; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16

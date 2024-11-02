@@ -19,7 +19,6 @@
 
 TEST_CONSTEXPR_CXX20 bool test()
 {
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     char16_t s1[] = {1, 2, 3};
     char16_t s2[3] = {0};
     assert(std::char_traits<char16_t>::copy(s2, s1, 3) == s2);
@@ -28,9 +27,8 @@ TEST_CONSTEXPR_CXX20 bool test()
     assert(s2[2] == char16_t(3));
     assert(std::char_traits<char16_t>::copy(NULL, s1, 0) == NULL);
     assert(std::char_traits<char16_t>::copy(s1, NULL, 0) == s1);
-#endif // TEST_HAS_NO_UNICODE_CHARS
 
-  return true;
+    return true;
 }
 
 int main(int, char**)
@@ -41,5 +39,5 @@ int main(int, char**)
     static_assert(test());
 #endif
 
-  return 0;
+    return 0;
 }

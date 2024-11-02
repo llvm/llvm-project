@@ -18,7 +18,8 @@
 #include "mlir/Support/LLVM.h"
 
 // Pull in TableGen'erated SPIR-V attribute definitions for target and ABI.
-#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h.inc"
 
 namespace mlir {
 namespace spirv {
@@ -57,7 +58,7 @@ public:
   static InterfaceVarABIAttr get(IntegerAttr descriptorSet, IntegerAttr binding,
                                  IntegerAttr storageClass);
 
-  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  /// Returns the attribute kind's name (without the 'spirv.' prefix).
   static StringRef getKindName();
 
   /// Returns descriptor set.
@@ -89,7 +90,7 @@ public:
   static VerCapExtAttr get(IntegerAttr version, ArrayAttr capabilities,
                            ArrayAttr extensions);
 
-  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  /// Returns the attribute kind's name (without the 'spirv.' prefix).
   static StringRef getKindName();
 
   /// Returns the version.
@@ -139,9 +140,9 @@ public:
   /// Gets a TargetEnvAttr instance.
   static TargetEnvAttr get(VerCapExtAttr triple, Vendor vendorID,
                            DeviceType deviceType, uint32_t deviceId,
-                           DictionaryAttr limits);
+                           ResourceLimitsAttr limits);
 
-  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  /// Returns the attribute kind's name (without the 'spirv.' prefix).
   static StringRef getKindName();
 
   /// Returns the (version, capabilities, extensions) triple attribute.
@@ -171,11 +172,6 @@ public:
 
   /// Returns the target resource limits.
   ResourceLimitsAttr getResourceLimits() const;
-
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              VerCapExtAttr triple, Vendor vendorID,
-                              DeviceType deviceType, uint32_t deviceID,
-                              DictionaryAttr limits);
 };
 } // namespace spirv
 } // namespace mlir

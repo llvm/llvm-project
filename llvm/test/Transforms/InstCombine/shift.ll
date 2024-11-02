@@ -456,18 +456,18 @@ entry:
   ret <2 x i32> %i10
 }
 
-define <2 x i32> @test29_undef(<2 x i64> %d18) {
-; CHECK-LABEL: @test29_undef(
+define <2 x i32> @test29_poison(<2 x i64> %d18) {
+; CHECK-LABEL: @test29_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 undef>
+; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 poison>
 ; CHECK-NEXT:    [[I917:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
-; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 undef>
+; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[I10]]
 ;
 entry:
-  %i916 = lshr <2 x i64> %d18, <i64 32, i64 undef>
+  %i916 = lshr <2 x i64> %d18, <i64 32, i64 poison>
   %i917 = trunc <2 x i64> %i916 to <2 x i32>
-  %i10 = lshr <2 x i32> %i917, <i32 31, i32 undef>
+  %i10 = lshr <2 x i32> %i917, <i32 31, i32 poison>
   ret <2 x i32> %i10
 }
 
@@ -632,11 +632,11 @@ define <3 x i32> @test38_nonuniform(<3 x i32> %x) nounwind readnone {
   ret <3 x i32> %shl
 }
 
-define <2 x i32> @test38_undef(<2 x i32> %x) nounwind readnone {
-; CHECK-LABEL: @test38_undef(
+define <2 x i32> @test38_poison(<2 x i32> %x) nounwind readnone {
+; CHECK-LABEL: @test38_poison(
 ; CHECK-NEXT:    ret <2 x i32> poison
 ;
-  %rem = srem <2 x i32> %x, <i32 32, i32 undef>
+  %rem = srem <2 x i32> %x, <i32 32, i32 poison>
   %shl = shl <2 x i32> <i32 1, i32 1>, %rem
   ret <2 x i32> %shl
 }
@@ -1106,51 +1106,51 @@ define i32 @test60(i32 %x) {
 }
 
 ; PR17026
-define void @test61(i128 %arg) {
+define void @test61(i128 %arg, i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK-LABEL: @test61(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB7:%.*]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[BB3:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br label [[BB8:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br i1 undef, label [[BB8]], label [[BB2]]
+; CHECK-NEXT:    br i1 [[C3:%.*]], label [[BB8]], label [[BB2]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB12]]
+; CHECK-NEXT:    br i1 [[C4:%.*]], label [[BB1]], label [[BB12]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  br i1 undef, label %bb1, label %bb12
+  br i1 %c1, label %bb1, label %bb12
 
 bb1:                                              ; preds = %bb11, %bb
   br label %bb2
 
 bb2:                                              ; preds = %bb7, %bb1
-  br i1 undef, label %bb3, label %bb7
+  br i1 %c2, label %bb3, label %bb7
 
 bb3:                                              ; preds = %bb2
   %i = lshr i128 %arg, 36893488147419103232
   %i4 = shl i128 %i, 0
-  %i5 = or i128 %i4, undef
+  %i5 = or i128 %i4, 0
   %i6 = trunc i128 %i5 to i16
   br label %bb8
 
 bb7:                                              ; preds = %bb2
-  br i1 undef, label %bb8, label %bb2
+  br i1 %c3, label %bb8, label %bb2
 
 bb8:                                              ; preds = %bb7, %bb3
-  %i9 = phi i16 [ %i6, %bb3 ], [ undef, %bb7 ]
+  %i9 = phi i16 [ %i6, %bb3 ], [ poison, %bb7 ]
   %i10 = icmp eq i16 %i9, 0
   br i1 %i10, label %bb11, label %bb12
 
 bb11:                                             ; preds = %bb8
-  br i1 undef, label %bb1, label %bb12
+  br i1 %c4, label %bb1, label %bb12
 
 bb12:                                             ; preds = %bb11, %bb8, %bb
   ret void
@@ -1358,6 +1358,16 @@ define <2 x i8> @ashr_demanded_bits_splat(<2 x i8> %x) {
   ret <2 x i8> %shr
 }
 
+define <vscale x 8 x i8> @ashr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
+; CHECK-LABEL: @ashr_demanded_bits_splat2(
+; CHECK-NEXT:    [[AND:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x i8> [[AND]]
+;
+  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %shr = ashr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i8> %shr
+}
+
 define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_demanded_bits_splat(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 7, i8 7>
@@ -1366,6 +1376,16 @@ define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
   %and = and <2 x i8> %x, <i8 128, i8 128>
   %shr = lshr <2 x i8> %and, <i8 7, i8 7>
   ret <2 x i8> %shr
+}
+
+define <vscale x 8 x i8> @lshr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
+; CHECK-LABEL: @lshr_demanded_bits_splat2(
+; CHECK-NEXT:    [[AND:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x i8> [[AND]]
+;
+  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %shr = lshr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i8> %shr
 }
 
 ; Make sure known bits works correctly with non power of 2 bit widths.
@@ -1641,14 +1661,14 @@ define i32 @ashr_select_xor_false(i32 %x, i1 %cond) {
 
 ; OSS Fuzz #4871
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=4871
-define i177 @lshr_out_of_range(i177 %Y, i177** %A2) {
+define i177 @lshr_out_of_range(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-LABEL: @lshr_out_of_range(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i177 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[B4:%.*]] = sext i1 [[TMP1]] to i177
 ; CHECK-NEXT:    [[C8:%.*]] = icmp ult i177 [[B4]], [[Y]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[C8]] to i64
-; CHECK-NEXT:    [[G18:%.*]] = getelementptr i177*, i177** [[A2:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    store i177** [[G18]], i177*** undef, align 8
+; CHECK-NEXT:    [[G18:%.*]] = getelementptr ptr, ptr [[A2:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    store ptr [[G18]], ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret i177 0
 ;
   %B5 = udiv i177 %Y, -1
@@ -1659,15 +1679,15 @@ define i177 @lshr_out_of_range(i177 %Y, i177** %A2) {
   %B10 = sub i177 %B5, %B3
   %B12 = lshr i177 %Y, %B6
   %C8 = icmp ugt i177 %B12, %B4
-  %G18 = getelementptr i177*, i177** %A2, i1 %C8
-  store i177** %G18, i177*** undef
+  %G18 = getelementptr ptr, ptr %A2, i1 %C8
+  store ptr %G18, ptr %ptr
   %B1 = udiv i177 %B10, %B6
   ret i177 %B1
 }
 
 ; OSS Fuzz #26716
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=26716
-define i177 @lshr_out_of_range2(i177 %Y, i177** %A2) {
+define i177 @lshr_out_of_range2(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-LABEL: @lshr_out_of_range2(
 ; CHECK-NEXT:    ret i177 0
 ;
@@ -1678,82 +1698,84 @@ define i177 @lshr_out_of_range2(i177 %Y, i177** %A2) {
   %B6 = mul i177 %B5, %B2
   %B12 = lshr i177 %Y, %B6
   %C8 = icmp ugt i177 %B12, %B4
-  %G18 = getelementptr i177*, i177** %A2, i1 %C8
-  store i177** %G18, i177*** undef, align 8
+  %G18 = getelementptr ptr, ptr %A2, i1 %C8
+  store ptr %G18, ptr %ptr, align 8
   %B1 = udiv i177 %B5, %B6
   ret i177 %B1
 }
 
 ; OSS Fuzz #5032
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5032
-define void @ashr_out_of_range(i177* %A) {
+define void @ashr_out_of_range(ptr %A) {
 ; CHECK-LABEL: @ashr_out_of_range(
-; CHECK-NEXT:    [[L:%.*]] = load i177, i177* [[A:%.*]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 -1, i64 -2
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, i177* [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[L7:%.*]] = load i177, i177* [[G11]], align 4
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[L7:%.*]] = load i177, ptr [[G11]], align 4
 ; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7]], 0
 ; CHECK-NEXT:    [[C17:%.*]] = select i1 [[TMP1]], i1 [[C171]], i1 false
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C17]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, i177* [[G11]], i64 [[TMP3]]
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP4]], i177 0, i177 [[L7]]
-; CHECK-NEXT:    store i177 [[B28]], i177* [[G62]], align 4
+; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %L = load i177, i177* %A
+  %L = load i177, ptr %A
   %B5 = udiv i177 %L, -1
   %B4 = add i177 %B5, -1
   %B2 = add i177 %B4, -1
-  %G11 = getelementptr i177, i177* %A, i177 %B2
-  %L7 = load i177, i177* %G11
+  %G11 = getelementptr i177, ptr %A, i177 %B2
+  %L7 = load i177, ptr %G11
   %B6 = mul i177 %B5, %B2
   %B24 = ashr i177 %L7, %B6
   %B36 = and i177 %L7, %B4
   %C17 = icmp sgt i177 %B36, %B24
-  %G62 = getelementptr i177, i177* %G11, i1 %C17
+  %G62 = getelementptr i177, ptr %G11, i1 %C17
   %B28 = urem i177 %B24, %B6
-  store i177 %B28, i177* %G62
+  store i177 %B28, ptr %G62
   ret void
 }
 
 ; OSS Fuzz #26135
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=26135
-define void @ashr_out_of_range_1(i177* %A) {
+define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-LABEL: @ashr_out_of_range_1(
-; CHECK-NEXT:    [[L:%.*]] = load i177, i177* [[A:%.*]], align 4
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, i177* [[A]], i64 -1
+; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[B24_LOBIT:%.*]] = ashr i177 [[L]], 175
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i177 [[B24_LOBIT]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, i177* [[G11]], i64 [[TMP1]]
-; CHECK-NEXT:    store i177 0, i177* [[G62]], align 4
+; CHECK-NEXT:    [[G111:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G111]], i64 -1
+; CHECK-NEXT:    store i177 0, ptr [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %L = load i177, i177* %A, align 4
+  %L = load i177, ptr %A, align 4
   %B5 = udiv i177 %L, -1
   %B4 = add i177 %B5, -1
   %B = and i177 %B4, %L
   %B2 = add i177 %B, -1
-  %G11 = getelementptr i177, i177* %A, i177 %B2
+  %G11 = getelementptr i177, ptr %A, i177 %B2
   %B6 = mul i177 %B5, %B2
   %B24 = ashr i177 %L, %B6
   %C17 = icmp sgt i177 %B, %B24
-  %G62 = getelementptr i177, i177* %G11, i1 %C17
+  %G62 = getelementptr i177, ptr %G11, i1 %C17
   %B28 = urem i177 %B24, %B6
-  store i177 %B28, i177* %G62, align 4
+  store i177 %B28, ptr %G62, align 4
   ret void
 }
 
 ; OSS Fuzz #38078
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=38078
-define void @ossfuzz_38078(i32 %arg, i32 %arg1) {
+define void @ossfuzz_38078(i32 %arg, i32 %arg1, ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5, ptr %ptr6, ptr %ptr7) {
 ; CHECK-LABEL: @ossfuzz_38078(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I2:%.*]] = sub i32 0, [[ARG1:%.*]]
-; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = add nsw i32 [[ARG:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[B3:%.*]] = or i32 [[I2]], 2147483647
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I5]])
-; CHECK-NEXT:    store volatile i32 undef, i32* undef, align 4
+; CHECK-NEXT:    store volatile i32 [[B3]], ptr [[G1]], align 4
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       BB:
 ; CHECK-NEXT:    unreachable
@@ -1782,27 +1804,27 @@ bb:
   %C2 = icmp sge i1 %C1, false
   %C7 = icmp sle i32 %i3, %B16
   %B20 = xor i32 %B21, %B22
-  %G1 = getelementptr i32, i32* undef, i32 %B22
-  %B1 = sub i32 %B, undef
-  %B26 = ashr i32 %B29, undef
-  %B4 = add i32 undef, %B5
+  %G1 = getelementptr i32, ptr %ptr, i32 %B22
+  %B1 = sub i32 %B, 0
+  %B26 = ashr i32 %B29, 0
+  %B4 = add i32 0, %B5
   %B27 = srem i32 %B12, %B21
   %i5 = icmp eq i32 %B20, %B18
   %C11 = icmp ugt i32 %i4, %B4
   call void @llvm.assume(i1 %i5)
-  store volatile i32 %B4, i32* %G1, align 4
-  %B11 = or i32 undef, %B23
+  store volatile i32 %B4, ptr %G1, align 4
+  %B11 = or i32 0, %B23
   br label %BB
 
 BB:
-  store i1 %C7, i1* undef, align 1
-  store i32 %B11, i32* undef, align 4
-  store i1 %C11, i1* undef, align 1
-  store i32 %B1, i32* undef, align 4
-  store i32 %B27, i32* undef, align 4
-  %C = icmp ne i32 %B26, undef
+  store i1 %C7, ptr %ptr2, align 1
+  store i32 %B11, ptr %ptr3, align 4
+  store i1 %C11, ptr %ptr4, align 1
+  store i32 %B1, ptr %ptr5, align 4
+  store i32 %B27, ptr %ptr6, align 4
+  %C = icmp ne i32 %B26, 0
   %B17 = or i1 %C, %C2
-  store i1 %B17, i1* undef, align 1
+  store i1 %B17, ptr %ptr7, align 1
   unreachable
 }
 declare void @llvm.assume(i1 noundef)
@@ -1827,4 +1849,160 @@ define i8 @shl_mask_demand(i8 %x) {
   %s = shl i8 12, %x ; 0b00001100
   %r = and i8 %s, 7  ; 0b00000111
   ret i8 %r
+}
+
+define i64 @lshr_mul_negpow2(i64 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i64 [[TMP1]], 4294967295
+; CHECK-NEXT:    ret i64 [[A]]
+;
+  %a = mul i64 %x, -4294967296
+  %b = lshr i64 %a, 32
+  ret i64 %b
+}
+
+define i64 @lshr_mul_negpow2_2(i64 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i64 [[TMP1]], 281474976710655
+; CHECK-NEXT:    ret i64 [[A]]
+;
+  %a = mul i64 %x, -65536
+  %b = lshr i64 %a, 16
+  ret i64 %b
+}
+
+define <2 x i32> @lshr_mul_negpow2_3(<2 x i32> %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[TMP1]], <i32 255, i32 255>
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+  %a = mul <2 x i32> %x, <i32 -16777216, i32 -16777216>
+  %b = lshr <2 x i32> %a, <i32 24, i32 24>
+  ret <2 x i32>  %b
+}
+
+define i32 @lshr_mul_negpow2_4(i32 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_4(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[TMP1]], 65535
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = mul i32 %x, -65536
+  %b = xor i32 %a, 65536
+  %c = lshr i32 %b, 16
+  ret i32 %c
+}
+
+define <2 x i32> @lshr_mul_negpow2_5(<2 x i32> %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_5(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[TMP1]], <i32 65527, i32 65527>
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A]], <i32 8, i32 8>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %a = mul <2 x i32> %x, <i32 -65536, i32 -65536>
+  %b = or <2 x i32> %a, <i32 524288, i32 524288>
+  %c = lshr <2 x i32> %b, <i32 16, i32 16>
+  ret <2 x i32> %c
+}
+
+define i64 @lshr_mul_negpow2_extra_use(i64 %x) {
+; CHECK-LABEL: @lshr_mul_negpow2_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = mul i64 [[X:%.*]], -4294967296
+; CHECK-NEXT:    [[B:%.*]] = lshr exact i64 [[A]], 32
+; CHECK-NEXT:    call void @use(i64 [[A]])
+; CHECK-NEXT:    ret i64 [[B]]
+;
+  %a = mul i64 %x, -4294967296
+  %b = lshr i64 %a, 32
+  call void @use(i64 %a)
+  ret i64 %b
+}
+
+define i8 @ashr_sdiv_pos(i8 %x) {
+; CHECK-LABEL: @ashr_sdiv_pos(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], -41
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %d = sdiv i8 %x, 42
+  %r = ashr i8 %d, 7
+  ret i8 %r
+}
+
+define <2 x i8> @ashr_sdiv_neg_splat_vec(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_sdiv_neg_splat_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 41, i8 41>
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %d = sdiv <2 x i8> %x, <i8 -42, i8 -42>
+  %r = ashr <2 x i8> %d, <i8 7, i8 7>
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @ashr_sdiv_neg_splat_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_sdiv_neg_splat_vec_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %d = sdiv <2 x i8> %x, <i8 -127, i8 -127>
+  %r = ashr <2 x i8> %d, <i8 7, i8 poison>
+  ret <2 x i8> %r
+}
+
+define i8 @lshr_sdiv_pos(i8 %x) {
+; CHECK-LABEL: @lshr_sdiv_pos(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], -11
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %d = sdiv i8 %x, 12
+  %r = lshr i8 %d, 7
+  ret i8 %r
+}
+
+define i18 @lshr_sdiv_neg(i18 %x) {
+; CHECK-LABEL: @lshr_sdiv_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i18 [[X:%.*]], 11
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i18
+; CHECK-NEXT:    ret i18 [[R]]
+;
+  %d = sdiv i18 %x, -12
+  %r = lshr i18 %d, 17
+  ret i18 %r
+}
+
+; negative test
+
+define i8 @ashr_sdiv_not_full_shift(i8 %x) {
+; CHECK-LABEL: @ashr_sdiv_not_full_shift(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[D]], 6
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %d = sdiv i8 %x, 42
+  %r = ashr i8 %d, 6
+  ret i8 %r
+}
+
+; negative test
+
+define i32 @ashr_sdiv_extra_use(i32 %x) {
+; CHECK-LABEL: @ashr_sdiv_extra_use(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use_i32(i32 [[D]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], -41
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %d = sdiv i32 %x, 42
+  call void @use_i32(i32 %d)
+  %r = ashr i32 %d, 31
+  ret i32 %r
 }

@@ -53,7 +53,7 @@ void WinException::endModule() {
 
   if (M->getModuleFlag("ehcontguard") && !EHContTargets.empty()) {
     // Emit the symbol index of each ehcont target.
-    OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
+    OS.switchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
     for (const MCSymbol *S : EHContTargets) {
       OS.emitCOFFSymbolIndex(S);
     }
@@ -145,12 +145,12 @@ void WinException::endFunction(const MachineFunction *MF) {
     return;
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
-    Asm->OutStreamer->PushSection();
+    Asm->OutStreamer->pushSection();
 
     // Just switch sections to the right xdata section.
     MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
         Asm->OutStreamer->getCurrentSectionOnly());
-    Asm->OutStreamer->SwitchSection(XData);
+    Asm->OutStreamer->switchSection(XData);
 
     // Emit the tables appropriate to the personality function in use. If we
     // don't recognize the personality, assume it uses an Itanium-style LSDA.
@@ -165,7 +165,7 @@ void WinException::endFunction(const MachineFunction *MF) {
     else
       emitExceptionTable();
 
-    Asm->OutStreamer->PopSection();
+    Asm->OutStreamer->popSection();
   }
 
   if (!MF->getCatchretTargets().empty()) {
@@ -205,11 +205,11 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     Sym = getMCSymbolForMBB(Asm, &MBB);
 
     // Describe our funclet symbol as a function with internal linkage.
-    Asm->OutStreamer->BeginCOFFSymbolDef(Sym);
+    Asm->OutStreamer->beginCOFFSymbolDef(Sym);
     Asm->OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
     Asm->OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                                          << COFF::SCT_COMPLEX_TYPE_SHIFT);
-    Asm->OutStreamer->EndCOFFSymbolDef();
+    Asm->OutStreamer->endCOFFSymbolDef();
 
     // We want our funclet's entry point to be aligned such that no nops will be
     // present after the label.
@@ -249,7 +249,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
 void WinException::endFunclet() {
   if (isAArch64 && CurrentFuncletEntry &&
       (shouldEmitMoves || shouldEmitPersonality)) {
-    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
+    Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->emitWinCFIFuncletOrFuncEnd();
   }
   endFuncletImpl();
@@ -301,7 +301,7 @@ void WinException::endFuncletImpl() {
     // Switch back to the funclet start .text section now that we are done
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
-    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
+    Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->emitWinCFIEndProc();
   }
 

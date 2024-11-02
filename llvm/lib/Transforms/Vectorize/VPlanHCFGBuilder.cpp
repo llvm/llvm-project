@@ -216,10 +216,13 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
            "Instruction shouldn't have been visited.");
 
     if (auto *Br = dyn_cast<BranchInst>(Inst)) {
-      // Branch instruction is not explicitly represented in VPlan but we need
-      // to represent its condition bit when it's conditional.
-      if (Br->isConditional())
-        getOrCreateVPOperand(Br->getCondition());
+      // Conditional branch instruction are represented using BranchOnCond
+      // recipes.
+      if (Br->isConditional()) {
+        VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
+        VPBB->appendRecipe(
+            new VPInstruction(VPInstruction::BranchOnCond, {Cond}));
+      }
 
       // Skip the rest of the Instruction processing for Branch instructions.
       continue;
@@ -240,7 +243,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
 
-      // Build VPInstruction for any arbitraty Instruction without specific
+      // Build VPInstruction for any arbitrary Instruction without specific
       // representation in VPlan.
       NewVPV = cast<VPInstruction>(
           VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
@@ -304,16 +307,13 @@ VPBasicBlock *PlainCFGBuilder::buildPlainCFG() {
 
       // Get VPBB's condition bit.
       assert(isa<BranchInst>(TI) && "Unsupported terminator!");
-      auto *Br = cast<BranchInst>(TI);
-      Value *BrCond = Br->getCondition();
       // Look up the branch condition to get the corresponding VPValue
       // representing the condition bit in VPlan (which may be in another VPBB).
-      assert(IRDef2VPValue.count(BrCond) &&
+      assert(IRDef2VPValue.count(cast<BranchInst>(TI)->getCondition()) &&
              "Missing condition bit in IRDef2VPValue!");
-      VPValue *VPCondBit = IRDef2VPValue[BrCond];
 
-      // Link successors using condition bit.
-      VPBB->setTwoSuccessors(SuccVPBB0, SuccVPBB1, VPCondBit);
+      // Link successors.
+      VPBB->setTwoSuccessors(SuccVPBB0, SuccVPBB1);
     } else
       llvm_unreachable("Number of successors not supported.");
 

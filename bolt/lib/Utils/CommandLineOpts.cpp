@@ -40,17 +40,14 @@ cl::OptionCategory AggregatorCategory("Data aggregation options");
 cl::OptionCategory BoltInstrCategory("BOLT instrumentation options");
 cl::OptionCategory HeatmapCategory("Heatmap options");
 
-cl::opt<unsigned>
-AlignText("align-text",
-  cl::desc("alignment of .text section"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<unsigned> AlignText("align-text",
+                            cl::desc("alignment of .text section"), cl::Hidden,
+                            cl::cat(BoltCategory));
 
 cl::opt<unsigned> AlignFunctions(
     "align-functions",
     cl::desc("align functions at a given value (relocation mode)"),
-    cl::init(64), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(64), cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 AggregateOnly("aggregate-only",
@@ -76,8 +73,13 @@ EnableBAT("enable-bat",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
+cl::opt<bool> EqualizeBBCounts(
+    "equalize-bb-counts",
+    cl::desc("use same count for BBs that should have equivalent count (used "
+             "in non-LBR and shrink wrapping)"),
+    cl::ZeroOrMore, cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
+
 cl::opt<bool> RemoveSymtab("remove-symtab", cl::desc("Remove .symtab section"),
-                           cl::init(false), cl::ZeroOrMore,
                            cl::cat(BoltCategory));
 
 cl::opt<unsigned>
@@ -104,19 +106,15 @@ cl::opt<unsigned long long> HeatmapMinAddress(
     cl::desc("minimum address considered valid for heatmap (default 0)"),
     cl::Optional, cl::cat(HeatmapCategory));
 
-cl::opt<bool>
-HotData("hot-data",
-  cl::desc("hot data symbols support (relocation mode)"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> HotData("hot-data",
+                      cl::desc("hot data symbols support (relocation mode)"),
+                      cl::cat(BoltCategory));
 
-cl::opt<bool>
-HotFunctionsAtEnd(
-  "hot-functions-at-end",
-  cl::desc(
-      "if reorder-functions is used, order functions putting hottest last"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> HotFunctionsAtEnd(
+    "hot-functions-at-end",
+    cl::desc(
+        "if reorder-functions is used, order functions putting hottest last"),
+    cl::cat(BoltCategory));
 
 cl::opt<bool> HotText(
     "hot-text",
@@ -129,7 +127,7 @@ cl::opt<bool> HotText(
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
-               cl::ZeroOrMore, cl::cat(BoltOptCategory));
+               cl::cat(BoltOptCategory));
 
 cl::opt<std::string>
 OutputFilename("o",
@@ -137,12 +135,9 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string>
-PerfData("perfdata",
-  cl::desc("<data file>"),
-  cl::Optional,
-  cl::cat(AggregatorCategory),
-  cl::sub(*cl::AllSubCommands));
+cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
+                              cl::cat(AggregatorCategory),
+                              cl::sub(cl::SubCommand::getAll()));
 
 static cl::alias
 PerfDataA("p",
@@ -150,60 +145,51 @@ PerfDataA("p",
   cl::aliasopt(PerfData),
   cl::cat(AggregatorCategory));
 
-cl::opt<bool>
-PrintCacheMetrics("print-cache-metrics",
-  cl::desc("calculate and print various metrics for instruction cache"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<bool> PrintCacheMetrics(
+    "print-cache-metrics",
+    cl::desc("calculate and print various metrics for instruction cache"),
+    cl::cat(BoltOptCategory));
+
+cl::opt<bool> PrintSections("print-sections",
+                            cl::desc("print all registered sections"),
+                            cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<ProfileFormatKind> ProfileFormat(
+    "profile-format",
+    cl::desc(
+        "format to dump profile output in aggregation mode, default is fdata"),
+    cl::init(PF_Fdata),
+    cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
+               clEnumValN(PF_YAML, "yaml", "dense YAML reprensentation")),
+    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
+                      cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
-  PrintSections("print-sections",
-  cl::desc("print all registered sections"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    StrictMode("strict",
+               cl::desc("trust the input to be from a well-formed source"),
 
-cl::opt<bool>
-SplitEH("split-eh",
-  cl::desc("split C++ exception handling code"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+               cl::cat(BoltCategory));
 
-cl::opt<bool>
-StrictMode("strict",
-  cl::desc("trust the input to be from a well-formed source"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+llvm::cl::opt<bool> TimeOpts("time-opts",
+                             cl::desc("print time spent in each optimization"),
+                             cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool>
-TimeOpts("time-opts",
-  cl::desc("print time spent in each optimization"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<bool> UseOldText(
+    "use-old-text",
+    cl::desc("re-use space in old .text if possible (relocation mode)"),
+    cl::cat(BoltCategory));
 
-cl::opt<bool>
-UseOldText("use-old-text",
-  cl::desc("re-use space in old .text if possible (relocation mode)"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
-
-cl::opt<bool>
-UpdateDebugSections("update-debug-sections",
-  cl::desc("update DWARF debug sections of the executable"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> UpdateDebugSections(
+    "update-debug-sections",
+    cl::desc("update DWARF debug sections of the executable"),
+    cl::cat(BoltCategory));
 
 cl::opt<unsigned>
-Verbosity("v",
-  cl::desc("set verbosity level for diagnostic output"),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory),
-  cl::sub(*cl::AllSubCommands));
+    Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
+              cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
+              cl::sub(cl::SubCommand::getAll()));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

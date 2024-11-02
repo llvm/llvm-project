@@ -1177,13 +1177,13 @@ SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   // i32 load from lower address.
   SDValue Lo = DAG.getLoad(MVT::i32, DL, Chain, Ptr, MachinePointerInfo(),
-                           Nd.getAlignment(), Nd.getMemOperand()->getFlags());
+                           Nd.getAlign(), Nd.getMemOperand()->getFlags());
 
   // i32 load from higher address.
   Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Ptr, DAG.getConstant(4, DL, PtrVT));
   SDValue Hi = DAG.getLoad(
       MVT::i32, DL, Lo.getValue(1), Ptr, MachinePointerInfo(),
-      std::min(Nd.getAlignment(), 4U), Nd.getMemOperand()->getFlags());
+      commonAlignment(Nd.getAlign(), 4), Nd.getMemOperand()->getFlags());
 
   if (!Subtarget.isLittle())
     std::swap(Lo, Hi);
@@ -1212,14 +1212,13 @@ SDValue MipsSETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     std::swap(Lo, Hi);
 
   // i32 store to lower address.
-  Chain =
-      DAG.getStore(Chain, DL, Lo, Ptr, MachinePointerInfo(), Nd.getAlignment(),
-                   Nd.getMemOperand()->getFlags(), Nd.getAAInfo());
+  Chain = DAG.getStore(Chain, DL, Lo, Ptr, MachinePointerInfo(), Nd.getAlign(),
+                       Nd.getMemOperand()->getFlags(), Nd.getAAInfo());
 
   // i32 store to higher address.
   Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Ptr, DAG.getConstant(4, DL, PtrVT));
   return DAG.getStore(Chain, DL, Hi, Ptr, MachinePointerInfo(),
-                      std::min(Nd.getAlignment(), 4U),
+                      commonAlignment(Nd.getAlign(), 4),
                       Nd.getMemOperand()->getFlags(), Nd.getAAInfo());
 }
 

@@ -13,9 +13,9 @@ add_mlir_conversion_library(MLIRControlFlowToLLVM
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
-  MLIRControlFlow
+  MLIRControlFlowDialect
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRPass
   MLIRTransformUtils
   )

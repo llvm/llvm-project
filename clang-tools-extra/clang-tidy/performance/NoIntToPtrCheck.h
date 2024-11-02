@@ -18,7 +18,7 @@ namespace performance {
 /// Diagnoses every integer to pointer cast.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-no-int-to-ptr.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/no-int-to-ptr.html
 class NoIntToPtrCheck : public ClangTidyCheck {
 public:
   NoIntToPtrCheck(StringRef Name, ClangTidyContext *Context)

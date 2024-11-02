@@ -14,8 +14,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include <vector>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class ScriptLexer {
 public:
@@ -52,7 +51,6 @@ private:
   size_t getColumnNumber();
 };
 
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

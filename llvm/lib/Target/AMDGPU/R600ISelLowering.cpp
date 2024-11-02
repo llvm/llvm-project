@@ -589,7 +589,7 @@ void R600TargetLowering::ReplaceNodeResults(SDNode *N,
     // Since we don't care about out of bounds values we can use FP_TO_SINT for
     // uints too. The DAGLegalizer code for uint considers some extra cases
     // which are not necessary here.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::FP_TO_SINT: {
     if (N->getValueType(0) == MVT::i1) {
       Results.push_back(lowerFP_TO_SINT(N->getOperand(0), DAG));
@@ -1108,9 +1108,9 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
       // TODO: can the chain be replaced without creating a new store?
       SDValue NewStore = DAG.getTruncStore(
-          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(),
-          MemVT, StoreNode->getAlignment(),
-          StoreNode->getMemOperand()->getFlags(), StoreNode->getAAInfo());
+          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(), MemVT,
+          StoreNode->getAlign(), StoreNode->getMemOperand()->getFlags(),
+          StoreNode->getAAInfo());
       StoreNode = cast<StoreSDNode>(NewStore);
     }
 
@@ -1362,7 +1362,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     assert(!MemVT.isVector() && (MemVT == MVT::i16 || MemVT == MVT::i8));
     SDValue NewLoad = DAG.getExtLoad(
         ISD::EXTLOAD, DL, VT, Chain, Ptr, LoadNode->getPointerInfo(), MemVT,
-        LoadNode->getAlignment(), LoadNode->getMemOperand()->getFlags());
+        LoadNode->getAlign(), LoadNode->getMemOperand()->getFlags());
     SDValue Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, NewLoad,
                               DAG.getValueType(MemVT));
 
@@ -1623,7 +1623,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
                             NewBldVec);
 }
 
-SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[4],
+SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
                                             SelectionDAG &DAG,
                                             const SDLoc &DL) const {
   // Old -> New swizzle values
@@ -1659,7 +1659,7 @@ SDValue R600TargetLowering::constBufferLoad(LoadSDNode *LoadNode, int Block,
   if (LoadNode->getMemoryVT().getScalarType() != MVT::i32 || !ISD::isNON_EXTLoad(LoadNode))
     return SDValue();
 
-  if (LoadNode->getAlignment() < 4)
+  if (LoadNode->getAlign() < Align(4))
     return SDValue();
 
   int ConstantBlock = ConstantAddressBlock(Block);

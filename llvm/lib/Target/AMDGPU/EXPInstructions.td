@@ -134,6 +134,15 @@ class ExpPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
         ExpSrc2:$src2, ExpSrc3:$src3, timm:$vm, 0, timm:$en)
 >;
 
+class ExpRowPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
+  (int_amdgcn_exp_row timm:$tgt, timm:$en,
+                      (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
+                      (vt ExpSrc2:$src2), (vt ExpSrc3:$src3),
+                      done_val, M0),
+  (Inst timm:$tgt, ExpSrc0:$src0, ExpSrc1:$src1,
+        ExpSrc2:$src2, ExpSrc3:$src3, 0, 0, timm:$en)
+>;
+
 class ExpComprPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
   (int_amdgcn_exp_compr timm:$tgt, timm:$en,
                         (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
@@ -149,6 +158,11 @@ def : ExpPattern<i32, EXP, 0>;
 def : ExpPattern<i32, EXP_DONE, -1>;
 def : ExpPattern<f32, EXP, 0>;
 def : ExpPattern<f32, EXP_DONE, -1>;
+
+def : ExpRowPattern<i32, EXP_ROW, 0>;
+def : ExpRowPattern<i32, EXP_ROW_DONE, -1>;
+def : ExpRowPattern<f32, EXP_ROW, 0>;
+def : ExpRowPattern<f32, EXP_ROW_DONE, -1>;
 
 def : ExpComprPattern<v2i16, EXP, 0>;
 def : ExpComprPattern<v2i16, EXP_DONE, -1>;

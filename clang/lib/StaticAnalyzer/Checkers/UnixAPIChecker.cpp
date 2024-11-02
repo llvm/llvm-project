@@ -43,8 +43,6 @@ class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable Optional<uint64_t> Val_O_CREAT;
 
 public:
-  bool CheckMisuse = false, CheckPortability = false;
-
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
   void CheckOpen(CheckerContext &C, const CallExpr *CE) const;
@@ -213,7 +211,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
 
   // The definition of O_CREAT is platform specific.  We need a better way
   // of querying this information from the checking environment.
-  if (!Val_O_CREAT.hasValue()) {
+  if (!Val_O_CREAT) {
     if (C.getASTContext().getTargetInfo().getTriple().getVendor()
                                                       == llvm::Triple::Apple)
       Val_O_CREAT = 0x0200;
@@ -229,14 +227,15 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   // Now check if oflags has O_CREAT set.
   const Expr *oflagsEx = CE->getArg(FlagsArgIndex);
   const SVal V = C.getSVal(oflagsEx);
-  if (!V.getAs<NonLoc>()) {
+  if (!isa<NonLoc>(V)) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
     return;
   }
   NonLoc oflags = V.castAs<NonLoc>();
   NonLoc ocreateFlag = C.getSValBuilder()
-      .makeIntVal(Val_O_CREAT.getValue(), oflagsEx->getType()).castAs<NonLoc>();
+                           .makeIntVal(Val_O_CREAT.value(), oflagsEx->getType())
+                           .castAs<NonLoc>();
   SVal maskedFlagsUC = C.getSValBuilder().evalBinOpNN(state, BO_And,
                                                       oflags, ocreateFlag,
                                                       oflagsEx->getType());
@@ -503,7 +502,7 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
     mgr.registerChecker<CHECKERNAME>();                                        \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {              \
+  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {          \
     return true;                                                               \
   }
 

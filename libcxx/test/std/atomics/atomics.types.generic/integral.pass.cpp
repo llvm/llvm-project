@@ -177,10 +177,8 @@ int main(int, char**)
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<std::atomic_char8_t, char8_t>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<std::atomic_char16_t, char16_t>();
     test<std::atomic_char32_t, char32_t>();
-#endif
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::atomic_wchar_t, wchar_t>();
 #endif
@@ -205,10 +203,8 @@ int main(int, char**)
     test<volatile std::atomic_ulong, unsigned long>();
     test<volatile std::atomic_llong, long long>();
     test<volatile std::atomic_ullong, unsigned long long>();
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<volatile std::atomic_char16_t, char16_t>();
     test<volatile std::atomic_char32_t, char32_t>();
-#endif
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<volatile std::atomic_wchar_t, wchar_t>();
 #endif

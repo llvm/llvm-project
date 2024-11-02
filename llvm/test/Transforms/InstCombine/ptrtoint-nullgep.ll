@@ -13,32 +13,32 @@
 target datalayout = "p:64:64:64:64"
 
 declare void @use_i64(i64)
-declare void @use_ptr(i8 addrspace(1)*)
+declare void @use_ptr(ptr addrspace(1))
 
 define i64 @constant_fold_ptrtoint_gep_zero() {
 ; ALL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_zero() {
 ; ALL-NEXT:    ret i64 0
 ;
-  ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 0) to i64)
+  ret i64 ptrtoint (ptr addrspace(1) null to i64)
 }
 define i64 @constant_fold_ptrtoint_gep_nonzero() {
 ; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; LLPARSER-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; LLPARSER-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr (i32, ptr addrspace(1) null, i64 1234) to i64)
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
-; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr (i32, ptr addrspace(1) null, i64 1234) to i64)
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero() {
 ; INSTCOMBINE-NEXT:    ret i64 4936
 ;
-  ret i64 ptrtoint (i32 addrspace(1)* getelementptr (i32, i32 addrspace(1)* null, i64 1234) to i64)
+  ret i64 ptrtoint (ptr addrspace(1) getelementptr (i32, ptr addrspace(1) null, i64 1234) to i64)
 }
 
 define i64 @constant_fold_ptrtoint_gep_zero_inbounds() {
 ; ALL-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_zero_inbounds() {
 ; ALL-NEXT:    ret i64 0
 ;
-  ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 0) to i64)
+  ret i64 ptrtoint (ptr addrspace(1) null to i64)
 }
 
 ; In theory we could fold this to poison/null, but that would break offsetof
@@ -46,28 +46,28 @@ define i64 @constant_fold_ptrtoint_gep_zero_inbounds() {
 ; TODO: should Clang special case ((INTEGER)&((TYPE *)0)->MEMBER) to emit a non-inbounds GEP?
 define i64 @constant_fold_ptrtoint_gep_nonzero_inbounds() {
 ; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; LLPARSER-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; LLPARSER-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i32, ptr addrspace(1) null, i64 1234) to i64)
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
-; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
+; INSTSIMPLIFY-NEXT:    ret i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i32, ptr addrspace(1) null, i64 1234) to i64)
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_gep_nonzero_inbounds() {
 ; INSTCOMBINE-NEXT:    ret i64 4936
 ;
-  ret i64 ptrtoint (i32 addrspace(1)* getelementptr inbounds (i32, i32 addrspace(1)* null, i64 1234) to i64)
+  ret i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i32, ptr addrspace(1) null, i64 1234) to i64)
 }
 
 ; Check all combinations of inbounds+non-inbounds GEP with the outer GEP having a non-zero offset
 define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
 ; LLPARSER-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
 ; LLPARSER-NEXT:    call void @use_i64(i64 0)
 ; LLPARSER-NEXT:    call void @use_i64(i64 0)
 ; LLPARSER-NEXT:    call void @use_i64(i64 0)
@@ -75,14 +75,14 @@ define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
 ; LLPARSER-NEXT:    ret void
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
 ; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
 ; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
 ; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
@@ -104,20 +104,20 @@ define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
 ; INSTCOMBINE-NEXT:    call void @use_i64(i64 0)
 ; INSTCOMBINE-NEXT:    ret void
 ;
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 0), i64 1234) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 0), i64 1234) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 0), i64 1234) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 0), i64 1234) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
   ; Same again but this time with the inner GEP using the non-zero offset
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234), i64 0) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 1234), i64 0) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234), i64 0) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 1234), i64 0) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234), i64 0) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234), i64 0) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234), i64 0) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234), i64 0) to i64))
   ; And finally with two constants that sum to zero
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 -1), i64 1) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* null, i64 -1), i64 1) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr inbounds (i8, i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 -1), i64 1) to i64))
-  call void @use_i64(i64 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* null, i64 -1), i64 1) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+  call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
   ret void
 }
 
@@ -125,48 +125,48 @@ define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
 define i64 @fold_ptrtoint_nullgep_zero() {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_zero() {
 ; LLPARSER-NEXT:    [[OFFSET:%.*]] = add i64 0, 0
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_zero() {
 ; CHECK-NEXT:    ret i64 0
 ;
   %offset = add i64 0, 0
-  %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr i8, ptr addrspace(1) null, i64 %offset
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
 define i64 @fold_ptrtoint_nullgep_zero_inbounds() {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_zero_inbounds() {
 ; LLPARSER-NEXT:    [[OFFSET:%.*]] = add i64 0, 0
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_zero_inbounds() {
 ; CHECK-NEXT:    ret i64 0
 ;
   %offset = add i64 0, 0
-  %ptr = getelementptr inbounds i8, i8 addrspace(1)* null, i64 %offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr inbounds i8, ptr addrspace(1) null, i64 %offset
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
 define i64 @fold_ptrtoint_nullgep_nonzero() {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero() {
 ; LLPARSER-NEXT:    [[OFFSET:%.*]] = add i64 1234, 0
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero() {
 ; CHECK-NEXT:    ret i64 1234
 ;
   %offset = add i64 1234, 0
-  %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr i8, ptr addrspace(1) null, i64 %offset
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -175,16 +175,16 @@ define i64 @fold_ptrtoint_nullgep_nonzero() {
 define i64 @fold_ptrtoint_nullgep_nonzero_inbounds() {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero_inbounds() {
 ; LLPARSER-NEXT:    [[OFFSET:%.*]] = add i64 1234, 0
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_nonzero_inbounds() {
 ; CHECK-NEXT:    ret i64 1234
 ;
   %offset = add i64 1234, 0
-  %ptr = getelementptr inbounds i8, i8 addrspace(1)* null, i64 %offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr inbounds i8, ptr addrspace(1) null, i64 %offset
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -192,22 +192,22 @@ define i64 @fold_ptrtoint_nullgep_nonzero_inbounds() {
 define i64 @fold_ptrtoint_nullgep_variable(i64 %val) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable
 ; LLPARSER-SAME: (i64 [[VAL:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[VAL]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable
 ; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[VAL]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable
 ; INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
 ; INSTCOMBINE-NEXT:    ret i64 [[VAL]]
 ;
-  %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %val
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr i8, ptr addrspace(1) null, i64 %val
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -216,15 +216,15 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero(i64 %val) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero
 ; LLPARSER-SAME: (i64 [[VAL:%.*]]) {
 ; LLPARSER-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[NON_ZERO_OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[NON_ZERO_OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero
 ; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
 ; INSTSIMPLIFY-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[NON_ZERO_OFFSET]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[NON_ZERO_OFFSET]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero
@@ -233,8 +233,8 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero(i64 %val) {
 ; INSTCOMBINE-NEXT:    ret i64 [[NON_ZERO_OFFSET]]
 ;
   %non_zero_offset = or i64 %val, 1
-  %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %non_zero_offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr i8, ptr addrspace(1) null, i64 %non_zero_offset
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -242,22 +242,22 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero(i64 %val) {
 define i64 @fold_ptrtoint_nullgep_variable_inbounds(i64 %val) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_inbounds
 ; LLPARSER-SAME: (i64 [[VAL:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[VAL]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[VAL]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_inbounds
 ; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[VAL]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[VAL]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_inbounds
 ; INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
 ; INSTCOMBINE-NEXT:    ret i64 [[VAL]]
 ;
-  %ptr = getelementptr inbounds i8, i8 addrspace(1)* null, i64 %val
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr inbounds i8, ptr addrspace(1) null, i64 %val
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -266,15 +266,15 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero_inbounds(i64 %val) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds
 ; LLPARSER-SAME: (i64 [[VAL:%.*]]) {
 ; LLPARSER-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[NON_ZERO_OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[NON_ZERO_OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds
 ; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
 ; INSTSIMPLIFY-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[NON_ZERO_OFFSET]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[NON_ZERO_OFFSET]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds
@@ -283,8 +283,8 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero_inbounds(i64 %val) {
 ; INSTCOMBINE-NEXT:    ret i64 [[NON_ZERO_OFFSET]]
 ;
   %non_zero_offset = or i64 %val, 1
-  %ptr = getelementptr inbounds i8, i8 addrspace(1)* null, i64 %non_zero_offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr inbounds i8, ptr addrspace(1) null, i64 %non_zero_offset
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -293,15 +293,15 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indic
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
 ; LLPARSER-SAME: (i64 [[VAL:%.*]]) {
 ; LLPARSER-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i32 1
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], ptr addrspace(1) null, i64 [[NON_ZERO_OFFSET]], i32 1
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
 ; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
 ; INSTSIMPLIFY-NEXT:    [[NON_ZERO_OFFSET:%.*]] = or i64 [[VAL]], 1
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 [[NON_ZERO_OFFSET]], i32 1
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [2 x i8], ptr addrspace(1) null, i64 [[NON_ZERO_OFFSET]], i32 1
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indices
@@ -311,8 +311,8 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indic
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS]]
 ;
   %non_zero_offset = or i64 %val, 1
-  %ptr = getelementptr inbounds [2 x i8], [2 x i8] addrspace(1)* null, i64 %non_zero_offset, i32 1
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr inbounds [2 x i8], ptr addrspace(1) null, i64 %non_zero_offset, i32 1
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -321,14 +321,14 @@ define i64 @fold_ptrtoint_nullgep_variable_known_nonzero_inbounds_multiple_indic
 define i64 @fold_ptrtoint_nullgep_i32_variable(i64 %val) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_i32_variable
 ; LLPARSER-SAME: (i64 [[VAL:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i32, i32 addrspace(1)* null, i64 [[VAL]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i32 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) null, i64 [[VAL]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_i32_variable
 ; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i32, i32 addrspace(1)* null, i64 [[VAL]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i32 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(1) null, i64 [[VAL]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_i32_variable
@@ -336,8 +336,8 @@ define i64 @fold_ptrtoint_nullgep_i32_variable(i64 %val) {
 ; INSTCOMBINE-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[VAL]], 2
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_IDX]]
 ;
-  %ptr = getelementptr i32, i32 addrspace(1)* null, i64 %val
-  %ret = ptrtoint i32 addrspace(1)* %ptr to i64
+  %ptr = getelementptr i32, ptr addrspace(1) null, i64 %val
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -345,14 +345,14 @@ define i64 @fold_ptrtoint_nullgep_i32_variable(i64 %val) {
 define i32 @fold_ptrtoint_nullgep_variable_trunc(i64 %val) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
 ; LLPARSER-SAME: (i64 [[VAL:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i32
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[VAL]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i32
 ; LLPARSER-NEXT:    ret i32 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
 ; INSTSIMPLIFY-SAME: (i64 [[VAL:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[VAL]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i32
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[VAL]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i32
 ; INSTSIMPLIFY-NEXT:    ret i32 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_variable_trunc
@@ -360,8 +360,8 @@ define i32 @fold_ptrtoint_nullgep_variable_trunc(i64 %val) {
 ; INSTCOMBINE-NEXT:    [[RET:%.*]] = trunc i64 [[VAL]] to i32
 ; INSTCOMBINE-NEXT:    ret i32 [[RET]]
 ;
-  %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %val
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i32
+  %ptr = getelementptr i8, ptr addrspace(1) null, i64 %val
+  %ret = ptrtoint ptr addrspace(1) %ptr to i32
   ret i32 %ret
 }
 
@@ -371,9 +371,9 @@ define i64 @fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
 ; LLPARSER-NEXT:    [[NONZERO_OFFSET:%.*]] = add i64 1234, 0
 ; LLPARSER-NEXT:    [[ZERO_OFFSET:%.*]] = sub i64 [[NONZERO_OFFSET]], 1234
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[NONZERO_OFFSET]]
-; LLPARSER-NEXT:    [[PTR2:%.*]] = getelementptr i8, i8 addrspace(1)* [[PTR]], i64 [[ZERO_OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR2]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[NONZERO_OFFSET]]
+; LLPARSER-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR]], i64 [[ZERO_OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR2]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
@@ -381,9 +381,9 @@ define i64 @fold_ptrtoint_zero_nullgep_of_nonzero_inbounds_nullgep() {
 ;
   %nonzero_offset = add i64 1234, 0
   %zero_offset = sub i64 %nonzero_offset, 1234
-  %ptr = getelementptr inbounds i8, i8 addrspace(1)* null, i64 %nonzero_offset
-  %ptr2 = getelementptr i8, i8 addrspace(1)* %ptr, i64 %zero_offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr2 to i64
+  %ptr = getelementptr inbounds i8, ptr addrspace(1) null, i64 %nonzero_offset
+  %ptr2 = getelementptr i8, ptr addrspace(1) %ptr, i64 %zero_offset
+  %ret = ptrtoint ptr addrspace(1) %ptr2 to i64
   ret i64 %ret
 }
 
@@ -391,9 +391,9 @@ define i64 @fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep()
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep() {
 ; LLPARSER-NEXT:    [[NONZERO_OFFSET:%.*]] = add i64 1234, 0
 ; LLPARSER-NEXT:    [[ZERO_OFFSET:%.*]] = sub i64 [[NONZERO_OFFSET]], 1234
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(1)* null, i64 [[ZERO_OFFSET]]
-; LLPARSER-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[PTR]], i64 [[NONZERO_OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR2]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[ZERO_OFFSET]]
+; LLPARSER-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PTR]], i64 [[NONZERO_OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR2]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep() {
@@ -401,9 +401,9 @@ define i64 @fold_ptrtoint_nonzero_inbounds_nullgep_of_zero_noninbounds_nullgep()
 ;
   %nonzero_offset = add i64 1234, 0
   %zero_offset = sub i64 %nonzero_offset, 1234
-  %ptr = getelementptr i8, i8 addrspace(1)* null, i64 %zero_offset
-  %ptr2 = getelementptr inbounds i8, i8 addrspace(1)* %ptr, i64 %nonzero_offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr2 to i64
+  %ptr = getelementptr i8, ptr addrspace(1) null, i64 %zero_offset
+  %ptr2 = getelementptr inbounds i8, ptr addrspace(1) %ptr, i64 %nonzero_offset
+  %ret = ptrtoint ptr addrspace(1) %ptr2 to i64
   ret i64 %ret
 }
 
@@ -415,15 +415,15 @@ define i64 @fold_complex_index_last_nonzero(i64 %x) local_unnamed_addr #0 {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_complex_index_last_nonzero
 ; LLPARSER-SAME: (i64 [[X:%.*]]) local_unnamed_addr {
 ; LLPARSER-NEXT:  entry:
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], [[STRUCT_S]] addrspace(1)* null, i64 0, i32 0, i64 0, i32 0, i64 [[X]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr addrspace(1) null, i64 0, i32 0, i64 0, i32 0, i64 [[X]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_complex_index_last_nonzero
 ; INSTSIMPLIFY-SAME: (i64 [[X:%.*]]) local_unnamed_addr {
 ; INSTSIMPLIFY-NEXT:  entry:
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], [[STRUCT_S]] addrspace(1)* null, i64 0, i32 0, i64 0, i32 0, i64 [[X]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr addrspace(1) null, i64 0, i32 0, i64 0, i32 0, i64 [[X]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_complex_index_last_nonzero
@@ -432,8 +432,8 @@ define i64 @fold_complex_index_last_nonzero(i64 %x) local_unnamed_addr #0 {
 ; INSTCOMBINE-NEXT:    ret i64 [[X]]
 ;
 entry:
-  %ptr = getelementptr inbounds %struct.S, %struct.S addrspace(1)* null, i64 0, i32 0, i64 0, i32 0, i64 %x
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr inbounds %struct.S, ptr addrspace(1) null, i64 0, i32 0, i64 0, i32 0, i64 %x
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -441,15 +441,15 @@ define i64 @fold_complex_index_multiple_nonzero(i64 %x) local_unnamed_addr #0 {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_complex_index_multiple_nonzero
 ; LLPARSER-SAME: (i64 [[X:%.*]]) local_unnamed_addr {
 ; LLPARSER-NEXT:  entry:
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], [[STRUCT_S]] addrspace(1)* null, i64 1, i32 0, i64 1, i32 0, i64 [[X]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr addrspace(1) null, i64 1, i32 0, i64 1, i32 0, i64 [[X]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_complex_index_multiple_nonzero
 ; INSTSIMPLIFY-SAME: (i64 [[X:%.*]]) local_unnamed_addr {
 ; INSTSIMPLIFY-NEXT:  entry:
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], [[STRUCT_S]] addrspace(1)* null, i64 1, i32 0, i64 1, i32 0, i64 [[X]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr addrspace(1) null, i64 1, i32 0, i64 1, i32 0, i64 [[X]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_complex_index_multiple_nonzero
@@ -459,8 +459,8 @@ define i64 @fold_complex_index_multiple_nonzero(i64 %x) local_unnamed_addr #0 {
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS]]
 ;
 entry:
-  %ptr = getelementptr inbounds %struct.S, %struct.S addrspace(1)* null, i64 1, i32 0, i64 1, i32 0, i64 %x
-  %ret = ptrtoint i8 addrspace(1)* %ptr to i64
+  %ptr = getelementptr inbounds %struct.S, ptr addrspace(1) null, i64 1, i32 0, i64 1, i32 0, i64 %x
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -468,9 +468,9 @@ define i64 @fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
 ; LLPARSER-NEXT:    [[NONZERO_OFFSET:%.*]] = add i64 1234, 0
 ; LLPARSER-NEXT:    [[ZERO_OFFSET:%.*]] = sub i64 [[NONZERO_OFFSET]], 1234
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* null, i64 [[NONZERO_OFFSET]]
-; LLPARSER-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[PTR]], i64 [[ZERO_OFFSET]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i8 addrspace(1)* [[PTR2]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) null, i64 [[NONZERO_OFFSET]]
+; LLPARSER-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PTR]], i64 [[ZERO_OFFSET]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR2]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; CHECK-LABEL: define {{[^@]+}}@fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
@@ -478,9 +478,9 @@ define i64 @fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
 ;
   %nonzero_offset = add i64 1234, 0
   %zero_offset = sub i64 %nonzero_offset, 1234
-  %ptr = getelementptr inbounds i8, i8 addrspace(1)* null, i64 %nonzero_offset
-  %ptr2 = getelementptr inbounds i8, i8 addrspace(1)* %ptr, i64 %zero_offset
-  %ret = ptrtoint i8 addrspace(1)* %ptr2 to i64
+  %ptr = getelementptr inbounds i8, ptr addrspace(1) null, i64 %nonzero_offset
+  %ptr2 = getelementptr inbounds i8, ptr addrspace(1) %ptr, i64 %zero_offset
+  %ret = ptrtoint ptr addrspace(1) %ptr2 to i64
   ret i64 %ret
 }
 
@@ -488,14 +488,14 @@ define i64 @fold_ptrtoint_inbounds_nullgep_of_nonzero_inbounds_nullgep() {
 define i64 @fold_ptrtoint_nullgep_array_one_var_1(i64 %x) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_1
 ; LLPARSER-SAME: (i64 [[X:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 [[X]], i64 3
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 [[X]], i64 3
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_1
 ; INSTSIMPLIFY-SAME: (i64 [[X:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 [[X]], i64 3
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 [[X]], i64 3
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_1
@@ -504,22 +504,22 @@ define i64 @fold_ptrtoint_nullgep_array_one_var_1(i64 %x) {
 ; INSTCOMBINE-NEXT:    [[PTR_OFFS:%.*]] = add i64 [[PTR_IDX]], 6
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS]]
 ;
-  %ptr = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 %x, i64 3
-  %ret = ptrtoint i16 addrspace(1)* %ptr to i64
+  %ptr = getelementptr [2 x i16], ptr addrspace(1) null, i64 %x, i64 3
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
 define i64 @fold_ptrtoint_nullgep_array_one_var_2(i64 %x) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_2
 ; LLPARSER-SAME: (i64 [[X:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 7, i64 [[X]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 7, i64 [[X]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_2
 ; INSTSIMPLIFY-SAME: (i64 [[X:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 7, i64 [[X]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 7, i64 [[X]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_2
@@ -528,22 +528,22 @@ define i64 @fold_ptrtoint_nullgep_array_one_var_2(i64 %x) {
 ; INSTCOMBINE-NEXT:    [[PTR_OFFS:%.*]] = add i64 [[PTR_IDX]], 28
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS]]
 ;
-  %ptr = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 7, i64 %x
-  %ret = ptrtoint i16 addrspace(1)* %ptr to i64
+  %ptr = getelementptr [2 x i16], ptr addrspace(1) null, i64 7, i64 %x
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
 define i64 @fold_ptrtoint_nested_array_two_vars(i64 %x, i64 %y) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars
 ; LLPARSER-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 [[X]], i64 [[Y]]
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 [[X]], i64 [[Y]]
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars
 ; INSTSIMPLIFY-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 [[X]], i64 [[Y]]
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 [[X]], i64 [[Y]]
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars
@@ -554,22 +554,22 @@ define i64 @fold_ptrtoint_nested_array_two_vars(i64 %x, i64 %y) {
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS]]
 ;
 
-  %ptr = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 %x, i64 %y
-  %ret = ptrtoint i16 addrspace(1)* %ptr to i64
+  %ptr = getelementptr [2 x i16], ptr addrspace(1) null, i64 %x, i64 %y
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
 define i64 @fold_ptrtoint_nested_array_two_vars_plus_zero(i64 %x, i64 %y) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_zero
 ; LLPARSER-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], [2 x [2 x i16]] addrspace(1)* null, i64 [[X]], i64 [[Y]], i64 0
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 [[X]], i64 [[Y]], i64 0
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_zero
 ; INSTSIMPLIFY-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], [2 x [2 x i16]] addrspace(1)* null, i64 [[X]], i64 [[Y]], i64 0
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 [[X]], i64 [[Y]], i64 0
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_zero
@@ -579,22 +579,22 @@ define i64 @fold_ptrtoint_nested_array_two_vars_plus_zero(i64 %x, i64 %y) {
 ; INSTCOMBINE-NEXT:    [[PTR_OFFS:%.*]] = add i64 [[PTR_IDX]], [[PTR_IDX1]]
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS]]
 ;
-  %ptr = getelementptr [2 x [2 x i16]], [2 x [2 x i16]] addrspace(1)* null, i64 %x, i64 %y, i64 0
-  %ret = ptrtoint i16 addrspace(1)* %ptr to i64
+  %ptr = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 %x, i64 %y, i64 0
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
 define i64 @fold_ptrtoint_nested_array_two_vars_plus_const(i64 %x, i64 %y) {
 ; LLPARSER-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_const
 ; LLPARSER-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], [2 x [2 x i16]] addrspace(1)* null, i64 [[X]], i64 [[Y]], i64 1
-; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; LLPARSER-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 [[X]], i64 [[Y]], i64 1
+; LLPARSER-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; LLPARSER-NEXT:    ret i64 [[RET]]
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_const
 ; INSTSIMPLIFY-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], [2 x [2 x i16]] addrspace(1)* null, i64 [[X]], i64 [[Y]], i64 1
-; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; INSTSIMPLIFY-NEXT:    [[PTR:%.*]] = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 [[X]], i64 [[Y]], i64 1
+; INSTSIMPLIFY-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTSIMPLIFY-NEXT:    ret i64 [[RET]]
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_const
@@ -605,8 +605,8 @@ define i64 @fold_ptrtoint_nested_array_two_vars_plus_const(i64 %x, i64 %y) {
 ; INSTCOMBINE-NEXT:    [[PTR_OFFS2:%.*]] = or i64 [[PTR_OFFS]], 2
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS2]]
 ;
-  %ptr = getelementptr [2 x [2 x i16]], [2 x [2 x i16]] addrspace(1)* null, i64 %x, i64 %y, i64 1
-  %ret = ptrtoint i16 addrspace(1)* %ptr to i64
+  %ptr = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 %x, i64 %y, i64 1
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }
 
@@ -614,15 +614,13 @@ define i64 @fold_ptrtoint_nested_array_two_vars_plus_const(i64 %x, i64 %y) {
 define i64 @fold_ptrtoint_nested_nullgep_array_variable_multiple_uses(i64 %x, i64 %y) {
 ; ALL-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_nullgep_array_variable_multiple_uses
 ; ALL-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; ALL-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 [[X]], i64 [[Y]]
-; ALL-NEXT:    [[PTRI8:%.*]] = bitcast i16 addrspace(1)* [[PTR]] to i8 addrspace(1)*
-; ALL-NEXT:    call void @use_ptr(i8 addrspace(1)* [[PTRI8]])
-; ALL-NEXT:    [[RET:%.*]] = ptrtoint i16 addrspace(1)* [[PTR]] to i64
+; ALL-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 [[X]], i64 [[Y]]
+; ALL-NEXT:    call void @use_ptr(ptr addrspace(1) [[PTR]])
+; ALL-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; ALL-NEXT:    ret i64 [[RET]]
 ;
-  %ptr = getelementptr [2 x i16], [2 x i16] addrspace(1)* null, i64 %x, i64 %y
-  %ptri8 = bitcast i16 addrspace(1)* %ptr to i8 addrspace(1)*
-  call void @use_ptr(i8 addrspace(1)* %ptri8)
-  %ret = ptrtoint i16 addrspace(1)* %ptr to i64
+  %ptr = getelementptr [2 x i16], ptr addrspace(1) null, i64 %x, i64 %y
+  call void @use_ptr(ptr addrspace(1) %ptr)
+  %ret = ptrtoint ptr addrspace(1) %ptr to i64
   ret i64 %ret
 }

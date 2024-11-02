@@ -144,6 +144,18 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
   return addr;
 }
 
+lldb::addr_t ProcessElfCore::AddAddressRangeFromMemoryTagSegment(
+    const elf::ELFProgramHeader &header) {
+  // If lldb understood multiple kinds of tag segments we would record the type
+  // of the segment here also. As long as there is only 1 type lldb looks for,
+  // there is no need.
+  FileRange file_range(header.p_offset, header.p_filesz);
+  m_core_tag_ranges.Append(
+      VMRangeToFileOffset::Entry(header.p_vaddr, header.p_memsz, file_range));
+
+  return header.p_vaddr;
+}
+
 // Process Control
 Status ProcessElfCore::DoLoadCore() {
   Status error;
@@ -170,9 +182,12 @@ Status ProcessElfCore::DoLoadCore() {
 
   bool ranges_are_sorted = true;
   lldb::addr_t vm_addr = 0;
+  lldb::addr_t tag_addr = 0;
   /// Walk through segments and Thread and Address Map information.
   /// PT_NOTE - Contains Thread and Register information
   /// PT_LOAD - Contains a contiguous range of Process Address Space
+  /// PT_AARCH64_MEMTAG_MTE - Contains AArch64 MTE memory tags for a range of
+  ///                         Process Address Space.
   for (const elf::ELFProgramHeader &H : segments) {
     DataExtractor data = core->GetSegmentData(H);
 
@@ -187,12 +202,18 @@ Status ProcessElfCore::DoLoadCore() {
       if (vm_addr > last_addr)
         ranges_are_sorted = false;
       vm_addr = last_addr;
+    } else if (H.p_type == llvm::ELF::PT_AARCH64_MEMTAG_MTE) {
+      lldb::addr_t last_addr = AddAddressRangeFromMemoryTagSegment(H);
+      if (tag_addr > last_addr)
+        ranges_are_sorted = false;
+      tag_addr = last_addr;
     }
   }
 
   if (!ranges_are_sorted) {
     m_core_aranges.Sort();
     m_core_range_infos.Sort();
+    m_core_tag_ranges.Sort();
   }
 
   // Even if the architecture is set in the target, we need to override it to
@@ -310,6 +331,15 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                     ? MemoryRegionInfo::eYes
                                     : MemoryRegionInfo::eNo);
       region_info.SetMapped(MemoryRegionInfo::eYes);
+
+      // A region is memory tagged if there is a memory tag segment that covers
+      // the exact same range.
+      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+      const VMRangeToFileOffset::Entry *tag_entry =
+          m_core_tag_ranges.FindEntryStartsAt(permission_entry->GetRangeBase());
+      if (tag_entry &&
+          tag_entry->GetRangeEnd() == permission_entry->GetRangeEnd())
+        region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
     } else if (load_addr < permission_entry->GetRangeBase()) {
       region_info.GetRange().SetRangeBase(load_addr);
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
@@ -317,6 +347,7 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
       region_info.SetWritable(MemoryRegionInfo::eNo);
       region_info.SetExecutable(MemoryRegionInfo::eNo);
       region_info.SetMapped(MemoryRegionInfo::eNo);
+      region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
     }
     return Status();
   }
@@ -327,6 +358,7 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
   region_info.SetWritable(MemoryRegionInfo::eNo);
   region_info.SetExecutable(MemoryRegionInfo::eNo);
   region_info.SetMapped(MemoryRegionInfo::eNo);
+  region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
   return Status();
 }
 
@@ -374,6 +406,38 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
         core_objfile->CopyData(offset + file_start, bytes_to_read, buf);
 
   return bytes_copied;
+}
+
+llvm::Expected<std::vector<lldb::addr_t>>
+ProcessElfCore::ReadMemoryTags(lldb::addr_t addr, size_t len) {
+  ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
+  if (core_objfile == nullptr)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No core object file.");
+
+  llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
+      GetMemoryTagManager();
+  if (!tag_manager_or_err)
+    return tag_manager_or_err.takeError();
+
+  // LLDB only supports AArch64 MTE tag segments so we do not need to worry
+  // about the segment type here. If you got here then you must have a tag
+  // manager (meaning you are debugging AArch64) and all the segments in this
+  // list will have had type PT_AARCH64_MEMTAG_MTE.
+  const VMRangeToFileOffset::Entry *tag_entry =
+      m_core_tag_ranges.FindEntryThatContains(addr);
+  // If we don't have a tag segment or the range asked for extends outside the
+  // segment.
+  if (!tag_entry || (addr + len) >= tag_entry->GetRangeEnd())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No tag segment that covers this range.");
+
+  const MemoryTagManager *tag_manager = *tag_manager_or_err;
+  return tag_manager->UnpackTagsFromCoreFileSegment(
+      [core_objfile](lldb::offset_t offset, size_t length, void *dst) {
+        return core_objfile->CopyData(offset, length, dst);
+      },
+      tag_entry->GetRangeBase(), tag_entry->data.GetRangeBase(), addr, len);
 }
 
 void ProcessElfCore::Clear() {
@@ -610,9 +674,9 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   // To be extracted from struct netbsd_elfcore_procinfo
   // Used to sanity check of the LWPs of the process
   uint32_t nlwps = 0;
-  uint32_t signo;  // killing signal
-  uint32_t siglwp; // LWP target of killing signal
-  uint32_t pr_pid;
+  uint32_t signo = 0;  // killing signal
+  uint32_t siglwp = 0; // LWP target of killing signal
+  uint32_t pr_pid = 0;
 
   for (const auto &note : notes) {
     llvm::StringRef name = note.info.n_name;
@@ -764,7 +828,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 }
 
 llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
-  ThreadData thread_data;
+  ThreadData thread_data = {};
   for (const auto &note : notes) {
     // OpenBSD per-thread information is stored in notes named "OpenBSD@nnn" so
     // match on the initial part of the string.

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-io.h"
+#include "definable.h"
 #include "flang/Common/format.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/tools.h"
@@ -97,6 +98,14 @@ void IoChecker::Enter(const parser::ConnectSpec &spec) {
   }
 }
 
+// Ignore trailing spaces (12.5.6.2 p1) and convert to upper case
+static std::string Normalize(const std::string &value) {
+  auto upper{parser::ToUpperCaseLetters(value)};
+  std::size_t lastNonBlank{upper.find_last_not_of(" ")};
+  upper.resize(lastNonBlank == std::string::npos ? 0 : lastNonBlank + 1);
+  return upper;
+}
+
 void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
   IoSpecKind specKind{};
   using ParseKind = parser::ConnectSpec::CharExpr::Kind;
@@ -150,7 +159,7 @@ void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
   SetSpecifier(specKind);
   if (const std::optional<std::string> charConst{GetConstExpr<std::string>(
           std::get<parser::ScalarDefaultCharExpr>(spec.t))}) {
-    std::string s{parser::ToUpperCaseLetters(*charConst)};
+    std::string s{Normalize(*charConst)};
     if (specKind == IoSpecKind::Access) {
       flags_.set(Flag::KnownAccess);
       flags_.set(Flag::AccessDirect, s == "DIRECT");
@@ -242,13 +251,6 @@ void IoChecker::Enter(const parser::Format &spec) {
                     context_.defaultKinds().GetDefaultKind(type->category())) {
               context_.Say(format.source,
                   "Format expression must be default character or default scalar integer"_err_en_US);
-              return;
-            }
-            if (expr->Rank() > 0 &&
-                !IsSimplyContiguous(*expr, context_.foldingContext())) {
-              // The runtime APIs don't allow arbitrary descriptors for formats.
-              context_.Say(format.source,
-                  "Format expression must be a simply contiguous array if not scalar"_err_en_US);
               return;
             }
             flags_.set(Flag::CharFmt);
@@ -484,8 +486,7 @@ void IoChecker::Enter(const parser::IoControlSpec::Asynchronous &spec) {
   SetSpecifier(IoSpecKind::Asynchronous);
   if (const std::optional<std::string> charConst{
           GetConstExpr<std::string>(spec)}) {
-    flags_.set(
-        Flag::AsynchronousYes, parser::ToUpperCaseLetters(*charConst) == "YES");
+    flags_.set(Flag::AsynchronousYes, Normalize(*charConst) == "YES");
     CheckStringValue(IoSpecKind::Asynchronous, *charConst,
         parser::FindSourceLocation(spec)); // C1223
   }
@@ -521,8 +522,7 @@ void IoChecker::Enter(const parser::IoControlSpec::CharExpr &spec) {
   if (const std::optional<std::string> charConst{GetConstExpr<std::string>(
           std::get<parser::ScalarDefaultCharExpr>(spec.t))}) {
     if (specKind == IoSpecKind::Advance) {
-      flags_.set(
-          Flag::AdvanceYes, parser::ToUpperCaseLetters(*charConst) == "YES");
+      flags_.set(Flag::AdvanceYes, Normalize(*charConst) == "YES");
     }
     CheckStringValue(specKind, *charConst, parser::FindSourceLocation(spec));
   }
@@ -543,21 +543,50 @@ void IoChecker::Enter(const parser::IoControlSpec::Size &var) {
 
 void IoChecker::Enter(const parser::IoUnit &spec) {
   if (const parser::Variable * var{std::get_if<parser::Variable>(&spec.u)}) {
-    if (stmt_ == IoStmtKind::Write) {
-      CheckForDefinableVariable(*var, "Internal file");
+    // Only now after generic resolution can it be known whether a function
+    // call appearing as UNIT=f() is an integer scalar external unit number
+    // or a character pointer for internal I/O.
+    const auto *expr{GetExpr(context_, *var)};
+    std::optional<evaluate::DynamicType> dyType;
+    if (expr) {
+      dyType = expr->GetType();
     }
-    if (const auto *expr{GetExpr(context_, *var)}) {
+    if (dyType && dyType->category() == TypeCategory::Integer) {
+      if (expr->Rank() != 0) {
+        context_.Say(parser::FindSourceLocation(*var),
+            "I/O unit number must be scalar"_err_en_US);
+      }
+      // In the case of an integer unit number variable, rewrite the parse
+      // tree as if the unit had been parsed as a FileUnitNumber in order
+      // to ease lowering.
+      auto &mutableSpec{const_cast<parser::IoUnit &>(spec)};
+      auto &mutableVar{std::get<parser::Variable>(mutableSpec.u)};
+      auto source{mutableVar.GetSource()};
+      auto typedExpr{std::move(mutableVar.typedExpr)};
+      auto newExpr{common::visit(
+          [](auto &&indirection) {
+            return parser::Expr{std::move(indirection)};
+          },
+          std::move(mutableVar.u))};
+      newExpr.source = source;
+      newExpr.typedExpr = std::move(typedExpr);
+      mutableSpec.u = parser::FileUnitNumber{
+          parser::ScalarIntExpr{parser::IntExpr{std::move(newExpr)}}};
+    } else if (!dyType || dyType->category() != TypeCategory::Character) {
+      SetSpecifier(IoSpecKind::Unit);
+      context_.Say(parser::FindSourceLocation(*var),
+          "I/O unit must be a character variable or a scalar integer expression"_err_en_US);
+    } else { // CHARACTER variable (internal I/O)
+      if (stmt_ == IoStmtKind::Write) {
+        CheckForDefinableVariable(*var, "Internal file");
+      }
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
             "Internal file must not have a vector subscript"_err_en_US);
-      } else if (!ExprTypeKindIsDefault(*expr, context_)) {
-        // This may be too restrictive; other kinds may be valid.
-        context_.Say(parser::FindSourceLocation(*var), // C1202
-            "Invalid character kind for an internal file variable"_err_en_US);
       }
+      SetSpecifier(IoSpecKind::Unit);
+      flags_.set(Flag::InternalUnit);
     }
-    SetSpecifier(IoSpecKind::Unit);
-    flags_.set(Flag::InternalUnit);
   } else if (std::get_if<parser::Star>(&spec.u)) {
     SetSpecifier(IoSpecKind::Unit);
     flags_.set(Flag::StarUnit);
@@ -601,7 +630,7 @@ void IoChecker::Enter(const parser::StatusExpr &spec) {
   if (const std::optional<std::string> charConst{
           GetConstExpr<std::string>(spec)}) {
     // Status values for Open and Close are different.
-    std::string s{parser::ToUpperCaseLetters(*charConst)};
+    std::string s{Normalize(*charConst)};
     if (stmt_ == IoStmtKind::Open) {
       flags_.set(Flag::KnownStatus);
       flags_.set(Flag::StatusNew, s == "NEW");
@@ -868,7 +897,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE"}},
       {IoSpecKind::Dispose, {"DELETE", "KEEP"}},
   };
-  auto upper{parser::ToUpperCaseLetters(value)};
+  auto upper{Normalize(value)};
   if (specValues.at(specKind).count(upper) == 0) {
     if (specKind == IoSpecKind::Access && upper == "APPEND") {
       if (context_.languageFeatures().ShouldWarn(
@@ -977,11 +1006,12 @@ void IoChecker::CheckForDefinableVariable(
   if (const auto *var{parser::Unwrap<parser::Variable>(variable)}) {
     if (auto expr{AnalyzeExpr(context_, *var)}) {
       auto at{var->GetSource()};
-      if (auto whyNot{WhyNotModifiable(at, *expr, context_.FindScope(at),
-              true /*vectorSubscriptIsOk*/)}) {
+      if (auto whyNot{WhyNotDefinable(at, context_.FindScope(at),
+              DefinabilityFlags{DefinabilityFlag::VectorSubscriptIsOk},
+              *expr)}) {
         const Symbol *base{GetFirstSymbol(*expr)};
         context_
-            .Say(at, "%s variable '%s' must be definable"_err_en_US, s,
+            .Say(at, "%s variable '%s' is not definable"_err_en_US, s,
                 (base ? base->name() : at).ToString())
             .Attach(std::move(*whyNot));
       }

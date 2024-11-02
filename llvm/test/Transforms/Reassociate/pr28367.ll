@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -S
+; RUN: opt < %s -passes=reassociate -S
 
 ; PR28367
 

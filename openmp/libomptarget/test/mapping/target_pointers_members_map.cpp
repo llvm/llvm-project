@@ -38,10 +38,8 @@ int main() {
   // CHECK: 10 111
   printf("%d %ld %p %p %p %p\n", dvb1.c[0].b.a[0], dvb1.c[0].b.d1, &dvb1,
          &dvb1.c[0], &dvb1.c[0].b, &dvb1.c[0].b.a[0]);
-#pragma omp target map(to                                                      \
-                       : dvb1, dvb1.c [0:2])                                   \
-    map(tofrom                                                                 \
-        : dvb1.c[0].b.a [0:10], dvb1.c[1].b.a [0:10])
+#pragma omp target map(to : dvb1, dvb1.c[0 : 2])                               \
+    map(tofrom : dvb1.c[0].b.a[0 : 10], dvb1.c[1].b.a[0 : 10])
   {
     // CHECK: 10 111
     printf("%d %ld %p %p %p %p\n", dvb1.c[0].b.a[0], dvb1.c[0].b.d1, &dvb1,

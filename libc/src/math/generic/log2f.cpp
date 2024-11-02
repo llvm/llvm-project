@@ -98,7 +98,6 @@ static constexpr double LOG2_F[128] = {
     0x1.f16e281db7630p-1, 0x1.f45e08bcf0655p-1, 0x1.f74aef0efafaep-1,
     0x1.fa34e1177c233p-1, 0x1.fd1be4c7f2af9p-1};
 
-INLINE_FMA
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);

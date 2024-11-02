@@ -11,7 +11,7 @@ define void @test_vsseg2_mask_nxv16i16(<vscale x 16 x i16> %val, i16* %base, <vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:

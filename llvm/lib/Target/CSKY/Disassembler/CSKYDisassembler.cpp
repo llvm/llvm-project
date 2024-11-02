@@ -361,7 +361,7 @@ static DecodeStatus DecodeRegSeqOperandD2(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeImmShiftOpValue(MCInst &Inst, uint64_t Imm,
                                           int64_t Address,
                                           const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(Log2(Imm)));
+  Inst.addOperand(MCOperand::createImm(Log2_64(Imm)));
   return MCDisassembler::Success;
 }
 

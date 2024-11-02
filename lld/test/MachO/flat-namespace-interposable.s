@@ -9,42 +9,91 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/foo.o %t/foo.s
 # RUN: %lld -lSystem -flat_namespace -o %t/foo %t/foo.o
+# RUN: %lld -lSystem -flat_namespace -fixup_chains -o %t/chained %t/foo.o
 # RUN: %lld -lSystem -dylib -flat_namespace -o %t/foo.dylib %t/foo.o
+# RUN: %lld -lSystem -dylib -flat_namespace -fixup_chains -o %t/chained.dylib %t/foo.o
 # RUN: %lld -lSystem -bundle -flat_namespace -o %t/foo.bundle %t/foo.o
-# RUN: llvm-objdump --macho --bind --lazy-bind --weak-bind %t/foo | FileCheck \
-# RUN:   %s --check-prefix=EXEC --implicit-check-not=_private_extern
-# RUN: llvm-objdump --macho --bind --lazy-bind --weak-bind %t/foo.dylib | \
-# RUN:   FileCheck %s --check-prefix=DYLIB --implicit-check-not=_private_extern
-# RUN: llvm-objdump --macho --bind --lazy-bind --weak-bind %t/foo.bundle | \
-# RUN:   FileCheck %s --check-prefix=DYLIB --implicit-check-not=_private_extern
+# RUN: %lld -lSystem -bundle -flat_namespace -fixup_chains -o %t/chained.bundle %t/foo.o
+# RUN: llvm-objdump --macho --syms --rebase --bind --lazy-bind --weak-bind %t/foo | \
+# RUN:   FileCheck %s --check-prefixes=SYMS,EXEC --implicit-check-not=_private_extern
+# RUN: llvm-objdump --macho --syms %t/chained >> %t/chained.objdump
+# RUN: llvm-objdump --macho --dyld-info %t/chained >> %t/chained.objdump
+# RUN: FileCheck %s --check-prefixes=SYMS,CHAINED-EXEC < %t/chained.objdump
+# RUN: llvm-objdump --macho --syms %t/chained.dylib >> %t/dylib.objdump
+# RUN: llvm-objdump --macho --dyld-info %t/chained.dylib >> %t/dylib.objdump
+# RUN: FileCheck %s --check-prefixes=SYMS,CHAINED-DYLIB < %t/dylib.objdump
+# RUN: llvm-objdump --macho --syms %t/chained.bundle >> %t/bundle.objdump
+# RUN: llvm-objdump --macho --dyld-info %t/chained.bundle >> %t/bundle.objdump
+# RUN: FileCheck %s --check-prefixes=SYMS,CHAINED-DYLIB < %t/bundle.objdump
+
+# SYMS: SYMBOL TABLE:
+# SYMS-DAG: [[#%x, EXTERN_REF:]] l     O __DATA,__data _extern_ref
+# SYMS-DAG: [[#%x, LOCAL_REF:]]  l     O __DATA,__data _local_ref
+# SYMS-DAG: [[#%x, WEAK_REF:]]   l     O __DATA,__data _weak_ref
+# SYMS-DAG: [[#%x, TLV_REF:]]    g     O __DATA,__thread_vars _tlv
 
 ## Executables with -flat_namespace don't have interposable externs.
-# EXEC:       Bind table:
+# EXEC:       Rebase table:
+# EXEC-NEXT:  segment  section          address                  type
+# EXEC-DAG:   __DATA   __la_symbol_ptr  0x[[#%X, WEAK_LAZY:]]    pointer
+# EXEC-DAG:   __DATA   __data           0x[[#%.8X, EXTERN_REF]]  pointer
+# EXEC-DAG:   __DATA   __data           0x[[#%.8X, LOCAL_REF]]   pointer
+# EXEC-DAG:   __DATA   __data           0x[[#%.8X, WEAK_REF]]    pointer
+# EXEC-EMPTY:
+# EXEC-NEXT:  Bind table:
 # EXEC-NEXT:  segment  section          address  type     addend dylib   symbol
 # EXEC-EMPTY:
 # EXEC-NEXT:  Lazy bind table:
 # EXEC-NEXT:  segment  section          address  dylib    symbol
 # EXEC-EMPTY:
 # EXEC-NEXT:  Weak bind table:
-# EXEC-NEXT:  segment  section          address  type     addend   symbol
-# EXEC-NEXT:  __DATA   __la_symbol_ptr  {{.*}}   pointer       0   _weak_extern
-# EXEC-NEXT:  __DATA   __data           {{.*}}   pointer       0   _weak_extern
+# EXEC-NEXT:  segment  section          address                type     addend   symbol
+# EXEC-NEXT:  __DATA   __la_symbol_ptr  0x[[#%.8X, WEAK_LAZY]] pointer       0   _weak_extern
+# EXEC-NEXT:  __DATA   __data           0x[[#%.8X, WEAK_REF]]  pointer       0   _weak_extern
 # EXEC-EMPTY:
 
-# DYLIB:       Bind table:
-# DYLIB-NEXT:  segment      section        address  type     addend dylib            symbol
-# DYLIB-DAG:   __DATA       __data         {{.*}}   pointer       0 flat-namespace   _extern
-# DYLIB-DAG:   __DATA       __thread_ptrs  {{.*}}   pointer       0 flat-namespace   _tlv
-# DYLIB-DAG:   __DATA_CONST __got          {{.*}}   pointer       0 flat-namespace   dyld_stub_binder
+# CHAINED-EXEC:      dyld information:
+# CHAINED-EXEC-NEXT: segment      section  address               pointer type   addend dylib  symbol/vm address
+# CHAINED-EXEC-DAG:  __DATA_CONST __got    {{.*}}                {{.*}}  bind   0x0    weak   _weak_extern
+# CHAINED-EXEC-DAG: __DATA       __data    0x[[#%x, EXTERN_REF]] {{.*}}  rebase               {{.*}}
+# CHAINED-EXEC-DAG: __DATA       __data    0x[[#%x, WEAK_REF]]   {{.*}}  bind   0x0    weak   _weak_extern
+# CHAINED-EXEC-DAG: __DATA       __data    0x[[#%x, LOCAL_REF]]  {{.*}}  rebase               {{.*}}
+# CHAINED-EXEC-EMPTY:
+
+# DYLIB:       Rebase table:
+# DYLIB-NEXT:  segment      section          address                  type
+# DYLIB-DAG:   __DATA       __la_symbol_ptr  0x[[#%X, WEAK_LAZY:]]    pointer
+# DYLIB-DAG:   __DATA       __la_symbol_ptr  0x[[#%X, EXTERN_LAZY:]]  pointer
+# DYLIB-DAG:   __DATA       __data           0x[[#%.8X, EXTERN_REF]]  pointer
+# DYLIB-DAG:   __DATA       __data           0x[[#%.8X, LOCAL_REF]]   pointer
+# DYLIB-DAG:   __DATA       __data           0x[[#%.8X, WEAK_REF]]    pointer
+# DYLIB-DAG:   __DATA       __thread_ptrs    0x[[#%.8X, TLV_REF]]     pointer
+# DYLIB-EMPTY:
+# DYLIB-NEXT:  Bind table:
+# DYLIB-NEXT:  segment      section        address                 type     addend dylib            symbol
+# DYLIB-DAG:   __DATA_CONST __got          {{.*}}                  pointer       0 flat-namespace   dyld_stub_binder
+# DYLIB-DAG:   __DATA       __data         0x[[#%.8X, EXTERN_REF]] pointer       0 flat-namespace   _extern
+# DYLIB-DAG:   __DATA       __thread_ptrs  0x[[#%.8X, TLV_REF]]    pointer       0 flat-namespace   _tlv
 # DYLIB-EMPTY:
 # DYLIB-NEXT:  Lazy bind table:
-# DYLIB-NEXT:  segment  section            address  dylib            symbol
-# DYLIB-NEXT:  __DATA   __la_symbol_ptr    {{.*}}   flat-namespace   _extern
+# DYLIB-NEXT:  segment  section            address                  dylib           symbol
+# DYLIB-NEXT:  __DATA   __la_symbol_ptr    0x[[#%.8X, EXTERN_LAZY]] flat-namespace   _extern
 # DYLIB-EMPTY:
 # DYLIB-NEXT:  Weak bind table:
-# DYLIB-NEXT:  segment  section            address  type    addend   symbol
-# DYLIB-NEXT:  __DATA   __la_symbol_ptr    {{.*}}   pointer      0   _weak_extern
-# DYLIB-NEXT:  __DATA   __data             {{.*}}   pointer      0   _weak_extern
+# DYLIB-NEXT:  segment  section            address                  type    addend   symbol
+# DYLIB-NEXT:  __DATA   __la_symbol_ptr    0x[[#%.8X, WEAK_LAZY]]   pointer      0   _weak_extern
+# DYLIB-NEXT:  __DATA   __data             0x[[#%.8X, WEAK_REF]]    pointer      0   _weak_extern
+# DYLIB-EMPTY:
+
+# CHAINED-DYLIB: dyld information:
+# CHAINED-DYLIB-NEXT: segment      section      address               pointer type  addend dylib           symbol/vm address
+# CHAINED-DYLIB-DAG: __DATA_CONST __got         {{.*}}                {{.*}}  bind  0x0    weak            _weak_extern
+# CHAINED-DYLIB-DAG: __DATA_CONST __got         {{.*}}                {{.*}}  bind  0x0    flat-namespace  _extern
+# CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, EXTERN_REF]] {{.*}}  bind  0x0    flat-namespace  _extern
+# CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, WEAK_REF]]   {{.*}}  bind  0x0    weak            _weak_extern
+# CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, LOCAL_REF]]  {{.*}}  rebase                       {{.*}}
+# CHAINED-DYLIB-DAG: __DATA       __thread_ptrs 0x[[#%x, TLV_REF]]    {{.*}}  bind  0x0    flat-namespace  _tlv
+# CHAINED-DYLIB-EMPTY:
 
 #--- foo.s
 
@@ -70,8 +119,11 @@ _main:
   retq
 
 .data
+_extern_ref:
 .quad _extern
+_weak_ref:
 .quad _weak_extern
+_local_ref:
 .quad _local
 
 .section __DATA,__thread_vars,thread_local_variables

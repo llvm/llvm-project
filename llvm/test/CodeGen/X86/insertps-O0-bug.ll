@@ -33,18 +33,18 @@
 ; This test checks that the vector load in input to the insertps is not
 ; canonicalized into a scalar load plus scalar_to_vector (a movss).
 
-define <4 x float> @test(<4 x float> %a, <4 x float>* %b) {
+define <4 x float> @test(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: test:
 ; CHECK: movaps (%rdi), [[REG:%[a-z0-9]+]]
 ; CHECK-NOT: movss
 ; CHECK: insertps $64, [[REG]],
 ; CHECK: ret
 entry:
-  %0 = load <4 x float>, <4 x float>* %b, align 16
+  %0 = load <4 x float>, ptr %b, align 16
   %1 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> %0, i32 64)
   %2 = alloca <4 x float>, align 16
-  store <4 x float> %1, <4 x float>* %2, align 16
-  %3 = load <4 x float>, <4 x float>* %2, align 16
+  store <4 x float> %1, ptr %2, align 16
+  %3 = load <4 x float>, ptr %2, align 16
   ret <4 x float> %3
 }
 

@@ -24,9 +24,6 @@ def print_function(name):
   have_lsda = (random.random() < lsda_odds)
   frame_size = random.randint(4, 64) * 16
   frame_offset = -random.randint(0, (frame_size/16 - 4)) * 16
-  reg_count = random.randint(0, 5)
-  reg_combo = random.randint(0, factorial(reg_count) - 1)
-  regs_saved = saved_regs_combined[reg_count][reg_combo]
   global func_size_low, func_size_high
   func_size = random.randint(func_size_low, func_size_high) * 0x10
   func_size_high += 1
@@ -34,13 +31,13 @@ def print_function(name):
     func_size_low += 1
 
   print("""\
-### %s regs=%d frame=%d lsda=%s size=%d
+### %s frame=%d lsda=%s size=%d
     .section __TEXT,__text,regular,pure_instructions
     .p2align 4, 0x90
     .globl %s
 %s:
     .cfi_startproc""" % (
-        name, reg_count, frame_size, have_lsda, func_size, name, name))
+        name, frame_size, have_lsda, func_size, name, name))
   if have_lsda:
     global lsda_n
     lsda_n += 1
@@ -53,8 +50,6 @@ def print_function(name):
     .cfi_offset %%rbp, %d
     movq %%rsp, %%rbp
     .cfi_def_cfa_register %%rbp""" % (frame_size, frame_offset + 6*8))
-  for i in range(reg_count):
-    print(".cfi_offset %s, %d" % (regs_saved[i], frame_offset+(i*8)))
   print("""\
     .fill %d
     popq %%rbp
@@ -72,7 +67,7 @@ Lexception%d:
   return func_size
 
 def random_seed():
-  """Generate a seed that can easily be passsed back in via --seed=STRING"""
+  """Generate a seed that can easily be passed back in via --seed=STRING"""
   return ''.join(random.choice(string.ascii_lowercase) for i in range(10))
 
 def main():
@@ -87,7 +82,7 @@ size = 4 KiB.
 
 Use --pages=N or --functions=N to control the size of the output.
 Default is --pages=2, meaning produce at least two full pages of
-compact unwind entries, plus some more. The calculatation is sloppy.
+compact unwind entries, plus some more. The calculation is sloppy.
 """)
   parser.add_argument('--seed', type=str, default=random_seed(),
                       help='Seed the random number generator')

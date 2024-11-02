@@ -13,8 +13,8 @@ bb:                                               ; preds = %bb, %entry
   %z5 = add nsw i32 %z4, %z2
   %z6 = trunc i32 %z5 to i16
   call fastcc void @dw210x_op_rw(i16 zeroext %z6)
-  %z7 = getelementptr i8, i8* null, i64 %z
-  store i8 undef, i8* %z7, align 1
+  %z7 = getelementptr i8, ptr null, i64 %z
+  store i8 undef, ptr %z7, align 1
   %z8 = add nsw i32 %z2, 1
   br label %bb
 }

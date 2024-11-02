@@ -16,7 +16,7 @@ define void @cmp_2_floats(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 entry:
   %0 = fcmp oeq <2 x float> %c, %c
   %1 = select <2 x i1> %0, <2 x float> %a, <2 x float> %b
-  store <2 x float> %1, <2 x float>* undef
+  store <2 x float> %1, ptr undef
   ret void
 }
 
@@ -32,11 +32,11 @@ define void @cmp_2_doubles(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 entry:
   %0 = fcmp oeq <2 x double> %c, %c
   %1 = select <2 x i1> %0, <2 x double> %a, <2 x double> %b
-  store <2 x double> %1, <2 x double>* undef
+  store <2 x double> %1, ptr undef
   ret void
 }
 
-define void @mp_11193(<8 x float> * nocapture %aFOO, <8 x float>* nocapture %RET) nounwind {
+define void @mp_11193(ptr nocapture %aFOO, ptr nocapture %RET) nounwind {
 ; CHECK-LABEL: mp_11193:
 ; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    movl $-1082130432, (%rsi) # imm = 0xBF800000
@@ -45,8 +45,7 @@ allocas:
   %bincmp = fcmp olt <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 9.000000e+00, float 1.000000e+00, float 9.000000e+00, float 1.000000e+00> , <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   %t = extractelement <8 x i1> %bincmp, i32 0
   %ft = sitofp i1 %t to float
-  %pp = bitcast <8 x float>* %RET to float*
-  store float %ft, float* %pp
+  store float %ft, ptr %RET
   ret void
 }
 

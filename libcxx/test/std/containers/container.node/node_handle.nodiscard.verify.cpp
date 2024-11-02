@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03
+// UNSUPPORTED: (c++11 || c++14 || c++17) && !stdlib=libc++
 
 // Make sure the various node handles mark their .empty() method with
 // [[nodiscard]] starting with C++20
@@ -16,7 +17,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "test_macros.h"
+
 void test() {
+#if TEST_STD_VER >= 17
     {
         std::map<int, int>::node_type node;
         node.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -25,6 +29,7 @@ void test() {
         std::multimap<int, int>::node_type node;
         node.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     }
+#endif // TEST_STD_VER >= 17
     {
         std::set<int> node;
         node.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

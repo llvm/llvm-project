@@ -77,7 +77,7 @@ namespace PR45468 {
       //expected-error@+1{{'~CtorAndDTor' requires target feature 'avx512f'}}
       c2.~CtorAndDTor();
     }
-    // FIXME: These need to be given a line number, however theres no good way
+    // FIXME: These need to be given a line number, however there's no good way
     // to get to the SourceLocation of anything by the time we're doing CodeGen
     // cleanups.
     //expected-error@*{{'~CtorAndDTor' requires target feature 'avx512f'}}

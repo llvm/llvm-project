@@ -363,7 +363,6 @@ public:
   bool isDotCurInst(const MachineInstr &MI) const;
   bool isDotNewInst(const MachineInstr &MI) const;
   bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
-  bool isEarlySourceInstr(const MachineInstr &MI) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
   bool isExtendable(const MachineInstr &MI) const;
@@ -375,9 +374,6 @@ public:
   bool isIndirectL4Return(const MachineInstr &MI) const;
   bool isJumpR(const MachineInstr &MI) const;
   bool isJumpWithinBranchRange(const MachineInstr &MI, unsigned offset) const;
-  bool isLateInstrFeedsEarlyInstr(const MachineInstr &LRMI,
-                                  const MachineInstr &ESMI) const;
-  bool isLateResultInstr(const MachineInstr &MI) const;
   bool isLateSourceInstr(const MachineInstr &MI) const;
   bool isLoopN(const MachineInstr &MI) const;
   bool isMemOp(const MachineInstr &MI) const;

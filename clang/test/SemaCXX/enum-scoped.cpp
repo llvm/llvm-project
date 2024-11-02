@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify -triple x86_64-apple-darwin %s
 
 enum class E1 {
   Val1 = 1L
@@ -31,10 +32,22 @@ static_assert(sizeof(E3) == 1, "bad size");
 int x2 = Val2;
 
 int a1[Val2];
-int a2[E1::Val1]; // expected-error{{size of array has non-integer type}}
+int a2[E1::Val1];
+
+#if __cplusplus >= 201703L
+// expected-error@-3 {{type 'E1' is not implicitly convertible to 'unsigned long'}}
+#else
+// expected-error@-5 {{size of array has non-integer type}}
+#endif
 
 int* p1 = new int[Val2];
-int* p2 = new int[E1::Val1]; // expected-error{{array size expression must have integral or unscoped enumeration type, not 'E1'}}
+int* p2 = new int[E1::Val1];
+
+#if __cplusplus >= 201703L
+// expected-error@-3 {{converting 'E1' to incompatible type 'unsigned long'}}
+#else
+// expected-error@-5 {{array size expression must have integral or unscoped enumeration type, not 'E1'}}
+#endif
 
 enum class E4 {
   e1 = -2147483648, // ok
@@ -101,8 +114,7 @@ enum : long {
   long_enum_val = 10000
 };
 
-enum : long x; // expected-error{{unnamed enumeration must be a definition}} \
-// expected-warning{{declaration does not declare anything}}
+enum : long x; // expected-error{{unnamed enumeration must be a definition}}
 
 void PR9333() {
   enum class scoped_enum { yes, no, maybe };
@@ -115,8 +127,8 @@ namespace rdar9366066 {
   enum class X : unsigned { value };
 
   void f(X x) {
-    x % X::value; // expected-error{{invalid operands to binary expression ('rdar9366066::X' and 'rdar9366066::X')}}
-    x % 8; // expected-error{{invalid operands to binary expression ('rdar9366066::X' and 'int')}}
+    x % X::value; // expected-error{{invalid operands to binary expression ('X' and 'rdar9366066::X')}}
+    x % 8; // expected-error{{invalid operands to binary expression ('X' and 'int')}}
   }
 }
 
@@ -272,7 +284,7 @@ namespace PR15633 {
 
 namespace PR16900 {
   enum class A;
-  A f(A a) { return -a; } // expected-error {{invalid argument type 'PR16900::A' to unary expression}}
+  A f(A a) { return -a; } // expected-error {{invalid argument type 'A' to unary expression}}
 }
 
 namespace PR18551 {
@@ -310,10 +322,18 @@ namespace test11 {
   typedef E E2;
   E2 f1() { return E::a; }
 
-  bool f() { return !f1(); } // expected-error {{invalid argument type 'test11::E2' (aka 'test11::E') to unary expression}}
+  bool f() { return !f1(); } // expected-error {{invalid argument type 'E2' (aka 'test11::E') to unary expression}}
 }
 
 namespace PR35586 {
-  enum C { R, G, B };
+  enum C { R=-1, G, B };
   enum B { F = (enum C) -1, T}; // this should compile cleanly, it used to assert.
 };
+
+namespace test12 {
+// Check that clang rejects this code without crashing in c++17.
+enum class A;
+enum class B;
+A a;
+B b{a}; // expected-error {{cannot initialize}}
+}

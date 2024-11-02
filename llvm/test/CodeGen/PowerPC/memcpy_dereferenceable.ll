@@ -12,25 +12,21 @@
 define void @func(i1 %flag) {
 entry:
   %pairs = alloca [4 x <2 x i64>], align 8
-  %pair1 = getelementptr inbounds [4 x <2 x i64>], [4 x <2 x i64>]* %pairs, i64 0, i64 1
-  %pair2 = getelementptr inbounds [4 x <2 x i64>], [4 x <2 x i64>]* %pairs, i64 0, i64 2
-  %pvec1 = bitcast <2 x i64>* %pair1 to <2 x i64>*
-  %pvec2 = bitcast <2 x i64>* %pair2 to <2 x i64>*
-  %dst = bitcast [4 x <2 x i64>]* %pairs to i8*
-  %src = bitcast <2 x i64>* %pair2 to i8*
+  %pair1 = getelementptr inbounds [4 x <2 x i64>], ptr %pairs, i64 0, i64 1
+  %pair2 = getelementptr inbounds [4 x <2 x i64>], ptr %pairs, i64 0, i64 2
   br i1 %flag, label %end, label %dummy
 
 end:
   ; copy third element into first element by memcpy
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 nonnull %dst, i8* align 8 %src, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 nonnull %pairs, ptr align 8 %pair2, i64 16, i1 false)
   ; copy third element into second element by LD/ST
-  %vec2 = load <2 x i64>, <2 x i64>* %pvec2, align 8
-  store <2 x i64> %vec2, <2 x i64>* %pvec1, align 8
+  %vec2 = load <2 x i64>, ptr %pair2, align 8
+  store <2 x i64> %vec2, ptr %pair1, align 8
   ret void
 
 dummy:
-  ; to make use of %src in another BB
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %src, i8* %src, i64 0, i1 false)
+  ; to make use of %pair2 in another BB
+  call void @llvm.memcpy.p0.p0.i64(ptr %pair2, ptr %pair2, i64 0, i1 false)
   br label %end
 }
 
@@ -45,30 +41,26 @@ dummy:
 define void @func2(i1 %flag) {
 entry:
   %pairs = alloca [4 x <2 x i64>], align 8
-  %pair1 = getelementptr inbounds [4 x <2 x i64>], [4 x <2 x i64>]* %pairs, i64 0, i64 1
-  %pair2 = getelementptr inbounds [4 x <2 x i64>], [4 x <2 x i64>]* %pairs, i64 0, i64 2
-  %pvec1 = bitcast <2 x i64>* %pair1 to <2 x i64>*
-  %pvec2 = bitcast <2 x i64>* %pair2 to <2 x i64>*
-  %dst = bitcast [4 x <2 x i64>]* %pairs to i8*
-  %src = bitcast <2 x i64>* %pair2 to i8*
+  %pair1 = getelementptr inbounds [4 x <2 x i64>], ptr %pairs, i64 0, i64 1
+  %pair2 = getelementptr inbounds [4 x <2 x i64>], ptr %pairs, i64 0, i64 2
   br i1 %flag, label %end, label %dummy
 
 end:
   ; copy third element into first element by memcpy
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 nonnull %dst, i8* align 8 %src, i64 16, i1 false)
+  call void @llvm.memmove.p0.p0.i64(ptr align 8 nonnull %pairs, ptr align 8 %pair2, i64 16, i1 false)
   ; copy third element into second element by LD/ST
-  %vec2 = load <2 x i64>, <2 x i64>* %pvec2, align 8
-  store <2 x i64> %vec2, <2 x i64>* %pvec1, align 8
+  %vec2 = load <2 x i64>, ptr %pair2, align 8
+  store <2 x i64> %vec2, ptr %pair1, align 8
   ret void
 
 dummy:
-  ; to make use of %src in another BB
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %src, i8* %src, i64 0, i1 false)
+  ; to make use of %pair2 in another BB
+  call void @llvm.memcpy.p0.p0.i64(ptr %pair2, ptr %pair2, i64 0, i1 false)
   br label %end
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
+declare void @llvm.memmove.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
 attributes #1 = { argmemonly nounwind }

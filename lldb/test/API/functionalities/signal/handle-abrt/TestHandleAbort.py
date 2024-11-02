@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class HandleAbortTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows  # signals do not exist on Windows
@@ -32,7 +30,7 @@ class HandleAbortTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         signo = process.GetUnixSignals().GetSignalNumberFromName("SIGABRT")
 
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
@@ -66,5 +64,5 @@ class HandleAbortTestCase(TestBase):
 
         # Continue until we exit.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)

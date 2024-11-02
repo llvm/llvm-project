@@ -24,7 +24,7 @@ public:
     eStopIDNow = UINT32_MAX
   };
   // Constructors and Destructors
-  SectionLoadHistory() {}
+  SectionLoadHistory() = default;
 
   ~SectionLoadHistory() {
     // Call clear since this takes a lock and clears the section load list in

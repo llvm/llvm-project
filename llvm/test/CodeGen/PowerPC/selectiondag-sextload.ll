@@ -5,12 +5,12 @@
 
 declare void @g(i32 signext)
 
-define void @foo(i8* %p) {
+define void @foo(ptr %p) {
 entry:
   br label %while.body
 
 while.body:
-  %0 = load i8, i8* %p, align 1
+  %0 = load i8, ptr %p, align 1
   %conv = zext i8 %0 to i32
   %cmp = icmp sgt i8 %0, 0
   br i1 %cmp, label %if.then, label %while.body

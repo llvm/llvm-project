@@ -8,13 +8,13 @@
 // FIXME: Move this to clang/unittests/Analysis/FlowSensitive/Models.
 
 #include "clang/Analysis/FlowSensitive/Models/ChromiumCheckModel.h"
-#include "NoopAnalysis.h"
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/CFG.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -26,10 +26,8 @@ using namespace dataflow;
 using namespace test;
 
 namespace {
-using ::testing::_;
-using ::testing::ElementsAre;
 using ::testing::NotNull;
-using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
 
 static constexpr char ChromiumCheckHeader[] = R"(
 namespace std {
@@ -120,46 +118,42 @@ public:
 
   static NoopLattice initialElement() { return NoopLattice(); }
 
-  void transfer(const Stmt *S, NoopLattice &, Environment &Env) {
-    M.transfer(S, Env);
+  void transfer(const CFGElement *E, NoopLattice &, Environment &Env) {
+    M.transfer(E, Env);
   }
 
 private:
   Model M;
 };
 
-class ChromiumCheckModelTest : public ::testing::TestWithParam<std::string> {
-protected:
-  template <typename Matcher>
-  void runDataflow(llvm::StringRef Code, Matcher Match) {
-    const tooling::FileContentMappings FileContents = {
-        {"check.h", ChromiumCheckHeader}, {"othercheck.h", OtherCheckHeader}};
+template <typename Matcher>
+void runDataflow(llvm::StringRef Code, Matcher Match) {
+  const tooling::FileContentMappings FileContents = {
+      {"check.h", ChromiumCheckHeader}, {"othercheck.h", OtherCheckHeader}};
 
-    ASSERT_THAT_ERROR(
-        test::checkDataflow<ModelAdaptorAnalysis<ChromiumCheckModel>>(
-            Code, "target",
-            [](ASTContext &C, Environment &) {
-              return ModelAdaptorAnalysis<ChromiumCheckModel>(C);
-            },
-            [&Match](
-                llvm::ArrayRef<
-                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                    Results,
-                ASTContext &ASTCtx) { Match(Results, ASTCtx); },
-            {"-fsyntax-only", "-fno-delayed-template-parsing", "-std=c++17"},
-            FileContents),
-        llvm::Succeeded());
-  }
-};
+  ASSERT_THAT_ERROR(
+      checkDataflow<ModelAdaptorAnalysis<ChromiumCheckModel>>(
+          AnalysisInputs<ModelAdaptorAnalysis<ChromiumCheckModel>>(
+              Code, ast_matchers::hasName("target"),
+              [](ASTContext &C, Environment &) {
+                return ModelAdaptorAnalysis<ChromiumCheckModel>(C);
+              })
+              .withASTBuildArgs({"-fsyntax-only",
+                                 "-fno-delayed-template-parsing", "-std=c++17"})
+              .withASTBuildVirtualMappedFiles(std::move(FileContents)),
+          /*VerifyResults=*/
+          [&Match](const llvm::StringMap<DataflowAnalysisState<NoopLattice>>
+                       &Results,
+                   const AnalysisOutputs &AO) { Match(Results, AO.ASTCtx); }),
+      llvm::Succeeded());
+}
 
-TEST_F(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
+TEST(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
   auto Expectations =
-      [](llvm::ArrayRef<
-             std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-             Results,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
-        const Environment &Env = Results[0].second.Env;
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
@@ -185,14 +179,12 @@ TEST_F(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
   runDataflow(ReplacePattern(Code, "$check", "DPCHECK"), Expectations);
 }
 
-TEST_F(ChromiumCheckModelTest, UnrelatedCheckIgnored) {
+TEST(ChromiumCheckModelTest, UnrelatedCheckIgnored) {
   auto Expectations =
-      [](llvm::ArrayRef<
-             std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-             Results,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
-        const Environment &Env = Results[0].second.Env;
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());

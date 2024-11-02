@@ -53,12 +53,12 @@ entry:
   %aa = alloca i16, align 2
   %bb = alloca i16, align 2
   %cc = alloca i16, align 2
-  store i16 10959, i16* %aa, align 2
-  store i16 -15498, i16* %bb, align 2
-  store i16 19417, i16* %cc, align 2
-  %0 = load i16, i16* %aa, align 2
+  store i16 10959, ptr %aa, align 2
+  store i16 -15498, ptr %bb, align 2
+  store i16 19417, ptr %cc, align 2
+  %0 = load i16, ptr %aa, align 2
   %conv = zext i16 %0 to i32
-  %1 = load i16, i16* %cc, align 2
+  %1 = load i16, ptr %cc, align 2
   %tobool = icmp ne i16 %1, 0
   br i1 %tobool, label %lor.end, label %lor.rhs
 
@@ -80,8 +80,8 @@ lor.rhs4:                                         ; preds = %lor.end
 lor.end5:                                         ; preds = %lor.rhs4, %lor.end
   %3 = phi i1 [ true, %lor.end ], [ false, %lor.rhs4 ]
   %conv6 = zext i1 %3 to i16
-  store i16 %conv6, i16* %bb, align 2
-  %4 = load i16, i16* %bb, align 2
+  store i16 %conv6, ptr %bb, align 2
+  %4 = load i16, ptr %bb, align 2
   %conv7 = zext i16 %4 to i32
   ret i32 %conv7
 }

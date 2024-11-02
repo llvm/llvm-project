@@ -19,67 +19,67 @@ define hidden void @hf() {
 }
 
 ; Test loads of external variables, which must go via the GOT.
-define i32 *@f1() {
+define ptr@f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: lgrl %r2, ev@GOT
 ; CHECK: br %r14
-  ret i32 *@ev
+  ret ptr@ev
 }
 
 ; Check loads of locally-defined normal-visibility variables, which might
 ; be overridden.  The load must go via the GOT.
-define i32 *@f2() {
+define ptr@f2() {
 ; CHECK-LABEL: f2:
 ; CHECK: lgrl %r2, dv@GOT
 ; CHECK: br %r14
-  ret i32 *@dv
+  ret ptr@dv
 }
 
 ; Check loads of protected variables, which in the small code model
 ; must be in range of LARL.
-define i32 *@f3() {
+define ptr@f3() {
 ; CHECK-LABEL: f3:
 ; CHECK: larl %r2, pv
 ; CHECK: br %r14
-  ret i32 *@pv
+  ret ptr@pv
 }
 
 ; ...likewise hidden variables.
-define i32 *@f4() {
+define ptr@f4() {
 ; CHECK-LABEL: f4:
 ; CHECK: larl %r2, hv
 ; CHECK: br %r14
-  ret i32 *@hv
+  ret ptr@hv
 }
 
 ; Like f1, but for functions.
-define void() *@f5() {
+define ptr@f5() {
 ; CHECK-LABEL: f5:
 ; CHECK: lgrl %r2, ef@GOT
 ; CHECK: br %r14
-  ret void() *@ef
+  ret ptr@ef
 }
 
 ; Like f2, but for functions.
-define void() *@f6() {
+define ptr@f6() {
 ; CHECK-LABEL: f6:
 ; CHECK: lgrl %r2, df@GOT
 ; CHECK: br %r14
-  ret void() *@df
+  ret ptr@df
 }
 
 ; Like f3, but for functions.
-define void() *@f7() {
+define ptr@f7() {
 ; CHECK-LABEL: f7:
 ; CHECK: larl %r2, pf
 ; CHECK: br %r14
-  ret void() *@pf
+  ret ptr@pf
 }
 
 ; Like f4, but for functions.
-define void() *@f8() {
+define ptr@f8() {
 ; CHECK-LABEL: f8:
 ; CHECK: larl %r2, hf
 ; CHECK: br %r14
-  ret void() *@hf
+  ret ptr@hf
 }

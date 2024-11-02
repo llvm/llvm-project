@@ -23,7 +23,7 @@ inline uptr scaledLog2(uptr Size, uptr ZeroLog, uptr LogBits) {
 }
 
 template <typename Config> struct SizeClassMapBase {
-  static u32 getMaxCachedHint(uptr Size) {
+  static u16 getMaxCachedHint(uptr Size) {
     DCHECK_NE(Size, 0);
     u32 N;
     // Force a 32-bit division if the template parameters allow for it.
@@ -31,7 +31,10 @@ template <typename Config> struct SizeClassMapBase {
       N = static_cast<u32>((1UL << Config::MaxBytesCachedLog) / Size);
     else
       N = (1U << Config::MaxBytesCachedLog) / static_cast<u32>(Size);
-    return Max(1U, Min(Config::MaxNumCachedHint, N));
+
+    // Note that Config::MaxNumCachedHint is u16 so the result is guaranteed to
+    // fit in u16.
+    return static_cast<u16>(Max(1U, Min<u32>(Config::MaxNumCachedHint, N)));
   }
 };
 
@@ -65,7 +68,7 @@ class FixedSizeClassMap : public SizeClassMapBase<Config> {
   static const uptr M = (1UL << S) - 1;
 
 public:
-  static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
+  static const u16 MaxNumCachedHint = Config::MaxNumCachedHint;
 
   static const uptr MaxSize = (1UL << Config::MaxSizeLog) + Config::SizeDelta;
   static const uptr NumClasses =
@@ -99,7 +102,7 @@ public:
     return MidClass + 1 + scaledLog2(Size - 1, Config::MidSizeLog, S);
   }
 
-  static u32 getMaxCachedHint(uptr Size) {
+  static u16 getMaxCachedHint(uptr Size) {
     DCHECK_LE(Size, MaxSize);
     return Base::getMaxCachedHint(Size);
   }
@@ -178,7 +181,7 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
   static constexpr LSBTable LTable = {};
 
 public:
-  static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
+  static const u16 MaxNumCachedHint = Config::MaxNumCachedHint;
 
   static const uptr NumClasses = ClassesSize + 1;
   static_assert(NumClasses < 256, "");
@@ -212,7 +215,7 @@ public:
     return SzTable.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
   }
 
-  static u32 getMaxCachedHint(uptr Size) {
+  static u16 getMaxCachedHint(uptr Size) {
     DCHECK_LE(Size, MaxSize);
     return Base::getMaxCachedHint(Size);
   }
@@ -223,7 +226,7 @@ struct DefaultSizeClassConfig {
   static const uptr MinSizeLog = 5;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 14;
+  static const u16 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = 0;
 };
@@ -235,7 +238,7 @@ struct FuchsiaSizeClassConfig {
   static const uptr MinSizeLog = 5;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 10;
+  static const u16 MaxNumCachedHint = 12;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = Chunk::getHeaderSize();
 };
@@ -248,7 +251,7 @@ struct AndroidSizeClassConfig {
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 6;
   static const uptr MaxSizeLog = 16;
-  static const u32 MaxNumCachedHint = 13;
+  static const u16 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 13;
 
   static constexpr u32 Classes[] = {
@@ -263,7 +266,7 @@ struct AndroidSizeClassConfig {
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 7;
   static const uptr MaxSizeLog = 16;
-  static const u32 MaxNumCachedHint = 14;
+  static const u16 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 13;
 
   static constexpr u32 Classes[] = {
@@ -292,7 +295,7 @@ struct SvelteSizeClassConfig {
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 13;
+  static const u16 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = Chunk::getHeaderSize();
 #else
@@ -300,7 +303,7 @@ struct SvelteSizeClassConfig {
   static const uptr MinSizeLog = 3;
   static const uptr MidSizeLog = 7;
   static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 14;
+  static const u16 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = Chunk::getHeaderSize();
 #endif
@@ -315,7 +318,7 @@ struct TrustySizeClassConfig {
   static const uptr MinSizeLog = 7;
   static const uptr MidSizeLog = 7;
   static const uptr MaxSizeLog = 7;
-  static const u32 MaxNumCachedHint = 8;
+  static const u16 MaxNumCachedHint = 12;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = 0;
 };

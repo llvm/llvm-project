@@ -326,6 +326,46 @@ TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
   EXPECT_TRUE(Consumer.SawSourceManager);
 }
 
+TEST(ToolInvocation, CC1Args) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  Args.push_back("-cc1");
+  Args.push_back("-fsyntax-only");
+  Args.push_back("test.cpp");
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile(
+      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("void foo(void);\n"));
+  EXPECT_TRUE(Invocation.run());
+}
+
+TEST(ToolInvocation, CC1ArgsInvalid) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  Args.push_back("-cc1");
+  Args.push_back("-invalid-arg");
+  Args.push_back("test.cpp");
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile(
+      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("void foo(void);\n"));
+  EXPECT_FALSE(Invocation.run());
+}
+
 namespace {
 /// Overlays the real filesystem with the given VFS and returns the result.
 llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>

@@ -33,16 +33,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-copy-combine"
 
-static
-cl::opt<bool> IsCombinesDisabled("disable-merge-into-combines",
-                                 cl::Hidden, cl::ZeroOrMore,
-                                 cl::init(false),
-                                 cl::desc("Disable merging into combines"));
-static
-cl::opt<bool> IsConst64Disabled("disable-const64",
-                                 cl::Hidden, cl::ZeroOrMore,
-                                 cl::init(false),
-                                 cl::desc("Disable generation of const64"));
+static cl::opt<bool>
+    IsCombinesDisabled("disable-merge-into-combines", cl::Hidden,
+
+                       cl::desc("Disable merging into combines"));
+static cl::opt<bool>
+    IsConst64Disabled("disable-const64", cl::Hidden,
+
+                      cl::desc("Disable generation of const64"));
 static
 cl::opt<unsigned>
 MaxNumOfInstsBetweenNewValueStoreAndTFR("max-num-inst-between-tfr-and-nv-store",
@@ -627,7 +625,7 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
   if (!DoInsertAtI1 && DbgMItoMove.size() != 0) {
     // Insert debug instructions at the new location before I2.
     MachineBasicBlock *BB = InsertPt->getParent();
-    for (auto NewMI : DbgMItoMove) {
+    for (auto *NewMI : DbgMItoMove) {
       // If iterator MI is pointing to DEBUG_VAL, make sure
       // MI now points to next relevant instruction.
       if (NewMI == MI)

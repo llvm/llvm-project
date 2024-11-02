@@ -44,18 +44,18 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define dso_local void @test_b4() nounwind {
 entry:
-  %0 = load i8, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 0), align 1
+  %0 = load i8, ptr @b4v, align 1
   %inc0 = add nsw i8 %0, 1
-  store i8 %inc0, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 0), align 1
-  %1 = load i8, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 1), align 1
+  store i8 %inc0, ptr @b4v, align 1
+  %1 = load i8, ptr getelementptr inbounds (%struct.b4, ptr @b4v, i32 0, i32 1), align 1
   %inc1 = add nsw i8 %1, 2
-  store i8 %inc1, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 1), align 1
-  %2 = load i8, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 2), align 1
+  store i8 %inc1, ptr getelementptr inbounds (%struct.b4, ptr @b4v, i32 0, i32 1), align 1
+  %2 = load i8, ptr getelementptr inbounds (%struct.b4, ptr @b4v, i32 0, i32 2), align 1
   %inc2 = add nsw i8 %2, 3
-  store i8 %inc2, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 2), align 1
-  %3 = load i8, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 3), align 1
+  store i8 %inc2, ptr getelementptr inbounds (%struct.b4, ptr @b4v, i32 0, i32 2), align 1
+  %3 = load i8, ptr getelementptr inbounds (%struct.b4, ptr @b4v, i32 0, i32 3), align 1
   %inc3 = add nsw i8 %3, 4
-  store i8 %inc3, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 3), align 1
+  store i8 %inc3, ptr getelementptr inbounds (%struct.b4, ptr @b4v, i32 0, i32 3), align 1
   ret void
 }
 
@@ -70,12 +70,12 @@ entry:
 
 define dso_local void @test_h2() nounwind {
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 0), align 2
+  %0 = load i16, ptr @h2v, align 2
   %inc0 = add nsw i16 %0, 1
-  store i16 %inc0, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 0), align 2
-  %1 = load i16, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 1), align 2
+  store i16 %inc0, ptr @h2v, align 2
+  %1 = load i16, ptr getelementptr inbounds (%struct.h2, ptr @h2v, i32 0, i32 1), align 2
   %inc1 = add nsw i16 %1, 2
-  store i16 %inc1, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 1), align 2
+  store i16 %inc1, ptr getelementptr inbounds (%struct.h2, ptr @h2v, i32 0, i32 1), align 2
   ret void
 }
 
@@ -89,12 +89,12 @@ entry:
 ; CHECK-DAG: sth [[REG1_1]], h2v@toc@l+2([[REGSTRUCT]])
 define dso_local void @test_h2_optsize() optsize nounwind {
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 0), align 2
+  %0 = load i16, ptr @h2v, align 2
   %inc0 = add nsw i16 %0, 1
-  store i16 %inc0, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 0), align 2
-  %1 = load i16, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 1), align 2
+  store i16 %inc0, ptr @h2v, align 2
+  %1 = load i16, ptr getelementptr inbounds (%struct.h2, ptr @h2v, i32 0, i32 1), align 2
   %inc1 = add nsw i16 %1, 2
-  store i16 %inc1, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 1), align 2
+  store i16 %inc1, ptr getelementptr inbounds (%struct.h2, ptr @h2v, i32 0, i32 1), align 2
   ret void
 }
 
@@ -127,30 +127,30 @@ entry:
 
 define dso_local void @test_b8() nounwind {
 entry:
-  %0 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 0), align 1
+  %0 = load i8, ptr @b8v, align 1
   %inc0 = add nsw i8 %0, 1
-  store i8 %inc0, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 0), align 1
-  %1 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 1), align 1
+  store i8 %inc0, ptr @b8v, align 1
+  %1 = load i8, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 1), align 1
   %inc1 = add nsw i8 %1, 2
-  store i8 %inc1, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 1), align 1
-  %2 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 2), align 1
+  store i8 %inc1, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 1), align 1
+  %2 = load i8, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 2), align 1
   %inc2 = add nsw i8 %2, 3
-  store i8 %inc2, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 2), align 1
-  %3 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 3), align 1
+  store i8 %inc2, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 2), align 1
+  %3 = load i8, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 3), align 1
   %inc3 = add nsw i8 %3, 4
-  store i8 %inc3, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 3), align 1
-  %4 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 4), align 1
+  store i8 %inc3, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 3), align 1
+  %4 = load i8, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 4), align 1
   %inc4 = add nsw i8 %4, 5
-  store i8 %inc4, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 4), align 1
-  %5 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 5), align 1
+  store i8 %inc4, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 4), align 1
+  %5 = load i8, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 5), align 1
   %inc5 = add nsw i8 %5, 6
-  store i8 %inc5, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 5), align 1
-  %6 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 6), align 1
+  store i8 %inc5, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 5), align 1
+  %6 = load i8, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 6), align 1
   %inc6 = add nsw i8 %6, 7
-  store i8 %inc6, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 6), align 1
-  %7 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 7), align 1
+  store i8 %inc6, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 6), align 1
+  %7 = load i8, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 7), align 1
   %inc7 = add nsw i8 %7, 8
-  store i8 %inc7, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 7), align 1
+  store i8 %inc7, ptr getelementptr inbounds (%struct.b8, ptr @b8v, i32 0, i32 7), align 1
   ret void
 }
 
@@ -171,18 +171,18 @@ entry:
 
 define dso_local void @test_h4() nounwind {
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 0), align 2
+  %0 = load i16, ptr @h4v, align 2
   %inc0 = add nsw i16 %0, 1
-  store i16 %inc0, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 0), align 2
-  %1 = load i16, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 1), align 2
+  store i16 %inc0, ptr @h4v, align 2
+  %1 = load i16, ptr getelementptr inbounds (%struct.h4, ptr @h4v, i32 0, i32 1), align 2
   %inc1 = add nsw i16 %1, 2
-  store i16 %inc1, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 1), align 2
-  %2 = load i16, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 2), align 2
+  store i16 %inc1, ptr getelementptr inbounds (%struct.h4, ptr @h4v, i32 0, i32 1), align 2
+  %2 = load i16, ptr getelementptr inbounds (%struct.h4, ptr @h4v, i32 0, i32 2), align 2
   %inc2 = add nsw i16 %2, 3
-  store i16 %inc2, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 2), align 2
-  %3 = load i16, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 3), align 2
+  store i16 %inc2, ptr getelementptr inbounds (%struct.h4, ptr @h4v, i32 0, i32 2), align 2
+  %3 = load i16, ptr getelementptr inbounds (%struct.h4, ptr @h4v, i32 0, i32 3), align 2
   %inc3 = add nsw i16 %3, 4
-  store i16 %inc3, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 3), align 2
+  store i16 %inc3, ptr getelementptr inbounds (%struct.h4, ptr @h4v, i32 0, i32 3), align 2
   ret void
 }
 
@@ -197,12 +197,12 @@ entry:
 
 define dso_local void @test_w2() nounwind {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.w2, %struct.w2* @w2v, i32 0, i32 0), align 4
+  %0 = load i32, ptr @w2v, align 4
   %inc0 = add nsw i32 %0, 1
-  store i32 %inc0, i32* getelementptr inbounds (%struct.w2, %struct.w2* @w2v, i32 0, i32 0), align 4
-  %1 = load i32, i32* getelementptr inbounds (%struct.w2, %struct.w2* @w2v, i32 0, i32 1), align 4
+  store i32 %inc0, ptr @w2v, align 4
+  %1 = load i32, ptr getelementptr inbounds (%struct.w2, ptr @w2v, i32 0, i32 1), align 4
   %inc1 = add nsw i32 %1, 2
-  store i32 %inc1, i32* getelementptr inbounds (%struct.w2, %struct.w2* @w2v, i32 0, i32 1), align 4
+  store i32 %inc1, ptr getelementptr inbounds (%struct.w2, ptr @w2v, i32 0, i32 1), align 4
   ret void
 }
 
@@ -218,12 +218,12 @@ entry:
 
 define dso_local void @test_d2() nounwind {
 entry:
-  %0 = load i64, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 0), align 8
+  %0 = load i64, ptr @d2v, align 8
   %inc0 = add nsw i64 %0, 1
-  store i64 %inc0, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 0), align 8
-  %1 = load i64, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 1), align 8
+  store i64 %inc0, ptr @d2v, align 8
+  %1 = load i64, ptr getelementptr inbounds (%struct.d2, ptr @d2v, i32 0, i32 1), align 8
   %inc1 = add nsw i64 %1, 2
-  store i64 %inc1, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 1), align 8
+  store i64 %inc1, ptr getelementptr inbounds (%struct.d2, ptr @d2v, i32 0, i32 1), align 8
   ret void
 }
 
@@ -232,7 +232,7 @@ entry:
 ; CHECK: ld 3, d2v@toc@l+8([[REG]])
 define i64 @test_singleuse() nounwind {
 entry:
-  %0 = load i64, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 1), align 8
+  %0 = load i64, ptr getelementptr inbounds (%struct.d2, ptr @d2v, i32 0, i32 1), align 8
   ret i64 %0
 }
 
@@ -246,8 +246,8 @@ entry:
 ; CHECK: stdx [[REG0_1]], [[REGSTRUCT]], [[OFFSET_REG]]
 define dso_local void @test_misalign() nounwind {
 entry:
-  %0 = load i64, i64* getelementptr inbounds (%struct.misalign, %struct.misalign* @misalign_v, i32 0, i32 1), align 1
+  %0 = load i64, ptr getelementptr inbounds (%struct.misalign, ptr @misalign_v, i32 0, i32 1), align 1
   %inc0 = add nsw i64 %0, 1
-  store i64 %inc0, i64* getelementptr inbounds (%struct.misalign, %struct.misalign* @misalign_v, i32 0, i32 1), align 1
+  store i64 %inc0, ptr getelementptr inbounds (%struct.misalign, ptr @misalign_v, i32 0, i32 1), align 1
   ret void
 }

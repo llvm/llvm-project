@@ -51,7 +51,7 @@ public:
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
 
   static bool
-  AnyMatches(ConstString type_name,
+  AnyMatches(const FormattersMatchCandidate &candidate_type,
              TypeCategoryImpl::FormatCategoryItems items =
                  TypeCategoryImpl::ALL_ITEM_TYPES,
              bool only_enabled = true, const char **matching_category = nullptr,

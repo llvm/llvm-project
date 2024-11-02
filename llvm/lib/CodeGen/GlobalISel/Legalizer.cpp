@@ -225,6 +225,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
+        salvageDebugInfo(MRI, MI);
         eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
@@ -272,6 +273,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
+        salvageDebugInfo(MRI, MI);
         eraseInstr(MI, MRI, &LocObserver);
         continue;
       }

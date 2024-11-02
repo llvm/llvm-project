@@ -15,7 +15,6 @@
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/ProcessTrace.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"

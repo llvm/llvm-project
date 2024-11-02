@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // basic_string(basic_string&& str, const Allocator& alloc); // constexpr since C++20

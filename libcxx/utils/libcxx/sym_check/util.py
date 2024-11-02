@@ -90,10 +90,19 @@ def is_mach_o(filename):
         b'\xbe\xba\xfe\xca'   # FAT_CIGAM
     ]
 
+def is_xcoff_or_big_ar(filename):
+    with open(filename, 'rb') as f:
+        magic_bytes = f.read(7)
+    return magic_bytes[:4] in [
+        b'\x01DF',  # XCOFF32
+        b'\x01F7'   # XCOFF64
+    ] or magic_bytes == b'<bigaf>'
 
 def is_library_file(filename):
     if sys.platform == 'darwin':
         return is_mach_o(filename)
+    elif sys.platform.startswith('aix'):
+        return is_xcoff_or_big_ar(filename)
     else:
         return is_elf(filename)
 

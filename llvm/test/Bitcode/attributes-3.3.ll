@@ -213,8 +213,8 @@ define void @f34()
 
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
-; CHECK: attributes #2 = { readnone }
-; CHECK: attributes #3 = { readonly }
+; CHECK: attributes #2 = { memory(none) }
+; CHECK: attributes #3 = { memory(read) }
 ; CHECK: attributes #4 = { noinline }
 ; CHECK: attributes #5 = { alwaysinline }
 ; CHECK: attributes #6 = { optsize }

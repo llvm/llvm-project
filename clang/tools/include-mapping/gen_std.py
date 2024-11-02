@@ -8,7 +8,7 @@
 #===------------------------------------------------------------------------===#
 
 """gen_std.py is a tool to generate a lookup table (from qualified names to
-include headers) for C/C++ Standard Library symbols by parsing archieved HTML
+include headers) for C/C++ Standard Library symbols by parsing archived HTML
 files from cppreference.
 
 The generated files are located in clang/include/Tooling/Inclusions.

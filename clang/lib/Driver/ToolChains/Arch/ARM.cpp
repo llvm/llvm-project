@@ -121,7 +121,8 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
       (Split.second.size() && !DecodeARMFeatures(D, Split.second, CPUName,
                                                  ArchKind, Features, ArgFPUID)))
-    D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+    D.Diag(clang::diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << A->getValue();
 }
 
 // Check -mcpu=. Needs ArchName to handle -mcpu=generic.
@@ -137,7 +138,8 @@ static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
       (Split.second.size() &&
        !DecodeARMFeatures(D, Split.second, CPU, ArchKind, Features, ArgFPUID)))
-    D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+    D.Diag(clang::diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << A->getValue();
 }
 
 bool arm::useAAPCSForMachO(const llvm::Triple &T) {
@@ -546,6 +548,11 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (CPUArg)
     checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, ExtensionFeatures,
                     Triple, CPUArgFPUID);
+
+  // TODO Handle -mtune=. Suppress -Wunused-command-line-argument as a
+  // longstanding behavior.
+  (void)Args.getLastArg(options::OPT_mtune_EQ);
+
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
   unsigned FPUID = llvm::ARM::FK_INVALID;
   const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ);
@@ -718,6 +725,15 @@ fp16_fml_fallthrough:
     }
   }
 
+  // Propagate frame-chain model selection
+  if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+    StringRef FrameChainOption = A->getValue();
+    if (FrameChainOption.startswith("aapcs"))
+      Features.push_back("+aapcs-frame-chain");
+    if (FrameChainOption == "aapcs+leaf")
+      Features.push_back("+aapcs-frame-chain-leaf");
+  }
+
   // CMSE: Check for target 8M (for -mcmse to be applicable) is performed later.
   if (Args.getLastArg(options::OPT_mcmse))
     Features.push_back("+8msecext");
@@ -760,21 +776,15 @@ fp16_fml_fallthrough:
   // This only makes sense for the compiler, not for the assembler.
   if (!ForAS) {
     // Supported only on ARMv6T2 and ARMv7 and above.
-    // Cannot be combined with -mno-movt or -mlong-calls
+    // Cannot be combined with -mno-movt.
     if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
       if (A->getOption().matches(options::OPT_mexecute_only)) {
         if (getARMSubArchVersionNumber(Triple) < 7 &&
             llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::ArchKind::ARMV6T2)
               D.Diag(diag::err_target_unsupported_execute_only) << Triple.getArchName();
         else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
-          D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
-        // Long calls create constant pool entries and have not yet been fixed up
-        // to play nicely with execute-only. Hence, they cannot be used in
-        // execute-only code for now
-        else if (Arg *B = Args.getLastArg(options::OPT_mlong_calls, options::OPT_mno_long_calls)) {
-          if (B->getOption().matches(options::OPT_mlong_calls))
-            D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
-        }
+          D.Diag(diag::err_opt_not_valid_with_opt)
+              << A->getAsString(Args) << B->getAsString(Args);
         Features.push_back("+execute-only");
       }
     }
@@ -869,7 +879,7 @@ fp16_fml_fallthrough:
           continue;
         }
         D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getOption().getName() << Scope;
+            << A->getSpelling() << Scope;
         break;
       }
     }
@@ -928,7 +938,7 @@ StringRef arm::getARMCPUForMArch(StringRef Arch, const llvm::Triple &Triple) {
 
   // We need to return an empty string here on invalid MArch values as the
   // various places that call this function can't cope with a null result.
-  return Triple.getARMCPUForArch(MArch);
+  return llvm::ARM::getARMCPUForArch(Triple, MArch);
 }
 
 /// getARMTargetCPU - Get the (LLVM) name of the ARM cpu we are targeting.
@@ -961,7 +971,8 @@ llvm::ARM::ArchKind arm::getLLVMArchKindForARM(StringRef CPU, StringRef Arch,
     if (ArchKind == llvm::ARM::ArchKind::INVALID)
       // In case of generic Arch, i.e. "arm",
       // extract arch from default cpu of the Triple
-      ArchKind = llvm::ARM::parseCPUArch(Triple.getARMCPUForArch(ARMArch));
+      ArchKind =
+          llvm::ARM::parseCPUArch(llvm::ARM::getARMCPUForArch(Triple, ARMArch));
   } else {
     // FIXME: horrible hack to get around the fact that Cortex-A7 is only an
     // armv7k triple if it's actually been specified via "-arch armv7k".

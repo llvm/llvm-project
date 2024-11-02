@@ -58,8 +58,7 @@ using namespace llvm::object;
 using namespace llvm::COFF;
 using namespace llvm::sys;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 std::unique_ptr<Configuration> config;
 std::unique_ptr<LinkerDriver> driver;
@@ -232,7 +231,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
                        "import library?");
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     error(mbref.getBufferIdentifier() + ": unknown file type");
     break;
@@ -280,6 +279,10 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   } else if (magic == file_magic::bitcode) {
     obj =
         make<BitcodeFile>(ctx, mb, parentName, offsetInArchive, /*lazy=*/false);
+  } else if (magic == file_magic::coff_cl_gl_object) {
+    error(mb.getBufferIdentifier() +
+          ": is not a native COFF file. Recompile without /GL?");
+    return;
   } else {
     error("unknown file type: " + mb.getBufferIdentifier());
     return;
@@ -372,6 +375,14 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   for (StringRef inc : directives.includes)
     addUndefined(inc);
 
+  // Handle /exclude-symbols: in bulk.
+  for (StringRef e : directives.excludes) {
+    SmallVector<StringRef, 2> vec;
+    e.split(vec, ',');
+    for (StringRef sym : vec)
+      excludedSymbols.insert(mangle(sym));
+  }
+
   // https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-160
   for (auto *arg : directives.args) {
     switch (arg->getOption().getID()) {
@@ -436,17 +447,26 @@ void LinkerDriver::parseDirectives(InputFile *file) {
 // Find file from search paths. You can omit ".obj", this function takes
 // care of that. Note that the returned path is not guaranteed to exist.
 StringRef LinkerDriver::doFindFile(StringRef filename) {
+  auto getFilename = [](StringRef filename) -> StringRef {
+    if (config->vfs)
+      if (auto statOrErr = config->vfs->status(filename))
+        return saver().save(statOrErr->getName());
+    return filename;
+  };
+
   bool hasPathSep = (filename.find_first_of("/\\") != StringRef::npos);
   if (hasPathSep)
-    return filename;
+    return getFilename(filename);
   bool hasExt = filename.contains('.');
   for (StringRef dir : searchPaths) {
     SmallString<128> path = dir;
     sys::path::append(path, filename);
+    path = SmallString<128>{getFilename(path.str())};
     if (sys::fs::exists(path.str()))
       return saver().save(path.str());
     if (!hasExt) {
       path.append(".obj");
+      path = SmallString<128>{getFilename(path.str())};
       if (sys::fs::exists(path.str()))
         return saver().save(path.str());
     }
@@ -473,7 +493,7 @@ Optional<StringRef> LinkerDriver::findFile(StringRef filename) {
   }
 
   if (path.endswith_insensitive(".lib"))
-    visitedLibs.insert(std::string(sys::path::filename(path)));
+    visitedLibs.insert(std::string(sys::path::filename(path).lower()));
   return path;
 }
 
@@ -620,7 +640,7 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
 // Parses LIB environment which contains a list of search paths.
 void LinkerDriver::addLibSearchPaths() {
   Optional<std::string> envOpt = Process::GetEnv("LIB");
-  if (!envOpt.hasValue())
+  if (!envOpt)
     return;
   StringRef env = saver().save(*envOpt);
   while (!env.empty()) {
@@ -1297,11 +1317,18 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
       return;
   }
 
-  AutoExporter exporter;
+  AutoExporter exporter(excludedSymbols);
 
   for (auto *arg : args.filtered(OPT_wholearchive_file))
     if (Optional<StringRef> path = doFindFile(arg->getValue()))
       exporter.addWholeArchive(*path);
+
+  for (auto *arg : args.filtered(OPT_exclude_symbols)) {
+    SmallVector<StringRef, 2> vec;
+    StringRef(arg->getValue()).split(vec, ',');
+    for (StringRef sym : vec)
+      exporter.addExcludedSymbol(mangle(sym));
+  }
 
   ctx.symtab.forEachSymbol([&](Symbol *s) {
     auto *def = dyn_cast<Defined>(s);
@@ -1349,6 +1376,28 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
   return None;
 }
 
+static std::unique_ptr<llvm::vfs::FileSystem>
+getVFS(const opt::InputArgList &args) {
+  using namespace llvm::vfs;
+
+  const opt::Arg *arg = args.getLastArg(OPT_vfsoverlay);
+  if (!arg)
+    return nullptr;
+
+  auto bufOrErr = llvm::MemoryBuffer::getFile(arg->getValue());
+  if (!bufOrErr) {
+    checkError(errorCodeToError(bufOrErr.getError()));
+    return nullptr;
+  }
+
+  if (auto ret = vfs::getVFSFromYAML(std::move(*bufOrErr), /*DiagHandler*/ nullptr,
+                             arg->getValue()))
+    return ret;
+
+  error("Invalid vfs overlay");
+  return nullptr;
+}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ScopedTimer rootTimer(ctx.rootTimer);
 
@@ -1390,6 +1439,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     errorHandler().errorLimit = n;
   }
 
+  config->vfs = getVFS(args);
+
   // Handle /help
   if (args.hasArg(OPT_help)) {
     printHelp(argsArr[0]);
@@ -1424,6 +1475,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /lldmingw early, since it can potentially affect how other
   // options are handled.
   config->mingw = args.hasArg(OPT_lldmingw);
+  if (config->mingw)
+    ctx.e.errorLimitExceededMsg = "too many errors emitted, stopping now"
+                                  " (use --error-limit=0 to see all errors)";
 
   // Handle /linkrepro and /reproduce.
   if (Optional<std::string> path = getReproduceFile(args)) {
@@ -1677,7 +1731,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /opt.
   bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);
-  Optional<ICFLevel> icfLevel = None;
+  Optional<ICFLevel> icfLevel;
   if (args.hasArg(OPT_profile))
     icfLevel = ICFLevel::None;
   unsigned tailMerge = 1;
@@ -1729,7 +1783,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!icfLevel)
     icfLevel = doGC ? ICFLevel::All : ICFLevel::None;
   config->doGC = doGC;
-  config->doICF = icfLevel.getValue();
+  config->doICF = *icfLevel;
   config->tailMerge =
       (tailMerge == 1 && config->doICF != ICFLevel::None) || tailMerge == 2;
   config->ltoDebugPassManager = ltoDebugPM;
@@ -1867,15 +1921,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // when -debug:dwarf is requested.
   if (config->mingw || config->debugDwarf)
     config->warnLongSectionNames = false;
-
-  config->lldmapFile = getMapFile(args, OPT_lldmap, OPT_lldmap_file);
-  config->mapFile = getMapFile(args, OPT_map, OPT_map_file);
-
-  if (config->lldmapFile != "" && config->lldmapFile == config->mapFile) {
-    warn("/lldmap and /map have the same output file '" + config->mapFile +
-         "'.\n>>> ignoring /lldmap");
-    config->lldmapFile.clear();
-  }
 
   if (config->incremental && args.hasArg(OPT_profile)) {
     warn("ignoring '/incremental' due to '/profile' specification");
@@ -2082,6 +2127,25 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     return;
   }
 
+  config->lldmapFile = getMapFile(args, OPT_lldmap, OPT_lldmap_file);
+  config->mapFile = getMapFile(args, OPT_map, OPT_map_file);
+
+  if (config->mapFile != "" && args.hasArg(OPT_map_info)) {
+    for (auto *arg : args.filtered(OPT_map_info)) {
+      std::string s = StringRef(arg->getValue()).lower();
+      if (s == "exports")
+        config->mapInfo = true;
+      else
+        error("unknown option: /mapinfo:" + s);
+    }
+  }
+
+  if (config->lldmapFile != "" && config->lldmapFile == config->mapFile) {
+    warn("/lldmap and /map have the same output file '" + config->mapFile +
+         "'.\n>>> ignoring /lldmap");
+    config->lldmapFile.clear();
+  }
+
   if (shouldCreatePDB) {
     // Put the PDB next to the image if no /pdb flag was passed.
     if (config->pdbPath.empty()) {
@@ -2180,15 +2244,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // Windows specific -- if __load_config_used can be resolved, resolve it.
     if (ctx.symtab.findUnderscore("_load_config_used"))
       addUndefined(mangle("_load_config_used"));
-  } while (run());
 
-  if (args.hasArg(OPT_include_optional)) {
-    // Handle /includeoptional
-    for (auto *arg : args.filtered(OPT_include_optional))
-      if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-        addUndefined(arg->getValue());
-    while (run());
-  }
+    if (args.hasArg(OPT_include_optional)) {
+      // Handle /includeoptional
+      for (auto *arg : args.filtered(OPT_include_optional))
+        if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
+          addUndefined(arg->getValue());
+    }
+  } while (run());
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
@@ -2355,7 +2418,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // For now, just manually try to retain the known possible personality
       // functions. This doesn't bring in more object files, but only marks
       // functions that already have been included to be retained.
-      for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0"}) {
+      for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
+                            "rust_eh_personality"}) {
         Defined *d = dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore(n));
         if (d && !d->isGCRoot) {
           d->isGCRoot = true;
@@ -2385,5 +2449,4 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.rootTimer.print();
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

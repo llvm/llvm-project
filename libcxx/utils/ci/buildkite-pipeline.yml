@@ -17,6 +17,14 @@
 # goal being to reduce the load on testers when a commit is known to fail.
 #
 
+# The Linux CI runners use the nightly ToT build provided by the Docker image.
+# (Note the image isn't updated daily.) The LLVM_HEAD_VERSION contains that
+# version number. The Linux CI runners for GCC use the latest stable version.
+# Theses numbers are available in all runners, making it easier to update the
+# version number.
+env:
+    LLVM_HEAD_VERSION: "16"
+    GCC_STABLE_VERSION: "12"
 steps:
   #
   # Light pre-commit tests for things like formatting or when people forget
@@ -71,39 +79,31 @@ steps:
   #
   - wait
 
+  - label: "GCC ${GCC_STABLE_VERSION} / C++latest"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "gcc-${GCC_STABLE_VERSION}"
+        CXX: "g++-${GCC_STABLE_VERSION}"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "C++2b"
     command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "C++11"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "C++03"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -118,6 +118,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -127,11 +130,31 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "GCC 11 / C++latest"
-    command: "libcxx/utils/ci/run-buildbot generic-gcc"
+  - label: "C++11"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "C++03"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -151,6 +174,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -165,6 +191,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -179,6 +208,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -189,25 +221,14 @@ steps:
     timeout_in_minutes: 120
 
   # Tests with the supported compilers.
-  - label: "GCC 11 / C++11"
+  - label: "GCC ${GCC_STABLE_VERSION} / C++11"
     command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Clang 13"
-    command: "libcxx/utils/ci/run-buildbot generic-clang-13"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+    env:
+        CC: "gcc-${GCC_STABLE_VERSION}"
+        CXX: "g++-${GCC_STABLE_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -218,10 +239,30 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Clang 14"
-    command: "libcxx/utils/ci/run-buildbot generic-clang-14"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-14"
+        CXX: "clang++-14"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Clang 15"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-15"
+        CXX: "clang++-15"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -239,6 +280,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -253,6 +297,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -267,6 +314,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -281,6 +331,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -296,6 +349,12 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+      - "**/crash_diagnostics/*"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}"
+        CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -305,43 +364,15 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - group: "Legacy"
-    steps:
-    - label: "Legacy Lit configuration"
-      command: "libcxx/utils/ci/run-buildbot legacy-test-config"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
-      agents:
-        queue: "libcxx-builders"
-        os: "linux"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
-
-    - label: "Legacy LLVM_ENABLE_PROJECTS build"
-      command: "libcxx/utils/ci/run-buildbot legacy-project-build"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
-      agents:
-        queue: "libcxx-builders"
-        os: "linux"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
-
   # Tests with various build configurations.
-
   - label: "Static libraries"
     command: "libcxx/utils/ci/run-buildbot generic-static"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -356,6 +387,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -370,6 +404,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -379,11 +416,31 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Debug iterators"
-    command: "libcxx/utils/ci/run-buildbot generic-debug-iterators"
+  - label: "Debug mode"
+    command: "libcxx/utils/ci/run-buildbot generic-debug-mode"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "No transitive includes"
+    command: "libcxx/utils/ci/run-buildbot generic-no-transitive-includes"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -398,6 +455,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -414,20 +474,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
-      agents:
-        queue: "libcxx-builders"
-        os: "linux"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
-
-    - label: "No debug mode"
-      command: "libcxx/utils/ci/run-buildbot generic-no-debug"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -442,6 +491,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -456,6 +508,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -470,6 +525,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -484,6 +542,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -498,6 +559,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -512,6 +576,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -526,6 +593,9 @@ steps:
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
+      env:
+          CC: "clang-${LLVM_HEAD_VERSION}"
+          CXX: "clang++-${LLVM_HEAD_VERSION}"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -540,6 +610,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -555,6 +628,9 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -592,6 +668,18 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
       timeout_in_minutes: 120
+
+    - label: "Clang-cl (no vcruntime exceptions)"
+      command: "bash libcxx/utils/ci/run-buildbot clang-cl-no-vcruntime"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "windows"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
 
     - label: "MinGW (DLL, x86_64)"
       command: "bash libcxx/utils/ci/run-buildbot mingw-dll"
@@ -689,7 +777,7 @@ steps:
       agents:
         queue: "libcxx-builders"
         os: "macos"
-        arch: "x86_64" # We need to use x86_64 for back-deployment CI, since the old dylibs were compiled for x86_64
+        arch: "x86_64" # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then.
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
@@ -704,7 +792,7 @@ steps:
       agents:
         queue: "libcxx-builders"
         os: "macos"
-        arch: "x86_64" # We need to use x86_64 for back-deployment CI, since the old dylibs were compiled for x86_64
+        arch: "x86_64" # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then.
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
@@ -726,10 +814,23 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
+    - label: "Apple back-deployment with assertions enabled"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-assertions-11.0"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "libcxx-builders"
+        os: "macos"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
   - group: "ARM"
     steps:
     - label: "AArch64"
-      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot aarch64"
       artifact_paths:
         - "**/test-results.xml"
@@ -744,7 +845,6 @@ steps:
       timeout_in_minutes: 120
 
     - label: "AArch64 -fno-exceptions"
-      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
@@ -759,7 +859,6 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv8"
-      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv8"
       artifact_paths:
         - "**/test-results.xml"
@@ -774,7 +873,6 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv8 -fno-exceptions"
-      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
@@ -789,7 +887,6 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv7"
-      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv7"
       artifact_paths:
         - "**/test-results.xml"
@@ -804,7 +901,6 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv7 -fno-exceptions"
-      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
@@ -826,6 +922,8 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
+          CC: "clang"
+          CXX: "clang++"
           OBJECT_MODE: "32"
       agents:
           queue: libcxx-builders
@@ -842,6 +940,8 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
+          CC: "clang"
+          CXX: "clang++"
           OBJECT_MODE: "64"
       agents:
           queue: libcxx-builders

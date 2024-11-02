@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -O2 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -O2 -emit-llvm -o - | FileCheck %s
 // PR11480
 
 void foo(int);
@@ -27,10 +27,10 @@ public:
 
 A C::a = A();
 
-// CHECK: @llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }]
-// CHECK: [{ i32, void ()*, i8* } { i32 200, void ()* @_GLOBAL__I_000200, i8* null },
-// CHECK:  { i32, void ()*, i8* } { i32 300, void ()* @_GLOBAL__I_000300, i8* null },
-// CHECK:  { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_init_priority_attr.cpp, i8* null }]
+// CHECK: @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }]
+// CHECK: [{ i32, ptr, ptr } { i32 200, ptr @_GLOBAL__I_000200, ptr null },
+// CHECK:  { i32, ptr, ptr } { i32 300, ptr @_GLOBAL__I_000300, ptr null },
+// CHECK:  { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_init_priority_attr.cpp, ptr null }]
 
 // CHECK: _GLOBAL__I_000200()
 // CHECK: _Z3fooi(i32 noundef 3)

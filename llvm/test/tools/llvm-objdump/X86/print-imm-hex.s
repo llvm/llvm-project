@@ -1,6 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 
-# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=NOPRINT
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=PRINT
 # RUN: llvm-objdump -d --print-imm-hex --no-print-imm-hex %t | FileCheck %s --check-prefix=NOPRINT
 # RUN: llvm-objdump -d --no-print-imm-hex --print-imm-hex %t | FileCheck %s --check-prefix=PRINT
 

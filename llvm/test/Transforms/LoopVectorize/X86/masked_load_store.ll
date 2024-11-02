@@ -1379,11 +1379,11 @@ define void @foo4(double* nocapture %A, double* nocapture readonly %B, i32* noca
 ; AVX512-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], <8 x i64> [[VEC_IND]]
-; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP0]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef), !alias.scope !21
+; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP0]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison), !alias.scope !21
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp slt <8 x i32> [[WIDE_MASKED_GATHER]], <i32 100, i32 100, i32 100, i32 100, i32 100, i32 100, i32 100, i32 100>
 ; AVX512-NEXT:    [[TMP2:%.*]] = shl nuw nsw <8 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
 ; AVX512-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, double* [[B]], <8 x i64> [[TMP2]]
-; AVX512-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> [[TMP3]], i32 8, <8 x i1> [[TMP1]], <8 x double> undef), !alias.scope !24
+; AVX512-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> [[TMP3]], i32 8, <8 x i1> [[TMP1]], <8 x double> poison), !alias.scope !24
 ; AVX512-NEXT:    [[TMP4:%.*]] = sitofp <8 x i32> [[WIDE_MASKED_GATHER]] to <8 x double>
 ; AVX512-NEXT:    [[TMP5:%.*]] = fadd <8 x double> [[WIDE_MASKED_GATHER12]], [[TMP4]]
 ; AVX512-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, double* [[A]], <8 x i64> [[VEC_IND]]
@@ -1451,74 +1451,6 @@ for.end:                                          ; preds = %for.inc
 
 @a = common global [1 x i32*] zeroinitializer, align 8
 @c = common global i32* null, align 8
-
-; The loop here should not be vectorized due to trapping
-; constant expression
-
-define void @foo5(i32* nocapture %A, i32* nocapture readnone %B, i32* nocapture readonly %trigger) local_unnamed_addr #0 {
-; AVX-LABEL: @foo5(
-; AVX-NEXT:  entry:
-; AVX-NEXT:    br label [[FOR_BODY:%.*]]
-; AVX:       for.body:
-; AVX-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; AVX-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[INDVARS_IV]]
-; AVX-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; AVX-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP0]], 100
-; AVX-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; AVX:       if.then:
-; AVX-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; AVX-NEXT:    store i32 sdiv (i32 1, i32 zext (i1 icmp eq (i32** getelementptr inbounds ([1 x i32*], [1 x i32*]* @a, i64 1, i64 0), i32** @c) to i32)), i32* [[ARRAYIDX7]], align 4
-; AVX-NEXT:    br label [[FOR_INC]]
-; AVX:       for.inc:
-; AVX-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; AVX-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 10000
-; AVX-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
-; AVX:       for.end:
-; AVX-NEXT:    ret void
-;
-; AVX512-LABEL: @foo5(
-; AVX512-NEXT:  entry:
-; AVX512-NEXT:    br label [[FOR_BODY:%.*]]
-; AVX512:       for.body:
-; AVX512-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; AVX512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER:%.*]], i64 [[INDVARS_IV]]
-; AVX512-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; AVX512-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP0]], 100
-; AVX512-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; AVX512:       if.then:
-; AVX512-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; AVX512-NEXT:    store i32 sdiv (i32 1, i32 zext (i1 icmp eq (i32** getelementptr inbounds ([1 x i32*], [1 x i32*]* @a, i64 1, i64 0), i32** @c) to i32)), i32* [[ARRAYIDX7]], align 4
-; AVX512-NEXT:    br label [[FOR_INC]]
-; AVX512:       for.inc:
-; AVX512-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; AVX512-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 10000
-; AVX512-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
-; AVX512:       for.end:
-; AVX512-NEXT:    ret void
-;
-entry:
-  br label %for.body
-
-for.body:                                         ; preds = %for.inc, %entry
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
-  %arrayidx = getelementptr inbounds i32, i32* %trigger, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %cmp1 = icmp slt i32 %0, 100
-  br i1 %cmp1, label %if.then, label %for.inc
-
-if.then:                                          ; preds = %for.body
-  %arrayidx7 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 sdiv (i32 1, i32 zext (i1 icmp eq (i32** getelementptr inbounds ([1 x i32*], [1 x i32*]* @a, i64 1, i64 0), i32** @c) to i32)), i32* %arrayidx7, align 4
-  br label %for.inc
-
-for.inc:                                          ; preds = %for.body, %if.then
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 10000
-  br i1 %exitcond, label %for.end, label %for.body
-
-for.end:                                          ; preds = %for.inc
-  ret void
-}
 
 ; Reverse loop
 ;void foo6(double *in, double *out, unsigned size, int *trigger) {

@@ -36,6 +36,12 @@ $ cp /path/to/a/built/lldb-vscode .
 $ cp /path/to/a/built/liblldb.so .
 ```
 
+It is important to note that the directory `~/.vscode/extensions` works for users logged in locally to the machine. If you are remoting into the box using Visual Studio Code's Remote plugins (SSH, WSL, Docker) it will look for extensions on `~/.vscode-server/extensions` only and you will not see your just installed lldb-vscode plug-in. If you want this plugin to be visible to remoting users, you will need to either repeat the process above for the `~/.vscode-server` folder or create a symbolic link from it to `~/.vscode/extensions`:
+
+```
+$ cd ~/.vscode-server/extensions
+$ ln -s ~/.vscode/extensions/llvm-org.lldb-vscode-0.1.0  llvm-org.lldb-vscode-0.1.0
+```
 
 If you want to make a stand alone plug-in that you can send to others on macOS systems:
 
@@ -60,6 +66,8 @@ $ ln -s /path/to/a/built/lldb-vscode
 ```
 
 This is handy if you want to debug and develope the `lldb-vscode` executable when adding features or fixing bugs.
+
+
 
 # Configurations
 

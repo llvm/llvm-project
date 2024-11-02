@@ -17,7 +17,7 @@ main_body:
   br i1 %10, label %IF, label %ELSE
 
 IF:                                               ; preds = %main_body
-  %11 = call float @fabs(float %2)
+  %11 = call float @fabsf(float %2)
   %12 = fcmp ueq float %11, 0x7FF0000000000000
   %13 = select i1 %12, float 1.000000e+00, float 0.000000e+00
   %14 = fsub float -0.000000e+00, %13
@@ -87,7 +87,7 @@ IF23:                                             ; preds = %ELSE
   br label %ENDIF
 }
 
-declare float @fabs(float) #0
+declare float @fabsf(float) #0
 
 declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
