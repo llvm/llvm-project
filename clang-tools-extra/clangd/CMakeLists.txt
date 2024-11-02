@@ -98,6 +98,7 @@ add_clang_library(clangDaemon STATIC
   InlayHints.cpp
   JSONTransport.cpp
   ModulesBuilder.cpp
+  NoLintFixes.cpp
   PathMapping.cpp
   Protocol.cpp
   Quality.cpp
