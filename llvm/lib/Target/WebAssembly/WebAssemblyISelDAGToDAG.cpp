@@ -248,6 +248,19 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, Throw);
       return;
     }
+    case Intrinsic::wasm_rethrow: {
+      // RETHROW's BB argument will be populated in LateEHPrepare. Just use a
+      // '0' as a placeholder for now.
+      MachineSDNode *Rethrow = CurDAG->getMachineNode(
+          WebAssembly::RETHROW, DL,
+          MVT::Other, // outchain type
+          {
+              CurDAG->getConstant(0, DL, MVT::i32), // placeholder
+              Node->getOperand(0)                   // inchain
+          });
+      ReplaceNode(Node, Rethrow);
+      return;
+    }
     }
     break;
   }
