@@ -1478,8 +1478,23 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_memset_inline:
     llvm_unreachable("BI__builtin_memset_inline NYI");
-  case Builtin::BI__builtin___memset_chk:
-    llvm_unreachable("BI__builtin___memset_chk NYI");
+  case Builtin::BI__builtin___memset_chk: {
+    // fold __builtin_memset_chk(x, y, cst1, cst2) to memset iff cst1<=cst2.
+    Expr::EvalResult sizeResult, dstSizeResult;
+    if (!E->getArg(2)->EvaluateAsInt(sizeResult, CGM.getASTContext()) ||
+        !E->getArg(3)->EvaluateAsInt(dstSizeResult, CGM.getASTContext()))
+      break;
+    llvm::APSInt size = sizeResult.Val.getInt();
+    llvm::APSInt dstSize = dstSizeResult.Val.getInt();
+    if (size.ugt(dstSize))
+      break;
+    Address dest = buildPointerWithAlignment(E->getArg(0));
+    mlir::Value byteVal = buildScalarExpr(E->getArg(1));
+    auto loc = getLoc(E->getSourceRange());
+    ConstantOp sizeOp = builder.getConstInt(loc, size);
+    builder.createMemSet(loc, dest.getPointer(), byteVal, sizeOp);
+    return RValue::get(dest.getPointer());
+  }
   case Builtin::BI__builtin_wmemchr:
     llvm_unreachable("BI__builtin_wmemchr NYI");
   case Builtin::BI__builtin_wmemcmp:

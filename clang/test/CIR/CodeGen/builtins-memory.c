@@ -54,3 +54,56 @@ void test_memcpy_chk(void *dest, const void *src, size_t n) {
   // CIR: cir.call @__memcpy_chk(%[[#DEST_LOAD]], %[[#SRC_LOAD]], %[[#N_LOAD1]], %[[#N_LOAD2]])
   __builtin___memcpy_chk(dest, src, n, n);
 }
+
+void test_memset_chk(void *dest, int ch, size_t n) {
+  // CIR-LABEL: cir.func @test_memset_chk
+  // CIR:         %[[#DEST:]] = cir.alloca {{.*}} ["dest", init]
+  // CIR:         %[[#CH:]] = cir.alloca {{.*}} ["ch", init]
+  // CIR:         %[[#N:]] = cir.alloca {{.*}} ["n", init]
+
+  // An unchecked memset should be emitted when the count and buffer size are
+  // constants and the count is less than or equal to the buffer size.
+
+  // CIR: %[[#DEST_LOAD:]] = cir.load %[[#DEST]]
+  // CIR: %[[#CH_LOAD:]] = cir.load %[[#CH]]
+  // CIR: %[[#COUNT:]] = cir.const #cir.int<8>
+  // CIR: cir.libc.memset %[[#COUNT]] bytes from %[[#DEST_LOAD]] set to %[[#CH_LOAD]]
+  __builtin___memset_chk(dest, ch, 8, 10);
+
+  // CIR: %[[#DEST_LOAD:]] = cir.load %[[#DEST]]
+  // CIR: %[[#CH_LOAD:]] = cir.load %[[#CH]]
+  // CIR: %[[#COUNT:]] = cir.const #cir.int<10>
+  // CIR: cir.libc.memset %[[#COUNT]] bytes from %[[#DEST_LOAD]] set to %[[#CH_LOAD]]
+  __builtin___memset_chk(dest, ch, 10, 10);
+
+  // __memset_chk should be called when the count is greater than the buffer
+  // size, or when either the count or buffer size isn't a constant.
+
+  // CIR: %[[#DEST_LOAD:]] = cir.load %[[#DEST]]
+  // CIR: %[[#CH_LOAD:]] = cir.load %[[#CH]]
+  // CIR: %[[#COUNT:]] = cir.const #cir.int<10>
+  // CIR: %[[#SIZE:]] = cir.const #cir.int<8>
+  // CIR: cir.call @__memset_chk(%[[#DEST_LOAD]], %[[#CH_LOAD]], %[[#COUNT]], %[[#SIZE]])
+  __builtin___memset_chk(dest, ch, 10lu, 8lu);
+
+  // CIR: %[[#DEST_LOAD:]] = cir.load %[[#DEST]]
+  // CIR: %[[#CH_LOAD:]] = cir.load %[[#CH]]
+  // CIR: %[[#N_LOAD:]] = cir.load %[[#N]]
+  // CIR: %[[#SIZE:]] = cir.const #cir.int<10>
+  // CIR: cir.call @__memset_chk(%[[#DEST_LOAD]], %[[#CH_LOAD]], %[[#N_LOAD]], %[[#SIZE]])
+  __builtin___memset_chk(dest, ch, n, 10lu);
+
+  // CIR: %[[#DEST_LOAD:]] = cir.load %[[#DEST]]
+  // CIR: %[[#CH_LOAD:]] = cir.load %[[#CH]]
+  // CIR: %[[#COUNT:]] = cir.const #cir.int<10>
+  // CIR: %[[#N_LOAD:]] = cir.load %[[#N]]
+  // CIR: cir.call @__memset_chk(%[[#DEST_LOAD]], %[[#CH_LOAD]], %[[#COUNT]], %[[#N_LOAD]])
+  __builtin___memset_chk(dest, ch, 10lu, n);
+
+  // CIR: %[[#DEST_LOAD:]] = cir.load %[[#DEST]]
+  // CIR: %[[#CH_LOAD:]] = cir.load %[[#CH]]
+  // CIR: %[[#N_LOAD1:]] = cir.load %[[#N]]
+  // CIR: %[[#N_LOAD2:]] = cir.load %[[#N]]
+  // CIR: cir.call @__memset_chk(%[[#DEST_LOAD]], %[[#CH_LOAD]], %[[#N_LOAD1]], %[[#N_LOAD2]])
+  __builtin___memset_chk(dest, ch, n, n);
+}
