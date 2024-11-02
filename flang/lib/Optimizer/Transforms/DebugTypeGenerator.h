@@ -31,6 +31,10 @@ public:
                                      mlir::Location loc);
 
 private:
+  mlir::LLVM::DITypeAttr convertSequenceType(fir::SequenceType seqTy,
+                                             mlir::LLVM::DIFileAttr fileAttr,
+                                             mlir::LLVM::DIScopeAttr scope,
+                                             mlir::Location loc);
   mlir::ModuleOp module;
   KindMapping kindMapping;
 };

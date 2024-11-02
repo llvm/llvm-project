@@ -54,7 +54,9 @@ AST_MATCHER(QualType, isEnableIf) {
 AST_MATCHER_P(TemplateTypeParmDecl, hasDefaultArgument,
               clang::ast_matchers::internal::Matcher<QualType>, TypeMatcher) {
   return Node.hasDefaultArgument() &&
-         TypeMatcher.matches(Node.getDefaultArgument(), Finder, Builder);
+         TypeMatcher.matches(
+             Node.getDefaultArgument().getArgument().getAsType(), Finder,
+             Builder);
 }
 AST_MATCHER(TemplateDecl, hasAssociatedConstraints) {
   return Node.hasAssociatedConstraints();

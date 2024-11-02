@@ -95,9 +95,9 @@ constexpr FeatureBitset FeaturesBroadwell =
 
 // Intel Knights Landing and Knights Mill
 // Knights Landing has feature parity with Broadwell.
-constexpr FeatureBitset FeaturesKNL =
-    FeaturesBroadwell | FeatureAES | FeatureAVX512F | FeatureEVEX512 |
-    FeatureAVX512CD | FeatureAVX512ER | FeatureAVX512PF | FeaturePREFETCHWT1;
+constexpr FeatureBitset FeaturesKNL = FeaturesBroadwell | FeatureAES |
+                                      FeatureAVX512F | FeatureEVEX512 |
+                                      FeatureAVX512CD;
 constexpr FeatureBitset FeaturesKNM = FeaturesKNL | FeatureAVX512VPOPCNTDQ;
 
 // Intel Skylake processors.
@@ -500,7 +500,6 @@ constexpr FeatureBitset ImpliedFeaturesMOVDIRI = {};
 constexpr FeatureBitset ImpliedFeaturesPCONFIG = {};
 constexpr FeatureBitset ImpliedFeaturesPOPCNT = {};
 constexpr FeatureBitset ImpliedFeaturesPKU = {};
-constexpr FeatureBitset ImpliedFeaturesPREFETCHWT1 = {};
 constexpr FeatureBitset ImpliedFeaturesPRFCHW = {};
 constexpr FeatureBitset ImpliedFeaturesPTWRITE = {};
 constexpr FeatureBitset ImpliedFeaturesRDPID = {};
@@ -569,8 +568,6 @@ constexpr FeatureBitset ImpliedFeaturesSM4 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX512CD = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512BW = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512DQ = FeatureAVX512F;
-constexpr FeatureBitset ImpliedFeaturesAVX512ER = FeatureAVX512F;
-constexpr FeatureBitset ImpliedFeaturesAVX512PF = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VL = FeatureAVX512F;
 
 constexpr FeatureBitset ImpliedFeaturesAVX512BF16 = FeatureAVX512BW;
@@ -751,13 +748,13 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that
   // "compat" features are assigned non-duplicate consecutive priorities
-  // starting from one (1, ..., 37) and multiple zeros.
+  // starting from one (1, ..., 35) and multiple zeros.
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
-  const size_t MaxPriority = 37;
+  const size_t MaxPriority = 35;
   std::iota(HelperList.begin(), HelperList.begin() + MaxPriority + 1, 0);
   for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
     HelperList[i] = 0;

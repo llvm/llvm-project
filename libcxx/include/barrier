@@ -54,7 +54,6 @@ namespace std
 #include <__assert>
 #include <__atomic/atomic_base.h>
 #include <__atomic/memory_order.h>
-#include <__availability>
 #include <__memory/unique_ptr.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>

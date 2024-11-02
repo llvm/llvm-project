@@ -178,3 +178,25 @@ namespace ExplicitLambdaThis {
   };
   static_assert(f());
 }
+
+namespace std {
+  struct strong_ordering {
+    int n;
+    constexpr operator int() const { return n; }
+    static const strong_ordering less, equal, greater;
+  };
+  constexpr strong_ordering strong_ordering::less = {-1};
+  constexpr strong_ordering strong_ordering::equal = {0};
+  constexpr strong_ordering strong_ordering::greater = {1};
+}
+
+namespace UndefinedThreeWay {
+  struct A {
+    friend constexpr std::strong_ordering operator<=>(const A&, const A&) = default; // all-note {{declared here}}
+  };
+
+  constexpr std::strong_ordering operator<=>(const A&, const A&) noexcept;
+  constexpr std::strong_ordering (*test_a_threeway)(const A&, const A&) = &operator<=>;
+  static_assert(!(*test_a_threeway)(A(), A())); // all-error {{static assertion expression is not an integral constant expression}} \
+                                                // all-note {{undefined function 'operator<=>' cannot be used in a constant expression}}
+}

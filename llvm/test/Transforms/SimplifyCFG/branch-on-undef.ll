@@ -57,8 +57,8 @@ define void @br_poison_succs_used(i32 %v) {
 ; CHECK-LABEL: @br_poison_succs_used(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[BR:%.*]] [
-; CHECK-NEXT:    i32 1, label [[IF:%.*]]
-; CHECK-NEXT:    i32 2, label [[ELSE:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF:%.*]]
+; CHECK-NEXT:      i32 2, label [[ELSE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       br:
 ; CHECK-NEXT:    call void @foo(i32 0)

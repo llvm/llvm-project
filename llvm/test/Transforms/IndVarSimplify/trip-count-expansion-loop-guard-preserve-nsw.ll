@@ -12,8 +12,7 @@ define void @rewrite_preserve_add_nsw(i32 %a) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp sgt i32 [[A]], -4
 ; CHECK-NEXT:    br i1 [[PRE]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[SMAX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], 5
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]

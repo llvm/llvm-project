@@ -477,6 +477,15 @@ void DebugUnparseWithSymbolsAction::executeAction() {
   reportFatalSemanticErrors();
 }
 
+void DebugUnparseWithModulesAction::executeAction() {
+  auto &parseTree{*getInstance().getParsing().parseTree()};
+  CompilerInstance &ci{getInstance()};
+  Fortran::semantics::UnparseWithModules(
+      llvm::outs(), ci.getSemantics().context(), parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8);
+  reportFatalSemanticErrors();
+}
+
 void DebugDumpSymbolsAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
 
@@ -808,6 +817,9 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMin = vsr->first;
     config.VScaleMax = vsr->second;
   }
+
+  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
+    config.NSWOnLoopVarInc = true;
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());

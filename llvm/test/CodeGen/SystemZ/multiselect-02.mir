@@ -1,5 +1,7 @@
 # RUN: llc -mtriple=s390x-linux-gnu -mcpu=z10 -run-pass=finalize-isel -o - %s \
 # RUN:   | FileCheck %s
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z10 -passes=finalize-isel -o - %s \
+# RUN:   | FileCheck %s
 #
 # Test that an instruction (ZEXT128) that uses custom insertion gets treated
 # correctly also when it lies between two Select instructions that could

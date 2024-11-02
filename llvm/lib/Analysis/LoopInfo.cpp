@@ -1105,6 +1105,26 @@ int llvm::getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
   return getOptionalIntLoopAttribute(TheLoop, Name).value_or(Default);
 }
 
+CallBase *llvm::getLoopConvergenceHeart(const Loop *TheLoop) {
+  BasicBlock *H = TheLoop->getHeader();
+  for (Instruction &II : *H) {
+    if (auto *CB = dyn_cast<CallBase>(&II)) {
+      if (!CB->isConvergent())
+        continue;
+      // This is the heart if it uses a token defined outside the loop. The
+      // verifier has already checked that only the loop intrinsic can use such
+      // a token.
+      if (auto *Token = CB->getConvergenceControlToken()) {
+        auto *TokenDef = cast<Instruction>(Token);
+        if (!TheLoop->contains(TokenDef->getParent()))
+          return CB;
+      }
+      return nullptr;
+    }
+  }
+  return nullptr;
+}
+
 bool llvm::isFinite(const Loop *L) {
   return L->getHeader()->getParent()->willReturn();
 }

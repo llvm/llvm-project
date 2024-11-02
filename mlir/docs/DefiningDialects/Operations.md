@@ -291,8 +291,27 @@ Right now, the following primitive constraints are supported:
     equal to `N`
 *   `IntMaxValue<N>`: Specifying an integer attribute to be less than or equal
     to `N`
+*   `IntNEQValue<N>`: Specifying an integer attribute to be not equal
+    to `N`
+*   `IntPositive`: Specifying an integer attribute whose value is positive
+*   `IntNonNegative`: Specifying an integer attribute whose value is
+    non-negative
 *   `ArrayMinCount<N>`: Specifying an array attribute to have at least `N`
     elements
+*   `ArrayMaxCount<N>`: Specifying an array attribute to have at most `N`
+    elements
+*   `ArrayCount<N>`: Specifying an array attribute to have exactly `N`
+    elements
+*   `DenseArrayCount<N>`: Specifying a dense array attribute to have
+    exactly `N` elements
+*   `DenseArrayStrictlyPositive<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have all positive elements
+*   `DenseArrayStrictlyNonNegative<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have all non-negative elements
+*   `DenseArraySorted<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have elements in non-decreasing order
+*   `DenseArrayStrictlySorted<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have elements in increasing order
 *   `IntArrayNthElemEq<I, N>`: Specifying an integer array attribute's `I`-th
     element to be equal to `N`
 *   `IntArrayNthElemMinValue<I, N>`: Specifying an integer array attribute's
@@ -301,8 +320,35 @@ Right now, the following primitive constraints are supported:
     `I`-th element to be less than or equal to `N`
 *   `IntArrayNthElemInRange<I, M, N>`: Specifying an integer array attribute's
     `I`-th element to be greater than or equal to `M` and less than or equal to `N`
+*   `IsNullAttr`: Specifying an optional attribute which must be empty
 
 TODO: Design and implement more primitive constraints
+
+#### Combining constraints
+
+`AllAttrOf` is provided to allow combination of multiple constraints which
+must all hold.
+
+For example:
+```tablegen
+def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
+  let arguments = (ins I64ArrayAttr:$attr);
+  let results = (outs I32);
+}
+def OpAllAttrConstraint2 : TEST_Op<"all_attr_constraint_of2"> {
+  let arguments = (ins I64ArrayAttr:$attr);
+  let results = (outs I32);
+}
+def Constraint0 : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[0]).getInt() == 0">,
+    "[0] == 0">;
+def Constraint1 : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[1]).getInt() == 1">,
+    "[1] == 1">;
+def : Pat<(OpAllAttrConstraint1
+            AllAttrOf<[Constraint0, Constraint1]>:$attr),
+          (OpAllAttrConstraint2 $attr)>;
+```
 
 ### Operation regions
 
@@ -1398,6 +1444,8 @@ optionality, default values, etc.:
 *   `OptionalAttr`: specifies an attribute as [optional](#optional-attributes).
 *   `ConfinedAttr`: adapts an attribute with
     [further constraints](#confining-attributes).
+*   `AllAttrOf`: adapts an attribute with
+    [multiple constraints](#combining-constraints).
 
 ### Enum attributes
 

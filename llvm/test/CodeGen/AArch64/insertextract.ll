@@ -983,13 +983,12 @@ define <3 x i32> @insert_v3i32_0(<3 x i32> %a, i32 %b, i32 %c) {
 ;
 ; CHECK-GI-LABEL: insert_v3i32_0:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v0.s[2], w8
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    fmov s1, w0
+; CHECK-GI-NEXT:    mov w9, v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[1], w8
+; CHECK-GI-NEXT:    mov v1.s[2], w9
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <3 x i32> %a, i32 %b, i32 0

@@ -1220,15 +1220,18 @@ void SymtabSection::emitStabs() {
         continue;
 
       // Constant-folded symbols go in the executable's symbol table, but don't
-      // get a stabs entry.
-      if (defined->wasIdenticalCodeFolded)
+      // get a stabs entry unless --keep-icf-stabs flag is specified
+      if (!config->keepICFStabs && defined->wasIdenticalCodeFolded)
         continue;
 
       ObjFile *file = defined->getObjectFile();
       if (!file || !file->compileUnit)
         continue;
 
-      symbolsNeedingStabs.emplace_back(defined, defined->isec()->getFile()->id);
+      // We use 'originalIsec' to get the file id of the symbol since 'isec()'
+      // might point to the merged ICF symbol's file
+      symbolsNeedingStabs.emplace_back(defined,
+                                       defined->originalIsec->getFile()->id);
     }
   }
 
@@ -1243,7 +1246,9 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
-    InputSection *isec = defined->isec();
+    // We use 'originalIsec' of the symbol since we care about the actual origin
+    // of the symbol, not the canonical location returned by `isec()`.
+    InputSection *isec = defined->originalIsec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1256,7 +1261,7 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = defined->isec()->parent->index;
+    symStab.sect = isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = defined->getVA();
 

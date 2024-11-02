@@ -259,7 +259,8 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
       promoteCallWithIfThenElse(CB, DirectCallee, BranchWeights);
 
   if (AttachProfToDirectCall) {
-    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)});
+    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)},
+                     /*IsExpected=*/false);
   }
 
   using namespace ore;

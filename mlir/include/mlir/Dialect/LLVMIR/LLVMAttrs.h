@@ -60,6 +60,15 @@ public:
   static bool classof(Attribute attr);
 };
 
+/// This class represents a LLVM attribute that describes a debug info variable.
+class DIVariableAttr : public DINodeAttr {
+public:
+  using DINodeAttr::DINodeAttr;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
 /// Base class for LLVM attributes participating in the TBAA graph.
 class TBAANodeAttr : public Attribute {
 public:

@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX908 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 
 define amdgpu_ps void @buffer_atomic_fadd_v2f16_offset_no_rtn(<2 x half> %val, <4 x i32> inreg %rsrc, i32 inreg %soffset) {
   ; GFX908-LABEL: name: buffer_atomic_fadd_v2f16_offset_no_rtn

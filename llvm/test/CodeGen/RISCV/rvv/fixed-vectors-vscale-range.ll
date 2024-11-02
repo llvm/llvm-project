@@ -24,17 +24,17 @@ define <512 x i8> @vadd_v512i8_zvl128(<512 x i8> %a, <512 x i8> %b) #0 {
 ; CHECK-NEXT:    addi a2, a2, 16
 ; CHECK-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    addi a4, a3, 128
+; CHECK-NEXT:    addi a5, a3, 384
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    addi a2, a3, 128
-; CHECK-NEXT:    addi a4, a3, 384
-; CHECK-NEXT:    vle8.v v8, (a4)
-; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    vle8.v v8, (a5)
+; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    li a5, 24
-; CHECK-NEXT:    mul a4, a4, a5
-; CHECK-NEXT:    add a4, sp, a4
-; CHECK-NEXT:    addi a4, a4, 16
-; CHECK-NEXT:    vs8r.v v8, (a4) # Unknown-size Folded Spill
-; CHECK-NEXT:    addi a4, a1, 128
+; CHECK-NEXT:    mul a2, a2, a5
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
+; CHECK-NEXT:    addi a2, a1, 128
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 4
@@ -48,10 +48,10 @@ define <512 x i8> @vadd_v512i8_zvl128(<512 x i8> %a, <512 x i8> %b) #0 {
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle8.v v8, (a4)
+; CHECK-NEXT:    vle8.v v8, (a2)
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle8.v v24, (a2)
+; CHECK-NEXT:    vle8.v v24, (a4)
 ; CHECK-NEXT:    vle8.v v0, (a3)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 4

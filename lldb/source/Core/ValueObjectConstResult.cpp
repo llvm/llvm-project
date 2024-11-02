@@ -267,12 +267,6 @@ lldb::addr_t ValueObjectConstResult::GetAddressOf(bool scalar_is_load_address,
   return m_impl.GetAddressOf(scalar_is_load_address, address_type);
 }
 
-ValueObject *ValueObjectConstResult::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  return m_impl.CreateChildAtIndex(idx, synthetic_array_member,
-                                   synthetic_index);
-}
-
 size_t ValueObjectConstResult::GetPointeeData(DataExtractor &data,
                                               uint32_t item_idx,
                                               uint32_t item_count) {

@@ -419,6 +419,15 @@ public:
   /// treating both this and \p Other as unsigned ranges.
   ConstantRange multiply(const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting
+  /// from a multiplication with wrap type \p NoWrapKind of a value in this
+  /// range and a value in \p Other.
+  /// If the result range is disjoint, the preferred range is determined by the
+  /// \p PreferredRangeType.
+  ConstantRange
+  multiplyWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                     PreferredRangeType RangeType = Smallest) const;
+
   /// Return range of possible values for a signed multiplication of this and
   /// \p Other. However, if overflow is possible always return a full range
   /// rather than trying to determine a more precise result.

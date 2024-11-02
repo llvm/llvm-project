@@ -12,7 +12,7 @@
 
 #define DEBUG_TYPE "macro-expansion-context"
 
-static void dumpTokenInto(const clang::Preprocessor &PP, clang::raw_ostream &OS,
+static void dumpTokenInto(const clang::Preprocessor &PP, llvm::raw_ostream &OS,
                           clang::Token Tok);
 
 namespace clang {

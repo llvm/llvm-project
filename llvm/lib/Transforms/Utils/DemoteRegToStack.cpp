@@ -50,6 +50,15 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
       assert(BB && "Unable to split critical edge.");
       (void)BB;
     }
+  } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(&I)) {
+    for (unsigned i = 0; i < CBI->getNumSuccessors(); i++) {
+      auto *Succ = CBI->getSuccessor(i);
+      if (!Succ->getSinglePredecessor()) {
+        assert(isCriticalEdge(II, i) && "Expected a critical edge!");
+        [[maybe_unused]] BasicBlock *BB = SplitCriticalEdge(II, i);
+        assert(BB && "Unable to split critical edge.");
+      }
+    }
   }
 
   // Change all of the users of the instruction to read from the stack slot.
@@ -102,9 +111,14 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
         new StoreInst(&I, Slot, Handler->getFirstInsertionPt());
       return Slot;
     }
+  } else if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
+    InsertPt = II->getNormalDest()->getFirstInsertionPt();
+  } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(&I)) {
+    for (BasicBlock *Succ : successors(CBI))
+      new StoreInst(CBI, Slot, Succ->getFirstInsertionPt());
+    return Slot;
   } else {
-    InvokeInst &II = cast<InvokeInst>(I);
-    InsertPt = II.getNormalDest()->getFirstInsertionPt();
+    llvm_unreachable("Unsupported terminator for Reg2Mem");
   }
 
   new StoreInst(&I, Slot, InsertPt);

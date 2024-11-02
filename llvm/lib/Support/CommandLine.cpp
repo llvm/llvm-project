@@ -534,7 +534,7 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
     if (S->getName().empty())
       continue;
 
-    if (StringRef(S->getName()) == StringRef(Name))
+    if (S->getName() == Name)
       return S;
 
     if (!NearestMatch && S->getName().edit_distance(Name) < 2)

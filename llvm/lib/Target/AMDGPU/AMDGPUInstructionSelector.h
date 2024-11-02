@@ -125,6 +125,7 @@ private:
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
   bool selectSBarrier(MachineInstr &MI) const;
   bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
+  bool selectPOPSExitingWaveID(MachineInstr &MI) const;
 
   bool selectImageIntrinsic(MachineInstr &MI,
                             const AMDGPU::ImageDimIntrinsicInfo *Intr) const;

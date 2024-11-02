@@ -134,16 +134,19 @@ enum Form : uint16_t {
 };
 
 enum LocationAtom {
-#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR) DW_OP_##NAME = ID,
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
+  DW_OP_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
-  DW_OP_LLVM_fragment = 0x1000,         ///< Only used in LLVM metadata.
-  DW_OP_LLVM_convert = 0x1001,          ///< Only used in LLVM metadata.
-  DW_OP_LLVM_tag_offset = 0x1002,       ///< Only used in LLVM metadata.
-  DW_OP_LLVM_entry_value = 0x1003,      ///< Only used in LLVM metadata.
-  DW_OP_LLVM_implicit_pointer = 0x1004, ///< Only used in LLVM metadata.
-  DW_OP_LLVM_arg = 0x1005,              ///< Only used in LLVM metadata.
+  DW_OP_LLVM_fragment = 0x1000,          ///< Only used in LLVM metadata.
+  DW_OP_LLVM_convert = 0x1001,           ///< Only used in LLVM metadata.
+  DW_OP_LLVM_tag_offset = 0x1002,        ///< Only used in LLVM metadata.
+  DW_OP_LLVM_entry_value = 0x1003,       ///< Only used in LLVM metadata.
+  DW_OP_LLVM_implicit_pointer = 0x1004,  ///< Only used in LLVM metadata.
+  DW_OP_LLVM_arg = 0x1005,               ///< Only used in LLVM metadata.
+  DW_OP_LLVM_extract_bits_sext = 0x1006, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_extract_bits_zext = 0x1007, ///< Only used in LLVM metadata.
 };
 
 enum LlvmUserLocationAtom {
@@ -1046,6 +1049,14 @@ unsigned OperationVendor(LocationAtom O);
 unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
+
+/// The number of operands for the given LocationAtom.
+std::optional<unsigned> OperationOperands(LocationAtom O);
+
+/// The arity of the given LocationAtom. This is the number of elements on the
+/// stack this operation operates on. Returns -1 if the arity is variable (e.g.
+/// depending on the argument) or unknown.
+std::optional<unsigned> OperationArity(LocationAtom O);
 
 std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 

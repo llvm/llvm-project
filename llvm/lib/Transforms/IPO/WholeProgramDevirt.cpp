@@ -1927,7 +1927,7 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
   // element (the original initializer).
   auto Alias = GlobalAlias::create(
       B.GV->getInitializer()->getType(), 0, B.GV->getLinkage(), "",
-      ConstantExpr::getGetElementPtr(
+      ConstantExpr::getInBoundsGetElementPtr(
           NewInit->getType(), NewGV,
           ArrayRef<Constant *>{ConstantInt::get(Int32Ty, 0),
                                ConstantInt::get(Int32Ty, 1)}),

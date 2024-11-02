@@ -916,7 +916,10 @@ apple_genrule(
     srcs = [":debugserver_unsigned"],
     outs = ["debugserver"],
     cmd = "cp $(SRCS) $(OUTS) && xcrun codesign -f -s - --entitlements $(location tools/debugserver/resources/debugserver-macosx-entitlements.plist) $(OUTS)",
-    tags = ["nobuildkite"],
+    tags = [
+        "manual",
+        "nobuildkite",
+    ],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],

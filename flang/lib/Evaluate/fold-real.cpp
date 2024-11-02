@@ -381,13 +381,14 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                 std::move(funcRef),
                 ScalarFunc<T, T, TBY>(
                     [&](const Scalar<T> &x, const Scalar<TBY> &y) -> Scalar<T> {
-                      ValueWithRealFlags<Scalar<T>> result{x.
+                      ValueWithRealFlags<Scalar<T>> result{
+                          x.
 // MSVC chokes on the keyword "template" here in a call to a
 // member function template.
 #ifndef _MSC_VER
-                                                           template
+                          template
 #endif
-                                                           SCALE(y)};
+                          SCALE<Scalar<TBY>>(y)};
                       if (result.flags.test(RealFlag::Overflow) &&
                           context.languageFeatures().ShouldWarn(
                               common::UsageWarning::FoldingException)) {

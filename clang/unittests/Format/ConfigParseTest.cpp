@@ -480,6 +480,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ENAS_DontAlign);
   CHECK_PARSE("AlignEscapedNewlines: Left", AlignEscapedNewlines,
               FormatStyle::ENAS_Left);
+  CHECK_PARSE("AlignEscapedNewlines: LeftWithLastLine", AlignEscapedNewlines,
+              FormatStyle::ENAS_LeftWithLastLine);
   CHECK_PARSE("AlignEscapedNewlines: Right", AlignEscapedNewlines,
               FormatStyle::ENAS_Right);
   // For backward compatibility:

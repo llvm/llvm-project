@@ -3618,12 +3618,10 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ConceptSpecializationExprClass:
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:
+  case PackIndexingExprClass:
     // These never have a side-effect.
     return false;
 
-  case PackIndexingExprClass:
-    return cast<PackIndexingExpr>(this)->getSelectedExpr()->HasSideEffects(
-        Ctx, IncludePossibleEffects);
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(

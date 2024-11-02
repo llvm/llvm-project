@@ -479,14 +479,6 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
       return false;
   }();
 
-  // Currently only supported for small code model.
-  if (TOCDataGloballyinEffect &&
-      (Args.getLastArgValue(options::OPT_mcmodel_EQ) == "large" ||
-       Args.getLastArgValue(options::OPT_mcmodel_EQ) == "medium")) {
-    D.Diag(clang::diag::warn_drv_unsupported_tocdata);
-    return;
-  }
-
   enum TOCDataSetting {
     AddressInTOC = 0, // Address of the symbol stored in the TOC.
     DataInTOC = 1     // Symbol defined in the TOC.

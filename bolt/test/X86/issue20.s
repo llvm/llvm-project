@@ -1,6 +1,6 @@
-# This reproduces issue 20 from our github repo
-#  "BOLT crashes when removing unreachable BBs that are a target
-#   in a JT"
+## This reproduces issue 20 from our github repo
+## "BOLT crashes when removing unreachable BBs that are a target
+##   in a JT"
 
 # REQUIRES: system-linux
 

@@ -10,4 +10,4 @@
 // as InstructionSelector RegClass checking code relies on them
 
 def TYPERegBank : RegisterBank<"TYPEBank", [TYPE]>;
-def IDRegBank : RegisterBank<"IDBank", [ID, fID, pID32, pID64, vID, vfID, vpID32, vpID64]>;
+def IDRegBank : RegisterBank<"IDBank", [ID, ID64, fID, fID64, pID32, pID64, vID, vfID, vpID32, vpID64]>;

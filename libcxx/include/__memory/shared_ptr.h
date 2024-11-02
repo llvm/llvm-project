@@ -403,6 +403,9 @@ struct __shared_ptr_deleter_ctor_reqs {
                             __well_formed_deleter<_Dp, _Yp*>::value;
 };
 
+template <class _Dp, class _Tp>
+using __shared_ptr_nullptr_deleter_ctor_reqs = _And<is_move_constructible<_Dp>, __well_formed_deleter<_Dp, nullptr_t> >;
+
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
@@ -498,7 +501,7 @@ public:
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
   }
 
-  template <class _Dp>
+  template <class _Dp, __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp, _Tp>::value, int> = 0 >
   _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t __p, _Dp __d) : __ptr_(nullptr) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
@@ -518,7 +521,7 @@ public:
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
   }
 
-  template <class _Dp, class _Alloc>
+  template <class _Dp, class _Alloc, __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp, _Tp>::value, int> = 0 >
   _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a) : __ptr_(nullptr) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
@@ -1580,15 +1583,13 @@ private:
 
 _LIBCPP_EXPORTED_FROM_ABI __sp_mut& __get_sp_mut(const void*);
 
-#  if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
-
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const shared_ptr<_Tp>*) {
+inline _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const shared_ptr<_Tp>*) {
   return false;
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load(const shared_ptr<_Tp>* __p) {
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load(const shared_ptr<_Tp>* __p) {
   __sp_mut& __m = std::__get_sp_mut(__p);
   __m.lock();
   shared_ptr<_Tp> __q = *__p;
@@ -1597,13 +1598,12 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load(co
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
-atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order) {
+inline _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order) {
   return std::atomic_load(__p);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
+_LIBCPP_HIDE_FROM_ABI void atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
   __sp_mut& __m = std::__get_sp_mut(__p);
   __m.lock();
   __p->swap(__r);
@@ -1611,14 +1611,12 @@ _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void atomic_store(shared_ptr<_
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
-atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order) {
+inline _LIBCPP_HIDE_FROM_ABI void atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order) {
   std::atomic_store(__p, __r);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
-atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
   __sp_mut& __m = std::__get_sp_mut(__p);
   __m.lock();
   __p->swap(__r);
@@ -1627,13 +1625,13 @@ atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r) {
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
+inline _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_exchange_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order) {
   return std::atomic_exchange(__p, __r);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+_LIBCPP_HIDE_FROM_ABI bool
 atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w) {
   shared_ptr<_Tp> __temp;
   __sp_mut& __m = std::__get_sp_mut(__p);
@@ -1651,24 +1649,22 @@ atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, share
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI bool
 atomic_compare_exchange_weak(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w) {
   return std::atomic_compare_exchange_strong(__p, __v, __w);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_strong_explicit(
+inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_strong_explicit(
     shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w, memory_order, memory_order) {
   return std::atomic_compare_exchange_strong(__p, __v, __w);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
+inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
     shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w, memory_order, memory_order) {
   return std::atomic_compare_exchange_weak(__p, __v, __w);
 }
-
-#  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS)
 
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)
 

@@ -241,6 +241,8 @@ public:
 
   bool shouldFoldTerminatingConditionAfterLSR() const { return false; }
 
+  bool shouldDropLSRSolutionIfLessProfitable() const { return false; }
+
   bool isProfitableLSRChainElement(Instruction *I) const { return false; }
 
   bool canMacroFuseCmp() const { return false; }

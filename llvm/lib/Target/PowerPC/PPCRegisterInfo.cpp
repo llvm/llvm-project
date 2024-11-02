@@ -1695,7 +1695,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // transform it to the prefixed version so we don't have to use the XForm.
   if ((OpC == PPC::LXVP || OpC == PPC::STXVP) &&
       (!isInt<16>(Offset) || (Offset % offsetMinAlign(MI)) != 0) &&
-      Subtarget.hasPrefixInstrs()) {
+      Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
     unsigned NewOpc = OpC == PPC::LXVP ? PPC::PLXVP : PPC::PSTXVP;
     MI.setDesc(TII.get(NewOpc));
     OpC = NewOpc;

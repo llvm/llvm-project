@@ -1588,6 +1588,14 @@ public:
   static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
                                        BasicBlock::iterator InsertPt);
 
+  /// Return the convergence control token for this call, if it exists.
+  Value *getConvergenceControlToken() const {
+    if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {
+      return Bundle->Inputs[0].get();
+    }
+    return nullptr;
+  }
+
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||
            I->getOpcode() == Instruction::Invoke ||
@@ -2118,6 +2126,15 @@ public:
 
   MaybeAlign getParamStackAlign(unsigned ArgNo) const {
     return Attrs.getParamStackAlignment(ArgNo);
+  }
+
+  /// Extract the byref type for a call or parameter.
+  Type *getParamByRefType(unsigned ArgNo) const {
+    if (auto *Ty = Attrs.getParamByRefType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamByRefType(ArgNo);
+    return nullptr;
   }
 
   /// Extract the byval type for a call or parameter.

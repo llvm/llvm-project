@@ -159,29 +159,6 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.writer
 )
 
-list(APPEND printf_deps
-      libc.src.__support.arg_list
-      libc.src.stdio.printf_core.vfprintf_internal
-)
-
-if(LLVM_LIBC_FULL_BUILD)
-  list(APPEND printf_deps
-      libc.src.__support.File.file
-      libc.src.__support.File.platform_file
-      libc.src.__support.File.platform_stdout
-  )
-endif()
-
-add_entrypoint_object(
-  printf
-  SRCS
-    printf.cpp
-  HDRS
-    printf.h
-  DEPENDS
-    ${printf_deps}
-)
-
 add_entrypoint_object(
   fprintf
   SRCS
@@ -213,16 +190,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
-)
-
-add_entrypoint_object(
-  vprintf
-  SRCS
-    vprintf.cpp
-  HDRS
-    vprintf.h
-  DEPENDS
-    ${printf_deps}
 )
 
 add_entrypoint_object(
@@ -286,6 +253,7 @@ add_stdio_entrypoint_object(fwrite)
 add_stdio_entrypoint_object(fputc)
 add_stdio_entrypoint_object(putc)
 add_stdio_entrypoint_object(putchar)
+add_stdio_entrypoint_object(printf)
 add_stdio_entrypoint_object(fgetc)
 add_stdio_entrypoint_object(fgetc_unlocked)
 add_stdio_entrypoint_object(getc)
@@ -297,3 +265,4 @@ add_stdio_entrypoint_object(ungetc)
 add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)
+add_stdio_entrypoint_object(vprintf)

@@ -7,7 +7,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-types %t.bolt | FileCheck --check-prefix=POSTCHECKTU %s
 
-# Check BOLT handles DWARF4 with fdebug-types, and DWARF5 without.
+## Check BOLT handles DWARF4 with fdebug-types, and DWARF5 without.
 
 # POSTCHECK: version = 0x0004
 # POSTCHECK: DW_TAG_compile_unit

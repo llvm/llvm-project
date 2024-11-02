@@ -2031,50 +2031,57 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
                                                     MachineInstr &MI,
                                                     const DebugLoc &DL) const {
   MachineFunction *MF = MBB.getParent();
-  MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
-  MachineBasicBlock *HaltLoop = MF->CreateMachineBasicBlock();
-  MF->push_back(HaltLoop);
-
   constexpr unsigned DoorbellIDMask = 0x3ff;
   constexpr unsigned ECQueueWaveAbort = 0x400;
 
+  MachineBasicBlock *TrapBB = &MBB;
+  MachineBasicBlock *ContBB = &MBB;
+  MachineBasicBlock *HaltLoopBB = MF->CreateMachineBasicBlock();
+
+  if (!MBB.succ_empty() || std::next(MI.getIterator()) != MBB.end()) {
+    ContBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
+    TrapBB = MF->CreateMachineBasicBlock();
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(TrapBB);
+    MF->push_back(TrapBB);
+    MBB.addSuccessor(TrapBB);
+  }
+
   // Start with a `s_trap 2`, if we're in PRIV=1 and we need the workaround this
   // will be a nop.
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_TRAP))
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_TRAP))
       .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   Register DoorbellReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_SENDMSG_RTN_B32), DoorbellReg)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_SENDMSG_RTN_B32),
+          DoorbellReg)
       .addImm(AMDGPU::SendMsg::ID_RTN_GET_DOORBELL);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::TTMP2)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::TTMP2)
       .addUse(AMDGPU::M0);
   Register DoorbellRegMasked =
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_AND_B32), DoorbellRegMasked)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_AND_B32), DoorbellRegMasked)
       .addUse(DoorbellReg)
       .addImm(DoorbellIDMask);
   Register SetWaveAbortBit =
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
       .addUse(DoorbellRegMasked)
       .addImm(ECQueueWaveAbort);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(SetWaveAbortBit);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_SENDMSG))
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_SENDMSG))
       .addImm(AMDGPU::SendMsg::ID_INTERRUPT);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(AMDGPU::TTMP2);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoop);
+  BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoopBB);
+  TrapBB->addSuccessor(HaltLoopBB);
 
-  BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_SETHALT)).addImm(5);
-  BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_BRANCH))
-      .addMBB(HaltLoop);
+  BuildMI(*HaltLoopBB, HaltLoopBB->end(), DL, get(AMDGPU::S_SETHALT)).addImm(5);
+  BuildMI(*HaltLoopBB, HaltLoopBB->end(), DL, get(AMDGPU::S_BRANCH))
+      .addMBB(HaltLoopBB);
+  MF->push_back(HaltLoopBB);
+  HaltLoopBB->addSuccessor(HaltLoopBB);
 
-  if (SplitBB != &MBB)
-    MBB.removeSuccessor(SplitBB);
-  MBB.addSuccessor(HaltLoop);
-  HaltLoop->addSuccessor(HaltLoop);
-
-  return SplitBB;
+  return ContBB;
 }
 
 unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
@@ -4479,45 +4486,45 @@ static void copyFlagsToImplicitVCC(MachineInstr &MI,
 MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
                                            unsigned Op32) const {
   MachineBasicBlock *MBB = MI.getParent();
+
+  const MCInstrDesc &Op32Desc = get(Op32);
   MachineInstrBuilder Inst32 =
-    BuildMI(*MBB, MI, MI.getDebugLoc(), get(Op32))
+    BuildMI(*MBB, MI, MI.getDebugLoc(), Op32Desc)
     .setMIFlags(MI.getFlags());
 
   // Add the dst operand if the 32-bit encoding also has an explicit $vdst.
   // For VOPC instructions, this is replaced by an implicit def of vcc.
-  if (AMDGPU::hasNamedOperand(Op32, AMDGPU::OpName::vdst)) {
-    // dst
-    Inst32.add(MI.getOperand(0));
-  } else if (AMDGPU::hasNamedOperand(Op32, AMDGPU::OpName::sdst)) {
-    // VOPCX instructions won't be writing to an explicit dst, so this should
-    // not fail for these instructions.
-    assert(((MI.getOperand(0).getReg() == AMDGPU::VCC) ||
-            (MI.getOperand(0).getReg() == AMDGPU::VCC_LO)) &&
-           "Unexpected case");
-  }
 
-  Inst32.add(*getNamedOperand(MI, AMDGPU::OpName::src0));
-
-  const MachineOperand *Src1 = getNamedOperand(MI, AMDGPU::OpName::src1);
-  if (Src1)
-    Inst32.add(*Src1);
+  // We assume the defs of the shrunk opcode are in the same order, and the
+  // shrunk opcode loses the last def (SGPR def, in the VOP3->VOPC case).
+  for (int I = 0, E = Op32Desc.getNumDefs(); I != E; ++I)
+    Inst32.add(MI.getOperand(I));
 
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
 
-  if (Src2) {
-    int Op32Src2Idx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2);
-    if (Op32Src2Idx != -1) {
-      Inst32.add(*Src2);
-    } else {
-      // In the case of V_CNDMASK_B32_e32, the explicit operand src2 is
-      // replaced with an implicit read of vcc or vcc_lo. The implicit read
-      // of vcc was already added during the initial BuildMI, but we
-      // 1) may need to change vcc to vcc_lo to preserve the original register
-      // 2) have to preserve the original flags.
-      fixImplicitOperands(*Inst32);
-      copyFlagsToImplicitVCC(*Inst32, *Src2);
+  int Idx = MI.getNumExplicitDefs();
+  for (const MachineOperand &Use : MI.explicit_uses()) {
+    int OpTy = MI.getDesc().operands()[Idx++].OperandType;
+    if (OpTy == AMDGPU::OPERAND_INPUT_MODS || OpTy == MCOI::OPERAND_IMMEDIATE)
+      continue;
+
+    if (&Use == Src2) {
+      if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2) == -1) {
+        // In the case of V_CNDMASK_B32_e32, the explicit operand src2 is
+        // replaced with an implicit read of vcc or vcc_lo. The implicit read
+        // of vcc was already added during the initial BuildMI, but we
+        // 1) may need to change vcc to vcc_lo to preserve the original register
+        // 2) have to preserve the original flags.
+        fixImplicitOperands(*Inst32);
+        copyFlagsToImplicitVCC(*Inst32, *Src2);
+        continue;
+      }
     }
+
+    Inst32.add(Use);
   }
+
+  // FIXME: Losing implicit operands
 
   return Inst32;
 }
@@ -6430,8 +6437,13 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
 
   // Save SCC. Waterfall Loop may overwrite SCC.
   Register SaveSCCReg;
-  bool SCCNotDead = (MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI, 30) !=
-                     MachineBasicBlock::LQR_Dead);
+
+  // FIXME: We should maintain SCC liveness while doing the FixSGPRCopies walk
+  // rather than unlimited scan everywhere
+  bool SCCNotDead =
+      MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI,
+                                  std::numeric_limits<unsigned>::max()) !=
+      MachineBasicBlock::LQR_Dead;
   if (SCCNotDead) {
     SaveSCCReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(MBB, Begin, DL, TII.get(AMDGPU::S_CSELECT_B32), SaveSCCReg)

@@ -822,8 +822,8 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TID_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], ptr [[TID_ADDR_LOCAL]], align 4
 // CHECK3-NEXT:    [[TID:%.*]] = load i32, ptr [[TID_ADDR_LOCAL]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i64, ptr [[LOADGEP__RELOADED]], align 8
 // CHECK3-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i64, ptr [[LOADGEP__RELOADED]], align 8
 // CHECK3-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK3:       omp.par.region:
 // CHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LOADGEP_ARGC_ADDR]], align 8
@@ -966,8 +966,8 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TID_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP1]], ptr [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    [[TID:%.*]] = load i32, ptr [[TID_ADDR_LOCAL]], align 4
-// CHECK4-NEXT:    [[TMP2:%.*]] = load i64, ptr [[LOADGEP__RELOADED]], align 8
 // CHECK4-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
+// CHECK4-NEXT:    [[TMP2:%.*]] = load i64, ptr [[LOADGEP__RELOADED]], align 8
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LOADGEP_ARGC_ADDR]], align 8, !dbg [[DBG58:![0-9]+]]

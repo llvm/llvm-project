@@ -146,13 +146,17 @@ end
 ! CHECK:           %[[VAL_4:.*]] = omp.threadprivate %[[VAL_3]]#1 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFcombined_parallel_worksharing_loopEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_6:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:             %[[VAL_8:.*]] = omp.threadprivate %[[VAL_3]]#1 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:             %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFcombined_parallel_worksharing_loopEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_10]] to %[[VAL_9]]#0 temporary_lhs : i32, !fir.ref<i32>
+
 ! CHECK:             omp.barrier
+
+! CHECK:             %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
+! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
@@ -280,7 +284,6 @@ subroutine common_1()
   !$omp end parallel sections
 end subroutine
 
-
 ! CHECK-LABEL:   func.func @_QPcommon_2() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcommon_2Ei"}
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -302,8 +305,7 @@ end subroutine
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_19:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-! CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:             %[[VAL_21:.*]] = omp.threadprivate %[[VAL_2]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
 ! CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:             %[[VAL_23:.*]] = arith.constant 0 : index
@@ -320,6 +322,10 @@ end subroutine
 ! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_18]]#0 : !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_31]]#0 temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
+
+! CHECK:             %[[VAL_19:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
+! CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 ! CHECK:             %[[VAL_34:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_35:.*]] = fir.load %[[VAL_26]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_36:.*]] = arith.constant 1 : i32

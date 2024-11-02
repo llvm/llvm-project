@@ -1242,13 +1242,13 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
   // variable in place of the product; the affine expression
   // corresponding to the quantifier is added to `localExprs`.
   if (!isa<AffineConstantExpr>(expr.getRHS())) {
+    SmallVector<int64_t, 8> mulLhs(lhs);
     MLIRContext *context = expr.getContext();
     AffineExpr a = getAffineExprFromFlatForm(lhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
-    addLocalVariableSemiAffine(a * b, lhs, lhs.size());
-    return success();
+    return addLocalVariableSemiAffine(mulLhs, rhs, a * b, lhs, lhs.size());
   }
 
   // Get the RHS constant.
@@ -1295,13 +1295,13 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
   // variable in place of the modulo value, and the affine expression
   // corresponding to the quantifier is added to `localExprs`.
   if (!isa<AffineConstantExpr>(expr.getRHS())) {
+    SmallVector<int64_t, 8> modLhs(lhs);
     AffineExpr dividendExpr = getAffineExprFromFlatForm(
         lhs, numDims, numSymbols, localExprs, context);
     AffineExpr divisorExpr = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                                        localExprs, context);
     AffineExpr modExpr = dividendExpr % divisorExpr;
-    addLocalVariableSemiAffine(modExpr, lhs, lhs.size());
-    return success();
+    return addLocalVariableSemiAffine(modLhs, rhs, modExpr, lhs, lhs.size());
   }
 
   int64_t rhsConst = rhs[getConstantIndex()];
@@ -1385,19 +1385,22 @@ SimpleAffineExprFlattener::visitConstantExpr(AffineConstantExpr expr) {
   return success();
 }
 
-void SimpleAffineExprFlattener::addLocalVariableSemiAffine(
-    AffineExpr expr, SmallVectorImpl<int64_t> &result,
-    unsigned long resultSize) {
+LogicalResult SimpleAffineExprFlattener::addLocalVariableSemiAffine(
+    ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs, AffineExpr localExpr,
+    SmallVectorImpl<int64_t> &result, unsigned long resultSize) {
   assert(result.size() == resultSize &&
          "`result` vector passed is not of correct size");
   int loc;
-  if ((loc = findLocalId(expr)) == -1)
-    addLocalIdSemiAffine(expr);
+  if ((loc = findLocalId(localExpr)) == -1) {
+    if (failed(addLocalIdSemiAffine(lhs, rhs, localExpr)))
+      return failure();
+  }
   std::fill(result.begin(), result.end(), 0);
   if (loc == -1)
     result[getLocalVarStartIndex() + numLocals - 1] = 1;
   else
     result[getLocalVarStartIndex() + loc] = 1;
+  return success();
 }
 
 // t = expr floordiv c   <=> t = q, c * q <= expr <= c * q + c - 1
@@ -1426,13 +1429,13 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   // variable in place of the quotient, and the affine expression corresponding
   // to the quantifier is added to `localExprs`.
   if (!isa<AffineConstantExpr>(expr.getRHS())) {
+    SmallVector<int64_t, 8> divLhs(lhs);
     AffineExpr a = getAffineExprFromFlatForm(lhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr divExpr = isCeil ? a.ceilDiv(b) : a.floorDiv(b);
-    addLocalVariableSemiAffine(divExpr, lhs, lhs.size());
-    return success();
+    return addLocalVariableSemiAffine(divLhs, rhs, divExpr, lhs, lhs.size());
   }
 
   // This is a pure affine expr; the RHS is a positive constant.
@@ -1503,11 +1506,14 @@ void SimpleAffineExprFlattener::addLocalFloorDivId(ArrayRef<int64_t> dividend,
   // dividend and divisor are not used here; an override of this method uses it.
 }
 
-void SimpleAffineExprFlattener::addLocalIdSemiAffine(AffineExpr localExpr) {
+LogicalResult SimpleAffineExprFlattener::addLocalIdSemiAffine(
+    ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs, AffineExpr localExpr) {
   for (SmallVector<int64_t, 8> &subExpr : operandExprStack)
     subExpr.insert(subExpr.begin() + getLocalVarStartIndex() + numLocals, 0);
   localExprs.push_back(localExpr);
   ++numLocals;
+  // lhs and rhs are not used here; an override of this method uses them.
+  return success();
 }
 
 int SimpleAffineExprFlattener::findLocalId(AffineExpr localExpr) {

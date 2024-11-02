@@ -4,7 +4,7 @@
 
 ---
 
-# GCN-label: name: vop3
+# GCN-LABEL: name: vop3
 # GCN: %6:vgpr_32, %7:sreg_32_xm0_xexec = V_SUBBREV_U32_e64_dpp %3, %0, %1, %5, 1, 1, 15, 15, 1, implicit $exec
 # GCN: %8:vgpr_32 = V_CVT_PK_U8_F32_e64_dpp %3, 4, %0, 2, %2, 2, %1, 1, 1, 15, 15, 1, implicit $mode, implicit $exec
 # GCN: %10:vgpr_32 = V_MED3_F32_e64 0, %9, 0, %0, 0, 12345678, 0, 0, implicit $mode, implicit $exec
@@ -37,7 +37,7 @@ body:             |
 ...
 ---
 
-# GCN-label: name: vop3_sgpr_src1
+# GCN-LABEL: name: vop3_sgpr_src1
 # GCN: %6:vgpr_32 = V_MED3_F32_e64_dpp %4, 0, %0, 0, %1, 0, %2, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
 # GFX1100: %8:vgpr_32 = V_MED3_F32_e64 0, %7, 0, %2, 0, %1, 0, 0, implicit $mode, implicit $exec
 # GFX1150: %8:vgpr_32 = V_MED3_F32_e64_dpp %4, 0, %0, 0, %2, 0, %1, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
@@ -81,7 +81,7 @@ body:             |
 ---
 
 # Regression test for src_modifiers on base u16 opcode
-# GCN-label: name: vop3_u16
+# GCN-LABEL: name: vop3_u16
 # GCN: %5:vgpr_32 = V_ADD_NC_U16_e64_dpp %3, 0, %1, 0, %3, 0, 0, 1, 15, 15, 1, implicit $exec
 # GCN: %7:vgpr_32 = V_ADD_NC_U16_e64_dpp %3, 1, %5, 2, %5, 0, 0, 1, 15, 15, 1, implicit $exec
 # GCN: %9:vgpr_32 = V_ADD_NC_U16_e64 4, %8, 8, %7, 0, 0, implicit $exec
@@ -205,7 +205,7 @@ body:             |
 ...
 
 # do not combine, dpp arg used twice
-# GCN-label: name: dpp_arg_twice
+# GCN-LABEL: name: dpp_arg_twice
 # GCN: %4:vgpr_32 = V_FMA_F32_e64 1, %1, 2, %3, 2, %3, 1, 2, implicit $mode, implicit $exec
 # GCN: %6:vgpr_32 = V_FMA_F32_e64 2, %5, 2, %1, 2, %5, 1, 2, implicit $mode, implicit $exec
 # GCN: %8:vgpr_32 = V_FMA_F32_e64 2, %7, 2, %7, 2, %1, 1, 2, implicit $mode, implicit $exec
@@ -231,7 +231,7 @@ body:             |
 ...
 
 # when the dpp source isn't a src0 operand the operation should be commuted if possible
-# GCN-label: name: dpp_commute_e64
+# GCN-LABEL: name: dpp_commute_e64
 # GCN: %4:vgpr_32  = V_MUL_U32_U24_e64_dpp %1, %0, %1, 1, 1, 14, 15, 0, implicit $exec
 # GCN: %7:vgpr_32 = V_FMA_F32_e64_dpp %5, 2, %0, 1, %1, 2, %1, 1, 2, 1, 15, 15, 1, implicit $mode, implicit $exec
 # GCN: %10:vgpr_32 = V_SUBREV_U32_e64_dpp %1, %0, %1, 1, 1, 14, 15, 0, implicit $exec

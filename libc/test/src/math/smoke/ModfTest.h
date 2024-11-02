@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -83,10 +84,12 @@ public:
   }
 
   void testRange(ModfFunc func) {
-    constexpr StorageType COUNT = 100'000;
-    constexpr StorageType STEP = STORAGE_MAX / COUNT;
-    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      FPBits x_bits = FPBits(v);
+    constexpr int COUNT = 100'000;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0;
+    for (int i = 0; i <= COUNT; ++i, v += STEP) {
+      FPBits x_bits(v);
       if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
 

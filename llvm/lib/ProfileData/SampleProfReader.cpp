@@ -1822,9 +1822,9 @@ setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
 ///
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReader>>
-SampleProfileReader::create(const std::string Filename, LLVMContext &C,
+SampleProfileReader::create(StringRef Filename, LLVMContext &C,
                             vfs::FileSystem &FS, FSDiscriminatorPass P,
-                            const std::string RemapFilename) {
+                            StringRef RemapFilename) {
   auto BufferOrError = setupMemoryBuffer(Filename, FS);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
@@ -1842,7 +1842,7 @@ SampleProfileReader::create(const std::string Filename, LLVMContext &C,
 ///
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
-SampleProfileReaderItaniumRemapper::create(const std::string Filename,
+SampleProfileReaderItaniumRemapper::create(StringRef Filename,
                                            vfs::FileSystem &FS,
                                            SampleProfileReader &Reader,
                                            LLVMContext &C) {
@@ -1895,7 +1895,7 @@ SampleProfileReaderItaniumRemapper::create(std::unique_ptr<MemoryBuffer> &B,
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
                             vfs::FileSystem &FS, FSDiscriminatorPass P,
-                            const std::string RemapFilename) {
+                            StringRef RemapFilename) {
   std::unique_ptr<SampleProfileReader> Reader;
   if (SampleProfileReaderRawBinary::hasFormat(*B))
     Reader.reset(new SampleProfileReaderRawBinary(std::move(B), C));

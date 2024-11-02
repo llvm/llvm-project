@@ -1,4 +1,4 @@
-# Check that tail calls can be 2 bytes in the output binary.
+## Check that tail calls can be 2 bytes in the output binary.
 
 RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-unknown -o %t.o \
 RUN:   %S/Inputs/relaxed_tc.s

@@ -36,6 +36,9 @@ syn keyword llvmStatement sle slt srem store sub switch trunc udiv ueq uge ugt
 syn keyword llvmStatement uitofp ule ult umax umin une uno unreachable unwind
 syn keyword llvmStatement urem va_arg xchg xor zext
 
+" Debug records.
+syn match llvmStatement /\v#dbg_(assign|declare|label|value)/
+
 " Keywords.
 syn keyword llvmKeyword
       \ acq_rel
@@ -150,6 +153,7 @@ syn keyword llvmKeyword
       \ preallocated
       \ private
       \ protected
+      \ ptrauth
       \ ptx_device
       \ ptx_kernel
       \ readnone

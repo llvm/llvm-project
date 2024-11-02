@@ -125,6 +125,12 @@ public:
 
   void emitSled(const MachineInstr &MI, SledKind Kind);
 
+  // Emit the sequence for BLRA (authenticate + branch).
+  void emitPtrauthBranch(const MachineInstr *MI);
+  // Emit the sequence to compute a discriminator into x17, or reuse AddrDisc.
+  unsigned emitPtrauthDiscriminator(uint16_t Disc, unsigned AddrDisc,
+                                    unsigned &InstsEmitted);
+
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
@@ -1161,52 +1167,45 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     TS->emitDirectiveVariantPCS(CurrentFnSym);
   }
 
+  AsmPrinter::emitFunctionEntryLabel();
+
   if (TM.getTargetTriple().isWindowsArm64EC() &&
       !MF->getFunction().hasLocalLinkage()) {
     // For ARM64EC targets, a function definition's name is mangled differently
-    // from the normal symbol. We emit the alias from the unmangled symbol to
-    // mangled symbol name here.
-    if (MDNode *Unmangled =
-            MF->getFunction().getMetadata("arm64ec_unmangled_name")) {
-      AsmPrinter::emitFunctionEntryLabel();
+    // from the normal symbol, emit required aliases here.
+    auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
+      OutStreamer->emitSymbolAttribute(Src, MCSA_WeakAntiDep);
+      OutStreamer->emitAssignment(
+          Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_None,
+                                       MMI->getContext()));
+    };
 
-      if (MDNode *ECMangled =
-              MF->getFunction().getMetadata("arm64ec_ecmangled_name")) {
-        StringRef UnmangledStr =
-            cast<MDString>(Unmangled->getOperand(0))->getString();
-        MCSymbol *UnmangledSym =
-            MMI->getContext().getOrCreateSymbol(UnmangledStr);
-        StringRef ECMangledStr =
-            cast<MDString>(ECMangled->getOperand(0))->getString();
-        MCSymbol *ECMangledSym =
-            MMI->getContext().getOrCreateSymbol(ECMangledStr);
-        OutStreamer->emitSymbolAttribute(UnmangledSym, MCSA_WeakAntiDep);
-        OutStreamer->emitAssignment(
-            UnmangledSym,
-            MCSymbolRefExpr::create(ECMangledSym, MCSymbolRefExpr::VK_WEAKREF,
-                                    MMI->getContext()));
-        OutStreamer->emitSymbolAttribute(ECMangledSym, MCSA_WeakAntiDep);
-        OutStreamer->emitAssignment(
-            ECMangledSym,
-            MCSymbolRefExpr::create(CurrentFnSym, MCSymbolRefExpr::VK_WEAKREF,
-                                    MMI->getContext()));
-        return;
+    auto getSymbolFromMetadata = [&](StringRef Name) {
+      MCSymbol *Sym = nullptr;
+      if (MDNode *Node = MF->getFunction().getMetadata(Name)) {
+        StringRef NameStr = cast<MDString>(Node->getOperand(0))->getString();
+        Sym = MMI->getContext().getOrCreateSymbol(NameStr);
+      }
+      return Sym;
+    };
+
+    if (MCSymbol *UnmangledSym =
+            getSymbolFromMetadata("arm64ec_unmangled_name")) {
+      MCSymbol *ECMangledSym = getSymbolFromMetadata("arm64ec_ecmangled_name");
+
+      if (ECMangledSym) {
+        // An external function, emit the alias from the unmangled symbol to
+        // mangled symbol name and the alias from the mangled symbol to guest
+        // exit thunk.
+        emitFunctionAlias(UnmangledSym, ECMangledSym);
+        emitFunctionAlias(ECMangledSym, CurrentFnSym);
       } else {
-        StringRef UnmangledStr =
-            cast<MDString>(Unmangled->getOperand(0))->getString();
-        MCSymbol *UnmangledSym =
-            MMI->getContext().getOrCreateSymbol(UnmangledStr);
-        OutStreamer->emitSymbolAttribute(UnmangledSym, MCSA_WeakAntiDep);
-        OutStreamer->emitAssignment(
-            UnmangledSym,
-            MCSymbolRefExpr::create(CurrentFnSym, MCSymbolRefExpr::VK_WEAKREF,
-                                    MMI->getContext()));
-        return;
+        // A function implementation, emit the alias from the unmangled symbol
+        // to mangled symbol name.
+        emitFunctionAlias(UnmangledSym, CurrentFnSym);
       }
     }
   }
-
-  return AsmPrinter::emitFunctionEntryLabel();
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
@@ -1504,6 +1503,78 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   }
 }
 
+unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
+                                                     unsigned AddrDisc,
+                                                     unsigned &InstsEmitted) {
+  // So far we've used NoRegister in pseudos.  Now we need real encodings.
+  if (AddrDisc == AArch64::NoRegister)
+    AddrDisc = AArch64::XZR;
+
+  // If there is no constant discriminator, there's no blend involved:
+  // just use the address discriminator register as-is (XZR or not).
+  if (!Disc)
+    return AddrDisc;
+
+  // If there's only a constant discriminator, MOV it into x17.
+  if (AddrDisc == AArch64::XZR) {
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVZXi)
+                                     .addReg(AArch64::X17)
+                                     .addImm(Disc)
+                                     .addImm(/*shift=*/0));
+    ++InstsEmitted;
+    return AArch64::X17;
+  }
+
+  // If there are both, emit a blend into x17.
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
+                                   .addReg(AArch64::X17)
+                                   .addReg(AArch64::XZR)
+                                   .addReg(AddrDisc)
+                                   .addImm(0));
+  ++InstsEmitted;
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKXi)
+                                   .addReg(AArch64::X17)
+                                   .addReg(AArch64::X17)
+                                   .addImm(Disc)
+                                   .addImm(/*shift=*/48));
+  ++InstsEmitted;
+  return AArch64::X17;
+}
+
+void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
+  unsigned InstsEmitted = 0;
+  unsigned BrTarget = MI->getOperand(0).getReg();
+
+  auto Key = (AArch64PACKey::ID)MI->getOperand(1).getImm();
+  assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
+         "Invalid auth call key");
+
+  uint64_t Disc = MI->getOperand(2).getImm();
+  assert(isUInt<16>(Disc));
+
+  unsigned AddrDisc = MI->getOperand(3).getReg();
+
+  // Compute discriminator into x17
+  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, InstsEmitted);
+  bool IsZeroDisc = DiscReg == AArch64::XZR;
+
+  unsigned Opc;
+  if (Key == AArch64PACKey::IA)
+    Opc = IsZeroDisc ? AArch64::BLRAAZ : AArch64::BLRAA;
+  else
+    Opc = IsZeroDisc ? AArch64::BLRABZ : AArch64::BLRAB;
+
+  MCInst BRInst;
+  BRInst.setOpcode(Opc);
+  BRInst.addOperand(MCOperand::createReg(BrTarget));
+  if (!IsZeroDisc)
+    BRInst.addOperand(MCOperand::createReg(DiscReg));
+  EmitToStreamer(*OutStreamer, BRInst);
+  ++InstsEmitted;
+
+  assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -1639,9 +1710,63 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
+  case AArch64::BLRA:
+    emitPtrauthBranch(MI);
+    return;
+
   // Tail calls use pseudo instructions so they have the proper code-gen
   // attributes (isCall, isReturn, etc.). We lower them to the real
   // instruction here.
+  case AArch64::AUTH_TCRETURN:
+  case AArch64::AUTH_TCRETURN_BTI: {
+    const uint64_t Key = MI->getOperand(2).getImm();
+    assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
+           "Invalid auth key for tail-call return");
+
+    const uint64_t Disc = MI->getOperand(3).getImm();
+    assert(isUInt<16>(Disc) && "Integer discriminator is too wide");
+
+    Register AddrDisc = MI->getOperand(4).getReg();
+
+    Register ScratchReg = MI->getOperand(0).getReg() == AArch64::X16
+                              ? AArch64::X17
+                              : AArch64::X16;
+
+    unsigned DiscReg = AddrDisc;
+    if (Disc) {
+      if (AddrDisc != AArch64::NoRegister) {
+        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
+                                         .addReg(ScratchReg)
+                                         .addReg(AArch64::XZR)
+                                         .addReg(AddrDisc)
+                                         .addImm(0));
+        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKXi)
+                                         .addReg(ScratchReg)
+                                         .addReg(ScratchReg)
+                                         .addImm(Disc)
+                                         .addImm(/*shift=*/48));
+      } else {
+        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVZXi)
+                                         .addReg(ScratchReg)
+                                         .addImm(Disc)
+                                         .addImm(/*shift=*/0));
+      }
+      DiscReg = ScratchReg;
+    }
+
+    const bool IsZero = DiscReg == AArch64::NoRegister;
+    const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
+                                    {AArch64::BRAB, AArch64::BRABZ}};
+
+    MCInst TmpInst;
+    TmpInst.setOpcode(Opcodes[Key][IsZero]);
+    TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+    if (!IsZero)
+      TmpInst.addOperand(MCOperand::createReg(DiscReg));
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
+
   case AArch64::TCRETURNri:
   case AArch64::TCRETURNrix16x17:
   case AArch64::TCRETURNrix17:

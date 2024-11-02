@@ -1520,7 +1520,8 @@ bool NumericLiteralParser::GetIntegerValue(llvm::APInt &Val) {
 }
 
 llvm::APFloat::opStatus
-NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
+NumericLiteralParser::GetFloatValue(llvm::APFloat &Result,
+                                    llvm::RoundingMode RM) {
   using llvm::APFloat;
 
   unsigned n = std::min(SuffixBegin - ThisTokBegin, ThisTokEnd - ThisTokBegin);
@@ -1534,8 +1535,7 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
     Str = Buffer;
   }
 
-  auto StatusOrErr =
-      Result.convertFromString(Str, APFloat::rmNearestTiesToEven);
+  auto StatusOrErr = Result.convertFromString(Str, RM);
   assert(StatusOrErr && "Invalid floating point representation");
   return !errorToBool(StatusOrErr.takeError()) ? *StatusOrErr
                                                : APFloat::opInvalidOp;

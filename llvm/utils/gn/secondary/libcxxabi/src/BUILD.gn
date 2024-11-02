@@ -116,7 +116,7 @@ if (libcxxabi_enable_static) {
     if (libcxxabi_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
       if (libcxxabi_enable_new_delete_definitions) {
-        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
+        cflags_cc = [ "-fvisibility-global-new-delete=force-hidden" ]
       }
       defines = [
         "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",

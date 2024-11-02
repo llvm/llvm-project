@@ -983,10 +983,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       append_range(srcUseList, U->users());
       continue;
     }
-    if (const auto *G = dyn_cast<GetElementPtrInst>(U)) {
-      if (!G->hasAllZeroIndices())
-        return false;
-
+    if (const auto *G = dyn_cast<GetElementPtrInst>(U);
+        G && G->hasAllZeroIndices()) {
       append_range(srcUseList, U->users());
       continue;
     }
@@ -994,8 +992,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       if (IT->isLifetimeStartOrEnd())
         continue;
 
-    if (U != C && U != cpyLoad)
+    if (U != C && U != cpyLoad) {
+      LLVM_DEBUG(dbgs() << "Call slot: Source accessed by " << *U << "\n");
       return false;
+    }
   }
 
   // Check whether src is captured by the called function, in which case there

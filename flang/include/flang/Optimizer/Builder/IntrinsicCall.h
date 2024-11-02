@@ -222,6 +222,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genExit(llvm::ArrayRef<fir::ExtendedValue>);
   void genExecuteCommandLine(mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genEtime(std::optional<mlir::Type>,
+                              mlir::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genExtendsTypeOf(mlir::Type,
                                       llvm::ArrayRef<fir::ExtendedValue>);
@@ -230,6 +232,8 @@ struct IntrinsicLibrary {
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genGetCwd(std::optional<mlir::Type> resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genGetPID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
@@ -269,8 +273,9 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeSupportFlagOrHalting(mlir::Type,
-                                          llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue
+      genIeeeSupportFlagOrHalting(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeSupportRounding(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -323,6 +328,8 @@ struct IntrinsicLibrary {
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReduce(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReduceDim(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
@@ -331,7 +338,10 @@ struct IntrinsicLibrary {
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSelectedCharKind(mlir::Type,
+                                         llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSelectedIntKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSelectedLogicalKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
@@ -400,8 +410,10 @@ struct IntrinsicLibrary {
   using ElementalGenerator = decltype(&IntrinsicLibrary::genAbs);
   using ExtendedGenerator = decltype(&IntrinsicLibrary::genLenTrim);
   using SubroutineGenerator = decltype(&IntrinsicLibrary::genDateAndTime);
-  using Generator =
-      std::variant<ElementalGenerator, ExtendedGenerator, SubroutineGenerator>;
+  /// The generator for intrinsic that has both function and subroutine form.
+  using DualGenerator = decltype(&IntrinsicLibrary::genEtime);
+  using Generator = std::variant<ElementalGenerator, ExtendedGenerator,
+                                 SubroutineGenerator, DualGenerator>;
 
   /// All generators can be outlined. This will build a function named
   /// "fir."+ <generic name> + "." + <result type code> and generate the
@@ -441,6 +453,10 @@ struct IntrinsicLibrary {
                               mlir::Type resultType,
                               llvm::ArrayRef<mlir::Value> args);
   mlir::Value invokeGenerator(SubroutineGenerator generator,
+                              llvm::ArrayRef<mlir::Value> args);
+  mlir::Value invokeGenerator(DualGenerator generator,
+                              llvm::ArrayRef<mlir::Value> args);
+  mlir::Value invokeGenerator(DualGenerator generator, mlir::Type resultType,
                               llvm::ArrayRef<mlir::Value> args);
 
   /// Get pointer to unrestricted intrinsic. Generate the related unrestricted

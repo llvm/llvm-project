@@ -67,7 +67,20 @@ calcTSPScore(const std::vector<BinaryFunction *> &BinaryFunctions,
       for (BinaryBasicBlock *DstBB : SrcBB->successors()) {
         if (SrcBB != DstBB && BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE) {
           JumpCount += BI->Count;
-          if (BBAddr.at(SrcBB) + BBSize.at(SrcBB) == BBAddr.at(DstBB))
+
+          auto BBAddrIt = BBAddr.find(SrcBB);
+          assert(BBAddrIt != BBAddr.end());
+          uint64_t SrcBBAddr = BBAddrIt->second;
+
+          auto BBSizeIt = BBSize.find(SrcBB);
+          assert(BBSizeIt != BBSize.end());
+          uint64_t SrcBBSize = BBSizeIt->second;
+
+          BBAddrIt = BBAddr.find(DstBB);
+          assert(BBAddrIt != BBAddr.end());
+          uint64_t DstBBAddr = BBAddrIt->second;
+
+          if (SrcBBAddr + SrcBBSize == DstBBAddr)
             Score += BI->Count;
         }
         ++BI;
@@ -149,20 +162,28 @@ double expectedCacheHitRatio(
   for (BinaryFunction *BF : BinaryFunctions) {
     if (BF->getLayout().block_empty())
       continue;
-    const uint64_t Page =
-        BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
-    PageSamples[Page] += FunctionSamples.at(BF);
+    auto BBAddrIt = BBAddr.find(BF->getLayout().block_front());
+    assert(BBAddrIt != BBAddr.end());
+    const uint64_t Page = BBAddrIt->second / ITLBPageSize;
+
+    auto FunctionSamplesIt = FunctionSamples.find(BF);
+    assert(FunctionSamplesIt != FunctionSamples.end());
+    PageSamples[Page] += FunctionSamplesIt->second;
   }
 
   // Computing the expected number of misses for every function
   double Misses = 0;
   for (BinaryFunction *BF : BinaryFunctions) {
     // Skip the function if it has no samples
-    if (BF->getLayout().block_empty() || FunctionSamples.at(BF) == 0.0)
+    auto FunctionSamplesIt = FunctionSamples.find(BF);
+    assert(FunctionSamplesIt != FunctionSamples.end());
+    double Samples = FunctionSamplesIt->second;
+    if (BF->getLayout().block_empty() || Samples == 0.0)
       continue;
-    double Samples = FunctionSamples.at(BF);
-    const uint64_t Page =
-        BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
+
+    auto BBAddrIt = BBAddr.find(BF->getLayout().block_front());
+    assert(BBAddrIt != BBAddr.end());
+    const uint64_t Page = BBAddrIt->second / ITLBPageSize;
     // The probability that the page is not present in the cache
     const double MissProb =
         pow(1.0 - PageSamples[Page] / TotalSamples, ITLBEntries);
@@ -170,8 +191,10 @@ double expectedCacheHitRatio(
     // Processing all callers of the function
     for (std::pair<BinaryFunction *, uint64_t> Pair : Calls[BF]) {
       BinaryFunction *SrcFunction = Pair.first;
-      const uint64_t SrcPage =
-          BBAddr.at(SrcFunction->getLayout().block_front()) / ITLBPageSize;
+
+      BBAddrIt = BBAddr.find(SrcFunction->getLayout().block_front());
+      assert(BBAddrIt != BBAddr.end());
+      const uint64_t SrcPage = BBAddrIt->second / ITLBPageSize;
       // Is this a 'long' or a 'short' call?
       if (Page != SrcPage) {
         // This is a miss

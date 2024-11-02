@@ -82,6 +82,12 @@ sbic  b, 1    ; R_AVR_PORT5
 ; CHECK-NEXT:  rjmp .-36
 ; CHECK-NEXT:  breq .+26
 ; CHECK-NEXT:  breq .-40
+; CHECK-NEXT:  rjmp .-4096
+; CHECK-NEXT:  rjmp .+4094
+; CHECK-NEXT:  rjmp .+4094
+; CHECK-NEXT:  rjmp .-4096
+; CHECK-NEXT:  breq .-128
+; CHECK-NEXT:  breq .+126
 ; HEX-LABEL:   section .PCREL:
 ; HEX-NEXT:    0fc0eecf 69f061f3
 foo:
@@ -89,6 +95,12 @@ rjmp foo + 32  ; R_AVR_13_PCREL
 rjmp foo - 32  ; R_AVR_13_PCREL
 breq foo + 32  ; R_AVR_7_PCREL
 breq foo - 32  ; R_AVR_7_PCREL
+rjmp 1f - 4096  $ 1:  ; R_AVR_13_PCREL
+rjmp 1f + 4094  $ 1:  ; R_AVR_13_PCREL
+rjmp 1f - 4098  $ 1:  ; R_AVR_13_PCREL (overflow)
+rjmp 1f + 4096  $ 1:  ; R_AVR_13_PCREL (overflow)
+breq 1f - 128   $ 1:  ; R_AVR_7_PCREL
+breq 1f + 126   $ 1:  ; R_AVR_7_PCREL
 
 .section .LDSSTS,"ax",@progbits
 ; CHECK-LABEL: section .LDSSTS:

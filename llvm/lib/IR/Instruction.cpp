@@ -441,7 +441,7 @@ void Instruction::dropPoisonGeneratingFlags() {
     break;
 
   case Instruction::GetElementPtr:
-    cast<GetElementPtrInst>(this)->setIsInBounds(false);
+    cast<GetElementPtrInst>(this)->setNoWrapFlags(GEPNoWrapFlags::none());
     break;
 
   case Instruction::UIToFP:
@@ -660,7 +660,8 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() || DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() |
+                              DestGEP->getNoWrapFlags());
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
@@ -700,7 +701,8 @@ void Instruction::andIRFlags(const Value *V) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() && DestGEP->isInBounds());
+      DestGEP->setNoWrapFlags(SrcGEP->getNoWrapFlags() &
+                              DestGEP->getNoWrapFlags());
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
@@ -1266,12 +1268,23 @@ Instruction *Instruction::cloneImpl() const {
 
 void Instruction::swapProfMetadata() {
   MDNode *ProfileData = getBranchWeightMDNode(*this);
-  if (!ProfileData || ProfileData->getNumOperands() != 3)
+  if (!ProfileData)
+    return;
+  unsigned FirstIdx = getBranchWeightOffset(ProfileData);
+  if (ProfileData->getNumOperands() != 2 + FirstIdx)
     return;
 
-  // The first operand is the name. Fetch them backwards and build a new one.
-  Metadata *Ops[] = {ProfileData->getOperand(0), ProfileData->getOperand(2),
-                     ProfileData->getOperand(1)};
+  unsigned SecondIdx = FirstIdx + 1;
+  SmallVector<Metadata *, 4> Ops;
+  // If there are more weights past the second, we can't swap them
+  if (ProfileData->getNumOperands() > SecondIdx + 1)
+    return;
+  for (unsigned Idx = 0; Idx < FirstIdx; ++Idx) {
+    Ops.push_back(ProfileData->getOperand(Idx));
+  }
+  // Switch the order of the weights
+  Ops.push_back(ProfileData->getOperand(SecondIdx));
+  Ops.push_back(ProfileData->getOperand(FirstIdx));
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
 }

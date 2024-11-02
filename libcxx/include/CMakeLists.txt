@@ -72,23 +72,8 @@ set(files
   __algorithm/partition_point.h
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
-  __algorithm/pstl_any_all_none_of.h
-  __algorithm/pstl_copy.h
-  __algorithm/pstl_count.h
-  __algorithm/pstl_equal.h
-  __algorithm/pstl_fill.h
-  __algorithm/pstl_find.h
-  __algorithm/pstl_for_each.h
+  __algorithm/pstl.h
   __algorithm/pstl_frontend_dispatch.h
-  __algorithm/pstl_generate.h
-  __algorithm/pstl_is_partitioned.h
-  __algorithm/pstl_merge.h
-  __algorithm/pstl_move.h
-  __algorithm/pstl_replace.h
-  __algorithm/pstl_rotate_copy.h
-  __algorithm/pstl_sort.h
-  __algorithm/pstl_stable_sort.h
-  __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
@@ -224,6 +209,7 @@ set(files
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
+  __atomic/atomic_ref.h
   __atomic/atomic_sync.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
@@ -232,7 +218,7 @@ set(files
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
-  __availability
+  __atomic/to_gcc_order.h
   __bit/bit_cast.h
   __bit/bit_ceil.h
   __bit/bit_floor.h
@@ -264,6 +250,7 @@ set(files
   __chrono/convert_to_tm.h
   __chrono/day.h
   __chrono/duration.h
+  __chrono/exception.h
   __chrono/file_clock.h
   __chrono/formatter.h
   __chrono/hh_mm_ss.h
@@ -290,6 +277,7 @@ set(files
   __chrono/year_month.h
   __chrono/year_month_day.h
   __chrono/year_month_weekday.h
+  __chrono/zoned_time.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
@@ -327,6 +315,11 @@ set(files
   __concepts/totally_ordered.h
   __condition_variable/condition_variable.h
   __config
+  __configuration/abi.h
+  __configuration/availability.h
+  __configuration/compiler.h
+  __configuration/language.h
+  __configuration/platform.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
@@ -575,8 +568,7 @@ set(files
   __numeric/iota.h
   __numeric/midpoint.h
   __numeric/partial_sum.h
-  __numeric/pstl_reduce.h
-  __numeric/pstl_transform_reduce.h
+  __numeric/pstl.h
   __numeric/reduce.h
   __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h

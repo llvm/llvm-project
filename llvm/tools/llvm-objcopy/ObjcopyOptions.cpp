@@ -571,6 +571,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
+  if (MissingArgumentCount)
+    return createStringError(
+        errc::invalid_argument,
+        "argument to '%s' is missing (expected %d value(s))",
+        InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
+
   if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);

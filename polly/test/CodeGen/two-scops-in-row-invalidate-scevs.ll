@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: for.cond:
 ; CHECK:         %num.0 = phi i32 [ %add, %for.body15 ], [ 0, %for.cond.pre_entry_bb ]

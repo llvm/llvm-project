@@ -5,9 +5,9 @@
 
 ; CHECK-LABEL: define amdgpu_kernel void @promote_to_lds(ptr addrspace(1) %out, i32 %in) #0 {
 ; CHECK: call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK: call i32 @llvm.amdgcn.workitem.id.x(), !range !2
-; CHECK: call i32 @llvm.amdgcn.workitem.id.y(), !range !2
-; CHECK: call i32 @llvm.amdgcn.workitem.id.z(), !range !2
+; CHECK: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.y()
+; CHECK: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.z()
 define amdgpu_kernel void @promote_to_lds(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %tmp = alloca [2 x i32], addrspace(5)

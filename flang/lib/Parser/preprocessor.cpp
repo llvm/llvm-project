@@ -749,17 +749,18 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     }
     std::string buf;
     llvm::raw_string_ostream error{buf};
-    const SourceFile *included{
-        allSources_.Open(include, error, std::move(prependPath))};
-    if (!included) {
+    if (const SourceFile *
+        included{allSources_.Open(include, error, std::move(prependPath))}) {
+      if (included->bytes() > 0) {
+        ProvenanceRange fileRange{
+            allSources_.AddIncludedFile(*included, dir.GetProvenanceRange())};
+        Prescanner{prescanner, /*isNestedInIncludeDirective=*/true}
+            .set_encoding(included->encoding())
+            .Prescan(fileRange);
+      }
+    } else {
       prescanner.Say(dir.GetTokenProvenanceRange(j), "#include: %s"_err_en_US,
           error.str());
-    } else if (included->bytes() > 0) {
-      ProvenanceRange fileRange{
-          allSources_.AddIncludedFile(*included, dir.GetProvenanceRange())};
-      Prescanner{prescanner}
-          .set_encoding(included->encoding())
-          .Prescan(fileRange);
     }
   } else {
     prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),

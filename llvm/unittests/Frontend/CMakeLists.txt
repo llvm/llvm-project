@@ -15,6 +15,7 @@ add_llvm_unittest(LLVMFrontendTests
   OpenMPIRBuilderTest.cpp
   OpenMPParsingTest.cpp
   OpenMPCompositionTest.cpp
+  OpenMPDecompositionTest.cpp
 
   DEPENDS
   acc_gen

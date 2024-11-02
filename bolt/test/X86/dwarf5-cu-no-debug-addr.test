@@ -7,7 +7,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe  | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This tests checks that we handle correctly, don't crash, DWARF5 CUs that does not access .debug_addr.
+## This tests checks that we handle correctly, don't crash, DWARF5 CUs that does not access .debug_addr.
 
 # PRECHECK: DW_TAG_compile_unit
 # PRECHECK: DW_AT_addr_base

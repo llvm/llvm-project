@@ -66,6 +66,9 @@ namespace {
 
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
+    // We need this so we can find e.g. attributes on lambdas.
+    bool shouldVisitImplicitCode() const { return true; }
+
     //------------------------------------------------------------------------
     // Recording occurrences of (unexpanded) parameter packs.
     //------------------------------------------------------------------------
@@ -1128,7 +1131,7 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
 
   return PackIndexingExpr::Create(getASTContext(), EllipsisLoc, RSquareLoc,
                                   PackExpression, IndexExpr, Index,
-                                  ExpandedExprs);
+                                  ExpandedExprs, EmptyPack);
 }
 
 TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(

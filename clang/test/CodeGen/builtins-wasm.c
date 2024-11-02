@@ -11,6 +11,7 @@ typedef unsigned char u8x16 __attribute((vector_size(16)));
 typedef unsigned short u16x8 __attribute((vector_size(16)));
 typedef unsigned int u32x4 __attribute((vector_size(16)));
 typedef unsigned long long u64x2 __attribute((vector_size(16)));
+typedef __fp16 f16x8 __attribute((vector_size(16)));
 typedef float f32x4 __attribute((vector_size(16)));
 typedef double f64x2 __attribute((vector_size(16)));
 
@@ -813,6 +814,41 @@ void store_f16_f32(float val, __fp16 *addr) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+f16x8 splat_f16x8(float a) {
+  // WEBASSEMBLY: %0 = tail call <8 x half> @llvm.wasm.splat.f16x8(float %a)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_splat_f16x8(a);
+}
+
+float extract_lane_f16x8(f16x8 a, int i) {
+  // WEBASSEMBLY:  %0 = tail call float @llvm.wasm.extract.lane.f16x8(<8 x half> %a, i32 %i)
+  // WEBASSEMBLY-NEXT: ret float %0
+  return __builtin_wasm_extract_lane_f16x8(a, i);
+}
+
+f16x8 min_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.minimum.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_min_f16x8(a, b);
+}
+
+f16x8 max_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.maximum.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_max_f16x8(a, b);
+}
+
+f16x8 pmin_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.wasm.pmin.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_pmin_f16x8(a, b);
+}
+
+f16x8 pmax_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.wasm.pmax.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_pmax_f16x8(a, b);
+}
 __externref_t externref_null() {
   return __builtin_wasm_ref_null_extern();
   // WEBASSEMBLY: tail call ptr addrspace(10) @llvm.wasm.ref.null.extern()

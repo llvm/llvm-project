@@ -2,11 +2,11 @@
 
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sme.h>
 

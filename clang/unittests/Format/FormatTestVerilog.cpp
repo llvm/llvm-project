@@ -19,7 +19,7 @@ protected:
   FormatStyle getDefaultStyle() const override {
     return getLLVMStyle(FormatStyle::LK_Verilog);
   }
-  std::string messUp(llvm::StringRef Code) const override {
+  std::string messUp(StringRef Code) const override {
     return test::messUp(Code, /*HandleHash=*/false);
   }
 };

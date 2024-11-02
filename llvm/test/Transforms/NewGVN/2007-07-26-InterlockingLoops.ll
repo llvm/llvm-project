@@ -8,7 +8,7 @@ define i32 @NextRootMove(i32 %wtm, i32 %x, i32 %y, i32 %z) {
 ; CHECK-SAME: (i32 [[WTM:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[TMP17618:%.*]] = load ptr, ptr getelementptr inbounds ([65 x ptr], ptr @last, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP17618:%.*]] = load ptr, ptr getelementptr ([65 x ptr], ptr @last, i32 0, i32 1), align 4
 ; CHECK-NEXT:    store ptr [[TMP17618]], ptr [[A]], align 8
 ; CHECK-NEXT:    br label [[COND_TRUE116:%.*]]
 ; CHECK:       cond_true116:

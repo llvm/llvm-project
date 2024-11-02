@@ -1583,6 +1583,10 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     } else {
       Builder.restoreIP(
           PrivCB(InnerAllocaIP, Builder.saveIP(), V, *Inner, ReplacementValue));
+      InnerAllocaIP = {
+          InnerAllocaIP.getBlock(),
+          InnerAllocaIP.getBlock()->getTerminator()->getIterator()};
+
       assert(ReplacementValue &&
              "Expected copy/create callback to set replacement value!");
       if (ReplacementValue == &V)
@@ -1870,6 +1874,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     //    call @__kmpc_omp_task(...)
     //    br label %exit
     //  else:
+    //    ;; Wait for resolution of dependencies, if any, before
+    //    ;; beginning the task
+    //    call @__kmpc_omp_wait_deps(...)
     //    call @__kmpc_omp_task_begin_if0(...)
     //    call @outlined_fn(...)
     //    call @__kmpc_omp_task_complete_if0(...)
@@ -1887,6 +1894,16 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       SplitBlockAndInsertIfThenElse(IfCondition, IfTerminator, &ThenTI,
                                     &ElseTI);
       Builder.SetInsertPoint(ElseTI);
+
+      if (Dependencies.size()) {
+        Function *TaskWaitFn =
+            getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
+        Builder.CreateCall(
+            TaskWaitFn,
+            {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepArray,
+             ConstantInt::get(Builder.getInt32Ty(), 0),
+             ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
+      }
       Function *TaskBeginFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
       Function *TaskCompleteFn =
@@ -2108,9 +2125,12 @@ Function *getFreshReductionFunc(Module &M) {
                           ".omp.reduction.func", &M);
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
-    const LocationDescription &Loc, InsertPointTy AllocaIP,
-    ArrayRef<ReductionInfo> ReductionInfos, bool IsNoWait, bool IsByRef) {
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
+                                  InsertPointTy AllocaIP,
+                                  ArrayRef<ReductionInfo> ReductionInfos,
+                                  ArrayRef<bool> IsByRef, bool IsNoWait) {
+  assert(ReductionInfos.size() == IsByRef.size());
   for (const ReductionInfo &RI : ReductionInfos) {
     (void)RI;
     assert(RI.Variable && "expected non-null variable");
@@ -2200,7 +2220,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     // We have one less load for by-ref case because that load is now inside of
     // the reduction region
     Value *RedValue = nullptr;
-    if (!IsByRef) {
+    if (!IsByRef[En.index()]) {
       RedValue = Builder.CreateLoad(ValueType, RI.Variable,
                                     "red.value." + Twine(En.index()));
     }
@@ -2208,7 +2228,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
         Builder.CreateLoad(ValueType, RI.PrivateVariable,
                            "red.private.value." + Twine(En.index()));
     Value *Reduced;
-    if (IsByRef) {
+    if (IsByRef[En.index()]) {
       Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), RI.Variable,
                                         PrivateRedValue, Reduced));
     } else {
@@ -2218,7 +2238,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
     // for by-ref case, the load is inside of the reduction region
-    if (!IsByRef)
+    if (!IsByRef[En.index()])
       Builder.CreateStore(Reduced, RI.Variable);
   }
   Function *EndReduceFunc = getOrCreateRuntimeFunctionPtr(
@@ -2231,7 +2251,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   // function. There are no loads/stores here because they will be happening
   // inside the atomic elementwise reduction.
   Builder.SetInsertPoint(AtomicRedBlock);
-  if (CanGenerateAtomic && !IsByRef) {
+  if (CanGenerateAtomic && llvm::none_of(IsByRef, [](bool P) { return P; })) {
     for (const ReductionInfo &RI : ReductionInfos) {
       Builder.restoreIP(RI.AtomicReductionGen(Builder.saveIP(), RI.ElementType,
                                               RI.Variable, RI.PrivateVariable));
@@ -2270,7 +2290,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
     // store is inside of the reduction region when using by-ref
-    if (!IsByRef)
+    if (!IsByRef[En.index()])
       Builder.CreateStore(Reduced, LHSPtr);
   }
   Builder.CreateRetVoid();
@@ -3941,7 +3961,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
 
   // Loop is not unrollable if the loop contains certain instructions.
-  if (!UCE.canUnroll() || UCE.Convergent) {
+  if (!UCE.canUnroll()) {
     LLVM_DEBUG(dbgs() << "Loop not considered unrollable\n");
     return 1;
   }

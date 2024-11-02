@@ -603,11 +603,6 @@ struct WasmSym {
   // Used in PIC code for offset of indirect function table
   static UndefinedGlobal *tableBase;
   static DefinedData *definedTableBase;
-  // 32-bit copy in wasm64 to work around init expr limitations.
-  // These can potentially be removed again once we have
-  // https://github.com/WebAssembly/extended-const 
-  static UndefinedGlobal *tableBase32;
-  static DefinedData *definedTableBase32;
 
   // __memory_base
   // Used in PIC code for offset of global data

@@ -22,33 +22,33 @@
   }
 
 using ReductionOpsSet =
-    Fortran::common::EnumSet<Fortran::parser::AccReductionOperator::Operator,
-        Fortran::parser::AccReductionOperator::Operator_enumSize>;
+    Fortran::common::EnumSet<Fortran::parser::ReductionOperator::Operator,
+        Fortran::parser::ReductionOperator::Operator_enumSize>;
 
 static ReductionOpsSet reductionIntegerSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply,
-    Fortran::parser::AccReductionOperator::Operator::Max,
-    Fortran::parser::AccReductionOperator::Operator::Min,
-    Fortran::parser::AccReductionOperator::Operator::Iand,
-    Fortran::parser::AccReductionOperator::Operator::Ior,
-    Fortran::parser::AccReductionOperator::Operator::Ieor};
+    Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Multiply,
+    Fortran::parser::ReductionOperator::Operator::Max,
+    Fortran::parser::ReductionOperator::Operator::Min,
+    Fortran::parser::ReductionOperator::Operator::Iand,
+    Fortran::parser::ReductionOperator::Operator::Ior,
+    Fortran::parser::ReductionOperator::Operator::Ieor};
 
 static ReductionOpsSet reductionRealSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply,
-    Fortran::parser::AccReductionOperator::Operator::Max,
-    Fortran::parser::AccReductionOperator::Operator::Min};
+    Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Multiply,
+    Fortran::parser::ReductionOperator::Operator::Max,
+    Fortran::parser::ReductionOperator::Operator::Min};
 
 static ReductionOpsSet reductionComplexSet{
-    Fortran::parser::AccReductionOperator::Operator::Plus,
-    Fortran::parser::AccReductionOperator::Operator::Multiply};
+    Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Multiply};
 
 static ReductionOpsSet reductionLogicalSet{
-    Fortran::parser::AccReductionOperator::Operator::And,
-    Fortran::parser::AccReductionOperator::Operator::Or,
-    Fortran::parser::AccReductionOperator::Operator::Eqv,
-    Fortran::parser::AccReductionOperator::Operator::Neqv};
+    Fortran::parser::ReductionOperator::Operator::And,
+    Fortran::parser::ReductionOperator::Operator::Or,
+    Fortran::parser::ReductionOperator::Operator::Eqv,
+    Fortran::parser::ReductionOperator::Operator::Neqv};
 
 namespace Fortran::semantics {
 
@@ -670,7 +670,7 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
   // The following check that the reduction operator is supported with the given
   // type.
   const parser::AccObjectListWithReduction &list{reduction.v};
-  const auto &op{std::get<parser::AccReductionOperator>(list.t)};
+  const auto &op{std::get<parser::ReductionOperator>(list.t)};
   const auto &objects{std::get<parser::AccObjectList>(list.t)};
 
   for (const auto &object : objects.v) {

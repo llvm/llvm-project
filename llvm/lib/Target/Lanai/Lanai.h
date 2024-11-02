@@ -37,7 +37,7 @@ FunctionPass *createLanaiMemAluCombinerPass();
 // operations.
 FunctionPass *createLanaiSetflagAluCombinerPass();
 
-void initializeLanaiDAGToDAGISelPass(PassRegistry &);
+void initializeLanaiDAGToDAGISelLegacyPass(PassRegistry &);
 
 } // namespace llvm
 

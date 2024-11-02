@@ -928,6 +928,11 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
+  mlir::arith::IntegerOverflowFlags flags{};
+  if (converter.getLoweringOptions().getNSWOnLoopVarInc())
+    flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
+  auto iofAttr =
+      mlir::arith::IntegerOverflowFlagsAttr::get(builder.getContext(), flags);
   makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
@@ -965,7 +970,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
     genItemList(ioImpliedDo);
     builder.setInsertionPointToEnd(doLoopOp.getBody());
     mlir::Value result = builder.create<mlir::arith::AddIOp>(
-        loc, doLoopOp.getInductionVar(), doLoopOp.getStep());
+        loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr);
     builder.create<fir::ResultOp>(loc, result);
     builder.setInsertionPointAfter(doLoopOp);
     // The loop control variable may be used after the loop.
@@ -1007,7 +1012,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   mlir::OpResult iterateResult = builder.getBlock()->back().getResult(0);
   mlir::Value inductionResult0 = iterWhileOp.getInductionVar();
   auto inductionResult1 = builder.create<mlir::arith::AddIOp>(
-      loc, inductionResult0, iterWhileOp.getStep());
+      loc, inductionResult0, iterWhileOp.getStep(), iofAttr);
   auto inductionResult = builder.create<mlir::arith::SelectOp>(
       loc, iterateResult, inductionResult1, inductionResult0);
   llvm::SmallVector<mlir::Value> results = {inductionResult, iterateResult};

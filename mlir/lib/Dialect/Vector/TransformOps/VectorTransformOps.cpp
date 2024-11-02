@@ -79,6 +79,11 @@ void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
   vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
 }
 
+void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorBitCastLoweringPatterns(patterns);
+}
+
 void transform::ApplyLowerBroadcastPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   populateVectorBroadcastLoweringPatterns(patterns);
@@ -162,6 +167,11 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
 void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorInterleaveLoweringPatterns(patterns);
+}
+
+void transform::ApplyInterleaveToShufflePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorInterleaveToShufflePatterns(patterns);
 }
 
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(

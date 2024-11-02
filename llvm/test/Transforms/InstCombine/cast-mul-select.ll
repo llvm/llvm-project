@@ -207,7 +207,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:  entry:
 ; DBGINFO-NEXT:    br label [[WHILE_BODY:%.*]], !dbg [[DBG94:![0-9]+]]
 ; DBGINFO:       while.body:
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[B:%.*]], metadata [[META89:![0-9]+]], metadata !DIExpression(DW_OP_constu, 0, DW_OP_eq, DW_OP_stack_value)), !dbg [[DBG95:![0-9]+]]
+; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[B:%.*]], metadata [[META89:![0-9]+]], metadata !DIExpression(DW_OP_lit0, DW_OP_eq, DW_OP_stack_value)), !dbg [[DBG95:![0-9]+]]
 ; DBGINFO-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY3_US:%.*]], label [[FOR_BODY3:%.*]], !dbg [[DBG96:![0-9]+]]
 ; DBGINFO:       for.body3.us:
 ; DBGINFO-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[B]], 0, !dbg [[DBG95]]

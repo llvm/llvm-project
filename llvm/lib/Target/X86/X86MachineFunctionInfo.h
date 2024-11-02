@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+enum AMXProgModelEnum { None = 0, DirectReg = 1, ManagedRA = 2 };
+
 /// X86MachineFunctionInfo - This class is derived from MachineFunction and
 /// contains private X86 target-specific information for each MachineFunction.
 class X86MachineFunctionInfo : public MachineFunctionInfo {
@@ -95,6 +97,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// The frame index of a stack object containing the original frame pointer
   /// used to address arguments in a function using a base pointer.
   int SEHFramePtrSaveIndex = 0;
+
+  /// The AMX programing model used in the function.
+  AMXProgModelEnum AMXProgModel = AMXProgModelEnum::None;
 
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
@@ -218,6 +223,13 @@ public:
 
   int getSEHFramePtrSaveIndex() const { return SEHFramePtrSaveIndex; }
   void setSEHFramePtrSaveIndex(int Index) { SEHFramePtrSaveIndex = Index; }
+
+  AMXProgModelEnum getAMXProgModel() const { return AMXProgModel; }
+  void setAMXProgModel(AMXProgModelEnum Model) {
+    assert((AMXProgModel == AMXProgModelEnum::None || AMXProgModel == Model) &&
+           "mixed model is not supported");
+    AMXProgModel = Model;
+  }
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;

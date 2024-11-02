@@ -406,16 +406,10 @@ static bool
 isRightAfterData(MCFragment *CurrentFragment,
                  const std::pair<MCFragment *, size_t> &PrevInstPosition) {
   MCFragment *F = CurrentFragment;
-  // Empty data fragments may be created to prevent further data being
-  // added into the previous fragment, we need to skip them since they
-  // have no contents.
-  for (; isa_and_nonnull<MCDataFragment>(F); F = F->getPrevNode())
-    if (cast<MCDataFragment>(F)->getContents().size() != 0)
-      break;
-
   // Since data is always emitted into a DataFragment, our check strategy is
   // simple here.
   //   - If the fragment is a DataFragment
+  //     - If it's empty (section start or data after align), return false.
   //     - If it's not the fragment where the previous instruction is,
   //       returns true.
   //     - If it's the fragment holding the previous instruction but its
@@ -424,8 +418,9 @@ isRightAfterData(MCFragment *CurrentFragment,
   //     - Otherwise returns false.
   //   - If the fragment is not a DataFragment, returns false.
   if (auto *DF = dyn_cast_or_null<MCDataFragment>(F))
-    return DF != PrevInstPosition.first ||
-           DF->getContents().size() != PrevInstPosition.second;
+    return DF->getContents().size() &&
+           (DF != PrevInstPosition.first ||
+            DF->getContents().size() != PrevInstPosition.second);
 
   return false;
 }
@@ -526,7 +521,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   if (!CanPadInst)
     return;
 
-  if (PendingBA && OS.getCurrentFragment()->getPrevNode() == PendingBA) {
+  if (PendingBA && PendingBA->getNextNode() == OS.getCurrentFragment()) {
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction.
     //
@@ -723,9 +718,10 @@ void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
                                       const MCSubtargetInfo &STI) const {
   unsigned Opcode = MI.getOpcode();
+  unsigned SkipOperands = X86::isCCMPCC(Opcode) ? 2 : 0;
   return isRelaxableBranch(Opcode) ||
          (X86::getOpcodeForLongImmediateForm(Opcode) != Opcode &&
-          MI.getOperand(MI.getNumOperands() - 1).isExpr());
+          MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
 bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,

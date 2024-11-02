@@ -35,7 +35,6 @@
 #include "Common/GlobalISel/CombinerUtils.h"
 #include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
-#include "Common/GlobalISel/MatchDataInfo.h"
 #include "Common/GlobalISel/PatternParser.h"
 #include "Common/GlobalISel/Patterns.h"
 #include "Common/SubtargetFeatureInfo.h"
@@ -45,6 +44,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -79,8 +79,9 @@ cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
                              cl::desc("Print type inference debug logs"),
                              cl::cat(GICombinerEmitterCat));
 
-constexpr StringLiteral CXXApplyPrefix = "GICXXCustomAction_CombineApply";
+constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
+constexpr StringLiteral MatchDataClassName = "GIDefMatchData";
 
 //===- CodeExpansions Helpers  --------------------------------------------===//
 
@@ -605,6 +606,21 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
   return TECs;
 }
 
+//===- MatchData Handling -------------------------------------------------===//
+struct MatchDataDef {
+  MatchDataDef(StringRef Symbol, StringRef Type) : Symbol(Symbol), Type(Type) {}
+
+  StringRef Symbol;
+  StringRef Type;
+
+  /// \returns the desired variable name for this MatchData.
+  std::string getVarName() const {
+    // Add a prefix in case the symbol name is very generic and conflicts with
+    // something else.
+    return "GIMatchData_" + Symbol.str();
+  }
+};
+
 //===- CombineRuleBuilder -------------------------------------------------===//
 
 /// Parses combine rule and builds a small intermediate representation to tie
@@ -671,10 +687,6 @@ private:
   void addCXXPredicate(RuleMatcher &M, const CodeExpansions &CE,
                        const CXXPattern &P, const PatternAlternatives &Alts);
 
-  /// Adds an apply \p P to \p IM, expanding its code using \p CE.
-  void addCXXAction(RuleMatcher &M, const CodeExpansions &CE,
-                    const CXXPattern &P);
-
   bool hasOnlyCXXApplyPatterns() const;
   bool hasEraseRoot() const;
 
@@ -721,6 +733,8 @@ private:
                                DenseSet<const Pattern *> &SeenPats);
 
   bool emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M);
+  bool emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
+                         ArrayRef<CXXPattern *> Matchers);
 
   // Recursively visits InstructionPatterns from P to build up the
   // RuleMatcher actions.
@@ -777,7 +791,7 @@ private:
   Pattern *MatchRoot = nullptr;
   SmallDenseSet<InstructionPattern *, 2> ApplyRoots;
 
-  SmallVector<MatchDataInfo, 2> MatchDatas;
+  SmallVector<MatchDataDef, 2> MatchDatas;
   SmallVector<PatternAlternatives, 1> PermutationsToEmit;
 };
 
@@ -811,7 +825,6 @@ bool CombineRuleBuilder::emitRuleMatchers() {
 
   assert(MatchRoot);
   CodeExpansions CE;
-  declareAllMatchDatasExpansions(CE);
 
   assert(!PermutationsToEmit.empty());
   for (const auto &Alts : PermutationsToEmit) {
@@ -845,9 +858,8 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
   if (!MatchDatas.empty()) {
     OS << "  (MatchDatas\n";
     for (const auto &MD : MatchDatas) {
-      OS << "    ";
-      MD.print(OS);
-      OS << '\n';
+      OS << "    (MatchDataDef symbol:" << MD.Symbol << " type:" << MD.Type
+         << ")\n";
     }
     OS << "  )\n";
   }
@@ -1008,7 +1020,7 @@ bool CombineRuleBuilder::addMatchPattern(std::unique_ptr<Pattern> Pat) {
 void CombineRuleBuilder::declareAllMatchDatasExpansions(
     CodeExpansions &CE) const {
   for (const auto &MD : MatchDatas)
-    CE.declare(MD.getPatternSymbol(), MD.getQualifiedVariableName());
+    CE.declare(MD.Symbol, MD.getVarName());
 }
 
 void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
@@ -1028,13 +1040,6 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
       DebugCXXPreds ? P.expandCode(CE, Loc, AddComment) : P.expandCode(CE, Loc);
   IM->addPredicate<GenericInstructionPredicateMatcher>(
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
-}
-
-void CombineRuleBuilder::addCXXAction(RuleMatcher &M, const CodeExpansions &CE,
-                                      const CXXPattern &P) {
-  const auto &ExpandedCode = P.expandCode(CE, RuleDef.getLoc());
-  M.addAction<CustomCXXAction>(
-      ExpandedCode.getEnumNameWithPrefix(CXXApplyPrefix));
 }
 
 bool CombineRuleBuilder::hasOnlyCXXApplyPatterns() const {
@@ -1175,9 +1180,20 @@ bool CombineRuleBuilder::checkSemantics() {
     UsesWipMatchOpcode = true;
   }
 
+  std::optional<bool> IsUsingCXXPatterns;
   for (const auto &Apply : ApplyPats) {
-    assert(Apply.second.get());
-    const auto *IP = dyn_cast<InstructionPattern>(Apply.second.get());
+    Pattern *Pat = Apply.second.get();
+    if (IsUsingCXXPatterns) {
+      if (*IsUsingCXXPatterns != isa<CXXPattern>(Pat)) {
+        PrintError("'apply' patterns cannot mix C++ code with other types of "
+                   "patterns");
+        return false;
+      }
+    } else
+      IsUsingCXXPatterns = isa<CXXPattern>(Pat);
+
+    assert(Pat);
+    const auto *IP = dyn_cast<InstructionPattern>(Pat);
     if (!IP)
       continue;
 
@@ -1258,6 +1274,12 @@ bool CombineRuleBuilder::checkSemantics() {
       break;
     }
     }
+  }
+
+  if (!hasOnlyCXXApplyPatterns() && !MatchDatas.empty()) {
+    PrintError(MatchDataClassName +
+               " can only be used if 'apply' in entirely written in C++");
+    return false;
   }
 
   return true;
@@ -1440,7 +1462,7 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
     // data from the match stage to the apply stage, and ensure that the
     // generated matcher has a suitable variable for it to do so.
     if (Record *MatchDataRec =
-            getDefOfSubClass(*Def.getArg(I), "GIDefMatchData")) {
+            getDefOfSubClass(*Def.getArg(I), MatchDataClassName)) {
       MatchDatas.emplace_back(Def.getArgNameStr(I),
                               MatchDataRec->getValueAsString("Type"));
       continue;
@@ -1463,9 +1485,6 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
   }
 
   RootName = Roots.front();
-
-  // Assign variables to all MatchDatas.
-  AssignMatchDataVariables(MatchDatas);
   return true;
 }
 
@@ -1502,6 +1521,8 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     llvm_unreachable("Unknown kind of InstructionPattern!");
 
   // Emit remaining patterns
+  const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
+  SmallVector<CXXPattern *, 2> CXXMatchers;
   for (auto &Pat : values(MatchPats)) {
     if (SeenPats.contains(Pat.get()))
       continue;
@@ -1523,7 +1544,11 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       cast<InstructionPattern>(Pat.get())->reportUnreachable(RuleDef.getLoc());
       return false;
     case Pattern::K_CXX: {
-      addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
+      // Delay emission for top-level C++ matchers (which can use MatchDatas).
+      if (IsUsingCustomCXXAction)
+        CXXMatchers.push_back(cast<CXXPattern>(Pat.get()));
+      else
+        addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
       continue;
     }
     default:
@@ -1531,7 +1556,8 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     }
   }
 
-  return emitApplyPatterns(CE, M);
+  return IsUsingCustomCXXAction ? emitCXXMatchApply(CE, M, CXXMatchers)
+                                : emitApplyPatterns(CE, M);
 }
 
 bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
@@ -1539,6 +1565,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
                                           const AnyOpcodePattern &AOP) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &AOP);
 
+  const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
   for (const CodeGenInstruction *CGI : AOP.insts()) {
     auto &M = addRuleMatcher(Alts, "wip_match_opcode '" +
                                        CGI->TheDef->getName() + "'");
@@ -1552,6 +1579,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     IM.addPredicate<InstructionOpcodeMatcher>(CGI);
 
     // Emit remaining patterns.
+    SmallVector<CXXPattern *, 2> CXXMatchers;
     for (auto &Pat : values(MatchPats)) {
       if (Pat.get() == &AOP)
         continue;
@@ -1576,7 +1604,11 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
             RuleDef.getLoc());
         return false;
       case Pattern::K_CXX: {
-        addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
+        // Delay emission for top-level C++ matchers (which can use MatchDatas).
+        if (IsUsingCustomCXXAction)
+          CXXMatchers.push_back(cast<CXXPattern>(Pat.get()));
+        else
+          addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
         break;
       }
       default:
@@ -1584,7 +1616,10 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       }
     }
 
-    if (!emitApplyPatterns(CE, M))
+    const bool Res = IsUsingCustomCXXAction
+                         ? emitCXXMatchApply(CE, M, CXXMatchers)
+                         : emitApplyPatterns(CE, M);
+    if (!Res)
       return false;
   }
 
@@ -1727,11 +1762,7 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
 }
 
 bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
-  if (hasOnlyCXXApplyPatterns()) {
-    for (auto &Pat : values(ApplyPats))
-      addCXXAction(M, CE, *cast<CXXPattern>(Pat.get()));
-    return true;
-  }
+  assert(MatchDatas.empty());
 
   DenseSet<const Pattern *> SeenPats;
   StringMap<unsigned> OperandToTempRegID;
@@ -1764,8 +1795,8 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
       cast<CodeGenInstructionPattern>(*Pat).reportUnreachable(RuleDef.getLoc());
       return false;
     case Pattern::K_CXX: {
-      addCXXAction(M, CE, *cast<CXXPattern>(Pat.get()));
-      continue;
+      llvm_unreachable(
+          "CXX Pattern Emission should have been handled earlier!");
     }
     default:
       llvm_unreachable("unknown pattern kind!");
@@ -1777,6 +1808,44 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
       M.getInsnVarID(M.getInstructionMatcher(MatchRoot->getName()));
   M.addAction<EraseInstAction>(RootInsnID);
 
+  return true;
+}
+
+bool CombineRuleBuilder::emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
+                                           ArrayRef<CXXPattern *> Matchers) {
+  assert(hasOnlyCXXApplyPatterns());
+  declareAllMatchDatasExpansions(CE);
+
+  std::string CodeStr;
+  raw_string_ostream OS(CodeStr);
+
+  for (auto &MD : MatchDatas)
+    OS << MD.Type << " " << MD.getVarName() << ";\n";
+
+  if (!Matchers.empty()) {
+    OS << "// Match Patterns\n";
+    for (auto *M : Matchers) {
+      OS << "if(![&](){";
+      CodeExpander Expander(M->getRawCode(), CE, RuleDef.getLoc(),
+                            /*ShowExpansions=*/false);
+      Expander.emit(OS);
+      OS << "}()) {\n"
+         << "  return false;\n}\n";
+    }
+  }
+
+  OS << "// Apply Patterns\n";
+  ListSeparator LS("\n");
+  for (auto &Pat : ApplyPats) {
+    auto *CXXPat = cast<CXXPattern>(Pat.second.get());
+    CodeExpander Expander(CXXPat->getRawCode(), CE, RuleDef.getLoc(),
+                          /*ShowExpansions=*/ false);
+    OS << LS;
+    Expander.emit(OS);
+  }
+
+  const auto &Code = CXXPredicateCode::getCustomActionCode(CodeStr);
+  M.setCustomCXXAction(Code.getEnumNameWithPrefix(CXXCustomActionPrefix));
   return true;
 }
 
@@ -2226,9 +2295,6 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   void emitTestSimplePredicate(raw_ostream &OS) override;
   void emitRunCustomAction(raw_ostream &OS) override;
 
-  void emitAdditionalTemporariesDecl(raw_ostream &OS,
-                                     StringRef Indent) override;
-
   const CodeGenTarget &getTarget() const override { return Target; }
   StringRef getClassName() const override {
     return Combiner->getValueAsString("Classname");
@@ -2371,8 +2437,6 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
      << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
-     << "  " << MatchDataInfo::StructName << " = "
-     << MatchDataInfo::StructTypeName << "();\n\n"
      << "  if (executeMatchTable(*this, State, ExecInfo, B"
      << ", getMatchTable(), *ST.getInstrInfo(), MRI, "
         "*MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures"
@@ -2438,48 +2502,36 @@ void GICombinerEmitter::emitTestSimplePredicate(raw_ostream &OS) {
 }
 
 void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
-  const auto ApplyCode = CXXPredicateCode::getAllApplyCode();
+  const auto CustomActionsCode = CXXPredicateCode::getAllCustomActionsCode();
 
-  if (!ApplyCode.empty()) {
+  if (!CustomActionsCode.empty()) {
     OS << "enum {\n";
     std::string EnumeratorSeparator = " = GICXXCustomAction_Invalid + 1,\n";
-    for (const auto &Apply : ApplyCode) {
-      OS << "  " << Apply->getEnumNameWithPrefix(CXXApplyPrefix)
+    for (const auto &CA : CustomActionsCode) {
+      OS << "  " << CA->getEnumNameWithPrefix(CXXCustomActionPrefix)
          << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
     }
     OS << "};\n";
   }
 
-  OS << "void " << getClassName()
+  OS << "bool " << getClassName()
      << "::runCustomAction(unsigned ApplyID, const MatcherState &State, "
         "NewMIVector &OutMIs) const "
-        "{\n";
-  if (!ApplyCode.empty()) {
+        "{\n  Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);\n";
+  if (!CustomActionsCode.empty()) {
     OS << "  switch(ApplyID) {\n";
-    for (const auto &Apply : ApplyCode) {
-      OS << "  case " << Apply->getEnumNameWithPrefix(CXXApplyPrefix) << ":{\n"
-         << "    Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);\n"
-         << "    " << join(split(Apply->Code, '\n'), "\n    ") << '\n'
-         << "    return;\n";
+    for (const auto &CA : CustomActionsCode) {
+      OS << "  case " << CA->getEnumNameWithPrefix(CXXCustomActionPrefix)
+         << ":{\n"
+         << "    " << join(split(CA->Code, '\n'), "\n    ") << '\n'
+         << "    return true;\n";
       OS << "  }\n";
     }
-    OS << "}\n";
+    OS << "  }\n";
   }
   OS << "  llvm_unreachable(\"Unknown Apply Action\");\n"
      << "}\n";
-}
-
-void GICombinerEmitter::emitAdditionalTemporariesDecl(raw_ostream &OS,
-                                                      StringRef Indent) {
-  OS << Indent << "struct " << MatchDataInfo::StructTypeName << " {\n";
-  for (const auto &[Type, VarNames] : AllMatchDataVars) {
-    assert(!VarNames.empty() && "Cannot have no vars for this type!");
-    OS << Indent << "  " << Type << " " << join(VarNames, ", ") << ";\n";
-  }
-  OS << Indent << "};\n"
-     << Indent << "mutable " << MatchDataInfo::StructTypeName << " "
-     << MatchDataInfo::StructName << ";\n\n";
 }
 
 GICombinerEmitter::GICombinerEmitter(RecordKeeper &RK,

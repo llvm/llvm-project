@@ -20,8 +20,8 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -38,6 +38,7 @@ class MDNode;
 namespace clang {
 class ClassTemplateSpecializationDecl;
 class GlobalDecl;
+class Module;
 class ModuleMap;
 class ObjCInterfaceDecl;
 class UsingDecl;
@@ -528,6 +529,12 @@ public:
 
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
+
+  /// Emit a pseudo variable and debug info for an intermediate value if it does
+  /// not correspond to a variable in the source code, so that a profiler can
+  /// track more accurate usage of certain instructions of interest.
+  void EmitPseudoVariable(CGBuilderTy &Builder, llvm::Instruction *Value,
+                          QualType Ty);
 
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);

@@ -40,9 +40,6 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
 
 MCObjectStreamer::~MCObjectStreamer() = default;
 
-// AssemblerPtr is used for evaluation of expressions and causes
-// difference between asm and object outputs. Return nullptr to in
-// inline asm mode to limit divergence to assembly inputs.
 MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   if (getUseAssemblerInfoForParsing())
     return Assembler.get();
@@ -178,8 +175,11 @@ void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 }
 
 void MCObjectStreamer::reset() {
-  if (Assembler)
+  if (Assembler) {
     Assembler->reset();
+    if (getContext().getTargetOptions())
+      Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
+  }
   CurInsertionPoint = MCSection::iterator();
   EmitEHFrame = true;
   EmitDebugFrame = false;

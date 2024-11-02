@@ -24,7 +24,7 @@ class TargetRegisterClass;
 class XtensaInstrInfo;
 class XtensaSubtarget;
 
-struct XtensaRegisterInfo : public XtensaGenRegisterInfo {
+class XtensaRegisterInfo : public XtensaGenRegisterInfo {
 public:
   const XtensaSubtarget &Subtarget;
 

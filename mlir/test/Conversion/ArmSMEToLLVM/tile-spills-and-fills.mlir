@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -allocate-arm-sme-tiles -split-input-file -verify-diagnostics | \
+// RUN: mlir-opt %s -test-arm-sme-tile-allocation -split-input-file | \
 // RUN: FileCheck %s  --check-prefix=AFTER-TILE-ALLOC
-// RUN: mlir-opt %s -allocate-arm-sme-tiles -convert-arm-sme-to-llvm -canonicalize -cse \
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(convert-arm-sme-to-llvm,cse,canonicalize))" \
 // RUN:   -split-input-file -verify-diagnostics | \
 // RUN: FileCheck %s  --check-prefix=AFTER-LLVM-LOWERING
 
@@ -54,8 +54,11 @@
 func.func @use_too_many_tiles() {
   %0 = arm_sme.zero : vector<[4]x[4]xi32>
   %1 = arm_sme.zero : vector<[4]x[4]xi32>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %2 = arm_sme.zero : vector<[8]x[8]xi16>
+  "test.some_use"(%0) : (vector<[4]x[4]xi32>) -> ()
+  "test.some_use"(%1) : (vector<[4]x[4]xi32>) -> ()
+  "test.some_use"(%2) : (vector<[8]x[8]xi16>) -> ()
   return
 }
 // AFTER-TILE-ALLOC-LABEL: @use_too_many_tiles
@@ -131,18 +134,16 @@ func.func @use_too_many_tiles() {
 /// Note: In this example an entire tile swap is inserted before/after the
 /// `arm_sme.load_tile_slice` operation. Really, this only needs to spill a
 /// single tile slice (and can omit the initial load, like in the previous example).
-func.func @very_excessive_spills(%memref : memref<?x?xf32>) -> vector<[4]x[4]xf32> {
-  %useAllTiles = arm_sme.get_tile : vector<[16]x[16]xi8>
+func.func @very_excessive_spills(%useAllTiles : vector<[16]x[16]xi8>, %memref: memref<?x?xf32>) -> vector<[4]x[4]xf32> {
   %c0 = arith.constant 0 : index
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
   %mask = vector.constant_mask [4] : vector<[4]xi1>
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %loadSlice = arm_sme.load_tile_slice %memref[%c0, %c0], %mask, %tile, %c0 : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+  "test.some_use"(%useAllTiles) : (vector<[16]x[16]xi8>) -> ()
   "test.some_use"(%loadSlice) : (vector<[4]x[4]xf32>) -> ()
 }
 // AFTER-TILE-ALLOC-LABEL: @very_excessive_spills
-//      AFTER-TILE-ALLOC: arm_sme.get_tile
-// AFTER-TILE-ALLOC-SAME:   tile_id = 0
 //      AFTER-TILE-ALLOC: arm_sme.load_tile_slice
 // AFTER-TILE-ALLOC-SAME:   tile_id = 16
 

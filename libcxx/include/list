@@ -203,7 +203,6 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__format/enable_insertable.h>
 #include <__iterator/distance.h>
@@ -567,7 +566,6 @@ protected:
     return __guard.__release_ptr();
   }
 
-  template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __delete_node(__node_pointer __node) {
     // For the same reason as above, we use the allocator's destroy() method for the value_type,
     // but not for the node itself.

@@ -430,7 +430,7 @@ protected:
 using DebugStrOffsetsBufferVector = SmallVector<char, 16>;
 class DebugStrOffsetsWriter {
 public:
-  DebugStrOffsetsWriter() {
+  DebugStrOffsetsWriter(BinaryContext &BC) : BC(BC) {
     StrOffsetsBuffer = std::make_unique<DebugStrOffsetsBufferVector>();
     StrOffsetsStream = std::make_unique<raw_svector_ostream>(*StrOffsetsBuffer);
   }
@@ -460,6 +460,10 @@ public:
     StrOffsets.clear();
   }
 
+  bool isStrOffsetsSectionModified() const {
+    return StrOffsetSectionWasModified;
+  }
+
 private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
@@ -467,13 +471,16 @@ private:
   SmallVector<uint32_t, 5> StrOffsets;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
   bool StrOffsetSectionWasModified = false;
+  BinaryContext &BC;
 };
 
 using DebugStrBufferVector = SmallVector<char, 16>;
 class DebugStrWriter {
 public:
   DebugStrWriter() = delete;
-  DebugStrWriter(BinaryContext &BC) : BC(BC) { create(); }
+  DebugStrWriter(DWARFContext &DwCtx, bool IsDWO) : DwCtx(DwCtx), IsDWO(IsDWO) {
+    create();
+  }
   std::unique_ptr<DebugStrBufferVector> releaseBuffer() {
     return std::move(StrBuffer);
   }
@@ -495,7 +502,8 @@ private:
   void create();
   std::unique_ptr<DebugStrBufferVector> StrBuffer;
   std::unique_ptr<raw_svector_ostream> StrStream;
-  BinaryContext &BC;
+  DWARFContext &DwCtx;
+  bool IsDWO;
 };
 
 enum class LocWriterKind { DebugLocWriter, DebugLoclistWriter };

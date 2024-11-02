@@ -35,10 +35,10 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK-NEXT:    vslidedown.vi v16, v16, 4
 ; CHECK-NEXT:    li a0, 466
 ; CHECK-NEXT:    li a1, 465
+; CHECK-NEXT:    lbu a2, 1012(sp)
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    lbu a0, 1012(sp)
 ; CHECK-NEXT:    vslideup.vx v8, v16, a1
-; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vmv.s.x v16, a2
 ; CHECK-NEXT:    li a0, 501
 ; CHECK-NEXT:    li a1, 500
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
@@ -118,16 +118,16 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    vslidedown.vi v24, v24, 4
 ; CHECK-NEXT:    li a1, 466
 ; CHECK-NEXT:    li a2, 465
+; CHECK-NEXT:    lbu a3, 985(sp)
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
-; CHECK-NEXT:    lbu a1, 985(sp)
 ; CHECK-NEXT:    vslideup.vx v8, v24, a2
-; CHECK-NEXT:    vmv.s.x v24, a1
+; CHECK-NEXT:    vmv.s.x v24, a3
 ; CHECK-NEXT:    li a1, 478
 ; CHECK-NEXT:    li a2, 477
+; CHECK-NEXT:    lbu a3, 1012(sp)
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
-; CHECK-NEXT:    lbu a1, 1012(sp)
 ; CHECK-NEXT:    vslideup.vx v8, v24, a2
-; CHECK-NEXT:    vmv.s.x v24, a1
+; CHECK-NEXT:    vmv.s.x v24, a3
 ; CHECK-NEXT:    li a1, 501
 ; CHECK-NEXT:    li a2, 500
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
@@ -137,21 +137,21 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    addi a1, a1, 501
 ; CHECK-NEXT:    slli a1, a1, 13
 ; CHECK-NEXT:    addi a1, a1, 512
+; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v24, 0
+; CHECK-NEXT:    lui a2, 1047552
+; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    slli a2, a2, 23
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    slli a2, a2, 18
+; CHECK-NEXT:    vslide1down.vx v0, v24, a2
+; CHECK-NEXT:    lui a2, 4
+; CHECK-NEXT:    vmv.s.x v24, a2
 ; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetivli zero, 7, e64, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v0, v24, 6
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v24, a1
-; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v7, 0
-; CHECK-NEXT:    lui a1, 1047552
-; CHECK-NEXT:    addiw a1, a1, 1
-; CHECK-NEXT:    slli a1, a1, 23
-; CHECK-NEXT:    addi a1, a1, 1
-; CHECK-NEXT:    slli a1, a1, 18
-; CHECK-NEXT:    vslide1down.vx v0, v7, a1
-; CHECK-NEXT:    lui a1, 4
-; CHECK-NEXT:    vmv.s.x v7, a1
-; CHECK-NEXT:    vsetivli zero, 7, e64, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v0, v7, 6
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
 ; CHECK-NEXT:    vrgather.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    addi sp, s0, -1536

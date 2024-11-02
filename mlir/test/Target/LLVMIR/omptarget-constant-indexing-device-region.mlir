@@ -37,6 +37,6 @@ module attributes {omp.is_target_device = true} {
 // CHECK: store ptr %[[ARG1]], ptr %[[ARG1_ALLOCA]], align 8
 // CHECK: %[[LOAD_ARG1_ALLOCA:.*]] = load ptr, ptr %[[ARG1_ALLOCA]], align 8
 // CHECK: store i32 20, ptr %[[LOAD_ARG1_ALLOCA]], align 4
-// CHECK: %[[GEP_ARG1_ALLOCA:.*]] = getelementptr inbounds [10 x i32], ptr %[[LOAD_ARG1_ALLOCA]], i32 0, i64 4
+// CHECK: %[[GEP_ARG1_ALLOCA:.*]] = getelementptr [10 x i32], ptr %[[LOAD_ARG1_ALLOCA]], i32 0, i64 4
 // CHECK: store i32 10, ptr %[[GEP_ARG1_ALLOCA]], align 4
 

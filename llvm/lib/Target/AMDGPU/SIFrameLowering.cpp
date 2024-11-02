@@ -579,6 +579,7 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
         (!GITPtrLoReg || !TRI->isSubRegisterEq(Reg, GITPtrLoReg))) {
       MRI.replaceRegWith(ScratchRsrcReg, Reg);
       MFI->setScratchRSrcReg(Reg);
+      MRI.reserveReg(Reg, TRI);
       return Reg;
     }
   }

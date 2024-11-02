@@ -27,9 +27,4 @@ def FoldTensorSubsetOps : Pass<"fold-tensor-subset-ops"> {
   ];
 }
 
-def TensorBufferize : Pass<"tensor-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the `tensor` dialect";
-  let constructor = "mlir::tensor::createTensorBufferizePass()";
-}
-
 #endif // MLIR_DIALECT_TENSOR_TRANSFORMS_PASSES

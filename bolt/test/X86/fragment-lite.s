@@ -1,4 +1,4 @@
-# Check that BOLT in lite mode processes fragments as expected.
+## Check that BOLT in lite mode processes fragments as expected.
 
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o

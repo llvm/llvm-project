@@ -110,6 +110,7 @@ static_library("AST") {
     "Interp/InterpShared.cpp",
     "Interp/InterpStack.cpp",
     "Interp/InterpState.cpp",
+    "Interp/MemberPointer.cpp",
     "Interp/Pointer.cpp",
     "Interp/PrimType.cpp",
     "Interp/Program.cpp",

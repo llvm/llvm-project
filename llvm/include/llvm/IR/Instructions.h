@@ -26,6 +26,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/OperandTraits.h"
@@ -1030,36 +1031,60 @@ public:
                                           NameStr, InsertAtEnd);
   }
 
+  static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
+                                   ArrayRef<Value *> IdxList, GEPNoWrapFlags NW,
+                                   const Twine &NameStr,
+                                   BasicBlock::iterator InsertBefore) {
+    GetElementPtrInst *GEP =
+        Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
+    GEP->setNoWrapFlags(NW);
+    return GEP;
+  }
+
+  static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
+                                   ArrayRef<Value *> IdxList, GEPNoWrapFlags NW,
+                                   const Twine &NameStr = "",
+                                   Instruction *InsertBefore = nullptr) {
+    GetElementPtrInst *GEP =
+        Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
+    GEP->setNoWrapFlags(NW);
+    return GEP;
+  }
+
+  static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
+                                   ArrayRef<Value *> IdxList, GEPNoWrapFlags NW,
+                                   const Twine &NameStr,
+                                   BasicBlock *InsertAtEnd) {
+    GetElementPtrInst *GEP =
+        Create(PointeeType, Ptr, IdxList, NameStr, InsertAtEnd);
+    GEP->setNoWrapFlags(NW);
+    return GEP;
+  }
+
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
   static GetElementPtrInst *CreateInBounds(Type *PointeeType, Value *Ptr,
                                            ArrayRef<Value *> IdxList,
                                            const Twine &NameStr,
                                            BasicBlock::iterator InsertBefore) {
-    GetElementPtrInst *GEP =
-        Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
-    GEP->setIsInBounds(true);
-    return GEP;
+    return Create(PointeeType, Ptr, IdxList, GEPNoWrapFlags::inBounds(),
+                  NameStr, InsertBefore);
   }
 
   static GetElementPtrInst *
   CreateInBounds(Type *PointeeType, Value *Ptr, ArrayRef<Value *> IdxList,
                  const Twine &NameStr = "",
                  Instruction *InsertBefore = nullptr) {
-    GetElementPtrInst *GEP =
-        Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
-    GEP->setIsInBounds(true);
-    return GEP;
+    return Create(PointeeType, Ptr, IdxList, GEPNoWrapFlags::inBounds(),
+                  NameStr, InsertBefore);
   }
 
   static GetElementPtrInst *CreateInBounds(Type *PointeeType, Value *Ptr,
                                            ArrayRef<Value *> IdxList,
                                            const Twine &NameStr,
                                            BasicBlock *InsertAtEnd) {
-    GetElementPtrInst *GEP =
-        Create(PointeeType, Ptr, IdxList, NameStr, InsertAtEnd);
-    GEP->setIsInBounds(true);
-    return GEP;
+    return Create(PointeeType, Ptr, IdxList, GEPNoWrapFlags::inBounds(),
+                  NameStr, InsertAtEnd);
   }
 
   /// Transparently provide more efficient getOperand methods.
@@ -1167,12 +1192,25 @@ public:
   /// a constant offset between them.
   bool hasAllConstantIndices() const;
 
+  /// Set nowrap flags for GEP instruction.
+  void setNoWrapFlags(GEPNoWrapFlags NW);
+
   /// Set or clear the inbounds flag on this GEP instruction.
   /// See LangRef.html for the meaning of inbounds on a getelementptr.
+  /// TODO: Remove this method in favor of setNoWrapFlags().
   void setIsInBounds(bool b = true);
+
+  /// Get the nowrap flags for the GEP instruction.
+  GEPNoWrapFlags getNoWrapFlags() const;
 
   /// Determine whether the GEP has the inbounds flag.
   bool isInBounds() const;
+
+  /// Determine whether the GEP has the nusw flag.
+  bool hasNoUnsignedSignedWrap() const;
+
+  /// Determine whether the GEP has the nuw flag.
+  bool hasNoUnsignedWrap() const;
 
   /// Accumulate the constant address offset of this GEP if possible.
   ///

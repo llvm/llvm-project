@@ -58,8 +58,6 @@ Paper Status
       * ``GPS clock`` not done
       * ``UTC clock`` not done
 
-   .. [#note-P0718] P0718: Implemented deprecation of ``shared_ptr`` atomic access APIs only.
-
 .. _issues-status-cxx20:
 
 Library Working Group Issues Status

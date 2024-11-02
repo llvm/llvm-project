@@ -23,12 +23,12 @@ define i32 @foo(i32 %x) #0 section ".tcm_text" {
 ; DISABLE-LABEL: @foo(
 ; DISABLE-NEXT:  entry:
 ; DISABLE-NEXT:    switch i32 [[X:%.*]], label [[SW_DEFAULT:%.*]] [
-; DISABLE-NEXT:    i32 0, label [[RETURN:%.*]]
-; DISABLE-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; DISABLE-NEXT:    i32 2, label [[SW_BB2:%.*]]
-; DISABLE-NEXT:    i32 3, label [[SW_BB3:%.*]]
-; DISABLE-NEXT:    i32 4, label [[SW_BB4:%.*]]
-; DISABLE-NEXT:    i32 5, label [[SW_BB5:%.*]]
+; DISABLE-NEXT:      i32 0, label [[RETURN:%.*]]
+; DISABLE-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; DISABLE-NEXT:      i32 2, label [[SW_BB2:%.*]]
+; DISABLE-NEXT:      i32 3, label [[SW_BB3:%.*]]
+; DISABLE-NEXT:      i32 4, label [[SW_BB4:%.*]]
+; DISABLE-NEXT:      i32 5, label [[SW_BB5:%.*]]
 ; DISABLE-NEXT:    ]
 ; DISABLE:       sw.bb1:
 ; DISABLE-NEXT:    br label [[RETURN]]

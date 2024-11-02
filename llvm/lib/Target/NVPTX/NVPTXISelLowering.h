@@ -462,6 +462,9 @@ public:
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
+  Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
+                                     const DataLayout &DL) const;
+
   /// getFunctionParamOptimizedAlign - since function arguments are passed via
   /// .param space, we may want to increase their alignment in a way that
   /// ensures that we can effectively vectorize their loads & stores. We can

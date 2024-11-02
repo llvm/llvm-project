@@ -56,8 +56,8 @@ def testAttrEq():
         print("a1 == a2:", a1 == a2)
         # CHECK: a1 == a3: True
         print("a1 == a3:", a1 == a3)
-        # CHECK: a1 == None: False
-        print("a1 == None:", a1 == None)
+        # CHECK: a1 is None: False
+        print("a1 is None:", a1 is None)
 
 
 # CHECK-LABEL: TEST: testAttrHash
@@ -109,9 +109,9 @@ def testAttrEqDoesNotRaise():
         # CHECK: False
         print(a1 == not_an_attr)
         # CHECK: False
-        print(a1 == None)
+        print(a1 is None)
         # CHECK: True
-        print(a1 != None)
+        print(a1 is not None)
 
 
 # CHECK-LABEL: TEST: testAttrCapsule

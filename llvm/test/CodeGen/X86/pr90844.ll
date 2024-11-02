@@ -17,3 +17,20 @@ entry:
   store <2 x i64> %5, ptr poison, align 16
   ret void
 }
+
+define void @foo(ptr %0) {
+; CHECK-LABEL: foo:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpxor 32(%rdi), %ymm0, %ymm1
+; CHECK-NEXT:    vpxor (%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqa %ymm0, (%rdi)
+; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %1 = load <32 x half>, ptr %0
+  %2 = fneg <32 x half> %1
+  store <32 x half> %2, ptr %0
+  ret void
+}

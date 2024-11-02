@@ -123,7 +123,7 @@ llvm.func @launch_from_llvm_func() {
   llvm.return
 }
 
-// CHECK-DL-LABLE: gpu.module @launch_from_llvm_func_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_from_llvm_func_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
 
 // -----
 

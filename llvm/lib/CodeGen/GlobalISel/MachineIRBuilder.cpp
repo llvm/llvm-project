@@ -996,7 +996,6 @@ MachineInstrBuilder MachineIRBuilder::buildAtomicRMW(
   LLT OldValResTy = OldValRes.getLLTTy(*getMRI());
   LLT AddrTy = Addr.getLLTTy(*getMRI());
   LLT ValTy = Val.getLLTTy(*getMRI());
-  assert(OldValResTy.isScalar() && "invalid operand type");
   assert(AddrTy.isPointer() && "invalid operand type");
   assert(ValTy.isValid() && "invalid operand type");
   assert(OldValResTy == ValTy && "type mismatch");

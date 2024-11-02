@@ -73,7 +73,6 @@ define void @extract_v1i32_v8i32_4(ptr %x, ptr %y) {
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vle32.v v8, (a0)
-; VLA-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; VLA-NEXT:    vslidedown.vi v8, v8, 4
 ; VLA-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; VLA-NEXT:    vse32.v v8, (a1)
@@ -96,7 +95,6 @@ define void @extract_v1i32_v8i32_5(ptr %x, ptr %y) {
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLA-NEXT:    vle32.v v8, (a0)
-; VLA-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; VLA-NEXT:    vslidedown.vi v8, v8, 5
 ; VLA-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; VLA-NEXT:    vse32.v v8, (a1)
@@ -391,9 +389,8 @@ define void @extract_v8i1_v64i1_8(ptr %x, ptr %y) {
 ; VLA-NEXT:    li a2, 64
 ; VLA-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; VLA-NEXT:    vlm.v v8, (a0)
-; VLA-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; VLA-NEXT:    vslidedown.vi v8, v8, 1
 ; VLA-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; VLA-NEXT:    vslidedown.vi v8, v8, 1
 ; VLA-NEXT:    vsm.v v8, (a1)
 ; VLA-NEXT:    ret
 ;
@@ -401,9 +398,8 @@ define void @extract_v8i1_v64i1_8(ptr %x, ptr %y) {
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
 ; VLS-NEXT:    vlm.v v8, (a0)
-; VLS-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; VLS-NEXT:    vslidedown.vi v8, v8, 1
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; VLS-NEXT:    vslidedown.vi v8, v8, 1
 ; VLS-NEXT:    vsm.v v8, (a1)
 ; VLS-NEXT:    ret
   %a = load <64 x i1>, ptr %x
@@ -418,9 +414,8 @@ define void @extract_v8i1_v64i1_48(ptr %x, ptr %y) {
 ; VLA-NEXT:    li a2, 64
 ; VLA-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; VLA-NEXT:    vlm.v v8, (a0)
-; VLA-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; VLA-NEXT:    vslidedown.vi v8, v8, 6
 ; VLA-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; VLA-NEXT:    vslidedown.vi v8, v8, 6
 ; VLA-NEXT:    vsm.v v8, (a1)
 ; VLA-NEXT:    ret
 ;
@@ -428,9 +423,8 @@ define void @extract_v8i1_v64i1_48(ptr %x, ptr %y) {
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
 ; VLS-NEXT:    vlm.v v8, (a0)
-; VLS-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; VLS-NEXT:    vslidedown.vi v8, v8, 6
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; VLS-NEXT:    vslidedown.vi v8, v8, 6
 ; VLS-NEXT:    vsm.v v8, (a1)
 ; VLS-NEXT:    ret
   %a = load <64 x i1>, ptr %x
@@ -853,9 +847,8 @@ define void @extract_v2i1_nxv32i1_26(<vscale x 32 x i1> %x, ptr %y) {
 define void @extract_v8i1_nxv32i1_16(<vscale x 32 x i1> %x, ptr %y) {
 ; CHECK-LABEL: extract_v8i1_nxv32i1_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v0, 2
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
   %c = call <8 x i1> @llvm.vector.extract.v8i1.nxv32i1(<vscale x 32 x i1> %x, i64 16)

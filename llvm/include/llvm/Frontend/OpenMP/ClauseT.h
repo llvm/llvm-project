@@ -19,7 +19,7 @@
 // - EmptyTrait: the class has no data members.
 // - WrapperTrait: the class has a single member `v`
 // - TupleTrait: the class has a tuple member `t`
-// - UnionTrait the class has a varuant member `u`
+// - UnionTrait the class has a variant member `u`
 // - IncompleteTrait: the class is a placeholder class that is currently empty,
 //   but will be completed at a later time.
 // Note: This structure follows the one used in flang parser.
@@ -150,33 +150,41 @@ template <typename T, typename... Ts> struct Union<T, Ts...> {
 
 template <typename T> using ListT = llvm::SmallVector<T, 0>;
 
-// The ObjectT class represents a variable (as defined in the OpenMP spec).
+// The ObjectT class represents a variable or a locator (as defined in
+// the OpenMP spec).
+// Note: the ObjectT template is not defined. Any user of it is expected to
+// provide their own specialization that conforms to the requirements listed
+// below.
 //
-// A specialization of ObjectT<Id, Expr> must provide the following definitions:
+// Let ObjectS be any specialization of ObjectT:
+//
+// ObjectS must provide the following definitions:
 // {
 //    using IdTy = Id;
 //    using ExprTy = Expr;
 //
 //    auto id() const -> IdTy {
-//      return the identifier of the object (for use in tests for
-//         presence/absence of the object)
-//    }
-//
-//    auto ref() const -> (e.g. const ExprTy&) {
-//      return the expression accessing (referencing) the object
+//      // Return a value such that a.id() == b.id() if and only if:
+//      // (1) both `a` and `b` represent the same variable or location, or
+//      // (2) bool(a.id()) == false and bool(b.id()) == false
 //    }
 // }
 //
-// For example, the ObjectT instance created for "var[x+1]" would have
-// the `id()` return the identifier for `var`, and the `ref()` return the
-// representation of the array-access `var[x+1]`.
+// The type IdTy should be hashable (usable as key in unordered containers).
 //
-// The identity of an object must always be present, i.e. it cannot be
-// nullptr, std::nullopt, etc. The reference is optional.
+// Values of type IdTy should be contextually convertible to `bool`.
 //
-// Note: the ObjectT template is not defined. Any user of it is expected to
-// provide their own specialization that conforms to the above requirements.
+// If S is an object of type ObjectS, then `bool(S.id())` is `false` if
+// and only if S does not represent any variable or location.
+//
+// ObjectS should be copyable, movable, and default-constructible.
 template <typename IdType, typename ExprType> struct ObjectT;
+
+// By default, object equality is only determined by its identity.
+template <typename I, typename E>
+bool operator==(const ObjectT<I, E> &o1, const ObjectT<I, E> &o2) {
+  return o1.id() == o2.id();
+}
 
 template <typename I, typename E> using ObjectListT = ListT<ObjectT<I, E>>;
 
@@ -264,6 +272,32 @@ struct ReductionIdentifierT {
 
 template <typename T, typename I, typename E> //
 using IteratorT = ListT<IteratorSpecifierT<T, I, E>>;
+
+template <typename T>
+std::enable_if_t<T::EmptyTrait::value, bool> operator==(const T &a,
+                                                        const T &b) {
+  return true;
+}
+template <typename T>
+std::enable_if_t<T::IncompleteTrait::value, bool> operator==(const T &a,
+                                                             const T &b) {
+  return true;
+}
+template <typename T>
+std::enable_if_t<T::WrapperTrait::value, bool> operator==(const T &a,
+                                                          const T &b) {
+  return a.v == b.v;
+}
+template <typename T>
+std::enable_if_t<T::TupleTrait::value, bool> operator==(const T &a,
+                                                        const T &b) {
+  return a.t == b.t;
+}
+template <typename T>
+std::enable_if_t<T::UnionTrait::value, bool> operator==(const T &a,
+                                                        const T &b) {
+  return a.u == b.u;
+}
 } // namespace type
 
 template <typename T> using ListT = type::ListT<T>;
@@ -285,6 +319,8 @@ ListT<ResultTy> makeList(ContainerTy &&container, FunctionTy &&func) {
 }
 
 namespace clause {
+using type::operator==;
+
 // V5.2: [8.3.1] `assumption` clauses
 template <typename T, typename I, typename E> //
 struct AbsentT {
@@ -726,7 +762,7 @@ struct LinearT {
   ENUM(LinearModifier, Ref, Val, Uval);
 
   using TupleTrait = std::true_type;
-  // Step == nullptr means 1.
+  // Step == nullopt means 1.
   std::tuple<OPT(StepSimpleModifier), OPT(StepComplexModifier),
              OPT(LinearModifier), List>
       t;
@@ -1142,9 +1178,11 @@ struct UsesAllocatorsT {
   using MemSpace = E;
   using TraitsArray = ObjectT<I, E>;
   using Allocator = E;
-  using AllocatorSpec =
-      std::tuple<OPT(MemSpace), OPT(TraitsArray), Allocator>; // Not a spec name
-  using Allocators = ListT<AllocatorSpec>;                    // Not a spec name
+  struct AllocatorSpec { // Not a spec name
+    using TupleTrait = std::true_type;
+    std::tuple<OPT(MemSpace), OPT(TraitsArray), Allocator> t;
+  };
+  using Allocators = ListT<AllocatorSpec>; // Not a spec name
   using WrapperTrait = std::true_type;
   Allocators v;
 };
@@ -1232,8 +1270,9 @@ using UnionOfAllClausesT = typename type::Union< //
     UnionClausesT<T, I, E>,                      //
     WrapperClausesT<T, I, E>                     //
     >::type;
-
 } // namespace clause
+
+using type::operator==;
 
 // The variant wrapper that encapsulates all possible specific clauses.
 // The `Extras` arguments are additional types representing local extensions
@@ -1244,12 +1283,18 @@ using UnionOfAllClausesT = typename type::Union< //
 //
 // The member Clause::u will be a variant containing all specific clauses
 // defined above, plus MyClause1 and MyClause2.
+//
+// Note: Any derived class must be constructible from the base class
+// ClauseT<...>.
 template <typename TypeType, typename IdType, typename ExprType,
           typename... Extras>
 struct ClauseT {
   using TypeTy = TypeType;
   using IdTy = IdType;
   using ExprTy = ExprType;
+
+  // Type of "self" to specify this type given a derived class type.
+  using BaseT = ClauseT<TypeType, IdType, ExprType, Extras...>;
 
   using VariantTy = typename type::Union<
       clause::UnionOfAllClausesT<TypeType, IdType, ExprType>,
@@ -1258,6 +1303,11 @@ struct ClauseT {
   llvm::omp::Clause id; // The numeric id of the clause
   using UnionTrait = std::true_type;
   VariantTy u;
+};
+
+template <typename ClauseType> struct DirectiveWithClauses {
+  llvm::omp::Directive id = llvm::omp::Directive::OMPD_unknown;
+  tomp::type::ListT<ClauseType> clauses;
 };
 
 } // namespace tomp

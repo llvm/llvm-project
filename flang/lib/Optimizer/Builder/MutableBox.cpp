@@ -394,6 +394,8 @@ static bool readToBoxValue(const fir::MutableBoxValue &box,
   // Track value as fir.box
   if ((box.isDerived() && mayBePolymorphic) || box.isUnlimitedPolymorphic())
     return true;
+  if (box.hasAssumedRank())
+    return true;
   // Intrinsic allocatables are contiguous, no need to track the value by
   // fir.box.
   if (box.isAllocatable() || box.rank() == 0)
@@ -409,14 +411,12 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::MutableBoxValue &box,
                                 bool mayBePolymorphic,
                                 bool preserveLowerBounds) {
-  if (box.hasAssumedRank())
-    TODO(loc, "assumed rank allocatables or pointers");
   llvm::SmallVector<mlir::Value> lbounds;
   llvm::SmallVector<mlir::Value> extents;
   llvm::SmallVector<mlir::Value> lengths;
   if (readToBoxValue(box, mayBePolymorphic)) {
     auto reader = MutablePropertyReader(builder, loc, box);
-    if (preserveLowerBounds)
+    if (preserveLowerBounds && !box.hasAssumedRank())
       reader.getLowerBounds(lbounds);
     return fir::BoxValue{reader.getIrBox(), lbounds,
                          box.nonDeferredLenParams()};

@@ -21,13 +21,13 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-TSO,RV64IA-TSO-ZACAS %s
 
-; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zabha -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+zabha -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO,RV64IA-WMO-ZABHA,RV64IA-WMO-ZABHA-NOZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso,+experimental-zabha -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso,+zabha -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO,RV64IA-TSO-ZABHA,RV64IA-TSO-ZABHA-NOZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zabha,+zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+zabha,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO,RV64IA-WMO-ZABHA,RV64IA-WMO-ZABHA-ZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso,+experimental-zabha,+zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso,+zabha,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO,RV64IA-TSO-ZABHA,RV64IA-TSO-ZABHA-ZACAS %s
 
 define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {

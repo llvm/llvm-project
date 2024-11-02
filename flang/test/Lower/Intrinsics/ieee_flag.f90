@@ -20,6 +20,7 @@
   ! CHECK:     %[[V_63:[0-9]+]] = fir.alloca !fir.array<3x!fir.logical<4>> {bindc_name = "v_usual", uniq_name = "_QFEv_usual"}
   ! CHECK:     %[[V_64:[0-9]+]] = fir.declare %[[V_63]](%[[V_54]]) {uniq_name = "_QFEv_usual"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.logical<4>>>
   logical :: v, v2(2), v_usual(size(ieee_usual)), v_all(size(ieee_all))
+  real :: x(100,20,10)
 
   ! CHECK:     %[[V_67:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
   print*, 'Flag'
@@ -40,7 +41,7 @@
   ! CHECK:     %[[V_92:[0-9]+]] = arith.cmpi ne, %[[V_91]], %c0{{.*}} : i8
   ! CHECK:     %[[V_93:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_74]], %[[V_92]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
   print*, 'support invalid: ', &
-    ieee_support_flag(ieee_invalid), ieee_support_flag(ieee_invalid, 0.)
+    ieee_support_flag(ieee_invalid), ieee_support_flag(ieee_invalid, x)
 
   ! CHECK:     %[[V_95:[0-9]+]] = fir.declare %[[V_80]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_ieee_exceptionsTieee_flag_type.0"} : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:     %[[V_96:[0-9]+]] = fir.coordinate_of %[[V_95]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>

@@ -123,6 +123,9 @@ static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
   if (const auto *Method = dyn_cast<CXXMethodDecl>(ND)) {
     if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
       Canonical = cast<NamedDecl>(Overridden->getCanonicalDecl());
+    else if (const FunctionTemplateDecl *Primary = Method->getPrimaryTemplate())
+      if (const FunctionDecl *TemplatedDecl = Primary->getTemplatedDecl())
+        Canonical = cast<NamedDecl>(TemplatedDecl->getCanonicalDecl());
 
     if (Canonical != ND)
       return Canonical;

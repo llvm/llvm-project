@@ -53,7 +53,7 @@ public:
   /// Returns the name of the underlying declaration.
   const std::string getName() const;
   /// Checks if the record is a union.
-  bool isUnion() const { return getDecl()->isUnion(); }
+  bool isUnion() const { return IsUnion; }
   /// Returns the size of the record.
   unsigned getSize() const { return BaseSize; }
   /// Returns the full size of the record, including records.
@@ -132,6 +132,8 @@ private:
   unsigned BaseSize;
   /// Size of all virtual bases.
   unsigned VirtualSize;
+  /// If this record is a union.
+  bool IsUnion;
 };
 
 } // namespace interp

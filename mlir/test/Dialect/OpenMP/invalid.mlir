@@ -648,7 +648,6 @@ func.func @foo(%lb : index, %ub : index, %step : index) {
   omp.wsloop reduction(@foo %0 -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       %2 = arith.constant 2.0 : f32
-      omp.reduction %2, %1 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -678,7 +677,6 @@ func.func @foo(%lb : index, %ub : index, %step : index) {
   omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr, @add_f32 %0 -> %prv1 : !llvm.ptr) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       %2 = arith.constant 2.0 : f32
-      omp.reduction %2, %0 : f32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -713,7 +711,6 @@ func.func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
   omp.wsloop reduction(@add_f32 %mem -> %prv : memref<1xf32>) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       %2 = arith.constant 2.0 : f32
-      omp.reduction %2, %mem : f32, memref<1xf32>
       omp.yield
     }
     omp.terminator
@@ -2113,23 +2110,23 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>) -> () {
 
 func.func @omp_distribute_wrapper() -> () {
   // expected-error @below {{op must be a loop wrapper}}
-  "omp.distribute"() ({
+  omp.distribute {
       %0 = arith.constant 0 : i32
       "omp.terminator"() : () -> ()
-    }) : () -> ()
+  }
 }
 
 // -----
 
 func.func @omp_distribute_nested_wrapper(%data_var : memref<i32>) -> () {
   // expected-error @below {{only supported nested wrappers are 'omp.parallel' and 'omp.simd'}}
-  "omp.distribute"() ({
-      "omp.wsloop"() ({
-        %0 = arith.constant 0 : i32
-        "omp.terminator"() : () -> ()
-      }) : () -> ()
+  omp.distribute {
+    "omp.wsloop"() ({
+      %0 = arith.constant 0 : i32
       "omp.terminator"() : () -> ()
     }) : () -> ()
+    "omp.terminator"() : () -> ()
+  }
 }
 
 // -----
@@ -2270,5 +2267,24 @@ func.func @undefined_privatizer(%arg0: !llvm.ptr) {
     ^bb0(%arg2: !llvm.ptr):
       omp.terminator
     }) : (!llvm.ptr) -> ()
+  return
+}
+
+// -----
+
+omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @byref_in_private(%arg0: index) {
+  // expected-error @below {{private clause cannot have byref attributes}}
+  omp.parallel private(byref @var1.privatizer %arg0 -> %arg2 : index) {
+    omp.terminator
+  }
+
   return
 }

@@ -93,3 +93,34 @@ entry:
 
   ret <vscale x 1 x i32> %va
 }
+
+; Make sure the local stack allocation pass doesn't count vector registers. The
+; sizes are chosen to be on the edge of what RISCVRegister::needsFrameBaseReg
+; considers to need a virtual base register.
+define riscv_vector_cc void @local_stack_allocation_frame_pointer() "frame-pointer"="all" {
+; SPILL-O2-LABEL: local_stack_allocation_frame_pointer:
+; SPILL-O2:       # %bb.0:
+; SPILL-O2-NEXT:    addi sp, sp, -2032
+; SPILL-O2-NEXT:    .cfi_def_cfa_offset 2032
+; SPILL-O2-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    sw s0, 2024(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    .cfi_offset ra, -4
+; SPILL-O2-NEXT:    .cfi_offset s0, -8
+; SPILL-O2-NEXT:    addi s0, sp, 2032
+; SPILL-O2-NEXT:    .cfi_def_cfa s0, 0
+; SPILL-O2-NEXT:    addi sp, sp, -480
+; SPILL-O2-NEXT:    lbu a0, -1912(s0)
+; SPILL-O2-NEXT:    sb a0, -1912(s0)
+; SPILL-O2-NEXT:    addi sp, s0, -2048
+; SPILL-O2-NEXT:    addi sp, sp, -464
+; SPILL-O2-NEXT:    addi sp, sp, 480
+; SPILL-O2-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    addi sp, sp, 2032
+; SPILL-O2-NEXT:    ret
+  %va = alloca [2500 x i8], align 4
+  %va_gep = getelementptr [2000 x i8], ptr %va, i64 0, i64 600
+  %load = load volatile i8, ptr %va_gep, align 4
+  store volatile i8 %load, ptr %va_gep, align 4
+  ret void
+}

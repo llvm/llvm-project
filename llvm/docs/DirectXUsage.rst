@@ -15,6 +15,7 @@ User Guide for the DirectX Target
 
    DirectX/DXILArchitecture
    DirectX/DXContainer
+   DirectX/DXILOpTableGenDesign
 
 Introduction
 ============

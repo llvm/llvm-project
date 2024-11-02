@@ -28,15 +28,15 @@ func.func @slicing_test() {
   // BWD: matched: %[[v1:.*]] {{.*}} backward static slice:
   //
   // FWDBWD: matched: %[[v1:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-DAG: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-DAG: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %1 = "slicing-test-op" () : () -> i1
 
@@ -49,15 +49,15 @@ func.func @slicing_test() {
   // BWD: matched: %[[v2:.*]] {{.*}} backward static slice:
   //
   // FWDBWD-NEXT: matched: %[[v2:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-DAG: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-DAG: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %2 = "slicing-test-op" () : () -> i2
 
@@ -69,15 +69,15 @@ func.func @slicing_test() {
   // BWD: matched: %[[v3:.*]] {{.*}} backward static slice:
   //
   // FWDBWD-NEXT: matched: %[[v3:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-NEXT: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-NEXT: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %3 = "slicing-test-op" () : () -> i3
 
@@ -89,15 +89,15 @@ func.func @slicing_test() {
   // BWD: matched: %[[v4:.*]] {{.*}} backward static slice:
   //
   // FWDBWD-NEXT: matched: %[[v4:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-NEXT: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-NEXT: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %4 = "slicing-test-op" () : () -> i4
 
@@ -111,15 +111,15 @@ func.func @slicing_test() {
   // BWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
   //
   // FWDBWD-NEXT: matched: %[[v5:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-DAG: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-DAG: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %5 = "slicing-test-op" (%1, %2) : (i1, i2) -> i5
 
@@ -132,15 +132,15 @@ func.func @slicing_test() {
   // BWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
   //
   // FWDBWD-NEXT: matched: %[[v6:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-NEXT: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-NEXT: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %6 = "slicing-test-op" (%3, %4) : (i3, i4) -> i6
 
@@ -153,15 +153,15 @@ func.func @slicing_test() {
   // BWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
   //
   // FWDBWD-NEXT: matched: %[[v7:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
   // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-DAG: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-DAG: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %7 = "slicing-test-op" (%1, %5) : (i1, i5) -> i7
 
@@ -177,15 +177,15 @@ func.func @slicing_test() {
   // BWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
   //
   // FWDBWD-NEXT: matched: %[[v8:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-DAG: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-DAG: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %8 = "slicing-test-op" (%5, %6) : (i5, i6) -> i8
 
@@ -202,15 +202,15 @@ func.func @slicing_test() {
   // BWD-NEXT: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
   //
   // FWDBWD-NEXT: matched: %[[v9:.*]] {{.*}} static slice:
-  // FWDBWD-DAG: %[[v4:.*]] = "slicing-test-op"() : () -> i4
-  // FWDBWD-DAG: %[[v3:.*]] = "slicing-test-op"() : () -> i3
-  // FWDBWD-NEXT: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
-  // FWDBWD-DAG: %[[v2:.*]] = "slicing-test-op"() : () -> i2
-  // FWDBWD-DAG: %[[v1:.*]] = "slicing-test-op"() : () -> i1
-  // FWDBWD-NEXT: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
-  // FWDBWD-DAG: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
-  // FWDBWD-DAG: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
-  // FWDBWD-NEXT: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
+  // FWDBWD: %[[v1:.*]] = "slicing-test-op"() : () -> i1
+  // FWDBWD: %[[v2:.*]] = "slicing-test-op"() : () -> i2
+  // FWDBWD: %[[v3:.*]] = "slicing-test-op"() : () -> i3
+  // FWDBWD: %[[v4:.*]] = "slicing-test-op"() : () -> i4
+  // FWDBWD: %[[v5:.*]] = "slicing-test-op"(%[[v1]], %[[v2]]) : (i1, i2) -> i5
+  // FWDBWD: %[[v6:.*]] = "slicing-test-op"(%[[v3]], %[[v4]]) : (i3, i4) -> i6
+  // FWDBWD: %[[v7:.*]] = "slicing-test-op"(%[[v1]], %[[v5]]) : (i1, i5) -> i7
+  // FWDBWD: %[[v8:.*]] = "slicing-test-op"(%[[v5]], %[[v6]]) : (i5, i6) -> i8
+  // FWDBWD: %[[v9:.*]] = "slicing-test-op"(%[[v7]], %[[v8]]) : (i7, i8) -> i9
 
   %9 = "slicing-test-op" (%7, %8) : (i7, i8) -> i9
 

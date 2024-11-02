@@ -16,6 +16,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -134,66 +135,6 @@ inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
        "intrinsic: " +
            fir::numericMlirTypeToFortran(builder, type, loc, intrinsicName) +
            " in " + intrinsicName);
-}
-
-inline fir::CUDADataAttributeAttr
-getCUDADataAttribute(mlir::MLIRContext *mlirContext,
-                     std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
-  if (cudaAttr) {
-    fir::CUDADataAttribute attr;
-    switch (*cudaAttr) {
-    case Fortran::common::CUDADataAttr::Constant:
-      attr = fir::CUDADataAttribute::Constant;
-      break;
-    case Fortran::common::CUDADataAttr::Device:
-      attr = fir::CUDADataAttribute::Device;
-      break;
-    case Fortran::common::CUDADataAttr::Managed:
-      attr = fir::CUDADataAttribute::Managed;
-      break;
-    case Fortran::common::CUDADataAttr::Pinned:
-      attr = fir::CUDADataAttribute::Pinned;
-      break;
-    case Fortran::common::CUDADataAttr::Shared:
-      attr = fir::CUDADataAttribute::Shared;
-      break;
-    case Fortran::common::CUDADataAttr::Texture:
-      // Obsolete attribute
-      return {};
-    case Fortran::common::CUDADataAttr::Unified:
-      attr = fir::CUDADataAttribute::Unified;
-      break;
-    }
-    return fir::CUDADataAttributeAttr::get(mlirContext, attr);
-  }
-  return {};
-}
-
-inline fir::CUDAProcAttributeAttr getCUDAProcAttribute(
-    mlir::MLIRContext *mlirContext,
-    std::optional<Fortran::common::CUDASubprogramAttrs> cudaAttr) {
-  if (cudaAttr) {
-    fir::CUDAProcAttribute attr;
-    switch (*cudaAttr) {
-    case Fortran::common::CUDASubprogramAttrs::Host:
-      attr = fir::CUDAProcAttribute::Host;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::Device:
-      attr = fir::CUDAProcAttribute::Device;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::HostDevice:
-      attr = fir::CUDAProcAttribute::HostDevice;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::Global:
-      attr = fir::CUDAProcAttribute::Global;
-      break;
-    case Fortran::common::CUDASubprogramAttrs::Grid_Global:
-      attr = fir::CUDAProcAttribute::GridGlobal;
-      break;
-    }
-    return fir::CUDAProcAttributeAttr::get(mlirContext, attr);
-  }
-  return {};
 }
 
 } // namespace fir

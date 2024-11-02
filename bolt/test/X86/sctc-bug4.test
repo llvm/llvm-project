@@ -1,5 +1,5 @@
-# Check that fallthrough blocks are handled properly and Offset annotation is
-# set for conditional tail calls.
+## Check that fallthrough blocks are handled properly and Offset annotation is
+## set for conditional tail calls.
 
 RUN: %clang %cflags %S/Inputs/sctc_bug4.s -o %t
 RUN: llvm-bolt %t -o %t.null --enable-bat \

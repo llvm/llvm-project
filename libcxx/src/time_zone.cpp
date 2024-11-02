@@ -34,6 +34,7 @@
 #include <chrono>
 #include <expected>
 #include <map>
+#include <numeric>
 #include <ranges>
 
 #include "include/tzdb/time_zone_private.h"
@@ -901,6 +902,152 @@ time_zone::__get_info(sys_seconds __time) const {
     return *__result;
 
   std::__throw_runtime_error("tzdb: corrupt db");
+}
+
+// Is the "__local_time" present in "__first" and "__second". If so the
+// local_info has an ambiguous result.
+[[nodiscard]] static bool
+__is_ambiguous(local_seconds __local_time, const sys_info& __first, const sys_info& __second) {
+  std::chrono::local_seconds __end_first{__first.end.time_since_epoch() + __first.offset};
+  std::chrono::local_seconds __begin_second{__second.begin.time_since_epoch() + __second.offset};
+
+  return __local_time < __end_first && __local_time >= __begin_second;
+}
+
+// Determines the result of the "__local_time". This expects the object
+// "__first" to be earlier in time than "__second".
+[[nodiscard]] static local_info
+__get_info(local_seconds __local_time, const sys_info& __first, const sys_info& __second) {
+  std::chrono::local_seconds __end_first{__first.end.time_since_epoch() + __first.offset};
+  std::chrono::local_seconds __begin_second{__second.begin.time_since_epoch() + __second.offset};
+
+  if (__local_time < __end_first) {
+    if (__local_time >= __begin_second)
+      // |--------|
+      //        |------|
+      //         ^
+      return {local_info::ambiguous, __first, __second};
+
+    // |--------|
+    //          |------|
+    //         ^
+    return {local_info::unique, __first, sys_info{}};
+  }
+
+  if (__local_time < __begin_second)
+    // |--------|
+    //             |------|
+    //           ^
+    return {local_info::nonexistent, __first, __second};
+
+  // |--------|
+  //          |------|
+  //           ^
+  return {local_info::unique, __second, sys_info{}};
+}
+
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI local_info
+time_zone::__get_info(local_seconds __local_time) const {
+  seconds __local_seconds = __local_time.time_since_epoch();
+
+  /* An example of a typical year with a DST switch displayed in local time.
+   *
+   * At the first of April the time goes forward one hour. This means the
+   * time marked with ~~ is not a valid local time. This is represented by the
+   * nonexistent value in local_info.result.
+   *
+   * At the first of November the time goes backward one hour. This means the
+   * time marked with ^^ happens twice. This is represented by the ambiguous
+   * value in local_info.result.
+   *
+   * 2020.11.01                  2021.04.01              2021.11.01
+   * offset +05                  offset +05              offset +05
+   * save    0s                  save    1h              save    0s
+   * |------------//----------|
+   *                             |---------//--------------|
+   *                                                    |-------------
+   *                           ~~                        ^^
+   *
+   * These shifts can happen due to changes in the current time zone for a
+   * location. For example, Indian/Kerguelen switched only once. In 1950 from an
+   * offset of 0 hours to an offset of +05 hours.
+   *
+   * During all these shifts the UTC time will not have gaps.
+   */
+
+  // The code needs to determine the system time for the local time. There is no
+  // information available. Assume the offset between system time and local time
+  // is 0s. This gives an initial estimate.
+  sys_seconds __guess{__local_seconds};
+  sys_info __info = __get_info(__guess);
+
+  // At this point the offset can be used to determine an estimate for the local
+  // time. Before doing that, determine the offset and validate whether the
+  // local time is the range [chrono::local_seconds::min(),
+  // chrono::local_seconds::max()).
+  if (__local_seconds < 0s && __info.offset > 0s)
+    if (__local_seconds - chrono::local_seconds::min().time_since_epoch() < __info.offset)
+      return {-1, __info, {}};
+
+  if (__local_seconds > 0s && __info.offset < 0s)
+    if (chrono::local_seconds::max().time_since_epoch() - __local_seconds < -__info.offset)
+      return {-2, __info, {}};
+
+  // Based on the information found in the sys_info, the local time can be
+  // converted to a system time. This resulting time can be in the following
+  // locations of the sys_info:
+  //
+  //                             |---------//--------------|
+  //                           1   2.1      2.2         2.3  3
+  //
+  // 1. The estimate is before the returned sys_info object.
+  //    The result is either non-existent or unique in the previous sys_info.
+  // 2. The estimate is in the sys_info object
+  //    - If the sys_info begin is not sys_seconds::min(), then it might be at
+  //      2.1 and could be ambiguous with the previous or unique.
+  //    - If sys_info end is not sys_seconds::max(), then it might be at 2.3
+  //      and could be ambiguous with the next or unique.
+  //    - Else it is at 2.2 and always unique. This case happens when a
+  //      time zone has no transitions. For example, UTC or GMT+1.
+  // 3. The estimate is after the returned sys_info object.
+  //    The result is either non-existent or unique in the next sys_info.
+  //
+  // There is no specification where the "middle" starts. Similar issues can
+  // happen when sys_info objects are "short", then "unique in the next" could
+  // become "ambiguous in the next and the one following". Theoretically there
+  // is the option of the following time-line
+  //
+  // |------------|
+  //           |----|
+  //       |-----------------|
+  //
+  // However the local_info object only has 2 sys_info objects, so this option
+  // is not tested.
+
+  sys_seconds __sys_time{__local_seconds - __info.offset};
+  if (__sys_time < __info.begin)
+    // Case 1 before __info
+    return chrono::__get_info(__local_time, __get_info(__info.begin - 1s), __info);
+
+  if (__sys_time >= __info.end)
+    // Case 3 after __info
+    return chrono::__get_info(__local_time, __info, __get_info(__info.end));
+
+  // Case 2 in __info
+  if (__info.begin != sys_seconds::min()) {
+    // Case 2.1 Not at the beginning, when not ambiguous the result should test
+    // case 2.3.
+    sys_info __prev = __get_info(__info.begin - 1s);
+    if (__is_ambiguous(__local_time, __prev, __info))
+      return {local_info::ambiguous, __prev, __info};
+  }
+
+  if (__info.end == sys_seconds::max())
+    // At the end so it's case 2.2
+    return {local_info::unique, __info, sys_info{}};
+
+  // This tests case 2.2 or case 2.3.
+  return chrono::__get_info(__local_time, __info, __get_info(__info.end));
 }
 
 } // namespace chrono
