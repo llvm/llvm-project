@@ -63,8 +63,8 @@ namespace clangd {
 namespace {
 
 // Tracks number of times a tweak has been offered.
-static constexpr trace::Metric
-    TweakAvailable("tweak_available", trace::Metric::Counter, "tweak_id");
+static constexpr trace::Metric TweakAvailable(
+    "tweak_available", trace::Metric::Counter, "tweak_id");
 
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {

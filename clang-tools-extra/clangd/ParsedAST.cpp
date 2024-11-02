@@ -667,8 +667,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             return Fixes;
           });
       ASTDiags.contributeNoteDiagFixes(
-          [&FixIncludes](const Diag &Diag,
-                                     const clang::Diagnostic &Info) {
+          [&FixIncludes](const Diag &Diag, const clang::Diagnostic &Info) {
             return FixIncludes->fix(Diag.Severity, Info);
           });
       Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());

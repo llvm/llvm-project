@@ -239,8 +239,8 @@ TEST_F(LSPTest, ClangTidyRename) {
   const auto NoLintRegex = std::regex("Apply fix: " + NoLintFixMsgRegexStr);
   const auto &RenameCommand = *std::find_if(
       Fixes.begin(), Fixes.end(), [&](decltype(Fixes)::value_type &Fix) {
-
-        return !std::regex_match((*Fix.getAsObject())["title"].getAsString()->data(), NoLintRegex);
+        return !std::regex_match(
+            (*Fix.getAsObject())["title"].getAsString()->data(), NoLintRegex);
       });
 
   ASSERT_EQ((*RenameCommand.getAsObject()).get("title")->getAsString(),

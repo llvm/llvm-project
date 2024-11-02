@@ -1295,7 +1295,6 @@ TEST(IncludeFixerTest, IncompleteType) {
       {"call_incomplete_argument", "int m(ns::X); int i = m([[*x]]);"},
       {"switch_incomplete_class_type", "void a() { [[switch]](*x) {} }"},
       {"delete_incomplete_class_type", "void f() { [[delete]] *x; }"},
-      // TODO: Add to test case
       {"-Wdelete-incomplete", "void f() { [[delete]] x; }"},
       {"dereference_incomplete_type",
        R"cpp(void f() { asm("" : "=r"([[*]]x)::); })cpp"},
@@ -1303,7 +1302,6 @@ TEST(IncludeFixerTest, IncompleteType) {
   for (auto Case : Tests) {
     Annotations Main(Case.second);
     TU.Code = Main.code().str() + "\n // error-ok";
-    // TODO: maybe only do containsFix on -Wdelete-incomplete
     EXPECT_THAT(TU.build().getDiagnostics(),
                 ElementsAre(AllOf(
                     diagName(Case.first), hasRange(Main.range()),
@@ -1669,7 +1667,6 @@ TEST(IncludeFixerTest, HeaderNamedInDiag) {
                              "with type 'int (const char *, ...)'; ISO C99 "
                              "and later do not support implicit function "
                              "declarations"),
-          // TODO: Add to test case
           containsFix(Fix(Test.range("insert"), "#include <stdio.h>\n",
                           "Include <stdio.h> for symbol printf")))));
 
@@ -2020,10 +2017,10 @@ TEST(ParsedASTTest, ModuleSawDiag) {
   TestTU TU;
 
   auto AST = TU.build();
-#if 0
+        #if 0
   EXPECT_THAT(AST.getDiagnostics(),
               testing::Contains(Diag(Code.range(), KDiagMsg.str())));
-#endif
+        #endif
 }
 
 TEST(Preamble, EndsOnNonEmptyLine) {
