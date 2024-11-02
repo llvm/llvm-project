@@ -472,6 +472,23 @@ const Symbol &NamedEntity::GetLastSymbol() const {
       u_);
 }
 
+const SymbolRef *NamedEntity::UnwrapSymbolRef() const {
+  return common::visit(
+      common::visitors{
+          [](const SymbolRef &s) { return &s; },
+          [](const Component &) -> const SymbolRef * { return nullptr; },
+      },
+      u_);
+}
+
+SymbolRef *NamedEntity::UnwrapSymbolRef() {
+  return common::visit(common::visitors{
+                           [](SymbolRef &s) { return &s; },
+                           [](Component &) -> SymbolRef * { return nullptr; },
+                       },
+      u_);
+}
+
 const Component *NamedEntity::UnwrapComponent() const {
   return common::visit(
       common::visitors{

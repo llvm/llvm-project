@@ -527,7 +527,7 @@ int main(int argc, char *argv[]) {
     TracingSession.emplace(*Tracer);
 
   clang::clangd::RealThreadsafeFS TFS;
-  auto FS = TFS.view(llvm::None);
+  auto FS = TFS.view(std::nullopt);
   auto Status = FS->status(IndexPath);
   if (!Status) {
     elog("{0} does not exist.", IndexPath);

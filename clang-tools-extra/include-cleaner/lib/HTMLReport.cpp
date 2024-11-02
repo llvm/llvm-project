@@ -154,7 +154,7 @@ class Reporter {
   };
   std::vector<Ref> Refs;
   llvm::DenseMap<const Include *, std::vector<unsigned>> IncludeRefs;
-  llvm::StringMap<std::vector</*RefIndex*/unsigned>> Insertion;
+  llvm::StringMap<std::vector</*RefIndex*/ unsigned>> Insertion;
 
   llvm::StringRef includeType(const Include *I) {
     auto &List = IncludeRefs[I];
@@ -185,17 +185,8 @@ class Reporter {
 
   void fillTarget(Ref &R) {
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
-    // FIXME: use locateDecl and friends once implemented.
-    // This doesn't use stdlib::Recognizer, but locateDecl will soon do that.
-    switch (R.Sym.kind()) {
-    case Symbol::Declaration:
-      R.Locations.push_back(R.Sym.declaration().getLocation());
-      break;
-    case Symbol::Macro:
-      R.Locations.push_back(R.Sym.macro().Definition);
-      break;
-    }
-
+    for (auto &Loc : locateSymbol(R.Sym))
+      R.Locations.push_back(Loc);
     for (const auto &Loc : R.Locations)
       R.Headers.append(findHeaders(Loc, SM, PI));
 
@@ -220,8 +211,8 @@ class Reporter {
 
 public:
   Reporter(llvm::raw_ostream &OS, ASTContext &Ctx, HeaderSearch &HS,
-           const include_cleaner::Includes &Includes,
-           const PragmaIncludes *PI, FileID MainFile)
+           const include_cleaner::Includes &Includes, const PragmaIncludes *PI,
+           FileID MainFile)
       : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), HS(HS),
         Includes(Includes), PI(PI), MainFile(MainFile),
         MainFE(SM.getFileEntryForID(MainFile)) {}
@@ -321,7 +312,7 @@ private:
     printFilename(SM.getSpellingLoc(Loc).printToString(SM));
     OS << ">";
   }
-  
+
   // Write "Provides: " rows of an include or include-insertion table.
   // These describe the symbols the header provides, referenced by RefIndices.
   void writeProvides(llvm::ArrayRef<unsigned> RefIndices) {
@@ -366,7 +357,7 @@ private:
     }
     OS << "</table>";
   }
-  
+
   void writeInsertion(llvm::StringRef Text, llvm::ArrayRef<unsigned> Refs) {
     OS << "<table class='insertion'>";
     writeProvides(Refs);
@@ -440,7 +431,7 @@ private:
     llvm::sort(Insertions);
     for (llvm::StringRef Insertion : Insertions) {
       OS << "<code class='line added'>"
-          << "<span class='inc sel inserted' data-hover='i";
+         << "<span class='inc sel inserted' data-hover='i";
       escapeString(Insertion);
       OS << "'>#include ";
       escapeString(Insertion);

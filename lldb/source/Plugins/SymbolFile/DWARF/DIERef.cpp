@@ -36,11 +36,11 @@ llvm::Optional<DIERef> DIERef::Decode(const DataExtractor &data,
   // it will return 0
   dw_offset_t die_offset = data.GetU32(offset_ptr);
   if (die_offset == 0)
-    return llvm::None;
+    return std::nullopt;
   if (dwo_num_valid)
     return DIERef(dwo_num, section, die_offset);
   else
-    return DIERef(llvm::None, section, die_offset);
+    return DIERef(std::nullopt, section, die_offset);
 }
 
 void DIERef::Encode(DataEncoder &encoder) const {

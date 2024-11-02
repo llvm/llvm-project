@@ -219,11 +219,11 @@ public:
   /// Return true for expressions that can't be evaluated at runtime
   /// within given \b Budget.
   ///
-  /// At is a parameter which specifies point in code where user is going to
-  /// expand this expression. Sometimes this knowledge can lead to
+  /// \p At is a parameter which specifies point in code where user is going to
+  /// expand these expressions. Sometimes this knowledge can lead to
   /// a less pessimistic cost estimation.
-  bool isHighCostExpansion(const SCEV *Expr, Loop *L, unsigned Budget,
-                           const TargetTransformInfo *TTI,
+  bool isHighCostExpansion(ArrayRef<const SCEV *> Exprs, Loop *L,
+                           unsigned Budget, const TargetTransformInfo *TTI,
                            const Instruction *At) {
     assert(TTI && "This function requires TTI to be provided.");
     assert(At && "This function requires At instruction to be provided.");
@@ -233,7 +233,8 @@ public:
     SmallPtrSet<const SCEV *, 8> Processed;
     InstructionCost Cost = 0;
     unsigned ScaledBudget = Budget * TargetTransformInfo::TCC_Basic;
-    Worklist.emplace_back(-1, -1, Expr);
+    for (auto *Expr : Exprs)
+      Worklist.emplace_back(-1, -1, Expr);
     while (!Worklist.empty()) {
       const SCEVOperand WorkItem = Worklist.pop_back_val();
       if (isHighCostExpansionHelper(WorkItem, L, *At, Cost, ScaledBudget, *TTI,

@@ -18,13 +18,13 @@ using namespace mlir;
 using namespace mlir::detail;
 
 static Operation *createOp(MLIRContext *context,
-                           ArrayRef<Value> operands = llvm::None,
-                           ArrayRef<Type> resultTypes = llvm::None,
+                           ArrayRef<Value> operands = std::nullopt,
+                           ArrayRef<Type> resultTypes = std::nullopt,
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
   return Operation::create(UnknownLoc::get(context),
                            OperationName("foo.bar", context), resultTypes,
-                           operands, llvm::None, llvm::None, numRegions);
+                           operands, std::nullopt, std::nullopt, numRegions);
 }
 
 namespace {
@@ -33,7 +33,7 @@ TEST(OperandStorageTest, NonResizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
@@ -44,7 +44,7 @@ TEST(OperandStorageTest, NonResizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(llvm::None);
+  user->setOperands(std::nullopt);
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Destroy the operations.
@@ -57,7 +57,7 @@ TEST(OperandStorageTest, Resizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -68,7 +68,7 @@ TEST(OperandStorageTest, Resizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(llvm::None);
+  user->setOperands(std::nullopt);
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Adding more operands is okay.
@@ -85,7 +85,7 @@ TEST(OperandStorageTest, RangeReplace) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -121,7 +121,7 @@ TEST(OperandStorageTest, MutableRange) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -158,7 +158,8 @@ TEST(OperandStorageTest, RangeErase) {
   Builder builder(&context);
 
   Type type = builder.getNoneType();
-  Operation *useOp = createOp(&context, /*operands=*/llvm::None, {type, type});
+  Operation *useOp =
+      createOp(&context, /*operands=*/std::nullopt, {type, type});
   Value operand1 = useOp->getResult(0);
   Value operand2 = useOp->getResult(1);
 
@@ -188,9 +189,9 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *containerOp =
-      createOp(&context, /*operands=*/llvm::None, /*resultTypes=*/llvm::None,
-               /*numRegions=*/1);
+  Operation *containerOp = createOp(&context, /*operands=*/std::nullopt,
+                                    /*resultTypes=*/std::nullopt,
+                                    /*numRegions=*/1);
   Region &region = containerOp->getRegion(0);
   Block *block = new Block();
   region.push_back(block);

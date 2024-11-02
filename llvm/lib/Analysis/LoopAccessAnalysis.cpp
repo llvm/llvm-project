@@ -622,7 +622,10 @@ public:
   AccessAnalysis(Loop *TheLoop, AAResults *AA, LoopInfo *LI,
                  MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE)
-      : TheLoop(TheLoop), AST(*AA), LI(LI), DepCands(DA), PSE(PSE) {}
+      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DepCands(DA), PSE(PSE) {
+    // We're analyzing dependences across loop iterations.
+    BAA.enableCrossIterationMode();
+  }
 
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, Type *AccessTy, bool IsReadOnly) {
@@ -703,6 +706,9 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Batched alias analysis results.
+  BatchAAResults BAA;
 
   /// An alias set tracker to partition the access set by underlying object and
   //intrinsic property (such as TBAA metadata).
@@ -805,10 +811,10 @@ static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
 // in by the caller. If we have a node that may potentially yield a valid
 // SCEVAddRecExpr then we decompose it into parts and build the SCEV terms
 // ourselves before adding to the list.
-static void
-findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
-                SmallVectorImpl<std::pair<const SCEV *, bool>> &ScevList,
-                unsigned Depth) {
+static void findForkedSCEVs(
+    ScalarEvolution *SE, const Loop *L, Value *Ptr,
+    SmallVectorImpl<PointerIntPair<const SCEV *, 1, bool>> &ScevList,
+    unsigned Depth) {
   // If our Value is a SCEVAddRecExpr, loop invariant, not an instruction, or
   // we've exceeded our limit on recursion, just return whatever we have
   // regardless of whether it can be used for a forked pointer or not, along
@@ -816,15 +822,14 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
   const SCEV *Scev = SE->getSCEV(Ptr);
   if (isa<SCEVAddRecExpr>(Scev) || L->isLoopInvariant(Ptr) ||
       !isa<Instruction>(Ptr) || Depth == 0) {
-    ScevList.push_back(
-        std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr)));
+    ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     return;
   }
 
   Depth--;
 
-  auto UndefPoisonCheck = [](std::pair<const SCEV *, bool> S) -> bool {
-    return S.second;
+  auto UndefPoisonCheck = [](PointerIntPair<const SCEV *, 1, bool> S) {
+    return get<1>(S);
   };
 
   auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L, const SCEV *R) {
@@ -847,12 +852,11 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
     // We only handle base + single offset GEPs here for now.
     // Not dealing with preexisting gathers yet, so no vectors.
     if (I->getNumOperands() != 2 || SourceTy->isVectorTy()) {
-      ScevList.push_back(
-          std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(GEP)));
+      ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(GEP));
       break;
     }
-    SmallVector<std::pair<const SCEV *, bool>, 2> BaseScevs;
-    SmallVector<std::pair<const SCEV *, bool>, 2> OffsetScevs;
+    SmallVector<PointerIntPair<const SCEV *, 1, bool>, 2> BaseScevs;
+    SmallVector<PointerIntPair<const SCEV *, 1, bool>, 2> OffsetScevs;
     findForkedSCEVs(SE, L, I->getOperand(0), BaseScevs, Depth);
     findForkedSCEVs(SE, L, I->getOperand(1), OffsetScevs, Depth);
 
@@ -868,7 +872,7 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
     else if (BaseScevs.size() == 2 && OffsetScevs.size() == 1)
       OffsetScevs.push_back(OffsetScevs[0]);
     else {
-      ScevList.push_back(std::make_pair(Scev, NeedsFreeze));
+      ScevList.emplace_back(Scev, NeedsFreeze);
       break;
     }
 
@@ -883,17 +887,17 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
 
     // Scale up the offsets by the size of the type, then add to the bases.
     const SCEV *Scaled1 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(OffsetScevs[0].first, IntPtrTy));
+        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[0]), IntPtrTy));
     const SCEV *Scaled2 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(OffsetScevs[1].first, IntPtrTy));
-    ScevList.push_back(std::make_pair(
-        SE->getAddExpr(BaseScevs[0].first, Scaled1), NeedsFreeze));
-    ScevList.push_back(std::make_pair(
-        SE->getAddExpr(BaseScevs[1].first, Scaled2), NeedsFreeze));
+        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[1]), IntPtrTy));
+    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled1),
+                          NeedsFreeze);
+    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled2),
+                          NeedsFreeze);
     break;
   }
   case Instruction::Select: {
-    SmallVector<std::pair<const SCEV *, bool>, 2> ChildScevs;
+    SmallVector<PointerIntPair<const SCEV *, 1, bool>, 2> ChildScevs;
     // A select means we've found a forked pointer, but we currently only
     // support a single select per pointer so if there's another behind this
     // then we just bail out and return the generic SCEV.
@@ -903,14 +907,13 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
       ScevList.push_back(ChildScevs[0]);
       ScevList.push_back(ChildScevs[1]);
     } else
-      ScevList.push_back(
-          std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr)));
+      ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
   case Instruction::Add:
   case Instruction::Sub: {
-    SmallVector<std::pair<const SCEV *, bool>> LScevs;
-    SmallVector<std::pair<const SCEV *, bool>> RScevs;
+    SmallVector<PointerIntPair<const SCEV *, 1, bool>> LScevs;
+    SmallVector<PointerIntPair<const SCEV *, 1, bool>> RScevs;
     findForkedSCEVs(SE, L, I->getOperand(0), LScevs, Depth);
     findForkedSCEVs(SE, L, I->getOperand(1), RScevs, Depth);
 
@@ -926,49 +929,49 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
     else if (RScevs.size() == 2 && LScevs.size() == 1)
       LScevs.push_back(LScevs[0]);
     else {
-      ScevList.push_back(std::make_pair(Scev, NeedsFreeze));
+      ScevList.emplace_back(Scev, NeedsFreeze);
       break;
     }
 
-    ScevList.push_back(std::make_pair(
-        GetBinOpExpr(Opcode, LScevs[0].first, RScevs[0].first), NeedsFreeze));
-    ScevList.push_back(std::make_pair(
-        GetBinOpExpr(Opcode, LScevs[1].first, RScevs[1].first), NeedsFreeze));
+    ScevList.emplace_back(
+        GetBinOpExpr(Opcode, get<0>(LScevs[0]), get<0>(RScevs[0])),
+        NeedsFreeze);
+    ScevList.emplace_back(
+        GetBinOpExpr(Opcode, get<0>(LScevs[1]), get<0>(RScevs[1])),
+        NeedsFreeze);
     break;
   }
   default:
     // Just return the current SCEV if we haven't handled the instruction yet.
     LLVM_DEBUG(dbgs() << "ForkedPtr unhandled instruction: " << *I << "\n");
-    ScevList.push_back(
-        std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr)));
+    ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
 }
 
-static SmallVector<std::pair<const SCEV *, bool>>
+static SmallVector<PointerIntPair<const SCEV *, 1, bool>>
 findForkedPointer(PredicatedScalarEvolution &PSE,
                   const ValueToValueMap &StridesMap, Value *Ptr,
                   const Loop *L) {
   ScalarEvolution *SE = PSE.getSE();
   assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
-  SmallVector<std::pair<const SCEV *, bool>> Scevs;
+  SmallVector<PointerIntPair<const SCEV *, 1, bool>> Scevs;
   findForkedSCEVs(SE, L, Ptr, Scevs, MaxForkedSCEVDepth);
 
   // For now, we will only accept a forked pointer with two possible SCEVs
   // that are either SCEVAddRecExprs or loop invariant.
   if (Scevs.size() == 2 &&
-      (isa<SCEVAddRecExpr>(Scevs[0].first) ||
-       SE->isLoopInvariant(Scevs[0].first, L)) &&
-      (isa<SCEVAddRecExpr>(Scevs[1].first) ||
-       SE->isLoopInvariant(Scevs[1].first, L))) {
+      (isa<SCEVAddRecExpr>(get<0>(Scevs[0])) ||
+       SE->isLoopInvariant(get<0>(Scevs[0]), L)) &&
+      (isa<SCEVAddRecExpr>(get<0>(Scevs[1])) ||
+       SE->isLoopInvariant(get<0>(Scevs[1]), L))) {
     LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
-    LLVM_DEBUG(dbgs() << "\t(1) " << *(Scevs[0].first) << "\n");
-    LLVM_DEBUG(dbgs() << "\t(2) " << *(Scevs[1].first) << "\n");
+    LLVM_DEBUG(dbgs() << "\t(1) " << *get<0>(Scevs[0]) << "\n");
+    LLVM_DEBUG(dbgs() << "\t(2) " << *get<0>(Scevs[1]) << "\n");
     return Scevs;
   }
 
-  return {
-      std::make_pair(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false)};
+  return {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
 }
 
 bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
@@ -980,11 +983,11 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                                           bool Assume) {
   Value *Ptr = Access.getPointer();
 
-  SmallVector<std::pair<const SCEV *, bool>> TranslatedPtrs =
+  SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
       findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
 
   for (auto &P : TranslatedPtrs) {
-    const SCEV *PtrExpr = P.first;
+    const SCEV *PtrExpr = get<0>(P);
     if (!hasComputableBounds(PSE, Ptr, PtrExpr, TheLoop, Assume))
       return false;
 
@@ -1005,13 +1008,11 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
     if (TranslatedPtrs.size() == 1)
-      TranslatedPtrs[0] = std::make_pair(
-          replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false);
+      TranslatedPtrs[0] = {replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr),
+                           false};
   }
 
-  for (auto &P : TranslatedPtrs) {
-    const SCEV *PtrExpr = P.first;
-
+  for (auto [PtrExpr, NeedsFreeze] : TranslatedPtrs) {
     // The id of the dependence set.
     unsigned DepId;
 
@@ -1027,7 +1028,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
     bool IsWrite = Access.getInt();
     RtCheck.insert(TheLoop, Ptr, PtrExpr, AccessTy, IsWrite, DepId, ASId, PSE,
-                   P.second);
+                   NeedsFreeze);
     LLVM_DEBUG(dbgs() << "LAA: Found a runtime check ptr:" << *Ptr << '\n');
   }
 
@@ -1830,10 +1831,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                               const ValueToValueMap &Strides) {
   assert (AIdx < BIdx && "Must pass arguments in program order");
 
-  Value *APtr = A.getPointer();
-  Value *BPtr = B.getPointer();
-  bool AIsWrite = A.getInt();
-  bool BIsWrite = B.getInt();
+  auto [APtr, AIsWrite] = A;
+  auto [BPtr, BIsWrite] = B;
   Type *ATy = getLoadStoreType(InstMap[AIdx]);
   Type *BTy = getLoadStoreType(InstMap[BIdx]);
 

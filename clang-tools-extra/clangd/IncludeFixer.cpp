@@ -58,7 +58,7 @@ llvm::Optional<llvm::StringRef> getArgStr(const clang::Diagnostic &Info,
   case DiagnosticsEngine::ak_std_string:
     return llvm::StringRef(Info.getArgStdStr(Index));
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 
@@ -249,18 +249,22 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
 }
 
 llvm::Optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
-                                               llvm::StringRef Symbol) const {
+                                               llvm::StringRef Symbol,
+                                               tooling::IncludeDirective Directive) const {
   Fix F;
 
-  if (auto Edit = Inserter->insert(Spelled))
+  if (auto Edit = Inserter->insert(Spelled, Directive))
     F.Edits.push_back(std::move(*Edit));
   else
-    return llvm::None;
+    return std::nullopt;
 
+  llvm::StringRef DirectiveSpelling =
+      Directive == tooling::IncludeDirective::Include ? "Include" : "Import";
   if (Symbol.empty())
-    F.Message = llvm::formatv("Include {0}", Spelled);
+    F.Message = llvm::formatv("{0} {1}", DirectiveSpelling, Spelled);
   else
-    F.Message = llvm::formatv("Include {0} for symbol {1}", Spelled, Symbol);
+    F.Message = llvm::formatv("{0} {1} for symbol {2}",
+        DirectiveSpelling, Spelled, Symbol);
 
   return F;
 }
@@ -317,17 +321,21 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   llvm::StringSet<> InsertedHeaders;
   for (const auto &Sym : Syms) {
     for (const auto &Inc : getRankedIncludes(Sym)) {
-      if (auto ToInclude = Inserted(Sym, Inc)) {
+      // FIXME: We should support #import directives here.
+      if ((Inc.Directive & clang::clangd::Symbol::Include) == 0)
+        continue;
+      if (auto ToInclude = Inserted(Sym, Inc.Header)) {
         if (ToInclude->second) {
           if (!InsertedHeaders.try_emplace(ToInclude->first).second)
             continue;
           if (auto Fix =
-                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str()))
+                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str(),
+                               tooling::IncludeDirective::Include))
             Fixes.push_back(std::move(*Fix));
         }
       } else {
-        vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,
-             File, ToInclude.takeError());
+        vlog("Failed to calculate include insertion for {0} into {1}: {2}",
+             Inc.Header, File, ToInclude.takeError());
       }
     }
   }
@@ -355,7 +363,7 @@ llvm::Optional<std::string> qualifiedByUnresolved(const SourceManager &SM,
     NextLoc = IDTok->getLocation();
   }
   if (Result.empty())
-    return llvm::None;
+    return std::nullopt;
   return Result;
 }
 
@@ -377,10 +385,10 @@ llvm::Optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
     const SourceManager &SM) {
   // Support specifiers written within a single macro argument.
   if (!SM.isWrittenInSameFile(SS.getBeginLoc(), SS.getEndLoc()))
-    return llvm::None;
+    return std::nullopt;
   SourceRange Range(SM.getTopMacroCallerLoc(SS.getBeginLoc()), SM.getTopMacroCallerLoc(SS.getEndLoc()));
   if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
-    return llvm::None;
+    return std::nullopt;
 
   return (toSourceCode(SM, Range) + "::").str();
 }
@@ -418,7 +426,7 @@ llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
       } else {
         // We don't fix symbols in scopes that are not top-level e.g. class
         // members, as we don't collect includes for them.
-        return llvm::None;
+        return std::nullopt;
       }
     }
   }
@@ -571,7 +579,7 @@ IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {
     return &I->second;
 
   if (IndexRequestCount >= IndexRequestLimit)
-    return llvm::None;
+    return std::nullopt;
   IndexRequestCount++;
 
   SymbolSlab::Builder Matches;
@@ -596,7 +604,7 @@ IncludeFixer::lookupCached(const SymbolID &ID) const {
     return &I->second;
 
   if (IndexRequestCount >= IndexRequestLimit)
-    return llvm::None;
+    return std::nullopt;
   IndexRequestCount++;
 
   // FIXME: consider batching the requests for all diagnostics.

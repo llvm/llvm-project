@@ -500,7 +500,8 @@ static void collectStatsRecursive(
     return;
 
   // Handle any kind of lexical scope.
-  const bool HasAbstractOrigin = Die.find(dwarf::DW_AT_abstract_origin) != None;
+  const bool HasAbstractOrigin =
+      Die.find(dwarf::DW_AT_abstract_origin) != std::nullopt;
   const bool IsFunction = Tag == dwarf::DW_TAG_subprogram;
   const bool IsBlock = Tag == dwarf::DW_TAG_lexical_block;
   const bool IsInlinedFunction = Tag == dwarf::DW_TAG_inlined_subroutine;

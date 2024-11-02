@@ -53,7 +53,7 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
 
   Module *Mod = unwrap(M);
   PassInstrumentationCallbacks PIC;
-  PassBuilder PB(Machine, PassOpts->PTO, None, &PIC);
+  PassBuilder PB(Machine, PassOpts->PTO, std::nullopt, &PIC);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;

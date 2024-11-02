@@ -50,7 +50,7 @@ public:
   OperationName getName() { return name; }
 
   /// If this operation has a registered operation description, return it.
-  /// Otherwise return None.
+  /// Otherwise return std::nullopt.
   Optional<RegisteredOperationName> getRegisteredInfo() {
     return getName().getRegisteredInfo();
   }
@@ -240,7 +240,7 @@ public:
   /// take O(N) where N is the number of operations within the parent block.
   bool isBeforeInBlock(Operation *other);
 
-  void print(raw_ostream &os, const OpPrintingFlags &flags = llvm::None);
+  void print(raw_ostream &os, const OpPrintingFlags &flags = std::nullopt);
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
@@ -478,6 +478,10 @@ public:
 
   /// Returns the regions held by this operation.
   MutableArrayRef<Region> getRegions() {
+    // Check the count first, as computing the trailing objects can be slow.
+    if (numRegions == 0)
+      return MutableArrayRef<Region>();
+
     auto *regions = getTrailingObjects<Region>();
     return {regions, numRegions};
   }

@@ -14,8 +14,8 @@
 #ifndef LLVM_SUPPORT_SMLOC_H
 #define LLVM_SUPPORT_SMLOC_H
 
-#include "llvm/ADT/None.h"
 #include <cassert>
+#include <optional>
 
 namespace llvm {
 

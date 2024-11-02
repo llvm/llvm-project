@@ -74,8 +74,8 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
   }
 }
 
-Optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
-  return None;
+std::optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
+  return std::nullopt;
 }
 
 const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {

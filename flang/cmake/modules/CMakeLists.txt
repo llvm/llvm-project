@@ -28,6 +28,10 @@ set(FLANG_CONFIG_INCLUDE_DIRS
   "${FLANG_BINARY_DIR}/include"
   )
 configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/FlangConfig.cmake.in
+  ${flang_cmake_builddir}/FlangConfig.cmake
+  @ONLY)
+configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/FlangConfigVersion.cmake.in
   ${flang_cmake_builddir}/FlangConfigVersion.cmake
   @ONLY)

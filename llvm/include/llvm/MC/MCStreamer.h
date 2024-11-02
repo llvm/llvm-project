@@ -31,6 +31,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -905,11 +906,10 @@ public:
 
   /// Associate a filename with a specified logical file number.  This
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
-  unsigned emitDwarfFileDirective(unsigned FileNo, StringRef Directory,
-                                  StringRef Filename,
-                                  Optional<MD5::MD5Result> Checksum = None,
-                                  Optional<StringRef> Source = None,
-                                  unsigned CUID = 0) {
+  unsigned emitDwarfFileDirective(
+      unsigned FileNo, StringRef Directory, StringRef Filename,
+      std::optional<MD5::MD5Result> Checksum = std::nullopt,
+      std::optional<StringRef> Source = std::nullopt, unsigned CUID = 0) {
     return cantFail(
         tryEmitDwarfFileDirective(FileNo, Directory, Filename, Checksum,
                                   Source, CUID));
@@ -922,13 +922,13 @@ public:
   /// '.file 4 "dir/foo.c" md5 "..." source "..."' assembler directive.
   virtual Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
-      Optional<MD5::MD5Result> Checksum = None, Optional<StringRef> Source = None,
-      unsigned CUID = 0);
+      std::optional<MD5::MD5Result> Checksum = std::nullopt,
+      std::optional<StringRef> Source = std::nullopt, unsigned CUID = 0);
 
   /// Specify the "root" file of the compilation, using the ".file 0" extension.
   virtual void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
-                                       Optional<MD5::MD5Result> Checksum,
-                                       Optional<StringRef> Source,
+                                       std::optional<MD5::MD5Result> Checksum,
+                                       std::optional<StringRef> Source,
                                        unsigned CUID = 0);
 
   virtual void emitCFIBKeyFrame();
@@ -1084,12 +1084,12 @@ public:
 
   virtual void emitSyntaxDirective();
 
-  /// Record a relocation described by the .reloc directive. Return None if
-  /// succeeded. Otherwise, return a pair (Name is invalid, error message).
-  virtual Optional<std::pair<bool, std::string>>
+  /// Record a relocation described by the .reloc directive. Return std::nullopt
+  /// if succeeded. Otherwise, return a pair (Name is invalid, error message).
+  virtual std::optional<std::pair<bool, std::string>>
   emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
                      SMLoc Loc, const MCSubtargetInfo &STI) {
-    return None;
+    return std::nullopt;
   }
 
   virtual void emitAddrsig() {}

@@ -158,7 +158,7 @@ json::Value TargetStats::ToJSON(Target &target) {
 
 void TargetStats::SetLaunchOrAttachTime() {
   m_launch_or_attach_time = StatsClock::now();
-  m_first_private_stop_time = llvm::None;
+  m_first_private_stop_time = std::nullopt;
 }
 
 void TargetStats::SetFirstPrivateStopTime() {

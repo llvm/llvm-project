@@ -169,7 +169,7 @@ public:
   Command(const Action &Source, const Tool &Creator,
           ResponseFileSupport ResponseSupport, const char *Executable,
           const llvm::opt::ArgStringList &Arguments, ArrayRef<InputInfo> Inputs,
-          ArrayRef<InputInfo> Outputs = None);
+          ArrayRef<InputInfo> Outputs = std::nullopt);
   // FIXME: This really shouldn't be copyable, but is currently copied in some
   // error handling in Driver::generateCompilationDiagnostics.
   Command(const Command &) = default;
@@ -241,7 +241,8 @@ public:
   CC1Command(const Action &Source, const Tool &Creator,
              ResponseFileSupport ResponseSupport, const char *Executable,
              const llvm::opt::ArgStringList &Arguments,
-             ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs = None);
+             ArrayRef<InputInfo> Inputs,
+             ArrayRef<InputInfo> Outputs = std::nullopt);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;
@@ -260,7 +261,7 @@ public:
                       const char *Executable_,
                       const llvm::opt::ArgStringList &Arguments_,
                       ArrayRef<InputInfo> Inputs,
-                      ArrayRef<InputInfo> Outputs = None);
+                      ArrayRef<InputInfo> Outputs = std::nullopt);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;

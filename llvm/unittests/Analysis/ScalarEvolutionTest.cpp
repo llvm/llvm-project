@@ -1151,7 +1151,7 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> Optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
       if (!ConstantDiffOrNone)
-        return None;
+        return std::nullopt;
 
       auto ExtDiff = ConstantDiffOrNone->getSExtValue();
       int Diff = ExtDiff;
@@ -1170,9 +1170,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
-    EXPECT_EQ(diff(ScevV0, ScevIV), None);
-    EXPECT_EQ(diff(ScevIVNext, ScevV3), None);
-    EXPECT_EQ(diff(ScevYY, ScevV3), None);
+    EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
+    EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
+    EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);
   });
 }
 

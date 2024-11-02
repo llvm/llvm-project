@@ -17,7 +17,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,6 +26,7 @@
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -175,8 +175,8 @@ namespace llvm {
     /// \param Source    Optional source text.
     DIFile *createFile(
         StringRef Filename, StringRef Directory,
-        Optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt,
-        Optional<StringRef> Source = std::nullopt);
+        std::optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt,
+        std::optional<StringRef> Source = std::nullopt);
 
     /// Create debugging information entry for a macro.
     /// \param Parent     Macro parent (could be nullptr).
@@ -256,7 +256,7 @@ namespace llvm {
     DIDerivedType *
     createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                       uint32_t AlignInBits = 0,
-                      Optional<unsigned> DWARFAddressSpace = std::nullopt,
+                      std::optional<unsigned> DWARFAddressSpace = std::nullopt,
                       StringRef Name = "", DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a pointer to member.
@@ -271,10 +271,10 @@ namespace llvm {
 
     /// Create debugging information entry for a c++
     /// style reference or rvalue reference type.
-    DIDerivedType *
-    createReferenceType(unsigned Tag, DIType *RTy, uint64_t SizeInBits = 0,
-                        uint32_t AlignInBits = 0,
-                        Optional<unsigned> DWARFAddressSpace = std::nullopt);
+    DIDerivedType *createReferenceType(
+        unsigned Tag, DIType *RTy, uint64_t SizeInBits = 0,
+        uint32_t AlignInBits = 0,
+        std::optional<unsigned> DWARFAddressSpace = std::nullopt);
 
     /// Create debugging information entry for a typedef.
     /// \param Ty          Original type.

@@ -14,7 +14,6 @@
 
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "RISCVInstructions.h"
-#include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
 
@@ -299,6 +298,33 @@ RISCVInst DecodeC_SUBW(uint32_t inst) {
 RISCVInst DecodeC_ADDW(uint32_t inst) {
   auto rd = DecodeCA_RD(inst);
   return ADDW{rd, rd, DecodeCA_RS2(inst)};
+}
+RISCVInst DecodeC_FLW(uint32_t inst) {
+  uint16_t offset = ((inst << 1) & 0x40)   // imm[6]
+                    | ((inst >> 7) & 0x38) // imm[5:3]
+                    | ((inst >> 4) & 0x4); // imm[2]
+  return FLW{DecodeCL_RD(inst), DecodeCL_RS1(inst), uint32_t(offset)};
+}
+
+RISCVInst DecodeC_FSW(uint32_t inst) {
+  uint16_t offset = ((inst << 1) & 0x40)   // imm[6]
+                    | ((inst >> 7) & 0x38) // imm[5:3]
+                    | ((inst >> 4) & 0x4); // imm[2]
+  return FSW{DecodeCS_RS1(inst), DecodeCS_RS2(inst), uint32_t(offset)};
+}
+
+RISCVInst DecodeC_FLWSP(uint32_t inst) {
+  auto rd = DecodeCI_RD(inst);
+  uint16_t offset = ((inst << 4) & 0xc0)    // offset[7:6]
+                    | ((inst >> 7) & 0x20)  // offset[5]
+                    | ((inst >> 2) & 0x1c); // offset[4:2]
+  return FLW{rd, Rs{gpr_sp_riscv}, uint32_t(offset)};
+}
+
+RISCVInst DecodeC_FSWSP(uint32_t inst) {
+  uint16_t offset = ((inst >> 1) & 0xc0)    // offset[7:6]
+                    | ((inst >> 7) & 0x3c); // offset[5:2]
+  return FSW{Rs{gpr_sp_riscv}, DecodeCSS_RS2(inst), uint32_t(offset)};
 }
 
 } // namespace lldb_private

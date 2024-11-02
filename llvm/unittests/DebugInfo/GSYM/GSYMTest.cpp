@@ -980,7 +980,7 @@ TEST(GSYMTest, TestGsymCreatorEncodeErrors) {
   // Verify errors are propagated when we try to encoding an invalid inline
   // info.
   GC.forEachFunctionInfo([](FunctionInfo &FI) -> bool {
-    FI.OptLineTable = llvm::None;
+    FI.OptLineTable = std::nullopt;
     FI.Inline = InlineInfo(); // Invalid InlineInfo.
     return false; // Stop iterating
   });

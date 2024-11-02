@@ -600,7 +600,7 @@ public:
     return OperandGroupPosition::get(uniquer, p, group, isVariadic);
   }
   Position *getAllOperands(OperationPosition *p) {
-    return getOperandGroup(p, /*group=*/llvm::None, /*isVariadic=*/true);
+    return getOperandGroup(p, /*group=*/std::nullopt, /*isVariadic=*/true);
   }
 
   /// Returns a result position for a result of the given operation.
@@ -614,7 +614,7 @@ public:
     return ResultGroupPosition::get(uniquer, p, group, isVariadic);
   }
   Position *getAllResults(OperationPosition *p) {
-    return getResultGroup(p, /*group=*/llvm::None, /*isVariadic=*/true);
+    return getResultGroup(p, /*group=*/std::nullopt, /*isVariadic=*/true);
   }
 
   /// Returns a type position for the given entity.

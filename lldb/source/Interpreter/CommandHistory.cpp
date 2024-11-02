@@ -27,14 +27,14 @@ llvm::Optional<llvm::StringRef>
 CommandHistory::FindString(llvm::StringRef input_str) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (input_str.size() < 2)
-    return llvm::None;
+    return std::nullopt;
 
   if (input_str[0] != g_repeat_char)
-    return llvm::None;
+    return std::nullopt;
 
   if (input_str[1] == g_repeat_char) {
     if (m_history.empty())
-      return llvm::None;
+      return std::nullopt;
     return llvm::StringRef(m_history.back());
   }
 
@@ -43,15 +43,15 @@ CommandHistory::FindString(llvm::StringRef input_str) const {
   size_t idx = 0;
   if (input_str.front() == '-') {
     if (input_str.drop_front(1).getAsInteger(0, idx))
-      return llvm::None;
+      return std::nullopt;
     if (idx >= m_history.size())
-      return llvm::None;
+      return std::nullopt;
     idx = m_history.size() - idx;
   } else {
     if (input_str.getAsInteger(0, idx))
-      return llvm::None;
+      return std::nullopt;
     if (idx >= m_history.size())
-      return llvm::None;
+      return std::nullopt;
   }
 
   return llvm::StringRef(m_history[idx]);

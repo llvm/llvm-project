@@ -1,7 +1,7 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S | FileCheck %s
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s -check-prefix=WIDTH
-; RUN: opt -S -loop-vectorize -force-vector-width=4 < %s | FileCheck %s -check-prefix=RIGHTVF
-; RUN: opt -S -loop-vectorize -force-vector-width=8 < %s | FileCheck %s -check-prefix=WRONGVF
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s -check-prefix=WIDTH
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 < %s | FileCheck %s -check-prefix=RIGHTVF
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=8 < %s | FileCheck %s -check-prefix=WRONGVF
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -226,7 +226,7 @@ for.end:
 
 ;Check the new calculation of the maximum safe distance in bits which can be vectorized.
 ;The previous behavior did not take account that the stride was 2.
-;Therefore the maxVF was computed as 8 instead of 4, as the dependence distance here is 6 iterations, given by |N-(N-12)|/2.  
+;Therefore the maxVF was computed as 8 instead of 4, as the dependence distance here is 6 iterations, given by |N-(N-12)|/2.
 
 ;#define M 32
 ;#define N 2 * M

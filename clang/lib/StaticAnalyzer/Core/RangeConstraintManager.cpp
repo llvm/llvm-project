@@ -1095,7 +1095,7 @@ Optional<bool> meansEquality(const SymSymExpr *Sym) {
     // This case is: A != B != 0 -> diseqiality check.
     return false;
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 
@@ -1139,7 +1139,7 @@ intersect(RangeSet::Factory &F, const RangeSet *End) {
   if (End) {
     return *End;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 template <class... RestTy>
@@ -1164,7 +1164,8 @@ template <class SecondTy, class... RestTy>
 
 /// Main generic intersect function.
 /// It intersects all of the given range sets.  If some of the given arguments
-/// don't hold a range set (nullptr or llvm::None), the function will skip them.
+/// don't hold a range set (nullptr or std::nullopt), the function will skip
+/// them.
 ///
 /// Available representations for the arguments are:
 ///   * RangeSet
@@ -1179,7 +1180,7 @@ template <class SecondTy, class... RestTy>
 /// simply RangeSet, in other cases we have to back off to Optional<RangeSet>.
 ///
 /// Please, prefer optional range sets to raw pointers.  If the last argument is
-/// a raw pointer and all previous arguments are None, it will cost one
+/// a raw pointer and all previous arguments are std::nullopt, it will cost one
 /// additional check to convert RangeSet * into Optional<RangeSet>.
 template <class HeadTy, class SecondTy, class... RestTy>
 [[nodiscard]] inline
@@ -1361,11 +1362,11 @@ private:
 
   /// Try to convert given range into the given type.
   ///
-  /// It will return llvm::None only when the trivial conversion is possible.
+  /// It will return std::nullopt only when the trivial conversion is possible.
   llvm::Optional<Range> convert(const Range &Origin, APSIntType To) {
     if (To.testInRange(Origin.From(), false) != APSIntType::RTR_Within ||
         To.testInRange(Origin.To(), false) != APSIntType::RTR_Within) {
-      return llvm::None;
+      return std::nullopt;
     }
     return Range(ValueFactory.Convert(To, Origin.From()),
                  ValueFactory.Convert(To, Origin.To()));
@@ -1455,13 +1456,13 @@ private:
     // Do not negate if the type cannot be meaningfully negated.
     if (!T->isUnsignedIntegerOrEnumerationType() &&
         !T->isSignedIntegerOrEnumerationType())
-      return llvm::None;
+      return std::nullopt;
 
     if (SymbolRef NegatedSym = F())
       if (const RangeSet *NegatedRange = getConstraint(State, NegatedSym))
         return RangeFactory.negate(*NegatedRange);
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   Optional<RangeSet> getRangeForNegatedUnarySym(const UnarySymExpr *USE) {
@@ -1511,7 +1512,7 @@ private:
 
     // We currently do not support <=> (C++20).
     if (!BinaryOperator::isComparisonOp(CurrentOP) || (CurrentOP == BO_Cmp))
-      return llvm::None;
+      return std::nullopt;
 
     static const OperatorRelationsTable CmpOpTable{};
 
@@ -1581,14 +1582,14 @@ private:
                                                            : getFalseRange(T);
     }
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   Optional<RangeSet> getRangeForEqualities(const SymSymExpr *Sym) {
     Optional<bool> Equality = meansEquality(Sym);
 
     if (!Equality)
-      return llvm::None;
+      return std::nullopt;
 
     if (Optional<bool> AreEqual =
             EquivalenceClass::areEqual(State, Sym->getLHS(), Sym->getRHS())) {
@@ -1602,7 +1603,7 @@ private:
       return getFalseRange(Sym->getType());
     }
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   RangeSet getTrueRange(QualType T) {
@@ -2106,7 +2107,7 @@ private:
     if (!Constraint.containsZero())
       return true;
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   ProgramStateRef State;
@@ -2523,7 +2524,7 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
     return false;
 
   // It is not clear.
-  return llvm::None;
+  return std::nullopt;
 }
 
 [[nodiscard]] ProgramStateRef

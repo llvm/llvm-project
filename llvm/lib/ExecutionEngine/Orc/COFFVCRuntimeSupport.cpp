@@ -157,8 +157,8 @@ COFFVCRuntimeBootstrapper::getMSVCToolchainPath() {
   std::string VCToolChainPath;
   ToolsetLayout VSLayout;
   IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem();
-  if (!findVCToolChainViaCommandLine(*VFS, None, None, None, VCToolChainPath,
-                                     VSLayout) &&
+  if (!findVCToolChainViaCommandLine(*VFS, std::nullopt, std::nullopt,
+                                     std::nullopt, VCToolChainPath, VSLayout) &&
       !findVCToolChainViaEnvironment(*VFS, VCToolChainPath, VSLayout) &&
       !findVCToolChainViaSetupConfig(*VFS, VCToolChainPath, VSLayout) &&
       !findVCToolChainViaRegistry(VCToolChainPath, VSLayout))
@@ -167,8 +167,8 @@ COFFVCRuntimeBootstrapper::getMSVCToolchainPath() {
 
   std::string UniversalCRTSdkPath;
   std::string UCRTVersion;
-  if (!getUniversalCRTSdkDir(*VFS, None, None, None, UniversalCRTSdkPath,
-                             UCRTVersion))
+  if (!getUniversalCRTSdkDir(*VFS, std::nullopt, std::nullopt, std::nullopt,
+                             UniversalCRTSdkPath, UCRTVersion))
     return make_error<StringError>("Couldn't find universal sdk.",
                                    inconvertibleErrorCode());
 

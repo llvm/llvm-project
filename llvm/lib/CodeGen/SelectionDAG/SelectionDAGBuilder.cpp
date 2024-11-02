@@ -6398,7 +6398,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Get the last argument, the metadata and convert it to an integer in the
     // call
     Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
-    Optional<RoundingMode> RoundMode =
+    std::optional<RoundingMode> RoundMode =
         convertStrToRoundingMode(cast<MDString>(MD)->getString());
 
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());

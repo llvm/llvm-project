@@ -55,11 +55,9 @@ define void @ucvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) #0 {
 define <2 x float> @ucvtf_v2i16_v2f32(<2 x i16> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v2i16_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -142,11 +140,9 @@ define <1 x double> @ucvtf_v1i16_v1f64(<1 x i16> %op1) #0 {
 define <2 x double> @ucvtf_v2i16_v2f64(<2 x i16> %op1) #0 {
 ; CHECK-LABEL: ucvtf_v2i16_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -644,12 +640,10 @@ define void @scvtf_v16i16_v16f16(<16 x i16>* %a, <16 x half>* %b) #0 {
 define <2 x float> @scvtf_v2i16_v2f32(<2 x i16> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i16_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI33_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI33_0]
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #16
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #16
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -720,12 +714,10 @@ define void @scvtf_v16i16_v16f32(<16 x i16>* %a, <16 x float>* %b) #0 {
 define <2 x double> @scvtf_v2i16_v2f64(<2 x i16> %op1) #0 {
 ; CHECK-LABEL: scvtf_v2i16_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI37_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI37_0]
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #16
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #16
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d

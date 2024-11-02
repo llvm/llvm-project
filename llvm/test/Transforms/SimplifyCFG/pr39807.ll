@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true < %s | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true < %s | FileCheck %s
 
 declare void @personality()
 

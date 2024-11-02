@@ -206,9 +206,9 @@ Value *getWithType(Value &V, Type &Ty);
 ///        X + none  => X
 /// not_none + undef => not_none
 ///          V1 + V2 => nullptr
-Optional<Value *>
-combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
-                                     const Optional<Value *> &B, Type *Ty);
+std::optional<Value *>
+combineOptionalValuesInAAValueLatice(const std::optional<Value *> &A,
+                                     const std::optional<Value *> &B, Type *Ty);
 
 /// Helper to represent an access offset and size, with logic to deal with
 /// uncertainty and check for overlapping accesses.
@@ -1700,14 +1700,13 @@ struct Attributor {
     }
     Value &V = IRP.getAssociatedValue();
     auto &Entry = ToBeChangedValues[&V];
-    Value *&CurNV = Entry.first;
+    Value *CurNV = get<0>(Entry);
     if (CurNV && (CurNV->stripPointerCasts() == NV.stripPointerCasts() ||
                   isa<UndefValue>(CurNV)))
       return false;
     assert((!CurNV || CurNV == &NV || isa<UndefValue>(NV)) &&
            "Value replacement was registered twice with different values!");
-    CurNV = &NV;
-    Entry.second = ChangeDroppable;
+    Entry = {&NV, ChangeDroppable};
     return true;
   }
 
@@ -1745,39 +1744,40 @@ struct Attributor {
   }
 
   /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`.
-  Optional<Constant *> getAssumedConstant(const IRPosition &IRP,
-                                          const AbstractAttribute &AA,
-                                          bool &UsedAssumedInformation);
-  Optional<Constant *> getAssumedConstant(const Value &V,
-                                          const AbstractAttribute &AA,
-                                          bool &UsedAssumedInformation) {
+  /// return std::nullopt, otherwise return `nullptr`.
+  std::optional<Constant *> getAssumedConstant(const IRPosition &IRP,
+                                               const AbstractAttribute &AA,
+                                               bool &UsedAssumedInformation);
+  std::optional<Constant *> getAssumedConstant(const Value &V,
+                                               const AbstractAttribute &AA,
+                                               bool &UsedAssumedInformation) {
     return getAssumedConstant(IRPosition::value(V), AA, UsedAssumedInformation);
   }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`.
-  Optional<Value *> getAssumedSimplified(const IRPosition &IRP,
-                                         const AbstractAttribute &AA,
-                                         bool &UsedAssumedInformation,
-                                         AA::ValueScope S) {
+  /// return std::nullopt, otherwise return `nullptr`.
+  std::optional<Value *> getAssumedSimplified(const IRPosition &IRP,
+                                              const AbstractAttribute &AA,
+                                              bool &UsedAssumedInformation,
+                                              AA::ValueScope S) {
     return getAssumedSimplified(IRP, &AA, UsedAssumedInformation, S);
   }
-  Optional<Value *> getAssumedSimplified(const Value &V,
-                                         const AbstractAttribute &AA,
-                                         bool &UsedAssumedInformation,
-                                         AA::ValueScope S) {
+  std::optional<Value *> getAssumedSimplified(const Value &V,
+                                              const AbstractAttribute &AA,
+                                              bool &UsedAssumedInformation,
+                                              AA::ValueScope S) {
     return getAssumedSimplified(IRPosition::value(V), AA,
                                 UsedAssumedInformation, S);
   }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`. Same as the public version
-  /// except that it can be used without recording dependences on any \p AA.
-  Optional<Value *> getAssumedSimplified(const IRPosition &V,
-                                         const AbstractAttribute *AA,
-                                         bool &UsedAssumedInformation,
-                                         AA::ValueScope S);
+  /// return std::nullopt, otherwise return `nullptr`. Same as the public
+  /// version except that it can be used without recording dependences on any \p
+  /// AA.
+  std::optional<Value *> getAssumedSimplified(const IRPosition &V,
+                                              const AbstractAttribute *AA,
+                                              bool &UsedAssumedInformation,
+                                              AA::ValueScope S);
 
   /// Try to simplify \p IRP and in the scope \p S. If successful, true is
   /// returned and all potential values \p IRP can take are put into \p Values.
@@ -1793,7 +1793,7 @@ struct Attributor {
   /// we it will ask `AAValueSimplify`. It is important to ensure this
   /// is called before `identifyDefaultAbstractAttributes`, assuming the
   /// latter is called at all.
-  using SimplifictionCallbackTy = std::function<Optional<Value *>(
+  using SimplifictionCallbackTy = std::function<std::optional<Value *>(
       const IRPosition &, const AbstractAttribute *, bool &)>;
   void registerSimplificationCallback(const IRPosition &IRP,
                                       const SimplifictionCallbackTy &CB) {
@@ -1812,8 +1812,8 @@ private:
 
 public:
   /// Translate \p V from the callee context into the call site context.
-  Optional<Value *>
-  translateArgumentToCallSiteContent(Optional<Value *> V, CallBase &CB,
+  std::optional<Value *>
+  translateArgumentToCallSiteContent(std::optional<Value *> V, CallBase &CB,
                                      const AbstractAttribute &AA,
                                      bool &UsedAssumedInformation);
 
@@ -2265,7 +2265,8 @@ private:
 
   /// Values we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
-  SmallMapVector<Value *, std::pair<Value *, bool>, 32> ToBeChangedValues;
+  SmallMapVector<Value *, PointerIntPair<Value *, 1, bool>, 32>
+      ToBeChangedValues;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
   SmallSetVector<WeakVH, 16> ToBeChangedToUnreachableInsts;
@@ -3998,7 +3999,7 @@ protected:
   Type *Ty;
 
   /// Merge \p Other into the currently assumed simplified value
-  bool unionAssumed(Optional<Value *> Other);
+  bool unionAssumed(std::optional<Value *> Other);
 
   /// Helper to track validity and fixpoint
   BooleanState BS;
@@ -4007,7 +4008,7 @@ protected:
   /// means that the value is not clear under current assumption. If in the
   /// pessimistic state, getAssumedSimplifiedValue doesn't return this value but
   /// returns orignal associated value.
-  Optional<Value *> SimplifiedAssociatedValue;
+  std::optional<Value *> SimplifiedAssociatedValue;
 };
 
 /// An abstract interface for value simplify abstract attribute.
@@ -4042,7 +4043,8 @@ private:
   /// the Optional::NoneType.
   ///
   /// Use `Attributor::getAssumedSimplified` for value simplification.
-  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const = 0;
+  virtual std::optional<Value *>
+  getAssumedSimplifiedValue(Attributor &A) const = 0;
 
   friend struct Attributor;
 };
@@ -4099,7 +4101,7 @@ struct AAPrivatizablePtr
 
   /// Return the type we can choose for a private copy of the underlying
   /// value. None means it is not clear yet, nullptr means there is none.
-  virtual Optional<Type *> getPrivatizableType() const = 0;
+  virtual std::optional<Type *> getPrivatizableType() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAPrivatizablePtr &createForPosition(const IRPosition &IRP,
@@ -4383,7 +4385,7 @@ struct AAValueConstantRange
 
   /// Return an assumed constant for the associated value a program point \p
   /// CtxI.
-  Optional<Constant *>
+  std::optional<Constant *>
   getAssumedConstant(Attributor &A, const Instruction *CtxI = nullptr) const {
     ConstantRange RangeV = getAssumedConstantRange(A, CtxI);
     if (auto *C = RangeV.getSingleElement()) {
@@ -4634,7 +4636,7 @@ struct AAPotentialConstantValues
                                                       Attributor &A);
 
   /// Return assumed constant for the associated value
-  Optional<Constant *>
+  std::optional<Constant *>
   getAssumedConstant(Attributor &A, const Instruction *CtxI = nullptr) const {
     if (!isValidState())
       return nullptr;
@@ -5005,13 +5007,14 @@ struct AAPointerInfo : public AbstractAttribute {
   /// An access description.
   struct Access {
     Access(Instruction *I, int64_t Offset, int64_t Size,
-           Optional<Value *> Content, AccessKind Kind, Type *Ty)
+           std::optional<Value *> Content, AccessKind Kind, Type *Ty)
         : LocalI(I), RemoteI(I), Content(Content), OAS(Offset, Size),
           Kind(Kind), Ty(Ty) {
       verify();
     }
     Access(Instruction *LocalI, Instruction *RemoteI, int64_t Offset,
-           int64_t Size, Optional<Value *> Content, AccessKind Kind, Type *Ty)
+           int64_t Size, std::optional<Value *> Content, AccessKind Kind,
+           Type *Ty)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content), OAS(Offset, Size),
           Kind(Kind), Ty(Ty) {
       verify();
@@ -5095,7 +5098,7 @@ struct AAPointerInfo : public AbstractAttribute {
 
     /// Return the written value which can be `llvm::null` if it is not yet
     /// determined.
-    Optional<Value *> getContent() const { return Content; }
+    std::optional<Value *> getContent() const { return Content; }
 
     /// Return the offset for this access.
     int64_t getOffset() const { return OAS.Offset; }
@@ -5113,7 +5116,7 @@ struct AAPointerInfo : public AbstractAttribute {
 
     /// The value written, if any. `llvm::none` means "not known yet", `nullptr`
     /// cannot be determined.
-    Optional<Value *> Content;
+    std::optional<Value *> Content;
 
     /// The object accessed, in terms of an offset and size in bytes.
     AA::OffsetAndSize OAS;

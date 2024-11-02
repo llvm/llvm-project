@@ -551,7 +551,7 @@ public:
     return makeArrayRef(getTrailingObjects<unsigned>(), NumOperands);
   }
 
-  Optional<unsigned> getInRangeIndex() const {
+  std::optional<unsigned> getInRangeIndex() const {
     assert(Opcode == Instruction::GetElementPtr);
     if (Extra == (unsigned)-1)
       return std::nullopt;

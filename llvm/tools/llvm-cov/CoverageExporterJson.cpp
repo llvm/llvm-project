@@ -48,7 +48,6 @@
 
 #include "CoverageExporterJson.h"
 #include "CoverageReport.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ThreadPool.h"

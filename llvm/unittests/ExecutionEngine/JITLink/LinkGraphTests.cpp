@@ -438,7 +438,7 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
   EXPECT_EQ(S1.getSize(), 64U) << "Size was not updated";
 
   // Transfer with non-zero offset, implicit truncation.
-  G.transferDefinedSymbol(S1, B3, 16, None);
+  G.transferDefinedSymbol(S1, B3, 16, std::nullopt);
 
   EXPECT_EQ(&S1.getBlock(), &B3) << "Block was not updated";
   EXPECT_EQ(S1.getOffset(), 16U) << "Offset was not updated";

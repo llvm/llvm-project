@@ -13,6 +13,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
@@ -740,6 +741,191 @@ bool EquivalenceSets::IsSequenceType(const DeclTypeSpec *type,
   } else {
     return false;
   }
+}
+
+// MapSubprogramToNewSymbols() relies on the following recursive symbol/scope
+// copying infrastructure to duplicate an interface's symbols and map all
+// of the symbol references in their contained expressions and interfaces
+// to the new symbols.
+
+struct SymbolAndTypeMappings {
+  std::map<const Symbol *, const Symbol *> symbolMap;
+  std::map<const DeclTypeSpec *, const DeclTypeSpec *> typeMap;
+};
+
+class SymbolMapper : public evaluate::AnyTraverse<SymbolMapper, bool> {
+public:
+  using Base = evaluate::AnyTraverse<SymbolMapper, bool>;
+  SymbolMapper(Scope &scope, SymbolAndTypeMappings &map)
+      : Base{*this}, scope_{scope}, map_{map} {}
+  using Base::operator();
+  bool operator()(const SymbolRef &ref) const {
+    if (const Symbol *mapped{MapSymbol(*ref)}) {
+      const_cast<SymbolRef &>(ref) = *mapped;
+    }
+    return false;
+  }
+  bool operator()(const Symbol &x) const {
+    if (MapSymbol(x)) {
+      DIE("SymbolMapper hit symbol outside SymbolRef");
+    }
+    return false;
+  }
+  void MapSymbolExprs(Symbol &);
+
+private:
+  void MapParamValue(ParamValue &param) const { (*this)(param.GetExplicit()); }
+  void MapBound(Bound &bound) const { (*this)(bound.GetExplicit()); }
+  void MapShapeSpec(ShapeSpec &spec) const {
+    MapBound(spec.lbound());
+    MapBound(spec.ubound());
+  }
+  const Symbol *MapSymbol(const Symbol &) const;
+  const Symbol *MapSymbol(const Symbol *) const;
+  const DeclTypeSpec *MapType(const DeclTypeSpec &);
+  const DeclTypeSpec *MapType(const DeclTypeSpec *);
+  const Symbol *MapInterface(const Symbol *);
+
+  Scope &scope_;
+  SymbolAndTypeMappings &map_;
+};
+
+void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
+  if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (const DeclTypeSpec *type{object->type()}) {
+      if (const DeclTypeSpec *newType{MapType(*type)}) {
+        object->ReplaceType(*newType);
+      }
+    }
+  }
+  common::visit(common::visitors{[&](ObjectEntityDetails &object) {
+                                   for (ShapeSpec &spec : object.shape()) {
+                                     MapShapeSpec(spec);
+                                   }
+                                   for (ShapeSpec &spec : object.coshape()) {
+                                     MapShapeSpec(spec);
+                                   }
+                                 },
+                    [&](ProcEntityDetails &proc) {
+                      if (const Symbol *mappedSymbol{
+                              MapInterface(proc.interface().symbol())}) {
+                        proc.interface().set_symbol(*mappedSymbol);
+                      } else if (const DeclTypeSpec *mappedType{
+                                     MapType(proc.interface().type())}) {
+                        proc.interface().set_type(*mappedType);
+                      }
+                      if (proc.init()) {
+                        if (const Symbol *mapped{MapSymbol(*proc.init())}) {
+                          proc.set_init(*mapped);
+                        }
+                      }
+                    },
+                    [&](const HostAssocDetails &hostAssoc) {
+                      if (const Symbol *mapped{MapSymbol(hostAssoc.symbol())}) {
+                        symbol.set_details(HostAssocDetails{*mapped});
+                      }
+                    },
+                    [](const auto &) {}},
+      symbol.details());
+}
+
+const Symbol *SymbolMapper::MapSymbol(const Symbol &symbol) const {
+  if (auto iter{map_.symbolMap.find(&symbol)}; iter != map_.symbolMap.end()) {
+    return iter->second;
+  }
+  return nullptr;
+}
+
+const Symbol *SymbolMapper::MapSymbol(const Symbol *symbol) const {
+  return symbol ? MapSymbol(*symbol) : nullptr;
+}
+
+const DeclTypeSpec *SymbolMapper::MapType(const DeclTypeSpec &type) {
+  if (auto iter{map_.typeMap.find(&type)}; iter != map_.typeMap.end()) {
+    return iter->second;
+  }
+  const DeclTypeSpec *newType{nullptr};
+  if (type.category() == DeclTypeSpec::Category::Character) {
+    const CharacterTypeSpec &charType{type.characterTypeSpec()};
+    if (charType.length().GetExplicit()) {
+      ParamValue newLen{charType.length()};
+      (*this)(newLen.GetExplicit());
+      newType = &scope_.MakeCharacterType(
+          std::move(newLen), KindExpr{charType.kind()});
+    }
+  } else if (const DerivedTypeSpec *derived{type.AsDerived()}) {
+    if (!derived->parameters().empty()) {
+      DerivedTypeSpec newDerived{derived->name(), derived->typeSymbol()};
+      newDerived.CookParameters(scope_.context().foldingContext());
+      for (const auto &[paramName, paramValue] : derived->parameters()) {
+        ParamValue newParamValue{paramValue};
+        MapParamValue(newParamValue);
+        newDerived.AddParamValue(paramName, std::move(newParamValue));
+      }
+      // Scope::InstantiateDerivedTypes() instantiates it later.
+      newType = &scope_.MakeDerivedType(type.category(), std::move(newDerived));
+    }
+  }
+  if (newType) {
+    map_.typeMap[&type] = newType;
+  }
+  return newType;
+}
+
+const DeclTypeSpec *SymbolMapper::MapType(const DeclTypeSpec *type) {
+  return type ? MapType(*type) : nullptr;
+}
+
+const Symbol *SymbolMapper::MapInterface(const Symbol *interface) {
+  if (const Symbol *mapped{MapSymbol(interface)}) {
+    return mapped;
+  }
+  if (interface) {
+    if (&interface->owner() != &scope_) {
+      return interface;
+    } else if (const auto *subp{interface->detailsIf<SubprogramDetails>()};
+               subp && subp->isInterface()) {
+      if (Symbol *newSymbol{scope_.CopySymbol(*interface)}) {
+        newSymbol->get<SubprogramDetails>().set_isInterface(true);
+        map_.symbolMap[interface] = newSymbol;
+        Scope &newScope{scope_.MakeScope(Scope::Kind::Subprogram, newSymbol)};
+        MapSubprogramToNewSymbols(*interface, *newSymbol, newScope, &map_);
+        return newSymbol;
+      }
+    }
+  }
+  return nullptr;
+}
+
+void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
+    Scope &newScope, SymbolAndTypeMappings *mappings) {
+  SymbolAndTypeMappings newMappings;
+  if (!mappings) {
+    mappings = &newMappings;
+  }
+  mappings->symbolMap[&oldSymbol] = &newSymbol;
+  const auto &oldDetails{oldSymbol.get<SubprogramDetails>()};
+  auto &newDetails{newSymbol.get<SubprogramDetails>()};
+  for (const Symbol *dummyArg : oldDetails.dummyArgs()) {
+    if (!dummyArg) {
+      newDetails.add_alternateReturn();
+    } else if (Symbol *copy{newScope.CopySymbol(*dummyArg)}) {
+      newDetails.add_dummyArg(*copy);
+      mappings->symbolMap[dummyArg] = copy;
+    }
+  }
+  if (oldDetails.isFunction()) {
+    newScope.erase(newSymbol.name());
+    if (Symbol *copy{newScope.CopySymbol(oldDetails.result())}) {
+      newDetails.set_result(*copy);
+      mappings->symbolMap[&oldDetails.result()] = copy;
+    }
+  }
+  SymbolMapper mapper{newScope, *mappings};
+  for (auto &[_, ref] : newScope) {
+    mapper.MapSymbolExprs(*ref);
+  }
+  newScope.InstantiateDerivedTypes();
 }
 
 } // namespace Fortran::semantics

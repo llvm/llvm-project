@@ -1,14 +1,14 @@
-; RUN: opt -S -loop-vectorize -instcombine -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; Check that the interleaved-mem-access analysis currently does not create an 
+; Check that the interleaved-mem-access analysis currently does not create an
 ; interleave group for access 'a' due to the possible pointer wrap-around.
 ;
-; To begin with, in this test the candidate interleave group can be created 
+; To begin with, in this test the candidate interleave group can be created
 ; only when getPtrStride is called with Assume=true. Next, because
-; the interleave-group of the loads is not full (has gaps), we also need to check 
-; for possible pointer wrapping. Here we currently use Assume=false and as a 
+; the interleave-group of the loads is not full (has gaps), we also need to check
+; for possible pointer wrapping. Here we currently use Assume=false and as a
 ; result cannot prove the transformation is safe and therefore invalidate the
 ; candidate interleave group.
 ;

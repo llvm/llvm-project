@@ -100,7 +100,7 @@ struct InstRegexOp : public SetTheory::Operator {
       if (removeParens(Original).find_first_of("|?") != std::string::npos)
         FirstMeta = 0;
 
-      Optional<Regex> Regexpr;
+      std::optional<Regex> Regexpr;
       StringRef Prefix = Original.substr(0, FirstMeta);
       StringRef PatStr = Original.substr(FirstMeta);
       if (!PatStr.empty()) {

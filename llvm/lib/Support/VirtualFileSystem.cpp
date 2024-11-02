@@ -1013,8 +1013,8 @@ bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
   // before. Resolved ToPath must be a File.
   if (!TargetNode || NewLinkNode || !isa<detail::InMemoryFile>(*TargetNode))
     return false;
-  return addFile(NewLink, 0, nullptr, None, None, None, None,
-                 [&](detail::NewInMemoryNodeInfo NNI) {
+  return addFile(NewLink, 0, nullptr, std::nullopt, std::nullopt, std::nullopt,
+                 std::nullopt, [&](detail::NewInMemoryNodeInfo NNI) {
                    return std::make_unique<detail::InMemoryHardLink>(
                        NNI.Path.str(),
                        *cast<detail::InMemoryFile>(*TargetNode));
@@ -1610,7 +1610,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     SmallString<12> Storage;
     StringRef Value;
     if (!parseScalarString(N, Value, Storage))
-      return None;
+      return std::nullopt;
 
     if (Value.equals_insensitive("fallthrough")) {
       return RedirectingFileSystem::RedirectKind::Fallthrough;
@@ -1619,7 +1619,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     } else if (Value.equals_insensitive("redirect-only")) {
       return RedirectingFileSystem::RedirectKind::RedirectOnly;
     }
-    return None;
+    return std::nullopt;
   }
 
   struct KeyStatus {

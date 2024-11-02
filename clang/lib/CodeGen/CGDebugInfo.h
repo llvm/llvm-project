@@ -30,6 +30,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 
 namespace llvm {
 class MDNode;
@@ -630,11 +631,11 @@ private:
   void CreateCompileUnit();
 
   /// Compute the file checksum debug info for input file ID.
-  Optional<llvm::DIFile::ChecksumKind>
+  std::optional<llvm::DIFile::ChecksumKind>
   computeChecksum(FileID FID, SmallString<64> &Checksum) const;
 
   /// Get the source of the given file ID.
-  Optional<StringRef> getSource(const SourceManager &SM, FileID FID);
+  std::optional<StringRef> getSource(const SourceManager &SM, FileID FID);
 
   /// Convenience function to get the file debug info descriptor for the input
   /// location.
@@ -643,8 +644,8 @@ private:
   /// Create a file debug info descriptor for a source file.
   llvm::DIFile *
   createFile(StringRef FileName,
-             Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo,
-             Optional<StringRef> Source);
+             std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo,
+             std::optional<StringRef> Source);
 
   /// Get the type from the cache or create a new type if necessary.
   llvm::DIType *getOrCreateType(QualType Ty, llvm::DIFile *Fg);

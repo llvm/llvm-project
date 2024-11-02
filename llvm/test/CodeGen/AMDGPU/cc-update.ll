@@ -537,7 +537,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX803-NEXT:    buffer_store_dword v0, off, s[0:3], s4 ; 4-byte Folded Spill
 ; GFX803-NEXT:    ;;#ASMSTART
 ; GFX803-NEXT:    ;;#ASMEND
-; GFX803-NEXT:    s_mov_b32 s4, 0x40000
 ; GFX803-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
@@ -554,7 +553,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_mov_b32 s4, 0x40000
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
@@ -569,8 +567,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX1010-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 glc dlc
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-NEXT:    buffer_store_dword v0, off, s[0:3], s4 ; 4-byte Folded Spill
-; GFX1010-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010-NEXT:    s_mov_b32 s4, 0x20000
 ; GFX1010-NEXT:    ;;#ASMSTART
 ; GFX1010-NEXT:    ;;#ASMEND
 ; GFX1010-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
@@ -585,7 +581,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    s_movk_i32 s0, 0x1000
 ; GFX1100-NEXT:    scratch_store_b32 off, v0, s0 ; 4-byte Folded Spill
-; GFX1100-NEXT:    s_movk_i32 s0, 0x1000
 ; GFX1100-NEXT:    ;;#ASMSTART
 ; GFX1100-NEXT:    ;;#ASMEND
 ; GFX1100-NEXT:    scratch_load_b32 v0, off, s0 ; 4-byte Folded Reload

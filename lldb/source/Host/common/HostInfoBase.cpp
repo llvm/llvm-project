@@ -113,7 +113,7 @@ HostInfoBase::ParseArchitectureKind(llvm::StringRef kind) {
       .Case(LLDB_ARCH_DEFAULT, eArchKindDefault)
       .Case(LLDB_ARCH_DEFAULT_32BIT, eArchKind32)
       .Case(LLDB_ARCH_DEFAULT_64BIT, eArchKind64)
-      .Default(llvm::None);
+      .Default(std::nullopt);
 }
 
 FileSpec HostInfoBase::GetShlibDir() {

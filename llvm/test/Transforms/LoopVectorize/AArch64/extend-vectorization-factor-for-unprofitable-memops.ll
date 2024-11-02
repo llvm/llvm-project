@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -mtriple=arm64-apple-darwin -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-darwin -S %s | FileCheck %s
 
 ; Test cases for extending the vectorization factor, if small memory operations
 ; are not profitable.

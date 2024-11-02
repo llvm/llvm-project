@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -S %s | FileCheck %s
 
 ; Test cases to make sure LV & loop versioning can handle loops with
 ; multiple exiting branches.

@@ -157,7 +157,7 @@ Optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
         Rule.match(File, &Matches);
         // Returned matches are always in stable order.
         if (Matches.size() != 4)
-          return None;
+          return std::nullopt;
 
         return path::convert_to_slash(
             (Matches[1].drop_front(Matches[1].rfind('/') + 1) + "/" +
@@ -172,7 +172,7 @@ Optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
   }
 
   // Couldn't determine a include name, use full path instead.
-  return None;
+  return std::nullopt;
 }
 
 struct LocationFileChecker {

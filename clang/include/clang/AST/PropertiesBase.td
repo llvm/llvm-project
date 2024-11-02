@@ -41,7 +41,7 @@ class RefPropertyType<string className> : PropertyType<className # "*"> {
   let PackOptional =
     "value ? *value : nullptr";
   let UnpackOptional =
-    "value ? llvm::Optional<" # CXXName # ">(value) : llvm::None";
+    "value ? llvm::Optional<" # CXXName # ">(value) : std::nullopt";
 }
 
 /// Property types that correspond to a specific subclass of another type.
@@ -58,7 +58,7 @@ class DefaultValuePropertyType<string typeName = ""> : PropertyType<typeName> {
   let PackOptional =
     "value ? *value : " # CXXName # "()";
   let UnpackOptional =
-    "value.isNull() ? llvm::None : llvm::Optional<" # CXXName # ">(value)";
+    "value.isNull() ? std::nullopt : llvm::Optional<" # CXXName # ">(value)";
 }
 
 /// Property types that correspond to integer types and support optional
@@ -67,7 +67,7 @@ class CountPropertyType<string typeName = ""> : PropertyType<typeName> {
   let PackOptional =
     "value ? *value + 1 : 0";
   let UnpackOptional =
-    "value ? llvm::Optional<" # CXXName # ">(value - 1) : llvm::None";
+    "value ? llvm::Optional<" # CXXName # ">(value - 1) : std::nullopt";
 }
 
 def APInt : PropertyType<"llvm::APInt"> { let PassByReference = 1; }

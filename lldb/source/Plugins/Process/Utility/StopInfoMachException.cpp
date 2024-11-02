@@ -50,12 +50,12 @@ GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
   DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
       arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
   if (!disassembler_sp)
-    return llvm::None;
+    return std::nullopt;
 
   InstructionList &insn_list = disassembler_sp->GetInstructionList();
   InstructionSP insn = insn_list.GetInstructionAtIndex(0);
   if (!insn)
-    return llvm::None;
+    return std::nullopt;
 
   return PtrauthInstructionInfo{insn->IsAuthenticated(), insn->IsLoad(),
                                 insn->DoesBranch()};
@@ -590,7 +590,7 @@ StopInfoMachException::MachException::ExceptionCode(const char *name) {
 #ifdef EXC_CORPSE_NOTIFY
       .Case("EXC_CORPSE_NOTIFY", EXC_CORPSE_NOTIFY)
 #endif
-      .Default(llvm::None);
+      .Default(std::nullopt);
 }
 #endif
 

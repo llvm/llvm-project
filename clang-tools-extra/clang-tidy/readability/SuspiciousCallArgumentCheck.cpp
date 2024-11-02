@@ -587,7 +587,7 @@ Optional<int8_t> SuspiciousCallArgumentCheck::getBound(Heuristic H,
   assert(Idx < HeuristicCount);
 
   if (!Defaults[Idx].hasBounds())
-    return None;
+    return std::nullopt;
 
   switch (BK) {
   case BoundKind::DissimilarBelow:

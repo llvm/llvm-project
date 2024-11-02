@@ -23,6 +23,7 @@
 # Theses numbers are available in all runners, making it easier to update the
 # version number.
 env:
+    LLVM_STABLE_VERSION: "15"
     LLVM_HEAD_VERSION: "16"
     GCC_STABLE_VERSION: "12"
 steps:
@@ -34,6 +35,8 @@ steps:
     command: "libcxx/utils/ci/run-buildbot check-format"
     artifact_paths:
       - "**/clang-format.patch"
+    env:
+        GIT_CLANG_FORMAT: "/usr/bin/git-clang-format-${LLVM_STABLE_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"

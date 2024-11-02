@@ -289,10 +289,9 @@ decomposeGEP(GetElementPtrInst &GEP,
   return Result;
 }
 
-// Decomposes \p V into a vector of entries of the form { Coefficient, Variable
-// } where Coefficient * Variable. The sum of the pairs equals \p V.  The first
-// pair is the constant-factor and X must be nullptr. If the expression cannot
-// be decomposed, returns an empty vector.
+// Decomposes \p V into a constant offset + list of pairs { Coefficient,
+// Variable } where Coefficient * Variable. The sum of the constant offset and
+// pairs equals \p V.
 static Decomposition decompose(Value *V,
                                SmallVectorImpl<PreconditionTy> &Preconditions,
                                bool IsSigned, const DataLayout &DL) {
@@ -577,30 +576,46 @@ void ConstraintInfo::transferToOtherSystem(
 }
 
 namespace {
-/// Represents either a condition that holds on entry to a block or a basic
-/// block, with their respective Dominator DFS in and out numbers.
-struct ConstraintOrBlock {
+/// Represents either
+///  * a condition that holds on entry to a block (=conditional fact)
+///  * an assume (=assume fact)
+///  * an instruction to simplify.
+/// It also tracks the Dominator DFS in and out numbers for each entry.
+struct FactOrCheck {
+  Instruction *Inst;
   unsigned NumIn;
   unsigned NumOut;
-  bool IsBlock;
+  bool IsCheck;
   bool Not;
-  union {
-    BasicBlock *BB;
-    CmpInst *Condition;
-  };
 
-  ConstraintOrBlock(DomTreeNode *DTN)
-      : NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()), IsBlock(true),
-        BB(DTN->getBlock()) {}
-  ConstraintOrBlock(DomTreeNode *DTN, CmpInst *Condition, bool Not)
-      : NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()), IsBlock(false),
-        Not(Not), Condition(Condition) {}
+  FactOrCheck(DomTreeNode *DTN, Instruction *Inst, bool IsCheck, bool Not)
+      : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
+        IsCheck(IsCheck), Not(Not) {}
+
+  static FactOrCheck getFact(DomTreeNode *DTN, Instruction *Inst,
+                             bool Not = false) {
+    return FactOrCheck(DTN, Inst, false, Not);
+  }
+
+  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *Inst) {
+    return FactOrCheck(DTN, Inst, true, false);
+  }
+
+  bool isAssumeFact() const {
+    if (!IsCheck && isa<IntrinsicInst>(Inst)) {
+      assert(match(Inst, m_Intrinsic<Intrinsic::assume>()));
+      return true;
+    }
+    return false;
+  }
+
+  bool isConditionFact() const { return !IsCheck && isa<CmpInst>(Inst); }
 };
 
 /// Keep state required to build worklist.
 struct State {
   DominatorTree &DT;
-  SmallVector<ConstraintOrBlock, 64> WorkList;
+  SmallVector<FactOrCheck, 64> WorkList;
 
   State(DominatorTree &DT) : DT(DT) {}
 
@@ -645,16 +660,20 @@ static void dumpWithNames(ArrayRef<int64_t> C,
 #endif
 
 void State::addInfoFor(BasicBlock &BB) {
-  WorkList.emplace_back(DT.getNode(&BB));
-
   // True as long as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
-  // Scan BB for assume calls.
-  // TODO: also use this scan to queue conditions to simplify, so we can
-  // interleave facts from assumes and conditions to simplify in a single
-  // basic block. And to skip another traversal of each basic block when
-  // simplifying.
+  // Queue conditions and assumes.
   for (Instruction &I : BB) {
+    if (auto Cmp = dyn_cast<ICmpInst>(&I)) {
+      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), Cmp));
+      continue;
+    }
+
+    if (match(&I, m_Intrinsic<Intrinsic::ssub_with_overflow>())) {
+      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), &I));
+      continue;
+    }
+
     Value *Cond;
     // For now, just handle assumes with a single compare as condition.
     if (match(&I, m_Intrinsic<Intrinsic::assume>(m_Value(Cond))) &&
@@ -662,14 +681,11 @@ void State::addInfoFor(BasicBlock &BB) {
       if (GuaranteedToExecute) {
         // The assume is guaranteed to execute when BB is entered, hence Cond
         // holds on entry to BB.
-        WorkList.emplace_back(DT.getNode(&BB), cast<ICmpInst>(Cond), false);
+        WorkList.emplace_back(FactOrCheck::getFact(DT.getNode(I.getParent()),
+                                                   cast<Instruction>(Cond)));
       } else {
-        // Otherwise the condition only holds in the successors.
-        for (BasicBlock *Succ : successors(&BB)) {
-          if (!canAddSuccessor(BB, Succ))
-            continue;
-          WorkList.emplace_back(DT.getNode(Succ), cast<ICmpInst>(Cond), false);
-        }
+        WorkList.emplace_back(
+            FactOrCheck::getFact(DT.getNode(I.getParent()), &I));
       }
     }
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
@@ -706,7 +722,8 @@ void State::addInfoFor(BasicBlock &BB) {
       while (!CondWorkList.empty()) {
         Value *Cur = CondWorkList.pop_back_val();
         if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
-          WorkList.emplace_back(DT.getNode(Successor), Cmp, IsOr);
+          WorkList.emplace_back(
+              FactOrCheck::getFact(DT.getNode(Successor), Cmp, IsOr));
           continue;
         }
         if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
@@ -728,9 +745,11 @@ void State::addInfoFor(BasicBlock &BB) {
   if (!CmpI)
     return;
   if (canAddSuccessor(BB, Br->getSuccessor(0)))
-    WorkList.emplace_back(DT.getNode(Br->getSuccessor(0)), CmpI, false);
+    WorkList.emplace_back(
+        FactOrCheck::getFact(DT.getNode(Br->getSuccessor(0)), CmpI));
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
-    WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
+    WorkList.emplace_back(
+        FactOrCheck::getFact(DT.getNode(Br->getSuccessor(1)), CmpI, true));
 }
 
 static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
@@ -920,29 +939,41 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     S.addInfoFor(BB);
   }
 
-  // Next, sort worklist by dominance, so that dominating blocks and conditions
-  // come before blocks and conditions dominated by them. If a block and a
-  // condition have the same numbers, the condition comes before the block, as
-  // it holds on entry to the block. Also make sure conditions with constant
-  // operands come before conditions without constant operands. This increases
-  // the effectiveness of the current signed <-> unsigned fact transfer logic.
-  stable_sort(
-      S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
-        auto HasNoConstOp = [](const ConstraintOrBlock &B) {
-          return !B.IsBlock && !isa<ConstantInt>(B.Condition->getOperand(0)) &&
-                 !isa<ConstantInt>(B.Condition->getOperand(1));
-        };
+  // Next, sort worklist by dominance, so that dominating conditions to check
+  // and facts come before conditions and facts dominated by them. If a
+  // condition to check and a fact have the same numbers, conditional facts come
+  // first. Assume facts and checks are ordered according to their relative
+  // order in the containing basic block. Also make sure conditions with
+  // constant operands come before conditions without constant operands. This
+  // increases the effectiveness of the current signed <-> unsigned fact
+  // transfer logic.
+  stable_sort(S.WorkList, [](const FactOrCheck &A, const FactOrCheck &B) {
+    auto HasNoConstOp = [](const FactOrCheck &B) {
+      return !isa<ConstantInt>(B.Inst->getOperand(0)) &&
+             !isa<ConstantInt>(B.Inst->getOperand(1));
+    };
+    // If both entries have the same In numbers, conditional facts come first.
+    // Otherwise use the relative order in the basic block.
+    if (A.NumIn == B.NumIn) {
+      if (A.isConditionFact() && B.IsCheck)
+        return true;
+      if (B.isConditionFact() && A.IsCheck)
+        return false;
+      if (A.isConditionFact() && B.isConditionFact()) {
         bool NoConstOpA = HasNoConstOp(A);
         bool NoConstOpB = HasNoConstOp(B);
-        return std::tie(A.NumIn, A.IsBlock, NoConstOpA) <
-               std::tie(B.NumIn, B.IsBlock, NoConstOpB);
-      });
+        return NoConstOpA < NoConstOpB;
+      }
+      return A.Inst->comesBefore(B.Inst);
+    }
+    return A.NumIn < B.NumIn;
+  });
 
   SmallVector<Instruction *> ToRemove;
 
   // Finally, process ordered worklist and eliminate implied conditions.
   SmallVector<StackEntry, 16> DFSInStack;
-  for (ConstraintOrBlock &CB : S.WorkList) {
+  for (FactOrCheck &CB : S.WorkList) {
     // First, pop entries from the stack that are out-of-scope for CB. Remove
     // the corresponding entry from the constraint system.
     while (!DFSInStack.empty()) {
@@ -971,25 +1002,19 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
     LLVM_DEBUG({
       dbgs() << "Processing ";
-      if (CB.IsBlock)
-        dbgs() << *CB.BB;
+      if (CB.IsCheck)
+        dbgs() << "condition to simplify: " << *CB.Inst;
       else
-        dbgs() << *CB.Condition;
+        dbgs() << "fact to add to the system: " << *CB.Inst;
       dbgs() << "\n";
     });
 
     // For a block, check if any CmpInsts become known based on the current set
     // of constraints.
-    if (CB.IsBlock) {
-      for (Instruction &I : make_early_inc_range(*CB.BB)) {
-        if (auto *II = dyn_cast<WithOverflowInst>(&I)) {
-          Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
-          continue;
-        }
-        auto *Cmp = dyn_cast<ICmpInst>(&I);
-        if (!Cmp)
-          continue;
-
+    if (CB.IsCheck) {
+      if (auto *II = dyn_cast<WithOverflowInst>(CB.Inst)) {
+        Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
+      } else if (auto *Cmp = dyn_cast<ICmpInst>(CB.Inst)) {
         Changed |= checkAndReplaceCondition(Cmp, Info);
       }
       continue;
@@ -997,7 +1022,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
     ICmpInst::Predicate Pred;
     Value *A, *B;
-    if (match(CB.Condition, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+    Value *Cmp = CB.Inst;
+    match(Cmp, m_Intrinsic<Intrinsic::assume>(m_Value(Cmp)));
+    if (match(Cmp, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
       // Use the inverse predicate if required.
       if (CB.Not)
         Pred = CmpInst::getInversePredicate(Pred);

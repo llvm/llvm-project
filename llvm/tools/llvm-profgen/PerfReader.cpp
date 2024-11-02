@@ -396,7 +396,7 @@ PerfInputFile PerfScriptReader::convertPerfDataToTrace(
   StringRef ScriptSampleArgs[] = {PerfPath, "script",     "--show-mmap-events",
                                   "-F",     "ip,brstack", "--pid",
                                   PIDs,     "-i",         PerfData};
-  sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, llvm::None, Redirects);
+  sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
 
   return {PerfTraceFile, PerfFormat::PerfScript, PerfContent::UnknownContent};
 }

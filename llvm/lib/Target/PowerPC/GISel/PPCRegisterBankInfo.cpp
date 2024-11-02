@@ -99,6 +99,26 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_CONSTANT:
     OperandsMapping = getOperandsMapping({getValueMapping(PMI_GPR64), nullptr});
     break;
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FPTOSI: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
+
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(PMI_GPR64),
+         getValueMapping(Size == 32 ? PMI_FPR32 : PMI_FPR64)});
+    break;
+  }
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_SITOFP: {
+    Register SrcReg = MI.getOperand(0).getReg();
+    unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
+
+    OperandsMapping =
+        getOperandsMapping({getValueMapping(Size == 32 ? PMI_FPR32 : PMI_FPR64),
+                            getValueMapping(PMI_GPR64)});
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }

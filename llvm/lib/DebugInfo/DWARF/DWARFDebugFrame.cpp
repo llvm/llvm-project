@@ -33,7 +33,7 @@ using namespace dwarf;
 static void printRegister(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
                           unsigned RegNum) {
   if (MRI) {
-    if (Optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(RegNum, IsEH)) {
+    if (std::optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(RegNum, IsEH)) {
       if (const char *RegName = MRI->getName(*LLVMRegNum)) {
         OS << RegName;
         return;
@@ -50,26 +50,26 @@ UnwindLocation UnwindLocation::createUndefined() { return {Undefined}; }
 UnwindLocation UnwindLocation::createSame() { return {Same}; }
 
 UnwindLocation UnwindLocation::createIsConstant(int32_t Value) {
-  return {Constant, InvalidRegisterNumber, Value, None, false};
+  return {Constant, InvalidRegisterNumber, Value, std::nullopt, false};
 }
 
 UnwindLocation UnwindLocation::createIsCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, false};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, std::nullopt, false};
 }
 
 UnwindLocation UnwindLocation::createAtCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, true};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, std::nullopt, true};
 }
 
 UnwindLocation
 UnwindLocation::createIsRegisterPlusOffset(uint32_t RegNum, int32_t Offset,
-                                           Optional<uint32_t> AddrSpace) {
+                                           std::optional<uint32_t> AddrSpace) {
   return {RegPlusOffset, RegNum, Offset, AddrSpace, false};
 }
 
 UnwindLocation
 UnwindLocation::createAtRegisterPlusOffset(uint32_t RegNum, int32_t Offset,
-                                           Optional<uint32_t> AddrSpace) {
+                                           std::optional<uint32_t> AddrSpace) {
   return {RegPlusOffset, RegNum, Offset, AddrSpace, true};
 }
 
@@ -571,7 +571,7 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
       if (!RegNum)
         return RegNum.takeError();
-      if (Optional<UnwindLocation> O =
+      if (std::optional<UnwindLocation> O =
               InitialLocs->getRegisterLocation(*RegNum))
         Row.getRegisterLocations().setRegisterLocation(*RegNum, *O);
       else
@@ -1052,7 +1052,7 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     if (Length == 0) {
       auto Cie = std::make_unique<CIE>(
           IsDWARF64, StartOffset, 0, 0, SmallString<8>(), 0, 0, 0, 0, 0,
-          SmallString<8>(), 0, 0, None, None, Arch);
+          SmallString<8>(), 0, 0, std::nullopt, std::nullopt, Arch);
       CIEs[StartOffset] = Cie.get();
       Entries.push_back(std::move(Cie));
       break;
@@ -1089,8 +1089,8 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       StringRef AugmentationData("");
       uint32_t FDEPointerEncoding = DW_EH_PE_absptr;
       uint32_t LSDAPointerEncoding = DW_EH_PE_omit;
-      Optional<uint64_t> Personality;
-      Optional<uint32_t> PersonalityEncoding;
+      std::optional<uint64_t> Personality;
+      std::optional<uint32_t> PersonalityEncoding;
       if (IsEH) {
         std::optional<uint64_t> AugmentationLength;
         uint64_t StartAugmentationOffset;
@@ -1170,7 +1170,7 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       uint64_t CIEPointer = Id;
       uint64_t InitialLocation = 0;
       uint64_t AddressRange = 0;
-      Optional<uint64_t> LSDAAddress;
+      std::optional<uint64_t> LSDAAddress;
       CIE *Cie = CIEs[IsEH ? (StartStructureOffset - CIEPointer) : CIEPointer];
 
       if (IsEH) {
@@ -1244,7 +1244,7 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
 
 void DWARFDebugFrame::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                            const MCRegisterInfo *MRI,
-                           Optional<uint64_t> Offset) const {
+                           std::optional<uint64_t> Offset) const {
   if (Offset) {
     if (auto *Entry = getEntryAtOffset(*Offset))
       Entry->dump(OS, DumpOpts, MRI, IsEH);

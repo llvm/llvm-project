@@ -28,7 +28,7 @@ TEST(RegisterValueTest, GetScalarValue) {
     Scalar S;
     if (V.GetScalarValue(S))
       return S;
-    return llvm::None;
+    return std::nullopt;
   };
   EXPECT_EQ(Get(RV(uint8_t(47))), Scalar(47));
   EXPECT_EQ(Get(RV(uint16_t(4747))), Scalar(4747));

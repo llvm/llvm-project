@@ -629,14 +629,14 @@ public:
   void EmitBasicReport(const Decl *DeclWithIssue, const CheckerBase *Checker,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = None,
-                       ArrayRef<FixItHint> Fixits = None);
+                       ArrayRef<SourceRange> Ranges = std::nullopt,
+                       ArrayRef<FixItHint> Fixits = std::nullopt);
 
   void EmitBasicReport(const Decl *DeclWithIssue, CheckerNameRef CheckerName,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = None,
-                       ArrayRef<FixItHint> Fixits = None);
+                       ArrayRef<SourceRange> Ranges = std::nullopt,
+                       ArrayRef<FixItHint> Fixits = std::nullopt);
 
 private:
   llvm::StringMap<std::unique_ptr<BugType>> StrBugTypes;
@@ -783,7 +783,7 @@ public:
                                         PathSensitiveBugReport &R) const {
     std::string Msg = Cb(BRC, R);
     if (Msg.empty())
-      return None;
+      return std::nullopt;
 
     return std::move(Msg);
   }

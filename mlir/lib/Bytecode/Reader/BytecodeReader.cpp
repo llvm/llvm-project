@@ -451,7 +451,8 @@ struct BytecodeOperationName {
   BytecodeOperationName(BytecodeDialect *dialect, StringRef name)
       : dialect(dialect), name(name) {}
 
-  /// The loaded operation name, or None if it hasn't been processed yet.
+  /// The loaded operation name, or std::nullopt if it hasn't been processed
+  /// yet.
   Optional<OperationName> opName;
 
   /// The dialect that owns this operation name.

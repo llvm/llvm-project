@@ -69,7 +69,7 @@ public:
   /// Creates a \p Header inclusion directive fixit in the File \p FileID.
   /// When \p Header is enclosed in angle brackets, uses angle brackets in the
   /// inclusion directive, otherwise uses quotes.
-  /// Returns ``llvm::None`` on error or if the inclusion directive already
+  /// Returns ``std::nullopt`` on error or if the inclusion directive already
   /// exists.
   llvm::Optional<FixItHint> createIncludeInsertion(FileID FileID,
                                                    llvm::StringRef Header);
@@ -77,7 +77,7 @@ public:
   /// Creates a \p Header inclusion directive fixit in the main file.
   /// When \p Header is enclosed in angle brackets, uses angle brackets in the
   /// inclusion directive, otherwise uses quotes.
-  /// Returns ``llvm::None`` on error or if the inclusion directive already
+  /// Returns ``std::nullopt`` on error or if the inclusion directive already
   /// exists.
   llvm::Optional<FixItHint>
   createMainFileIncludeInsertion(llvm::StringRef Header);

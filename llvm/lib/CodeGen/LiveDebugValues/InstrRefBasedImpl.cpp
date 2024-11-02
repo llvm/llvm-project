@@ -1543,10 +1543,10 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
     }
   }
 
-  // We, we have a value number or None. Tell the variable value tracker about
-  // it. The rest of this LiveDebugValues implementation acts exactly the same
-  // for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values that
-  // aren't immediately available).
+  // We, we have a value number or std::nullopt. Tell the variable value tracker
+  // about it. The rest of this LiveDebugValues implementation acts exactly the
+  // same for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values
+  // that aren't immediately available).
   DbgValueProperties Properties(Expr, false, false);
   SmallVector<DbgOpID> DbgOpIDs;
   if (NewID)

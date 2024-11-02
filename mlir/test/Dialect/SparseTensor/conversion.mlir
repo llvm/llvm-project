@@ -40,7 +40,7 @@ func.func @sparse_nop(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #Spa
 // CHECK-LABEL: func @sparse_dim1d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[D:.*]] = call @sparseLvlSize(%[[A]], %[[C]])
+//       CHECK: %[[D:.*]] = call @sparseDimSize(%[[A]], %[[C]])
 //       CHECK: return %[[D]] : index
 func.func @sparse_dim1d(%arg0: tensor<?xf64, #SparseVector>) -> index {
   %c = arith.constant 0 : index
@@ -48,28 +48,28 @@ func.func @sparse_dim1d(%arg0: tensor<?xf64, #SparseVector>) -> index {
   return %0 : index
 }
 
+// Querying the size of dimension 1 should do so; i.e., it should
+// not be permuted into a query for the size of level 2 (even though
+// dimension 1 is stored as level 2).
 // CHECK-LABEL: func @sparse_dim3d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
-//       CHECK: %[[C:.*]] = arith.constant 2 : index
-//       CHECK: %[[D:.*]] = call @sparseLvlSize(%[[A]], %[[C]])
+//       CHECK: %[[C:.*]] = arith.constant 1 : index
+//       CHECK: %[[D:.*]] = call @sparseDimSize(%[[A]], %[[C]])
 //       CHECK: return %[[D]] : index
 func.func @sparse_dim3d(%arg0: tensor<?x?x?xf64, #SparseTensor>) -> index {
-  // Querying for dimension 1 in the tensor type needs to be
-  // permuted into querying for dimension 2 in the stored sparse
-  // tensor scheme, since the latter honors the dimOrdering.
   %c = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c : tensor<?x?x?xf64, #SparseTensor>
   return %0 : index
 }
 
+// Querying the size of a static dimension should be folded into a
+// constant (and we should be sure to get the size of dimension 1,
+// not dimension 2 nor level 1).
 // CHECK-LABEL: func @sparse_dim3d_const(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 20 : index
 //       CHECK: return %[[C]] : index
 func.func @sparse_dim3d_const(%arg0: tensor<10x20x30xf64, #SparseTensor>) -> index {
-  // Querying for dimension 1 in the tensor type can be directly
-  // folded into the right value (even though it corresponds
-  // to dimension 2 in the stored sparse tensor scheme).
   %c = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c : tensor<10x20x30xf64, #SparseTensor>
   return %0 : index
@@ -361,7 +361,7 @@ func.func @sparse_expansion2() -> memref<?xindex> {
 // CHECK-LABEL: func @sparse_expansion3(
 //       CHECK: %[[C1:.*]] = arith.constant 1 : index
 //       CHECK: %[[N:.*]] = call @newSparseTensor
-//       CHECK: %[[S:.*]] = call @sparseLvlSize(%[[N]], %c1) : (!llvm.ptr<i8>, index) -> index
+//       CHECK: %[[S:.*]] = call @sparseLvlSize(%[[N]], %[[C1]])
 //       CHECK: %[[A:.*]] = memref.alloc(%[[S]]) : memref<?xf64>
 //       CHECK: %[[B:.*]] = memref.alloc(%[[S]]) : memref<?xi1>
 //       CHECK: %[[C:.*]] = memref.alloc(%[[S]]) : memref<?xindex>

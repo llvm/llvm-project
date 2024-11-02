@@ -88,7 +88,7 @@ protected:
   /// may not be populated.
   struct Impl {
     Impl(StringAttr name)
-        : name(name), dialect(nullptr), interfaceMap(llvm::None) {}
+        : name(name), dialect(nullptr), interfaceMap(std::nullopt) {}
 
     /// The name of the operation.
     StringAttr name;
@@ -251,7 +251,7 @@ inline llvm::hash_code hash_value(OperationName arg) {
 class RegisteredOperationName : public OperationName {
 public:
   /// Lookup the registered operation information for the given operation.
-  /// Returns None if the operation isn't registered.
+  /// Returns std::nullopt if the operation isn't registered.
   static Optional<RegisteredOperationName> lookup(StringRef name,
                                                   MLIRContext *ctx);
 
@@ -464,8 +464,8 @@ Attribute getAttrFromSortedRange(IteratorT first, IteratorT last, NameT name) {
   return result.second ? result.first->getValue() : Attribute();
 }
 
-/// Get an attribute from a sorted range of named attributes. Returns None if
-/// the attribute was not found.
+/// Get an attribute from a sorted range of named attributes. Returns
+/// std::nullopt if the attribute was not found.
 template <typename IteratorT, typename NameT>
 Optional<NamedAttribute>
 getNamedAttrFromSortedRange(IteratorT first, IteratorT last, NameT name) {
@@ -554,7 +554,7 @@ public:
   void pop_back() { attrs.pop_back(); }
 
   /// Returns an entry with a duplicate name the list, if it exists, else
-  /// returns llvm::None.
+  /// returns std::nullopt.
   Optional<NamedAttribute> findDuplicate() const;
 
   /// Return a dictionary attribute for the underlying dictionary. This will

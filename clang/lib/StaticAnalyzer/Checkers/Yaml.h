@@ -28,7 +28,7 @@ template <class T, class Checker>
 llvm::Optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
                                    StringRef Option, StringRef ConfigFile) {
   if (ConfigFile.trim().empty())
-    return None;
+    return std::nullopt;
 
   llvm::vfs::FileSystem *FS = llvm::vfs::getRealFileSystem().get();
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
@@ -38,7 +38,7 @@ llvm::Optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
     Mgr.reportInvalidCheckerOptionValue(Chk, Option,
                                         "a valid filename instead of '" +
                                             std::string(ConfigFile) + "'");
-    return None;
+    return std::nullopt;
   }
 
   llvm::yaml::Input Input(Buffer.get()->getBuffer());
@@ -48,7 +48,7 @@ llvm::Optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
   if (std::error_code ec = Input.error()) {
     Mgr.reportInvalidCheckerOptionValue(Chk, Option,
                                         "a valid yaml file: " + ec.message());
-    return None;
+    return std::nullopt;
   }
 
   return Config;

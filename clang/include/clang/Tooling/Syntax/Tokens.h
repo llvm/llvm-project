@@ -204,7 +204,7 @@ public:
   /// Returns the subrange of spelled tokens corresponding to AST node spanning
   /// \p Expanded. This is the text that should be replaced if a refactoring
   /// were to rewrite the node. If \p Expanded is empty, the returned value is
-  /// llvm::None.
+  /// std::nullopt.
   ///
   /// Will fail if the expanded tokens do not correspond to a sequence of
   /// spelled tokens. E.g. for the following example:

@@ -717,18 +717,19 @@ multiclass VWREDO_FV_V<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VMALU_MV_Mask<string opcodestr, bits<6> funct6, string vm = "v"> {
-  def M : VALUVVNoVm<funct6, OPMVV, opcodestr # "." # vm # "m">,
-          Sched<[WriteVMALUV, ReadVMALUV, ReadVMALUV]>;
+  def M : VALUVVNoVm<funct6, OPMVV, opcodestr #"." #vm #"m">,
+          Sched<[WriteVMALUV_UpperBound, ReadVMALUV_UpperBound,
+                 ReadVMALUV_UpperBound]>;
 }
 
 multiclass VMSFS_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
   def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
-           Sched<[WriteVMSFSV, ReadVMSFSV, ReadVMask]>;
+           Sched<[WriteVMSFSV_UpperBound, ReadVMSFSV_UpperBound, ReadVMask]>;
 }
 
 multiclass VMIOT_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
   def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
-           Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
+           Sched<[WriteVMIotV_UpperBound, ReadVMIotV_UpperBound, ReadVMask]>;
 }
 
 multiclass VSHT_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
@@ -1518,13 +1519,15 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
 def VCPOP_M : RVInstV<0b010000, 0b10000, OPMVV, (outs GPR:$vd),
                       (ins VR:$vs2, VMaskOp:$vm),
                       "vcpop.m", "$vd, $vs2$vm">,
-              Sched<[WriteVMPopV, ReadVMPopV, ReadVMask]>;
+              Sched<[WriteVMPopV_UpperBound, ReadVMPopV_UpperBound,
+                     ReadVMask]>;
 
 // vfirst find-first-set mask bit
 def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
                        (ins VR:$vs2, VMaskOp:$vm),
                        "vfirst.m", "$vd, $vs2$vm">,
-              Sched<[WriteVMFFSV, ReadVMFFSV, ReadVMask]>;
+              Sched<[WriteVMFFSV_UpperBound, ReadVMFFSV_UpperBound,
+                     ReadVMask]>;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -1550,7 +1553,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let vs2 = 0 in
 def VID_V : RVInstV<0b010100, 0b10001, OPMVV, (outs VR:$vd),
                     (ins VMaskOp:$vm), "vid.v", "$vd$vm">,
-            Sched<[WriteVMIdxV, ReadVMask]>;
+            Sched<[WriteVMIdxV_UpperBound, ReadVMask]>;
 
 // Integer Scalar Move Instructions
 let vm = 1, RVVConstraint = NoConstraint in {

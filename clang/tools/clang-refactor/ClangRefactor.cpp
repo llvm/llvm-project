@@ -200,7 +200,7 @@ public:
       Value = CLOpt.getValue();
       return;
     }
-    Value = None;
+    Value = std::nullopt;
     if (Opt.isRequired())
       MissingRequiredOptions.push_back(&Opt);
   }

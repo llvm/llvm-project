@@ -13,7 +13,6 @@
 #ifndef LLVM_TARGET_TARGETMACHINE_H
 #define LLVM_TARGET_TARGETMACHINE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
@@ -23,6 +22,7 @@
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -110,7 +110,7 @@ protected: // Can only create subclasses.
   unsigned O0WantsFastISel : 1;
 
   // PGO related tunables.
-  Optional<PGOOptions> PGOOption = None;
+  std::optional<PGOOptions> PGOOption = std::nullopt;
 
 public:
   const TargetOptions DefaultOptions;
@@ -310,8 +310,8 @@ public:
     return false;
   }
 
-  void setPGOOption(Optional<PGOOptions> PGOOpt) { PGOOption = PGOOpt; }
-  const Optional<PGOOptions> &getPGOOption() const { return PGOOption; }
+  void setPGOOption(std::optional<PGOOptions> PGOOpt) { PGOOption = PGOOpt; }
+  const std::optional<PGOOptions> &getPGOOption() const { return PGOOption; }
 
   /// If the specified generic pointer could be assumed as a pointer to a
   /// specific address space, return that address space.
@@ -497,8 +497,9 @@ public:
 /// CM does not have a value. The tiny and kernel models will produce
 /// an error, so targets that support them or require more complex codemodel
 /// selection logic should implement and call their own getEffectiveCodeModel.
-inline CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
-                                              CodeModel::Model Default) {
+inline CodeModel::Model
+getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
+                      CodeModel::Model Default) {
   if (CM) {
     // By default, targets do not support the tiny and kernel models.
     if (*CM == CodeModel::Tiny)

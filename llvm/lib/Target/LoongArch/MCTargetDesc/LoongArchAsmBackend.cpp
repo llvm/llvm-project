@@ -24,7 +24,8 @@
 
 using namespace llvm;
 
-Optional<MCFixupKind> LoongArchAsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind>
+LoongArchAsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     auto Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
@@ -37,7 +38,7 @@ Optional<MCFixupKind> LoongArchAsmBackend::getFixupKind(StringRef Name) const {
     if (Type != -1u)
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
-  return None;
+  return std::nullopt;
 }
 
 const MCFixupKindInfo &

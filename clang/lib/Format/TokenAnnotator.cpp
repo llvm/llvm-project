@@ -5016,6 +5016,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
         !Right.MatchingParen) {
       return false;
     }
+    auto Next = Right.Next;
+    if (Next && Next->is(tok::r_paren))
+      Next = Next->Next;
+    if (Next && Next->is(tok::l_paren))
+      return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
     return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
   }

@@ -926,12 +926,13 @@ void TextDiagnostic::emitBuildingModuleLocation(FullSourceLoc Loc,
 static llvm::Optional<std::pair<unsigned, unsigned>>
 findLinesForRange(const CharSourceRange &R, FileID FID,
                   const SourceManager &SM) {
-  if (!R.isValid()) return None;
+  if (!R.isValid())
+    return std::nullopt;
 
   SourceLocation Begin = R.getBegin();
   SourceLocation End = R.getEnd();
   if (SM.getFileID(Begin) != FID || SM.getFileID(End) != FID)
-    return None;
+    return std::nullopt;
 
   return std::make_pair(SM.getExpansionLineNumber(Begin),
                         SM.getExpansionLineNumber(End));

@@ -73,6 +73,9 @@ subroutine assoc()
     type(t1), target :: t1xtarget
     type(t2) :: t2x
     type(t2), target :: t2xtarget
+    integer, target :: targetIntArr(2)
+    integer, target :: targetIntCoarray[*]
+    integer, pointer :: intPointerArr(:)
 
     !ERROR: missing mandatory 'pointer=' argument
     lVar = associated()
@@ -177,5 +180,9 @@ subroutine assoc()
     cannotBeCalledfromImplicitPointer => externalProc
     !WARNING: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
     lvar = associated(cannotBeCalledfromImplicitPointer, externalProc)
+    !ERROR: TARGET= argument 'targetintarr([INTEGER(8)::2_8,1_8])' may not have a vector subscript or coindexing
+    lvar = associated(intPointerArr, targetIntArr([2,1]))
+    !ERROR: TARGET= argument 'targetintcoarray[1_8]' may not have a vector subscript or coindexing
+    lvar = associated(intPointerVar1, targetIntCoarray[1])
   end subroutine test
 end subroutine assoc

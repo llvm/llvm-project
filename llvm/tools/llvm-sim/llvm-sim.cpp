@@ -47,7 +47,7 @@ getPositionInModule(const Instruction *I,
   assert(I && "Instruction is nullptr!");
   DenseMap<Instruction *, unsigned>::const_iterator It = LLVMInstNum.find(I);
   if (It == LLVMInstNum.end())
-    return None;
+    return std::nullopt;
   return It->second;
 }
 

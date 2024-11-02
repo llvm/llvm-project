@@ -320,7 +320,7 @@ llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
 /// Infers whether this is a header from the FileName and LangOpts (if
 /// presents).
 bool isHeaderFile(llvm::StringRef FileName,
-                  llvm::Optional<LangOptions> LangOpts = llvm::None);
+                  llvm::Optional<LangOptions> LangOpts = std::nullopt);
 
 /// Returns true if the given location is in a generated protobuf file.
 bool isProtoFile(SourceLocation Loc, const SourceManager &SourceMgr);

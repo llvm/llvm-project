@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -loop-vectorize -S < %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck --check-prefix=CHECK-DBG %s
-; RUN: opt -mtriple=aarch64-none-linux-gnu -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>%t | FileCheck --check-prefix=CHECK-NO-SVE %s
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -passes=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck --check-prefix=CHECK-DBG %s
+; RUN: opt -mtriple=aarch64-none-linux-gnu -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>%t | FileCheck --check-prefix=CHECK-NO-SVE %s
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-NO-SVE-REMARKS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

@@ -189,7 +189,7 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
     lldb::ConnectionStatus status = eConnectionStatusNoConnection;
     size_t bytes_read = Read(buffer, sizeof(buffer),
                              timeout_usec == UINT32_MAX
-                                 ? Timeout<std::micro>(llvm::None)
+                                 ? Timeout<std::micro>(std::nullopt)
                                  : std::chrono::microseconds(timeout_usec),
                              status, &error);
 

@@ -16,14 +16,13 @@
 using namespace lldb;
 using namespace lldb_private;
 using llvm::Optional;
-using llvm::None;
 using ParsedFunction = lldb_private::CPlusPlusNameParser::ParsedFunction;
 using ParsedName = lldb_private::CPlusPlusNameParser::ParsedName;
 namespace tok = clang::tok;
 
 Optional<ParsedFunction> CPlusPlusNameParser::ParseAsFunctionDefinition() {
   m_next_token_index = 0;
-  Optional<ParsedFunction> result(None);
+  Optional<ParsedFunction> result(std::nullopt);
 
   // Try to parse the name as function without a return type specified e.g.
   // main(int, char*[])
@@ -44,7 +43,7 @@ Optional<ParsedFunction> CPlusPlusNameParser::ParseAsFunctionDefinition() {
   // e.g. int main(int, char*[])
   result = ParseFunctionImpl(true);
   if (HasMoreTokens())
-    return None;
+    return std::nullopt;
   return result;
 }
 
@@ -52,9 +51,9 @@ Optional<ParsedName> CPlusPlusNameParser::ParseAsFullName() {
   m_next_token_index = 0;
   Optional<ParsedNameRanges> name_ranges = ParseFullNameImpl();
   if (!name_ranges)
-    return None;
+    return std::nullopt;
   if (HasMoreTokens())
-    return None;
+    return std::nullopt;
   ParsedName result;
   result.basename = GetTextForRange(name_ranges.value().basename_range);
   result.context = GetTextForRange(name_ranges.value().context_range);
@@ -111,7 +110,7 @@ CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
     size_t return_start = GetCurrentPosition();
     // Consume return type if it's expected.
     if (!ConsumeToken(tok::kw_auto) && !ConsumeTypename())
-      return None;
+      return std::nullopt;
 
     size_t return_end = GetCurrentPosition();
     result.return_type = GetTextForRange(Range(return_start, return_end));
@@ -119,12 +118,12 @@ CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
 
   auto maybe_name = ParseFullNameImpl();
   if (!maybe_name) {
-    return None;
+    return std::nullopt;
   }
 
   size_t argument_start = GetCurrentPosition();
   if (!ConsumeArguments()) {
-    return None;
+    return std::nullopt;
   }
 
   size_t qualifiers_start = GetCurrentPosition();
@@ -155,7 +154,7 @@ CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
   if (expect_return_type) {
     // Consume return type.
     if (!ConsumeTypename())
-      return None;
+      return std::nullopt;
   }
 
   // Step 2:
@@ -165,9 +164,9 @@ CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
   // Leaves us with:
   //   (*func(long))(int))(float)
   if (!ConsumeToken(tok::l_paren))
-    return None;
+    return std::nullopt;
   if (!ConsumePtrsAndRefs())
-    return None;
+    return std::nullopt;
 
   // Step 3:
   //
@@ -214,7 +213,7 @@ CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
         return maybe_inner_function_ptr_name;
       }
 
-  return None;
+  return std::nullopt;
 }
 
 bool CPlusPlusNameParser::ConsumeArguments() {
@@ -721,7 +720,7 @@ CPlusPlusNameParser::ParseFullNameImpl() {
     start_position.Remove();
     return result;
   } else {
-    return None;
+    return std::nullopt;
   }
 }
 

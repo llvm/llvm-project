@@ -2210,7 +2210,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeKernelDescriptor(
   return MCDisassembler::Success;
 }
 
-Optional<MCDisassembler::DecodeStatus>
+std::optional<MCDisassembler::DecodeStatus>
 AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                   ArrayRef<uint8_t> Bytes, uint64_t Address,
                                   raw_ostream &CStream) const {

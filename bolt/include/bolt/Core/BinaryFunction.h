@@ -980,7 +980,7 @@ public:
       if (Callback(StringRef(Name)))
         return StringRef(Name);
 
-    return None;
+    return std::nullopt;
   }
 
   /// Check if (possibly one out of many) function name matches the given
@@ -1318,7 +1318,7 @@ public:
   /// Return the name of the section this function originated from.
   Optional<StringRef> getOriginSectionName() const {
     if (!OriginSection)
-      return None;
+      return std::nullopt;
     return OriginSection->getName();
   }
 

@@ -185,6 +185,7 @@ struct ProcedureDesignator {
   // Exactly one of these will return a non-null pointer.
   const SpecificIntrinsic *GetSpecificIntrinsic() const;
   const Symbol *GetSymbol() const; // symbol or component symbol
+  const SymbolRef *UnwrapSymbolRef() const; // null if intrinsic or component
 
   // For references to NOPASS components and bindings only.
   // References to PASS components and bindings are represented

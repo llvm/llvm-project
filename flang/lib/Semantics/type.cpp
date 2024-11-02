@@ -37,9 +37,9 @@ void DerivedTypeSpec::ReplaceScope(const Scope &scope) {
 }
 
 void DerivedTypeSpec::AddRawParamValue(
-    const std::optional<parser::Keyword> &keyword, ParamValue &&value) {
+    const parser::Keyword *keyword, ParamValue &&value) {
   CHECK(parameters_.empty());
-  rawParameters_.emplace_back(keyword ? &*keyword : nullptr, std::move(value));
+  rawParameters_.emplace_back(keyword, std::move(value));
 }
 
 void DerivedTypeSpec::CookParameters(evaluate::FoldingContext &foldingContext) {

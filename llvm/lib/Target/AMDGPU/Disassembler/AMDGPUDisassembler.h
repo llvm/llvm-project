@@ -129,10 +129,9 @@ public:
     return MCDisassembler::Fail;
   }
 
-  Optional<DecodeStatus> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                                       ArrayRef<uint8_t> Bytes,
-                                       uint64_t Address,
-                                       raw_ostream &CStream) const override;
+  std::optional<DecodeStatus>
+  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
+                uint64_t Address, raw_ostream &CStream) const override;
 
   DecodeStatus decodeKernelDescriptor(StringRef KdName, ArrayRef<uint8_t> Bytes,
                                       uint64_t KdAddress) const;

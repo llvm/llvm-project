@@ -149,7 +149,7 @@ Optional<NSAPI::NSArrayMethodKind> NSAPI::getNSArrayMethodKind(Selector Sel) {
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Selector NSAPI::getNSDictionarySelector(
@@ -251,7 +251,7 @@ NSAPI::getNSDictionaryMethodKind(Selector Sel) {
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Selector NSAPI::getNSSetSelector(NSSetMethodKind MK) const {
@@ -308,7 +308,7 @@ NSAPI::getNSSetMethodKind(Selector Sel) {
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Selector NSAPI::getNSNumberLiteralSelector(NSNumberLiteralMethodKind MK,
@@ -371,14 +371,14 @@ NSAPI::getNSNumberLiteralMethodKind(Selector Sel) const {
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Optional<NSAPI::NSNumberLiteralMethodKind>
 NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   const BuiltinType *BT = T->getAs<BuiltinType>();
   if (!BT)
-    return None;
+    return std::nullopt;
 
   const TypedefType *TDT = T->getAs<TypedefType>();
   if (TDT) {
@@ -496,7 +496,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
     break;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 /// Returns true if \param T is a typedef of "BOOL" in objective-c.

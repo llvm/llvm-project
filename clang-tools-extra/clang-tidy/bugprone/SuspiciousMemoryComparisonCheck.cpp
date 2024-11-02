@@ -22,7 +22,7 @@ static llvm::Optional<uint64_t> tryEvaluateSizeExpr(const Expr *SizeExpr,
   if (SizeExpr->EvaluateAsRValue(Result, Ctx))
     return Ctx.toBits(
         CharUnits::fromQuantity(Result.Val.getInt().getExtValue()));
-  return None;
+  return std::nullopt;
 }
 
 void SuspiciousMemoryComparisonCheck::registerMatchers(MatchFinder *Finder) {

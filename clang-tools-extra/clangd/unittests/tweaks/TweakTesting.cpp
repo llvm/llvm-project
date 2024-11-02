@@ -59,7 +59,7 @@ llvm::Annotations::Range rangeOrPoint(const llvm::Annotations &A) {
 }
 
 // Prepare and apply the specified tweak based on the selection in Input.
-// Returns None if and only if prepare() failed.
+// Returns std::nullopt if and only if prepare() failed.
 llvm::Optional<llvm::Expected<Tweak::Effect>>
 applyTweak(ParsedAST &AST, llvm::Annotations::Range Range, StringRef TweakID,
            const SymbolIndex *Index, llvm::vfs::FileSystem *FS) {

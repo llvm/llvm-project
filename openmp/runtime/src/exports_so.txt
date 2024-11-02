@@ -72,10 +72,8 @@ VERSION {
         __kmp_fork_call;
         __kmp_invoke_microtask;
 #if KMP_USE_MONITOR
-        __kmp_launch_monitor;
         __kmp_reap_monitor;
 #endif
-        __kmp_launch_worker;
         __kmp_reap_worker;
         __kmp_release_64;
         __kmp_wait_64;

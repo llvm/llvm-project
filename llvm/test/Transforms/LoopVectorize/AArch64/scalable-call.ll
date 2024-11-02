@@ -1,7 +1,7 @@
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -instcombine -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
+; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-interleave=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
 ; RUN:     -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-target-instruction-cost=1 -instcombine -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
+; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-interleave=1 -force-target-instruction-cost=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
 ; RUN:     -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 

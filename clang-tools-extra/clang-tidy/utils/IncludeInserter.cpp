@@ -71,13 +71,13 @@ llvm::Optional<FixItHint>
 IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
   bool IsAngled = Header.consume_front("<");
   if (IsAngled != Header.consume_back(">"))
-    return llvm::None;
+    return std::nullopt;
   // We assume the same Header will never be included both angled and not
   // angled.
   // In self contained diags mode we don't track what headers we have already
   // inserted.
   if (!SelfContainedDiags && !InsertedHeaders[FileID].insert(Header).second)
-    return llvm::None;
+    return std::nullopt;
 
   return getOrCreate(FileID).createIncludeInsertion(Header, IsAngled);
 }

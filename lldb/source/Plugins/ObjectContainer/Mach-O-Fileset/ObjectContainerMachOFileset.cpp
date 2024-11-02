@@ -135,7 +135,7 @@ static llvm::Optional<mach_header> ParseMachOHeader(DataExtractor &data) {
 static bool
 ParseFileset(DataExtractor &data, mach_header header,
              std::vector<ObjectContainerMachOFileset::Entry> &entries,
-             llvm::Optional<lldb::addr_t> load_addr = llvm::None) {
+             llvm::Optional<lldb::addr_t> load_addr = std::nullopt) {
   lldb::offset_t offset = MachHeaderSizeFromMagic(header.magic);
   lldb::offset_t slide = 0;
   for (uint32_t i = 0; i < header.ncmds; ++i) {

@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -loop-vectorize -force-vector-width=4 | FileCheck %s
+; RUN: opt -S < %s -passes=loop-vectorize -force-vector-width=4 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

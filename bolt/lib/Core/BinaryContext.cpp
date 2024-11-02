@@ -1461,7 +1461,7 @@ void BinaryContext::printGlobalSymbols(raw_ostream &OS) const {
 
 Expected<unsigned> BinaryContext::getDwarfFile(
     StringRef Directory, StringRef FileName, unsigned FileNumber,
-    Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source,
+    std::optional<MD5::MD5Result> Checksum, std::optional<StringRef> Source,
     unsigned CUID, unsigned DWARFVersion) {
   DwarfLineTable &Table = DwarfLineTablesCUMap[CUID];
   return Table.tryGetFile(Directory, FileName, Checksum, Source, DWARFVersion,
@@ -1482,20 +1482,20 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
          "FileIndex out of range for the compilation unit.");
   StringRef Dir = "";
   if (FileNames[FileIndex - 1].DirIdx != 0) {
-    if (Optional<const char *> DirName = dwarf::toString(
+    if (std::optional<const char *> DirName = dwarf::toString(
             LineTable->Prologue
                 .IncludeDirectories[FileNames[FileIndex - 1].DirIdx - 1])) {
       Dir = *DirName;
     }
   }
   StringRef FileName = "";
-  if (Optional<const char *> FName =
+  if (std::optional<const char *> FName =
           dwarf::toString(FileNames[FileIndex - 1].Name))
     FileName = *FName;
   assert(FileName != "");
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
-  return cantFail(getDwarfFile(Dir, FileName, 0, None, None, DestCUID,
-                               DstUnit->getVersion()));
+  return cantFail(getDwarfFile(Dir, FileName, 0, std::nullopt, std::nullopt,
+                               DestCUID, DstUnit->getVersion()));
 }
 
 std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
@@ -1530,7 +1530,7 @@ std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
 Optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
   auto Iter = DWOCUs.find(DWOId);
   if (Iter == DWOCUs.end())
-    return None;
+    return std::nullopt;
 
   return Iter->second;
 }
@@ -1545,7 +1545,7 @@ DWARFContext *BinaryContext::getDWOContext() const {
 void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
-    if (llvm::Optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
+    if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit->getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
         std::string DWOName = dwarf::toString(
@@ -1645,19 +1645,19 @@ void BinaryContext::preprocessDebugInfo() {
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     if (DwarfVersion >= 5) {
-      Optional<MD5::MD5Result> Checksum;
+      std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      Optional<const char *> Name =
+      std::optional<const char *> Name =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
-      if (Optional<uint64_t> DWOID = CU->getDWOId()) {
+      if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
         assert(Iter != DWOCUs.end() && "DWO CU was not found.");
         Name = dwarf::toString(
             Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       }
       BinaryLineTable.setRootFile(CU->getCompilationDir(), *Name, Checksum,
-                                  None);
+                                  std::nullopt);
     }
 
     BinaryLineTable.setDwarfVersion(DwarfVersion);
@@ -1665,8 +1665,8 @@ void BinaryContext::preprocessDebugInfo() {
     // Assign a unique label to every line table, one per CU.
     // Make sure empty debug line tables are registered too.
     if (FileNames.empty()) {
-      cantFail(
-          getDwarfFile("", "<unknown>", 0, None, None, CUID, DwarfVersion));
+      cantFail(getDwarfFile("", "<unknown>", 0, std::nullopt, std::nullopt,
+                            CUID, DwarfVersion));
       continue;
     }
     const uint32_t Offset = DwarfVersion < 5 ? 1 : 0;
@@ -1675,19 +1675,20 @@ void BinaryContext::preprocessDebugInfo() {
       // means empty dir.
       StringRef Dir = "";
       if (FileNames[I].DirIdx != 0 || DwarfVersion >= 5)
-        if (Optional<const char *> DirName = dwarf::toString(
+        if (std::optional<const char *> DirName = dwarf::toString(
                 LineTable->Prologue
                     .IncludeDirectories[FileNames[I].DirIdx - Offset]))
           Dir = *DirName;
       StringRef FileName = "";
-      if (Optional<const char *> FName = dwarf::toString(FileNames[I].Name))
+      if (std::optional<const char *> FName =
+              dwarf::toString(FileNames[I].Name))
         FileName = *FName;
       assert(FileName != "");
-      Optional<MD5::MD5Result> Checksum;
+      std::optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
-      cantFail(
-          getDwarfFile(Dir, FileName, 0, Checksum, None, CUID, DwarfVersion));
+      cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
+                            DwarfVersion));
     }
   }
 }
@@ -1811,7 +1812,7 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
 
   const DWARFDebugLine::Row &Row = LineTable->Rows[RowRef.RowIndex - 1];
   StringRef FileName = "";
-  if (Optional<const char *> FName =
+  if (std::optional<const char *> FName =
           dwarf::toString(LineTable->Prologue.FileNames[Row.File - 1].Name))
     FileName = *FName;
   OS << " # debug line " << FileName << ":" << Row.Line;
@@ -1897,7 +1898,7 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
     }
   }
 
-  return None;
+  return std::nullopt;
 }
 
 ErrorOr<BinarySection &> BinaryContext::getSectionForAddress(uint64_t Address) {

@@ -28,7 +28,7 @@ define dso_local void @test(i64 %arg, i64 %arg1) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r30, r30, -1
 ; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    bne cr0, .LBB0_3
+; CHECK-NEXT:    bc 12, gt, .LBB0_3
 ; CHECK-NEXT:  # %bb.4: # %bb15
 ; CHECK-NEXT:    stb r3, 0(r3)
 ; CHECK-NEXT:    addi r1, r1, 64

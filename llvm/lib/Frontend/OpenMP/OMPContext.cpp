@@ -169,13 +169,13 @@ static int isVariantApplicableInContextHelper(
     if (MK == MK_ANY) {
       if (WasFound)
         return true;
-      return None;
+      return std::nullopt;
     }
 
     // In "all" or "none" mode we accept a matching or non-matching property
     // respectively and move on. We are not done yet!
     if ((WasFound && MK == MK_ALL) || (!WasFound && MK == MK_NONE))
-      return None;
+      return std::nullopt;
 
     // We missed a property, provide some debug output and indicate failure.
     LLVM_DEBUG({

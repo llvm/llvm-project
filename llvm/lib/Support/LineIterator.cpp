@@ -83,7 +83,7 @@ void line_iterator::advance() {
 
   if (*Pos == '\0') {
     // We've hit the end of the buffer, reset ourselves to the end state.
-    Buffer = None;
+    Buffer = std::nullopt;
     CurrentLine = StringRef();
     return;
   }

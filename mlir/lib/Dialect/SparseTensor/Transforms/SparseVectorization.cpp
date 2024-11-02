@@ -244,7 +244,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     }
     // Look under the hood of casting.
     auto cast = sub;
-    while (1) {
+    while (true) {
       if (auto icast = cast.getDefiningOp<arith::IndexCastOp>())
         cast = icast->getOperand(0);
       else if (auto ecast = cast.getDefiningOp<arith::ExtUIOp>())

@@ -763,6 +763,7 @@ X86 Support in Clang
   * Support intrinsic of ``_mm(256)_cvtneps_avx_pbh``.
 - ``-march=raptorlake`` and ``-march=meteorlake`` are now supported.
 - ``-march=sierraforest``, ``-march=graniterapids`` and ``-march=grandridge`` are now supported.
+- Lift _BitInt() supported max width from 128 to 8388608.
 
 WebAssembly Support in Clang
 ----------------------------

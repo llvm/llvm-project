@@ -283,7 +283,6 @@ define arm_aapcs_vfpcc i32 @t10(float %x) nounwind {
 ; CHECK-NEXT:  vst1.32	{d17[1]}, [r0:32]
 ; CHECK-NEXT:  mov	r0, #0
 ; CHECK-NEXT:  cmp	r0, #0
-; CHECK-NEXT:  movne	r0, #0
 ; CHECK-NEXT:  bxne	lr
 ; CHECK-NEXT:  LBB9_1:
 ; CHECK-NEXT:  trap

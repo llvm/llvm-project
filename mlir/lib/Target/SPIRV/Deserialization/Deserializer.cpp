@@ -490,7 +490,7 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
   }
 
   curBlock = nullptr;
-  curFunction = llvm::None;
+  curFunction = std::nullopt;
 
   LLVM_DEBUG({
     logger.unindent();
@@ -504,7 +504,7 @@ Optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
   if (constIt == constantMap.end())
-    return llvm::None;
+    return std::nullopt;
   return constIt->getSecond();
 }
 
@@ -512,7 +512,7 @@ Optional<spirv::SpecConstOperationMaterializationInfo>
 spirv::Deserializer::getSpecConstantOperation(uint32_t id) {
   auto constIt = specConstOperationMap.find(id);
   if (constIt == specConstOperationMap.end())
-    return llvm::None;
+    return std::nullopt;
   return constIt->getSecond();
 }
 
@@ -2102,7 +2102,7 @@ spirv::Deserializer::processDebugLine(ArrayRef<uint32_t> operands) {
   return success();
 }
 
-void spirv::Deserializer::clearDebugLine() { debugLine = llvm::None; }
+void spirv::Deserializer::clearDebugLine() { debugLine = std::nullopt; }
 
 LogicalResult
 spirv::Deserializer::processDebugString(ArrayRef<uint32_t> operands) {

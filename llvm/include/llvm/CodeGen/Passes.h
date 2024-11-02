@@ -334,6 +334,10 @@ namespace llvm {
 
   MachineFunctionPass *createMachineCopyPropagationPass(bool UseCopyInstr);
 
+  /// MachineLateInstrsCleanup - This pass removes redundant identical
+  /// instructions after register allocation and rematerialization.
+  extern char &MachineLateInstrsCleanupID;
+
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
   extern char &PeepholeOptimizerID;
@@ -408,6 +412,10 @@ namespace llvm {
   /// stackmap/patchpoint intrinsics and attaches the calculated information to
   /// the intrinsic for later emission to the StackMap.
   extern char &StackMapLivenessID;
+
+  // MachineSanitizerBinaryMetadata - appends/finalizes sanitizer binary
+  // metadata after llvm SanitizerBinaryMetadata pass.
+  extern char &MachineSanitizerBinaryMetadataID;
 
   /// RemoveRedundantDebugValues pass.
   extern char &RemoveRedundantDebugValuesID;

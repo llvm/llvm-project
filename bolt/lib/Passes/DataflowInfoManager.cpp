@@ -19,7 +19,7 @@ ReachingDefOrUse</*Def=*/true> &DataflowInfoManager::getReachingDefs() {
   if (RD)
     return *RD;
   assert(RA && "RegAnalysis required");
-  RD.reset(new ReachingDefOrUse<true>(*RA, BF, None, AllocatorId));
+  RD.reset(new ReachingDefOrUse<true>(*RA, BF, std::nullopt, AllocatorId));
   RD->run();
   return *RD;
 }
@@ -30,7 +30,7 @@ ReachingDefOrUse</*Def=*/false> &DataflowInfoManager::getReachingUses() {
   if (RU)
     return *RU;
   assert(RA && "RegAnalysis required");
-  RU.reset(new ReachingDefOrUse<false>(*RA, BF, None, AllocatorId));
+  RU.reset(new ReachingDefOrUse<false>(*RA, BF, std::nullopt, AllocatorId));
   RU->run();
   return *RU;
 }

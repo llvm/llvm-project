@@ -107,5 +107,7 @@ module m
     real, parameter :: bad1 = scale(1.0, 99999)
     !CHECK: complex ABS intrinsic folding overflow
     real, parameter :: bad2 = abs(cmplx(huge(0.),huge(0.)))
+    !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
+    x = 1.D40
   end subroutine
 end module

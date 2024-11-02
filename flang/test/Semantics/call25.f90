@@ -13,6 +13,10 @@ module m
     character(5), intent(in) :: x
     explicitLength = x
   end function
+  character(6) function badExplicitLength(x)
+    character(5), intent(in) :: x
+    badExplicitLength = x
+  end function
   real function notChar(x)
     character(*), intent(in) :: x
     notChar = 0
@@ -34,6 +38,8 @@ program main
   external assumedlength
   character(5) :: assumedlength
   call subr1(explicitLength)
+  !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+  call subr1(badExplicitLength)
   call subr1(assumedLength)
   !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
   call subr1(notChar)
@@ -42,6 +48,9 @@ program main
   !CHECK: error: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
   call subr2(notChar)
   call subr3(explicitLength)
+  !CHECK: warning: If the procedure's interface were explicit, this reference would be in error
+  !CHECK: because: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type
+  call subr3(badExplicitLength)
   call subr3(assumedLength)
   !CHECK: warning: If the procedure's interface were explicit, this reference would be in error
   !CHECK: because: Actual argument function associated with procedure dummy argument 'f=' has incompatible result type

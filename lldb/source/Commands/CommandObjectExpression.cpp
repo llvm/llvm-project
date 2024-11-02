@@ -374,7 +374,7 @@ CommandObjectExpression::GetEvalOptions(const Target &target) {
   if (m_command_options.timeout > 0)
     options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
   else
-    options.SetTimeout(llvm::None);
+    options.SetTimeout(std::nullopt);
   return options;
 }
 
@@ -540,7 +540,7 @@ GetExprOptions(ExecutionContext &ctx,
   if (command_options.timeout > 0)
     expr_options.SetTimeout(std::chrono::microseconds(command_options.timeout));
   else
-    expr_options.SetTimeout(llvm::None);
+    expr_options.SetTimeout(std::nullopt);
 
   return expr_options;
 }

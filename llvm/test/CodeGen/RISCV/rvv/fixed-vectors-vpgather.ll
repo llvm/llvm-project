@@ -2395,6 +2395,7 @@ define <32 x double> @vpgather_baseidx_sext_v32i32_v32f64(double* %base, <32 x i
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    slli a2, a2, 1
 ; RV64-NEXT:    sub sp, sp, a2
+; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; RV64-NEXT:    addi a2, sp, 16
 ; RV64-NEXT:    vs1r.v v0, (a2) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
@@ -2467,6 +2468,7 @@ define <32 x double> @vpgather_baseidx_zext_v32i32_v32f64(double* %base, <32 x i
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    slli a2, a2, 1
 ; RV64-NEXT:    sub sp, sp, a2
+; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; RV64-NEXT:    addi a2, sp, 16
 ; RV64-NEXT:    vs1r.v v0, (a2) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma

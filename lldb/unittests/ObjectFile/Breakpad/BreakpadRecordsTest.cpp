@@ -25,9 +25,9 @@ TEST(Record, classify) {
   EXPECT_EQ(Record::StackWin, Record::classify("STACK WIN"));
 
   // Any obviously incorrect lines will be classified as such.
-  EXPECT_EQ(llvm::None, Record::classify("STACK"));
-  EXPECT_EQ(llvm::None, Record::classify("STACK CODE_ID"));
-  EXPECT_EQ(llvm::None, Record::classify("CODE_ID"));
+  EXPECT_EQ(std::nullopt, Record::classify("STACK"));
+  EXPECT_EQ(std::nullopt, Record::classify("STACK CODE_ID"));
+  EXPECT_EQ(std::nullopt, Record::classify("CODE_ID"));
 
   // Any line which does not start with a known keyword will be classified as a
   // line record, as those are the only ones that start without a keyword.
@@ -41,10 +41,10 @@ TEST(ModuleRecord, parse) {
             ModuleRecord::parse(
                 "MODULE Linux x86_64 404142434445464748494a4b4c4d4e4f0 a.out"));
 
-  EXPECT_EQ(llvm::None, ModuleRecord::parse("MODULE"));
-  EXPECT_EQ(llvm::None, ModuleRecord::parse("MODULE Linux"));
-  EXPECT_EQ(llvm::None, ModuleRecord::parse("MODULE Linux x86_64"));
-  EXPECT_EQ(llvm::None,
+  EXPECT_EQ(std::nullopt, ModuleRecord::parse("MODULE"));
+  EXPECT_EQ(std::nullopt, ModuleRecord::parse("MODULE Linux"));
+  EXPECT_EQ(std::nullopt, ModuleRecord::parse("MODULE Linux x86_64"));
+  EXPECT_EQ(std::nullopt,
             ModuleRecord::parse("MODULE Linux x86_64 deadbeefbaadf00d"));
 }
 
@@ -53,15 +53,15 @@ TEST(InfoRecord, parse) {
             InfoRecord::parse("INFO CODE_ID 404142434445464748494a4b4c4d4e4f"));
   EXPECT_EQ(InfoRecord(UUID()), InfoRecord::parse("INFO CODE_ID 47 a.exe"));
 
-  EXPECT_EQ(llvm::None, InfoRecord::parse("INFO"));
-  EXPECT_EQ(llvm::None, InfoRecord::parse("INFO CODE_ID"));
+  EXPECT_EQ(std::nullopt, InfoRecord::parse("INFO"));
+  EXPECT_EQ(std::nullopt, InfoRecord::parse("INFO CODE_ID"));
 }
 
 TEST(FileRecord, parse) {
   EXPECT_EQ(FileRecord(47, "foo"), FileRecord::parse("FILE 47 foo"));
-  EXPECT_EQ(llvm::None, FileRecord::parse("FILE 47"));
-  EXPECT_EQ(llvm::None, FileRecord::parse("FILE"));
-  EXPECT_EQ(llvm::None, FileRecord::parse(""));
+  EXPECT_EQ(std::nullopt, FileRecord::parse("FILE 47"));
+  EXPECT_EQ(std::nullopt, FileRecord::parse("FILE"));
+  EXPECT_EQ(std::nullopt, FileRecord::parse(""));
 }
 
 TEST(FuncRecord, parse) {
@@ -70,20 +70,20 @@ TEST(FuncRecord, parse) {
   EXPECT_EQ(FuncRecord(false, 0x47, 0x7, 0x8, "foo"),
             FuncRecord::parse("FUNC 47 7 8 foo"));
 
-  EXPECT_EQ(llvm::None, FuncRecord::parse("PUBLIC 47 7 8 foo"));
-  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47 7 8"));
-  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47 7"));
-  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47"));
-  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC m"));
-  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC"));
+  EXPECT_EQ(std::nullopt, FuncRecord::parse("PUBLIC 47 7 8 foo"));
+  EXPECT_EQ(std::nullopt, FuncRecord::parse("FUNC 47 7 8"));
+  EXPECT_EQ(std::nullopt, FuncRecord::parse("FUNC 47 7"));
+  EXPECT_EQ(std::nullopt, FuncRecord::parse("FUNC 47"));
+  EXPECT_EQ(std::nullopt, FuncRecord::parse("FUNC m"));
+  EXPECT_EQ(std::nullopt, FuncRecord::parse("FUNC"));
 }
 
 TEST(InlineOriginRecord, parse) {
   EXPECT_EQ(InlineOriginRecord(47, "foo"),
             InlineOriginRecord::parse("INLINE_ORIGIN 47 foo"));
-  EXPECT_EQ(llvm::None, InlineOriginRecord::parse("INLINE_ORIGIN 47"));
-  EXPECT_EQ(llvm::None, InlineOriginRecord::parse("INLINE_ORIGIN"));
-  EXPECT_EQ(llvm::None, InlineOriginRecord::parse(""));
+  EXPECT_EQ(std::nullopt, InlineOriginRecord::parse("INLINE_ORIGIN 47"));
+  EXPECT_EQ(std::nullopt, InlineOriginRecord::parse("INLINE_ORIGIN"));
+  EXPECT_EQ(std::nullopt, InlineOriginRecord::parse(""));
 }
 
 TEST(InlineRecord, parse) {
@@ -92,20 +92,20 @@ TEST(InlineRecord, parse) {
   EXPECT_EQ(record1, InlineRecord::parse("INLINE 0 1 2 3 4 5"));
   record1.Ranges.emplace_back(6, 7);
   EXPECT_EQ(record1, InlineRecord::parse("INLINE 0 1 2 3 4 5 6 7"));
-  EXPECT_EQ(llvm::None, InlineRecord::parse("INLINE 0 1 2 3"));
-  EXPECT_EQ(llvm::None, InlineRecord::parse("INLINE 0 1 2 3 4 5 6"));
-  EXPECT_EQ(llvm::None, InlineRecord::parse("INLNIE 0"));
-  EXPECT_EQ(llvm::None, InlineRecord::parse(""));
-  EXPECT_EQ(llvm::None, InlineRecord::parse("FUNC"));
+  EXPECT_EQ(std::nullopt, InlineRecord::parse("INLINE 0 1 2 3"));
+  EXPECT_EQ(std::nullopt, InlineRecord::parse("INLINE 0 1 2 3 4 5 6"));
+  EXPECT_EQ(std::nullopt, InlineRecord::parse("INLNIE 0"));
+  EXPECT_EQ(std::nullopt, InlineRecord::parse(""));
+  EXPECT_EQ(std::nullopt, InlineRecord::parse("FUNC"));
 }
 
 TEST(LineRecord, parse) {
   EXPECT_EQ(LineRecord(0x47, 0x74, 47, 74), LineRecord::parse("47 74 47 74"));
-  EXPECT_EQ(llvm::None, LineRecord::parse("47 74 47"));
-  EXPECT_EQ(llvm::None, LineRecord::parse("47 74"));
-  EXPECT_EQ(llvm::None, LineRecord::parse("47"));
-  EXPECT_EQ(llvm::None, LineRecord::parse(""));
-  EXPECT_EQ(llvm::None, LineRecord::parse("FUNC"));
+  EXPECT_EQ(std::nullopt, LineRecord::parse("47 74 47"));
+  EXPECT_EQ(std::nullopt, LineRecord::parse("47 74"));
+  EXPECT_EQ(std::nullopt, LineRecord::parse("47"));
+  EXPECT_EQ(std::nullopt, LineRecord::parse(""));
+  EXPECT_EQ(std::nullopt, LineRecord::parse("FUNC"));
 }
 
 TEST(PublicRecord, parse) {
@@ -114,11 +114,11 @@ TEST(PublicRecord, parse) {
   EXPECT_EQ(PublicRecord(false, 0x47, 0x8, "foo"),
             PublicRecord::parse("PUBLIC 47 8 foo"));
 
-  EXPECT_EQ(llvm::None, PublicRecord::parse("FUNC 47 8 foo"));
-  EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC 47 8"));
-  EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC 47"));
-  EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC m"));
-  EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC"));
+  EXPECT_EQ(std::nullopt, PublicRecord::parse("FUNC 47 8 foo"));
+  EXPECT_EQ(std::nullopt, PublicRecord::parse("PUBLIC 47 8"));
+  EXPECT_EQ(std::nullopt, PublicRecord::parse("PUBLIC 47"));
+  EXPECT_EQ(std::nullopt, PublicRecord::parse("PUBLIC m"));
+  EXPECT_EQ(std::nullopt, PublicRecord::parse("PUBLIC"));
 }
 
 TEST(StackCFIRecord, parse) {
@@ -129,19 +129,19 @@ TEST(StackCFIRecord, parse) {
   EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: $esp 4 +"),
             StackCFIRecord::parse("STACK CFI INIT 47 8 .cfa: $esp 4 +  "));
 
-  EXPECT_EQ(StackCFIRecord(0x47, llvm::None, ".cfa: $esp 4 +"),
+  EXPECT_EQ(StackCFIRecord(0x47, std::nullopt, ".cfa: $esp 4 +"),
             StackCFIRecord::parse("STACK CFI 47 .cfa: $esp 4 +"));
 
   // The validity of the register value expressions is not checked
   EXPECT_EQ(StackCFIRecord(0x47, 0x8, ".cfa: ^ ^ ^"),
             StackCFIRecord::parse("STACK CFI INIT 47 8 .cfa: ^ ^ ^"));
 
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI INIT 47"));
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI INIT"));
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK CFI"));
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("STACK"));
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("FILE 47 foo"));
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("42 47"));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("STACK CFI INIT 47"));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("STACK CFI INIT"));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("STACK CFI"));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("STACK"));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("FILE 47 foo"));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("42 47"));
 }
 
 TEST(StackWinRecord, parse) {
@@ -149,28 +149,29 @@ TEST(StackWinRecord, parse) {
       StackWinRecord(0x47, 0x8, 3, 4, 5, llvm::StringRef("$eip $esp ^ =")),
       StackWinRecord::parse("STACK WIN 4 47 8 1 2 3 4 5 6 1 $eip $esp ^ ="));
 
-  EXPECT_EQ(llvm::None, StackWinRecord::parse(
-                            "STACK WIN 0 47 8 1 0 0 0 0 0 1 $eip $esp ^ ="));
-  EXPECT_EQ(llvm::None,
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse(
+                              "STACK WIN 0 47 8 1 0 0 0 0 0 1 $eip $esp ^ ="));
+  EXPECT_EQ(std::nullopt,
             StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0 0 0 1"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse(
-                            "STACK WIN 3 47 8 1 0 0 0 0 0 1 $eip $esp ^ ="));
-  EXPECT_EQ(llvm::None,
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse(
+                              "STACK WIN 3 47 8 1 0 0 0 0 0 1 $eip $esp ^ ="));
+  EXPECT_EQ(std::nullopt,
             StackWinRecord::parse("STACK WIN 3 47 8 1 0 0 0 0 0 0 1"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse(
-                            "STACK WIN 4 47 8 1 0 0 0 0 1 $eip $esp ^ ="));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0 0"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1 0"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8 1"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47 8"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4 47"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN 4"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK WIN"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse("STACK"));
-  EXPECT_EQ(llvm::None, StackWinRecord::parse(""));
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("FILE 47 foo"));
-  EXPECT_EQ(llvm::None, StackCFIRecord::parse("42 47"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse(
+                              "STACK WIN 4 47 8 1 0 0 0 0 1 $eip $esp ^ ="));
+  EXPECT_EQ(std::nullopt,
+            StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0 0"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0 0"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0 0"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4 47 8 1 0 0"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4 47 8 1 0"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4 47 8 1"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4 47 8"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4 47"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN 4"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK WIN"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse("STACK"));
+  EXPECT_EQ(std::nullopt, StackWinRecord::parse(""));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("FILE 47 foo"));
+  EXPECT_EQ(std::nullopt, StackCFIRecord::parse("42 47"));
 }

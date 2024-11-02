@@ -179,7 +179,7 @@ Optional<FixItHint> IncludeSorter::createIncludeInsertion(StringRef FileName,
         return FixItHint::CreateInsertion(Location.getBegin(), IncludeStmt);
       }
       if (FileName == IncludeEntry) {
-        return llvm::None;
+        return std::nullopt;
       }
     }
     // FileName comes after all include entries in bucket, insert it after
@@ -203,7 +203,7 @@ Optional<FixItHint> IncludeSorter::createIncludeInsertion(StringRef FileName,
     }
   }
   if (NonEmptyKind == IK_InvalidInclude) {
-    return llvm::None;
+    return std::nullopt;
   }
 
   if (NonEmptyKind < IncludeKind) {

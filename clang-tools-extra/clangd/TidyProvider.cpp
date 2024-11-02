@@ -149,12 +149,13 @@ static void mergeCheckList(llvm::Optional<std::string> &Checks,
 
 TidyProviderRef provideEnvironment() {
   static const llvm::Optional<std::string> User = [] {
-    llvm::Optional<std::string> Ret = llvm::sys::Process::GetEnv("USER");
+    std::optional<std::string> Ret = llvm::sys::Process::GetEnv("USER");
 #ifdef _WIN32
     if (!Ret)
-      return llvm::sys::Process::GetEnv("USERNAME");
+      Ret = llvm::sys::Process::GetEnv("USERNAME");
 #endif
-    return Ret;
+    return Ret ? llvm::Optional<std::string>(*Ret)
+               : llvm::Optional<std::string>();
   }();
 
   if (User)

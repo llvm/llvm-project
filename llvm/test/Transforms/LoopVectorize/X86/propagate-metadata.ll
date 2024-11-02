@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple="x86_64-unknown-linux-gnu" -loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -mtriple="x86_64-unknown-linux-gnu" -passes=loop-vectorize < %s | FileCheck %s
 
 ; Don't crash on unknown metadata
 ; CHECK-LABEL: @no_propagate_range_metadata(

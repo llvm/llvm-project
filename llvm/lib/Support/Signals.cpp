@@ -203,7 +203,7 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
 #endif
                       "--demangle"};
   int RunResult =
-      sys::ExecuteAndWait(LLVMSymbolizerPath, Args, None, Redirects);
+      sys::ExecuteAndWait(LLVMSymbolizerPath, Args, std::nullopt, Redirects);
   if (RunResult != 0)
     return false;
 

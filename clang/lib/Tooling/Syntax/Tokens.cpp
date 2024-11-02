@@ -457,7 +457,7 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
   // Mapping an empty range is ambiguous in case of empty mappings at either end
   // of the range, bail out in that case.
   if (Expanded.empty())
-    return llvm::None;
+    return std::nullopt;
   const syntax::Token *First = &Expanded.front();
   const syntax::Token *Last = &Expanded.back();
   auto [FirstSpelled, FirstMapping] = spelledForExpandedToken(First);
@@ -466,7 +466,7 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
   FileID FID = SourceMgr->getFileID(FirstSpelled->location());
   // FIXME: Handle multi-file changes by trying to map onto a common root.
   if (FID != SourceMgr->getFileID(LastSpelled->location()))
-    return llvm::None;
+    return std::nullopt;
 
   const MarkedFile &File = Files.find(FID)->second;
 
@@ -485,7 +485,7 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
     SourceRange Range = spelledForExpandedSlow(
         First->location(), Last->location(), Prev, Next, FID, *SourceMgr);
     if (Range.isInvalid())
-      return llvm::None;
+      return std::nullopt;
     return getTokensCovering(File.SpelledTokens, Range, *SourceMgr);
   }
 
@@ -494,9 +494,9 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
   unsigned FirstExpanded = Expanded.begin() - ExpandedTokens.data();
   unsigned LastExpanded = Expanded.end() - ExpandedTokens.data();
   if (FirstMapping && FirstExpanded != FirstMapping->BeginExpanded)
-    return llvm::None;
+    return std::nullopt;
   if (LastMapping && LastMapping->EndExpanded != LastExpanded)
-    return llvm::None;
+    return std::nullopt;
   return llvm::makeArrayRef(
       FirstMapping ? File.SpelledTokens.data() + FirstMapping->BeginSpelled
                    : FirstSpelled,
@@ -543,7 +543,7 @@ TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
     return M.BeginSpelled < SpelledIndex;
   });
   if (M == File.Mappings.end() || M->BeginSpelled != SpelledIndex)
-    return llvm::None;
+    return std::nullopt;
   return makeExpansion(File, *M);
 }
 
@@ -806,7 +806,7 @@ private:
   // In the simplest case, skips spelled tokens until finding one that produced
   // the NextExpanded token, and creates an empty mapping for them.
   // If Drain is provided, skips remaining tokens from that file instead.
-  void discard(llvm::Optional<FileID> Drain = llvm::None) {
+  void discard(llvm::Optional<FileID> Drain = std::nullopt) {
     SourceLocation Target =
         Drain ? SM.getLocForEndOfFile(*Drain)
               : SM.getExpansionLoc(

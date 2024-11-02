@@ -979,7 +979,7 @@ void __kmp_exit_thread(int exit_status) {
 #if KMP_USE_MONITOR
 void __kmp_resume_monitor();
 
-void __kmp_reap_monitor(kmp_info_t *th) {
+extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
   int status;
   void *exit_val;
 
@@ -1020,6 +1020,12 @@ void __kmp_reap_monitor(kmp_info_t *th) {
                 th->th.th_info.ds.ds_thread));
 
   KMP_MB(); /* Flush all pending memory write invalidates.  */
+}
+#else
+// Empty symbol to export (see exports_so.txt) when
+// monitor thread feature is disabled
+extern "C" void __kmp_reap_monitor(kmp_info_t *th) {
+  (void)th;
 }
 #endif // KMP_USE_MONITOR
 

@@ -145,8 +145,8 @@ bool ExecutionEngine::setupTargetTriple(Module *llvmModule) {
   llvm::StringMap<bool> hostFeatures;
 
   if (llvm::sys::getHostCPUFeatures(hostFeatures))
-    for (auto &f : hostFeatures)
-      features.AddFeature(f.first(), f.second);
+    for (const auto &[feature, isEnabled] : hostFeatures)
+      features.AddFeature(feature, isEnabled);
 
   std::unique_ptr<llvm::TargetMachine> machine(target->createTargetMachine(
       targetTriple, cpu, features.getString(), {}, {}));

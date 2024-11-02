@@ -24,11 +24,11 @@
 #ifndef LLVM_SUPPORT_PROCESS_H
 #define LLVM_SUPPORT_PROCESS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Program.h"
+#include <optional>
 #include <system_error>
 
 namespace llvm {
@@ -97,7 +97,7 @@ public:
 
   // This function returns the environment variable \arg name's value as a UTF-8
   // string. \arg Name is assumed to be in UTF-8 encoding too.
-  static Optional<std::string> GetEnv(StringRef name);
+  static std::optional<std::string> GetEnv(StringRef name);
 
   /// This function searches for an existing file in the list of directories
   /// in a PATH like environment variable, and returns the first file found,
@@ -105,14 +105,14 @@ public:
   /// variable.  If an ignore list is specified, then any folder which is in
   /// the PATH like environment variable but is also in IgnoreList is not
   /// considered.
-  static Optional<std::string> FindInEnvPath(StringRef EnvName,
-                                             StringRef FileName,
-                                             ArrayRef<std::string> IgnoreList,
-                                             char Separator = EnvPathSeparator);
+  static std::optional<std::string>
+  FindInEnvPath(StringRef EnvName, StringRef FileName,
+                ArrayRef<std::string> IgnoreList,
+                char Separator = EnvPathSeparator);
 
-  static Optional<std::string> FindInEnvPath(StringRef EnvName,
-                                             StringRef FileName,
-                                             char Separator = EnvPathSeparator);
+  static std::optional<std::string>
+  FindInEnvPath(StringRef EnvName, StringRef FileName,
+                char Separator = EnvPathSeparator);
 
   // This functions ensures that the standard file descriptors (input, output,
   // and error) are properly mapped to a file descriptor before we use any of

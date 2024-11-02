@@ -92,12 +92,12 @@ checkGpuLimits(TransformOpInterface transformOp, Optional<int64_t> gridDimX,
 static DiagnosedSilenceableFailure
 createGpuLaunch(RewriterBase &rewriter, Location loc,
                 TransformOpInterface transformOp, LaunchOp &launchOp,
-                Optional<int64_t> gridDimX = llvm::None,
-                Optional<int64_t> gridDimY = llvm::None,
-                Optional<int64_t> gridDimZ = llvm::None,
-                Optional<int64_t> blockDimX = llvm::None,
-                Optional<int64_t> blockDimY = llvm::None,
-                Optional<int64_t> blockDimZ = llvm::None) {
+                Optional<int64_t> gridDimX = std::nullopt,
+                Optional<int64_t> gridDimY = std::nullopt,
+                Optional<int64_t> gridDimZ = std::nullopt,
+                Optional<int64_t> blockDimX = std::nullopt,
+                Optional<int64_t> blockDimY = std::nullopt,
+                Optional<int64_t> blockDimZ = std::nullopt) {
   DiagnosedSilenceableFailure diag =
       checkGpuLimits(transformOp, gridDimX, gridDimY, gridDimZ, blockDimX,
                      blockDimY, blockDimZ);
@@ -126,12 +126,12 @@ createGpuLaunch(RewriterBase &rewriter, Location loc,
 static DiagnosedSilenceableFailure
 alterGpuLaunch(TrivialPatternRewriter &rewriter, LaunchOp gpuLaunch,
                TransformOpInterface transformOp,
-               Optional<int64_t> gridDimX = llvm::None,
-               Optional<int64_t> gridDimY = llvm::None,
-               Optional<int64_t> gridDimZ = llvm::None,
-               Optional<int64_t> blockDimX = llvm::None,
-               Optional<int64_t> blockDimY = llvm::None,
-               Optional<int64_t> blockDimZ = llvm::None) {
+               Optional<int64_t> gridDimX = std::nullopt,
+               Optional<int64_t> gridDimY = std::nullopt,
+               Optional<int64_t> gridDimZ = std::nullopt,
+               Optional<int64_t> blockDimX = std::nullopt,
+               Optional<int64_t> blockDimY = std::nullopt,
+               Optional<int64_t> blockDimZ = std::nullopt) {
   DiagnosedSilenceableFailure diag =
       checkGpuLimits(transformOp, gridDimX, gridDimY, gridDimZ, blockDimX,
                      blockDimY, blockDimZ);
@@ -535,7 +535,7 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
   blockDim.resize(/*size=*/3, /*value=*/1);
 
   DiagnosedSilenceableFailure diag =
-      checkGpuLimits(transformOp, llvm::None, llvm::None, llvm::None,
+      checkGpuLimits(transformOp, std::nullopt, std::nullopt, std::nullopt,
                      blockDim[0], blockDim[1], blockDim[2]);
   if (diag.isSilenceableFailure()) {
     results.assign({target});
@@ -557,9 +557,9 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
       threadMappingAttributes);
 
   if (diag.succeeded()) {
-    diag =
-        alterGpuLaunch(rewriter, gpuLaunch, transformOp, llvm::None, llvm::None,
-                       llvm::None, blockDim[0], blockDim[1], blockDim[2]);
+    diag = alterGpuLaunch(rewriter, gpuLaunch, transformOp, std::nullopt,
+                          std::nullopt, std::nullopt, blockDim[0], blockDim[1],
+                          blockDim[2]);
   }
 
   results.assign({gpuLaunch});

@@ -61,8 +61,8 @@ public:
   FmtContext &withOp(Twine subst);
   FmtContext &withSelf(Twine subst);
 
-  Optional<StringRef> getSubstFor(PHKind placeholder) const;
-  Optional<StringRef> getSubstFor(StringRef placeholder) const;
+  std::optional<StringRef> getSubstFor(PHKind placeholder) const;
+  std::optional<StringRef> getSubstFor(StringRef placeholder) const;
 
   static PHKind getPlaceHolderKind(StringRef str);
 

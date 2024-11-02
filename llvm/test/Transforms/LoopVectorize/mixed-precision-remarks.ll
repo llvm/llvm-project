@@ -1,4 +1,4 @@
-; RUN: opt -force-vector-interleave=2 -force-vector-width=4 -loop-vectorize -pass-remarks-analysis=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -force-vector-interleave=2 -force-vector-width=4 -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: remark: mixed-precision.c:3:26: floating point conversion changes vector width. Mixed floating point precision requires an up/down cast that will negatively impact performance.
 define void @f(float* noalias nocapture %X, i64 %N) {

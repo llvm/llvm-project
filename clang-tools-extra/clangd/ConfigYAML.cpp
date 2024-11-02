@@ -31,7 +31,7 @@ bestGuess(llvm::StringRef Search,
           llvm::ArrayRef<llvm::StringRef> AllowedValues) {
   unsigned MaxEdit = (Search.size() + 1) / 3;
   if (!MaxEdit)
-    return llvm::None;
+    return std::nullopt;
   llvm::Optional<llvm::StringRef> Result;
   for (const auto &AllowedValue : AllowedValues) {
     unsigned EditDistance = Search.edit_distance(AllowedValue, true, MaxEdit);
@@ -357,7 +357,7 @@ private:
     if (auto *BS = llvm::dyn_cast<BlockScalarNode>(&N))
       return Located<std::string>(BS->getValue().str(), N.getSourceRange());
     warning(Desc + " should be scalar", N);
-    return llvm::None;
+    return std::nullopt;
   }
 
   llvm::Optional<Located<bool>> boolValue(Node &N, llvm::StringRef Desc) {
@@ -366,7 +366,7 @@ private:
         return Located<bool>(*Bool, Scalar->Range);
       warning(Desc + " should be a boolean", N);
     }
-    return llvm::None;
+    return std::nullopt;
   }
 
   // Try to parse a list of single scalar values, or just a single value.
@@ -385,7 +385,7 @@ private:
       }
     } else {
       warning("Expected scalar or list of scalars", N);
-      return llvm::None;
+      return std::nullopt;
     }
     return Result;
   }

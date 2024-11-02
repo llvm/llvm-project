@@ -15,10 +15,9 @@
 #define LLVM_SUPPORT_AARCH64TARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/VersionTuple.h"
-#include <array>
 #include <vector>
 
+// FIXME:This should be made into class design,to avoid dupplication.
 namespace llvm {
 
 class Triple;
@@ -86,129 +85,101 @@ enum ArchExtKind : uint64_t {
 };
 // clang-format on
 
-// Represents an extension that can be enabled with -march=<arch>+<extension>.
-// Typically these correspond to Arm Architecture extensions, unlike
-// SubtargetFeature which may represent either an actual extension or some
-// internal LLVM property.
-struct ExtensionInfo {
-  StringRef Name;       // Human readable name, e.g. "profile".
-  ArchExtKind ID;       // Corresponding to the ArchExtKind, this extensions
-                        // representation in the bitfield.
-  StringRef Feature;    // -mattr enable string, e.g. "+spe"
-  StringRef NegFeature; // -mattr disable string, e.g. "-spe"
+enum class ArchKind {
+#define AARCH64_ARCH(NAME, ID, ARCH_FEATURE, ARCH_BASE_EXT) ID,
+#include "AArch64TargetParser.def"
 };
 
-inline constexpr ExtensionInfo Extensions[] = {
+struct ArchNames {
+  StringRef Name;
+  StringRef ArchFeature;
+  uint64_t ArchBaseExtensions;
+  ArchKind ID;
+
+  // Return ArchFeature without the leading "+".
+  StringRef getSubArch() const { return ArchFeature.substr(1); }
+};
+
+const ArchNames AArch64ARCHNames[] = {
+#define AARCH64_ARCH(NAME, ID, ARCH_FEATURE, ARCH_BASE_EXT)                    \
+  {NAME, ARCH_FEATURE, ARCH_BASE_EXT, AArch64::ArchKind::ID},
+#include "AArch64TargetParser.def"
+};
+
+// List of Arch Extension names.
+struct ExtName {
+  StringRef Name;
+  uint64_t ID;
+  StringRef Feature;
+  StringRef NegFeature;
+};
+
+const ExtName AArch64ARCHExtNames[] = {
 #define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                   \
   {NAME, ID, FEATURE, NEGFEATURE},
 #include "AArch64TargetParser.def"
 };
 
-enum ArchProfile { AProfile = 'A', RProfile = 'R', InvalidProfile = '?' };
-
-// Information about a specific architecture, e.g. V8.1-A
-struct ArchInfo {
-  VersionTuple Version;  // Architecture version, major + minor.
-  ArchProfile Profile;   // Architecuture profile
-  StringRef Name;        // Human readable name, e.g. "armv8.1-a"
-  StringRef ArchFeature; // Command line feature flag, e.g. +v8a
-  uint64_t DefaultExts;  // bitfield of default extensions ArchExtKind
-
-  // These are not intended to be copied or created outside of this file.
-  ArchInfo(const ArchInfo &) = delete;
-  ArchInfo(const ArchInfo &&) = delete;
-  ArchInfo &operator=(const ArchInfo &rhs) = delete;
-  ArchInfo &&operator=(const ArchInfo &&rhs) = delete;
-
-  // Comparison is done by address. Copies should not exist.
-  bool operator==(const ArchInfo &Other) const { return this == &Other; }
-  bool operator!=(const ArchInfo &Other) const { return this != &Other; }
-
-  // Defines the following partial order, indicating when an architecture is
-  // a superset of another:
-  //
-  //     v9.4a > v9.3a > v9.3a > v9.3a > v9a;
-  //       v       v       v       v       v
-  //     v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
-  //
-  // v8r and INVALID have no relation to anything. This is used to
-  // determine which features to enable for a given architecture. See
-  // AArch64TargetInfo::setFeatureEnabled.
-  bool implies(const ArchInfo &Other) const {
-    if (this->Profile != Other.Profile)
-      return false; // ARMV8R and INVALID
-    if (this->Version.getMajor() == Other.Version.getMajor()) {
-      return this->Version > Other.Version;
-    }
-    if (this->Version.getMajor() == 9 && Other.Version.getMajor() == 8) {
-      return this->Version.getMinor().value() + 5 >=
-             Other.Version.getMinor().value();
-    }
-    return false;
-  }
-
-  // Return ArchFeature without the leading "+".
-  StringRef getSubArch() const { return ArchFeature.substr(1); }
-
-  // Search for ArchInfo by SubArch name
-  static const ArchInfo &findBySubArch(StringRef SubArch);
-};
-
-// Create ArchInfo structs named <ID>
-#define AARCH64_ARCH(MAJOR, MINOR, PROFILE, NAME, ID, ARCH_FEATURE,            \
-                     ARCH_BASE_EXT)                                            \
-  inline constexpr ArchInfo ID = {VersionTuple{MAJOR, MINOR}, PROFILE, NAME,   \
-                                  ARCH_FEATURE, ARCH_BASE_EXT};
-#include "AArch64TargetParser.def"
-#undef AARCH64_ARCH
-
-// The set of all architectures
-inline constexpr std::array<const ArchInfo *, 17> ArchInfos = {
-#define AARCH64_ARCH(MAJOR, MINOR, PROFILE, NAME, ID, ARCH_FEATURE,            \
-                     ARCH_BASE_EXT)                                            \
-  &ID,
-#include "AArch64TargetParser.def"
-};
-
-// Details of a specific CPU.
-struct CpuInfo {
-  StringRef Name; // Name, as written for -mcpu.
-  const ArchInfo &Arch;
+// List of CPU names and their arches.
+// The same CPU can have multiple arches and can be default on multiple arches.
+// When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
+// When this becomes table-generated, we'd probably need two tables.
+struct CpuNames {
+  StringRef Name;
+  ArchKind ArchID;
   uint64_t DefaultExtensions;
 };
 
-inline constexpr CpuInfo CpuInfos[] = {
-#define AARCH64_CPU_NAME(NAME, ARCH_ID, DEFAULT_EXT)                           \
-  {NAME, ARCH_ID, DEFAULT_EXT},
+const CpuNames AArch64CPUNames[] = {
+#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_EXT)                                \
+  {NAME, AArch64::ArchKind::ID, DEFAULT_EXT},
 #include "AArch64TargetParser.def"
 };
 
-// An alias for a CPU.
-struct CpuAlias {
+const struct {
   StringRef Alias;
   StringRef Name;
-};
-
-inline constexpr CpuAlias CpuAliases[] = {
+} AArch64CPUAliases[] = {
 #define AARCH64_CPU_ALIAS(ALIAS, NAME) {ALIAS, NAME},
 #include "AArch64TargetParser.def"
 };
 
+const ArchKind ArchKinds[] = {
+#define AARCH64_ARCH(NAME, ID, ARCH_FEATURE, ARCH_BASE_EXT) ArchKind::ID,
+#include "AArch64TargetParser.def"
+};
+
+inline ArchKind &operator--(ArchKind &Kind) {
+  if ((Kind == ArchKind::INVALID) || (Kind == ArchKind::ARMV8A) ||
+      (Kind == ArchKind::ARMV9A) || (Kind == ArchKind::ARMV8R))
+    Kind = ArchKind::INVALID;
+  else {
+    unsigned KindAsInteger = static_cast<unsigned>(Kind);
+    Kind = static_cast<ArchKind>(--KindAsInteger);
+  }
+  return Kind;
+}
+
 bool getExtensionFeatures(uint64_t Extensions,
                           std::vector<StringRef> &Features);
+StringRef getArchFeature(ArchKind AK);
 
+StringRef getArchName(ArchKind AK);
+StringRef getSubArch(ArchKind AK);
+StringRef getArchExtName(unsigned ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
+ArchKind convertV9toV8(ArchKind AK);
 StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
-uint64_t getDefaultExtensions(StringRef CPU, const ArchInfo &AI);
-const ArchInfo &getArchForCpu(StringRef CPU);
+uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
+ArchKind getCPUArchKind(StringRef CPU);
+ArchKind getSubArchArchKind(StringRef SubArch);
 
 // Parser
-const ArchInfo &parseArch(StringRef Arch);
+ArchKind parseArch(StringRef Arch);
 ArchExtKind parseArchExt(StringRef ArchExt);
-// Given the name of a CPU or alias, return the correponding CpuInfo.
-const CpuInfo &parseCpu(StringRef Name);
+ArchKind parseCPUArch(StringRef CPU);
 // Used by target parser tests
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 

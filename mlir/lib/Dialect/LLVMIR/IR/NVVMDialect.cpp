@@ -92,16 +92,16 @@ Optional<mlir::NVVM::MMATypes> MmaOp::inferOperandMMAType(Type operandElType,
   if (operandElType.isa<IntegerType>()) {
     if (isAccumulator)
       return NVVM::MMATypes::s32;
-    return llvm::None;
+    return std::nullopt;
   }
 
   if (auto structType = operandElType.dyn_cast<LLVM::LLVMStructType>()) {
     if (structType.getBody().empty())
-      return llvm::None;
+      return std::nullopt;
     return inferOperandMMAType(structType.getBody()[0], isAccumulator);
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 static bool isInt4PtxType(MMATypes type) {

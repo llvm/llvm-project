@@ -32,7 +32,7 @@ ExternalASTSource::~ExternalASTSource() = default;
 
 llvm::Optional<ASTSourceDescriptor>
 ExternalASTSource::getSourceDescriptor(unsigned ID) {
-  return None;
+  return std::nullopt;
 }
 
 ExternalASTSource::ExtKind

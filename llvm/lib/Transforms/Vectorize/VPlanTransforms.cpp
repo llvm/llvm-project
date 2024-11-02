@@ -111,27 +111,31 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
   bool Changed = false;
   // First, collect the operands of all predicated replicate recipes as seeds
   // for sinking.
-  SetVector<std::pair<VPBasicBlock *, VPValue *>> WorkList;
+  SetVector<std::pair<VPBasicBlock *, VPRecipeBase *>> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (auto &Recipe : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
       if (!RepR || !RepR->isPredicated())
         continue;
       for (VPValue *Op : RepR->operands())
-        WorkList.insert(std::make_pair(RepR->getParent(), Op));
+        if (auto *Def = Op->getDefiningRecipe())
+          WorkList.insert(std::make_pair(RepR->getParent(), Def));
     }
   }
 
-  // Try to sink each replicate recipe in the worklist.
+  // Try to sink each replicate or scalar IV steps recipe in the worklist.
   while (!WorkList.empty()) {
     VPBasicBlock *SinkTo;
-    VPValue *C;
-    std::tie(SinkTo, C) = WorkList.pop_back_val();
-    auto *SinkCandidate = dyn_cast_or_null<VPReplicateRecipe>(C->Def);
-    if (!SinkCandidate || SinkCandidate->isUniform() ||
-        SinkCandidate->getParent() == SinkTo ||
+    VPRecipeBase *SinkCandidate;
+    std::tie(SinkTo, SinkCandidate) = WorkList.pop_back_val();
+    if (SinkCandidate->getParent() == SinkTo ||
         SinkCandidate->mayHaveSideEffects() ||
         SinkCandidate->mayReadOrWriteMemory())
+      continue;
+    if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
+      if (RepR->isUniform())
+        continue;
+    } else if (!isa<VPScalarIVStepsRecipe>(SinkCandidate))
       continue;
 
     bool NeedsDuplicating = false;
@@ -146,27 +150,31 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
         return false;
       if (UI->getParent() == SinkTo)
         return true;
-      NeedsDuplicating = UI->onlyFirstLaneUsed(SinkCandidate);
-      return NeedsDuplicating;
+      NeedsDuplicating =
+          UI->onlyFirstLaneUsed(SinkCandidate->getVPSingleValue());
+      // We only know how to duplicate VPRecipeRecipes for now.
+      return NeedsDuplicating && isa<VPReplicateRecipe>(SinkCandidate);
     };
-    if (!all_of(SinkCandidate->users(), CanSinkWithUser))
+    if (!all_of(SinkCandidate->getVPSingleValue()->users(), CanSinkWithUser))
       continue;
 
     if (NeedsDuplicating) {
-      Instruction *I = cast<Instruction>(SinkCandidate->getUnderlyingValue());
+      Instruction *I = cast<Instruction>(
+          cast<VPReplicateRecipe>(SinkCandidate)->getUnderlyingValue());
       auto *Clone =
           new VPReplicateRecipe(I, SinkCandidate->operands(), true, false);
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      SmallVector<VPUser *, 4> Users(SinkCandidate->users());
+      SmallVector<VPUser *, 4> Users(
+          SinkCandidate->getVPSingleValue()->users());
       for (auto *U : Users) {
         auto *UI = cast<VPRecipeBase>(U);
         if (UI->getParent() == SinkTo)
           continue;
 
         for (unsigned Idx = 0; Idx != UI->getNumOperands(); Idx++) {
-          if (UI->getOperand(Idx) != SinkCandidate)
+          if (UI->getOperand(Idx) != SinkCandidate->getVPSingleValue())
             continue;
           UI->setOperand(Idx, Clone);
         }
@@ -174,7 +182,8 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
     for (VPValue *Op : SinkCandidate->operands())
-      WorkList.insert(std::make_pair(SinkTo, Op));
+      if (auto *Def = Op->getDefiningRecipe())
+        WorkList.insert(std::make_pair(SinkTo, Def));
     Changed = true;
   }
   return Changed;

@@ -3448,7 +3448,7 @@ thread_result_t ProcessGDBRemote::AsyncThread() {
               ") listener.WaitForEvent (NULL, event_sp)...",
               __FUNCTION__, GetID());
 
-    if (m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
+    if (m_async_listener_sp->GetEvent(event_sp, std::nullopt)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&m_async_broadcaster)) {
         LLDB_LOGF(log,

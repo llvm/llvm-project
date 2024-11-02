@@ -10,16 +10,17 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 
 llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
   return llvm::codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple());
 }
 
-llvm::Optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
+std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
   return llvm::codegen::getExplicitRelocModel();
 }
 
-llvm::Optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel() {
+std::optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel() {
   return llvm::codegen::getExplicitCodeModel();
 }
 

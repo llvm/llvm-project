@@ -243,6 +243,10 @@ bool SelectOptimize::runOnFunction(Function &F) {
     return false;
 
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+
+  if (!TTI->enableSelectOptimize())
+    return false;
+
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   BPI.reset(new BranchProbabilityInfo(F, *LI));

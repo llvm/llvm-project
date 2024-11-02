@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Function.h"
 
 #ifndef LLVM_LIB_TARGET_AARCH64_UTILS_AARCH64SMEATTRIBUTES_H
@@ -68,8 +67,9 @@ public:
   /// interface. This can be useful when considering e.g. inlining, where we
   /// explicitly want the body to overrule the interface (because after inlining
   /// the interface is no longer relevant).
-  Optional<bool> requiresSMChange(const SMEAttrs &Callee,
-                                  bool BodyOverridesInterface = false) const;
+  std::optional<bool>
+  requiresSMChange(const SMEAttrs &Callee,
+                   bool BodyOverridesInterface = false) const;
 
   // Interfaces to query PSTATE.ZA
   bool hasNewZAInterface() const { return Bitmask & ZA_New; }

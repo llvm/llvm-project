@@ -123,9 +123,9 @@ public:
   }
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
-      const A *p, FoldingContext &context) {
-    if (p) {
-      return Characterize(*p, context);
+      A *ptr, FoldingContext &context) {
+    if (ptr) {
+      return Characterize(std::as_const(*ptr), context);
     } else {
       return std::nullopt;
     }

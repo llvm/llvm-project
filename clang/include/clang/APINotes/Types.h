@@ -15,6 +15,10 @@
 #include <climits>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
+
 namespace clang {
 namespace api_notes {
 enum class RetainCountConventionKind {
@@ -72,7 +76,7 @@ public:
 
   llvm::Optional<bool> isSwiftPrivate() const {
     return SwiftPrivateSpecified ? llvm::Optional<bool>(SwiftPrivate)
-                                 : llvm::None;
+                                 : std::nullopt;
   }
 
   void setSwiftPrivate(llvm::Optional<bool> Private) {
@@ -146,7 +150,7 @@ public:
   void setSwiftBridge(const llvm::Optional<llvm::StringRef> &SwiftType) {
     SwiftBridge = SwiftType
                       ? llvm::Optional<std::string>(std::string(*SwiftType))
-                      : llvm::None;
+                      : std::nullopt;
   }
 
   const llvm::Optional<std::string> &getNSErrorDomain() const {
@@ -158,8 +162,8 @@ public:
   }
 
   void setNSErrorDomain(const llvm::Optional<llvm::StringRef> &Domain) {
-    NSErrorDomain =
-        Domain ? llvm::Optional<std::string>(std::string(*Domain)) : llvm::None;
+    NSErrorDomain = Domain ? llvm::Optional<std::string>(std::string(*Domain))
+                           : std::nullopt;
   }
 
   friend bool operator==(const CommonTypeInfo &, const CommonTypeInfo &);
@@ -215,12 +219,13 @@ public:
   /// Determine the default nullability for properties and methods of this
   /// class.
   ///
-  /// eturns the default nullability, if implied, or None if there is no
+  /// Returns the default nullability, if implied, or std::nullopt if there is
+  /// none.
   llvm::Optional<NullabilityKind> getDefaultNullability() const {
     return HasDefaultNullability
                ? llvm::Optional<NullabilityKind>(
                      static_cast<NullabilityKind>(DefaultNullability))
-               : llvm::None;
+               : std::nullopt;
   }
 
   /// Set the default nullability for properties and methods of this class.
@@ -235,7 +240,7 @@ public:
   llvm::Optional<bool> getSwiftImportAsNonGeneric() const {
     return SwiftImportAsNonGenericSpecified
                ? llvm::Optional<bool>(SwiftImportAsNonGeneric)
-               : llvm::None;
+               : std::nullopt;
   }
   void setSwiftImportAsNonGeneric(llvm::Optional<bool> Value) {
     SwiftImportAsNonGenericSpecified = Value.has_value();
@@ -244,7 +249,7 @@ public:
 
   llvm::Optional<bool> getSwiftObjCMembers() const {
     return SwiftObjCMembersSpecified ? llvm::Optional<bool>(SwiftObjCMembers)
-                                     : llvm::None;
+                                     : std::nullopt;
   }
   void setSwiftObjCMembers(llvm::Optional<bool> Value) {
     SwiftObjCMembersSpecified = Value.has_value();
@@ -313,7 +318,7 @@ public:
   llvm::Optional<NullabilityKind> getNullability() const {
     return NullabilityAudited ? llvm::Optional<NullabilityKind>(
                                     static_cast<NullabilityKind>(Nullable))
-                              : llvm::None;
+                              : std::nullopt;
   }
 
   void setNullabilityAudited(NullabilityKind kind) {
@@ -362,7 +367,7 @@ public:
   llvm::Optional<bool> getSwiftImportAsAccessors() const {
     return SwiftImportAsAccessorsSpecified
                ? llvm::Optional<bool>(SwiftImportAsAccessors)
-               : llvm::None;
+               : std::nullopt;
   }
   void setSwiftImportAsAccessors(llvm::Optional<bool> Value) {
     SwiftImportAsAccessorsSpecified = Value.has_value();
@@ -425,7 +430,7 @@ public:
 
   llvm::Optional<bool> isNoEscape() const {
     if (!NoEscapeSpecified)
-      return llvm::None;
+      return std::nullopt;
     return NoEscape;
   }
   void setNoEscape(llvm::Optional<bool> Value) {
@@ -435,7 +440,7 @@ public:
 
   llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
     if (!RawRetainCountConvention)
-      return llvm::None;
+      return std::nullopt;
     return static_cast<RetainCountConventionKind>(RawRetainCountConvention - 1);
   }
   void
@@ -553,7 +558,7 @@ public:
 
   llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
     if (!RawRetainCountConvention)
-      return llvm::None;
+      return std::nullopt;
     return static_cast<RetainCountConventionKind>(RawRetainCountConvention - 1);
   }
   void
@@ -661,7 +666,7 @@ public:
   llvm::Optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
       return IsFlagEnum;
-    return llvm::None;
+    return std::nullopt;
   }
   void setFlagEnum(llvm::Optional<bool> Value) {
     HasFlagEnum = Value.has_value();

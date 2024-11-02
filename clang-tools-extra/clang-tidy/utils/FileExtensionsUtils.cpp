@@ -57,10 +57,10 @@ llvm::Optional<StringRef>
 getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions) {
   StringRef Extension = llvm::sys::path::extension(FileName);
   if (Extension.empty())
-    return llvm::None;
+    return std::nullopt;
   // Skip "." prefix.
   if (!FileExtensions.count(Extension.substr(1)))
-    return llvm::None;
+    return std::nullopt;
   return Extension;
 }
 

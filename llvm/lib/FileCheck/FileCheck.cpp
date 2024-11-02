@@ -206,7 +206,7 @@ Expected<ExpressionValue> llvm::operator+(const ExpressionValue &LeftOperand,
   if (LeftOperand.isNegative() && RightOperand.isNegative()) {
     int64_t LeftValue = cantFail(LeftOperand.getSignedValue());
     int64_t RightValue = cantFail(RightOperand.getSignedValue());
-    Optional<int64_t> Result = checkedAdd<int64_t>(LeftValue, RightValue);
+    std::optional<int64_t> Result = checkedAdd<int64_t>(LeftValue, RightValue);
     if (!Result)
       return make_error<OverflowError>();
 
@@ -224,7 +224,7 @@ Expected<ExpressionValue> llvm::operator+(const ExpressionValue &LeftOperand,
   // Both values are positive at this point.
   uint64_t LeftValue = cantFail(LeftOperand.getUnsignedValue());
   uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
-  Optional<uint64_t> Result =
+  std::optional<uint64_t> Result =
       checkedAddUnsigned<uint64_t>(LeftValue, RightValue);
   if (!Result)
     return make_error<OverflowError>();
@@ -241,7 +241,7 @@ Expected<ExpressionValue> llvm::operator-(const ExpressionValue &LeftOperand,
     // Result <= -1 - (max int64_t) which overflows on 1- and 2-complement.
     if (RightValue > (uint64_t)std::numeric_limits<int64_t>::max())
       return make_error<OverflowError>();
-    Optional<int64_t> Result =
+    std::optional<int64_t> Result =
         checkedSub(LeftValue, static_cast<int64_t>(RightValue));
     if (!Result)
       return make_error<OverflowError>();
@@ -306,7 +306,7 @@ Expected<ExpressionValue> llvm::operator*(const ExpressionValue &LeftOperand,
   // Result will be positive and can overflow.
   uint64_t LeftValue = cantFail(LeftOperand.getUnsignedValue());
   uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
-  Optional<uint64_t> Result =
+  std::optional<uint64_t> Result =
       checkedMulUnsigned<uint64_t>(LeftValue, RightValue);
   if (!Result)
     return make_error<OverflowError>();
@@ -702,7 +702,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
                      .Case("min", min)
                      .Case("mul", operator*)
                      .Case("sub", operator-)
-                     .Default(None);
+                     .Default(std::nullopt);
 
   if (!OptFunc)
     return ErrorDiagnostic::get(
@@ -770,7 +770,7 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     FileCheckPatternContext *Context, const SourceMgr &SM) {
   std::unique_ptr<ExpressionAST> ExpressionASTPointer = nullptr;
   StringRef DefExpr = StringRef();
-  DefinedNumericVariable = None;
+  DefinedNumericVariable = std::nullopt;
   ExpressionFormat ExplicitFormat = ExpressionFormat();
   unsigned Precision = 0;
 
@@ -2703,8 +2703,9 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       StringRef CmdlineDefExpr = CmdlineDef.substr(1);
       Optional<NumericVariable *> DefinedNumericVariable;
       Expected<std::unique_ptr<Expression>> ExpressionResult =
-          Pattern::parseNumericSubstitutionBlock(
-              CmdlineDefExpr, DefinedNumericVariable, false, None, this, SM);
+          Pattern::parseNumericSubstitutionBlock(CmdlineDefExpr,
+                                                 DefinedNumericVariable, false,
+                                                 std::nullopt, this, SM);
       if (!ExpressionResult) {
         Errs = joinErrors(std::move(Errs), ExpressionResult.takeError());
         continue;

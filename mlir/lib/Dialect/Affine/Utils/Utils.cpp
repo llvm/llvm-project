@@ -235,7 +235,7 @@ Optional<SmallVector<Value, 8>> mlir::expandAffineMap(OpBuilder &builder,
                       }));
   if (llvm::all_of(expanded, [](Value v) { return v; }))
     return expanded;
-  return None;
+  return std::nullopt;
 }
 
 /// Promotes the `then` or the `else` block of `ifOp` (depending on whether

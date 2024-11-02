@@ -1,6 +1,9 @@
 executable("merge-fdata") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
-  deps = [ "//llvm/lib/Support" ]
+  deps = [
+    "//llvm/include/llvm/IR:public_tablegen",
+    "//llvm/lib/Support",
+  ]
   sources = [ "merge-fdata.cpp" ]
 
   # Emit relocations for BOLT meta test

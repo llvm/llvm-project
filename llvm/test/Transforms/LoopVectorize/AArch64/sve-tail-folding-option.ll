@@ -1,10 +1,10 @@
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=disabled -S | FileCheck %s -check-prefix=CHECK-NOTF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=default -S | FileCheck %s -check-prefix=CHECK-NOTF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=all -S | FileCheck %s -check-prefix=CHECK-TF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=disabled+simple+reductions+recurrences -S | FileCheck %s -check-prefix=CHECK-TF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=all+noreductions -S | FileCheck %s -check-prefix=CHECK-TF-NORED
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=all+norecurrences -S | FileCheck %s -check-prefix=CHECK-TF-NOREC
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=reductions -S | FileCheck %s -check-prefix=CHECK-TF-ONLYRED
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=disabled -S | FileCheck %s -check-prefix=CHECK-NOTF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=default -S | FileCheck %s -check-prefix=CHECK-NOTF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=all -S | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=disabled+simple+reductions+recurrences -S | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=all+noreductions -S | FileCheck %s -check-prefix=CHECK-TF-NORED
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=all+norecurrences -S | FileCheck %s -check-prefix=CHECK-TF-NOREC
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=reductions -S | FileCheck %s -check-prefix=CHECK-TF-ONLYRED
 
 target triple = "aarch64-unknown-linux-gnu"
 

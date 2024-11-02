@@ -375,6 +375,9 @@ def AArch64mls_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                               (sub node:$op1, (AArch64mul_p_oneuse node:$pred, node:$op2, node:$op3)),
                               // sub(a, select(mask, mul(b, c), splat(0))) -> mls(a, mask, b, c)
                               (sub node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0)))]>;
+def AArch64eor3 : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                           [(int_aarch64_sve_eor3 node:$op1, node:$op2, node:$op3),
+                            (xor node:$op1, (xor node:$op2, node:$op3))]>;
 
 class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
     : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
@@ -3527,7 +3530,7 @@ let Predicates = [HasSVE2orSME] in {
   defm FMLSLT_ZZZ_SHH : sve2_fp_mla_long<0b11, "fmlslt", int_aarch64_sve_fmlslt>;
 
   // SVE2 bitwise ternary operations
-  defm EOR3_ZZZZ  : sve2_int_bitwise_ternary_op<0b000, "eor3",  int_aarch64_sve_eor3>;
+  defm EOR3_ZZZZ  : sve2_int_bitwise_ternary_op<0b000, "eor3",  AArch64eor3>;
   defm BCAX_ZZZZ  : sve2_int_bitwise_ternary_op<0b010, "bcax",  int_aarch64_sve_bcax>;
   defm BSL_ZZZZ   : sve2_int_bitwise_ternary_op<0b001, "bsl",   int_aarch64_sve_bsl, AArch64bsp>;
   defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", int_aarch64_sve_bsl1n>;

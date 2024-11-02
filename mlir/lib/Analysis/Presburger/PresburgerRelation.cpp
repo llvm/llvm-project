@@ -369,7 +369,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       unsigned simplexSnapshot = simplex.getSnapshot();
       IntegerRelation::CountsSnapshot bCounts = b.getCounts();
       frames.push_back(Frame{simplexSnapshot, bCounts, sI, ineqsToProcess,
-                             /*lastIneqProcessed=*/llvm::None});
+                             /*lastIneqProcessed=*/std::nullopt});
       // We have completed the initial setup for this level.
       // Fallthrough to the main recursive part below.
     }

@@ -16,6 +16,7 @@
 
 #include "MSP430Subtarget.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 class StringRef;
@@ -24,13 +25,14 @@ class StringRef;
 ///
 class MSP430TargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  MSP430Subtarget        Subtarget;
+  MSP430Subtarget Subtarget;
 
 public:
   MSP430TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                      CodeGenOpt::Level OL, bool JIT);
+                      std::optional<Reloc::Model> RM,
+                      std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                      bool JIT);
   ~MSP430TargetMachine() override;
 
   const MSP430Subtarget *getSubtargetImpl(const Function &F) const override {

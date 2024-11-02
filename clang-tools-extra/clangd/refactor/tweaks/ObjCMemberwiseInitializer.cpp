@@ -96,7 +96,7 @@ struct MethodParameter {
     if (const auto *PD = dyn_cast<ObjCPropertyDecl>(&D))
       if (PD->isInstanceProperty())
         return MethodParameter(*PD);
-    return llvm::None;
+    return std::nullopt;
   }
 };
 

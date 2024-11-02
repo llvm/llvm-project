@@ -246,12 +246,12 @@ GetNestedTagDefinition(const NestedTypeRecord &Record,
 
   // If it's a simple type, then this is something like `using foo = int`.
   if (Record.Type.isSimple())
-    return llvm::None;
+    return std::nullopt;
 
   CVType cvt = tpi.getType(Record.Type);
 
   if (!IsTagRecord(cvt))
-    return llvm::None;
+    return std::nullopt;
 
   // If it's an inner definition, then treat whatever name we have here as a
   // single component of a mangled name.  So we can inject it into the parent's
@@ -259,7 +259,7 @@ GetNestedTagDefinition(const NestedTypeRecord &Record,
   CVTagRecord child = CVTagRecord::create(cvt);
   std::string qname = std::string(parent.asTag().getUniqueName());
   if (qname.size() < 4 || child.asTag().getUniqueName().size() < 4)
-    return llvm::None;
+    return std::nullopt;
 
   // qname[3] is the tag type identifier (struct, class, union, etc).  Since the
   // inner tag type is not necessarily the same as the outer tag type, re-write
@@ -272,7 +272,7 @@ GetNestedTagDefinition(const NestedTypeRecord &Record,
   piece.push_back('@');
   qname.insert(4, std::move(piece));
   if (qname != child.asTag().UniqueName)
-    return llvm::None;
+    return std::nullopt;
 
   return std::move(child);
 }
@@ -1508,10 +1508,10 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
         file_offset = *next_file_offset;
       if (next_line_offset) {
         cur_line_offset = next_line_offset;
-        next_line_offset = llvm::None;
+        next_line_offset = std::nullopt;
       }
-      code_offset_base = is_terminal_entry ? llvm::None : code_offset_end;
-      code_offset_end = next_file_offset = llvm::None;
+      code_offset_base = is_terminal_entry ? std::nullopt : code_offset_end;
+      code_offset_end = next_file_offset = std::nullopt;
     }
     if (code_offset_base && cur_line_offset) {
       if (is_terminal_entry) {
@@ -2108,7 +2108,7 @@ Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
 llvm::Optional<SymbolFile::ArrayInfo>
 SymbolFileNativePDB::GetDynamicArrayInfoForUID(
     lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
@@ -2273,10 +2273,10 @@ SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
     // If this exact symbol opens a scope, we can just directly access its
     // parent.
     id.offset = getScopeParentOffset(sym);
-    // Global symbols have parent offset of 0.  Return llvm::None to indicate
+    // Global symbols have parent offset of 0.  Return std::nullopt to indicate
     // this.
     if (id.offset == 0)
-      return llvm::None;
+      return std::nullopt;
     return id;
   }
 
@@ -2293,7 +2293,7 @@ SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
     if (begin.offset() > id.offset) {
       // We passed it.  We couldn't even find this symbol record.
       lldbassert(false && "Invalid compiland symbol id!");
-      return llvm::None;
+      return std::nullopt;
     }
 
     // We haven't found the symbol yet.  Check if we need to open or close the
@@ -2314,7 +2314,7 @@ SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
     ++begin;
   }
   if (scope_stack.empty())
-    return llvm::None;
+    return std::nullopt;
   // We have a match!  Return the top of the stack
   return scope_stack.back();
 }
@@ -2323,6 +2323,6 @@ llvm::Optional<llvm::codeview::TypeIndex>
 SymbolFileNativePDB::GetParentType(llvm::codeview::TypeIndex ti) {
   auto parent_iter = m_parent_types.find(ti);
   if (parent_iter == m_parent_types.end())
-    return llvm::None;
+    return std::nullopt;
   return parent_iter->second;
 }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCWin64EH.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -274,9 +273,9 @@ static const MCExpr *GetSubDivExpr(MCStreamer &Streamer, const MCSymbol *LHS,
   return Expr;
 }
 
-static Optional<int64_t> GetOptionalAbsDifference(MCStreamer &Streamer,
-                                                  const MCSymbol *LHS,
-                                                  const MCSymbol *RHS) {
+static std::optional<int64_t> GetOptionalAbsDifference(MCStreamer &Streamer,
+                                                       const MCSymbol *LHS,
+                                                       const MCSymbol *RHS) {
   MCContext &Context = Streamer.getContext();
   const MCExpr *Diff =
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
@@ -287,13 +286,14 @@ static Optional<int64_t> GetOptionalAbsDifference(MCStreamer &Streamer,
   // unusual constructs, like an inline asm with an alignment directive.
   int64_t value;
   if (!Diff->evaluateAsAbsolute(value, OS->getAssembler()))
-    return None;
+    return std::nullopt;
   return value;
 }
 
 static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
                                 const MCSymbol *RHS) {
-  Optional<int64_t> MaybeDiff = GetOptionalAbsDifference(Streamer, LHS, RHS);
+  std::optional<int64_t> MaybeDiff =
+      GetOptionalAbsDifference(Streamer, LHS, RHS);
   if (!MaybeDiff)
     report_fatal_error("Failed to evaluate function length in SEH unwind info");
   return *MaybeDiff;
@@ -305,7 +305,7 @@ static void checkARM64Instructions(MCStreamer &Streamer,
                                    StringRef Name, StringRef Type) {
   if (!End)
     return;
-  Optional<int64_t> MaybeDistance =
+  std::optional<int64_t> MaybeDistance =
       GetOptionalAbsDifference(Streamer, End, Begin);
   if (!MaybeDistance)
     return;
@@ -1552,7 +1552,7 @@ static void checkARMInstructions(MCStreamer &Streamer,
                                  StringRef Name, StringRef Type) {
   if (!End)
     return;
-  Optional<int64_t> MaybeDistance =
+  std::optional<int64_t> MaybeDistance =
       GetOptionalAbsDifference(Streamer, End, Begin);
   if (!MaybeDistance)
     return;
@@ -1774,7 +1774,7 @@ static int checkARMPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
 
   // Check that the epilog actually is at the very end of the function,
   // otherwise it can't be packed.
-  Optional<int64_t> MaybeDistance = GetOptionalAbsDifference(
+  std::optional<int64_t> MaybeDistance = GetOptionalAbsDifference(
       streamer, info->FuncletOrFuncEnd, info->EpilogMap.begin()->first);
   if (!MaybeDistance)
     return -1;
@@ -2000,7 +2000,7 @@ static bool tryARMPackedUnwind(MCStreamer &streamer, WinEH::FrameInfo *info,
     if (EpilogInfo.Condition != 0xe) // ARMCC::AL
       return false;
     const std::vector<WinEH::Instruction> &Epilog = EpilogInfo.Instructions;
-    Optional<int64_t> MaybeDistance = GetOptionalAbsDifference(
+    std::optional<int64_t> MaybeDistance = GetOptionalAbsDifference(
         streamer, info->FuncletOrFuncEnd, info->EpilogMap.begin()->first);
     if (!MaybeDistance)
       return false;
@@ -2310,7 +2310,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
                        " not correctly terminated");
   }
 
-  Optional<int64_t> RawFuncLength;
+  std::optional<int64_t> RawFuncLength;
   const MCExpr *FuncLengthExpr = nullptr;
   if (!info->FuncletOrFuncEnd) {
     report_fatal_error("FuncletOrFuncEnd not set");
@@ -2440,7 +2440,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
       MCSymbol *EpilogStart = I.first;
       uint32_t EpilogIndex = I.second;
 
-      Optional<int64_t> MaybeEpilogOffset =
+      std::optional<int64_t> MaybeEpilogOffset =
           GetOptionalAbsDifference(streamer, EpilogStart, info->Begin);
       const MCExpr *OffsetExpr = nullptr;
       uint32_t EpilogOffset = 0;

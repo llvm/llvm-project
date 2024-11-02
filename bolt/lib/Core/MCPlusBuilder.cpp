@@ -135,15 +135,15 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
 
 Optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
   if (!isCall(Inst))
-    return None;
+    return std::nullopt;
   Optional<int64_t> LPSym =
       getAnnotationOpValue(Inst, MCAnnotation::kEHLandingPad);
   if (!LPSym)
-    return None;
+    return std::nullopt;
   Optional<int64_t> Action =
       getAnnotationOpValue(Inst, MCAnnotation::kEHAction);
   if (!Action)
-    return None;
+    return std::nullopt;
 
   return std::make_pair(reinterpret_cast<const MCSymbol *>(*LPSym),
                         static_cast<uint64_t>(*Action));
@@ -221,7 +221,7 @@ MCPlusBuilder::getConditionalTailCall(const MCInst &Inst) const {
   Optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kConditionalTailCall);
   if (!Value)
-    return None;
+    return std::nullopt;
   return static_cast<uint64_t>(*Value);
 }
 
@@ -243,7 +243,7 @@ bool MCPlusBuilder::unsetConditionalTailCall(MCInst &Inst) {
 Optional<uint32_t> MCPlusBuilder::getOffset(const MCInst &Inst) const {
   Optional<int64_t> Value = getAnnotationOpValue(Inst, MCAnnotation::kOffset);
   if (!Value)
-    return None;
+    return std::nullopt;
   return static_cast<uint32_t>(*Value);
 }
 

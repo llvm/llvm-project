@@ -109,7 +109,7 @@ CompileOnDemandLayer::compileRequested(GlobalValueSet Requested) {
 
 Optional<CompileOnDemandLayer::GlobalValueSet>
 CompileOnDemandLayer::compileWholeModule(GlobalValueSet Requested) {
-  return None;
+  return std::nullopt;
 }
 
 CompileOnDemandLayer::CompileOnDemandLayer(
@@ -287,7 +287,7 @@ void CompileOnDemandLayer::emitPartition(
   // Take a 'None' partition to mean the whole module (as opposed to an empty
   // partition, which means "materialize nothing"). Emit the whole module
   // unmodified to the base layer.
-  if (GVsToExtract == None) {
+  if (GVsToExtract == std::nullopt) {
     Defs.clear();
     BaseLayer.emit(std::move(R), std::move(TSM));
     return;

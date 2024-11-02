@@ -1,7 +1,7 @@
-; RUN: opt -mtriple armv7-linux-gnueabihf -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
-; RUN: opt -mtriple armv8-linux-gnu -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
-; RUN: opt -mtriple armv8.1.m-none-eabi -mattr=+mve.fp -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=MVE
-; RUN: opt -mtriple armv7-unknwon-darwin -loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=DARWIN
+; RUN: opt -mtriple armv7-linux-gnueabihf -passes=loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
+; RUN: opt -mtriple armv8-linux-gnu -passes=loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
+; RUN: opt -mtriple armv8.1.m-none-eabi -mattr=+mve.fp -passes=loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=MVE
+; RUN: opt -mtriple armv7-unknwon-darwin -passes=loop-vectorize -S %s -debug-only=loop-vectorize -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=DARWIN
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

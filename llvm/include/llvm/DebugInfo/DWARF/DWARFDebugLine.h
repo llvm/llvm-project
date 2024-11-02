@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGLINE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGLINE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -114,7 +113,7 @@ public:
 
     bool hasFileAtIndex(uint64_t FileIndex) const;
 
-    Optional<uint64_t> getLastValidFileIndex() const;
+    std::optional<uint64_t> getLastValidFileIndex() const;
 
     bool
     getFileNameByIndex(uint64_t FileIndex, StringRef CompDir,
@@ -246,7 +245,7 @@ public:
       return Prologue.hasFileAtIndex(FileIndex);
     }
 
-    Optional<uint64_t> getLastValidFileIndex() const {
+    std::optional<uint64_t> getLastValidFileIndex() const {
       return Prologue.getLastValidFileIndex();
     }
 
@@ -294,7 +293,7 @@ public:
   private:
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           object::SectionedAddress Address) const;
-    Optional<StringRef>
+    std::optional<StringRef>
     getSourceByIndex(uint64_t FileIndex,
                      DILineInfoSpecifier::FileLineInfoKind Kind) const;
 

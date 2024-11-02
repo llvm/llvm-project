@@ -309,7 +309,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
     Config.InputFormat = StringSwitch<Optional<FileFormat>>(A->getValue())
                              .Case("IFS", FileFormat::IFS)
                              .Case("ELF", FileFormat::ELF)
-                             .Default(None);
+                             .Default(std::nullopt);
     if (!Config.InputFormat)
       fatalError(Twine("invalid argument '") + A->getValue());
   }
@@ -323,7 +323,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
                               .Case("IFS", FileFormat::IFS)
                               .Case("ELF", FileFormat::ELF)
                               .Case("TBD", FileFormat::TBD)
-                              .Default(None);
+                              .Default(std::nullopt);
     if (!Config.OutputFormat)
       OptionNotFound("--output-format", A->getValue());
   }
@@ -344,7 +344,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
         StringSwitch<Optional<IFSEndiannessType>>(A->getValue())
             .Case("little", IFSEndiannessType::Little)
             .Case("big", IFSEndiannessType::Big)
-            .Default(None);
+            .Default(std::nullopt);
     if (!Config.OverrideEndianness)
       OptionNotFound("--endianness", A->getValue());
   }

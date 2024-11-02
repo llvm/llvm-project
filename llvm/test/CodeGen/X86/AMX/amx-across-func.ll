@@ -58,7 +58,6 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    tileloadd (%rax,%r14), %tmm0
 ; CHECK-NEXT:    movabsq $64, %rcx
 ; CHECK-NEXT:    tileloadd 1088(%rsp,%rcx), %tmm1 # 1024-byte Folded Reload
-; CHECK-NEXT:    movabsq $64, %rcx
 ; CHECK-NEXT:    tileloadd 64(%rsp,%rcx), %tmm2 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rax,%r14)

@@ -149,12 +149,12 @@ void MCObjectStreamer::resolvePendingFixups() {
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
 // tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment.
-static Optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
-                                             const MCSymbol *Lo) {
+static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
+                                                  const MCSymbol *Lo) {
   assert(Hi && Lo);
   if (!Hi->getFragment() || Hi->getFragment() != Lo->getFragment() ||
       Hi->isVariable() || Lo->isVariable())
-    return None;
+    return std::nullopt;
 
   return Hi->getOffset() - Lo->getOffset();
 }
@@ -163,7 +163,7 @@ void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
                                               const MCSymbol *Lo,
                                               unsigned Size) {
   if (!getAssembler().getContext().getTargetTriple().isRISCV())
-    if (Optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
+    if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
       return emitIntValue(*Diff, Size);
   MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
 }
@@ -171,7 +171,7 @@ void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
 void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
                                                        const MCSymbol *Lo) {
   if (!getAssembler().getContext().getTargetTriple().isRISCV())
-    if (Optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
+    if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
       return emitULEB128IntValue(*Diff);
   MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
@@ -726,7 +726,7 @@ void MCObjectStreamer::emitGPRel64Value(const MCExpr *Value) {
   DF->getContents().resize(DF->getContents().size() + 8, 0);
 }
 
-static Optional<std::pair<bool, std::string>>
+static std::optional<std::pair<bool, std::string>>
 getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
                          MCDataFragment *&DF) {
   if (Symbol.isVariable()) {
@@ -746,7 +746,7 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
                               std::string("symbol in offset has no data "
                                           "fragment"));
       DF = cast<MCDataFragment>(Fragment);
-      return None;
+      return std::nullopt;
     }
 
     if (OffsetVal.getSymB())
@@ -785,14 +785,15 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
                                         "fragment"));
     DF = cast<MCDataFragment>(Fragment);
   }
-  return None;
+  return std::nullopt;
 }
 
-Optional<std::pair<bool, std::string>>
+std::optional<std::pair<bool, std::string>>
 MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
                                      const MCExpr *Expr, SMLoc Loc,
                                      const MCSubtargetInfo &STI) {
-  Optional<MCFixupKind> MaybeKind = Assembler->getBackend().getFixupKind(Name);
+  std::optional<MCFixupKind> MaybeKind =
+      Assembler->getBackend().getFixupKind(Name);
   if (!MaybeKind)
     return std::make_pair(true, std::string("unknown relocation name"));
 
@@ -814,7 +815,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
       return std::make_pair(false, std::string(".reloc offset is negative"));
     DF->getFixups().push_back(
         MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
-    return None;
+    return std::nullopt;
   }
   if (OffsetVal.getSymB())
     return std::make_pair(false,
@@ -824,22 +825,22 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
   const MCSymbol &Symbol = SRE.getSymbol();
   if (Symbol.isDefined()) {
     uint32_t SymbolOffset = 0;
-    Optional<std::pair<bool, std::string>> Error;
-    Error = getOffsetAndDataFragment(Symbol, SymbolOffset, DF);
+    std::optional<std::pair<bool, std::string>> Error =
+        getOffsetAndDataFragment(Symbol, SymbolOffset, DF);
 
-    if (Error != None)
+    if (Error != std::nullopt)
       return Error;
 
     DF->getFixups().push_back(
         MCFixup::create(SymbolOffset + OffsetVal.getConstant(),
                         Expr, Kind, Loc));
-    return None;
+    return std::nullopt;
   }
 
   PendingFixups.emplace_back(
       &SRE.getSymbol(), DF,
       MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
-  return None;
+  return std::nullopt;
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,

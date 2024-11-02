@@ -27,7 +27,8 @@ RemarkStreamer::RemarkStreamer(
     std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
     Optional<StringRef> FilenameIn)
     : RemarkSerializer(std::move(RemarkSerializer)),
-      Filename(FilenameIn ? Optional<std::string>(FilenameIn->str()) : None) {}
+      Filename(FilenameIn ? Optional<std::string>(FilenameIn->str())
+                          : std::nullopt) {}
 
 Error RemarkStreamer::setFilter(StringRef Filter) {
   Regex R = Regex(Filter);

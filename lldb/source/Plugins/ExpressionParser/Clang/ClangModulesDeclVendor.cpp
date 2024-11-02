@@ -609,7 +609,8 @@ ClangModulesDeclVendor::Create(Target &target) {
       "-target",
       arch.GetTriple().str(),
       "-fmodules-validate-system-headers",
-      "-Werror=non-modular-include-in-framework-module"};
+      "-Werror=non-modular-include-in-framework-module",
+      "-Xclang=-fincremental-extensions"};
 
   target.GetPlatform()->AddClangModuleCompilationOptions(
       &target, compiler_invocation_arguments);
@@ -700,8 +701,6 @@ ClangModulesDeclVendor::Create(Target &target) {
   if (!action->BeginSourceFile(*instance,
                                instance->getFrontendOpts().Inputs[0]))
     return nullptr;
-
-  instance->getPreprocessor().enableIncrementalProcessing();
 
   instance->createASTReader();
 

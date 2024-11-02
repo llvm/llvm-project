@@ -1374,7 +1374,7 @@ NamedMDClone:
   }
 }
 
-int llvm_echo(bool OpaquePointers) {
+int llvm_echo(void) {
   LLVMEnablePrettyStackTrace();
 
   LLVMModuleRef Src = llvm_load_module(false, true);
@@ -1383,8 +1383,6 @@ int llvm_echo(bool OpaquePointers) {
   size_t ModuleIdentLen;
   const char *ModuleName = LLVMGetModuleIdentifier(Src, &ModuleIdentLen);
   LLVMContextRef Ctx = LLVMContextCreate();
-  if (!OpaquePointers)
-    LLVMContextSetOpaquePointers(Ctx, false);
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext(ModuleName, Ctx);
 
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);

@@ -170,7 +170,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
       // Erase subgroup size.
       entryPointAttr = spirv::EntryPointABIAttr::get(
           entryPointAttr.getContext(), entryPointAttr.getWorkgroupSize(),
-          llvm::None);
+          std::nullopt);
     }
   }
   if (entryPointAttr.getWorkgroupSize() || entryPointAttr.getSubgroupSize())
@@ -262,7 +262,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   // Creates a new function with the update signature.
   rewriter.updateRootInPlace(funcOp, [&] {
     funcOp.setType(rewriter.getFunctionType(
-        signatureConverter.getConvertedTypes(), llvm::None));
+        signatureConverter.getConvertedTypes(), std::nullopt));
   });
   return success();
 }

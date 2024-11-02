@@ -58,6 +58,18 @@ bool isFilterPassesEmpty();
 // Returns true if we should print the function.
 bool isFunctionInPrintList(StringRef FunctionName);
 
+// Ensure temporary files exist, creating or re-using them.  \p FD contains
+// file descriptors (-1 indicates that the file should be created) and
+// \p SR contains the corresponding initial content.  \p FileName will have
+// the filenames filled in when creating files.  Return first error code (if
+// any) and stop.
+std::error_code prepareTempFiles(SmallVector<int> &FD, ArrayRef<StringRef> SR,
+                                 SmallVector<std::string> &FileName);
+
+// Remove the temporary files in \p FileName.  Typically used in conjunction
+// with prepareTempFiles.  Return first error code (if any) and stop..
+std::error_code cleanUpTempFiles(ArrayRef<std::string> FileName);
+
 // Perform a system based diff between \p Before and \p After, using \p
 // OldLineFormat, \p NewLineFormat, and \p UnchangedLineFormat to control the
 // formatting of the output. Return an error message for any failures instead

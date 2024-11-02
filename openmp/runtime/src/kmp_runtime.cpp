@@ -9195,3 +9195,20 @@ void __kmp_set_nesting_mode_threads() {
   if (__kmp_nesting_mode == 1) // turn on nesting for this case only
     set__max_active_levels(thread, __kmp_nesting_mode_nlevels);
 }
+
+// Empty symbols to export (see exports_so.txt) when feature is disabled
+extern "C" {
+#if !KMP_STATS_ENABLED
+void __kmp_reset_stats() {}
+#endif
+#if !USE_DEBUGGER
+int __kmp_omp_debug_struct_info = FALSE;
+int __kmp_debugging = FALSE;
+#endif
+#if !USE_ITT_BUILD || !USE_ITT_NOTIFY
+void __kmp_itt_fini_ittlib() {}
+void __kmp_itt_init_ittlib() {}
+#endif
+}
+
+// end of file

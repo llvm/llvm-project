@@ -54,9 +54,9 @@ inline bool isRetainOrClaimRV(ARCInstKind Kind) {
 }
 
 /// This function returns the ARCInstKind of the function attached to operand
-/// bundle clang_arc_attachedcall. It returns None if the call doesn't have the
-/// operand bundle or the operand is null. Otherwise it returns either RetainRV
-/// or UnsafeClaimRV.
+/// bundle clang_arc_attachedcall. It returns std::nullopt if the call doesn't
+/// have the operand bundle or the operand is null. Otherwise it returns either
+/// RetainRV or UnsafeClaimRV.
 inline ARCInstKind getAttachedARCFunctionKind(const CallBase *CB) {
   Optional<Function *> Fn = getAttachedARCFunction(CB);
   if (!Fn)

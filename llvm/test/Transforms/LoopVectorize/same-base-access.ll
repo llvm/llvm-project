@@ -1,4 +1,4 @@
-; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -S -enable-if-conversion | FileCheck %s
+; RUN: opt < %s  -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S -enable-if-conversion | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -64,7 +64,7 @@ define i32 @kernel11(double* %x, double* %y, i32 %n) nounwind uwtable ssp {
 ; A[i*7] is scalarized, and the different scalars can in theory wrap
 ; around and overwrite other scalar elements. However we can still
 ; vectorize because we can version the loop to avoid this case.
-; 
+;
 ; void foo(int *a) {
 ;   for (int i=0; i<256; ++i) {
 ;     int x = a[i*7];

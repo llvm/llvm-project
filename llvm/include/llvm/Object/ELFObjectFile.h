@@ -89,7 +89,7 @@ public:
 
   SubtargetFeatures getFeatures() const override;
 
-  Optional<StringRef> tryGetCPUName() const override;
+  std::optional<StringRef> tryGetCPUName() const override;
 
   void setARMSubArch(Triple &TheTriple) const override;
 
@@ -97,7 +97,7 @@ public:
 
   virtual uint16_t getEMachine() const = 0;
 
-  std::vector<std::pair<Optional<DataRefImpl>, uint64_t>>
+  std::vector<std::pair<std::optional<DataRefImpl>, uint64_t>>
   getPltAddresses() const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
@@ -108,7 +108,7 @@ public:
   // `TextSectionIndex` is specified, only returns the BB address maps
   // corresponding to the section with that index.
   Expected<std::vector<BBAddrMap>>
-  readBBAddrMap(Optional<unsigned> TextSectionIndex = None) const;
+  readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt) const;
 };
 
 class ELFSectionRef : public SectionRef {

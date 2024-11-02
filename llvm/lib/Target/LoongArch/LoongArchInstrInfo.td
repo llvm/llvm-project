@@ -1302,7 +1302,6 @@ class PseudoMaskedAM
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let Size = 36;
 }
 
 def PseudoMaskedAtomicSwap32 : PseudoMaskedAM;
@@ -1316,7 +1315,6 @@ class PseudoAM : Pseudo<(outs GPR:$res, GPR:$scratch),
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let Size = 24;
 }
 
 def PseudoAtomicSwap32 : PseudoAM;
@@ -1349,7 +1347,6 @@ class PseudoMaskedAMUMinUMax
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let Size = 48;
 }
 
 def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMUMinUMax;
@@ -1364,7 +1361,6 @@ class PseudoMaskedAMMinMax
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let Size = 56;
 }
 
 def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMMinMax;
@@ -1379,7 +1375,6 @@ class PseudoCmpXchg
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let Size = 36;
 }
 
 def PseudoCmpXchg32 : PseudoCmpXchg;
@@ -1393,7 +1388,6 @@ def PseudoMaskedCmpXchg32
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let Size = 44;
 }
 
 class PseudoMaskedAMMinMaxPat<Intrinsic intrin, Pseudo AMInst>

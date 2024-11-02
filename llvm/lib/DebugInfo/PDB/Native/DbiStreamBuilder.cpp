@@ -86,7 +86,7 @@ Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
   assert(Type != DbgHeaderType::NewFPO &&
          "NewFPO data should be written via addFrameData()!");
 
-  DbgStreams[(int)Type].emplace();
+  DbgStreams[(int)Type] = DebugStream{};
   DbgStreams[(int)Type]->Size = Data.size();
   DbgStreams[(int)Type]->WriteFn = [Data](BinaryStreamWriter &Writer) {
     return Writer.writeArray(Data);
@@ -286,7 +286,7 @@ Error DbiStreamBuilder::finalize() {
 
 Error DbiStreamBuilder::finalizeMsfLayout() {
   if (NewFpoData) {
-    DbgStreams[(int)DbgHeaderType::NewFPO].emplace();
+    DbgStreams[(int)DbgHeaderType::NewFPO] = DebugStream{};
     DbgStreams[(int)DbgHeaderType::NewFPO]->Size =
         NewFpoData->calculateSerializedSize();
     DbgStreams[(int)DbgHeaderType::NewFPO]->WriteFn =
@@ -296,7 +296,7 @@ Error DbiStreamBuilder::finalizeMsfLayout() {
   }
 
   if (!OldFpoData.empty()) {
-    DbgStreams[(int)DbgHeaderType::FPO].emplace();
+    DbgStreams[(int)DbgHeaderType::FPO] = DebugStream{};
     DbgStreams[(int)DbgHeaderType::FPO]->Size =
         sizeof(object::FpoData) * OldFpoData.size();
     DbgStreams[(int)DbgHeaderType::FPO]->WriteFn =

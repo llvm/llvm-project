@@ -111,7 +111,7 @@ SplitTraceIntoPSBBlock(TraceIntelPT &trace_intel_pt,
 /// Find the lowest TSC in the given trace.
 ///
 /// \return
-///     The lowest TSC value in this trace if available, \a llvm::None if the
+///     The lowest TSC value in this trace if available, \a std::nullopt if the
 ///     trace is empty or the trace contains no timing information, or an \a
 ///     llvm::Error if it was not possible to set up the decoder.
 llvm::Expected<llvm::Optional<uint64_t>>

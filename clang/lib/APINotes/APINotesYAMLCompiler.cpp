@@ -119,7 +119,7 @@ template <> struct ScalarEnumerationTraits<RetainCountConventionKind> {
 template <> struct MappingTraits<Param> {
   static void mapping(IO &IO, Param &P) {
     IO.mapRequired("Position", P.Position);
-    IO.mapOptional("Nullability", P.Nullability, llvm::None);
+    IO.mapOptional("Nullability", P.Nullability, std::nullopt);
     IO.mapOptional("RetainCountConvention", P.RetainCountConvention);
     IO.mapOptional("NoEscape", P.NoEscape);
     IO.mapOptional("Type", P.Type, StringRef(""));
@@ -183,7 +183,7 @@ template <> struct MappingTraits<Method> {
     IO.mapRequired("MethodKind", M.Kind);
     IO.mapOptional("Parameters", M.Params);
     IO.mapOptional("Nullability", M.Nullability);
-    IO.mapOptional("NullabilityOfRet", M.NullabilityOfRet, llvm::None);
+    IO.mapOptional("NullabilityOfRet", M.NullabilityOfRet, std::nullopt);
     IO.mapOptional("RetainCountConvention", M.RetainCountConvention);
     IO.mapOptional("Availability", M.Availability.Mode,
                    APIAvailability::Available);
@@ -222,7 +222,7 @@ template <> struct MappingTraits<Property> {
   static void mapping(IO &IO, Property &P) {
     IO.mapRequired("Name", P.Name);
     IO.mapOptional("PropertyKind", P.Kind);
-    IO.mapOptional("Nullability", P.Nullability, llvm::None);
+    IO.mapOptional("Nullability", P.Nullability, std::nullopt);
     IO.mapOptional("Availability", P.Availability.Mode,
                    APIAvailability::Available);
     IO.mapOptional("AvailabilityMsg", P.Availability.Msg, StringRef(""));
@@ -303,7 +303,7 @@ template <> struct MappingTraits<Function> {
     IO.mapRequired("Name", F.Name);
     IO.mapOptional("Parameters", F.Params);
     IO.mapOptional("Nullability", F.Nullability);
-    IO.mapOptional("NullabilityOfRet", F.NullabilityOfRet, llvm::None);
+    IO.mapOptional("NullabilityOfRet", F.NullabilityOfRet, std::nullopt);
     IO.mapOptional("RetainCountConvention", F.RetainCountConvention);
     IO.mapOptional("Availability", F.Availability.Mode,
                    APIAvailability::Available);
@@ -336,7 +336,7 @@ namespace yaml {
 template <> struct MappingTraits<GlobalVariable> {
   static void mapping(IO &IO, GlobalVariable &GV) {
     IO.mapRequired("Name", GV.Name);
-    IO.mapOptional("Nullability", GV.Nullability, llvm::None);
+    IO.mapOptional("Nullability", GV.Nullability, std::nullopt);
     IO.mapOptional("Availability", GV.Availability.Mode,
                    APIAvailability::Available);
     IO.mapOptional("AvailabilityMsg", GV.Availability.Msg, StringRef(""));
@@ -549,7 +549,7 @@ struct Module {
   TopLevelItems TopLevel;
   VersionedSeq SwiftVersions;
 
-  llvm::Optional<bool> SwiftInferImportAsMember = {llvm::None};
+  llvm::Optional<bool> SwiftInferImportAsMember = {std::nullopt};
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() /*const*/;

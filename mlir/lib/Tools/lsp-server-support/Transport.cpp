@@ -286,7 +286,7 @@ LogicalResult readLine(std::FILE *in, SmallVectorImpl<char> &out) {
   }
 }
 
-// Returns None when:
+// Returns std::nullopt when:
 //  - ferror(), feof(), or shutdownRequested() are set.
 //  - Content-Length is missing or empty (protocol error)
 LogicalResult JSONTransport::readStandardMessage(std::string &json) {

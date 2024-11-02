@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 ; The three test-cases below are all based on modified versions of a simple copy-loop:
 ;

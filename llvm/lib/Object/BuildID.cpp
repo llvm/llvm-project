@@ -24,7 +24,7 @@ namespace object {
 namespace {
 
 template <typename ELFT>
-Optional<BuildIDRef> getBuildID(const ELFFile<ELFT> &Obj) {
+std::optional<BuildIDRef> getBuildID(const ELFFile<ELFT> &Obj) {
   auto PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
     consumeError(PhdrsOrErr.takeError());
@@ -45,7 +45,7 @@ Optional<BuildIDRef> getBuildID(const ELFFile<ELFT> &Obj) {
 
 } // namespace
 
-Optional<BuildIDRef> getBuildID(const ObjectFile *Obj) {
+std::optional<BuildIDRef> getBuildID(const ObjectFile *Obj) {
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(Obj))
     return getBuildID(O->getELFFile());
   if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(Obj))
@@ -54,10 +54,10 @@ Optional<BuildIDRef> getBuildID(const ObjectFile *Obj) {
     return getBuildID(O->getELFFile());
   if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Obj))
     return getBuildID(O->getELFFile());
-  return None;
+  return std::nullopt;
 }
 
-Optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
+std::optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
   auto GetDebugPath = [&](StringRef Directory) {
     SmallString<128> Path{Directory};
     sys::path::append(Path, ".build-id",
@@ -86,7 +86,7 @@ Optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
         return std::string(Path);
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 } // namespace object

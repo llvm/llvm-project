@@ -1671,7 +1671,8 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   // block can (non-trivially) reach itself.
   BasicBlock *BB = const_cast<BasicBlock *>(Inst->getParent());
   SmallVector<BasicBlock *> Succs(successors(BB));
-  return !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT);
+  return !Succs.empty() &&
+         !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.

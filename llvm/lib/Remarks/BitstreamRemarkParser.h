@@ -77,8 +77,8 @@ private:
 };
 
 Expected<std::unique_ptr<BitstreamRemarkParser>> createBitstreamParserFromMeta(
-    StringRef Buf, Optional<ParsedStringTable> StrTab = None,
-    Optional<StringRef> ExternalFilePrependPath = None);
+    StringRef Buf, Optional<ParsedStringTable> StrTab = std::nullopt,
+    Optional<StringRef> ExternalFilePrependPath = std::nullopt);
 
 } // end namespace remarks
 } // end namespace llvm

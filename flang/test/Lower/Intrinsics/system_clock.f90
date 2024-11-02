@@ -102,8 +102,8 @@ subroutine ss(count)
   ! CHECK:   }
   ! CHECK:   %[[V_17:[0-9]+]] = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
   ! CHECK:   fir.if %[[V_17]] {
-  ! CHECK:     %[[V_29]] = fir.convert %c0{{.*}}_i32 : (i32) -> i64
-  ! CHECK:     fir.store %[[V_29]] to %arg0 : !fir.ref<i64>
+  ! CHECK:     %[[C_0:c[0-9a-z_]+]] = arith.constant 0 : i64
+  ! CHECK:     fir.store %[[C_0]] to %arg0 : !fir.ref<i64>
   ! CHECK:   } else {
   ! CHECK:   }
   ! CHECK:   %[[V_18:[0-9]+]] = fir.zero_bits !fir.ptr<i64>

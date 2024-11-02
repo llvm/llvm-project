@@ -13,7 +13,7 @@ define void @test(ptr %cast) {
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
-; CHECK-NEXT:    li 30, 0
+; CHECK-NEXT:    li 30, 255
 ; CHECK-NEXT:    addi 29, 3, -8
 ; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    .p2align 5
@@ -22,10 +22,10 @@ define void @test(ptr %cast) {
 ; CHECK-NEXT:    lfdu 1, 8(29)
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 30, 30, 8
+; CHECK-NEXT:    addi 30, 30, -1
 ; CHECK-NEXT:    stfd 1, 0(29)
-; CHECK-NEXT:    cmpldi 30, 2040
-; CHECK-NEXT:    bne 0, .LBB0_1
+; CHECK-NEXT:    cmpldi 30, 0
+; CHECK-NEXT:    bc 12, 1, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    addi 1, 1, 64
 ; CHECK-NEXT:    ld 0, 16(1)

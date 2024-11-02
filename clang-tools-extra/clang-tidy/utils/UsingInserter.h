@@ -26,7 +26,7 @@ class UsingInserter {
 public:
   UsingInserter(const SourceManager &SourceMgr);
 
-  // Creates a \p using declaration fixit. Returns ``llvm::None`` on error
+  // Creates a \p using declaration fixit. Returns ``std::nullopt`` on error
   // or if the using declaration already exists.
   llvm::Optional<FixItHint>
   createUsingDeclaration(ASTContext &Context, const Stmt &Statement,

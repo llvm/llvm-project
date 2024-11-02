@@ -15,12 +15,12 @@
 
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsSubtarget.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -39,8 +39,9 @@ class MipsTargetMachine : public LLVMTargetMachine {
 public:
   MipsTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,
-                    Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                    CodeGenOpt::Level OL, bool JIT, bool isLittle);
+                    std::optional<Reloc::Model> RM,
+                    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                    bool JIT, bool isLittle);
   ~MipsTargetMachine() override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
@@ -83,8 +84,9 @@ class MipsebTargetMachine : public MipsTargetMachine {
 public:
   MipsebTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                      CodeGenOpt::Level OL, bool JIT);
+                      std::optional<Reloc::Model> RM,
+                      std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                      bool JIT);
 };
 
 /// Mips32/64 little endian target machine.
@@ -95,8 +97,9 @@ class MipselTargetMachine : public MipsTargetMachine {
 public:
   MipselTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                      CodeGenOpt::Level OL, bool JIT);
+                      std::optional<Reloc::Model> RM,
+                      std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                      bool JIT);
 };
 
 } // end namespace llvm

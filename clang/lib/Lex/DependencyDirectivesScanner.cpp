@@ -530,7 +530,7 @@ Scanner::tryLexIdentifierOrSkipLine(const char *&First, const char *const End) {
   if (Tok.isNot(tok::raw_identifier)) {
     if (!Tok.is(tok::eod))
       skipLine(First, End);
-    return None;
+    return std::nullopt;
   }
 
   bool NeedsCleaning = Tok.Flags & clang::Token::NeedsCleaning;

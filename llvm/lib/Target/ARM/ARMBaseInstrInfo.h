@@ -104,13 +104,13 @@ protected:
   /// If the specific machine instruction is an instruction that moves/copies
   /// value from one register to another register return destination and source
   /// registers as machine operands.
-  Optional<DestSourcePair>
+  std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
   /// Specialization of \ref TargetInstrInfo::describeLoadedValue, used to
   /// enhance debug entry value descriptions for ARM targets.
-  Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
-                                                 Register Reg) const override;
+  std::optional<ParamLoadedValue>
+  describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
 public:
   // Return whether the target has an explicit NOP encoding.
@@ -531,8 +531,8 @@ public:
     return MI.getOperand(3).getReg();
   }
 
-  Optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
-                                      Register Reg) const override;
+  std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                           Register Reg) const override;
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the

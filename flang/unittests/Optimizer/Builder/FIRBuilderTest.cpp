@@ -28,7 +28,7 @@ public:
     // Set the insertion point in the function entry block.
     mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
     mlir::func::FuncOp func = mlir::func::FuncOp::create(
-        loc, "func1", builder.getFunctionType(llvm::None, llvm::None));
+        loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
     mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
@@ -176,7 +176,7 @@ TEST_F(FIRBuilderTest, getNamedFunction) {
   EXPECT_EQ(nullptr, func2);
   auto loc = builder.getUnknownLoc();
   func2 = builder.createFunction(
-      loc, "func2", builder.getFunctionType(llvm::None, llvm::None));
+      loc, "func2", builder.getFunctionType(std::nullopt, std::nullopt));
   auto func2query = builder.getNamedFunction("func2");
   EXPECT_EQ(func2, func2query);
 }

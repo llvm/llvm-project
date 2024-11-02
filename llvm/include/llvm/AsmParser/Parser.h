@@ -87,7 +87,9 @@ struct ParsedModuleAndIndex {
 ParsedModuleAndIndex parseAssemblyFileWithIndex(
     StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+      return std::nullopt;
+    });
 
 /// Only for use in llvm-as for testing; this does not produce a valid module.
 ParsedModuleAndIndex parseAssemblyFileWithIndexNoUpgradeDebugInfo(
@@ -126,7 +128,9 @@ parseSummaryIndexAssemblyString(StringRef AsmString, SMDiagnostic &Err);
 std::unique_ptr<Module> parseAssembly(
     MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+      return std::nullopt;
+    });
 
 /// Parse LLVM Assembly including the summary index from a MemoryBuffer.
 ///
@@ -166,7 +170,9 @@ parseSummaryIndexAssembly(MemoryBufferRef F, SMDiagnostic &Err);
 bool parseAssemblyInto(
     MemoryBufferRef F, Module *M, ModuleSummaryIndex *Index, SMDiagnostic &Err,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+      return std::nullopt;
+    });
 
 /// Parse a type and a constant value in the given string.
 ///

@@ -22,7 +22,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
-#include "llvm/ADT/Optional.h"
 
 namespace clang {
 namespace interp {
@@ -36,7 +35,7 @@ template <class Emitter>
 class ByteCodeStmtGen final : public ByteCodeExprGen<Emitter> {
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
-  using OptLabelTy = llvm::Optional<LabelTy>;
+  using OptLabelTy = std::optional<LabelTy>;
   using CaseMap = llvm::DenseMap<const SwitchCase *, LabelTy>;
 
 public:
@@ -69,7 +68,7 @@ private:
 
 private:
   /// Type of the expression returned by the function.
-  llvm::Optional<PrimType> ReturnType;
+  std::optional<PrimType> ReturnType;
 
   /// Switch case mapping.
   CaseMap CaseLabels;

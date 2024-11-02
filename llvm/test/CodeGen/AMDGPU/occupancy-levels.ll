@@ -40,7 +40,7 @@ define amdgpu_kernel void @limited_occupancy_18() #1 {
 
 ; GCN-LABEL: {{^}}limited_occupancy_19:
 ; GFX9:       ; Occupancy: 10
-; GFX1010:    ; Occupancy: 18
+; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 define amdgpu_kernel void @limited_occupancy_19() #2 {

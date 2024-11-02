@@ -48,7 +48,7 @@ llvm::Optional<FoldingRange> toFoldingRange(SourceRange SR,
   // file. Macros have their own FileID so this also checks if locations are not
   // within the macros.
   if ((Begin.first != SM.getMainFileID()) || (End.first != SM.getMainFileID()))
-    return llvm::None;
+    return std::nullopt;
   FoldingRange Range;
   Range.startCharacter = SM.getColumnNumber(Begin.first, Begin.second) - 1;
   Range.startLine = SM.getLineNumber(Begin.first, Begin.second) - 1;
@@ -69,7 +69,7 @@ extractFoldingRange(const syntax::Node *Node,
     const auto *RBrace = cast_or_null<syntax::Leaf>(
         Stmt->findChild(syntax::NodeRole::CloseParen));
     if (!LBrace || !RBrace)
-      return llvm::None;
+      return std::nullopt;
     // Fold the entire range within braces, including whitespace.
     const SourceLocation LBraceLocInfo =
                              TM.getToken(LBrace->getTokenKey())->endLocation(),
@@ -82,7 +82,7 @@ extractFoldingRange(const syntax::Node *Node,
     if (Range && Range->startLine != Range->endLine)
       return Range;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Traverse the tree and collect folding ranges along the way.

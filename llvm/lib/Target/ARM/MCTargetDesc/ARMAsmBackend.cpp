@@ -47,11 +47,12 @@ public:
 };
 } // end anonymous namespace
 
-Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-Optional<MCFixupKind> ARMAsmBackendELF::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind>
+ARMAsmBackendELF::getFixupKind(StringRef Name) const {
   unsigned Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/ARM.def"

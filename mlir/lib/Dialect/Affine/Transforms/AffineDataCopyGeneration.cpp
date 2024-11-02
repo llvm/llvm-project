@@ -141,7 +141,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
     if ((forOp = dyn_cast<AffineForOp>(&*it)) && copyNests.count(forOp) == 0) {
       // Perform the copying up unti this 'for' op first.
       (void)affineDataCopyGenerate(/*begin=*/curBegin, /*end=*/it, copyOptions,
-                                   /*filterMemRef=*/llvm::None, copyNests);
+                                   /*filterMemRef=*/std::nullopt, copyNests);
 
       // Returns true if the footprint is known to exceed capacity.
       auto exceedsCapacity = [&](AffineForOp forOp) {
@@ -176,7 +176,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
         // loop's footprint fits.
         (void)affineDataCopyGenerate(/*begin=*/it, /*end=*/std::next(it),
                                      copyOptions,
-                                     /*filterMemRef=*/llvm::None, copyNests);
+                                     /*filterMemRef=*/std::nullopt, copyNests);
       }
       // Get to the next load or store op after 'forOp'.
       curBegin = std::find_if(std::next(it), block->end(), [&](Operation &op) {
@@ -200,7 +200,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
     // Exclude the affine.yield - hence, the std::prev.
     (void)affineDataCopyGenerate(/*begin=*/curBegin,
                                  /*end=*/std::prev(block->end()), copyOptions,
-                                 /*filterMemRef=*/llvm::None, copyNests);
+                                 /*filterMemRef=*/std::nullopt, copyNests);
   }
 }
 

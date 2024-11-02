@@ -264,7 +264,7 @@ static llvm::Optional<speed_t> baudRateToConst(unsigned int baud_rate) {
     return B4000000;
 #endif
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 #endif

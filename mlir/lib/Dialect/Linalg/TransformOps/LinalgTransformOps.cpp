@@ -1226,7 +1226,7 @@ transform::TileReductionUsingForeachThreadOp::applyToOne(
   FailureOr<linalg::ForeachThreadReductionTilingResult> result =
       linalg::tileReductionUsingForeachThread(
           rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
-          numThreadResults, /*mapping=*/llvm::None);
+          numThreadResults, /*mapping=*/std::nullopt);
 
   if (failed(result)) {
     results.assign(3, nullptr);
@@ -1804,7 +1804,7 @@ struct VectorizationPattern : public RewritePattern {
                                 PatternRewriter &rewriter) const override {
     LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
     if (!linalgOp)
-      return failure();
+      return rewriter.notifyMatchFailure(op, "expected Linalg Op");
     return vectorize(rewriter, linalgOp);
   }
 };

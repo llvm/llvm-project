@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -force-vector-width=16 -force-vector-interleave=1 -S < %s | FileCheck %s
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-target-supports-scalable-vectors=true -force-vector-width=16 -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefix=SVE
+; RUN: opt -passes=loop-vectorize -force-vector-width=16 -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -scalable-vectorization=on -force-target-supports-scalable-vectors=true -force-vector-width=16 -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefix=SVE
 
 define i64 @test(ptr noalias readonly %addr) {
 ; CHECK-LABEL: @test(

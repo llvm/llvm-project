@@ -481,7 +481,8 @@ void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
 }
 
 // Try to fill in Layout from Ty, returning true on success.  Alignment is
-// the alignment of the vector, or None if the ABI default should be used.
+// the alignment of the vector, or std::nullopt if the ABI default should be
+// used.
 Optional<VectorLayout>
 ScalarizerVisitor::getVectorLayout(Type *Ty, Align Alignment,
                                    const DataLayout &DL) {

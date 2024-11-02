@@ -32,16 +32,16 @@ GlobalTypeTableBuilder::GlobalTypeTableBuilder(BumpPtrAllocator &Storage)
 
 GlobalTypeTableBuilder::~GlobalTypeTableBuilder() = default;
 
-Optional<TypeIndex> GlobalTypeTableBuilder::getFirst() {
+std::optional<TypeIndex> GlobalTypeTableBuilder::getFirst() {
   if (empty())
-    return None;
+    return std::nullopt;
 
   return TypeIndex(TypeIndex::FirstNonSimpleIndex);
 }
 
-Optional<TypeIndex> GlobalTypeTableBuilder::getNext(TypeIndex Prev) {
+std::optional<TypeIndex> GlobalTypeTableBuilder::getNext(TypeIndex Prev) {
   if (++Prev == nextTypeIndex())
-    return None;
+    return std::nullopt;
   return Prev;
 }
 

@@ -227,7 +227,7 @@ static Optional<SVal> getSValForVar(const Expr *CondVarExpr,
       if (auto FieldL = State->getSVal(ME, LCtx).getAs<Loc>())
         return State->getRawSVal(*FieldL, FD->getType());
 
-  return None;
+  return std::nullopt;
 }
 
 static Optional<const llvm::APSInt *>
@@ -236,7 +236,7 @@ getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
   if (Optional<SVal> V = getSValForVar(CondVarExpr, N))
     if (auto CI = V->getAs<nonloc::ConcreteInt>())
       return &CI->getValue();
-  return None;
+  return std::nullopt;
 }
 
 static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
@@ -538,7 +538,7 @@ private:
   /// Dereferences fields up to a given recursion limit.
   /// Note that \p Vec is passed by value, leading to quadratic copying cost,
   /// but it's OK in practice since its length is limited to DEREFERENCE_LIMIT.
-  /// \return A chain fields leading to the region of interest or None.
+  /// \return A chain fields leading to the region of interest or std::nullopt.
   const Optional<RegionVector>
   findRegionOfInterestInRecord(const RecordDecl *RD, ProgramStateRef State,
                                const MemRegion *R, const RegionVector &Vec = {},
@@ -619,7 +619,7 @@ static bool potentiallyWritesIntoIvar(const Decl *Parent,
 /// Dereferences fields up to a given recursion limit.
 /// Note that \p Vec is passed by value, leading to quadratic copying cost,
 /// but it's OK in practice since its length is limited to DEREFERENCE_LIMIT.
-/// \return A chain fields leading to the region of interest or None.
+/// \return A chain fields leading to the region of interest or std::nullopt.
 const Optional<NoStoreFuncVisitor::RegionVector>
 NoStoreFuncVisitor::findRegionOfInterestInRecord(
     const RecordDecl *RD, ProgramStateRef State, const MemRegion *R,
@@ -627,11 +627,11 @@ NoStoreFuncVisitor::findRegionOfInterestInRecord(
     int depth /* = 0 */) {
 
   if (depth == DEREFERENCE_LIMIT) // Limit the recursion depth.
-    return None;
+    return std::nullopt;
 
   if (const auto *RDX = dyn_cast<CXXRecordDecl>(RD))
     if (!RDX->hasDefinition())
-      return None;
+      return std::nullopt;
 
   // Recursively examine the base classes.
   // Note that following base classes does not increase the recursion depth.
@@ -669,7 +669,7 @@ NoStoreFuncVisitor::findRegionOfInterestInRecord(
         return Out;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 PathDiagnosticPieceRef
@@ -933,7 +933,7 @@ private:
     ProgramStateRef State = N->getState();
     auto *LCtx = N->getLocationContext();
     if (!S)
-      return None;
+      return std::nullopt;
 
     if (const auto *DS = dyn_cast<DeclStmt>(S)) {
       if (const auto *VD = dyn_cast<VarDecl>(DS->getSingleDecl()))
@@ -948,7 +948,7 @@ private:
         return RHS->getBeginLoc();
       }
     }
-    return None;
+    return std::nullopt;
   }
 };
 

@@ -681,7 +681,7 @@ void RewriteInstance::parseBuildID() {
 
 Optional<std::string> RewriteInstance::getPrintableBuildID() const {
   if (BuildID.empty())
-    return None;
+    return std::nullopt;
 
   std::string Str;
   raw_string_ostream OS(Str);
@@ -4763,7 +4763,7 @@ void RewriteInstance::updateELFSymbolTable(
     assert(SymbolName && "cannot get symbol name");
 
     auto updateSymbolValue = [&](const StringRef Name,
-                                 Optional<uint64_t> Value = None) {
+                                 Optional<uint64_t> Value = std::nullopt) {
       NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
       NewSymbol.st_shndx = ELF::SHN_ABS;
       outs() << "BOLT-INFO: setting " << Name << " to 0x"

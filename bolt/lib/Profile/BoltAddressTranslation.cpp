@@ -263,7 +263,7 @@ BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
 
   auto Iter = Maps.find(FuncAddress);
   if (Iter == Maps.end())
-    return None;
+    return std::nullopt;
 
   const MapTy &Map = Iter->second;
   auto FromIter = Map.upper_bound(From);

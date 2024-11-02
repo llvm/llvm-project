@@ -309,19 +309,19 @@ def WriteVFWRedOV     : SchedWrite;
 
 // 15. Vector Mask Instructions
 // 15.1. Vector Mask-Register Logical Instructions
-def WriteVMALUV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMALUV">;
 // 15.2. Vector Mask Population Count
-def WriteVMPopV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMPopV">;
 // 15.3. Vector Find-First-Set Mask Bit
-def WriteVMFFSV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMFFSV">;
 // 15.4. Vector Set-Before-First Mask Bit
 // 15.5. Vector Set-Including-First Mask Bit
 // 15.6. Vector Set-only-First Mask Bit
-def WriteVMSFSV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMSFSV">;
 // 15.8. Vector Iota Instruction
-def WriteVMIotV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMIotV">;
 // 15.9. Vector Element Index Instruction
-def WriteVMIdxV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -529,17 +529,17 @@ def ReadVFWRedOV0     : SchedRead;
 
 // 15. Vector Mask Instructions
 // 15.1. Vector Mask-Register Logical Instructions
-def ReadVMALUV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMALUV">;
 // 15.2. Vector Mask Population Count
-def ReadVMPopV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMPopV">;
 // 15.3. Vector Find-First-Set Mask Bit
-def ReadVMFFSV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMFFSV">;
 // 15.4. Vector Set-Before-First Mask Bit
 // 15.5. Vector Set-Including-First Mask Bit
 // 15.6. Vector Set-only-First Mask Bit
-def ReadVMSFSV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMSFSV">;
 // 15.8. Vector Iota Instruction
-def ReadVMIotV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMIotV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -730,12 +730,12 @@ def : WriteRes<WriteVFWRedV, []>;
 def : WriteRes<WriteVFWRedOV, []>;
 
 // 15. Vector Mask Instructions
-def : WriteRes<WriteVMALUV, []>;
-def : WriteRes<WriteVMPopV, []>;
-def : WriteRes<WriteVMFFSV, []>;
-def : WriteRes<WriteVMSFSV, []>;
-def : WriteRes<WriteVMIotV, []>;
-def : WriteRes<WriteVMIdxV, []>;
+defm "" : LMULWriteRes<"WriteVMALUV", []>;
+defm "" : LMULWriteRes<"WriteVMPopV", []>;
+defm "" : LMULWriteRes<"WriteVMFFSV", []>;
+defm "" : LMULWriteRes<"WriteVMSFSV", []>;
+defm "" : LMULWriteRes<"WriteVMIotV", []>;
+defm "" : LMULWriteRes<"WriteVMIdxV", []>;
 
 // 16. Vector Permutation Instructions
 def : WriteRes<WriteVIMovVX, []>;
@@ -885,11 +885,11 @@ def : ReadAdvance<ReadVFWRedOV, 0>;
 def : ReadAdvance<ReadVFWRedOV0, 0>;
 
 // 15. Vector Mask Instructions
-def : ReadAdvance<ReadVMALUV, 0>;
-def : ReadAdvance<ReadVMPopV, 0>;
-def : ReadAdvance<ReadVMFFSV, 0>;
-def : ReadAdvance<ReadVMSFSV, 0>;
-def : ReadAdvance<ReadVMIotV, 0>;
+defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
+defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
+defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
+defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
+defm "" : LMULReadAdvance<"ReadVMIotV", 0>;
 
 // 16. Vector Permutation Instructions
 def : ReadAdvance<ReadVIMovVX, 0>;

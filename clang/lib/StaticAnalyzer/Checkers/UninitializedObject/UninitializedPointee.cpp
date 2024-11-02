@@ -234,7 +234,7 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
   // The region we'd like to acquire.
   const auto *R = V.getAsRegion()->getAs<TypedValueRegion>();
   if (!R)
-    return None;
+    return std::nullopt;
 
   VisitedRegions.insert(R);
 
@@ -245,7 +245,7 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
 
     R = Tmp->getAs<TypedValueRegion>();
     if (!R)
-      return None;
+      return std::nullopt;
 
     // We found a cyclic pointer, like int *ptr = (int *)&ptr.
     if (!VisitedRegions.insert(R).second)

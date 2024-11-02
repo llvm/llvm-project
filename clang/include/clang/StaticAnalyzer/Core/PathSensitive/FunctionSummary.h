@@ -90,7 +90,7 @@ public:
     MapTy::const_iterator I = Map.find(D);
     if (I != Map.end() && I->second.InlineChecked)
       return I->second.MayInline;
-    return None;
+    return std::nullopt;
   }
 
   void markVisitedBasicBlock(unsigned ID, const Decl* D, unsigned TotalIDs) {

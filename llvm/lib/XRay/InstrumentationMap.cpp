@@ -38,14 +38,14 @@ Optional<int32_t> InstrumentationMap::getFunctionId(uint64_t Addr) const {
   auto I = FunctionIds.find(Addr);
   if (I != FunctionIds.end())
     return I->second;
-  return None;
+  return std::nullopt;
 }
 
 Optional<uint64_t> InstrumentationMap::getFunctionAddr(int32_t FuncId) const {
   auto I = FunctionAddresses.find(FuncId);
   if (I != FunctionAddresses.end())
     return I->second;
-  return None;
+  return std::nullopt;
 }
 
 using RelocMap = DenseMap<uint64_t, uint64_t>;

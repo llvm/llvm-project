@@ -771,9 +771,9 @@ canonicalizeImmediatelyDeclaredConstraint(const ASTContext &C, Expr *IDC,
 
   if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
     NewIDC = new (C) CXXFoldExpr(
-        OrigFold->getType(), /*Callee*/nullptr, SourceLocation(), NewIDC,
+        OrigFold->getType(), /*Callee*/ nullptr, SourceLocation(), NewIDC,
         BinaryOperatorKind::BO_LAnd, SourceLocation(), /*RHS=*/nullptr,
-        SourceLocation(), /*NumExpansions=*/None);
+        SourceLocation(), /*NumExpansions=*/std::nullopt);
   return NewIDC;
 }
 
@@ -797,12 +797,13 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                           PEnd = Params->end();
        P != PEnd; ++P) {
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P)) {
-      TemplateTypeParmDecl *NewTTP = TemplateTypeParmDecl::Create(*this,
-          getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+      TemplateTypeParmDecl *NewTTP = TemplateTypeParmDecl::Create(
+          *this, getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
           TTP->getDepth(), TTP->getIndex(), nullptr, false,
           TTP->isParameterPack(), TTP->hasTypeConstraint(),
-          TTP->isExpandedParameterPack() ?
-          llvm::Optional<unsigned>(TTP->getNumExpansionParameters()) : None);
+          TTP->isExpandedParameterPack()
+              ? llvm::Optional<unsigned>(TTP->getNumExpansionParameters())
+              : std::nullopt);
       if (const auto *TC = TTP->getTypeConstraint()) {
         QualType ParamAsArgument(NewTTP->getTypeForDecl(), 0);
         Expr *NewIDC = canonicalizeImmediatelyDeclaredConstraint(
@@ -1139,7 +1140,7 @@ ASTContext::getModulesWithMergedDefinition(const NamedDecl *Def) {
   auto MergedIt =
       MergedDefModules.find(cast<NamedDecl>(Def->getCanonicalDecl()));
   if (MergedIt == MergedDefModules.end())
-    return None;
+    return std::nullopt;
   return MergedIt->second;
 }
 
@@ -1197,7 +1198,7 @@ void ASTContext::addLazyModuleInitializers(Module *M, ArrayRef<uint32_t> IDs) {
 ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
   auto It = ModuleInitializers.find(M);
   if (It == ModuleInitializers.end())
-    return None;
+    return std::nullopt;
 
   auto *Inits = It->second;
   Inits->resolve(*this);
@@ -2743,7 +2744,7 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
   bool IsBitIntType = Field->getType()->isBitIntType();
   if (!Field->getType()->isReferenceType() && !IsBitIntType &&
       !Context.hasUniqueObjectRepresentations(Field->getType()))
-    return llvm::None;
+    return std::nullopt;
 
   int64_t FieldSizeInBits =
       Context.toBits(Context.getTypeSizeInChars(Field->getType()));
@@ -2752,14 +2753,14 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
     if (IsBitIntType) {
       if ((unsigned)BitfieldSize >
           cast<BitIntType>(Field->getType())->getNumBits())
-        return llvm::None;
+        return std::nullopt;
     } else if (BitfieldSize > FieldSizeInBits) {
-      return llvm::None;
+      return std::nullopt;
     }
     FieldSizeInBits = BitfieldSize;
   } else if (IsBitIntType &&
              !Context.hasUniqueObjectRepresentations(Field->getType())) {
-    return llvm::None;
+    return std::nullopt;
   }
   return FieldSizeInBits;
 }
@@ -2777,11 +2778,11 @@ static llvm::Optional<int64_t> structSubobjectsHaveUniqueObjectRepresentations(
     llvm::Optional<int64_t> SizeInBits =
         getSubobjectSizeInBits(Subobject, Context);
     if (!SizeInBits)
-      return llvm::None;
+      return std::nullopt;
     if (*SizeInBits != 0) {
       int64_t Offset = getSubobjectOffset(Subobject, Context, Layout);
       if (Offset != CurOffsetInBits)
-        return llvm::None;
+        return std::nullopt;
       CurOffsetInBits += *SizeInBits;
     }
   }
@@ -2797,7 +2798,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
   int64_t CurOffsetInBits = 0;
   if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RD)) {
     if (ClassDecl->isDynamicClass())
-      return llvm::None;
+      return std::nullopt;
 
     SmallVector<CXXRecordDecl *, 4> Bases;
     for (const auto &Base : ClassDecl->bases()) {
@@ -2814,7 +2815,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
         structSubobjectsHaveUniqueObjectRepresentations(Bases, CurOffsetInBits,
                                                         Context, Layout);
     if (!OffsetAfterBases)
-      return llvm::None;
+      return std::nullopt;
     CurOffsetInBits = *OffsetAfterBases;
   }
 
@@ -2822,7 +2823,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
       structSubobjectsHaveUniqueObjectRepresentations(
           RD->fields(), CurOffsetInBits, Context, Layout);
   if (!OffsetAfterFields)
-    return llvm::None;
+    return std::nullopt;
   CurOffsetInBits = *OffsetAfterFields;
 
   return CurOffsetInBits;
@@ -5218,7 +5219,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
     QualType ArgType = getTypeDeclType(TTP);
     if (TTP->isParameterPack())
-      ArgType = getPackExpansionType(ArgType, None);
+      ArgType = getPackExpansionType(ArgType, std::nullopt);
 
     Arg = TemplateArgument(ArgType);
   } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
@@ -5235,8 +5236,8 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
     if (NTTP->isParameterPack())
-      E = new (*this) PackExpansionExpr(DependentTy, E, NTTP->getLocation(),
-                                        None);
+      E = new (*this)
+          PackExpansionExpr(DependentTy, E, NTTP->getLocation(), std::nullopt);
     Arg = TemplateArgument(E);
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
@@ -11923,7 +11924,7 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
         [](ASTContext &, const NamedDecl *ND) -> llvm::Optional<unsigned> {
           if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
             return RD->getDeviceLambdaManglingNumber();
-          return llvm::None;
+          return std::nullopt;
         },
         /*IsAux=*/true);
   case TargetCXXABI::Microsoft:

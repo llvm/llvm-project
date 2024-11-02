@@ -37,15 +37,15 @@ Annotations::Annotations(llvm::StringRef Text) {
       All.push_back(
           {Code.size(), size_t(-1), Name.value_or(""), Payload.value_or("")});
       Points[Name.value_or("")].push_back(All.size() - 1);
-      Name = llvm::None;
-      Payload = llvm::None;
+      Name = std::nullopt;
+      Payload = std::nullopt;
       continue;
     }
     if (Text.consume_front("[[")) {
       OpenRanges.push_back(
           {Code.size(), size_t(-1), Name.value_or(""), Payload.value_or("")});
-      Name = llvm::None;
-      Payload = llvm::None;
+      Name = std::nullopt;
+      Payload = std::nullopt;
       continue;
     }
     Require(!Name, "$name should be followed by ^ or [[");

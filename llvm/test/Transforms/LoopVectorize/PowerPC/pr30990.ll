@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -mcpu=pwr8 -mattr=+vsx -force-vector-interleave=1 -vectorizer-maximize-bandwidth=0 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mcpu=pwr8 -mattr=+vsx -force-vector-interleave=1 -vectorizer-maximize-bandwidth=0 -S | FileCheck %s
 
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -38,7 +38,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 
 define signext i16 @foo2(i8* readonly %ptr, i32 signext %l) {
 entry:
-  %idx.ext = sext i32 %l to i64 
+  %idx.ext = sext i32 %l to i64
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %idx.ext
   %cmp7 = icmp sgt i32 %l, 0
   br i1 %cmp7, label %while.body.preheader, label %while.end
@@ -50,8 +50,8 @@ while.body:                                       ; preds = %while.body.preheade
   %count.09 = phi i16 [ %add, %while.body ], [ 0, %while.body.preheader ]
   %ptr.addr.08 = phi i8* [ %incdec.ptr, %while.body ], [ %ptr, %while.body.preheader ]
   %0 = load i8, i8* %ptr.addr.08, align 1
-  %cmp1 = icmp slt i8 %0, -64 
-  %cond = zext i1 %cmp1 to i16 
+  %cmp1 = icmp slt i8 %0, -64
+  %cond = zext i1 %cmp1 to i16
   %add = add nsw i16 %cond, %count.09
   %incdec.ptr = getelementptr inbounds i8, i8* %ptr.addr.08, i64 1
   %cmp = icmp ult i8* %incdec.ptr, %add.ptr
@@ -72,7 +72,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 
 define signext i32 @foo3(i16* readonly %ptr, i32 signext %l) {
 entry:
-  %idx.ext = sext i32 %l to i64 
+  %idx.ext = sext i32 %l to i64
   %add.ptr = getelementptr inbounds i16, i16* %ptr, i64 %idx.ext
   %cmp7 = icmp sgt i32 %l, 0
   br i1 %cmp7, label %while.body.preheader, label %while.end
@@ -84,8 +84,8 @@ while.body:                                       ; preds = %while.body.preheade
   %count.09 = phi i32 [ %add, %while.body ], [ 0, %while.body.preheader ]
   %ptr.addr.16 = phi i16* [ %incdec.ptr, %while.body ], [ %ptr, %while.body.preheader ]
   %0 = load i16, i16* %ptr.addr.16, align 1
-  %cmp1 = icmp slt i16 %0, -64 
-  %cond = zext i1 %cmp1 to i32 
+  %cmp1 = icmp slt i16 %0, -64
+  %cond = zext i1 %cmp1 to i32
   %add = add nsw i32 %cond, %count.09
   %incdec.ptr = getelementptr inbounds i16, i16* %ptr.addr.16, i64 1
   %cmp = icmp ult i16* %incdec.ptr, %add.ptr
@@ -106,7 +106,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 
 define i64 @foo4(i16* readonly %ptr, i32 signext %l) {
 entry:
-  %idx.ext = sext i32 %l to i64 
+  %idx.ext = sext i32 %l to i64
   %add.ptr = getelementptr inbounds i16, i16* %ptr, i64 %idx.ext
   %cmp7 = icmp sgt i32 %l, 0
   br i1 %cmp7, label %while.body.preheader, label %while.end
@@ -118,8 +118,8 @@ while.body:                                       ; preds = %while.body.preheade
   %count.09 = phi i64 [ %add, %while.body ], [ 0, %while.body.preheader ]
   %ptr.addr.16 = phi i16* [ %incdec.ptr, %while.body ], [ %ptr, %while.body.preheader ]
   %0 = load i16, i16* %ptr.addr.16, align 1
-  %cmp1 = icmp slt i16 %0, -64 
-  %cond = zext i1 %cmp1 to i64 
+  %cmp1 = icmp slt i16 %0, -64
+  %cond = zext i1 %cmp1 to i64
   %add = add nsw i64 %cond, %count.09
   %incdec.ptr = getelementptr inbounds i16, i16* %ptr.addr.16, i64 1
   %cmp = icmp ult i16* %incdec.ptr, %add.ptr

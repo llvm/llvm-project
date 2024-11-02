@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -mtriple=aarch64-none-linux-gnu -mattr=+neon -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple=aarch64-none-linux-gnu -mattr=+neon -S | FileCheck %s
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; Function Attrs: nounwind

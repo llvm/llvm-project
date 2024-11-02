@@ -25,7 +25,6 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1782,7 +1781,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 
   // See if we can sink hardening the loaded value.
   auto SinkCheckToSingleUse =
-      [&](MachineInstr &MI) -> Optional<MachineInstr *> {
+      [&](MachineInstr &MI) -> std::optional<MachineInstr *> {
     Register DefReg = MI.getOperand(0).getReg();
 
     // We need to find a single use which we can sink the check. We can
@@ -1854,7 +1853,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
   };
 
   MachineInstr *MI = &InitialMI;
-  while (Optional<MachineInstr *> SingleUse = SinkCheckToSingleUse(*MI)) {
+  while (std::optional<MachineInstr *> SingleUse = SinkCheckToSingleUse(*MI)) {
     // Update which MI we're checking now.
     MI = *SingleUse;
     if (!MI)

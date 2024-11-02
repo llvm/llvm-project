@@ -252,8 +252,11 @@ public:
   }
 
   /// Get libdevice file for given architecture
-  std::string getLibDeviceFile(StringRef Gpu) const {
-    return LibDeviceMap.lookup(Gpu);
+  StringRef getLibDeviceFile(StringRef Gpu) const {
+    auto Loc = LibDeviceMap.find(Gpu);
+    if (Loc == LibDeviceMap.end())
+      return "";
+    return Loc->second;
   }
 
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -263,7 +266,7 @@ public:
   void detectHIPRuntime();
 
   /// Get the values for --rocm-device-lib-path arguments
-  std::vector<std::string> getRocmDeviceLibPathArg() const {
+  ArrayRef<std::string> getRocmDeviceLibPathArg() const {
     return RocmDeviceLibPathArg;
   }
 
@@ -273,7 +276,7 @@ public:
   /// Get the value for --hip-version argument
   StringRef getHIPVersionArg() const { return HIPVersionArg; }
 
-  std::string getHIPVersion() const { return DetectedVersion; }
+  StringRef getHIPVersion() const { return DetectedVersion; }
 };
 
 } // end namespace driver

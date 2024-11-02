@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-vectorize -S 2>&1 | FileCheck %s
-; RUN: opt < %s -debugify -loop-vectorize -S | FileCheck %s -check-prefix DEBUGLOC
+; RUN: opt < %s -passes=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=debugify,loop-vectorize -S | FileCheck %s -check-prefix DEBUGLOC
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test makes sure we don't duplicate the loop vectorizer's metadata

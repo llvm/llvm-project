@@ -1,5 +1,5 @@
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
-; RUN: opt -S -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
 
 ; CHECK-LABEL: @postinc
 ; CHECK-LABEL: scalar.ph:
@@ -99,8 +99,8 @@ entry:
 for.body:
   %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %inc.lag1 = phi i32* [ %base, %entry ], [ %tmp, %for.body]
-  %inc.lag2 = phi i32* [ undef, %entry ], [ %inc.lag1, %for.body]  
-  %tmp = getelementptr inbounds i32, i32* %inc.lag1, i64 1    
+  %inc.lag2 = phi i32* [ undef, %entry ], [ %inc.lag1, %for.body]
+  %tmp = getelementptr inbounds i32, i32* %inc.lag1, i64 1
   %inc = add nsw i32 %inc.phi, 1
   %cmp = icmp eq i32 %inc, %k
   br i1 %cmp, label %for.end, label %for.body

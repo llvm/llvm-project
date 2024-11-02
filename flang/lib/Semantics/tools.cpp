@@ -806,34 +806,6 @@ bool IsModuleProcedure(const Symbol &symbol) {
   return ClassifyProcedure(symbol) == ProcedureDefinitionClass::Module;
 }
 
-PotentialComponentIterator::const_iterator FindPolymorphicPotentialComponent(
-    const DerivedTypeSpec &derived) {
-  PotentialComponentIterator potentials{derived};
-  return std::find_if(
-      potentials.begin(), potentials.end(), [](const Symbol &component) {
-        if (const auto *details{component.detailsIf<ObjectEntityDetails>()}) {
-          const DeclTypeSpec *type{details->type()};
-          return type && type->IsPolymorphic();
-        }
-        return false;
-      });
-}
-
-bool IsOrContainsPolymorphicComponent(const Symbol &original) {
-  const Symbol &symbol{ResolveAssociations(original)};
-  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (const DeclTypeSpec * type{details->type()}) {
-      if (type->IsPolymorphic()) {
-        return true;
-      }
-      if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-        return (bool)FindPolymorphicPotentialComponent(*derived);
-      }
-    }
-  }
-  return false;
-}
-
 class ImageControlStmtHelper {
   using ImageControlStmts =
       std::variant<parser::ChangeTeamConstruct, parser::CriticalConstruct,
@@ -991,9 +963,8 @@ bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
 }
 
-std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
+std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const Scope &scope, const Symbol &symbol) {
-  CHECK(symbol.owner().IsDerivedType()); // symbol must be a component
   if (symbol.attrs().test(Attr::PRIVATE)) {
     if (FindModuleFileContaining(scope)) {
       // Don't enforce component accessibility checks in module files;
@@ -1003,7 +974,7 @@ std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
         moduleScope{FindModuleContaining(symbol.owner())}) {
       if (!moduleScope->Contains(scope)) {
         return parser::MessageFormattedText{
-            "PRIVATE component '%s' is only accessible within module '%s'"_err_en_US,
+            "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
             symbol.name(), moduleScope->GetName().value()};
       }
     }
@@ -1131,6 +1102,9 @@ ComponentIterator<componentKind>::const_iterator::PlanComponentTraversal(
           traverse = !IsPointer(component);
         } else if constexpr (componentKind == ComponentKind::Scope) {
           traverse = !IsAllocatableOrPointer(component);
+        } else if constexpr (componentKind ==
+            ComponentKind::PotentialAndPointer) {
+          traverse = !IsPointer(component);
         }
         if (traverse) {
           const Symbol &newTypeSymbol{derived->typeSymbol()};
@@ -1166,6 +1140,8 @@ static bool StopAtComponentPre(const Symbol &component) {
             component.get<ObjectEntityDetails>().type()->AsIntrinsic());
   } else if constexpr (componentKind == ComponentKind::Potential) {
     return !IsPointer(component);
+  } else if constexpr (componentKind == ComponentKind::PotentialAndPointer) {
+    return true;
   }
 }
 
@@ -1234,6 +1210,7 @@ template class ComponentIterator<ComponentKind::Direct>;
 template class ComponentIterator<ComponentKind::Ultimate>;
 template class ComponentIterator<ComponentKind::Potential>;
 template class ComponentIterator<ComponentKind::Scope>;
+template class ComponentIterator<ComponentKind::PotentialAndPointer>;
 
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &derived) {

@@ -88,7 +88,7 @@ TEST(StdLibTests, StdLibSet) {
   auto Add = [&](const LangOptions &LO,
                  std::vector<llvm::StringRef> SearchPath) {
     SourceManagerForFile SM("scratch", "");
-    SM.get().getFileManager().setVirtualFileSystem(FS.view(llvm::None));
+    SM.get().getFileManager().setVirtualFileSystem(FS.view(std::nullopt));
     HeaderSearch HS(/*HSOpts=*/nullptr, SM.get(), SM.get().getDiagnostics(), LO,
                     /*Target=*/nullptr);
     for (auto P : SearchPath)

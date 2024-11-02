@@ -431,6 +431,7 @@ class ArrayOfAttr<Dialect dialect, string attrName, string attrMnemonic,
     auto &front() const { return getValue().front(); }
     auto &back() const { return getValue().back(); }
     auto &operator[](size_t index) { return getValue()[index]; }
+    operator }] # returnType # [{() const { return getValue(); }
   }];
 }
 

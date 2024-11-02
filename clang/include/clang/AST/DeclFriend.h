@@ -108,11 +108,10 @@ public:
   friend class ASTNodeImporter;
   friend TrailingObjects;
 
-  static FriendDecl *Create(ASTContext &C, DeclContext *DC,
-                            SourceLocation L, FriendUnion Friend_,
-                            SourceLocation FriendL,
-                            ArrayRef<TemplateParameterList*> FriendTypeTPLists
-                            = None);
+  static FriendDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation L, FriendUnion Friend_,
+         SourceLocation FriendL,
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists = std::nullopt);
   static FriendDecl *CreateDeserialized(ASTContext &C, unsigned ID,
                                         unsigned FriendTypeNumTPLists);
 

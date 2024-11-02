@@ -110,7 +110,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
                               Value val, PredicateBuilder &builder,
                               DenseMap<Value, Position *> &inputs,
                               OperationPosition *pos,
-                              Optional<unsigned> ignoreOperand = llvm::None) {
+                              Optional<unsigned> ignoreOperand = std::nullopt) {
   assert(val.getType().isa<pdl::OperationType>() && "expected operation");
   pdl::OperationOp op = cast<pdl::OperationOp>(val.getDefiningOp());
   OperationPosition *opPos = cast<OperationPosition>(pos);
@@ -458,7 +458,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
             // For those, the index is empty.
             if (operands.size() == 1 &&
                 operands[0].getType().isa<pdl::RangeType>()) {
-              toVisit.emplace(operands[0], entry.value, llvm::None,
+              toVisit.emplace(operands[0], entry.value, std::nullopt,
                               entry.depth + 1);
               return;
             }

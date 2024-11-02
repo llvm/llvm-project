@@ -333,7 +333,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            bool EnableDebugify, bool VerifyDIPreserve) {
   bool VerifyEachPass = VK == VK_VerifyEachPass;
 
-  Optional<PGOOptions> P;
+  std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
     P = PGOOptions(ProfileFile, "", "", PGOOptions::IRInstr);
@@ -350,7 +350,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       P = PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction,
                      DebugInfoForProfiling, PseudoProbeForProfiling);
     else
-      P = None;
+      P = std::nullopt;
   }
   if (CSPGOKindFlag != NoCSPGO) {
     if (P && (P->Action == PGOOptions::IRInstr ||

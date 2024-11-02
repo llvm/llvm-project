@@ -948,9 +948,9 @@ computeContiguousStrides(MemRefType memRefType) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   if (failed(getStridesAndOffset(memRefType, strides, offset)))
-    return None;
+    return std::nullopt;
   if (!strides.empty() && strides.back() != 1)
-    return None;
+    return std::nullopt;
   // If no layout or identity layout, this is contiguous by definition.
   if (memRefType.getLayout().isIdentity())
     return strides;
@@ -964,9 +964,9 @@ computeContiguousStrides(MemRefType memRefType) {
     if (ShapedType::isDynamic(sizes[index + 1]) ||
         ShapedType::isDynamic(strides[index]) ||
         ShapedType::isDynamic(strides[index + 1]))
-      return None;
+      return std::nullopt;
     if (strides[index] != strides[index + 1] * sizes[index + 1])
-      return None;
+      return std::nullopt;
   }
   return strides;
 }

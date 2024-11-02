@@ -69,7 +69,7 @@ struct PlatformShellCommand {
   std::string m_output;
   int m_status = 0;
   int m_signo = 0;
-  Timeout<std::ratio<1>> m_timeout = llvm::None;
+  Timeout<std::ratio<1>> m_timeout = std::nullopt;
 };
 // SBPlatformConnectOptions
 SBPlatformConnectOptions::SBPlatformConnectOptions(const char *url)
@@ -261,7 +261,7 @@ void SBPlatformShellCommand::SetTimeoutSeconds(uint32_t sec) {
   LLDB_INSTRUMENT_VA(this, sec);
 
   if (sec == UINT32_MAX)
-    m_opaque_ptr->m_timeout = llvm::None;
+    m_opaque_ptr->m_timeout = std::nullopt;
   else
     m_opaque_ptr->m_timeout = std::chrono::seconds(sec);
 }

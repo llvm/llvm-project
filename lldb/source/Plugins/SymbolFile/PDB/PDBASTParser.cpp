@@ -663,7 +663,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     GetDeclarationForSymbol(type, decl);
     return std::make_shared<lldb_private::Type>(
         type.getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name),
-        llvm::None, nullptr, LLDB_INVALID_UID,
+        std::nullopt, nullptr, LLDB_INVALID_UID,
         lldb_private::Type::eEncodingIsUID, decl, func_sig_ast_type,
         lldb_private::Type::ResolveState::Full);
   } break;

@@ -76,7 +76,7 @@ public:
             DIE.getTag() == dwarf::DW_TAG_label) &&
            "Wrong type of input die");
 
-    if (Optional<uint64_t> LowPC =
+    if (std::optional<uint64_t> LowPC =
             dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc))) {
       if (!isDeadAddress(*LowPC, DIE.getDwarfUnit()->getVersion(),
                          Opts.Tombstone,
@@ -222,7 +222,8 @@ protected:
 
   bool isDeadAddress(uint64_t LowPC, uint16_t Version, TombstoneKind Tombstone,
                      uint8_t AddressByteSize) {
-    return isDeadAddressRange(LowPC, None, Version, Tombstone, AddressByteSize);
+    return isDeadAddressRange(LowPC, std::nullopt, Version, Tombstone,
+                              AddressByteSize);
   }
 
 private:
@@ -296,7 +297,6 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
   DWARFLinker DebugInfoLinker(&OutStreamer, DwarfLinkerClient::LLD);
 
   DebugInfoLinker.setEstimatedObjfilesAmount(1);
-  DebugInfoLinker.setAccelTableKind(DwarfLinkerAccelTableKind::None);
   DebugInfoLinker.setErrorHandler(ReportErr);
   DebugInfoLinker.setWarningHandler(ReportWarn);
   DebugInfoLinker.setNumThreads(Options.NumThreads);

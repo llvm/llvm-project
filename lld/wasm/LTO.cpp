@@ -55,7 +55,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   c.DebugPassManager = config->ltoDebugPassManager;
 
   if (config->relocatable)
-    c.RelocModel = None;
+    c.RelocModel = std::nullopt;
   else if (config->isPic)
     c.RelocModel = Reloc::PIC_;
   else
@@ -76,8 +76,9 @@ BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *s) {
   if (auto f = dyn_cast<DefinedFunction>(s))
-    replaceSymbol<UndefinedFunction>(f, f->getName(), None, None, 0,
-                                     f->getFile(), f->signature);
+    replaceSymbol<UndefinedFunction>(f, f->getName(), std::nullopt,
+                                     std::nullopt, 0, f->getFile(),
+                                     f->signature);
   else if (isa<DefinedData>(s))
     replaceSymbol<UndefinedData>(s, s->getName(), 0, s->getFile());
   else

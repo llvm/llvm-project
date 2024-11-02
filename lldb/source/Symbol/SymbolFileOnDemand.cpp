@@ -203,7 +203,7 @@ SymbolFileOnDemand::GetDynamicArrayInfoForUID(
   if (!m_debug_info_enabled) {
     LLDB_LOG(GetLog(), "[{0}] {1} is skipped", GetSymbolFileName(),
              __FUNCTION__);
-    return llvm::None;
+    return std::nullopt;
   }
   return m_sym_file_impl->GetDynamicArrayInfoForUID(type_uid, exe_ctx);
 }

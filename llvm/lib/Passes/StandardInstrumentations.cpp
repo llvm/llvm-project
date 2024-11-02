@@ -109,6 +109,18 @@ static cl::opt<std::string> OptBisectPrintIRPath(
 
 namespace {
 
+// An option for specifying an executable that will be called with the IR
+// everytime it changes in the opt pipeline.  It will also be called on
+// the initial IR as it enters the pipeline.  The executable will be passed
+// the name of a temporary file containing the IR and the PassID.  This may
+// be used, for example, to call llc on the IR and run a test to determine
+// which pass makes a change that changes the functioning of the IR.
+// The usual modifier options work as expected.
+static cl::opt<std::string>
+    TestChanged("exec-on-ir-change", cl::Hidden, cl::init(""),
+                cl::desc("exe called with module IR after each pass that "
+                         "changes it"));
+
 /// Extract Module out of \p IR unit. May return nullptr if \p IR does not match
 /// certain global filters. Will never return nullptr if \p Force is true.
 const Module *unwrapModule(Any IR, bool Force = false) {
@@ -482,6 +494,57 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
   }
 
   Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n" << After;
+}
+
+IRChangedTester::~IRChangedTester() {}
+
+void IRChangedTester::registerCallbacks(PassInstrumentationCallbacks &PIC) {
+  if (TestChanged != "")
+    TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
+}
+
+void IRChangedTester::handleIR(const std::string &S, StringRef PassID) {
+  // Store the body into a temporary file
+  static SmallVector<int> FD{-1};
+  SmallVector<StringRef> SR{S};
+  static SmallVector<std::string> FileName{""};
+  if (auto Err = prepareTempFiles(FD, SR, FileName)) {
+    dbgs() << "Unable to create temporary file.";
+    return;
+  }
+  static ErrorOr<std::string> Exe = sys::findProgramByName(TestChanged);
+  if (!Exe) {
+    dbgs() << "Unable to find test-changed executable.";
+    return;
+  }
+
+  StringRef Args[] = {TestChanged, FileName[0], PassID};
+  int Result = sys::ExecuteAndWait(*Exe, Args);
+  if (Result < 0) {
+    dbgs() << "Error executing test-changed executable.";
+    return;
+  }
+
+  if (auto Err = cleanUpTempFiles(FileName))
+    dbgs() << "Unable to remove temporary file.";
+}
+
+void IRChangedTester::handleInitialIR(Any IR) {
+  // Always test the initial module.
+  // Unwrap and print directly to avoid filtering problems in general routines.
+  std::string S;
+  generateIRRepresentation(IR, "Initial IR", S);
+  handleIR(S, "Initial IR");
+}
+
+void IRChangedTester::omitAfter(StringRef PassID, std::string &Name) {}
+void IRChangedTester::handleInvalidated(StringRef PassID) {}
+void IRChangedTester::handleFiltered(StringRef PassID, std::string &Name) {}
+void IRChangedTester::handleIgnored(StringRef PassID, std::string &Name) {}
+void IRChangedTester::handleAfter(StringRef PassID, std::string &Name,
+                                  const std::string &Before,
+                                  const std::string &After, Any) {
+  handleIR(After, PassID);
 }
 
 template <typename T>
@@ -1877,7 +1940,7 @@ std::string DotCfgChangeReporter::genHTML(StringRef Text, StringRef DotFile,
     return "Unable to find dot executable.";
 
   StringRef Args[] = {DotBinary, "-Tpdf", "-o", PDFFile, DotFile};
-  int Result = sys::ExecuteAndWait(*DotExe, Args, None);
+  int Result = sys::ExecuteAndWait(*DotExe, Args, std::nullopt);
   if (Result < 0)
     return "Error executing system dot.";
 
@@ -2119,6 +2182,9 @@ void StandardInstrumentations::registerCallbacks(
     Verify.registerCallbacks(PIC);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
+
+  ChangeTester.registerCallbacks(PIC);
+
   PrintCrashIR.registerCallbacks(PIC);
   // TimeProfiling records the pass running time cost.
   // Its 'BeforePassCallback' can be appended at the tail of all the

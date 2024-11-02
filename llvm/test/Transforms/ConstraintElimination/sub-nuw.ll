@@ -370,3 +370,29 @@ define i1 @wrapping_offset_sum(i64 %x) {
   %ult = icmp ugt i64 200, %add
   ret i1 %ult
 }
+
+define i1 @sub_nuw_i64_signed_min(i64 %a) {
+; CHECK-LABEL: @sub_nuw_i64_signed_min(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A:%.*]], -9223372036854775808
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i64 [[A]], [[SUB]]
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %sub = sub nuw i64 %a, -9223372036854775808
+  %c.1 = icmp ugt i64 %a, %sub
+  ret i1 %c.1
+}
+
+define i1 @sub_nuw_i64_signed_min_const(i64 %a) {
+; CHECK-LABEL: @sub_nuw_i64_signed_min_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG2:%.*]] = sub nuw i64 0, -9223372036854775808
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[NEG2]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %neg2 = sub nuw i64 0, -9223372036854775808
+  %c = icmp ugt i64 %neg2, 0
+  ret i1 %c
+}

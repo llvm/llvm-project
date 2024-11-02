@@ -500,7 +500,7 @@ TEST(ConstantsTest, BitcastToGEP) {
 
 bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
                                uint64_t AndValue,
-                               MaybeAlign FunctionAlign = llvm::None) {
+                               MaybeAlign FunctionAlign = std::nullopt) {
   Type *VoidType(Type::getVoidTy(Context));
   FunctionType *FuncType(FunctionType::get(VoidType, false));
   Function *Func(

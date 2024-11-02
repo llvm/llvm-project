@@ -35,7 +35,7 @@ enum PrimType : unsigned;
 class Block final {
 public:
   // Creates a new block.
-  Block(const llvm::Optional<unsigned> &DeclID, Descriptor *Desc,
+  Block(const std::optional<unsigned> &DeclID, Descriptor *Desc,
         bool IsStatic = false, bool IsExtern = false)
       : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
 
@@ -56,7 +56,7 @@ public:
   /// Returns the size of the block.
   InterpSize getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
-  llvm::Optional<unsigned> getDeclID() const { return DeclID; }
+  std::optional<unsigned> getDeclID() const { return DeclID; }
 
   /// Returns a pointer to the stored data.
   char *data() { return reinterpret_cast<char *>(this + 1); }
@@ -98,7 +98,7 @@ protected:
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
   /// Unique identifier of the declaration.
-  llvm::Optional<unsigned> DeclID;
+  std::optional<unsigned> DeclID;
   /// Flag indicating if the block has static storage duration.
   bool IsStatic = false;
   /// Flag indicating if the block is an extern.

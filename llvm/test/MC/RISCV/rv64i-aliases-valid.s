@@ -35,8 +35,10 @@ li x10, 2047
 # CHECK-INST: addi a0, zero, -2047
 # CHECK-ALIAS: li a0, -2047
 li x10, -2047
-# CHECK-EXPAND: lui a1, 1
-# CHECK-EXPAND: addiw a1, a1, -2048
+# CHECK-INST: addi a1, zero, 1
+# CHECK-INST: slli a1, a1, 11
+# CHECK-ALIAS: li a1, 1
+# CHECK-ALIAS: slli a1, a1, 11
 li x11, 2048
 # CHECK-INST: addi a1, zero, -2048
 # CHECK-ALIAS: li a1, -2048

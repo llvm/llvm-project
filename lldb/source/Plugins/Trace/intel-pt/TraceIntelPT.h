@@ -249,7 +249,7 @@ private:
 
   /// \return
   ///     The lowest timestamp in nanoseconds in all traces if available, \a
-  ///     llvm::None if all the traces were empty or no trace contained no
+  ///     std::nullopt if all the traces were empty or no trace contained no
   ///     timing information, or an \a llvm::Error if it was not possible to set
   ///     up the decoder for some trace.
   llvm::Expected<llvm::Optional<uint64_t>> FindBeginningOfTimeNanos();

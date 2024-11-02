@@ -80,7 +80,7 @@ PdbIndex::GetModuleIndexForAddr(uint16_t segment, uint32_t offset) const {
 llvm::Optional<uint16_t> PdbIndex::GetModuleIndexForVa(lldb::addr_t va) const {
   auto iter = m_va_to_modi.find(va);
   if (iter == m_va_to_modi.end())
-    return llvm::None;
+    return std::nullopt;
 
   return iter.value();
 }

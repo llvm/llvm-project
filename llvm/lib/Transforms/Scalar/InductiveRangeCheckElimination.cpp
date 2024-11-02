@@ -554,7 +554,7 @@ class LoopConstrainer {
 
   // Compute a safe set of limits for the main loop to run in -- effectively the
   // intersection of `Range' and the iteration space of the original loop.
-  // Return None if unable to compute the set of subranges.
+  // Return std::nullopt if unable to compute the set of subranges.
   Optional<SubRanges> calculateSubRanges(bool IsSignedPredicate) const;
 
   // Clone `OriginalLoop' and return the result in CLResult.  The IR after
@@ -1581,7 +1581,7 @@ bool LoopConstrainer::run() {
 
 /// Computes and returns a range of values for the induction variable (IndVar)
 /// in which the range check can be safely elided.  If it cannot compute such a
-/// range, returns None.
+/// range, returns std::nullopt.
 Optional<InductiveRangeCheck::Range>
 InductiveRangeCheck::computeSafeIterationSpace(
     ScalarEvolution &SE, const SCEVAddRecExpr *IndVar,
@@ -1733,7 +1733,7 @@ IntersectSignedRange(ScalarEvolution &SE,
   const SCEV *NewBegin = SE.getSMaxExpr(R1Value.getBegin(), R2.getBegin());
   const SCEV *NewEnd = SE.getSMinExpr(R1Value.getEnd(), R2.getEnd());
 
-  // If the resulting range is empty, just return None.
+  // If the resulting range is empty, just return std::nullopt.
   auto Ret = InductiveRangeCheck::Range(NewBegin, NewEnd);
   if (Ret.isEmpty(SE, /* IsSigned */ true))
     return std::nullopt;
@@ -1762,7 +1762,7 @@ IntersectUnsignedRange(ScalarEvolution &SE,
   const SCEV *NewBegin = SE.getUMaxExpr(R1Value.getBegin(), R2.getBegin());
   const SCEV *NewEnd = SE.getUMinExpr(R1Value.getEnd(), R2.getEnd());
 
-  // If the resulting range is empty, just return None.
+  // If the resulting range is empty, just return std::nullopt.
   auto Ret = InductiveRangeCheck::Range(NewBegin, NewEnd);
   if (Ret.isEmpty(SE, /* IsSigned */ false))
     return std::nullopt;

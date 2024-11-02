@@ -62,6 +62,10 @@ TEST(PointerIntPairTest, GetSet) {
   EXPECT_EQ(&s, Pair2.getPointer());
   EXPECT_EQ(E::Case3, Pair2.getInt());
 
+  auto [Pointer2, Int2] = Pair2;
+  EXPECT_EQ(Pair2.getPointer(), Pointer2);
+  EXPECT_EQ(Pair2.getInt(), Int2);
+
   static_assert(std::is_trivially_copyable_v<PointerIntPair<S *, 2, E>>,
                 "trivially copyable");
 }

@@ -41,8 +41,8 @@ protected:
 
     TargetOptions Options;
     TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
-        T->createTargetMachine("AArch64", "", "+sve", Options, None, None,
-                               CodeGenOpt::Aggressive)));
+        T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
+                               std::nullopt, CodeGenOpt::Aggressive)));
     if (!TM)
       GTEST_SKIP();
 
@@ -224,11 +224,15 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
 
   SDValue Op = DAG->getNode(ISD::AND, Loc, InVecVT, N0, Mask2V);
 
+  // N0 = ?000?0?0
+  // Mask2V = 01010101
+  //  =>
+  // Known.Zero = 00100000 (0xAA)
   KnownBits Known;
   APInt DemandedBits = APInt(8, 0xFF);
   TargetLowering::TargetLoweringOpt TLO(*DAG, false, false);
-  EXPECT_FALSE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
-  EXPECT_EQ(Known.Zero, APInt(8, 0));
+  EXPECT_TRUE(TL.SimplifyDemandedBits(Op, DemandedBits, Known, TLO));
+  EXPECT_EQ(Known.Zero, APInt(8, 0xAA));
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
@@ -594,7 +598,7 @@ TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
   EXPECT_FALSE(DAG->getHeapAllocSite(N2.getNode()));
   EXPECT_FALSE(DAG->getNoMergeSiteInfo(N2.getNode()));
   EXPECT_FALSE(DAG->getPCSections(N2.getNode()));
-  MDNode *MD = MDNode::get(Context, None);
+  MDNode *MD = MDNode::get(Context, std::nullopt);
   DAG->addHeapAllocSite(N2.getNode(), MD);
   DAG->addNoMergeSiteInfo(N2.getNode(), true);
   DAG->addPCSections(N2.getNode(), MD);

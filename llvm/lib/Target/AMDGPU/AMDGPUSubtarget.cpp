@@ -625,13 +625,8 @@ unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   return 5;
 }
 
-unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
-  unsigned MaxWaves = getMaxWavesPerEU();
-  unsigned Granule = getVGPRAllocGranule();
-  if (VGPRs < Granule)
-    return MaxWaves;
-  unsigned RoundedRegs = ((VGPRs + Granule - 1) / Granule) * Granule;
-  return std::min(std::max(getTotalNumVGPRs() / RoundedRegs, 1u), MaxWaves);
+unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs) const {
+  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs);
 }
 
 unsigned

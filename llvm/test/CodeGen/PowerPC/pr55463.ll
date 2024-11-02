@@ -6,14 +6,12 @@ define void @baz() #0 {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stwu 1, -16(1)
-; CHECK-NEXT:    # implicit-def: $r3
 ; CHECK-NEXT:    stw 0, 20(1)
+; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb1
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    cmplwi 3, 0
-; CHECK-NEXT:    bne 0, .LBB0_1
+; CHECK-NEXT:    bdnz .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb8
 ; CHECK-NEXT:    bl wibble
 ; CHECK-NEXT:    lwz 0, 20(1)
@@ -70,10 +68,10 @@ define void @wombat() #0 {
 ; CHECK-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; CHECK-NEXT:    bl fma
 ; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    addi 28, 28, 1
+; CHECK-NEXT:    addi 28, 28, -1
 ; CHECK-NEXT:    cmplwi 28, 0
 ; CHECK-NEXT:    efdctsiz 3, 3
-; CHECK-NEXT:    bne 0, .LBB1_1
+; CHECK-NEXT:    bc 12, 1, .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %bb8
 ; CHECK-NEXT:    bl wibble
 ; CHECK-NEXT:    evldd 30, 32(1) # 8-byte Folded Reload

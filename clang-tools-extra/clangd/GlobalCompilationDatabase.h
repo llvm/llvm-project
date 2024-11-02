@@ -42,7 +42,7 @@ public:
 
   /// Finds the closest project to \p File.
   virtual llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const {
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Makes a guess at how to build a file.

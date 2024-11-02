@@ -574,8 +574,7 @@ end subroutine test18
 ! CHECK:         %[[VAL_2:.*]] = arith.constant 3 : index
 ! CHECK:         %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:         %[[VAL_4:.*]] = fir.array_load %[[VAL_0]](%[[VAL_3]]) : (!fir.ref<!fir.array<2x3xf32>>, !fir.shape<2>) -> !fir.array<2x3xf32>
-! CHECK:         %[[VAL_5:.*]] = arith.constant 42 : i32
-! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> f32
+! CHECK:         %[[VAL_6:.*]] = arith.constant 4.200000e+01 : f32
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_9:.*]] = arith.subi %[[VAL_1]], %[[VAL_7]] : index
@@ -999,20 +998,6 @@ end subroutine test19f
 ! CHECK:         %[[VAL_30:.*]] = fir.do_loop %[[VAL_31:.*]] = %[[VAL_28]] to %[[VAL_29]] step %[[VAL_27]] unordered iter_args(%[[VAL_32:.*]] = %[[VAL_15]]) -> (!fir.array<70x!fir.char<4,?>>) {
 ! CHECK:           %[[VAL_33:.*]] = fir.array_access %[[VAL_24]], %[[VAL_31]] : (!fir.array<140x!fir.char<2,13>>, index) -> !fir.ref<!fir.char<2,13>>
 ! CHECK:           %[[VAL_34:.*]] = fir.alloca !fir.char<4,?>(%[[VAL_4]] : index)
-! CHECK:           %[[VAL_35:.*]] = arith.cmpi slt, %[[VAL_4]], %[[VAL_4]] : index
-! CHECK:           %[[VAL_36:.*]] = arith.select %[[VAL_35]], %[[VAL_4]], %[[VAL_4]] : index
-! CHECK:           fir.char_convert %[[VAL_33]] for %[[VAL_36]] to %[[VAL_34]] : !fir.ref<!fir.char<2,13>>, index, !fir.ref<!fir.char<4,?>>
-! CHECK:           %[[VAL_37:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_38:.*]] = arith.subi %[[VAL_4]], %[[VAL_37]] : index
-! CHECK:           %[[VAL_39:.*]] = arith.constant 32 : i32
-! CHECK:           %[[VAL_40:.*]] = fir.undefined !fir.char<4>
-! CHECK:           %[[VAL_41:.*]] = fir.insert_value %[[VAL_40]], %[[VAL_39]], [0 : index] : (!fir.char<4>, i32) -> !fir.char<4>
-! CHECK:           %[[VAL_42:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_43:.*]] = %[[VAL_36]] to %[[VAL_38]] step %[[VAL_42]] {
-! CHECK:             %[[VAL_44:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x!fir.char<4>>>
-! CHECK:             %[[VAL_45:.*]] = fir.coordinate_of %[[VAL_44]], %[[VAL_43]] : (!fir.ref<!fir.array<?x!fir.char<4>>>, index) -> !fir.ref<!fir.char<4>>
-! CHECK:             fir.store %[[VAL_41]] to %[[VAL_45]] : !fir.ref<!fir.char<4>>
-! CHECK:           }
 ! CHECK:           %[[VAL_46:.*]] = fir.array_access %[[VAL_32]], %[[VAL_31]] typeparams %[[VAL_11]] : (!fir.array<70x!fir.char<4,?>>, index, i32) -> !fir.ref<!fir.char<4,?>>
 ! CHECK:           %[[VAL_47:.*]] = fir.convert %[[VAL_11]] : (i32) -> index
 ! CHECK:           %[[VAL_48:.*]] = fir.convert %[[VAL_26]] : (i64) -> index

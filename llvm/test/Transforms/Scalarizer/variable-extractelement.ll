@@ -19,8 +19,8 @@ define i32 @f1(<4 x i32> %src, i32 %index) {
 ; DEFAULT-NEXT:    [[RES_UPTO2:%.*]] = select i1 [[INDEX_IS_2]], i32 [[SRC_I2]], i32 [[RES_UPTO1]]
 ; DEFAULT-NEXT:    [[INDEX_IS_3:%.*]] = icmp eq i32 [[INDEX]], 3
 ; DEFAULT-NEXT:    [[SRC_I3:%.*]] = extractelement <4 x i32> [[SRC]], i32 3
-; DEFAULT-NEXT:    [[RES:%.*]] = select i1 [[INDEX_IS_3]], i32 [[SRC_I3]], i32 [[RES_UPTO2]]
-; DEFAULT-NEXT:    ret i32 [[RES]]
+; DEFAULT-NEXT:    [[RES_UPTO3:%.*]] = select i1 [[INDEX_IS_3]], i32 [[SRC_I3]], i32 [[RES_UPTO2]]
+; DEFAULT-NEXT:    ret i32 [[RES_UPTO3]]
 ;
 ; OFF-LABEL: @f1(
 ; OFF-NEXT:    [[RES:%.*]] = extractelement <4 x i32> [[SRC:%.*]], i32 [[INDEX:%.*]]
@@ -48,8 +48,8 @@ define i32 @f2(ptr %src, i32 %index) {
 ; DEFAULT-NEXT:    [[INDEX_IS_2:%.*]] = icmp eq i32 [[INDEX]], 2
 ; DEFAULT-NEXT:    [[VAL2_UPTO2:%.*]] = select i1 [[INDEX_IS_2]], i32 [[VAL1_I2]], i32 [[VAL2_UPTO1]]
 ; DEFAULT-NEXT:    [[INDEX_IS_3:%.*]] = icmp eq i32 [[INDEX]], 3
-; DEFAULT-NEXT:    [[VAL2:%.*]] = select i1 [[INDEX_IS_3]], i32 [[VAL1_I3]], i32 [[VAL2_UPTO2]]
-; DEFAULT-NEXT:    ret i32 [[VAL2]]
+; DEFAULT-NEXT:    [[VAL2_UPTO3:%.*]] = select i1 [[INDEX_IS_3]], i32 [[VAL1_I3]], i32 [[VAL2_UPTO2]]
+; DEFAULT-NEXT:    ret i32 [[VAL2_UPTO3]]
 ;
 ; OFF-LABEL: @f2(
 ; OFF-NEXT:    [[VAL0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 16

@@ -2225,7 +2225,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
   };
   SmallVector<LocAndDiag, 16> DeclDiags;
   auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
-    DeclDiags.push_back(LocAndDiag{Loc, None, std::move(PD)});
+    DeclDiags.push_back(LocAndDiag{Loc, std::nullopt, std::move(PD)});
   };
   auto addDiagWithPrev = [&DeclDiags](SourceLocation Loc,
                                       SourceLocation PreviousDeclLoc,
@@ -13608,8 +13608,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     InitializationKind Kind
       = InitializationKind::CreateDefault(Var->getLocation());
 
-    InitializationSequence InitSeq(*this, Entity, Kind, None);
-    ExprResult Init = InitSeq.Perform(*this, Entity, Kind, None);
+    InitializationSequence InitSeq(*this, Entity, Kind, std::nullopt);
+    ExprResult Init = InitSeq.Perform(*this, Entity, Kind, std::nullopt);
 
     if (Init.get()) {
       Var->setInit(MaybeCreateExprWithCleanups(Init.get()));
@@ -15760,8 +15760,8 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                                              /*NumExceptions=*/0,
                                              /*NoexceptExpr=*/nullptr,
                                              /*ExceptionSpecTokens=*/nullptr,
-                                             /*DeclsInPrototype=*/None, Loc,
-                                             Loc, D),
+                                             /*DeclsInPrototype=*/std::nullopt,
+                                             Loc, Loc, D),
                 std::move(DS.getAttributes()), SourceLocation());
   D.SetIdentifier(&II, Loc);
 
@@ -18193,8 +18193,11 @@ static bool AreSpecialMemberFunctionsSameKind(ASTContext &Context,
                                               CXXMethodDecl *M1,
                                               CXXMethodDecl *M2,
                                               Sema::CXXSpecialMember CSM) {
+  // We don't want to compare templates to non-templates: See
+  // https://github.com/llvm/llvm-project/issues/59206
   if (CSM == Sema::CXXDefaultConstructor)
-    return true;
+    return bool(M1->getDescribedFunctionTemplate()) ==
+           bool(M2->getDescribedFunctionTemplate());
   if (!Context.hasSameType(M1->getParamDecl(0)->getType(),
                            M2->getParamDecl(0)->getType()))
     return false;
@@ -19547,6 +19550,12 @@ Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr,
                                                    AsmString, StartLoc,
                                                    EndLoc);
   CurContext->addDecl(New);
+  return New;
+}
+
+Decl *Sema::ActOnTopLevelStmtDecl(Stmt *Statement) {
+  auto *New = TopLevelStmtDecl::Create(Context, Statement);
+  Context.getTranslationUnitDecl()->addDecl(New);
   return New;
 }
 

@@ -402,7 +402,7 @@ static Optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma, Chipset chipset) {
     if (m == 4 && n == 4 && k == 4 && b == 4)
       return ROCDL::mfma_f64_4x4x4f64::getOperationName();
   }
-  return None;
+  return std::nullopt;
 }
 
 namespace {

@@ -244,7 +244,7 @@ public:
   /// Attaches a note to this diagnostic. A new location may be optionally
   /// provided, if not, then the location defaults to the one specified for this
   /// diagnostic. Notes may not be attached to other notes.
-  Diagnostic &attachNote(Optional<Location> noteLoc = llvm::None);
+  Diagnostic &attachNote(Optional<Location> noteLoc = std::nullopt);
 
   using note_iterator = llvm::pointee_iterator<NoteVector::iterator>;
   using const_note_iterator =
@@ -342,7 +342,7 @@ public:
   }
 
   /// Attaches a note to this diagnostic.
-  Diagnostic &attachNote(Optional<Location> noteLoc = llvm::None) {
+  Diagnostic &attachNote(Optional<Location> noteLoc = std::nullopt) {
     assert(isActive() && "diagnostic not active");
     return impl->attachNote(noteLoc);
   }

@@ -560,7 +560,7 @@ public:
   Error ReadAbbrevRecord();
 
   /// Read and return a block info block from the bitstream. If an error was
-  /// encountered, return None.
+  /// encountered, return std::nullopt.
   ///
   /// \param ReadBlockInfoNames Whether to read block/record name information in
   /// the BlockInfo block. Only llvm-bcanalyzer uses this.

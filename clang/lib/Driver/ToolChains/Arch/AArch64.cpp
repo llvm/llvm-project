@@ -70,7 +70,7 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
                                   std::vector<StringRef> &Features,
-                                  const llvm::AArch64::ArchInfo &ArchInfo) {
+                                  llvm::AArch64::ArchKind ArchKind) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
@@ -104,14 +104,14 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
 
     // +sve implies +f32mm if the base architecture is >= v8.6A (except v9A)
     // It isn't the case in general that sve implies both f64mm and f32mm
-    if ((ArchInfo == llvm::AArch64::ARMV8_6A ||
-         ArchInfo == llvm::AArch64::ARMV8_7A ||
-         ArchInfo == llvm::AArch64::ARMV8_8A ||
-         ArchInfo == llvm::AArch64::ARMV8_9A ||
-         ArchInfo == llvm::AArch64::ARMV9_1A ||
-         ArchInfo == llvm::AArch64::ARMV9_2A ||
-         ArchInfo == llvm::AArch64::ARMV9_3A ||
-         ArchInfo == llvm::AArch64::ARMV9_4A) &&
+    if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_8A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_9A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_3A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_4A) &&
         Feature == "sve")
       Features.push_back("+f32mm");
   }
@@ -123,8 +123,10 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
 static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
-  const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
-  CPU = llvm::AArch64::resolveCPUAlias(Split.first);
+  CPU = Split.first;
+  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::ARMV8A;
+
+  CPU = llvm::AArch64::resolveCPUAlias(CPU);
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
@@ -132,21 +134,21 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    ArchInfo = &llvm::AArch64::parseCpu(CPU).Arch;
-    if (*ArchInfo == llvm::AArch64::INVALID)
+    ArchKind = llvm::AArch64::parseCPUArch(CPU);
+    if (ArchKind == llvm::AArch64::ArchKind::INVALID)
       return false;
-    Features.push_back(ArchInfo->ArchFeature);
+    Features.push_back(llvm::AArch64::getArchFeature(ArchKind));
 
-    uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, *ArchInfo);
+    uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
-  }
+   }
 
-  if (Split.second.size() &&
-      !DecodeAArch64Features(D, Split.second, Features, *ArchInfo))
-    return false;
+   if (Split.second.size() &&
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind))
+     return false;
 
-  return true;
+   return true;
 }
 
 static bool
@@ -156,26 +158,25 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
-  const llvm::AArch64::ArchInfo *ArchInfo =
-      &llvm::AArch64::parseArch(Split.first);
+  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
   if (Split.first == "native")
-    ArchInfo = &llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
-  if (*ArchInfo == llvm::AArch64::INVALID)
+    ArchKind = llvm::AArch64::getCPUArchKind(llvm::sys::getHostCPUName().str());
+  if (ArchKind == llvm::AArch64::ArchKind::INVALID)
     return false;
-  Features.push_back(ArchInfo->ArchFeature);
+  Features.push_back(llvm::AArch64::getArchFeature(ArchKind));
 
   // Enable SVE2 by default on Armv9-A.
   // It can still be disabled if +nosve2 is present.
   // We must do this early so that DecodeAArch64Features has the correct state
-  if ((*ArchInfo == llvm::AArch64::ARMV9A ||
-       *ArchInfo == llvm::AArch64::ARMV9_1A ||
-       *ArchInfo == llvm::AArch64::ARMV9_2A)) {
+  if ((ArchKind == llvm::AArch64::ArchKind::ARMV9A ||
+       ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
+       ArchKind == llvm::AArch64::ArchKind::ARMV9_2A)) {
     Features.push_back("+sve");
     Features.push_back("+sve2");
   }
 
   if ((Split.second.size() &&
-       !DecodeAArch64Features(D, Split.second, Features, *ArchInfo)))
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind)))
     return false;
 
   return true;

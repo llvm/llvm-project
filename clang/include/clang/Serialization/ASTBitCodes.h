@@ -1318,6 +1318,9 @@ enum DeclCode {
   /// A FileScopeAsmDecl record.
   DECL_FILE_SCOPE_ASM,
 
+  /// A TopLevelStmtDecl record.
+  DECL_TOP_LEVEL_STMT_DECL,
+
   /// A BlockDecl record.
   DECL_BLOCK,
 

@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -debug-only=loop-vectorize -enable-arm-maskedgatscat -tail-predication=force-enabled -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-COST,CHECK-COST-2
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -enable-arm-maskedgatscat -tail-predication=force-enabled -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-COST,CHECK-COST-2
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

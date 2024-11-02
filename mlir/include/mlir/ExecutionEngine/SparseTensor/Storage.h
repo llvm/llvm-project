@@ -51,6 +51,8 @@ class SparseTensorEnumeratorBase;
 
 // These macros ensure consistent error messages, without risk of incuring
 // an additional method call to do so.
+#define ASSERT_VALID_DIM(d)                                                    \
+  assert(d < getDimRank() && "Dimension index is out of bounds");
 #define ASSERT_VALID_LVL(l)                                                    \
   assert(l < getLvlRank() && "Level index is out of bounds");
 #define ASSERT_COMPRESSED_LVL(l)                                               \
@@ -152,6 +154,12 @@ public:
 
   /// Gets the tensor-dimension sizes array.
   const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
+
+  /// Safely looks up the size of the given tensor-dimension.
+  uint64_t getDimSize(uint64_t d) const {
+    ASSERT_VALID_DIM(d);
+    return dimSizes[d];
+  }
 
   /// Gets the storage-level sizes array.
   const std::vector<uint64_t> &getLvlSizes() const { return lvlSizes; }
@@ -694,6 +702,7 @@ private:
 #undef ASSERT_COMPRESSED_OR_SINGLETON_LVL
 #undef ASSERT_COMPRESSED_LVL
 #undef ASSERT_VALID_LVL
+#undef ASSERT_VALID_DIM
 
 //===----------------------------------------------------------------------===//
 /// A (higher-order) function object for enumerating the elements of some

@@ -195,7 +195,7 @@ TEST_F(ProgramEnvTest, CreateProcessTrailingSlash) {
 #else
   StringRef nul("/dev/null");
 #endif
-  std::optional<StringRef> redirects[] = {nul, nul, None};
+  std::optional<StringRef> redirects[] = {nul, nul, std::nullopt};
   int rc = ExecuteAndWait(my_exe, argv, getEnviron(), redirects,
                           /*secondsToWait=*/ 10, /*memoryLimit=*/ 0, &error,
                           &ExecutionFailed);
@@ -289,8 +289,8 @@ TEST(ProgramTest, TestExecuteNegative) {
   {
     std::string Error;
     bool ExecutionFailed;
-    int RetCode = ExecuteAndWait(Executable, argv, llvm::None, {}, 0, 0, &Error,
-                                 &ExecutionFailed);
+    int RetCode = ExecuteAndWait(Executable, argv, std::nullopt, {}, 0, 0,
+                                 &Error, &ExecutionFailed);
     ASSERT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
                              "positive value indicating the result code";
     ASSERT_TRUE(ExecutionFailed);
@@ -300,8 +300,8 @@ TEST(ProgramTest, TestExecuteNegative) {
   {
     std::string Error;
     bool ExecutionFailed;
-    ProcessInfo PI = ExecuteNoWait(Executable, argv, llvm::None, {}, 0, &Error,
-                                   &ExecutionFailed);
+    ProcessInfo PI = ExecuteNoWait(Executable, argv, std::nullopt, {}, 0,
+                                   &Error, &ExecutionFailed);
     ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
         << "On error ExecuteNoWait should return an invalid ProcessInfo";
     ASSERT_TRUE(ExecutionFailed);

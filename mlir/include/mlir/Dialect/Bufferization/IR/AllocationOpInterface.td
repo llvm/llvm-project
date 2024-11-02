@@ -35,22 +35,22 @@ def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
         current allocation value (which refers to the current Op implementing
         this interface). The allocation value is a result of the current
         operation implementing this interface. If there is no compatible
-        deallocation operation, this method can return ::llvm::None.
+        deallocation operation, this method can return ::std::nullopt.
       }],
       "::mlir::Optional<::mlir::Operation*>", "buildDealloc",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
-      /*defaultImplementation=*/[{ return llvm::None; }]
+      /*defaultImplementation=*/[{ return std::nullopt; }]
     >,
     StaticInterfaceMethod<[{
         Builds a clone operation using the provided builder and the current
         allocation value (which refers to the current Op implementing this
         interface). The allocation value is a result of the current operation
         implementing this interface. If there is no compatible clone operation,
-        this method can return ::llvm::None.
+        this method can return ::std::nullopt.
       }],
       "::mlir::Optional<::mlir::Value>", "buildClone",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
-      /*defaultImplementation=*/[{ return llvm::None; }]
+      /*defaultImplementation=*/[{ return std::nullopt; }]
     >
   ];
 }

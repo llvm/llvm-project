@@ -64,12 +64,12 @@ bool isLegalShaderModel(Triple &T) {
   return false;
 }
 
-llvm::Optional<std::string> tryParseProfile(StringRef Profile) {
+std::optional<std::string> tryParseProfile(StringRef Profile) {
   // [ps|vs|gs|hs|ds|cs|ms|as]_[major]_[minor]
   SmallVector<StringRef, 3> Parts;
   Profile.split(Parts, "_");
   if (Parts.size() != 3)
-    return None;
+    return std::nullopt;
 
   Triple::EnvironmentType Kind =
       StringSwitch<Triple::EnvironmentType>(Parts[0])
@@ -84,17 +84,17 @@ llvm::Optional<std::string> tryParseProfile(StringRef Profile) {
           .Case("as", Triple::EnvironmentType::Amplification)
           .Default(Triple::EnvironmentType::UnknownEnvironment);
   if (Kind == Triple::EnvironmentType::UnknownEnvironment)
-    return None;
+    return std::nullopt;
 
   unsigned long long Major = 0;
   if (llvm::getAsUnsignedInteger(Parts[1], 0, Major))
-    return None;
+    return std::nullopt;
 
   unsigned long long Minor = 0;
   if (Parts[2] == "x" && Kind == Triple::EnvironmentType::Library)
     Minor = OfflineLibMinor;
   else if (llvm::getAsUnsignedInteger(Parts[2], 0, Minor))
-    return None;
+    return std::nullopt;
 
   // dxil-unknown-shadermodel-hull
   llvm::Triple T;
@@ -105,7 +105,7 @@ llvm::Optional<std::string> tryParseProfile(StringRef Profile) {
   if (isLegalShaderModel(T))
     return T.getTriple();
   else
-    return None;
+    return std::nullopt;
 }
 
 bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
@@ -138,7 +138,7 @@ HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args) {}
 
-llvm::Optional<std::string>
+std::optional<std::string>
 clang::driver::toolchains::HLSLToolChain::parseTargetProfile(
     StringRef TargetProfile) {
   return tryParseProfile(TargetProfile);

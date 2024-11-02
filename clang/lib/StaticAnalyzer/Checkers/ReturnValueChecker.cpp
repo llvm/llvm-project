@@ -74,7 +74,7 @@ static Optional<bool> isInvariantBreak(bool ExpectedValue, SVal ReturnV,
                                        CheckerContext &C) {
   auto ReturnDV = ReturnV.getAs<DefinedOrUnknownSVal>();
   if (!ReturnDV)
-    return None;
+    return std::nullopt;
 
   if (ExpectedValue)
     return C.getState()->isNull(*ReturnDV).isConstrainedTrue();

@@ -56,11 +56,12 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasD128;
   bool HasRCPC;
 
-  const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
+  llvm::AArch64::ArchKind ArchKind;
 
   static const Builtin::Info BuiltinInfo[];
 
   std::string ABI;
+  StringRef getArchProfile() const;
 
 public:
   AArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);

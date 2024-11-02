@@ -1,5 +1,5 @@
-; RUN: opt -S < %s -loop-vectorize -force-vector-interleave=2 -force-vector-width=4 | FileCheck %s
-; RUN: opt -S < %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 | FileCheck %s --check-prefix=FORCE-VEC
+; RUN: opt -S < %s -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=4 | FileCheck %s
+; RUN: opt -S < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 | FileCheck %s --check-prefix=FORCE-VEC
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnueabi"

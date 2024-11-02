@@ -31,9 +31,9 @@ llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
                                          llvm::StringRef OffloadArch);
 
 /// Parse a target ID to get processor and feature map.
-/// Returns canonicalized processor name or None if the target ID is invalid.
-/// Returns target ID features in \p FeatureMap if it is not null pointer.
-/// This function assumes \p OffloadArch is a valid target ID.
+/// Returns canonicalized processor name or std::nullopt if the target ID is
+/// invalid.  Returns target ID features in \p FeatureMap if it is not null
+/// pointer. This function assumes \p OffloadArch is a valid target ID.
 /// If the target ID contains feature+, map it to true.
 /// If the target ID contains feature-, map it to false.
 /// If the target ID does not contain a feature (default), do not map it.
@@ -48,8 +48,8 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
 
 /// Get the conflicted pair of target IDs for a compilation or a bundled code
 /// object, assuming \p TargetIDs are canonicalized. If there is no conflicts,
-/// returns None.
-llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+/// returns std::nullopt.
+std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs);
 
 /// Check whether the provided target ID is compatible with the requested

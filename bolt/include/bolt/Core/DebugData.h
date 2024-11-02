@@ -424,7 +424,7 @@ public:
 
   /// Initializes Buffer and Stream.
   void initialize(const DWARFSection &StrOffsetsSection,
-                  const Optional<StrOffsetsContributionDescriptor> Contr);
+                  const std::optional<StrOffsetsContributionDescriptor> Contr);
 
   /// Update Str offset in .debug_str in .debug_str_offsets.
   void updateAddressMap(uint32_t Index, uint32_t Address);
@@ -1016,7 +1016,8 @@ public:
   ///       Most of the time, using type units with DWO is not a good idea.
   ///       If type units are used, the caller is responsible for verifying
   ///       that abbreviations are shared by CU and TUs.
-  DebugAbbrevWriter(DWARFContext &Context, Optional<uint64_t> DWOId = None)
+  DebugAbbrevWriter(DWARFContext &Context,
+                    Optional<uint64_t> DWOId = std::nullopt)
       : Context(Context), DWOId(DWOId) {}
 
   DebugAbbrevWriter(const DebugAbbrevWriter &) = delete;
@@ -1129,11 +1130,11 @@ public:
 
   /// Emit the Dwarf file and the line tables for a given CU.
   void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-              Optional<MCDwarfLineStr> &LineStr, BinaryContext &BC) const;
+              std::optional<MCDwarfLineStr> &LineStr, BinaryContext &BC) const;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                Optional<MD5::MD5Result> Checksum,
-                                Optional<StringRef> Source,
+                                std::optional<MD5::MD5Result> Checksum,
+                                std::optional<StringRef> Source,
                                 uint16_t DwarfVersion,
                                 unsigned FileNumber = 0) {
     assert(RawData.empty() && "cannot use with raw data");
@@ -1149,8 +1150,8 @@ public:
   /// Sets the root file \p Directory, \p FileName, optional \p CheckSum, and
   /// optional \p Source.
   void setRootFile(StringRef Directory, StringRef FileName,
-                   Optional<MD5::MD5Result> Checksum,
-                   Optional<StringRef> Source) {
+                   std::optional<MD5::MD5Result> Checksum,
+                   std::optional<StringRef> Source) {
     Header.setRootFile(Directory, FileName, Checksum, Source);
   }
 

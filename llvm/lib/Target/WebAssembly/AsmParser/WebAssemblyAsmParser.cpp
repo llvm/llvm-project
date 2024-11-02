@@ -835,7 +835,8 @@ public:
       auto ElemTypeName = expectIdent();
       if (ElemTypeName.empty())
         return true;
-      Optional<wasm::ValType> ElemType = WebAssembly::parseType(ElemTypeName);
+      std::optional<wasm::ValType> ElemType =
+          WebAssembly::parseType(ElemTypeName);
       if (!ElemType)
         return error("Unknown type in .tabletype directive: ", ElemTypeTok);
 

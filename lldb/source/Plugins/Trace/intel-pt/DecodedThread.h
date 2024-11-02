@@ -188,7 +188,7 @@ public:
   ///   The trace item index to compare with.
   ///
   /// \return
-  ///   The requested TSC range, or \a llvm::None if not available.
+  ///   The requested TSC range, or \a std::nullopt if not available.
   llvm::Optional<DecodedThread::TSCRange>
   GetTSCRangeByIndex(uint64_t item_index) const;
 
@@ -199,7 +199,7 @@ public:
   ///   The trace item index to compare with.
   ///
   /// \return
-  ///   The requested nanoseconds range, or \a llvm::None if not available.
+  ///   The requested nanoseconds range, or \a std::nullopt if not available.
   llvm::Optional<DecodedThread::NanosecondsRange>
   GetNanosecondsRangeByIndex(uint64_t item_index);
 
@@ -296,7 +296,7 @@ private:
   std::map<uint64_t, TSCRange> m_tscs;
   /// This is the chronologically last TSC that has been added.
   llvm::Optional<std::map<uint64_t, TSCRange>::iterator> m_last_tsc =
-      llvm::None;
+      std::nullopt;
   /// This map contains the non-interpolated nanoseconds timestamps of the
   /// decoded trace items. It maps `item index -> nanoseconds`, where `item
   /// index` is the first index at which the mapped nanoseconds first appears.
@@ -304,14 +304,14 @@ private:
   /// them as ranges.
   std::map<uint64_t, NanosecondsRange> m_nanoseconds;
   llvm::Optional<std::map<uint64_t, NanosecondsRange>::iterator>
-      m_last_nanoseconds = llvm::None;
+      m_last_nanoseconds = std::nullopt;
 
   // The cpu information is stored as a map. It maps `item index -> CPU`.
   // A CPU is associated with the next instructions that follow until the next
   // cpu is seen.
   std::map<uint64_t, lldb::cpu_id_t> m_cpus;
   /// This is the chronologically last CPU ID.
-  llvm::Optional<uint64_t> m_last_cpu = llvm::None;
+  llvm::Optional<uint64_t> m_last_cpu = std::nullopt;
 
   // The PSB offsets are stored as a map. It maps `item index -> psb offset`.
   llvm::DenseMap<uint64_t, lldb::addr_t> m_psb_offsets;

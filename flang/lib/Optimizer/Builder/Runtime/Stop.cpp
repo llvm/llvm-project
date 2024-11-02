@@ -25,7 +25,7 @@ void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
 void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::func::FuncOp abortFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Abort)>(loc, builder);
-  builder.create<fir::CallOp>(loc, abortFunc, llvm::None);
+  builder.create<fir::CallOp>(loc, abortFunc, std::nullopt);
 }
 
 void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,

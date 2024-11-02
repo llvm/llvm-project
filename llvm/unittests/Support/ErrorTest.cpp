@@ -1097,7 +1097,7 @@ TEST(Error, moveInto) {
 
     // Failure with no prior value.
     EXPECT_THAT_ERROR(makeFailure().moveInto(V), Failed());
-    EXPECT_EQ(None, V.Box);
+    EXPECT_EQ(std::nullopt, V.Box);
 
     // Success with no prior value.
     EXPECT_THAT_ERROR(make(5).moveInto(V), Succeeded());
@@ -1119,7 +1119,7 @@ TEST(Error, moveInto) {
     // Same cases as above.
     Optional<MoveOnlyBox> MaybeV;
     EXPECT_THAT_ERROR(makeFailure().moveInto(MaybeV), Failed());
-    EXPECT_EQ(None, MaybeV);
+    EXPECT_EQ(std::nullopt, MaybeV);
 
     EXPECT_THAT_ERROR(make(5).moveInto(MaybeV), Succeeded());
     EXPECT_EQ(MoveOnlyBox(5), MaybeV);

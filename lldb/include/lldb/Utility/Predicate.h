@@ -127,7 +127,7 @@ public:
     }
     if (m_condition.wait_for(lock, *timeout, RealCond))
       return m_value;
-    return llvm::None;
+    return std::nullopt;
   }
   /// Wait for \a m_value to be equal to \a value.
   ///
@@ -152,9 +152,9 @@ public:
   ///     true if the \a m_value is equal to \a value, false otherwise (timeout
   ///     occurred).
   bool WaitForValueEqualTo(T value,
-                           const Timeout<std::micro> &timeout = llvm::None) {
+                           const Timeout<std::micro> &timeout = std::nullopt) {
     return WaitFor([&value](T current) { return value == current; }, timeout) !=
-           llvm::None;
+           std::nullopt;
   }
 
   /// Wait for \a m_value to not be equal to \a value.
@@ -180,7 +180,7 @@ public:
   ///     m_value if m_value != value, None otherwise (timeout occurred).
   llvm::Optional<T>
   WaitForValueNotEqualTo(T value,
-                         const Timeout<std::micro> &timeout = llvm::None) {
+                         const Timeout<std::micro> &timeout = std::nullopt) {
     return WaitFor([&value](T current) { return value != current; }, timeout);
   }
 

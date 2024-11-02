@@ -13,11 +13,11 @@ using namespace llvm;
 
 MCDisassembler::~MCDisassembler() = default;
 
-Optional<MCDisassembler::DecodeStatus>
+std::optional<MCDisassembler::DecodeStatus>
 MCDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const {
-  return None;
+  return std::nullopt;
 }
 
 uint64_t MCDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
@@ -82,7 +82,7 @@ static uint8_t getSMCPriority(XCOFF::StorageMappingClass SMC) {
 /// The symbols in the same section are sorted in ascending order.
 /// llvm-objdump -D will choose the highest priority symbol to display when
 /// there are symbols with the same address.
-bool XCOFFSymbolInfo::operator<(const XCOFFSymbolInfo &SymInfo) const {
+bool XCOFFSymbolInfoTy::operator<(const XCOFFSymbolInfoTy &SymInfo) const {
   // Label symbols have higher priority than non-label symbols.
   if (IsLabel != SymInfo.IsLabel)
     return SymInfo.IsLabel;

@@ -58,8 +58,8 @@ class ControlConditions {
 public:
   /// Return a ControlConditions which stores all conditions required to execute
   /// \p BB from \p Dominator. If \p MaxLookup is non-zero, it limits the
-  /// number of conditions to collect. Return None if not all conditions are
-  /// collected successfully, or we hit the limit.
+  /// number of conditions to collect. Return std::nullopt if not all conditions
+  /// are collected successfully, or we hit the limit.
   static const Optional<ControlConditions>
   collectControlConditions(const BasicBlock &BB, const BasicBlock &Dominator,
                            const DominatorTree &DT,

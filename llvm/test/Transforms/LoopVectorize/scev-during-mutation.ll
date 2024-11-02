@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -force-vector-interleave=2 -scev-verify-ir -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2 -scev-verify-ir -S %s | FileCheck %s
 
 ; Make sure SCEV is not queried while the IR is temporarily invalid. The tests
 ; deliberately do not check for details of the vectorized IR, because that's

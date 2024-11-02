@@ -652,7 +652,7 @@ StringExtractorGDBRemote::GetPidTid(lldb::pid_t default_pid) {
     } else if (view.consumeInteger(16, pid) || pid == 0) {
       // not a valid hex integer OR unsupported pid 0
       m_index = UINT64_MAX;
-      return llvm::None;
+      return std::nullopt;
     }
 
     // "." must follow if we expect TID too; otherwise, we assume -1
@@ -671,7 +671,7 @@ StringExtractorGDBRemote::GetPidTid(lldb::pid_t default_pid) {
   } else if (view.consumeInteger(16, tid) || tid == 0 || pid == AllProcesses) {
     // not a valid hex integer OR tid 0 OR pid -1 + a specific tid
     m_index = UINT64_MAX;
-    return llvm::None;
+    return std::nullopt;
   }
 
   // update m_index

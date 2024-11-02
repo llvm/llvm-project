@@ -216,6 +216,8 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_C_plus_plus_03:
   case DW_LANG_C_plus_plus_11:
   case DW_LANG_C_plus_plus_14:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
     result = true;
     break;
   case DW_LANG_C89:
@@ -256,6 +258,13 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C17:
+  case DW_LANG_Fortran18:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
     result = false;
     break;
   }
@@ -274,6 +283,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Fortran95:
   case DW_LANG_Fortran03:
   case DW_LANG_Fortran08:
+  case DW_LANG_Fortran18:
     result = true;
     break;
   case DW_LANG_C89:
@@ -313,6 +323,14 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
+  case DW_LANG_C17:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
     result = false;
     break;
   }
@@ -634,7 +652,7 @@ unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
 
-Optional<unsigned> LanguageLowerBound(SourceLanguage L);
+std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.
 inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
@@ -694,9 +712,10 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 ///
 /// \param Form DWARF form to get the fixed byte size for.
 /// \param Params DWARF parameters to help interpret forms.
-/// \returns Optional<uint8_t> value with the fixed byte size or None if
-/// \p Form doesn't have a fixed byte size.
-Optional<uint8_t> getFixedFormByteSize(dwarf::Form Form, FormParams Params);
+/// \returns std::optional<uint8_t> value with the fixed byte size or
+/// std::nullopt if \p Form doesn't have a fixed byte size.
+std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
+                                            FormParams Params);
 
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.

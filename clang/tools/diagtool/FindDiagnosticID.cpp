@@ -33,7 +33,7 @@ findDiagnostic(ArrayRef<DiagnosticRecord> Diagnostics, StringRef Name) {
     if (DiagName == Name)
       return Diag;
   }
-  return None;
+  return std::nullopt;
 }
 
 int FindDiagnosticID::run(unsigned int argc, char **argv,

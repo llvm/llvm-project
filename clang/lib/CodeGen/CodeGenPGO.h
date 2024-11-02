@@ -61,10 +61,10 @@ public:
   /// true and put the value in Count; else return false.
   Optional<uint64_t> getStmtCount(const Stmt *S) const {
     if (!StmtCountMap)
-      return None;
+      return std::nullopt;
     auto I = StmtCountMap->find(S);
     if (I == StmtCountMap->end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 

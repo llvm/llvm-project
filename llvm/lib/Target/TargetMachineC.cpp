@@ -24,6 +24,7 @@
 #include "llvm/Target/CodeGenCWrappers.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstring>
+#include <optional>
 
 using namespace llvm;
 
@@ -99,7 +100,7 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
         const char *Triple, const char *CPU, const char *Features,
         LLVMCodeGenOptLevel Level, LLVMRelocMode Reloc,
         LLVMCodeModel CodeModel) {
-  Optional<Reloc::Model> RM;
+  std::optional<Reloc::Model> RM;
   switch (Reloc){
     case LLVMRelocStatic:
       RM = Reloc::Static;
@@ -124,7 +125,7 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
   }
 
   bool JIT;
-  Optional<CodeModel::Model> CM = unwrap(CodeModel, JIT);
+  std::optional<CodeModel::Model> CM = unwrap(CodeModel, JIT);
 
   CodeGenOpt::Level OL;
   switch (Level) {
@@ -257,8 +258,8 @@ char *LLVMGetHostCPUFeatures(void) {
   StringMap<bool> HostFeatures;
 
   if (sys::getHostCPUFeatures(HostFeatures))
-    for (auto &F : HostFeatures)
-      Features.AddFeature(F.first(), F.second);
+    for (const auto &[Feature, IsEnabled] : HostFeatures)
+      Features.AddFeature(Feature, IsEnabled);
 
   return strdup(Features.getString().c_str());
 }
