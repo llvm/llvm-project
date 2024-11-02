@@ -35,6 +35,11 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-SAME:      metadata [[VAR_FROM_INLINE_ME:![0-9]+]]
 ; CHECK-SAME:      !dbg [[LINE2]]
 
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[ADD1]]
+; CHECK-SAME:      metadata [[VAR2:![0-9]+]]
+; CHECK-SAME:     !dbg [[LINE4:![0-9]+]]
+
+
 ; - The DISubprogram for @foo.cold.1 has an empty DISubroutineType
 ; CHECK: [[FILE:![0-9]+]] = !DIFile(filename: "<stdin>"
 ; CHECK: [[EMPTY_MD:![0-9]+]] = !{}
@@ -54,6 +59,11 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: [[VAR_FROM_INLINE_ME]] = !DILocalVariable(name: "var_from_inline_me",
 ; CHECK-SAME:                                      scope: [[INLINE_ME_SCOPE]]
 
+; CHECK: [[VAR2]] = !DILocalVariable(name: "var_from_scope_in_foo",
+; CHECK-SAME:                        scope: [[NEWSCOPE2:![0-9]+]]
+; CHECK: [[NEWSCOPE2]] = !DILexicalBlock(scope: [[NEWSCOPE]], file: [[FILE]], line: 7, column: 7)
+; CHECK: [[LINE4]] =     !DILocation(line: 6, column: 6, scope: [[NEWSCOPE2]]
+
 define void @foo(i32 %arg1) !dbg !6 {
 entry:
   %var = add i32 0, 0, !dbg !11
@@ -72,6 +82,7 @@ if.end:                                           ; preds = %entry
   call void @sink(i32 %add1), !dbg !13 ; inlined from @inline_me
   call void @sink(i32 %add1), !dbg !14 ; not inlined, but inside some scope of foo
   call void @llvm.dbg.value(metadata i32 %add1, metadata !17, metadata !DIExpression()), !dbg !13 ; variable from @inline_me, should preserve scope in !17.
+  call void @llvm.dbg.value(metadata i32 %add1, metadata !18, metadata !DIExpression()), !dbg !19 ; variable not inlined, but inside some scope of foo
   ret void
 }
 
@@ -105,3 +116,6 @@ define void @inline_me() !dbg !12{
 !15 = distinct !DILexicalBlock(scope: !16, file: !1, line: 4, column: 4)
 !16 = distinct !DILexicalBlock(scope: !6, file: !1, line: 5, column: 5)
 !17 = !DILocalVariable(name: "var_from_inline_me", scope: !12, file: !1, line: 1, type: !10)
+!18 = !DILocalVariable(name: "var_from_scope_in_foo", scope: !20, file: !1, line: 1, type: !10)
+!19 = !DILocation(line: 6, column: 6, scope: !20)
+!20 = distinct !DILexicalBlock(scope: !6, file: !1, line: 7, column: 7)
