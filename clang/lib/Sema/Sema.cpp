@@ -687,6 +687,18 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
       << FixItHint::CreateReplacement(E->getSourceRange(), "nullptr");
 }
 
+void Sema::DiagnoseImplicitCastBoolAssignment(Expr* E,QualType Ty) {
+  if (Ty->isBooleanType()) {
+    if (BinaryOperator* Op = dyn_cast<BinaryOperator>(E)) {
+      // should only be issued for regular assignment `=`, not for e.g `+=`
+      if (Op->getOpcode() == BO_Assign) {
+        SourceLocation Loc = Op->getOperatorLoc();
+        Diag(Loc,diag::warn_parens_bool_assign) << E->getSourceRange();
+      }
+    }
+  }
+}
+
 /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit cast.
 /// If there is already an implicit cast, merge into the existing one.
 /// The result is of the given category.
@@ -760,6 +772,8 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
       }
     }
   }
+
+  DiagnoseImplicitCastBoolAssignment(E,Ty);
 
   if (ImplicitCastExpr *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
     if (ImpCast->getCastKind() == Kind && (!BasePath || BasePath->empty())) {

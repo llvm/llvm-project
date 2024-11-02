@@ -18,6 +18,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
@@ -4391,6 +4392,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     From = Res.get();
     FromType = From->getType();
   }
+
+  DiagnoseImplicitCastBoolAssignment(From,ToType);
 
   // If we're converting to an atomic type, first convert to the corresponding
   // non-atomic type.

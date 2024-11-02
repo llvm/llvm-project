@@ -7232,6 +7232,8 @@ public:
   /// being used as a boolean condition, warn if it's an assignment.
   void DiagnoseAssignmentAsCondition(Expr *E);
 
+  void DiagnoseImplicitCastBoolAssignment(Expr *E, QualType ToType);
+
   /// Redundant parentheses over an equality comparison can indicate
   /// that the user intended an assignment used as condition.
   void DiagnoseEqualityWithExtraParens(ParenExpr *ParenE);
