@@ -3152,7 +3152,8 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
 
   // TODO: Check that the correct number of vectorSizes was provided.
   for (Operation *target : targets) {
-    if (!isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp>(target)) {
+    if (!isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
+            target)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
@@ -3240,6 +3241,31 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
   results.push_back(maybeTransformed->first);
   // Handle to the operation that replaces the original convolution.
   results.push_back(maybeTransformed->second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// FlattenElementwiseLinalgOp.
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  if (target.getNumLoops() <= 1)
+    return DiagnosedSilenceableFailure::success();
+  ReassociationIndices reassociation(target.getNumLoops());
+  std::iota(reassociation.begin(), reassociation.end(), 0);
+  auto maybeFlattened =
+      (isElementwise(target))
+          ? collapseOpIterationDims(target, reassociation, rewriter)
+          : FailureOr<CollapseResult>(rewriter.notifyMatchFailure(
+                target, "only elementwise flattening is supported"));
+  if (failed(maybeFlattened))
+    return emitDefaultSilenceableFailure(target);
+  results.push_back(maybeFlattened->collapsedOp);
+  rewriter.replaceOp(target, maybeFlattened->results);
   return DiagnosedSilenceableFailure::success();
 }
 

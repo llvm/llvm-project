@@ -24,7 +24,7 @@ define <vscale x 32 x i1> @vector_interleave_nxv32i1_nxv16i1(<vscale x 16 x i1> 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v0, v8, a0
 ; CHECK-NEXT:    ret
 ;
@@ -44,7 +44,7 @@ define <vscale x 32 x i1> @vector_interleave_nxv32i1_nxv16i1(<vscale x 16 x i1> 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    srli a0, a0, 2
 ; ZVBB-NEXT:    add a1, a0, a0
-; ZVBB-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
+; ZVBB-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; ZVBB-NEXT:    vslideup.vx v0, v8, a0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 32 x i1> @llvm.experimental.vector.interleave2.nxv32i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -376,9 +376,9 @@ define <vscale x 4 x half> @vector_interleave_nxv4f16_nxv2f16(<vscale x 2 x half
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
 ; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv4f16_nxv2f16:
@@ -391,9 +391,9 @@ define <vscale x 4 x half> @vector_interleave_nxv4f16_nxv2f16(<vscale x 2 x half
 ; ZVBB-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVBB-NEXT:    vslidedown.vx v8, v10, a0
 ; ZVBB-NEXT:    add a1, a0, a0
-; ZVBB-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
+; ZVBB-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; ZVBB-NEXT:    vslideup.vx v10, v8, a0
-; ZVBB-NEXT:    vmv1r.v v8, v10
+; ZVBB-NEXT:    vmv.v.v v8, v10
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 4 x half> @llvm.experimental.vector.interleave2.nxv4f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
   ret <vscale x 4 x half> %res

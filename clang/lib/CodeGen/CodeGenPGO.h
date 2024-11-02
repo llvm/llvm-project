@@ -36,8 +36,6 @@ private:
   unsigned NumRegionCounters;
   uint64_t FunctionHash;
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCounterMap;
-  std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionMCDCBitmapMap;
-  std::unique_ptr<llvm::DenseMap<const Stmt *, int16_t>> RegionCondIDMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
   std::unique_ptr<MCDC::State> RegionMCDCState;
@@ -96,6 +94,8 @@ public:
   // Set a module flag indicating if value profiling is enabled.
   void setValueProfilingFlag(llvm::Module &M);
 
+  void setProfileVersion(llvm::Module &M);
+
 private:
   void setFuncName(llvm::Function *Fn);
   void setFuncName(StringRef Name, llvm::GlobalValue::LinkageTypes Linkage);
@@ -110,8 +110,8 @@ private:
   bool canEmitMCDCCoverage(const CGBuilderTy &Builder);
 
 public:
-  void emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
-                            llvm::Value *StepV);
+  void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                 llvm::Value *StepV);
   void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
                                       Address MCDCCondBitmapAddr);
   void emitMCDCParameters(CGBuilderTy &Builder);

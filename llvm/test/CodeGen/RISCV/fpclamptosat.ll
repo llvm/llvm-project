@@ -2812,7 +2812,6 @@ define i16 @utesth_f16i16_mm(half %x) {
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.lu.s a0, fa0, rtz
-; RV64-NEXT:    sext.w a0, a0
 ; RV64-NEXT:    lui a1, 16
 ; RV64-NEXT:    addiw a1, a1, -1
 ; RV64-NEXT:    bltu a0, a1, .LBB43_2

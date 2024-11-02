@@ -157,6 +157,7 @@ static void ParseArgs(int argc, char **argv) {
             .Case("header-search", ScanningOptimizations::HeaderSearch)
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
             .Case("vfs", ScanningOptimizations::VFS)
+            .Case("canonicalize-macros", ScanningOptimizations::Macros)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {

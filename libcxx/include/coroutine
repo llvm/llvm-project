@@ -38,7 +38,6 @@ struct suspend_always;
 
  */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__coroutine/coroutine_handle.h>
 #include <__coroutine/coroutine_traits.h>

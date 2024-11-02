@@ -1545,7 +1545,7 @@ public:
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
         !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
-      PGO.emitCounterIncrement(Builder, S, StepV);
+      PGO.emitCounterSetOrIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
 
@@ -4405,6 +4405,7 @@ public:
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
                                            const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -5013,9 +5014,9 @@ private:
   llvm::Value *EmitAArch64CpuInit();
   llvm::Value *
   FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };
-
 
 inline DominatingLLVMValue::saved_type
 DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {

@@ -915,6 +915,10 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
     IO.mapOptional("AlignConsecutiveShortCaseStatements",
                    Style.AlignConsecutiveShortCaseStatements);
+    IO.mapOptional("AlignConsecutiveTableGenCondOperatorColons",
+                   Style.AlignConsecutiveTableGenCondOperatorColons);
+    IO.mapOptional("AlignConsecutiveTableGenDefinitionColons",
+                   Style.AlignConsecutiveTableGenDefinitionColons);
     IO.mapOptional("AlignEscapedNewlines", Style.AlignEscapedNewlines);
     IO.mapOptional("AlignOperands", Style.AlignOperands);
     IO.mapOptional("AlignTrailingComments", Style.AlignTrailingComments);
@@ -1420,6 +1424,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveDeclarations = {};
   LLVMStyle.AlignConsecutiveMacros = {};
   LLVMStyle.AlignConsecutiveShortCaseStatements = {};
+  LLVMStyle.AlignConsecutiveTableGenCondOperatorColons = {};
+  LLVMStyle.AlignConsecutiveTableGenDefinitionColons = {};
   LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
   LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
   LLVMStyle.AlignTrailingComments = {};
@@ -1591,7 +1597,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyBreakScopeResolution = 500;
   LLVMStyle.PenaltyBreakString = 1000;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
-  LLVMStyle.PenaltyExcessCharacter = 1000000;
+  LLVMStyle.PenaltyExcessCharacter = 1'000'000;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
   LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
 
@@ -1914,9 +1920,12 @@ FormatStyle getClangFormatStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.InsertBraces = true;
   Style.InsertNewlineAtEOF = true;
+  Style.IntegerLiteralSeparator.Decimal = 3;
+  Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
   Style.LineEnding = FormatStyle::LE_LF;
   Style.RemoveBracesLLVM = true;
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
+  Style.RemoveSemicolon = true;
   return Style;
 }
 
@@ -2261,27 +2270,36 @@ public:
           FormatTokenLexer &Tokens) override {
     AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
     tooling::Replacements Result;
-    removeSemi(AnnotatedLines, Result);
+    removeSemi(Annotator, AnnotatedLines, Result);
     return {Result, 0};
   }
 
 private:
-  void removeSemi(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void removeSemi(TokenAnnotator &Annotator,
+                  SmallVectorImpl<AnnotatedLine *> &Lines,
                   tooling::Replacements &Result) {
+    auto PrecededByFunctionRBrace = [](const FormatToken &Tok) {
+      const auto *Prev = Tok.Previous;
+      if (!Prev || Prev->isNot(tok::r_brace))
+        return false;
+      const auto *LBrace = Prev->MatchingParen;
+      return LBrace && LBrace->is(TT_FunctionLBrace);
+    };
     const auto &SourceMgr = Env.getSourceManager();
     const auto End = Lines.end();
     for (auto I = Lines.begin(); I != End; ++I) {
       const auto Line = *I;
-      removeSemi(Line->Children, Result);
+      removeSemi(Annotator, Line->Children, Result);
       if (!Line->Affected)
         continue;
+      Annotator.calculateFormattingInformation(*Line);
       const auto NextLine = I + 1 == End ? nullptr : I[1];
       for (auto Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (!Token->Optional)
+        if (Token->isNot(tok::semi) ||
+            (!Token->Optional && !PrecededByFunctionRBrace(*Token))) {
           continue;
-        if (Token->isNot(tok::semi))
-          continue;
+        }
         auto Next = Token->Next;
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
@@ -3677,7 +3695,7 @@ reformat(const FormatStyle &Style, StringRef Code,
       FormatStyle S = Expanded;
       S.RemoveSemicolon = true;
       Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
-        return SemiRemover(Env, S).process(/*SkipAnnotation=*/true);
+        return SemiRemover(Env, S).process();
       });
     }
 
@@ -3908,7 +3926,7 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
     auto Extension = llvm::sys::path::extension(FileName);
     // If there's no file extension (or it's .h), we need to check the contents
     // of the code to see if it contains Objective-C.
-    if (Extension.empty() || Extension == ".h") {
+    if (!Code.empty() && (Extension.empty() || Extension == ".h")) {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
       Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
       ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());

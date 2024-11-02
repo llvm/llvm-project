@@ -117,10 +117,10 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; DATA_NO_LANEMASK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; DATA_NO_LANEMASK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX]], 1
-; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_NO_LANEMASK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 4
+; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; DATA_NO_LANEMASK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; DATA_NO_LANEMASK-NEXT:    br label [[VECTOR_BODY:%.*]]

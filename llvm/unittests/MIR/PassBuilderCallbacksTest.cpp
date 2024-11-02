@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Testing/Support/Error.h"
@@ -96,8 +99,6 @@ MATCHER_P(HasNameRegex, Name, "") {
 }
 
 struct MockPassInstrumentationCallbacks {
-  PassInstrumentationCallbacks Callbacks;
-
   MockPassInstrumentationCallbacks() {
     ON_CALL(*this, runBeforePass(_, _)).WillByDefault(Return(true));
   }
@@ -111,7 +112,7 @@ struct MockPassInstrumentationCallbacks {
   MOCK_METHOD2(runBeforeAnalysis, void(StringRef PassID, llvm::Any));
   MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, llvm::Any));
 
-  void registerPassInstrumentation() {
+  void registerPassInstrumentation(PassInstrumentationCallbacks &Callbacks) {
     Callbacks.registerShouldRunOptionalPassCallback(
         [this](StringRef P, llvm::Any IR) {
           return this->runBeforePass(P, IR);
@@ -147,7 +148,8 @@ struct MockPassInstrumentationCallbacks {
     // to check these explicitly.
     EXPECT_CALL(*this,
                 runBeforePass(Not(HasNameRegex("Mock")), HasName(IRName)))
-        .Times(AnyNumber());
+        .Times(AnyNumber())
+        .WillRepeatedly(Return(false));
     EXPECT_CALL(
         *this, runBeforeSkippedPass(Not(HasNameRegex("Mock")), HasName(IRName)))
         .Times(AnyNumber());
@@ -157,14 +159,8 @@ struct MockPassInstrumentationCallbacks {
     EXPECT_CALL(*this,
                 runAfterPass(Not(HasNameRegex("Mock")), HasName(IRName), _))
         .Times(AnyNumber());
-    EXPECT_CALL(*this, runBeforeAnalysis(HasNameRegex("MachineModuleAnalysis"),
-                                         HasName(IRName)))
-        .Times(AnyNumber());
     EXPECT_CALL(*this,
                 runBeforeAnalysis(Not(HasNameRegex("Mock")), HasName(IRName)))
-        .Times(AnyNumber());
-    EXPECT_CALL(*this, runAfterAnalysis(HasNameRegex("MachineModuleAnalysis"),
-                                        HasName(IRName)))
         .Times(AnyNumber());
     EXPECT_CALL(*this,
                 runAfterAnalysis(Not(HasNameRegex("Mock")), HasName(IRName)))
@@ -202,7 +198,7 @@ public:
       }
     };
 
-    Result run(MachineFunction &IR, MachineFunctionAnalysisManager::Base &AM) {
+    Result run(MachineFunction &IR, MachineFunctionAnalysisManager &AM) {
       return Handle->run(IR, AM);
     }
   };
@@ -249,7 +245,7 @@ public:
 
   public:
     PreservedAnalyses run(MachineFunction &IR,
-                          MachineFunctionAnalysisManager::Base &AM) {
+                          MachineFunctionAnalysisManager &AM) {
       return Handle->run(IR, AM);
     }
   };
@@ -270,7 +266,7 @@ protected:
 
 struct MockAnalysisHandle : public MockAnalysisHandleBase<MockAnalysisHandle> {
   MOCK_METHOD2(run, Analysis::Result(MachineFunction &,
-                                     MachineFunctionAnalysisManager::Base &));
+                                     MachineFunctionAnalysisManager &));
 
   MOCK_METHOD3(invalidate, bool(MachineFunction &, const PreservedAnalyses &,
                                 MachineFunctionAnalysisManager::Invalidator &));
@@ -284,7 +280,7 @@ AnalysisKey MockAnalysisHandleBase<DerivedT>::Analysis::Key;
 class MockPassHandle : public MockPassHandleBase<MockPassHandle> {
 public:
   MOCK_METHOD2(run, PreservedAnalyses(MachineFunction &,
-                                      MachineFunctionAnalysisManager::Base &));
+                                      MachineFunctionAnalysisManager &));
 
   MockPassHandle() { setDefaults(); }
 };
@@ -297,50 +293,51 @@ protected:
     InitializeAllTargetMCs();
   }
 
+  LLVMContext Context;
+
   std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<MachineModuleInfo> MMI;
 
-  LLVMContext Context;
   std::unique_ptr<Module> M;
-  std::unique_ptr<MIRParser> MIR;
+
+  PassInstrumentationCallbacks PIC;
+  std::unique_ptr<PassBuilder> PB;
+  ModulePassManager MPM;
+  MachineFunctionAnalysisManager MFAM;
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
 
   MockPassInstrumentationCallbacks CallbacksHandle;
-
-  PassBuilder PB;
-  ModulePassManager PM;
-  MachineFunctionPassManager MFPM;
-  FunctionAnalysisManager FAM;
-  ModuleAnalysisManager AM;
-  MachineFunctionAnalysisManager MFAM;
-
   MockPassHandle PassHandle;
   MockAnalysisHandle AnalysisHandle;
 
-  std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,
-                                   MachineModuleInfo &MMI) {
+  static std::unique_ptr<Module> parseMIR(StringRef MIRCode,
+                                          LLVMContext &Context,
+                                          TargetMachine &TM,
+                                          MachineModuleInfo &MMI) {
     SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
-    MIR = createMIRParser(std::move(MBuffer), Context);
-    if (!MIR)
-      return nullptr;
+    std::unique_ptr<MIRParser> MIR =
+        createMIRParser(std::move(MBuffer), Context);
+    assert(MIR);
 
     std::unique_ptr<Module> Mod = MIR->parseIRModule();
-    if (!Mod)
-      return nullptr;
+    assert(Mod);
 
+    // Module identifier is used in tests below.
+    Mod->setModuleIdentifier("module");
     Mod->setDataLayout(TM.createDataLayout());
 
-    if (MIR->parseMachineFunctions(*Mod, MMI)) {
-      M.reset();
-      return nullptr;
-    }
+    [[maybe_unused]] bool Ret = MIR->parseMachineFunctions(*Mod, MMI);
+    assert(!Ret);
+
     return Mod;
   }
 
   static PreservedAnalyses
-  getAnalysisResult(MachineFunction &U,
-                    MachineFunctionAnalysisManager::Base &AM) {
-    auto &MFAM = static_cast<MachineFunctionAnalysisManager &>(AM);
+  getAnalysisResult(MachineFunction &U, MachineFunctionAnalysisManager &MFAM) {
     MFAM.getResult<MockAnalysisHandle::Analysis>(U);
     return PreservedAnalyses::all();
   }
@@ -356,25 +353,18 @@ protected:
             TripleName, "", "", TargetOptions(), std::nullopt)));
     if (!TM)
       GTEST_SKIP();
+
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
-    M = parseMIR(*TM, MIRString, *MMI);
-    AM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
-  }
-
-  MachineFunctionCallbacksTest()
-      : CallbacksHandle(), PB(nullptr, PipelineTuningOptions(), std::nullopt,
-                              &CallbacksHandle.Callbacks),
-        PM(), FAM(), AM(), MFAM(FAM, AM) {
-
-    EXPECT_TRUE(&CallbacksHandle.Callbacks ==
-                PB.getPassInstrumentationCallbacks());
+    M = parseMIR(MIRString, Context, *TM, *MMI);
+    PB = std::make_unique<PassBuilder>(TM.get(), PipelineTuningOptions(),
+                                       std::nullopt, &PIC);
 
     /// Register a callback for analysis registration.
     ///
     /// The callback is a function taking a reference to an AnalyisManager
     /// object. When called, the callee gets to register its own analyses with
     /// this PassBuilder instance.
-    PB.registerAnalysisRegistrationCallback(
+    PB->registerAnalysisRegistrationCallback(
         [this](MachineFunctionAnalysisManager &AM) {
           // Register our mock analysis
           AM.registerPass([this] { return AnalysisHandle.getAnalysis(); });
@@ -386,24 +376,29 @@ protected:
     /// callbacks for each encountered pass name that it does not know. This
     /// includes both simple pass names as well as names of sub-pipelines. In
     /// the latter case, the InnerPipeline is not empty.
-    PB.registerPipelineParsingCallback(
-        [this](StringRef Name, MachineFunctionPassManager &PM) {
+    PB->registerPipelineParsingCallback(
+        [this](StringRef Name, MachineFunctionPassManager &PM,
+               ArrayRef<PassBuilder::PipelineElement> InnerPipeline) {
           if (parseAnalysisUtilityPasses<MockAnalysisHandle::Analysis>(
                   "test-analysis", Name, PM))
             return true;
 
           /// Parse the name of our pass mock handle
           if (Name == "test-transform") {
-            MFPM.addPass(PassHandle.getPass());
+            PM.addPass(PassHandle.getPass());
             return true;
           }
           return false;
         });
 
     /// Register builtin analyses and cross-register the analysis proxies
-    PB.registerModuleAnalyses(AM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerMachineFunctionAnalyses(MFAM);
+    PB->registerModuleAnalyses(MAM);
+    PB->registerCGSCCAnalyses(CGAM);
+    PB->registerFunctionAnalyses(FAM);
+    PB->registerLoopAnalyses(LAM);
+    PB->registerMachineFunctionAnalyses(MFAM);
+    PB->crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+    MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
   }
 };
 
@@ -412,53 +407,58 @@ TEST_F(MachineFunctionCallbacksTest, Passes) {
   EXPECT_CALL(PassHandle, run(HasName("test"), _)).WillOnce(&getAnalysisResult);
 
   StringRef PipelineText = "test-transform";
-  ASSERT_THAT_ERROR(PB.parsePassPipeline(MFPM, PipelineText), Succeeded())
+  ASSERT_THAT_ERROR(PB->parsePassPipeline(MPM, PipelineText), Succeeded())
       << "Pipeline was: " << PipelineText;
-  ASSERT_THAT_ERROR(MFPM.run(*M, MFAM), Succeeded());
+  MPM.run(*M, MAM);
 }
 
 TEST_F(MachineFunctionCallbacksTest, InstrumentedPasses) {
-  CallbacksHandle.registerPassInstrumentation();
+  CallbacksHandle.registerPassInstrumentation(PIC);
   // Non-mock instrumentation not specifically mentioned below can be ignored.
-  CallbacksHandle.ignoreNonMockPassInstrumentation("<string>");
   CallbacksHandle.ignoreNonMockPassInstrumentation("test");
-  CallbacksHandle.ignoreNonMockPassInstrumentation("");
+  CallbacksHandle.ignoreNonMockPassInstrumentation("module");
 
   // PassInstrumentation calls should happen in-sequence, in the same order
   // as passes/analyses are scheduled.
   ::testing::Sequence PISequence;
   EXPECT_CALL(CallbacksHandle,
               runBeforePass(HasNameRegex("MockPassHandle"), HasName("test")))
-      .InSequence(PISequence);
+      .InSequence(PISequence)
+      .WillOnce(Return(true));
   EXPECT_CALL(
       CallbacksHandle,
       runBeforeNonSkippedPass(HasNameRegex("MockPassHandle"), HasName("test")))
       .InSequence(PISequence);
-  EXPECT_CALL(CallbacksHandle,
-              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+  EXPECT_CALL(
+      CallbacksHandle,
+      runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("test")))
       .InSequence(PISequence);
-  EXPECT_CALL(CallbacksHandle,
-              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+  EXPECT_CALL(
+      CallbacksHandle,
+      runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("test")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("test"), _))
       .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runBeforeSkippedPass(HasNameRegex("MockPassHandle"), HasName("test")))
+      .Times(0);
 
   EXPECT_CALL(AnalysisHandle, run(HasName("test"), _));
   EXPECT_CALL(PassHandle, run(HasName("test"), _)).WillOnce(&getAnalysisResult);
 
   StringRef PipelineText = "test-transform";
-  ASSERT_THAT_ERROR(PB.parsePassPipeline(MFPM, PipelineText), Succeeded())
+  ASSERT_THAT_ERROR(PB->parsePassPipeline(MPM, PipelineText), Succeeded())
       << "Pipeline was: " << PipelineText;
-  ASSERT_THAT_ERROR(MFPM.run(*M, MFAM), Succeeded());
+  MPM.run(*M, MAM);
 }
 
 TEST_F(MachineFunctionCallbacksTest, InstrumentedSkippedPasses) {
-  CallbacksHandle.registerPassInstrumentation();
+  CallbacksHandle.registerPassInstrumentation(PIC);
   // Non-mock instrumentation run here can safely be ignored.
-  CallbacksHandle.ignoreNonMockPassInstrumentation("<string>");
   CallbacksHandle.ignoreNonMockPassInstrumentation("test");
-  CallbacksHandle.ignoreNonMockPassInstrumentation("");
+  CallbacksHandle.ignoreNonMockPassInstrumentation("module");
 
   // Skip the pass by returning false.
   EXPECT_CALL(CallbacksHandle,
@@ -495,9 +495,81 @@ TEST_F(MachineFunctionCallbacksTest, InstrumentedSkippedPasses) {
       .Times(0);
 
   StringRef PipelineText = "test-transform";
-  ASSERT_THAT_ERROR(PB.parsePassPipeline(MFPM, PipelineText), Succeeded())
+  ASSERT_THAT_ERROR(PB->parsePassPipeline(MPM, PipelineText), Succeeded())
       << "Pipeline was: " << PipelineText;
-  ASSERT_THAT_ERROR(MFPM.run(*M, MFAM), Succeeded());
+  MPM.run(*M, MAM);
+}
+
+// Check that the Module -> MachineFunction adaptor properly calls
+// runAfterPassInvalidated.
+TEST_F(MachineFunctionCallbacksTest, InstrumentedFreeMFPass) {
+  CallbacksHandle.registerPassInstrumentation(PIC);
+  // Non-mock instrumentation run here can safely be ignored.
+  CallbacksHandle.ignoreNonMockPassInstrumentation("test");
+  CallbacksHandle.ignoreNonMockPassInstrumentation("module");
+
+  ::testing::Sequence PISequence;
+  EXPECT_CALL(
+      CallbacksHandle,
+      runBeforePass(HasNameRegex("FreeMachineFunctionPass"), HasName("test")))
+      .InSequence(PISequence)
+      .WillOnce(Return(true));
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeNonSkippedPass(HasNameRegex("FreeMachineFunctionPass"),
+                                      HasName("test")))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle, runAfterPassInvalidated(
+                                   HasNameRegex("FreeMachineFunctionPass"), _))
+      .InSequence(PISequence);
+
+  // runAfterPass should not be called since the MachineFunction is no longer
+  // valid after FreeMachineFunctionPass.
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("FreeMachineFunctionPass"), _, _))
+      .Times(0);
+
+  MPM.addPass(
+      createModuleToMachineFunctionPassAdaptor(FreeMachineFunctionPass()));
+  MPM.run(*M, MAM);
+}
+
+// Check that the Module -> MachineFunction adaptor and MachineFunction pass
+// manager properly call runAfterPassInvalidated.
+TEST_F(MachineFunctionCallbacksTest, InstrumentedFreeMFPass2) {
+  CallbacksHandle.registerPassInstrumentation(PIC);
+  // Non-mock instrumentation run here can safely be ignored.
+  CallbacksHandle.ignoreNonMockPassInstrumentation("test");
+  CallbacksHandle.ignoreNonMockPassInstrumentation("module");
+
+  ::testing::Sequence PISequence;
+  EXPECT_CALL(
+      CallbacksHandle,
+      runBeforePass(HasNameRegex("FreeMachineFunctionPass"), HasName("test")))
+      .InSequence(PISequence)
+      .WillOnce(Return(true));
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeNonSkippedPass(HasNameRegex("FreeMachineFunctionPass"),
+                                      HasName("test")))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle, runAfterPassInvalidated(
+                                   HasNameRegex("FreeMachineFunctionPass"), _))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPassInvalidated(HasNameRegex("PassManager"), _))
+      .InSequence(PISequence);
+
+  // runAfterPass should not be called since the MachineFunction is no longer
+  // valid after FreeMachineFunctionPass.
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("FreeMachineFunctionPass"), _, _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("PassManager"), _, _))
+      .Times(0);
+
+  MachineFunctionPassManager MFPM;
+  MFPM.addPass(FreeMachineFunctionPass());
+  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.run(*M, MAM);
 }
 
 } // end anonymous namespace

@@ -156,6 +156,8 @@ public:
       : ObjCContainerRecord(Name, RecordLinkage::Unknown),
         ClassToExtend(ClassToExtend) {}
 
+  StringRef getSuperClassName() const { return ClassToExtend; }
+
 private:
   StringRef ClassToExtend;
 };

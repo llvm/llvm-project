@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LIMITS_MACROS_H
-#define __LLVM_LIBC_MACROS_LIMITS_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LIMITS_MACROS_H
+#define LLVM_LIBC_MACROS_LIMITS_MACROS_H
 
 // Define all C23 macro constants of limits.h
 
@@ -225,4 +225,4 @@
 #define ULLONG_MIN 0ULL
 #endif // ULLONG_MIN
 
-#endif // __LLVM_LIBC_MACROS_LIMITS_MACROS_H
+#endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

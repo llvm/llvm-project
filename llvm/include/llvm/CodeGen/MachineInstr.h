@@ -20,6 +20,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -1438,7 +1439,7 @@ public:
   unsigned getBundleSize() const;
 
   /// Return true if the MachineInstr reads the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks if there
+  /// If TargetRegisterInfo is non-null, then it also checks if there
   /// is a read of a super-register.
   /// This does not count partial redefines of virtual registers as reads:
   ///   %reg1024:6 = OP.
@@ -1461,7 +1462,7 @@ public:
                                 SmallVectorImpl<unsigned> *Ops = nullptr) const;
 
   /// Return true if the MachineInstr kills the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks if there is
+  /// If TargetRegisterInfo is non-null, then it also checks if there is
   /// a kill of a super-register.
   bool killsRegister(Register Reg,
                      const TargetRegisterInfo *TRI = nullptr) const {
@@ -1469,7 +1470,7 @@ public:
   }
 
   /// Return true if the MachineInstr fully defines the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks
+  /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a def of a super-register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
   bool definesRegister(Register Reg,
@@ -1486,7 +1487,7 @@ public:
   }
 
   /// Returns true if the register is dead in this machine instruction.
-  /// If TargetRegisterInfo is passed, then it also checks
+  /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a dead def of a super-register.
   bool registerDefIsDead(Register Reg,
                          const TargetRegisterInfo *TRI = nullptr) const {
@@ -1744,16 +1745,17 @@ public:
   bool allImplicitDefsAreDead() const;
 
   /// Return a valid size if the instruction is a spill instruction.
-  std::optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<LocationSize> getSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded spill instruction.
-  std::optional<unsigned> getFoldedSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<LocationSize>
+  getFoldedSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a restore instruction.
-  std::optional<unsigned> getRestoreSize(const TargetInstrInfo *TII) const;
+  std::optional<LocationSize> getRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded restore instruction.
-  std::optional<unsigned>
+  std::optional<LocationSize>
   getFoldedRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Copy implicit register operands from specified

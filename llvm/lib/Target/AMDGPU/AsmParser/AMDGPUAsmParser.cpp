@@ -323,6 +323,9 @@ public:
     return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::f32);
   }
 
+  bool isPackedFP16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
+  }
 
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
@@ -1682,24 +1685,48 @@ public:
 private:
   struct OperandInfoTy {
     SMLoc Loc;
-    int64_t Id;
+    int64_t Val;
     bool IsSymbolic = false;
     bool IsDefined = false;
 
-    OperandInfoTy(int64_t Id_) : Id(Id_) {}
+    OperandInfoTy(int64_t Val) : Val(Val) {}
   };
+
+  struct StructuredOpField : OperandInfoTy {
+    StringLiteral Id;
+    StringLiteral Desc;
+    unsigned Width;
+    bool IsDefined = false;
+
+    StructuredOpField(StringLiteral Id, StringLiteral Desc, unsigned Width,
+                      int64_t Default)
+        : OperandInfoTy(Default), Id(Id), Desc(Desc), Width(Width) {}
+    virtual ~StructuredOpField() = default;
+
+    bool Error(AMDGPUAsmParser &Parser, const Twine &Err) const {
+      Parser.Error(Loc, "invalid " + Desc + ": " + Err);
+      return false;
+    }
+
+    virtual bool validate(AMDGPUAsmParser &Parser) const {
+      if (IsSymbolic && Val == OPR_ID_UNSUPPORTED)
+        return Error(Parser, "not supported on this GPU");
+      if (!isUIntN(Width, Val))
+        return Error(Parser, "only " + Twine(Width) + "-bit values are legal");
+      return true;
+    }
+  };
+
+  ParseStatus parseStructuredOpFields(ArrayRef<StructuredOpField *> Fields);
+  bool validateStructuredOpFields(ArrayRef<const StructuredOpField *> Fields);
 
   bool parseSendMsgBody(OperandInfoTy &Msg, OperandInfoTy &Op, OperandInfoTy &Stream);
   bool validateSendMsg(const OperandInfoTy &Msg,
                        const OperandInfoTy &Op,
                        const OperandInfoTy &Stream);
 
-  bool parseHwregBody(OperandInfoTy &HwReg,
-                      OperandInfoTy &Offset,
-                      OperandInfoTy &Width);
-  bool validateHwreg(const OperandInfoTy &HwReg,
-                     const OperandInfoTy &Offset,
-                     const OperandInfoTy &Width);
+  ParseStatus parseHwregFunc(OperandInfoTy &HwReg, OperandInfoTy &Offset,
+                             OperandInfoTy &Width);
 
   SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
   SMLoc getSMEMOffsetLoc(const OperandVector &Operands) const;
@@ -7194,71 +7221,44 @@ bool AMDGPUOperand::isDepCtr() const { return isS16Imm(); }
 // hwreg
 //===----------------------------------------------------------------------===//
 
-bool
-AMDGPUAsmParser::parseHwregBody(OperandInfoTy &HwReg,
-                                OperandInfoTy &Offset,
-                                OperandInfoTy &Width) {
+ParseStatus AMDGPUAsmParser::parseHwregFunc(OperandInfoTy &HwReg,
+                                            OperandInfoTy &Offset,
+                                            OperandInfoTy &Width) {
   using namespace llvm::AMDGPU::Hwreg;
+
+  if (!trySkipId("hwreg", AsmToken::LParen))
+    return ParseStatus::NoMatch;
 
   // The register may be specified by name or using a numeric code
   HwReg.Loc = getLoc();
   if (isToken(AsmToken::Identifier) &&
-      (HwReg.Id = getHwregId(getTokenStr(), getSTI())) != OPR_ID_UNKNOWN) {
+      (HwReg.Val = getHwregId(getTokenStr(), getSTI())) != OPR_ID_UNKNOWN) {
     HwReg.IsSymbolic = true;
     lex(); // skip register name
-  } else if (!parseExpr(HwReg.Id, "a register name")) {
-    return false;
+  } else if (!parseExpr(HwReg.Val, "a register name")) {
+    return ParseStatus::Failure;
   }
 
   if (trySkipToken(AsmToken::RParen))
-    return true;
+    return ParseStatus::Success;
 
   // parse optional params
   if (!skipToken(AsmToken::Comma, "expected a comma or a closing parenthesis"))
-    return false;
+    return ParseStatus::Failure;
 
   Offset.Loc = getLoc();
-  if (!parseExpr(Offset.Id))
-    return false;
+  if (!parseExpr(Offset.Val))
+    return ParseStatus::Failure;
 
   if (!skipToken(AsmToken::Comma, "expected a comma"))
-    return false;
+    return ParseStatus::Failure;
 
   Width.Loc = getLoc();
-  return parseExpr(Width.Id) &&
-         skipToken(AsmToken::RParen, "expected a closing parenthesis");
-}
+  if (!parseExpr(Width.Val) ||
+      !skipToken(AsmToken::RParen, "expected a closing parenthesis"))
+    return ParseStatus::Failure;
 
-bool
-AMDGPUAsmParser::validateHwreg(const OperandInfoTy &HwReg,
-                               const OperandInfoTy &Offset,
-                               const OperandInfoTy &Width) {
-
-  using namespace llvm::AMDGPU::Hwreg;
-
-  if (HwReg.IsSymbolic) {
-    if (HwReg.Id == OPR_ID_UNSUPPORTED) {
-      Error(HwReg.Loc,
-            "specified hardware register is not supported on this GPU");
-      return false;
-    }
-  } else {
-    if (!isValidHwreg(HwReg.Id)) {
-      Error(HwReg.Loc,
-            "invalid code of hardware register: only 6-bit values are legal");
-      return false;
-    }
-  }
-  if (!isValidHwregOffset(Offset.Id)) {
-    Error(Offset.Loc, "invalid bit offset: only 5-bit values are legal");
-    return false;
-  }
-  if (!isValidHwregWidth(Width.Id)) {
-    Error(Width.Loc,
-          "invalid bitfield width: only values from 1 to 32 are legal");
-    return false;
-  }
-  return true;
+  return ParseStatus::Success;
 }
 
 ParseStatus AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
@@ -7267,24 +7267,40 @@ ParseStatus AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
   int64_t ImmVal = 0;
   SMLoc Loc = getLoc();
 
-  if (trySkipId("hwreg", AsmToken::LParen)) {
-    OperandInfoTy HwReg(OPR_ID_UNKNOWN);
-    OperandInfoTy Offset(OFFSET_DEFAULT_);
-    OperandInfoTy Width(WIDTH_DEFAULT_);
-    if (parseHwregBody(HwReg, Offset, Width) &&
-        validateHwreg(HwReg, Offset, Width)) {
-      ImmVal = encodeHwreg(HwReg.Id, Offset.Id, Width.Id);
-    } else {
-      return ParseStatus::Failure;
+  StructuredOpField HwReg("id", "hardware register", HwregId::Width,
+                          HwregId::Default);
+  StructuredOpField Offset("offset", "bit offset", HwregOffset::Width,
+                           HwregOffset::Default);
+  struct : StructuredOpField {
+    using StructuredOpField::StructuredOpField;
+    bool validate(AMDGPUAsmParser &Parser) const override {
+      if (!isUIntN(Width, Val - 1))
+        return Error(Parser, "only values from 1 to 32 are legal");
+      return true;
     }
-  } else if (parseExpr(ImmVal, "a hwreg macro")) {
-    if (ImmVal < 0 || !isUInt<16>(ImmVal))
-      return Error(Loc, "invalid immediate: only 16-bit values are legal");
-  } else {
-    return ParseStatus::Failure;
+  } Width("size", "bitfield width", HwregSize::Width, HwregSize::Default);
+  ParseStatus Res = parseStructuredOpFields({&HwReg, &Offset, &Width});
+
+  if (Res.isNoMatch())
+    Res = parseHwregFunc(HwReg, Offset, Width);
+
+  if (Res.isSuccess()) {
+    if (!validateStructuredOpFields({&HwReg, &Offset, &Width}))
+      return ParseStatus::Failure;
+    ImmVal = HwregEncoding::encode(HwReg.Val, Offset.Val, Width.Val);
   }
 
-  Operands.push_back(AMDGPUOperand::CreateImm(this, ImmVal, Loc, AMDGPUOperand::ImmTyHwreg));
+  if (Res.isNoMatch() &&
+      parseExpr(ImmVal, "a hwreg macro, structured immediate"))
+    Res = ParseStatus::Success;
+
+  if (!Res.isSuccess())
+    return ParseStatus::Failure;
+
+  if (!isUInt<16>(ImmVal))
+    return Error(Loc, "invalid immediate: only 16-bit values are legal");
+  Operands.push_back(
+      AMDGPUOperand::CreateImm(this, ImmVal, Loc, AMDGPUOperand::ImmTyHwreg));
   return ParseStatus::Success;
 }
 
@@ -7304,10 +7320,10 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
 
   Msg.Loc = getLoc();
   if (isToken(AsmToken::Identifier) &&
-      (Msg.Id = getMsgId(getTokenStr(), getSTI())) != OPR_ID_UNKNOWN) {
+      (Msg.Val = getMsgId(getTokenStr(), getSTI())) != OPR_ID_UNKNOWN) {
     Msg.IsSymbolic = true;
     lex(); // skip message name
-  } else if (!parseExpr(Msg.Id, "a message name")) {
+  } else if (!parseExpr(Msg.Val, "a message name")) {
     return false;
   }
 
@@ -7315,16 +7331,16 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
     Op.IsDefined = true;
     Op.Loc = getLoc();
     if (isToken(AsmToken::Identifier) &&
-        (Op.Id = getMsgOpId(Msg.Id, getTokenStr())) >= 0) {
+        (Op.Val = getMsgOpId(Msg.Val, getTokenStr())) >= 0) {
       lex(); // skip operation name
-    } else if (!parseExpr(Op.Id, "an operation name")) {
+    } else if (!parseExpr(Op.Val, "an operation name")) {
       return false;
     }
 
     if (trySkipToken(AsmToken::Comma)) {
       Stream.IsDefined = true;
       Stream.Loc = getLoc();
-      if (!parseExpr(Stream.Id))
+      if (!parseExpr(Stream.Val))
         return false;
     }
   }
@@ -7344,17 +7360,17 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
   bool Strict = Msg.IsSymbolic;
 
   if (Strict) {
-    if (Msg.Id == OPR_ID_UNSUPPORTED) {
+    if (Msg.Val == OPR_ID_UNSUPPORTED) {
       Error(Msg.Loc, "specified message id is not supported on this GPU");
       return false;
     }
   } else {
-    if (!isValidMsgId(Msg.Id, getSTI())) {
+    if (!isValidMsgId(Msg.Val, getSTI())) {
       Error(Msg.Loc, "invalid message id");
       return false;
     }
   }
-  if (Strict && (msgRequiresOp(Msg.Id, getSTI()) != Op.IsDefined)) {
+  if (Strict && (msgRequiresOp(Msg.Val, getSTI()) != Op.IsDefined)) {
     if (Op.IsDefined) {
       Error(Op.Loc, "message does not support operations");
     } else {
@@ -7362,16 +7378,16 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     }
     return false;
   }
-  if (!isValidMsgOp(Msg.Id, Op.Id, getSTI(), Strict)) {
+  if (!isValidMsgOp(Msg.Val, Op.Val, getSTI(), Strict)) {
     Error(Op.Loc, "invalid operation id");
     return false;
   }
-  if (Strict && !msgSupportsStream(Msg.Id, Op.Id, getSTI()) &&
+  if (Strict && !msgSupportsStream(Msg.Val, Op.Val, getSTI()) &&
       Stream.IsDefined) {
     Error(Stream.Loc, "message operation does not support streams");
     return false;
   }
-  if (!isValidMsgStream(Msg.Id, Op.Id, Stream.Id, getSTI(), Strict)) {
+  if (!isValidMsgStream(Msg.Val, Op.Val, Stream.Val, getSTI(), Strict)) {
     Error(Stream.Loc, "invalid message stream id");
     return false;
   }
@@ -7390,7 +7406,7 @@ ParseStatus AMDGPUAsmParser::parseSendMsg(OperandVector &Operands) {
     OperandInfoTy Stream(STREAM_ID_NONE_);
     if (parseSendMsgBody(Msg, Op, Stream) &&
         validateSendMsg(Msg, Op, Stream)) {
-      ImmVal = encodeMsg(Msg.Id, Op.Id, Stream.Id);
+      ImmVal = encodeMsg(Msg.Val, Op.Val, Stream.Val);
     } else {
       return ParseStatus::Failure;
     }
@@ -7725,6 +7741,48 @@ AMDGPUAsmParser::getConstLoc(const OperandVector &Operands) const {
     return Op.isImmKindConst();
   };
   return getOperandLoc(Test, Operands);
+}
+
+ParseStatus
+AMDGPUAsmParser::parseStructuredOpFields(ArrayRef<StructuredOpField *> Fields) {
+  if (!trySkipToken(AsmToken::LCurly))
+    return ParseStatus::NoMatch;
+
+  bool First = true;
+  while (!trySkipToken(AsmToken::RCurly)) {
+    if (!First &&
+        !skipToken(AsmToken::Comma, "comma or closing brace expected"))
+      return ParseStatus::Failure;
+
+    StringRef Id = getTokenStr();
+    SMLoc IdLoc = getLoc();
+    if (!skipToken(AsmToken::Identifier, "field name expected") ||
+        !skipToken(AsmToken::Colon, "colon expected"))
+      return ParseStatus::Failure;
+
+    auto I =
+        find_if(Fields, [Id](StructuredOpField *F) { return F->Id == Id; });
+    if (I == Fields.end())
+      return Error(IdLoc, "unknown field");
+    if ((*I)->IsDefined)
+      return Error(IdLoc, "duplicate field");
+
+    // TODO: Support symbolic values.
+    (*I)->Loc = getLoc();
+    if (!parseExpr((*I)->Val))
+      return ParseStatus::Failure;
+    (*I)->IsDefined = true;
+
+    First = false;
+  }
+  return ParseStatus::Success;
+}
+
+bool AMDGPUAsmParser::validateStructuredOpFields(
+    ArrayRef<const StructuredOpField *> Fields) {
+  return all_of(Fields, [this](const StructuredOpField *F) {
+    return F->validate(*this);
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -8110,20 +8168,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   bool IsAtomicReturn = false;
 
   if (IsAtomic) {
-    for (unsigned i = FirstOperandIdx, e = Operands.size(); i != e; ++i) {
-      AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
-      if (!Op.isCPol())
-        continue;
-      IsAtomicReturn = Op.getImm() & AMDGPU::CPol::GLC;
-      break;
-    }
-
-    if (!IsAtomicReturn) {
-      int NewOpc = AMDGPU::getAtomicNoRetOp(Inst.getOpcode());
-      if (NewOpc != -1)
-        Inst.setOpcode(NewOpc);
-    }
-
     IsAtomicReturn =  MII.get(Inst.getOpcode()).TSFlags &
                       SIInstrFlags::IsAtomicRet;
   }

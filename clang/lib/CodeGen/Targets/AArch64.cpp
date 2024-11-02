@@ -8,6 +8,8 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -74,6 +76,12 @@ private:
   bool allowBFloatArgsAndRet() const override {
     return getTarget().hasBFloat16Type();
   }
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
 
 class AArch64SwiftABIInfo : public SwiftABIInfo {
@@ -124,8 +132,7 @@ public:
     assert(Error.empty());
 
     auto *Fn = cast<llvm::Function>(GV);
-    static const char *SignReturnAddrStr[] = {"none", "non-leaf", "all"};
-    Fn->addFnAttr("sign-return-address", SignReturnAddrStr[static_cast<int>(BPI.SignReturnAddr)]);
+    Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
 
     if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
       Fn->addFnAttr("sign-return-address-key",
@@ -155,6 +162,11 @@ public:
     }
     return TargetCodeGenInfo::isScalarizableAsmOperand(CGF, Ty);
   }
+
+  void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
+                            const FunctionDecl *Caller,
+                            const FunctionDecl *Callee,
+                            const CallArgList &Args) const override;
 };
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
@@ -812,6 +824,71 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
                           /*allowHigherAlign*/ false);
+}
+
+static bool isStreaming(const FunctionDecl *F) {
+  if (F->hasAttr<ArmLocallyStreamingAttr>())
+    return true;
+  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
+    return T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask;
+  return false;
+}
+
+static bool isStreamingCompatible(const FunctionDecl *F) {
+  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
+    return T->getAArch64SMEAttributes() &
+           FunctionType::SME_PStateSMCompatibleMask;
+  return false;
+}
+
+void AArch64TargetCodeGenInfo::checkFunctionCallABI(
+    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
+    const FunctionDecl *Callee, const CallArgList &Args) const {
+  if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
+    return;
+
+  bool CallerIsStreaming = isStreaming(Caller);
+  bool CalleeIsStreaming = isStreaming(Callee);
+  bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
+  bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
+
+  if (!CalleeIsStreamingCompatible &&
+      (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
+    CGM.getDiags().Report(CallLoc,
+                          diag::err_function_always_inline_attribute_mismatch)
+        << Caller->getDeclName() << Callee->getDeclName() << "streaming";
+  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
+    if (NewAttr->isNewZA())
+      CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
+          << Callee->getDeclName();
+}
+
+void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
+                                             unsigned Index,
+                                             raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                             raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << "._";
+  SmallVector<StringRef, 8> Features;
+  AttrStr.split(Features, "+");
+  for (auto &Feat : Features)
+    Feat = Feat.trim();
+
+  llvm::sort(Features, [](const StringRef LHS, const StringRef RHS) {
+    return LHS.compare(RHS) < 0;
+  });
+
+  for (auto &Feat : Features)
+    if (auto Ext = llvm::AArch64::parseArchExtension(Feat))
+      Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

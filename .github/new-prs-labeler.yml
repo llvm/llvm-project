@@ -846,8 +846,31 @@ backend:PowerPC:
   - clang/lib/Driver/ToolChains/Arch/PPC.*
   - clang/test/CodeGen/PowerPC/**
 
+backend:SystemZ:
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/SystemZ*
+  - llvm/include/llvm/BinaryFormat/GOFF.h
+  - llvm/include/llvm/IR/IntrinsicsSystemZ.td
+  - llvm/lib/Target/SystemZ/**
+  - llvm/test/Analysis/**/SystemZ/**
+  - llvm/test/CodeGen/SystemZ/**
+  - llvm/test/DebugInfo/SystemZ/**
+  - llvm/test/ExecutionEngine/**/SystemZ/**
+  - llvm/test/MC/Disassembler/SystemZ/**
+  - llvm/test/MC/GOFF/**
+  - llvm/test/MC/SystemZ/**
+  - llvm/test/Transforms/**/SystemZ/**
+  - clang/include/clang/Basic/BuiltinsSystemZ.*
+  - clang/lib/Basic/Targets/SystemZ.*
+  - clang/lib/CodeGen/Targets/SystemZ.cpp
+  - clang/lib/Driver/ToolChains/ZOS*
+  - clang/lib/Driver/ToolChains/Arch/SystemZ.*
+  - clang/test/CodeGen/SystemZ/**
+
 third-party:unittests:
   - third-party/unittests/**
+
+third-party:benchmark:
+  - third-party/benchmark/**
 
 llvm:binary-utilities:
   - llvm/docs/CommandGuide/llvm-*

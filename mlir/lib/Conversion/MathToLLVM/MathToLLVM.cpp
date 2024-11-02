@@ -148,10 +148,10 @@ struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
+          auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
-              mlir::VectorType::get(
-                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
-                  floatType),
+              mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
+                                    {numElements.isScalable()}),
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
@@ -207,10 +207,10 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
+          auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
-              mlir::VectorType::get(
-                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
-                  floatType),
+              mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
+                                    {numElements.isScalable()}),
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
@@ -266,10 +266,10 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
+          auto numElements = LLVM::getVectorNumElements(llvm1DVectorTy);
           auto splatAttr = SplatElementsAttr::get(
-              mlir::VectorType::get(
-                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
-                  floatType),
+              mlir::VectorType::get({numElements.getKnownMinValue()}, floatType,
+                                    {numElements.isScalable()}),
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);

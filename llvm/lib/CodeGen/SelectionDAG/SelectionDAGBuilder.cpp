@@ -1241,16 +1241,30 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
       }
     }
-    // We must early-exit here to prevent any DPValues from being emitted below,
-    // as we have just emitted the debug values resulting from assignment
-    // tracking analysis, making any existing DPValues redundant (and probably
-    // less correct).
-    return;
   }
 
+  // We must skip DPValues if they've already been processed above as we
+  // have just emitted the debug values resulting from assignment tracking
+  // analysis, making any existing DPValues redundant (and probably less
+  // correct). We still need to process DPLabels. This does sink DPLabels
+  // to the bottom of the group of debug records. That sholdn't be important
+  // as it does so deterministcally and ordering between DPLabels and DPValues
+  // is immaterial (other than for MIR/IR printing).
+  bool SkipDPValues = DAG.getFunctionVarLocs();
   // Is there is any debug-info attached to this instruction, in the form of
-  // DPValue non-instruction debug-info records.
-  for (DPValue &DPV : I.getDbgValueRange()) {
+  // DbgRecord non-instruction debug-info records.
+  for (DbgRecord &DR : I.getDbgValueRange()) {
+    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+      assert(DPL->getLabel() && "Missing label");
+      SDDbgLabel *SDV =
+          DAG.getDbgLabel(DPL->getLabel(), DPL->getDebugLoc(), SDNodeOrder);
+      DAG.AddDbgLabel(SDV);
+      continue;
+    }
+
+    if (SkipDPValues)
+      continue;
+    DPValue &DPV = cast<DPValue>(DR);
     DILocalVariable *Variable = DPV.getVariable();
     DIExpression *Expression = DPV.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
@@ -4331,7 +4345,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Type *Ty = I.getType();
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets, 0);
+  ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
@@ -4499,7 +4513,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                  SrcV->getType(), ValueVTs, &MemVTs, &Offsets, 0);
+                  SrcV->getType(), ValueVTs, &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
@@ -5064,6 +5078,17 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   // Create the node.
   SDValue Result;
+
+  if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    SDValue ConvControlToken = getValue(Token);
+    assert(Ops.back().getValueType() != MVT::Glue &&
+           "Did not expected another glue node here.");
+    ConvControlToken =
+        DAG.getNode(ISD::CONVERGENCECTRL_GLUE, {}, MVT::Glue, ConvControlToken);
+    Ops.push_back(ConvControlToken);
+  }
+
   // In some cases, custom collection of operands from CallInst I may be needed.
   TLI.CollectTargetIntrinsicOperands(I, Ops, DAG);
   if (IsTgtIntrinsic) {
@@ -6062,6 +6087,27 @@ bool SelectionDAGBuilder::visitEntryValueDbgValue(
   LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
                        "couldn't find a physical register\n");
   return true;
+}
+
+/// Lower the call to the specified intrinsic function.
+void SelectionDAGBuilder::visitConvergenceControl(const CallInst &I,
+                                                  unsigned Intrinsic) {
+  SDLoc sdl = getCurSDLoc();
+  switch (Intrinsic) {
+  case Intrinsic::experimental_convergence_anchor:
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_ANCHOR, sdl, MVT::Untyped));
+    break;
+  case Intrinsic::experimental_convergence_entry:
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_ENTRY, sdl, MVT::Untyped));
+    break;
+  case Intrinsic::experimental_convergence_loop: {
+    auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl);
+    auto *Token = Bundle->Inputs[0].get();
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_LOOP, sdl, MVT::Untyped,
+                             getValue(Token)));
+    break;
+  }
+  }
 }
 
 /// Lower the call to the specified intrinsic function.
@@ -7723,6 +7769,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_vector_deinterleave2:
     visitVectorDeinterleave(I);
     return;
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    visitConvergenceControl(I, Intrinsic);
   }
 }
 
@@ -8016,8 +8066,9 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
   bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
       MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
 
   SDValue LD = DAG.getStridedLoadVP(VT, DL, InChain, OpValues[0], OpValues[1],
@@ -8038,8 +8089,9 @@ void SelectionDAGBuilder::visitVPStridedStore(
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
+  unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      MachinePointerInfo(AS), MachineMemOperand::MOStore,
       MemoryLocation::UnknownSize, *Alignment, AAInfo);
 
   SDValue ST = DAG.getStridedStoreVP(
@@ -8397,6 +8449,14 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     }
   }
 
+  SDValue ConvControlToken;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    ConvControlToken = getValue(Token);
+  } else {
+    ConvControlToken = DAG.getUNDEF(MVT::Untyped);
+  }
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
@@ -8405,7 +8465,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setConvergent(CB.isConvergent())
       .setIsPreallocated(
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
-      .setCFIType(CFIType);
+      .setCFIType(CFIType)
+      .setConvergenceControlToken(ConvControlToken);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
@@ -8957,7 +9018,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
+              LLVMContext::OB_convergencectrl}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());

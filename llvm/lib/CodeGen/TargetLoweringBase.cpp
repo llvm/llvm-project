@@ -307,6 +307,9 @@ RTLIB::Libcall RTLIB::getFPEXT(EVT OpVT, EVT RetVT) {
   } else if (OpVT == MVT::f80) {
     if (RetVT == MVT::f128)
       return FPEXT_F80_F128;
+  } else if (OpVT == MVT::bf16) {
+    if (RetVT == MVT::f32)
+      return FPEXT_BF16_F32;
   }
 
   return UNKNOWN_LIBCALL;

@@ -381,6 +381,14 @@ static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
     // OP 1001_01 goes in bits 31:26 of BL.
     Value = ((Value >> 2) & 0x3ffffff) | 0x94000000ULL;
     break;
+  case ELF::R_AARCH64_JUMP26:
+    Value -= PC;
+    assert(isInt<28>(Value) &&
+           "only PC +/- 128MB is allowed for direct branch");
+    // Immediate goes in bits 25:0 of B.
+    // OP 0001_01 goes in bits 31:26 of B.
+    Value = ((Value >> 2) & 0x3ffffff) | 0x14000000ULL;
+    break;
   }
   return Value;
 }

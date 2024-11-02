@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNALS_H
-#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNALS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_SIGNALS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_SIGNALS_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/StringUtil/message_mapper.h"
@@ -43,4 +43,4 @@ LIBC_INLINE_VAR constexpr MsgTable<22> POSIX_SIGNALS = {
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNALS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_SIGNALS_H

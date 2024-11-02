@@ -18,6 +18,7 @@
 
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
 
@@ -28,8 +29,6 @@ extern cl::opt<unsigned> TaskCount;
 } // namespace opts
 
 namespace llvm {
-class ThreadPool;
-
 namespace bolt {
 class BinaryContext;
 class BinaryFunction;

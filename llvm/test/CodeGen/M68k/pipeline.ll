@@ -76,6 +76,7 @@
 ; CHECK-NEXT:      Peephole Optimizations
 ; CHECK-NEXT:      Remove dead machine instructions
 ; CHECK-NEXT:      Detect Dead Lanes
+; CHECK-NEXT:      Init Undef Pass
 ; CHECK-NEXT:      Process Implicit Definitions
 ; CHECK-NEXT:      Remove unreachable machine basic blocks
 ; CHECK-NEXT:      Live Variable Analysis

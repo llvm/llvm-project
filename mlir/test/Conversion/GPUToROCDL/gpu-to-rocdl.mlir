@@ -1,6 +1,8 @@
 // RUN: mlir-opt %s -convert-gpu-to-rocdl -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-rocdl='index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
+// CHECK-LABEL: @test_module
+// CHECK-SAME: llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_ops()
   // CHECK32-LABEL: func @gpu_index_ops()
@@ -627,4 +629,12 @@ gpu.module @test_module {
     %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
     func.return %shfl, %shfli : f32, f32
   }
+}
+
+// -----
+
+// CHECK-LABEL: @test_custom_data_layout
+// CHECK-SAME: llvm.data_layout = "e"
+gpu.module @test_custom_data_layout attributes {llvm.data_layout = "e"} {
+
 }

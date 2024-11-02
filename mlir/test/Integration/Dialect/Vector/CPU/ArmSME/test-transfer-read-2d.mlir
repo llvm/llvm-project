@@ -1,9 +1,5 @@
 // DEFINE: %{entry_point} = entry
-// DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
-// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// DEFINE:   -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
@@ -18,7 +14,7 @@ func.func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) 
   %0 = vector.transfer_read %A[%base1, %base2], %pad {in_bounds=[true, true]} :
     memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -31,7 +27,7 @@ func.func @transfer_read_2d_transposed(%A : memref<?x?xf32>, %base1: index, %bas
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]}
       : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0 : vector<[4]x[4]xf32>
 
   return
@@ -46,7 +42,7 @@ func.func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: in
   %0 = vector.transfer_read %A[%base1, %base2], %pad, %mask
     {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -62,7 +58,7 @@ func.func @transfer_read_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index,
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]}
       : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -77,7 +73,7 @@ func.func @transfer_read_2d_mask_non_zero_pad(%A : memref<?x?xf32>, %base1: inde
   %0 = vector.transfer_read %A[%base1, %base2], %pad, %mask
     {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -93,7 +89,7 @@ func.func @transfer_read_2d_mask_non_zero_pad_transposed(%A : memref<?x?xf32>, %
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]}
       : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return

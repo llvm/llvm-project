@@ -72,6 +72,10 @@ protected:
            "i32)";
     Str << " declare <8 x float> @llvm.vp.ceil.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
+    Str << " declare <8 x i32> @llvm.vp.lrint.v8i32.v8f32(<8 x float>, "
+           "<8 x i1>, i32)";
+    Str << " declare <8 x i64> @llvm.vp.llrint.v8i64.v8f32(<8 x float>, "
+           "<8 x i1>, i32)";
     Str << " declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
     Str << " declare <8 x float> @llvm.vp.fabs.v8f32(<8 x float>, <8 x i1>, "
@@ -163,6 +167,14 @@ protected:
         << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.cttz.v8i16"
         << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.sadd.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.uadd.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.ssub.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.usub.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshl.v8i16"
         << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshr.v8i16"

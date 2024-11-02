@@ -16,6 +16,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -25,8 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
-
-using namespace llvm::PatternMatch;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -486,6 +485,7 @@ static void removeDeadRecipes(VPlan &Plan) {
                  [](VPValue *V) { return V->getNumUsers(); }))
         continue;
 
+      using namespace llvm::PatternMatch;
       // Having side effects keeps R alive, but do remove conditional assume
       // instructions as their conditions may be flattened.
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
@@ -513,7 +513,8 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
   }
 
   // Truncate base induction if needed.
-  VPTypeAnalysis TypeInfo(SE.getContext());
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
+                          SE.getContext());
   Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
   if (TruncI) {
     Type *TruncTy = TruncI->getType();
@@ -594,15 +595,6 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
   }
 }
 
-static bool canSimplifyBranchOnCond(VPInstruction *Term) {
-  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
-  if (!Not || Not->getOpcode() != VPInstruction::Not)
-    return false;
-
-  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
-  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
-}
-
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -610,15 +602,16 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
   VPBasicBlock *ExitingVPBB =
       Plan.getVectorLoopRegion()->getExitingBasicBlock();
-  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
+  auto *Term = &ExitingVPBB->back();
   // Try to simplify the branch condition if TC <= VF * UF when preparing to
   // execute the plan for the main vector loop. We only do this if the
   // terminator is:
   //  1. BranchOnCount, or
   //  2. BranchOnCond where the input is Not(ActiveLaneMask).
-  if (!Term || (Term->getOpcode() != VPInstruction::BranchOnCount &&
-                (Term->getOpcode() != VPInstruction::BranchOnCond ||
-                 !canSimplifyBranchOnCond(Term))))
+  using namespace llvm::VPlanPatternMatch;
+  if (!match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
+      !match(Term,
+             m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
     return;
 
   Type *IdxTy =
@@ -897,7 +890,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still
     // accurate by comparing it to freshly computed types.
-    VPTypeAnalysis TypeInfo2(TypeInfo.getContext());
+    VPTypeAnalysis TypeInfo2(
+        R.getParent()->getPlan()->getCanonicalIV()->getScalarType(),
+        TypeInfo.getContext());
     assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
     for (VPUser *U : A->users()) {
       auto *R = dyn_cast<VPRecipeBase>(U);
@@ -918,7 +913,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 static void simplifyRecipes(VPlan &Plan, LLVMContext &Ctx) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  VPTypeAnalysis TypeInfo(Ctx);
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(), Ctx);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -939,7 +934,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // other uses have different types for their operands, making them invalidly
   // typed.
   DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
-  VPTypeAnalysis TypeInfo(Ctx);
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(), Ctx);
   VPBasicBlock *PH = Plan.getEntry();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {

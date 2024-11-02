@@ -615,7 +615,7 @@ public:
   }
 };
 
-#if !defined(LIBC_LONG_DOUBLE_IS_FLOAT64) &&                                   \
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                             \
     !defined(LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD)
 // --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
 
@@ -837,7 +837,7 @@ public:
   }
 };
 
-#endif // !LIBC_LONG_DOUBLE_IS_FLOAT64 &&
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 &&
        // !LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
 
 } // namespace LIBC_NAMESPACE

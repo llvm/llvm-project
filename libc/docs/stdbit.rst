@@ -71,21 +71,21 @@ stdc_first_trailing_one_us   |check|
 stdc_first_trailing_one_ui   |check|
 stdc_first_trailing_one_ul   |check|
 stdc_first_trailing_one_ull  |check|
-stdc_count_zeros_uc
-stdc_count_zeros_us
-stdc_count_zeros_ui
-stdc_count_zeros_ul
-stdc_count_zeros_ull
-stdc_count_ones_uc
-stdc_count_ones_us
-stdc_count_ones_ui
-stdc_count_ones_ul
-stdc_count_ones_ull
-stdc_has_single_bit_uc
-stdc_has_single_bit_us
-stdc_has_single_bit_ui
-stdc_has_single_bit_ul
-stdc_has_single_bit_ull
+stdc_count_zeros_uc          |check|
+stdc_count_zeros_us          |check|
+stdc_count_zeros_ui          |check|
+stdc_count_zeros_ul          |check|
+stdc_count_zeros_ull         |check|
+stdc_count_ones_uc           |check|
+stdc_count_ones_us           |check|
+stdc_count_ones_ui           |check|
+stdc_count_ones_ul           |check|
+stdc_count_ones_ull          |check|
+stdc_has_single_bit_uc       |check|
+stdc_has_single_bit_us       |check|
+stdc_has_single_bit_ui       |check|
+stdc_has_single_bit_ul       |check|
+stdc_has_single_bit_ull      |check|
 stdc_bit_width_uc
 stdc_bit_width_us
 stdc_bit_width_ui
@@ -122,9 +122,9 @@ stdc_first_leading_zero    |check|
 stdc_first_leading_one     |check|
 stdc_first_trailing_zero   |check|
 stdc_first_trailing_one    |check|
-stdc_count_zeros
-stdc_count_ones
-stdc_has_single_bit
+stdc_count_zeros           |check|
+stdc_count_ones            |check|
+stdc_has_single_bit        |check|
 stdc_bit_width
 stdc_bit_floor
 stdc_bit_ceil

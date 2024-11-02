@@ -890,6 +890,12 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
+  // Exceptions that escape a compute construct are ill-formed.
+  if (getLangOpts().OpenACC && getCurScope() &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::TryScope))
+    Diag(OpLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*throw*/ 2 << /*out of*/ 0;
+
   if (Ex && !Ex->isTypeDependent()) {
     // Initialize the exception result.  This implicitly weeds out
     // abstract types or types with inaccessible copy constructors.
@@ -1220,7 +1226,7 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
                     : nullptr;
     }
   }
-  return ASTCtx.getPointerType(ClassType);
+  return ThisTy;
 }
 
 QualType Sema::getCurrentThisType() {
@@ -4843,7 +4849,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                  .get();
       break;
     case ICK_Floating_Integral:
-      if (ToType->isRealFloatingType())
+      if (ToType->hasFloatingRepresentation())
         From =
             ImpCastExprToType(From, ToType, CK_IntegralToFloating, VK_PRValue,
                               /*BasePath=*/nullptr, CCK)

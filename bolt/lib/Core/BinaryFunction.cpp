@@ -1424,7 +1424,7 @@ add_instruction:
     InstrMapType::iterator II = Instructions.find(Offset);
     assert(II != Instructions.end() && "reference to non-existing instruction");
 
-    BC.MIB->setLabel(II->second, Label);
+    BC.MIB->setInstLabel(II->second, Label);
   }
 
   // Reset symbolizer for the disassembler.
@@ -1443,6 +1443,16 @@ add_instruction:
   updateState(State::Disassembled);
 
   return Error::success();
+}
+
+MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
+  assert(CurrentState == State::Disassembled &&
+         "Cannot register branch unless function is in disassembled state.");
+  assert(containsAddress(Src) && containsAddress(Dst) &&
+         "Cannot register external branch.");
+  MCSymbol *Target = getOrCreateLocalLabel(Dst);
+  TakenBranches.emplace_back(Src - getAddress(), Dst - getAddress());
+  return Target;
 }
 
 bool BinaryFunction::scanExternalRefs() {
@@ -1759,13 +1769,6 @@ void BinaryFunction::postProcessJumpTables() {
       }
     }
   }
-
-  // Remove duplicates branches. We can get a bunch of them from jump tables.
-  // Without doing jump table value profiling we don't have use for extra
-  // (duplicate) branches.
-  llvm::sort(TakenBranches);
-  auto NewEnd = std::unique(TakenBranches.begin(), TakenBranches.end());
-  TakenBranches.erase(NewEnd, TakenBranches.end());
 }
 
 bool BinaryFunction::validateExternallyReferencedOffsets() {
@@ -2127,6 +2130,13 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   // TODO: handle properly calls to no-return functions,
   // e.g. exit(3), etc. Otherwise we'll see a false fall-through
   // blocks.
+
+  // Remove duplicates branches. We can get a bunch of them from jump tables.
+  // Without doing jump table value profiling we don't have a use for extra
+  // (duplicate) branches.
+  llvm::sort(TakenBranches);
+  auto NewEnd = std::unique(TakenBranches.begin(), TakenBranches.end());
+  TakenBranches.erase(NewEnd, TakenBranches.end());
 
   for (std::pair<uint32_t, uint32_t> &Branch : TakenBranches) {
     LLVM_DEBUG(dbgs() << "registering branch [0x"

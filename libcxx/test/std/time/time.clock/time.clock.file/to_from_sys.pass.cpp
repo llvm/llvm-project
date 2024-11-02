@@ -10,9 +10,6 @@
 
 // UNSUPPORTED: availability-filesystem-missing
 
-// "unable to find library from dependent library specifier: rt"
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-
 // <chrono>
 //
 // file_clock

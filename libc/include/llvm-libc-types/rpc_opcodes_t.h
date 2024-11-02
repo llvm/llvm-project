@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_RPC_OPCODE_H__
-#define __LLVM_LIBC_TYPES_RPC_OPCODE_H__
+#ifndef LLVM_LIBC_TYPES_RPC_OPCODES_T_H
+#define LLVM_LIBC_TYPES_RPC_OPCODES_T_H
 
 typedef enum {
   RPC_NOOP = 0,
@@ -34,4 +34,4 @@ typedef enum {
   RPC_LAST = 0xFFFF,
 } rpc_opcode_t;
 
-#endif // __LLVM_LIBC_TYPES_RPC_OPCODE_H__
+#endif // LLVM_LIBC_TYPES_RPC_OPCODES_T_H

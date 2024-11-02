@@ -1,10 +1,12 @@
-! There is no quad math runtime available in lowering
-! for now. Test that the TODO are emitted correctly.
-! RUN: bbc -emit-fir %s -o /dev/null 2>&1 | FileCheck %s
+! If the compiler is built without 128-bit float math
+! support, an appropriate error message is emitted.
+! UNSUPPORTED: flang-supports-f128-math
+! RUN: bbc -emit-fir %s -o /dev/null >%t 2>&1 || echo
+! RUN: FileCheck %s --input-file=%t
 
  complex(16) :: a
  real(16) :: b
-! CHECK: not yet implemented: no math runtime available for 'ABS(COMPLEX(KIND=16))'
+! CHECK: compiler is built without support for 'ABS(COMPLEX(KIND=16))'
  b = abs(a)
 end
 

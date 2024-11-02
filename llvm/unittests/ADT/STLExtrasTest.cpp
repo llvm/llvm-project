@@ -1005,7 +1005,7 @@ TEST(STLExtras, Unique) {
 }
 
 TEST(STLExtras, UniqueNoPred) {
-  std::vector<uint32_t> V = {1, 5, 5, 4, 3, 3, 3};
+  std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
 
   auto I = llvm::unique(V);
 

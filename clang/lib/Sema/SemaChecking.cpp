@@ -2120,10 +2120,11 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
 // not a valid type, emit an error message and return true. Otherwise return
 // false.
 static bool checkMathBuiltinElementType(Sema &S, SourceLocation Loc,
-                                        QualType Ty) {
-  if (!Ty->getAs<VectorType>() && !ConstantMatrixType::isValidElementType(Ty)) {
+                                        QualType ArgTy, int ArgIndex) {
+  if (!ArgTy->getAs<VectorType>() &&
+      !ConstantMatrixType::isValidElementType(ArgTy)) {
     return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << 1 << /* vector, integer or float ty*/ 0 << Ty;
+           << ArgIndex << /* vector, integer or float ty*/ 0 << ArgTy;
   }
 
   return false;
@@ -2165,7 +2166,10 @@ static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
     return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
   if (!IsCPUSupports && !TheTI->supportsCpuIs())
-    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+    return S.Diag(TheCall->getBeginLoc(),
+                  TI.getTriple().isOSAIX()
+                      ? diag::err_builtin_aix_os_unsupported
+                      : diag::err_builtin_target_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
 
   Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
@@ -2176,12 +2180,37 @@ static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
 
   // Check the contents of the string.
   StringRef Feature = cast<StringLiteral>(Arg)->getString();
-  if (IsCPUSupports && !TheTI->validateCpuSupports(Feature))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_supports)
-           << Arg->getSourceRange();
+  if (IsCPUSupports && !TheTI->validateCpuSupports(Feature)) {
+    S.Diag(TheCall->getBeginLoc(), diag::warn_invalid_cpu_supports)
+        << Arg->getSourceRange();
+    return false;
+  }
   if (!IsCPUSupports && !TheTI->validateCpuIs(Feature))
     return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
            << Arg->getSourceRange();
+  return false;
+}
+
+/// Checks that __builtin_popcountg was called with a single argument, which is
+/// an unsigned integer.
+static bool SemaBuiltinPopcountg(Sema &S, CallExpr *TheCall) {
+  if (checkArgCount(S, TheCall, 1))
+    return true;
+
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+
+  QualType ArgTy = Arg->getType();
+
+  if (!ArgTy->isUnsignedIntegerType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*unsigned integer ty*/ 7 << ArgTy;
+    return true;
+  }
   return false;
 }
 
@@ -2955,8 +2984,16 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
            diag::err_hip_invalid_args_builtin_mangled_name);
       return ExprError();
     }
+    break;
   }
+  case Builtin::BI__builtin_popcountg:
+    if (SemaBuiltinPopcountg(*this, TheCall))
+      return ExprError();
+    break;
   }
+
+  if (getLangOpts().HLSL && CheckHLSLBuiltinFunctionCall(BuiltinID, TheCall))
+    return ExprError();
 
   // Since the target specific builtins for each arch overlap, only check those
   // of the arch we are compiling for.
@@ -5154,6 +5191,113 @@ bool Sema::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
      ) {
     Diag(TypeLoc, diag::err_ppc_invalid_use_mma_type);
     return true;
+  }
+  return false;
+}
+
+// Helper function for CheckHLSLBuiltinFunctionCall
+bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 1);
+  ExprResult A = TheCall->getArg(0);
+
+  QualType ArgTyA = A.get()->getType();
+
+  auto *VecTyA = ArgTyA->getAs<VectorType>();
+  SourceLocation BuiltinLoc = TheCall->getBeginLoc();
+
+  for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
+    ExprResult B = TheCall->getArg(i);
+    QualType ArgTyB = B.get()->getType();
+    auto *VecTyB = ArgTyB->getAs<VectorType>();
+    if (VecTyA == nullptr && VecTyB == nullptr)
+      return false;
+
+    if (VecTyA && VecTyB) {
+      bool retValue = false;
+      if (VecTyA->getElementType() != VecTyB->getElementType()) {
+        // Note: type promotion is intended to be handeled via the intrinsics
+        //  and not the builtin itself.
+        S->Diag(TheCall->getBeginLoc(),
+                diag::err_vec_builtin_incompatible_vector)
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+            << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
+        retValue = true;
+      }
+      if (VecTyA->getNumElements() != VecTyB->getNumElements()) {
+        // You should only be hitting this case if you are calling the builtin
+        // directly. HLSL intrinsics should avoid this case via a
+        // HLSLVectorTruncation.
+        S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                           TheCall->getArg(1)->getEndLoc());
+        retValue = true;
+      }
+
+      if (!retValue)
+        TheCall->setType(VecTyA->getElementType());
+
+      return retValue;
+    }
+  }
+
+  // Note: if we get here one of the args is a scalar which
+  // requires a VectorSplat on Arg0 or Arg1
+  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+      << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+      << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                     TheCall->getArg(1)->getEndLoc());
+  return true;
+}
+
+bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
+  QualType ExpectedType = S->Context.FloatTy;
+  for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
+    QualType PassedType = TheCall->getArg(i)->getType();
+    if (!PassedType->hasFloatingRepresentation()) {
+      if (auto *VecTyA = PassedType->getAs<VectorType>())
+        ExpectedType = S->Context.getVectorType(
+            ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
+      S->Diag(TheCall->getArg(0)->getBeginLoc(),
+              diag::err_typecheck_convert_incompatible)
+          << PassedType << ExpectedType << 1 << 0 << 0;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Note: returning true in this case results in CheckBuiltinFunctionCall
+// returning an ExprError
+bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_dot: {
+    if (checkArgCount(*this, TheCall, 2))
+      return true;
+    if (CheckVectorElementCallArgs(this, TheCall))
+      return true;
+    if (SemaBuiltinVectorToScalarMath(TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_frac: {
+    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_lerp: {
+    if (checkArgCount(*this, TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(this, TheCall))
+      return true;
+    if (SemaBuiltinElementwiseTernaryMath(TheCall))
+      return true;
+    if (CheckAllArgsHaveFloatRepresentation(this, TheCall))
+      return true;
+    break;
+  }
   }
   return false;
 }
@@ -9330,7 +9474,7 @@ bool Sema::SemaBuiltinVSX(CallExpr *TheCall) {
   if ((!Arg1Ty->isVectorType() && !Arg1Ty->isDependentType()) ||
       (!Arg2Ty->isVectorType() && !Arg2Ty->isDependentType())) {
     return Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
-           << TheCall->getDirectCallee()
+           << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                           TheCall->getArg(1)->getEndLoc());
   }
@@ -9338,7 +9482,7 @@ bool Sema::SemaBuiltinVSX(CallExpr *TheCall) {
   // Check the first two arguments are the same type.
   if (!Context.hasSameUnqualifiedType(Arg1Ty, Arg2Ty)) {
     return Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
-           << TheCall->getDirectCallee()
+           << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                           TheCall->getArg(1)->getEndLoc());
   }
@@ -9374,7 +9518,7 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
     if (!LHSType->isVectorType() || !RHSType->isVectorType())
       return ExprError(
           Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
-          << TheCall->getDirectCallee()
+          << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
           << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                          TheCall->getArg(1)->getEndLoc()));
 
@@ -9390,12 +9534,14 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
         return ExprError(Diag(TheCall->getBeginLoc(),
                               diag::err_vec_builtin_incompatible_vector)
                          << TheCall->getDirectCallee()
+                         << /*isMorethantwoArgs*/ false
                          << SourceRange(TheCall->getArg(1)->getBeginLoc(),
                                         TheCall->getArg(1)->getEndLoc()));
     } else if (!Context.hasSameUnqualifiedType(LHSType, RHSType)) {
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                        << TheCall->getDirectCallee()
+                       << /*isMorethantwoArgs*/ false
                        << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                                       TheCall->getArg(1)->getEndLoc()));
     } else if (numElements != numResElements) {
@@ -16055,15 +16201,8 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   // Diagnose conversions between different enumeration types.
   // In C, we pretend that the type of an EnumConstantDecl is its enumeration
   // type, to give us better diagnostics.
-  QualType SourceType = E->getType();
-  if (!S.getLangOpts().CPlusPlus) {
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
-      if (EnumConstantDecl *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
-        EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
-        SourceType = S.Context.getTypeDeclType(Enum);
-        Source = S.Context.getCanonicalType(SourceType).getTypePtr();
-      }
-  }
+  QualType SourceType = E->getEnumCoercedType(S.Context);
+  Source = S.Context.getCanonicalType(SourceType).getTypePtr();
 
   if (const EnumType *SourceEnum = Source->getAs<EnumType>())
     if (const EnumType *TargetEnum = Target->getAs<EnumType>())
@@ -16447,6 +16586,20 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
     if (auto *Callee = Call->getDirectCallee()) {
       if (const Attr *A = Callee->getAttr<ReturnsNonNullAttr>()) {
         ComplainAboutNonnullParamOrCall(A);
+        return;
+      }
+    }
+  }
+
+  // Complain if we are converting a lambda expression to a boolean value
+  // outside of instantiation.
+  if (!inTemplateInstantiation()) {
+    if (const auto *MCallExpr = dyn_cast<CXXMemberCallExpr>(E)) {
+      if (const auto *MRecordDecl = MCallExpr->getRecordDecl();
+          MRecordDecl && MRecordDecl->isLambda()) {
+        Diag(E->getExprLoc(), diag::warn_impcast_pointer_to_bool)
+            << /*LambdaPointerConversionOperatorType=*/3
+            << MRecordDecl->getSourceRange() << Range << IsEqual;
         return;
       }
     }
@@ -19033,6 +19186,9 @@ static bool isLayoutCompatible(ASTContext &C, FieldDecl *Field1,
       return false;
   }
 
+  if (Field1->hasAttr<clang::NoUniqueAddressAttr>() ||
+      Field2->hasAttr<clang::NoUniqueAddressAttr>())
+    return false;
   return true;
 }
 
@@ -19124,14 +19280,15 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   if (T1.isNull() || T2.isNull())
     return false;
 
-  // C++11 [basic.types] p11:
-  // If two types T1 and T2 are the same type, then T1 and T2 are
-  // layout-compatible types.
-  if (C.hasSameType(T1, T2))
-    return true;
-
+  // C++20 [basic.types] p11:
+  // Two types cv1 T1 and cv2 T2 are layout-compatible types
+  // if T1 and T2 are the same type, layout-compatible enumerations (9.7.1),
+  // or layout-compatible standard-layout class types (11.4).
   T1 = T1.getCanonicalType().getUnqualifiedType();
   T2 = T2.getCanonicalType().getUnqualifiedType();
+
+  if (C.hasSameType(T1, T2))
+    return true;
 
   const Type::TypeClass TC1 = T1->getTypeClass();
   const Type::TypeClass TC2 = T2->getTypeClass();
@@ -19587,7 +19744,7 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   TheCall->setArg(0, A.get());
   QualType TyA = A.get()->getType();
 
-  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA))
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
     return true;
 
   TheCall->setType(TyA);
@@ -19595,6 +19752,27 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
 }
 
 bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
+  QualType Res;
+  if (SemaBuiltinVectorMath(TheCall, Res))
+    return true;
+  TheCall->setType(Res);
+  return false;
+}
+
+bool Sema::SemaBuiltinVectorToScalarMath(CallExpr *TheCall) {
+  QualType Res;
+  if (SemaBuiltinVectorMath(TheCall, Res))
+    return true;
+
+  if (auto *VecTy0 = Res->getAs<VectorType>())
+    TheCall->setType(VecTy0->getElementType());
+  else
+    TheCall->setType(Res);
+
+  return false;
+}
+
+bool Sema::SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
   if (checkArgCount(*this, TheCall, 2))
     return true;
 
@@ -19602,8 +19780,7 @@ bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
   ExprResult B = TheCall->getArg(1);
   // Do standard promotions between the two arguments, returning their common
   // type.
-  QualType Res =
-      UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
+  Res = UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
   if (A.isInvalid() || B.isInvalid())
     return true;
 
@@ -19615,12 +19792,11 @@ bool Sema::SemaBuiltinElementwiseMath(CallExpr *TheCall) {
                 diag::err_typecheck_call_different_arg_types)
            << TyA << TyB;
 
-  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA))
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
     return true;
 
   TheCall->setArg(0, A.get());
   TheCall->setArg(1, B.get());
-  TheCall->setType(Res);
   return false;
 }
 

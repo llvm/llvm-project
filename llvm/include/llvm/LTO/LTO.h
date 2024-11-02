@@ -75,6 +75,8 @@ void computeLTOCacheKey(
 
 namespace lto {
 
+StringLiteral getThinLTODefaultCPU(const Triple &TheTriple);
+
 /// Given the original \p Path to an output file, replace any path
 /// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 /// resulting directory if it does not yet exist.

@@ -377,7 +377,7 @@ def grp_version : OptionGroup<"version">, HelpText<"VERSION TARGETING">;
 
 def platform_version : MultiArg<["-"], "platform_version", 3>,
     MetaVarName<"<platform> <min_version> <sdk_version>">,
-    HelpText<"Platform (e.g., macos, ios, tvos, watchos, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, driverkit) and version numbers">,
+    HelpText<"Platform (e.g., macos, ios, tvos, watchos, xros, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, xros-sim, driverkit) and version numbers">,
     Group<grp_version>;
 def sdk_version : Separate<["-"], "sdk_version">,
     HelpText<"This option is undocumented in ld64">,

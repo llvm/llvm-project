@@ -868,6 +868,9 @@ headers to:
   ...
   #endif
 
+If the modules imported by your library provides such headers too, remember to add them to
+your ``your_library_imported.h`` too.
+
 Importing modules
 ~~~~~~~~~~~~~~~~~
 

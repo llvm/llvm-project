@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Interp.h"
-#include <limits>
-#include <vector>
 #include "Function.h"
 #include "InterpFrame.h"
+#include "InterpShared.h"
 #include "InterpStack.h"
 #include "Opcode.h"
 #include "PrimType.h"
@@ -22,6 +21,10 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/APSInt.h"
+#include <limits>
+#include <vector>
+
+using namespace clang;
 
 using namespace clang;
 using namespace clang::interp;
@@ -282,10 +285,6 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
 
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return !Ptr.isDummy();
-}
-
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK) {
   if (!Ptr.isZero())
@@ -362,13 +361,13 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (Ptr.isInitialized())
     return true;
 
+  if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+      VD && VD->hasGlobalStorage()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+  }
   if (!S.checkingPotentialConstantExpression()) {
-    if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
-        VD && VD->hasGlobalStorage()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
-      S.Note(VD->getLocation(), diag::note_declared_at);
-    }
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
   }
@@ -461,6 +460,10 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
+
+      // Invalid decls have been diagnosed before.
+      if (DiagDecl->isInvalidDecl())
+        return false;
 
       // If this function is not constexpr because it is an inherited
       // non-constexpr constructor, diagnose that directly.
@@ -588,10 +591,8 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   return true;
 }
 
-/// We aleady know the given DeclRefExpr is invalid for some reason,
-/// now figure out why and print appropriate diagnostics.
-bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
-  const ValueDecl *D = DR->getDecl();
+static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
+                                const ValueDecl *D) {
   const SourceInfo &E = S.Current->getSource(OpPC);
 
   if (isa<ParmVarDecl>(D)) {
@@ -614,8 +615,48 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
       return false;
     }
   }
-
   return false;
+}
+
+/// We aleady know the given DeclRefExpr is invalid for some reason,
+/// now figure out why and print appropriate diagnostics.
+bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
+  const ValueDecl *D = DR->getDecl();
+  return diagnoseUnknownDecl(S, OpPC, D);
+}
+
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!Ptr.isDummy())
+    return true;
+
+  const Descriptor *Desc = Ptr.getDeclDesc();
+  const ValueDecl *D = Desc->asValueDecl();
+  if (!D)
+    return false;
+
+  return diagnoseUnknownDecl(S, OpPC, D);
+}
+
+bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
+                      const CallExpr *CE, unsigned ArgSize) {
+  auto Args = llvm::ArrayRef(CE->getArgs(), CE->getNumArgs());
+  auto NonNullArgs = collectNonNullArgs(F->getDecl(), Args);
+  unsigned Offset = 0;
+  unsigned Index = 0;
+  for (const Expr *Arg : Args) {
+    if (NonNullArgs[Index] && Arg->getType()->isPointerType()) {
+      const Pointer &ArgPtr = S.Stk.peek<Pointer>(ArgSize - Offset);
+      if (ArgPtr.isZero()) {
+        const SourceLocation &Loc = S.Current->getLocation(OpPC);
+        S.CCEDiag(Loc, diag::note_non_null_attribute_failed);
+        return false;
+      }
+    }
+
+    Offset += align(primSize(S.Ctx.classify(Arg).value_or(PT_Ptr)));
+    ++Index;
+  }
+  return true;
 }
 
 bool Interpret(InterpState &S, APValue &Result) {

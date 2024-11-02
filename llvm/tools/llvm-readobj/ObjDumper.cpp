@@ -14,6 +14,7 @@
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -142,8 +143,23 @@ getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
   return Ret;
 }
 
+static void maybeDecompress(const object::ObjectFile &Obj,
+                            StringRef SectionName, StringRef &SectionContent,
+                            SmallString<0> &Out) {
+  Expected<object::Decompressor> Decompressor = object::Decompressor::create(
+      SectionName, SectionContent, Obj.isLittleEndian(), Obj.is64Bit());
+  if (!Decompressor)
+    reportWarning(Decompressor.takeError(), Obj.getFileName());
+  else if (auto Err = Decompressor->resizeAndDecompress(Out))
+    reportWarning(std::move(Err), Obj.getFileName());
+  else
+    SectionContent = Out;
+}
+
 void ObjDumper::printSectionsAsString(const object::ObjectFile &Obj,
-                                      ArrayRef<std::string> Sections) {
+                                      ArrayRef<std::string> Sections,
+                                      bool Decompress) {
+  SmallString<0> Out;
   bool First = true;
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(Obj, Sections)) {
@@ -156,12 +172,16 @@ void ObjDumper::printSectionsAsString(const object::ObjectFile &Obj,
 
     StringRef SectionContent =
         unwrapOrError(Obj.getFileName(), Section.getContents());
+    if (Decompress && Section.isCompressed())
+      maybeDecompress(Obj, SectionName, SectionContent, Out);
     printAsStringList(SectionContent);
   }
 }
 
 void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
-                                   ArrayRef<std::string> Sections) {
+                                   ArrayRef<std::string> Sections,
+                                   bool Decompress) {
+  SmallString<0> Out;
   bool First = true;
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(Obj, Sections)) {
@@ -174,6 +194,8 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
 
     StringRef SectionContent =
         unwrapOrError(Obj.getFileName(), Section.getContents());
+    if (Decompress && Section.isCompressed())
+      maybeDecompress(Obj, SectionName, SectionContent, Out);
     const uint8_t *SecContent = SectionContent.bytes_begin();
     const uint8_t *SecEnd = SecContent + SectionContent.size();
 

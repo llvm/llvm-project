@@ -1,0 +1,31 @@
+# UNSUPPORTED: zstd
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -z -p .a -x .b %t 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK:      String dump of section '.a':
+# CHECK-NEXT: warning: '[[FILE]]': LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at build time
+# CHECK-NEXT: [     0] .
+# CHECK-NEXT: [     8] .
+# CHECK-NEXT: [    10] .
+# CHECK-NEXT: [    18] (./. ..
+# CHECK-NEXT: [    21] .
+# CHECK-NEXT: Hex dump of section '.b':
+# CHECK-NEXT: warning: '[[FILE]]': LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at build time
+# CHECK-NEXT: 0x00000000 02000000 00000000 01000000 00000000 ................
+# CHECK-NEXT: 0x00000010 01000000 00000000 28b52ffd 20010900 ........(./. ...
+# CHECK-NEXT: 0x00000020 0001                                ..
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .a
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 02000000000000000100000000000000010000000000000028b52ffd200109000001
+  - Name: .b
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 02000000000000000100000000000000010000000000000028b52ffd200109000001

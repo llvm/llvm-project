@@ -77,6 +77,18 @@ func.func @log1p_2dvector_fmf(%arg0 : vector<4x3xf32>) {
 
 // -----
 
+// CHECK-LABEL: func @log1p_scalable_vector(
+// CHECK-SAME: %[[VEC:.*]]: vector<[4]xf32>
+func.func @log1p_scalable_vector(%arg0 : vector<[4]xf32>) -> vector<[4]xf32> {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %[[VEC]]  : vector<[4]xf32>
+  // CHECK: %[[LOG:.*]] = llvm.intr.log(%[[ADD]])  : (vector<[4]xf32>) -> vector<[4]xf32>
+  %0 = math.log1p %arg0 : vector<[4]xf32>
+  func.return %0 : vector<[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @expm1(
 // CHECK-SAME: f32
 func.func @expm1(%arg0 : f32) {
@@ -109,6 +121,18 @@ func.func @expm1_vector(%arg0 : vector<4xf32>) {
   // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : vector<4xf32>
   %0 = math.expm1 %arg0 : vector<4xf32>
   func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @expm1_scalable_vector(
+// CHECK-SAME: %[[VEC:.*]]: vector<[4]xf32>
+func.func @expm1_scalable_vector(%arg0 : vector<[4]xf32>) -> vector<[4]xf32> {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  // CHECK: %[[EXP:.*]] = llvm.intr.exp(%[[VEC]])  : (vector<[4]xf32>) -> vector<[4]xf32>
+  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : vector<[4]xf32>
+  %0 = math.expm1 %arg0 : vector<[4]xf32>
+  func.return %0 : vector<[4]xf32>
 }
 
 // -----
@@ -177,6 +201,16 @@ func.func @cttz_vec(%arg0 : vector<4xi32>) {
 
 // -----
 
+// CHECK-LABEL: func @cttz_scalable_vec(
+// CHECK-SAME: %[[VEC:.*]]: vector<[4]xi32>
+func.func @cttz_scalable_vec(%arg0 : vector<[4]xi32>) -> vector<[4]xi32> {
+  // CHECK: "llvm.intr.cttz"(%[[VEC]]) <{is_zero_poison = false}> : (vector<[4]xi32>) -> vector<[4]xi32>
+  %0 = math.cttz %arg0 : vector<[4]xi32>
+  func.return %0 : vector<[4]xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @ctpop(
 // CHECK-SAME: i32
 func.func @ctpop(%arg0 : i32) {
@@ -193,6 +227,16 @@ func.func @ctpop_vector(%arg0 : vector<3xi32>) {
   // CHECK: llvm.intr.ctpop(%arg0) : (vector<3xi32>) -> vector<3xi32>
   %0 = math.ctpop %arg0 : vector<3xi32>
   func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @ctpop_scalable_vector(
+// CHECK-SAME: %[[VEC:.*]]: vector<[4]xi32>
+func.func @ctpop_scalable_vector(%arg0 : vector<[4]xi32>) -> vector<[4]xi32> {
+  // CHECK: llvm.intr.ctpop(%[[VEC]]) : (vector<[4]xi32>) -> vector<[4]xi32>
+  %0 = math.ctpop %arg0 : vector<[4]xi32>
+  func.return %0 : vector<[4]xi32>
 }
 
 // -----
@@ -233,6 +277,18 @@ func.func @rsqrt_vector(%arg0 : vector<4xf32>) {
 
 // -----
 
+// CHECK-LABEL: func @rsqrt_scalable_vector(
+// CHECK-SAME: %[[VEC:.*]]: vector<[4]xf32>
+func.func @rsqrt_scalable_vector(%arg0 : vector<[4]xf32>) ->  vector<[4]xf32>{
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[VEC]]) : (vector<[4]xf32>) -> vector<[4]xf32>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<[4]xf32>
+  %0 = math.rsqrt %arg0 : vector<[4]xf32>
+  func.return  %0 : vector<[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt_vector_fmf(
 // CHECK-SAME: vector<4xf32>
 func.func @rsqrt_vector_fmf(%arg0 : vector<4xf32>) {
@@ -241,6 +297,18 @@ func.func @rsqrt_vector_fmf(%arg0 : vector<4xf32>) {
   // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] {fastmathFlags = #llvm.fastmath<fast>} : vector<4xf32>
   %0 = math.rsqrt %arg0 fastmath<fast> : vector<4xf32>
   func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @rsqrt_scalable_vector_fmf(
+// CHECK-SAME: %[[VEC:.*]]: vector<[4]xf32>
+func.func @rsqrt_scalable_vector_fmf(%arg0 : vector<[4]xf32>) -> vector<[4]xf32> {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[VEC]]) {fastmathFlags = #llvm.fastmath<fast>} : (vector<[4]xf32>) -> vector<[4]xf32>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] {fastmathFlags = #llvm.fastmath<fast>} : vector<[4]xf32>
+  %0 = math.rsqrt %arg0 fastmath<fast> : vector<[4]xf32>
+  func.return %0 : vector<[4]xf32>
 }
 
 // -----
@@ -254,6 +322,19 @@ func.func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %{{.*}}[0] : !llvm.array<4 x vector<3xf32>>
   %0 = math.rsqrt %arg0 : vector<4x3xf32>
   func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @rsqrt_multidim_scalable_vector(
+func.func @rsqrt_multidim_scalable_vector(%arg0 : vector<4x[4]xf32>) -> vector<4x[4]xf32> {
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<[4]xf32>>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[EXTRACT]]) : (vector<[4]xf32>) -> vector<[4]xf32>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<[4]xf32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %{{.*}}[0] : !llvm.array<4 x vector<[4]xf32>>
+  %0 = math.rsqrt %arg0 : vector<4x[4]xf32>
+  func.return %0 : vector<4x[4]xf32>
 }
 
 // -----

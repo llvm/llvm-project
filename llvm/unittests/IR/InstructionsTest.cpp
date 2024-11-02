@@ -488,7 +488,7 @@ TEST(InstructionsTest, VectorGep) {
 
   BasicBlock* BB0 = BasicBlock::Create(C);
   // Test InsertAtEnd ICmpInst constructor.
-  ICmpInst *ICmp2 = new ICmpInst(*BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
+  ICmpInst *ICmp2 = new ICmpInst(BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
   EXPECT_NE(ICmp0, ICmp2); // suppress warning.
 
   GetElementPtrInst *Gep0 = GetElementPtrInst::Create(I32Ty, PtrVecA, C2xi32a);

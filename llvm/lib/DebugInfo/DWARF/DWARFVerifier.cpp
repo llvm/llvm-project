@@ -29,7 +29,9 @@
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
@@ -2026,11 +2028,36 @@ void OutputCategoryAggregator::EnumerateResults(
 }
 
 void DWARFVerifier::summarize() {
-  if (ErrorCategory.GetNumCategories() && DumpOpts.ShowAggregateErrors) {
+  if (DumpOpts.ShowAggregateErrors && ErrorCategory.GetNumCategories()) {
     error() << "Aggregated error counts:\n";
     ErrorCategory.EnumerateResults([&](StringRef s, unsigned count) {
       error() << s << " occurred " << count << " time(s).\n";
     });
+  }
+  if (!DumpOpts.JsonErrSummaryFile.empty()) {
+    std::error_code EC;
+    raw_fd_ostream JsonStream(DumpOpts.JsonErrSummaryFile, EC,
+                              sys::fs::OF_Text);
+    if (EC) {
+      error() << "unable to open json summary file '"
+              << DumpOpts.JsonErrSummaryFile
+              << "' for writing: " << EC.message() << '\n';
+      return;
+    }
+
+    llvm::json::Object Categories;
+    uint64_t ErrorCount = 0;
+    ErrorCategory.EnumerateResults([&](StringRef Category, unsigned Count) {
+      llvm::json::Object Val;
+      Val.try_emplace("count", Count);
+      Categories.try_emplace(Category, std::move(Val));
+      ErrorCount += Count;
+    });
+    llvm::json::Object RootNode;
+    RootNode.try_emplace("error-categories", std::move(Categories));
+    RootNode.try_emplace("error-count", ErrorCount);
+
+    JsonStream << llvm::json::Value(std::move(RootNode));
   }
 }
 

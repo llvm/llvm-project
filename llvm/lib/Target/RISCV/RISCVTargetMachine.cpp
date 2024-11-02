@@ -84,7 +84,7 @@ static cl::opt<bool> EnableRISCVDeadRegisterElimination(
 static cl::opt<bool>
     EnableSinkFold("riscv-enable-sink-fold",
                    cl::desc("Enable sinking and folding of instruction copies"),
-                   cl::init(false), cl::Hidden);
+                   cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableLoopDataPrefetch("riscv-enable-loop-data-prefetch", cl::Hidden,
@@ -124,7 +124,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
-  initializeRISCVInitUndefPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
 }
@@ -383,7 +382,6 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
-  void addOptimizedRegAlloc() override;
   void addFastRegAlloc() override;
 };
 } // namespace
@@ -422,7 +420,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
 }
 
 void RISCVPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoopDataPrefetch)
@@ -564,14 +562,8 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVInsertWriteVXRMPass());
 }
 
-void RISCVPassConfig::addOptimizedRegAlloc() {
-  insertPass(&DetectDeadLanesID, &RISCVInitUndefID);
-
-  TargetPassConfig::addOptimizedRegAlloc();
-}
-
 void RISCVPassConfig::addFastRegAlloc() {
-  addPass(createRISCVInitUndefPass());
+  addPass(&InitUndefID);
   TargetPassConfig::addFastRegAlloc();
 }
 

@@ -11,11 +11,6 @@ def TruePredicate : Predicate<"">;
 // FIXME: Tablegen should specially supports this
 def FalsePredicate : Predicate<"false">;
 
-// Add a predicate to the list if does not already exist to deduplicate it.
-class PredConcat<Predicate pred, list<Predicate> lst> {
-  list<Predicate> ret = !listconcat(lst, !listremove([pred], lst));
-}
-
 // Prevent using other kinds of predicates where True16 predicates are
 // expected by giving them their own class.
 class True16PredicateClass<string cond> : Predicate<cond>;
@@ -28,9 +23,8 @@ class PredicateControl {
   True16PredicateClass True16Predicate = NoTrue16Predicate;
   list<Predicate> OtherPredicates = [];
   list<Predicate> Predicates =
-      PredConcat<SubtargetPredicate,
-      PredConcat<AssemblerPredicate,
-      PredConcat<WaveSizePredicate,
-      PredConcat<True16Predicate,
-      OtherPredicates>.ret>.ret>.ret>.ret;
+      !foldl(OtherPredicates, [SubtargetPredicate, AssemblerPredicate,
+                               WaveSizePredicate, True16Predicate],
+             preds, p,
+             preds # !listremove([p], [TruePredicate, NoTrue16Predicate] # preds));
 }

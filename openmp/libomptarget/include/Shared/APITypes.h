@@ -30,7 +30,7 @@ struct __tgt_offload_entry {
   char *name;       // Name of the function or global
   size_t size;      // Size of the entry info (0 if it is a function)
   int32_t flags;    // Flags associated with the entry, e.g. 'link'.
-  int32_t reserved; // Reserved, to be used by the runtime library.
+  int32_t data;     // Extra data associated with the entry.
 };
 
 /// This struct is a record of the device image information

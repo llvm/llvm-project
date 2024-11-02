@@ -301,7 +301,7 @@ public:
   Record *InferredFrom;
 
   // The enum value assigned by CodeGenTarget::computeInstrsByEnum.
-  mutable unsigned EnumVal;
+  mutable unsigned EnumVal = 0;
 
   CodeGenInstruction(Record *R);
 

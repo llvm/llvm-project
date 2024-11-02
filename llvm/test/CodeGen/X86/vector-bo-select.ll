@@ -1270,7 +1270,7 @@ define <16 x float> @fdiv_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vbroadcastss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
+; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm2 {%k1} = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vdivps %zmm1, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, <16 x float> %y
@@ -5783,7 +5783,7 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm2 {%k1} = [1,1,1,1,1,1,1,1]
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm2, %xmm0
 ; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
@@ -5844,7 +5844,7 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; AVX512VL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
-; AVX512VL-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2 {%k1}
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm2 {%k1} = [1,1,1,1,1,1,1,1]
 ; AVX512VL-NEXT:    vextracti32x4 $3, %zmm2, %xmm0
 ; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512VL-NEXT:    vextracti32x4 $3, %zmm1, %xmm3

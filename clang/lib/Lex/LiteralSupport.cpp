@@ -1513,8 +1513,10 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
                                                : APFloat::opInvalidOp;
 }
 
-static inline bool IsExponentPart(char c) {
-  return c == 'p' || c == 'P' || c == 'e' || c == 'E';
+static inline bool IsExponentPart(char c, bool isHex) {
+  if (isHex)
+    return c == 'p' || c == 'P';
+  return c == 'e' || c == 'E';
 }
 
 bool NumericLiteralParser::GetFixedPointValue(llvm::APInt &StoreVal, unsigned Scale) {
@@ -1533,7 +1535,8 @@ bool NumericLiteralParser::GetFixedPointValue(llvm::APInt &StoreVal, unsigned Sc
   if (saw_exponent) {
     const char *Ptr = DigitsBegin;
 
-    while (!IsExponentPart(*Ptr)) ++Ptr;
+    while (!IsExponentPart(*Ptr, radix == 16))
+      ++Ptr;
     ExponentBegin = Ptr;
     ++Ptr;
     NegativeExponent = *Ptr == '-';

@@ -2099,9 +2099,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi64(__m128i __a,
 }
 
 /// Adds, with saturation, the corresponding elements of two 128-bit
-///    signed [16 x i8] vectors, saving each sum in the corresponding element of
-///    a 128-bit result vector of [16 x i8]. Positive sums greater than 0x7F are
-///    saturated to 0x7F. Negative sums less than 0x80 are saturated to 0x80.
+///    signed [16 x i8] vectors, saving each sum in the corresponding element
+///    of a 128-bit result vector of [16 x i8].
+///
+///    Positive sums greater than 0x7F are saturated to 0x7F. Negative sums
+///    less than 0x80 are saturated to 0x80.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2119,10 +2121,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_adds_epi8(__m128i __a,
 }
 
 /// Adds, with saturation, the corresponding elements of two 128-bit
-///    signed [8 x i16] vectors, saving each sum in the corresponding element of
-///    a 128-bit result vector of [8 x i16]. Positive sums greater than 0x7FFF
-///    are saturated to 0x7FFF. Negative sums less than 0x8000 are saturated to
-///    0x8000.
+///    signed [8 x i16] vectors, saving each sum in the corresponding element
+///    of a 128-bit result vector of [8 x i16].
+///
+///    Positive sums greater than 0x7FFF are saturated to 0x7FFF. Negative sums
+///    less than 0x8000 are saturated to 0x8000.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2141,8 +2144,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_adds_epi16(__m128i __a,
 
 /// Adds, with saturation, the corresponding elements of two 128-bit
 ///    unsigned [16 x i8] vectors, saving each sum in the corresponding element
-///    of a 128-bit result vector of [16 x i8]. Positive sums greater than 0xFF
-///    are saturated to 0xFF. Negative sums are saturated to 0x00.
+///    of a 128-bit result vector of [16 x i8].
+///
+///    Positive sums greater than 0xFF are saturated to 0xFF. Negative sums are
+///    saturated to 0x00.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2161,8 +2166,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_adds_epu8(__m128i __a,
 
 /// Adds, with saturation, the corresponding elements of two 128-bit
 ///    unsigned [8 x i16] vectors, saving each sum in the corresponding element
-///    of a 128-bit result vector of [8 x i16]. Positive sums greater than
-///    0xFFFF are saturated to 0xFFFF. Negative sums are saturated to 0x0000.
+///    of a 128-bit result vector of [8 x i16].
+///
+///    Positive sums greater than 0xFFFF are saturated to 0xFFFF. Negative sums
+///    are saturated to 0x0000.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2518,10 +2525,12 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi64(__m128i __a,
   return (__m128i)((__v2du)__a - (__v2du)__b);
 }
 
-/// Subtracts corresponding 8-bit signed integer values in the input and
-///    returns the differences in the corresponding bytes in the destination.
-///    Differences greater than 0x7F are saturated to 0x7F, and differences less
-///    than 0x80 are saturated to 0x80.
+/// Subtracts, with saturation, corresponding 8-bit signed integer values in
+///    the input and returns the differences in the corresponding bytes in the
+///    destination.
+///
+///    Differences greater than 0x7F are saturated to 0x7F, and differences
+///    less than 0x80 are saturated to 0x80.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2538,8 +2547,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_subs_epi8(__m128i __a,
   return (__m128i)__builtin_elementwise_sub_sat((__v16qs)__a, (__v16qs)__b);
 }
 
-/// Subtracts corresponding 16-bit signed integer values in the input and
-///    returns the differences in the corresponding bytes in the destination.
+/// Subtracts, with saturation, corresponding 16-bit signed integer values in
+///    the input and returns the differences in the corresponding bytes in the
+///    destination.
+///
 ///    Differences greater than 0x7FFF are saturated to 0x7FFF, and values less
 ///    than 0x8000 are saturated to 0x8000.
 ///
@@ -2558,9 +2569,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_subs_epi16(__m128i __a,
   return (__m128i)__builtin_elementwise_sub_sat((__v8hi)__a, (__v8hi)__b);
 }
 
-/// Subtracts corresponding 8-bit unsigned integer values in the input
-///    and returns the differences in the corresponding bytes in the
-///    destination. Differences less than 0x00 are saturated to 0x00.
+/// Subtracts, with saturation, corresponding 8-bit unsigned integer values in
+///    the input and returns the differences in the corresponding bytes in the
+///    destination.
+///
+///    Differences less than 0x00 are saturated to 0x00.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2577,9 +2590,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_subs_epu8(__m128i __a,
   return (__m128i)__builtin_elementwise_sub_sat((__v16qu)__a, (__v16qu)__b);
 }
 
-/// Subtracts corresponding 16-bit unsigned integer values in the input
-///    and returns the differences in the corresponding bytes in the
-///    destination. Differences less than 0x0000 are saturated to 0x0000.
+/// Subtracts, with saturation, corresponding 16-bit unsigned integer values in
+///    the input and returns the differences in the corresponding bytes in the
+///    destination.
+///
+///    Differences less than 0x0000 are saturated to 0x0000.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -4050,26 +4065,22 @@ void _mm_mfence(void);
 } // extern "C"
 #endif
 
-/// Converts 16-bit signed integers from both 128-bit integer vector
-///    operands into 8-bit signed integers, and packs the results into the
-///    destination. Positive values greater than 0x7F are saturated to 0x7F.
-///    Negative values less than 0x80 are saturated to 0x80.
+/// Converts, with saturation, 16-bit signed integers from both 128-bit integer
+///    vector operands into 8-bit signed integers, and packs the results into
+///    the destination.
+///
+///    Positive values greater than 0x7F are saturated to 0x7F. Negative values
+///    less than 0x80 are saturated to 0x80.
 ///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPACKSSWB / PACKSSWB </c> instruction.
 ///
 /// \param __a
-///   A 128-bit integer vector of [8 x i16]. Each 16-bit element is treated as
-///   a signed integer and is converted to a 8-bit signed integer with
-///   saturation. Values greater than 0x7F are saturated to 0x7F. Values less
-///   than 0x80 are saturated to 0x80. The converted [8 x i8] values are
+///   A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///   written to the lower 64 bits of the result.
 /// \param __b
-///   A 128-bit integer vector of [8 x i16]. Each 16-bit element is treated as
-///   a signed integer and is converted to a 8-bit signed integer with
-///   saturation. Values greater than 0x7F are saturated to 0x7F. Values less
-///   than 0x80 are saturated to 0x80. The converted [8 x i8] values are
+///   A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///   written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi16(__m128i __a,
@@ -4077,26 +4088,22 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi16(__m128i __a,
   return (__m128i)__builtin_ia32_packsswb128((__v8hi)__a, (__v8hi)__b);
 }
 
-/// Converts 32-bit signed integers from both 128-bit integer vector
-///    operands into 16-bit signed integers, and packs the results into the
-///    destination. Positive values greater than 0x7FFF are saturated to 0x7FFF.
-///    Negative values less than 0x8000 are saturated to 0x8000.
+/// Converts, with saturation, 32-bit signed integers from both 128-bit integer
+///    vector operands into 16-bit signed integers, and packs the results into
+///    the destination.
+///
+///    Positive values greater than 0x7FFF are saturated to 0x7FFF. Negative
+///    values less than 0x8000 are saturated to 0x8000.
 ///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPACKSSDW / PACKSSDW </c> instruction.
 ///
 /// \param __a
-///    A 128-bit integer vector of [4 x i32]. Each 32-bit element is treated as
-///    a signed integer and is converted to a 16-bit signed integer with
-///    saturation. Values greater than 0x7FFF are saturated to 0x7FFF. Values
-///    less than 0x8000 are saturated to 0x8000. The converted [4 x i16] values
+///    A 128-bit integer vector of [4 x i32]. The converted [4 x i16] values
 ///    are written to the lower 64 bits of the result.
 /// \param __b
-///    A 128-bit integer vector of [4 x i32]. Each 32-bit element is treated as
-///    a signed integer and is converted to a 16-bit signed integer with
-///    saturation. Values greater than 0x7FFF are saturated to 0x7FFF. Values
-///    less than 0x8000 are saturated to 0x8000. The converted [4 x i16] values
+///    A 128-bit integer vector of [4 x i32]. The converted [4 x i16] values
 ///    are written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi32(__m128i __a,
@@ -4104,26 +4111,22 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi32(__m128i __a,
   return (__m128i)__builtin_ia32_packssdw128((__v4si)__a, (__v4si)__b);
 }
 
-/// Converts 16-bit signed integers from both 128-bit integer vector
-///    operands into 8-bit unsigned integers, and packs the results into the
-///    destination. Values greater than 0xFF are saturated to 0xFF. Values less
-///    than 0x00 are saturated to 0x00.
+/// Converts, with saturation, 16-bit signed integers from both 128-bit integer
+///    vector operands into 8-bit unsigned integers, and packs the results into
+///    the destination.
+///
+///    Values greater than 0xFF are saturated to 0xFF. Values less than 0x00
+///    are saturated to 0x00.
 ///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPACKUSWB / PACKUSWB </c> instruction.
 ///
 /// \param __a
-///    A 128-bit integer vector of [8 x i16]. Each 16-bit element is treated as
-///    a signed integer and is converted to an 8-bit unsigned integer with
-///    saturation. Values greater than 0xFF are saturated to 0xFF. Values less
-///    than 0x00 are saturated to 0x00. The converted [8 x i8] values are
+///    A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///    written to the lower 64 bits of the result.
 /// \param __b
-///    A 128-bit integer vector of [8 x i16]. Each 16-bit element is treated as
-///    a signed integer and is converted to an 8-bit unsigned integer with
-///    saturation. Values greater than 0xFF are saturated to 0xFF. Values less
-///    than 0x00 are saturated to 0x00. The converted [8 x i8] values are
+///    A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///    written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,

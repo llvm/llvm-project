@@ -2809,6 +2809,7 @@ class AddSubImmShift<bit isSub, bit setFlags, RegisterClass dstRegtype,
   let Inst{23-22} = imm{13-12}; // '00' => lsl #0, '01' => lsl #12
   let Inst{21-10} = imm{11-0};
   let DecoderMethod = "DecodeAddSubImmShift";
+  let hasPostISelHook = 1;
 }
 
 class BaseAddSubRegPseudo<RegisterClass regtype,
@@ -7546,7 +7547,7 @@ class BaseSIMDCmpTwoScalar<bit U, bits<2> size, bits<2> size2, bits<5> opcode,
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class SIMDInexactCvtTwoScalar<bits<5> opcode, string asm>
   : I<(outs FPR32:$Rd), (ins FPR64:$Rn), asm, "\t$Rd, $Rn", "",
-     [(set (f32 FPR32:$Rd), (int_aarch64_sisd_fcvtxn (f64 FPR64:$Rn)))]>,
+     [(set (f32 FPR32:$Rd), (AArch64fcvtxn (f64 FPR64:$Rn)))]>,
     Sched<[WriteVd]> {
   bits<5> Rd;
   bits<5> Rn;

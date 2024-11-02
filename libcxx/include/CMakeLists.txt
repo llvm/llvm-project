@@ -431,7 +431,7 @@ set(files
   __fwd/bit_reference.h
   __fwd/complex.h
   __fwd/fstream.h
-  __fwd/hash.h
+  __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h

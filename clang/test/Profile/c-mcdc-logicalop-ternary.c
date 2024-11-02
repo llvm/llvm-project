@@ -20,9 +20,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC-LABEL: cond.true:
 // MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
-// MCDC:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
-// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr @__profbm_test to i64), %[[LAB2]]
-// MCDC:  %[[LAB4:[0-9]+]] = inttoptr i64 %[[LAB3]] to ptr
+// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
@@ -38,9 +36,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC-LABEL: land.end:
 // MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
-// MCDC:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
-// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 1) to i64), %[[LAB2]]
-// MCDC:  %[[LAB4:[0-9]+]] = inttoptr i64 %[[LAB3]] to ptr
+// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 1), i32 %[[LAB1]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
@@ -52,9 +48,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC-LABEL: cond.false:
 // MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
-// MCDC:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
-// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr @__profbm_test to i64), %[[LAB2]]
-// MCDC:  %[[LAB4:[0-9]+]] = inttoptr i64 %[[LAB3]] to ptr
+// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB1]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
@@ -70,9 +64,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC-LABEL: lor.end:
 // MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
-// MCDC:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
-// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 2) to i64), %[[LAB2]]
-// MCDC:  %[[LAB4:[0-9]+]] = inttoptr i64 %[[LAB3]] to ptr
+// MCDC:  %[[LAB4:[0-9]+]] = getelementptr inbounds i8, ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 2), i32 %[[LAB1]]
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]

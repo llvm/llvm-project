@@ -670,7 +670,7 @@ Expected<std::unique_ptr<Binary>> getAsBinary(const Archive::Child &C,
 }
 
 template <class A> static bool isValidInBitMode(const A &Member) {
-  if (object::Archive::getDefaultKindForHost() != object::Archive::K_AIXBIG)
+  if (object::Archive::getDefaultKind() != object::Archive::K_AIXBIG)
     return true;
   LLVMContext Context;
   Expected<std::unique_ptr<Binary>> BinOrErr = getAsBinary(Member, &Context);
@@ -1036,10 +1036,10 @@ static void performWriteOperation(ArchiveOperation Operation,
       }
     } else if (NewMembersP)
       Kind = !NewMembersP->empty() ? NewMembersP->front().detectKindFromObject()
-                                   : object::Archive::getDefaultKindForHost();
+                                   : object::Archive::getDefaultKind();
     else
       Kind = !NewMembers.empty() ? NewMembers.front().detectKindFromObject()
-                                 : object::Archive::getDefaultKindForHost();
+                                 : object::Archive::getDefaultKind();
     break;
   case GNU:
     Kind = object::Archive::K_GNU;
@@ -1331,7 +1331,7 @@ static int ar_main(int argc, char **argv) {
 
   // Get BitMode from enviorment variable "OBJECT_MODE" for AIX OS, if
   // specified.
-  if (object::Archive::getDefaultKindForHost() == object::Archive::K_AIXBIG) {
+  if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
     BitMode = getBitMode(getenv("OBJECT_MODE"));
     if (BitMode == BitModeTy::Unknown)
       BitMode = BitModeTy::Bit32;
@@ -1392,8 +1392,7 @@ static int ar_main(int argc, char **argv) {
       continue;
 
     if (strncmp(*ArgIt, "-X", 2) == 0) {
-      if (object::Archive::getDefaultKindForHost() ==
-          object::Archive::K_AIXBIG) {
+      if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
         Match = *(*ArgIt + 2) != '\0' ? *ArgIt + 2 : *(++ArgIt);
         BitMode = getBitMode(Match);
         if (BitMode == BitModeTy::Unknown)
@@ -1432,8 +1431,7 @@ static int ranlib_main(int argc, char **argv) {
           cl::PrintVersionMessage();
           return 0;
         } else if (arg.front() == 'X') {
-          if (object::Archive::getDefaultKindForHost() ==
-              object::Archive::K_AIXBIG) {
+          if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
             HasAIXXOption = true;
             arg.consume_front("X");
             const char *Xarg = arg.data();
@@ -1464,7 +1462,7 @@ static int ranlib_main(int argc, char **argv) {
     }
   }
 
-  if (object::Archive::getDefaultKindForHost() == object::Archive::K_AIXBIG) {
+  if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
     // If not specify -X option, get BitMode from enviorment variable
     // "OBJECT_MODE" for AIX OS if specify.
     if (!HasAIXXOption) {

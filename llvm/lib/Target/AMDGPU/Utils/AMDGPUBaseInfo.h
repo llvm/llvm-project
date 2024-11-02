@@ -295,6 +295,10 @@ unsigned getVGPREncodingGranule(
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 
+/// \returns Addressable number of architectural VGPRs for a given subtarget \p
+/// STI.
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
+
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
 
@@ -321,6 +325,35 @@ getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
                  std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
+
+// Represents a field in an encoded value.
+template <unsigned HighBit, unsigned LowBit, unsigned D = 0>
+struct EncodingField {
+  static_assert(HighBit >= LowBit, "Invalid bit range!");
+  static constexpr unsigned Offset = LowBit;
+  static constexpr unsigned Width = HighBit - LowBit + 1;
+
+  using ValueType = unsigned;
+  static constexpr ValueType Default = D;
+
+  ValueType Value;
+  constexpr EncodingField(ValueType Value) : Value(Value) {}
+
+  constexpr uint64_t encode() const { return Value; }
+  static ValueType decode(uint64_t Encoded) { return Encoded; }
+};
+
+// A helper for encoding and decoding multiple fields.
+template <typename... Fields> struct EncodingFields {
+  static constexpr uint64_t encode(Fields... Values) {
+    return ((Values.encode() << Values.Offset) | ...);
+  }
+
+  static std::tuple<typename Fields::ValueType...> decode(uint64_t Encoded) {
+    return {Fields::decode((Encoded >> Fields::Offset) &
+                           maxUIntN(Fields::Width))...};
+  }
+};
 
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
@@ -823,14 +856,6 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
-/// \returns Integer value requested using \p F's \p Name attribute.
-///
-/// \returns \p Default if attribute is not present.
-///
-/// \returns \p Default and emits error if requested value cannot be converted
-/// to integer.
-int getIntegerAttribute(const Function &F, StringRef Name, int Default);
-
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
 /// is false).
@@ -869,15 +894,6 @@ struct Waitcnt {
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt)
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt) {}
-
-  static Waitcnt allZero(bool Extended, bool HasStorecnt) {
-    return Extended ? Waitcnt(0, 0, 0, 0, 0, 0, 0)
-                    : Waitcnt(0, 0, 0, HasStorecnt ? 0 : ~0u);
-  }
-
-  static Waitcnt allZeroExceptVsCnt(bool Extended) {
-    return Extended ? Waitcnt(0, 0, 0, ~0u, 0, 0, 0) : Waitcnt(0, 0, 0, ~0u);
-  }
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
@@ -1030,25 +1046,22 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
 namespace Hwreg {
 
+using HwregId = EncodingField<5, 0>;
+using HwregOffset = EncodingField<10, 6>;
+
+struct HwregSize : EncodingField<15, 11, 32> {
+  using EncodingField::EncodingField;
+  constexpr uint64_t encode() const { return Value - 1; }
+  static ValueType decode(uint64_t Encoded) { return Encoded + 1; }
+};
+
+using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
+
 LLVM_READONLY
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
-bool isValidHwreg(int64_t Id);
-
-LLVM_READNONE
-bool isValidHwregOffset(int64_t Offset);
-
-LLVM_READNONE
-bool isValidHwregWidth(int64_t Width);
-
-LLVM_READNONE
-uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width);
-
-LLVM_READNONE
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);
-
-void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
 
 } // namespace Hwreg
 

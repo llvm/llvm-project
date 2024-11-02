@@ -20,7 +20,6 @@
 #include "mlir/ExecutionEngine/Float16bits.h"
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
-#include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/MapRef.h"
 
 namespace mlir {
@@ -149,13 +148,6 @@ public:
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETVALUES)
 #undef DECL_GETVALUES
 
-  /// Element-wise forwarding insertions. The first argument is the
-  /// dimension-coordinates for the value being inserted.
-#define DECL_FORWARDINGINSERT(VNAME, V)                                        \
-  virtual void forwardingInsert(const uint64_t *, V);
-  MLIR_SPARSETENSOR_FOREVERY_V(DECL_FORWARDINGINSERT)
-#undef DECL_FORWARDINGINSERT
-
   /// Element-wise insertion in lexicographic coordinate order. The first
   /// argument is the level-coordinates for the value being inserted.
 #define DECL_LEXINSERT(VNAME, V) virtual void lexInsert(const uint64_t *, V);
@@ -170,9 +162,6 @@ public:
                          uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
-
-  /// Finalizes forwarding insertions.
-  virtual void endForwardingInsert() = 0;
 
   /// Finalizes lexicographic insertions.
   virtual void endLexInsert() = 0;
@@ -248,7 +237,7 @@ public:
   static SparseTensorStorage<P, C, V> *
   newEmpty(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
            const uint64_t *lvlSizes, const LevelType *lvlTypes,
-           const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding);
+           const uint64_t *dim2lvl, const uint64_t *lvl2dim);
 
   /// Allocates a new sparse tensor and initializes it from the given COO.
   static SparseTensorStorage<P, C, V> *
@@ -282,13 +271,6 @@ public:
   void getValues(std::vector<V> **out) final {
     assert(out && "Received nullptr for out parameter");
     *out = &values;
-  }
-
-  /// Partially specialize forwarding insertions based on template types.
-  void forwardingInsert(const uint64_t *dimCoords, V val) final {
-    assert(dimCoords && coo);
-    map.pushforward(dimCoords, lvlCursor.data());
-    coo->add(lvlCursor, val);
   }
 
   /// Partially specialize lexicographical insertions based on template types.
@@ -343,21 +325,6 @@ public:
       values[c] = 0;
       filled[c] = false;
     }
-  }
-
-  /// Finalizes forwarding insertions.
-  void endForwardingInsert() final {
-    // Ensure COO is sorted.
-    assert(coo);
-    coo->sort();
-    // Now actually insert the `elements`.
-    const auto &elements = coo->getElements();
-    const uint64_t nse = elements.size();
-    assert(values.size() == 0);
-    values.reserve(nse);
-    fromCOO(elements, 0, nse, 0);
-    delete coo;
-    coo = nullptr;
   }
 
   /// Finalizes lexicographic insertions.
@@ -653,13 +620,10 @@ template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const LevelType *lvlTypes,
-    const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding) {
-  SparseTensorCOO<V> *lvlCOO = nullptr;
-  if (forwarding)
-    lvlCOO = new SparseTensorCOO<V>(lvlRank, lvlSizes);
+    const uint64_t *dim2lvl, const uint64_t *lvl2dim) {
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
-                                          lvlTypes, dim2lvl, lvl2dim, lvlCOO,
-                                          !forwarding);
+                                          lvlTypes, dim2lvl, lvl2dim, nullptr,
+                                          true);
 }
 
 template <typename P, typename C, typename V>

@@ -489,7 +489,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
 
       if (!EmitCodeOnly) {
         // A symbol to be emitted before the instruction to mark its location.
-        MCSymbol *InstrLabel = BC.MIB->getLabel(Instr);
+        MCSymbol *InstrLabel = BC.MIB->getInstLabel(Instr);
 
         if (opts::UpdateDebugSections && BF.getDWARFUnit()) {
           LastLocSeen = emitLineInfo(BF, Instr.getLoc(), LastLocSeen,

@@ -334,3 +334,27 @@ func.func @test_move_op_before_rollback() {
   }) : () -> ()
   "test.return"() : () -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @test_properties_rollback()
+func.func @test_properties_rollback() {
+  // CHECK: test.with_properties <{a = 32 : i64,
+  // expected-remark @below{{op 'test.with_properties' is not legalizable}}
+  test.with_properties
+      <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, b = "foo"}>
+      {modify_inplace}
+  "test.return"() : () -> ()
+}
+
+// -----
+
+//      CHECK: func.func @use_of_replaced_bbarg(
+// CHECK-SAME:     %[[arg0:.*]]: f64)
+//      CHECK:   "test.valid"(%[[arg0]])
+func.func @use_of_replaced_bbarg(%arg0: i64) {
+  %0 = "test.op_with_region_fold"(%arg0) ({
+    "foo.op_with_region_terminator"() : () -> ()
+  }) : (i64) -> (i64)
+  "test.invalid"(%0) : (i64) -> ()
+}

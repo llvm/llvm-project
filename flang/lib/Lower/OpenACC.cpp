@@ -3247,7 +3247,7 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
                                   fir::FirOpBuilder &builder,
                                   mlir::Location loc, fir::GlobalOp globalOp,
                                   mlir::acc::DataClause clause,
-                                  const std::string declareGlobalName,
+                                  const std::string &declareGlobalName,
                                   bool implicit, std::stringstream &asFortran) {
   GlobalOp declareGlobalOp =
       modBuilder.create<GlobalOp>(loc, declareGlobalName);

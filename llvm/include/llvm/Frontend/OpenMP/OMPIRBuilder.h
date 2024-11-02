@@ -342,6 +342,8 @@ public:
     OMPTargetGlobalVarEntryNone = 0x3,
     /// Mark the entry as a declare target indirect global.
     OMPTargetGlobalVarEntryIndirect = 0x8,
+    /// Mark the entry as a register requires global.
+    OMPTargetGlobalRegisterRequires = 0x10,
   };
 
   /// Kind of device clause for declare target variables
@@ -1504,6 +1506,11 @@ public:
   /// Collection of regions that need to be outlined during finalization.
   SmallVector<OutlineInfo, 16> OutlineInfos;
 
+  /// A collection of candidate target functions that's constant allocas will
+  /// attempt to be raised on a call of finalize after all currently enqueued
+  /// outline info's have been processed.
+  SmallVector<llvm::Function *, 16> ConstantAllocaRaiseCandidates;
+
   /// Collection of owned canonical loop objects that eventually need to be
   /// free'd.
   std::forward_list<CanonicalLoopInfo> LoopInfos;
@@ -1827,13 +1834,15 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param FiniCB Callback to finalize variable copies.
   /// \param IsNowait If false, a barrier is emitted.
-  /// \param DidIt Local variable used as a flag to indicate 'single' thread
+  /// \param CPVars copyprivate variables.
+  /// \param CPFuncs copy functions to use for each copyprivate variable.
   ///
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB, bool IsNowait,
-                             llvm::Value *DidIt);
+                             ArrayRef<llvm::Value *> CPVars = {},
+                             ArrayRef<llvm::Function *> CPFuncs = {});
 
   /// Generator for '#omp master'
   ///
@@ -2628,16 +2637,6 @@ public:
   /// \param Name Name of the variable.
   GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                               unsigned AddressSpace = 0);
-
-  /// Create a global function to register OpenMP requires flags into the
-  /// runtime, according to the `Config`.
-  ///
-  /// This function should be added to the list of constructors of the
-  /// compilation unit in order to be called before other OpenMP runtime
-  /// functions.
-  ///
-  /// \param Name  Name of the created function.
-  Function *createRegisterRequires(StringRef Name);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.

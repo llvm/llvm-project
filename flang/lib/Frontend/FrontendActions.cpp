@@ -177,7 +177,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     return;
   }
 
-  mlir::ConversionPatternRewriter builder(mlirModule.getContext());
+  mlir::IRRewriter builder(mlirModule.getContext());
   unsigned oclcABIVERsion = codeGenOpts.CodeObjectVersion;
   auto int32Type = builder.getI32Type();
 

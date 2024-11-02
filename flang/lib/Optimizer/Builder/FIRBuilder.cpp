@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1532,4 +1533,11 @@ mlir::Value fir::factory::createNullBoxProc(fir::FirOpBuilder &builder,
   auto boxEleTy{fir::unwrapRefType(boxTy.getEleTy())};
   mlir::Value initVal{builder.create<fir::ZeroOp>(loc, boxEleTy)};
   return builder.create<fir::EmboxProcOp>(loc, boxTy, initVal);
+}
+
+void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
+  auto internalLinkage = mlir::LLVM::linkage::Linkage::Internal;
+  auto linkage =
+      mlir::LLVM::LinkageAttr::get(func->getContext(), internalLinkage);
+  func->setAttr("llvm.linkage", linkage);
 }

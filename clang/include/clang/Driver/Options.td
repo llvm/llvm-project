@@ -336,8 +336,6 @@ class AnalyzerOpts<string base>
   : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
 class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base, "MIGRATOR_"> {}
-class InstallAPIOpts<string base>
-  : KeyPathAndMacro<"InstallAPIOpts.", base, "INSTALLAPI_"> {}
 
 // A boolean option which is opt-in in CC1. The positive option exists in CC1 and
 // Args.hasArg(OPT_ffoo) can be used to check that the flag is enabled.
@@ -550,6 +548,13 @@ multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
                        BothFlags both = BothFlags<[]>> {
   defm NAME : BoolOption<"g", flag_base, kpm, default, flag1, flag2, both>,
               Group<g_Group>;
+}
+
+multiclass BoolMOption<string flag_base, KeyPathAndMacro kpm,
+                       Default default, FlagDef flag1, FlagDef flag2,
+                       BothFlags both = BothFlags<[]>> {
+  defm NAME : BoolOption<"m", flag_base, kpm, default, flag1, flag2, both>,
+              Group<m_Group>;
 }
 
 // Works like BoolOption except without marshalling
@@ -1143,8 +1148,7 @@ def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
   Visibility<[ClangOption, CLOption]>;
 def cpp_precomp : Flag<["-"], "cpp-precomp">, Group<clang_ignored_f_Group>;
-def current__version : JoinedOrSeparate<["-"], "current_version">,
-  Visibility<[ClangOption, CC1Option]>;
+def current__version : JoinedOrSeparate<["-"], "current_version">;
 def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   HelpText<"Add directory to the C++ SYSTEM include search path">,
   Visibility<[ClangOption, CC1Option]>,
@@ -1559,9 +1563,6 @@ def static_libsan : Flag<["-"], "static-libsan">,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
-def installapi : Flag<["-"], "installapi">,
-  Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
-  HelpText<"Create a text-based stub file by scanning header files">;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
   CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
@@ -4320,9 +4321,7 @@ def verify_pch : Flag<["-"], "verify-pch">, Group<Action_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Load and verify that a pre-compiled header file is not stale">;
 def init : Separate<["-"], "init">;
-def install__name : Separate<["-"], "install_name">,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoString<InstallAPIOpts<"InstallName">>;
+def install__name : Separate<["-"], "install_name">;
 def iprefix : JoinedOrSeparate<["-"], "iprefix">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the -iwithprefix/-iwithprefixbefore prefix">, MetaVarName<"<dir>">;
@@ -4608,11 +4607,10 @@ def mretpoline : Flag<["-"], "mretpoline">, Group<m_Group>,
   Visibility<[ClangOption, CLOption]>;
 def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_Group>,
   Visibility<[ClangOption, CLOption]>;
-defm speculative_load_hardening : BoolOption<"m", "speculative-load-hardening",
+defm speculative_load_hardening : BoolMOption<"speculative-load-hardening",
   CodeGenOpts<"SpeculativeLoadHardening">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>,
-  Group<m_Group>;
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 def mlvi_hardening : Flag<["-"], "mlvi-hardening">, Group<m_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Enable all mitigations for Load Value Injection (LVI)">;
@@ -4829,13 +4827,13 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
            "explicitly terminated.">;
 } // let Flags = [TargetSpecific]
 
-defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
+defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   CodeGenOpts<"EmitIEEENaNCompliantInsts">, DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Sets the IEEE bit in the expected default floating point "
   " mode register. Floating point opcodes that support exception flag "
   "gathering quiet and propagate signaling NaN inputs per IEEE 754-2008. "
   "This option changes the ABI. (AMDGPU only)">,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>, Group<m_Group>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 5. (AMDGPU only)">,
@@ -4854,14 +4852,14 @@ defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
 
-defm unsafe_fp_atomics : BoolOption<"m", "unsafe-fp-atomics",
+defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
   TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enable generation of unsafe floating point "
           "atomic instructions. May generate more efficient code, but may not "
           "respect rounding and denormal modes, and may give incorrect results "
           "for certain memory destinations. (AMDGPU only)">,
-  NegFlag<SetFalse>>, Group<m_Group>;
+  NegFlag<SetFalse>>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
@@ -4949,11 +4947,10 @@ def mrop_protect : Flag<["-"], "mrop-protect">,
 def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
 
-defm regnames : BoolOption<"m", "regnames",
+defm regnames : BoolMOption<"regnames",
   CodeGenOpts<"PPCUseFullRegisterNames">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use full register names when writing assembly output">,
-  NegFlag<SetFalse, [], [ClangOption], "Use only register numbers when writing assembly output">>,
-  Group<m_Group>;
+  NegFlag<SetFalse, [], [ClangOption], "Use only register numbers when writing assembly output">>;
 } // let Flags = [TargetSpecific]
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,
@@ -4995,10 +4992,10 @@ def mxcoff_build_id_EQ : Joined<["-"], "mxcoff-build-id=">, Group<Link_Group>, M
 def mignore_xcoff_visibility : Flag<["-"], "mignore-xcoff-visibility">, Group<m_Group>,
 HelpText<"Not emit the visibility attribute for asm in AIX OS or give all symbols 'unspecified' visibility in XCOFF object file">,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>;
-defm backchain : BoolOption<"m", "backchain",
+defm backchain : BoolMOption<"backchain",
   CodeGenOpts<"Backchain">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link stack frames through backchain on System Z">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>, Group<m_Group>;
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
@@ -5366,6 +5363,9 @@ def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
+  Visibility<[ClangOption, CLOption]>;
+def print_std_module_manifest_path : Flag<["-", "--"], "print-library-module-manifest-path">,
+  HelpText<"Print the path for the C++ Standard library module manifest">,
   Visibility<[ClangOption, CLOption]>;
 def print_targets : Flag<["-", "--"], "print-targets">,
   HelpText<"Print the registered targets">,
@@ -6960,7 +6960,7 @@ def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
 def funwind_tables_EQ : Joined<["-"], "funwind-tables=">,
   HelpText<"Generate unwinding tables for all functions">,
   MarshallingInfoInt<CodeGenOpts<"UnwindTables">>;
-defm constructor_aliases : BoolOption<"m", "constructor-aliases",
+defm constructor_aliases : BoolMOption<"constructor-aliases",
   CodeGenOpts<"CXXCtorDtorAliases">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,

@@ -145,23 +145,34 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  kEmptyForward = 1,
-  kFromCOO = 2,
-  kFromReader = 4,
-  kToCOO = 5,
-  kPack = 7,
-  kSortCOOInPlace = 8,
+  kFromReader = 1,
+  kPack = 2,
+  kSortCOOInPlace = 3,
 };
 
 /// This enum defines all supported storage format without the level properties.
 enum class LevelFormat : uint64_t {
   Undef = 0x00000000,
   Dense = 0x00010000,
-  Compressed = 0x00020000,
-  Singleton = 0x00040000,
-  LooseCompressed = 0x00080000,
-  NOutOfM = 0x00100000,
+  Batch = 0x00020000,
+  Compressed = 0x00040000,
+  Singleton = 0x00080000,
+  LooseCompressed = 0x00100000,
+  NOutOfM = 0x00200000,
 };
+
+constexpr bool encPowOfTwo(LevelFormat fmt) {
+  auto enc = static_cast<std::underlying_type_t<LevelFormat>>(fmt);
+  return (enc & (enc - 1)) == 0;
+}
+
+// All LevelFormats must have only one bit set (power of two).
+static_assert(encPowOfTwo(LevelFormat::Dense) &&
+              encPowOfTwo(LevelFormat::Batch) &&
+              encPowOfTwo(LevelFormat::Compressed) &&
+              encPowOfTwo(LevelFormat::Singleton) &&
+              encPowOfTwo(LevelFormat::LooseCompressed) &&
+              encPowOfTwo(LevelFormat::NOutOfM));
 
 template <LevelFormat... targets>
 constexpr bool isAnyOfFmt(LevelFormat fmt) {
@@ -175,6 +186,8 @@ constexpr const char *toFormatString(LevelFormat lvlFmt) {
     return "undef";
   case LevelFormat::Dense:
     return "dense";
+  case LevelFormat::Batch:
+    return "batch";
   case LevelFormat::Compressed:
     return "compressed";
   case LevelFormat::Singleton:
@@ -228,10 +241,10 @@ public:
   static constexpr bool isValidLvlBits(uint64_t lvlBits) {
     auto fmt = static_cast<LevelFormat>(lvlBits & 0xffff0000);
     const uint64_t propertyBits = lvlBits & 0xffff;
-    // If undefined/dense/NOutOfM, then must be unique and ordered.
+    // If undefined/dense/batch/NOutOfM, then must be unique and ordered.
     // Otherwise, the format must be one of the known ones.
     return (isAnyOfFmt<LevelFormat::Undef, LevelFormat::Dense,
-                       LevelFormat::NOutOfM>(fmt))
+                       LevelFormat::Batch, LevelFormat::NOutOfM>(fmt))
                ? (propertyBits == 0)
                : (isAnyOfFmt<LevelFormat::Compressed, LevelFormat::Singleton,
                              LevelFormat::LooseCompressed>(fmt));
@@ -283,7 +296,13 @@ public:
   }
   bool operator!=(const LevelType lhs) const { return !(*this == lhs); }
 
-  LevelType stripProperties() const { return LevelType(lvlBits & ~0xffff); }
+  LevelType stripStorageIrrelevantProperties() const {
+    // Properties other than `SoA` do not change the storage scheme of the
+    // sparse tensor.
+    constexpr uint64_t mask =
+        0xffff & ~static_cast<uint64_t>(LevelPropNonDefault::SoA);
+    return LevelType(lvlBits & ~mask);
+  }
 
   /// Get N of NOutOfM level type.
   constexpr uint64_t getN() const {
@@ -303,9 +322,9 @@ public:
   }
 
   /// Check if the `LevelType` is in the `LevelFormat`.
-  template <LevelFormat fmt>
+  template <LevelFormat... fmt>
   constexpr bool isa() const {
-    return getLvlFmt() == fmt;
+    return (... || (getLvlFmt() == fmt)) || false;
   }
 
   /// Check if the `LevelType` has the properties
@@ -314,16 +333,28 @@ public:
     return lvlBits & static_cast<uint64_t>(p);
   }
 
+  /// Check if the `LevelType` is considered to be sparse.
+  constexpr bool hasSparseSemantic() const {
+    return isa<LevelFormat::Compressed, LevelFormat::Singleton,
+               LevelFormat::LooseCompressed, LevelFormat::NOutOfM>();
+  }
+
+  /// Check if the `LevelType` is considered to be dense-like.
+  constexpr bool hasDenseSemantic() const {
+    return isa<LevelFormat::Dense, LevelFormat::Batch>();
+  }
+
   /// Check if the `LevelType` needs positions array.
   constexpr bool isWithPosLT() const {
-    return isa<LevelFormat::Compressed>() ||
-           isa<LevelFormat::LooseCompressed>();
+    assert(!isa<LevelFormat::Undef>());
+    return isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>();
   }
 
   /// Check if the `LevelType` needs coordinates array.
   constexpr bool isWithCrdLT() const {
+    assert(!isa<LevelFormat::Undef>());
     // All sparse levels has coordinate array.
-    return !isa<LevelFormat::Dense>();
+    return hasSparseSemantic();
   }
 
   std::string toMLIRString() const {
@@ -372,6 +403,7 @@ inline std::optional<LevelType> buildLevelType(LevelFormat lf, bool ordered,
 }
 inline bool isUndefLT(LevelType lt) { return lt.isa<LevelFormat::Undef>(); }
 inline bool isDenseLT(LevelType lt) { return lt.isa<LevelFormat::Dense>(); }
+inline bool isBatchLT(LevelType lt) { return lt.isa<LevelFormat::Batch>(); }
 inline bool isCompressedLT(LevelType lt) {
   return lt.isa<LevelFormat::Compressed>();
 }
