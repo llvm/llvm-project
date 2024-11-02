@@ -143,8 +143,7 @@ int f() {
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %2, align 8
 // LLVM:   %[[BASE_A:.*]] = getelementptr i8, ptr %[[THIS]], i32 40
 // LLVM:   call void @_ZN1AC2Ev(ptr %[[BASE_A]])
-// LLVM:   %[[BASE_B:.*]] = getelementptr i8, ptr %[[THIS]], i32 0
-// LLVM:   call void @_ZN1BC2Ev(ptr %[[BASE_B]], ptr getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i32 0, i32 1))
+// LLVM:   call void @_ZN1BC2Ev(ptr %[[THIS]], ptr getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i32 0, i32 1))
 // LLVM:   %[[BASE_C:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
 // LLVM:   call void @_ZN1CC2Ev(ptr %[[BASE_C]], ptr getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i32 0, i32 3))
 // LLVM:   ret void

@@ -837,6 +837,12 @@ public:
         adaptor.getOffset().getZExtValue()};
     mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                  mlir::IntegerType::Signless);
+    if (adaptor.getOffset().getZExtValue() == 0) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(
+          baseClassOp, resultType, adaptor.getDerivedAddr());
+      return mlir::success();
+    }
+
     if (baseClassOp.getAssumeNotNull()) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
           baseClassOp, resultType, byteType, derivedAddr, offset);
