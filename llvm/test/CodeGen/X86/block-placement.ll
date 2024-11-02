@@ -359,7 +359,6 @@ define void @unnatural_cfg2(ptr %p0, i32 %a0) {
 ; CHECK: %loop.body2
 ; CHECK: %loop.body4
 ; CHECK: %loop.inner2.begin
-; CHECK: %loop.inner2.begin
 ; CHECK: %loop.body3
 ; CHECK: %loop.inner1.begin
 ; CHECK: %bail

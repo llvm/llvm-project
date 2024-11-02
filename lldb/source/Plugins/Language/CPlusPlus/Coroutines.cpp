@@ -104,7 +104,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     ~StdlibCoroutineHandleSyntheticFrontEnd() = default;
 
-size_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
+uint32_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
     CalculateNumChildren() {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
     return 0;
@@ -113,7 +113,7 @@ size_t lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   switch (idx) {
   case 0:
     return m_resume_ptr_sp;

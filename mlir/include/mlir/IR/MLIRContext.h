@@ -50,7 +50,7 @@ class IRUnit;
 /// To control better thread spawning, an externally owned ThreadPool can be
 /// injected in the context. For example:
 ///
-///  llvm::ThreadPool myThreadPool;
+///  llvm::DefaultThreadPool myThreadPool;
 ///  while (auto *request = nextCompilationRequests()) {
 ///    MLIRContext ctx(registry, MLIRContext::Threading::DISABLED);
 ///    ctx.setThreadPool(myThreadPool);

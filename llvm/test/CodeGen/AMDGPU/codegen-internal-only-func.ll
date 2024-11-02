@@ -27,4 +27,4 @@ define internal i32 @func() {
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

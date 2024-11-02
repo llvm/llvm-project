@@ -38,14 +38,14 @@ public:
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
-  virtual size_t CalculateNumChildren() = 0;
+  virtual uint32_t CalculateNumChildren() = 0;
 
-  virtual size_t CalculateNumChildren(uint32_t max) {
+  virtual uint32_t CalculateNumChildren(uint32_t max) {
     auto count = CalculateNumChildren();
     return count <= max ? count : max;
   }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx) = 0;
+  virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) = 0;
 
   virtual size_t GetIndexOfChildWithName(ConstString name) = 0;
 
@@ -109,9 +109,9 @@ public:
 
   ~SyntheticValueProviderFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return 0; }
+  uint32_t CalculateNumChildren() override { return 0; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override { return nullptr; }
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
   size_t GetIndexOfChildWithName(ConstString name) override {
     return UINT32_MAX;
@@ -322,9 +322,9 @@ public:
 
     ~FrontEnd() override = default;
 
-    size_t CalculateNumChildren() override { return filter->GetCount(); }
+    uint32_t CalculateNumChildren() override { return filter->GetCount(); }
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
       if (idx >= filter->GetCount())
         return lldb::ValueObjectSP();
       return m_backend.GetSyntheticExpressionPathChild(
@@ -426,11 +426,11 @@ public:
 
     bool IsValid();
 
-    size_t CalculateNumChildren() override;
+    uint32_t CalculateNumChildren() override;
 
-    size_t CalculateNumChildren(uint32_t max) override;
+    uint32_t CalculateNumChildren(uint32_t max) override;
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
     lldb::ChildCacheState Update() override;
 

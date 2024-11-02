@@ -32,7 +32,8 @@ protected:
   static RegisterBankInfo::PartialMapping PartMappings[];
   static RegisterBankInfo::ValueMapping ValMappings[];
 
-  static PartialMappingIdx getPartialMappingIdx(const LLT &Ty, bool isFP);
+  static PartialMappingIdx getPartialMappingIdx(const MachineInstr &MI,
+                                                const LLT &Ty, bool isFP);
   static const RegisterBankInfo::ValueMapping *
   getValueMapping(PartialMappingIdx Idx, unsigned NumOperands);
 };

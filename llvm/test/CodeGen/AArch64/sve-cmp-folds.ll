@@ -114,9 +114,12 @@ define i1 @foo_last(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: foo_last:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptest p0, p1.b
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    lastb w8, p1, z0.s
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %vcond = fcmp oeq <vscale x 4 x float> %a, %b
   %vscale = call i64 @llvm.vscale.i64()

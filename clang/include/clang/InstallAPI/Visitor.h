@@ -37,15 +37,30 @@ public:
   /// Collect global variables.
   bool VisitVarDecl(const VarDecl *D);
 
+  /// Collect global functions.
+  bool VisitFunctionDecl(const FunctionDecl *D);
+
   /// Collect Objective-C Interface declarations.
   /// Every Objective-C class has an interface declaration that lists all the
   /// ivars, properties, and methods of the class.
   bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D);
 
+  /// Collect Objective-C Category/Extension declarations.
+  ///
+  /// The class that is being extended might come from a different library and
+  /// is therefore itself not collected.
+  bool VisitObjCCategoryDecl(const ObjCCategoryDecl *D);
+
 private:
   std::string getMangledName(const NamedDecl *D) const;
   std::string getBackendMangledName(llvm::Twine Name) const;
   std::optional<HeaderType> getAccessForDecl(const NamedDecl *D) const;
+  void recordObjCInstanceVariables(
+      const ASTContext &ASTCtx, llvm::MachO::ObjCContainerRecord *Record,
+      StringRef SuperClass,
+      const llvm::iterator_range<
+          DeclContext::specific_decl_iterator<ObjCIvarDecl>>
+          Ivars);
 
   InstallAPIContext &Ctx;
   SourceManager &SrcMgr;

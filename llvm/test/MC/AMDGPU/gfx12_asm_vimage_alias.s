@@ -1,4 +1,4 @@
-; RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+; RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
 
 image_atomic_add v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 // GFX12: image_atomic_add_uint v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x00,0x43,0xd0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]

@@ -650,6 +650,12 @@ def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
   "Has v_dot2_f32_f16 instruction"
 >;
 
+def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
+  "HasDot11Insts",
+  "true",
+  "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
+>;
+
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
   "true",
@@ -1521,6 +1527,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot11Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
@@ -1874,6 +1881,12 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+
+def HasInterpInsts : Predicate<"Subtarget->hasInterpInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
@@ -2022,6 +2035,9 @@ def HasDot9Insts : Predicate<"Subtarget->hasDot9Insts()">,
 
 def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
   AssemblerPredicate<(all_of FeatureDot10Insts)>;
+
+def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
+  AssemblerPredicate<(all_of FeatureDot11Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;

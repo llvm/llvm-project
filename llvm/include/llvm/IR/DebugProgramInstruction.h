@@ -69,6 +69,53 @@ class DPMarker;
 class DPValue;
 class raw_ostream;
 
+/// A typed tracking MDNode reference that does not require a definition for its
+/// parameter type. Necessary to avoid including DebugInfoMetadata.h, which has
+/// a significant impact on compile times if included in this file.
+template <typename T> class DbgRecordParamRef {
+  TrackingMDNodeRef Ref;
+
+public:
+public:
+  DbgRecordParamRef() = default;
+
+  /// Construct from the templated type.
+  DbgRecordParamRef(const T *Param);
+
+  /// Construct from an \a MDNode.
+  ///
+  /// Note: if \c Param does not have the template type, a verifier check will
+  /// fail, and accessors will crash.  However, construction from other nodes
+  /// is supported in order to handle forward references when reading textual
+  /// IR.
+  explicit DbgRecordParamRef(const MDNode *Param);
+
+  /// Get the underlying type.
+  ///
+  /// \pre !*this or \c isa<T>(getAsMDNode()).
+  /// @{
+  T *get() const;
+  operator T *() const { return get(); }
+  T *operator->() const { return get(); }
+  T &operator*() const { return *get(); }
+  /// @}
+
+  /// Check for null.
+  ///
+  /// Check for null in a way that is safe with broken debug info.
+  explicit operator bool() const { return Ref; }
+
+  /// Return \c this as a \a MDNode.
+  MDNode *getAsMDNode() const { return Ref; }
+
+  bool operator==(const DbgRecordParamRef &Other) const {
+    return Ref == Other.Ref;
+  }
+  bool operator!=(const DbgRecordParamRef &Other) const {
+    return Ref != Other.Ref;
+  }
+};
+
 /// Base class for non-instruction debug metadata records that have positions
 /// within IR. Features various methods copied across from the Instruction
 /// class to aid ease-of-use. DbgRecords should always be linked into a
@@ -174,13 +221,20 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 /// llvm.dbg.label intrinsic.
 /// FIXME: Rename DbgLabelRecord when DPValue is renamed to DbgVariableRecord.
 class DPLabel : public DbgRecord {
-  DILabel *Label;
+  DbgRecordParamRef<DILabel> Label;
+
+  /// This constructor intentionally left private, so that it is only called via
+  /// "createUnresolvedDPLabel", which clearly expresses that it is for parsing
+  /// only.
+  DPLabel(MDNode *Label, MDNode *DL);
 
 public:
-  DPLabel(DILabel *Label, DebugLoc DL)
-      : DbgRecord(LabelKind, DL), Label(Label) {
-    assert(Label && "Unexpected nullptr");
-  }
+  DPLabel(DILabel *Label, DebugLoc DL);
+
+  /// For use during parsing; creates a DPLabel from as-of-yet unresolved
+  /// MDNodes. Trying to access the resulting DPLabel's fields before they are
+  /// resolved, or if they resolve to the wrong type, will result in a crash.
+  static DPLabel *createUnresolvedDPLabel(MDNode *Label, MDNode *DL);
 
   DPLabel *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
@@ -189,7 +243,8 @@ public:
                                      Instruction *InsertBefore) const;
 
   void setLabel(DILabel *NewLabel) { Label = NewLabel; }
-  DILabel *getLabel() const { return Label; }
+  DILabel *getLabel() const { return Label.get(); }
+  MDNode *getRawLabel() const { return Label.getAsMDNode(); };
 
   /// Support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const DbgRecord *E) {
@@ -224,9 +279,9 @@ public:
   // DebugValueUser superclass instead. The referred to Value can either be a
   // ValueAsMetadata or a DIArgList.
 
-  TrackingMDNodeRef Variable;
-  DIExpression *Expression;
-  DIExpression *AddressExpression;
+  DbgRecordParamRef<DILocalVariable> Variable;
+  DbgRecordParamRef<DIExpression> Expression;
+  DbgRecordParamRef<DIExpression> AddressExpression;
 
 public:
   /// Create a new DPValue representing the intrinsic \p DVI, for example the
@@ -240,6 +295,29 @@ public:
   DPValue(Metadata *Value, DILocalVariable *Variable, DIExpression *Expression,
           DIAssignID *AssignID, Metadata *Address,
           DIExpression *AddressExpression, const DILocation *DI);
+
+private:
+  /// Private constructor for creating new instances during parsing only. Only
+  /// called through `createUnresolvedDPValue` below, which makes clear that
+  /// this is used for parsing only, and will later return a subclass depending
+  /// on which Type is passed.
+  DPValue(LocationType Type, Metadata *Val, MDNode *Variable,
+          MDNode *Expression, MDNode *AssignID, Metadata *Address,
+          MDNode *AddressExpression, MDNode *DI);
+
+public:
+  /// Used to create DPValues during parsing, where some metadata references may
+  /// still be unresolved. Although for some fields a generic `Metadata*`
+  /// argument is accepted for forward type-references, the verifier and
+  /// accessors will reject incorrect types later on. The function is used for
+  /// all types of DPValues for simplicity while parsing, but asserts if any
+  /// necessary fields are empty or unused fields are not empty, i.e. if the
+  /// #dbg_assign fields are used for a non-dbg-assign type.
+  static DPValue *createUnresolvedDPValue(LocationType Type, Metadata *Val,
+                                          MDNode *Variable, MDNode *Expression,
+                                          MDNode *AssignID, Metadata *Address,
+                                          MDNode *AddressExpression,
+                                          MDNode *DI);
 
   static DPValue *createDPVAssign(Value *Val, DILocalVariable *Variable,
                                   DIExpression *Expression,
@@ -331,10 +409,6 @@ public:
   void addVariableLocationOps(ArrayRef<Value *> NewValues,
                               DIExpression *NewExpr);
 
-  void setVariable(DILocalVariable *NewVar);
-
-  void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
-
   unsigned getNumVariableLocationOps() const;
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
@@ -349,10 +423,13 @@ public:
   void setKillLocation();
   bool isKillLocation() const;
 
-  DILocalVariable *getVariable() const;
-  MDNode *getRawVariable() const { return Variable; }
+  void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
+  DILocalVariable *getVariable() const { return Variable.get(); };
+  MDNode *getRawVariable() const { return Variable.getAsMDNode(); }
 
-  DIExpression *getExpression() const { return Expression; }
+  void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
+  DIExpression *getExpression() const { return Expression.get(); }
+  MDNode *getRawExpression() const { return Expression.getAsMDNode(); }
 
   /// Returns the metadata operand for the first location description. i.e.,
   /// dbg intrinsic dbg.value,declare operand and dbg.assign 1st location
@@ -401,7 +478,10 @@ public:
   }
   Metadata *getRawAssignID() const { return DebugValues[2]; }
   DIAssignID *getAssignID() const;
-  DIExpression *getAddressExpression() const { return AddressExpression; }
+  DIExpression *getAddressExpression() const { return AddressExpression.get(); }
+  MDNode *getRawAddressExpression() const {
+    return AddressExpression.getAsMDNode();
+  }
   void setAddressExpression(DIExpression *NewExpr) {
     AddressExpression = NewExpr;
   }

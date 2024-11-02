@@ -306,7 +306,7 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ist2p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-SMINOR0 %s
 // RV32-SMINOR0: error: invalid arch name 'rv32ist2p0',
-// RV32-SMINOR0: unsupported version number 2.0 for extension 'st'
+// RV32-SMINOR0: unsupported standard supervisor-level extension 'st'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_ -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-XSEP %s
@@ -397,7 +397,7 @@
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32izbb1p0zbs1p0 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBB-ZBS-UNDERSCORE %s
-// RV32-EXPERIMENTAL-ZBB-ZBS-UNDERSCORE: error: invalid arch name 'rv32izbb1p0zbs1p0', unsupported version number 1.0 for extension 'zbb1p0zbs'
+// RV32-EXPERIMENTAL-ZBB-ZBS-UNDERSCORE: error: invalid arch name 'rv32izbb1p0zbs1p0', unsupported standard user-level extension 'zbb1p0zbs'
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izba1p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZBA %s

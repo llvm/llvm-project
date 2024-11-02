@@ -228,7 +228,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36) {
 }
 
 TEST(LlvmLibcIntegerToStringTest, UINT256_Base_16) {
-  using UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
+  using UInt256 = LIBC_NAMESPACE::UInt<256>;
   using type = IntegerToString<UInt256, Hex::WithWidth<64>>;
   EXPECT(
       type,

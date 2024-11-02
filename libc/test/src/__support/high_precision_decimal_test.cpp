@@ -406,3 +406,31 @@ TEST(LlvmLibcHighPrecisionDecimalTest, BigExpTest) {
   // Same, but since the number is negative the net result is -123456788
   EXPECT_EQ(big_negative_hpd.get_decimal_point(), -123456789 + 1);
 }
+
+TEST(LlvmLibcHighPrecisionDecimalTest, NumLenExpTest) {
+  LIBC_NAMESPACE::internal::HighPrecisionDecimal hpd =
+      LIBC_NAMESPACE::internal::HighPrecisionDecimal("1e123456789", 5);
+
+  // The length of 5 includes things like the "e" so it only gets 3 digits of
+  // exponent.
+  EXPECT_EQ(hpd.get_decimal_point(), 123 + 1);
+
+  LIBC_NAMESPACE::internal::HighPrecisionDecimal negative_hpd =
+      LIBC_NAMESPACE::internal::HighPrecisionDecimal("1e-123456789", 5);
+
+  // The negative sign also counts as a character.
+  EXPECT_EQ(negative_hpd.get_decimal_point(), -12 + 1);
+}
+
+TEST(LlvmLibcHighPrecisionDecimalTest, NumLenDigitsTest) {
+  LIBC_NAMESPACE::internal::HighPrecisionDecimal hpd =
+      LIBC_NAMESPACE::internal::HighPrecisionDecimal("123456789e1", 5);
+
+  EXPECT_EQ(hpd.round_to_integer_type<uint64_t>(), uint64_t(12345));
+
+  LIBC_NAMESPACE::internal::HighPrecisionDecimal longer_hpd =
+      LIBC_NAMESPACE::internal::HighPrecisionDecimal("123456789e1", 10);
+
+  // With 10 characters it should see the e, but not actually act on it.
+  EXPECT_EQ(longer_hpd.round_to_integer_type<uint64_t>(), uint64_t(123456789));
+}

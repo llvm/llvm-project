@@ -11,12 +11,13 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/UInt.h"
 
 namespace LIBC_NAMESPACE {
 
 // Return the first N hex digits of an integer as a string in upper case.
 template <typename T>
-cpp::enable_if_t<cpp::is_integral_v<T>, cpp::string>
+cpp::enable_if_t<cpp::is_integral_v<T> || is_big_int_v<T>, cpp::string>
 int_to_hex(T value, size_t length = sizeof(T) * 2) {
   cpp::string s(length, '0');
 

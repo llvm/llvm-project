@@ -590,7 +590,8 @@ public:
     // Copy fat object contents to the output when extracting host bundle.
     std::string ModifiedContent;
     if (Content.size() == 1u && Content.front() == 0) {
-      auto HostBundleOrErr = getHostBundle();
+      auto HostBundleOrErr = getHostBundle(
+          StringRef(Input.getBufferStart(), Input.getBufferSize()));
       if (!HostBundleOrErr)
         return HostBundleOrErr.takeError();
 
@@ -700,7 +701,7 @@ private:
     return Error::success();
   }
 
-  Expected<std::string> getHostBundle() {
+  Expected<std::string> getHostBundle(StringRef Input) {
     TempFileHandlerRAII TempFiles;
 
     auto ModifiedObjPathOrErr = TempFiles.Create(std::nullopt);
@@ -715,7 +716,24 @@ private:
     ObjcopyArgs.push_back("--regex");
     ObjcopyArgs.push_back("--remove-section=__CLANG_OFFLOAD_BUNDLE__.*");
     ObjcopyArgs.push_back("--");
-    ObjcopyArgs.push_back(BundlerConfig.InputFileNames.front());
+
+    StringRef ObjcopyInputFileName;
+    // When unbundling an archive, the content of each object file in the
+    // archive is passed to this function by parameter Input, which is different
+    // from the content of the original input archive file, therefore it needs
+    // to be saved to a temporary file before passed to llvm-objcopy. Otherwise,
+    // Input is the same as the content of the original input file, therefore
+    // temporary file is not needed.
+    if (StringRef(BundlerConfig.FilesType).starts_with("a")) {
+      auto InputFileOrErr =
+          TempFiles.Create(ArrayRef<char>(Input.data(), Input.size()));
+      if (!InputFileOrErr)
+        return InputFileOrErr.takeError();
+      ObjcopyInputFileName = *InputFileOrErr;
+    } else
+      ObjcopyInputFileName = BundlerConfig.InputFileNames.front();
+
+    ObjcopyArgs.push_back(ObjcopyInputFileName);
     ObjcopyArgs.push_back(ModifiedObjPath);
 
     if (Error Err = executeObjcopy(BundlerConfig.ObjcopyPath, ObjcopyArgs))
@@ -1628,10 +1646,8 @@ Error OffloadBundler::UnbundleArchive() {
     while (!CodeObject.empty()) {
       SmallVector<StringRef> CompatibleTargets;
       auto CodeObjectInfo = OffloadTargetInfo(CodeObject, BundlerConfig);
-      if (CodeObjectInfo.hasHostKind()) {
-        // Do nothing, we don't extract host code yet.
-      } else if (getCompatibleOffloadTargets(CodeObjectInfo, CompatibleTargets,
-                                             BundlerConfig)) {
+      if (getCompatibleOffloadTargets(CodeObjectInfo, CompatibleTargets,
+                                      BundlerConfig)) {
         std::string BundleData;
         raw_string_ostream DataStream(BundleData);
         if (Error Err = FileHandler->ReadBundle(DataStream, CodeObjectBuffer))

@@ -8,6 +8,12 @@
 // RUN: %clang_cc1 -std=c++20 %t/D.cppm -I%t -emit-module-interface -o %t/D.pcm
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/D-part.cppm -I%t -fprebuilt-module-path=%t -verify
 
+// RUN: %clang_cc1 -std=c++20 %t/B.cppm -I%t -emit-reduced-module-interface -o %t/B.pcm
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/A.cppm -I%t -fprebuilt-module-path=%t -verify
+//
+// RUN: %clang_cc1 -std=c++20 %t/D.cppm -I%t -emit-reduced-module-interface -o %t/D.pcm
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/D-part.cppm -I%t -fprebuilt-module-path=%t -verify
+
 //--- A.cppm
 module;
 export module baz:A;

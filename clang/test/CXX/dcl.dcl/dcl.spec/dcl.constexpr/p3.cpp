@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fcxx-exceptions -verify=expected,beforecxx14,beforecxx20,beforecxx23 -std=c++11 %s
-// RUN: %clang_cc1 -fcxx-exceptions -verify=expected,aftercxx14,beforecxx20,beforecxx23 -std=c++14 %s
-// RUN: %clang_cc1 -fcxx-exceptions -verify=expected,aftercxx14,aftercxx20,beforecxx23 -std=c++20  %s
+// RUN: %clang_cc1 -fcxx-exceptions -verify=expected,aftercxx14,beforecxx20,beforecxx23,cxx14_20 -std=c++14 %s
+// RUN: %clang_cc1 -fcxx-exceptions -verify=expected,aftercxx14,aftercxx20,beforecxx23,cxx14_20 -std=c++20  %s
 // RUN: %clang_cc1 -fcxx-exceptions -verify=expected,aftercxx14,aftercxx20 -std=c++23 %s
 
 namespace N {
@@ -11,7 +11,7 @@ namespace M {
   typedef double D;
 }
 
-struct NonLiteral { // expected-note 2{{no constexpr constructors}}
+struct NonLiteral { // beforecxx23-note 2{{no constexpr constructors}}
   NonLiteral() {}
   NonLiteral(int) {}
 };
@@ -43,7 +43,7 @@ struct T : SS, NonLiteral {
   //  - its return type shall be a literal type;
   // Once we support P2448R2 constexpr functions will be allowd to return non-literal types
   // The destructor will also be allowed
-  constexpr NonLiteral NonLiteralReturn() const { return {}; } // expected-error {{constexpr function's return type 'NonLiteral' is not a literal type}}
+  constexpr NonLiteral NonLiteralReturn() const { return {}; } // beforecxx23-error {{constexpr function's return type 'NonLiteral' is not a literal type}}
   constexpr void VoidReturn() const { return; }                // beforecxx14-error {{constexpr function's return type 'void' is not a literal type}}
   constexpr ~T();                                              // beforecxx20-error {{destructor cannot be declared constexpr}}
 
@@ -52,7 +52,7 @@ struct T : SS, NonLiteral {
 
   //  - each of its parameter types shall be a literal type;
   // Once we support P2448R2 constexpr functions will be allowd to have parameters of non-literal types
-  constexpr int NonLiteralParam(NonLiteral) const { return 0; } // expected-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
+  constexpr int NonLiteralParam(NonLiteral) const { return 0; } // beforecxx23-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
   typedef int G(NonLiteral) const;
   constexpr G NonLiteralParam2; // ok until definition
 
@@ -66,7 +66,7 @@ struct T : SS, NonLiteral {
   // constexpr since they can't be const.
   constexpr T &operator=(const T &) = default; // beforecxx14-error {{an explicitly-defaulted copy assignment operator may not have 'const', 'constexpr' or 'volatile' qualifiers}} \
                                                // beforecxx14-warning {{C++14}} \
-                                               // aftercxx14-error{{defaulted definition of copy assignment operator is not constexpr}}
+                                               // cxx14_20-error{{defaulted definition of copy assignment operator cannot be marked constexpr}}
 };
 
 constexpr int T::OutOfLineVirtual() const { return 0; }
@@ -229,9 +229,9 @@ namespace DR1364 {
     return k; // ok, even though lvalue-to-rvalue conversion of a function
               // parameter is not allowed in a constant expression.
   }
-  int kGlobal; // expected-note {{here}}
-  constexpr int f() { // expected-error {{constexpr function never produces a constant expression}}
-    return kGlobal;   // expected-note {{read of non-const}}
+  int kGlobal; // beforecxx23-note {{here}}
+  constexpr int f() { // beforecxx23-error {{constexpr function never produces a constant expression}}
+    return kGlobal;   // beforecxx23-note {{read of non-const}}
   }
 }
 

@@ -1017,13 +1017,13 @@ CanThrowResult Sema::canCalleeThrow(Sema &S, const Expr *E, const Decl *D,
                                     SourceLocation Loc) {
   // As an extension, we assume that __attribute__((nothrow)) functions don't
   // throw.
-  if (D && isa<FunctionDecl>(D) && D->hasAttr<NoThrowAttr>())
+  if (isa_and_nonnull<FunctionDecl>(D) && D->hasAttr<NoThrowAttr>())
     return CT_Cannot;
 
   QualType T;
 
   // In C++1z, just look at the function type of the callee.
-  if (S.getLangOpts().CPlusPlus17 && E && isa<CallExpr>(E)) {
+  if (S.getLangOpts().CPlusPlus17 && isa_and_nonnull<CallExpr>(E)) {
     E = cast<CallExpr>(E)->getCallee();
     T = E->getType();
     if (T->isSpecificPlaceholderType(BuiltinType::BoundMember)) {

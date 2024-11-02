@@ -21,6 +21,7 @@ namespace bufferization {
 } // namespace mlir
 
 using namespace mlir;
+using MemCpyFn = bufferization::BufferResultsToOutParamsOptions::MemCpyFn;
 
 /// Return `true` if the given MemRef type has a fully dynamic layout.
 static bool hasFullyDynamicLayoutMap(MemRefType type) {
@@ -97,9 +98,10 @@ updateFuncOp(func::FuncOp func,
 // Updates all ReturnOps in the scope of the given func::FuncOp by either
 // keeping them as return values or copying the associated buffer contents into
 // the given out-params.
-static void updateReturnOps(func::FuncOp func,
-                            ArrayRef<BlockArgument> appendedEntryArgs) {
-  func.walk([&](func::ReturnOp op) {
+static LogicalResult updateReturnOps(func::FuncOp func,
+                                     ArrayRef<BlockArgument> appendedEntryArgs,
+                                     MemCpyFn memCpyFn) {
+  auto res = func.walk([&](func::ReturnOp op) {
     SmallVector<Value, 6> copyIntoOutParams;
     SmallVector<Value, 6> keepAsReturnOperands;
     for (Value operand : op.getOperands()) {
@@ -109,12 +111,16 @@ static void updateReturnOps(func::FuncOp func,
         keepAsReturnOperands.push_back(operand);
     }
     OpBuilder builder(op);
-    for (auto t : llvm::zip(copyIntoOutParams, appendedEntryArgs))
-      builder.create<memref::CopyOp>(op.getLoc(), std::get<0>(t),
-                                     std::get<1>(t));
+    for (auto t : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
+      if (failed(
+              memCpyFn(builder, op.getLoc(), std::get<0>(t), std::get<1>(t))))
+        return WalkResult::interrupt();
+    }
     builder.create<func::ReturnOp>(op.getLoc(), keepAsReturnOperands);
     op.erase();
+    return WalkResult::advance();
   });
+  return failure(res.wasInterrupted());
 }
 
 // Updates all CallOps in the scope of the given ModuleOp by allocating
@@ -192,7 +198,15 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
       return failure();
     if (func.isExternal())
       continue;
-    updateReturnOps(func, appendedEntryArgs);
+    auto defaultMemCpyFn = [](OpBuilder &builder, Location loc, Value from,
+                              Value to) {
+      builder.create<memref::CopyOp>(loc, from, to);
+      return success();
+    };
+    if (failed(updateReturnOps(func, appendedEntryArgs,
+                               options.memCpyFn.value_or(defaultMemCpyFn)))) {
+      return failure();
+    }
   }
   if (failed(updateCalls(module, options)))
     return failure();

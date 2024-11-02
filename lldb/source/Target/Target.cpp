@@ -43,6 +43,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -4227,28 +4228,21 @@ void TargetProperties::UpdateLaunchInfoFromProperties() {
   DisableSTDIOValueChangedCallback();
 }
 
-bool TargetProperties::GetInjectLocalVariables(
-    ExecutionContext *exe_ctx) const {
+std::optional<bool> TargetProperties::GetExperimentalPropertyValue(
+    size_t prop_idx, ExecutionContext *exe_ctx) const {
   const Property *exp_property =
       m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values
-        ->GetPropertyAtIndexAs<bool>(ePropertyInjectLocalVars, exe_ctx)
-        .value_or(true);
-  else
-    return true;
+    return exp_values->GetPropertyAtIndexAs<bool>(prop_idx, exe_ctx);
+  return std::nullopt;
 }
 
-void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
-                                               bool b) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    exp_values->SetPropertyAtIndex(ePropertyInjectLocalVars, true, exe_ctx);
+bool TargetProperties::GetInjectLocalVariables(
+    ExecutionContext *exe_ctx) const {
+  return GetExperimentalPropertyValue(ePropertyInjectLocalVars, exe_ctx)
+      .value_or(true);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {

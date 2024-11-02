@@ -316,7 +316,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   // least 4 tasks.
   ThreadPoolStrategy S = optimal_concurrency(
       std::max(Filenames.size() / 4, static_cast<size_t>(1)));
-  ThreadPool Pool(S);
+  DefaultThreadPool Pool(S);
   DenseMap<llvm::thread::id, ProfileTy> ParsedProfiles(
       Pool.getMaxConcurrency());
   for (const auto &Filename : Filenames)

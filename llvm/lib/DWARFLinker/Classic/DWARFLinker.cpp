@@ -2935,7 +2935,7 @@ Error DWARFLinker::link() {
     }
     EmitLambda();
   } else {
-    ThreadPool Pool(hardware_concurrency(2));
+    DefaultThreadPool Pool(hardware_concurrency(2));
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();

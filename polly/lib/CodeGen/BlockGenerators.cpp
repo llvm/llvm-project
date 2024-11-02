@@ -1234,7 +1234,7 @@ PHINode *RegionGenerator::buildExitPHI(MemoryAccess *MA, LoopToScevMapT &LTS,
 
   PHINode *NewPHI = PHINode::Create(OrigPHI->getType(), Incoming.size(),
                                     "polly." + OrigPHI->getName(),
-                                    NewSubregionExit->getFirstNonPHI());
+                                    NewSubregionExit->getFirstNonPHIIt());
 
   // Add the incoming values to the PHI.
   for (auto &Pair : Incoming) {

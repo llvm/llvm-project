@@ -34,7 +34,6 @@ class VarDecl;
 
 namespace interp {
 class Context;
-class Record;
 
 /// The program contains and links the bytecode for all functions.
 class Program final {

@@ -11,4 +11,4 @@
 !opencl.ocl.version = !{!0}
 !llvm.module.flags = !{!1}
 !0 = !{i32 1}
-!1 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!1 = !{i32 1, !"amdhsa_code_object_version", i32 400}

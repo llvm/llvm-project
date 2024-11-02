@@ -1875,6 +1875,17 @@ public:
     llvm_unreachable("Unsupported character width!");
   }
 
+  // Get code unit but preserve sign info.
+  int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
+    int64_t V = getCodeUnit(I);
+    if (isOrdinary() || isWide()) {
+      unsigned Width = getCharByteWidth() * BitWidth;
+      llvm::APInt AInt(Width, (uint64_t)V);
+      V = AInt.getSExtValue();
+    }
+    return V;
+  }
+
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
@@ -5832,7 +5843,7 @@ class GenericSelectionExpr final
         std::conditional_t<Const, const Stmt *const *, Stmt **>;
     using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
                                            TypeSourceInfo **>;
-    StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
+    StmtPtrPtrTy E = nullptr;
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;
     AssociationIteratorTy(StmtPtrPtrTy E, TSIPtrPtrTy TSI, unsigned Offset,

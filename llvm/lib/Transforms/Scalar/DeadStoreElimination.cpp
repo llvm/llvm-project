@@ -634,7 +634,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
     Value *Indices[1] = {
         ConstantInt::get(DeadWriteLength->getType(), ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
-        Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "", DeadI);
+        Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
+        DeadI->getIterator());
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
   }
@@ -1907,15 +1908,15 @@ struct DSEState {
                               Malloc->getArgOperand(0), IRB, TLI);
     if (!Calloc)
       return false;
+
     MemorySSAUpdater Updater(&MSSA);
     auto *NewAccess =
       Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
                                       MallocDef);
     auto *NewAccessMD = cast<MemoryDef>(NewAccess);
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
-    Updater.removeMemoryAccess(Malloc);
     Malloc->replaceAllUsesWith(Calloc);
-    Malloc->eraseFromParent();
+    deleteDeadInstruction(Malloc);
     return true;
   }
 

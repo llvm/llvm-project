@@ -222,18 +222,6 @@ void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
   }
 }
 
-bool CoreEngine::ExecuteWorkListWithInitialState(const LocationContext *L,
-                                                 unsigned Steps,
-                                                 ProgramStateRef InitState,
-                                                 ExplodedNodeSet &Dst) {
-  bool DidNotFinish = ExecuteWorkList(L, Steps, InitState);
-  for (ExplodedGraph::eop_iterator I = G.eop_begin(), E = G.eop_end(); I != E;
-       ++I) {
-    Dst.Add(*I);
-  }
-  return DidNotFinish;
-}
-
 void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   const CFGBlock *Blk = L.getDst();
   NodeBuilderContext BuilderCtx(*this, Blk, Pred);
