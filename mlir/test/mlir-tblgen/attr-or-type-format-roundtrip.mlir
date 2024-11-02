@@ -62,6 +62,7 @@ attributes {
 // CHECK: !test.default_valued_type<>
 // CHECK: !test.custom_type<-5>
 // CHECK: !test.custom_type<2 0 1 5>
+// CHECK: !test.custom_type_spacing<1 2>
 // CHECK: !test.custom_type_string<"foo" foo>
 // CHECK: !test.custom_type_string<"bar" bar>
 
@@ -98,6 +99,7 @@ func.func private @test_roundtrip_default_parsers_struct(
   !test.default_valued_type<>,
   !test.custom_type<-5>,
   !test.custom_type<2 9 9 5>,
+  !test.custom_type_spacing<1 2>,
   !test.custom_type_string<"foo" foo>,
   !test.custom_type_string<"bar" bar>
 )

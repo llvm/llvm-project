@@ -143,6 +143,7 @@ private:
   void parseUnbracedBody(bool CheckEOF = false);
   void handleAttributes();
   bool handleCppAttributes();
+  bool isBlockBegin(const FormatToken &Tok) const;
   FormatToken *parseIfThenElse(IfStmtKind *IfKind, bool KeepBraces = false);
   void parseTryCatch();
   void parseLoopBody(bool KeepBraces, bool WrapRightBrace);

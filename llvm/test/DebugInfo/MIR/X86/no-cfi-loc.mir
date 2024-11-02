@@ -4,7 +4,7 @@
 #
 # CHECK-NOT: .loc 1 0
 # CHECK:     .cfi_def_cfa_offset
-# UNSUPPORTED: cygwin,windows-gnu,windows-msvc
+# UNSUPPORTED: target={{.*-(cygwin|windows-gnu|windows-msvc)}}
 
 --- |
   ; ModuleID = 'no-cfi-loc.ll'

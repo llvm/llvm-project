@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"

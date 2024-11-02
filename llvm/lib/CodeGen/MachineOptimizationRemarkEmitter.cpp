@@ -18,6 +18,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -30,7 +31,7 @@ DiagnosticInfoMIROptimization::MachineArgument::MachineArgument(
            /*SkipDebugLoc=*/true);
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 MachineOptimizationRemarkEmitter::computeHotness(const MachineBasicBlock &MBB) {
   if (!MBFI)
     return std::nullopt;

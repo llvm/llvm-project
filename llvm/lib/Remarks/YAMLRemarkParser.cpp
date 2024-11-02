@@ -367,7 +367,7 @@ Expected<Argument> YAMLRemarkParser::parseArg(yaml::Node &Node) {
 
   std::optional<StringRef> KeyStr;
   std::optional<StringRef> ValueStr;
-  Optional<RemarkLocation> Loc;
+  std::optional<RemarkLocation> Loc;
 
   for (yaml::KeyValueNode &ArgEntry : *ArgMap) {
     Expected<StringRef> MaybeKey = parseKey(ArgEntry);

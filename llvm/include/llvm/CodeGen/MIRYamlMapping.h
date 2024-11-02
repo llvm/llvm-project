@@ -14,7 +14,6 @@
 #ifndef LLVM_CODEGEN_MIRYAMLMAPPING_H
 #define LLVM_CODEGEN_MIRYAMLMAPPING_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -23,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -249,7 +249,7 @@ struct MachineStackObject {
   TargetStackID::Value StackID;
   StringValue CalleeSavedRegister;
   bool CalleeSavedRestored = true;
-  Optional<int64_t> LocalOffset;
+  std::optional<int64_t> LocalOffset;
   StringValue DebugVar;
   StringValue DebugExpr;
   StringValue DebugLoc;
@@ -291,7 +291,8 @@ template <> struct MappingTraits<MachineStackObject> {
                        StringValue()); // Don't print it out when it's empty.
     YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
                        true);
-    YamlIO.mapOptional("local-offset", Object.LocalOffset, Optional<int64_t>());
+    YamlIO.mapOptional("local-offset", Object.LocalOffset,
+                       std::optional<int64_t>());
     YamlIO.mapOptional("debug-info-variable", Object.DebugVar,
                        StringValue()); // Don't print it out when it's empty.
     YamlIO.mapOptional("debug-info-expression", Object.DebugExpr,
@@ -708,7 +709,7 @@ struct MachineFunction {
   bool TracksDebugUserValues = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
   std::vector<MachineFunctionLiveIn> LiveIns;
-  Optional<std::vector<FlowStringValue>> CalleeSavedRegisters;
+  std::optional<std::vector<FlowStringValue>> CalleeSavedRegisters;
   // TODO: Serialize the various register masks.
   // Frame information
   MachineFrameInfo FrameInfo;
@@ -749,7 +750,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("liveins", MF.LiveIns,
                        std::vector<MachineFunctionLiveIn>());
     YamlIO.mapOptional("calleeSavedRegisters", MF.CalleeSavedRegisters,
-                       Optional<std::vector<FlowStringValue>>());
+                       std::optional<std::vector<FlowStringValue>>());
     YamlIO.mapOptional("frameInfo", MF.FrameInfo, MachineFrameInfo());
     YamlIO.mapOptional("fixedStack", MF.FixedStackObjects,
                        std::vector<FixedMachineStackObject>());

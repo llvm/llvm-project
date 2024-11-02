@@ -4,7 +4,7 @@
 ; RUN: llvm-nm %t.o.1 | FileCheck --check-prefix=CHECK1 %s
 
 ; FIXME: Investigate test failures on these architectures.
-; UNSUPPORTED: mips, mipsel, aarch64, powerpc64
+; UNSUPPORTED: target={{(mips|mipsel)-.*}}, target=aarch64{{.*}}, target=powerpc64{{.*}}
 
 target triple = "x86_64-unknown-linux-gnu"
 

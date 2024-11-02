@@ -1,6 +1,7 @@
 ; REQUIRES: cxx-shared-library
 ; RUN: %lli -jit-kind=mcjit -relocation-model=pic -code-model=large %s
-; XFAIL: cygwin, windows-msvc, windows-gnu, mips-, mipsel-, i686, i386, aarch64, arm
+; XFAIL: target={{.*-(cygwin|windows-msvc|windows-gnu)}}
+; XFAIL: target={{(mips|mipsel)-.*}}, target={{(i686|i386).*}}, target={{(aarch64|arm).*}}
 declare ptr @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(ptr, ptr, ptr)
 declare i32 @__gxx_personality_v0(...)

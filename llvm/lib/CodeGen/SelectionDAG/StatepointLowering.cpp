@@ -1147,7 +1147,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   // TODO: To eliminate this problem we can remove gc.result intrinsics
   //       completely and make statepoint call to return a tuple.
   Type *RetTy = GCResultLocality.second->getType();
-  unsigned Reg = FuncInfo.CreateRegs(RetTy);
+  Register Reg = FuncInfo.CreateRegs(RetTy);
   RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                    DAG.getDataLayout(), Reg, RetTy,
                    I.getCallingConv());

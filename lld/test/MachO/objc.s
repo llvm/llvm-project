@@ -67,7 +67,7 @@
 ## TODO: Load has-objc-symbol.o prior to symbol resolution to match the archive behavior.
 # RUN: not %lld -dylib %t/refs-dup.o %t/refs-objc.o -o %t/refs-dup --start-lib %t/no-objc.o \
 # RUN:   %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/wrong-arch.o --end-lib \
-# RUN:   -ObjC  --check-prefix=DUP-FROM-OBJC
+# RUN:   -ObjC 2>&1 | FileCheck %s --check-prefix=DUP-ERROR
 
 #--- has-objc-symbol.s
 .globl _OBJC_CLASS_$_MyObject, _has_dup

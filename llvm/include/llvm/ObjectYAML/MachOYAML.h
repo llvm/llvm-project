@@ -21,6 +21,7 @@
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -54,7 +55,7 @@ struct Section {
   llvm::yaml::Hex32 reserved1;
   llvm::yaml::Hex32 reserved2;
   llvm::yaml::Hex32 reserved3;
-  Optional<llvm::yaml::BinaryRef> content;
+  std::optional<llvm::yaml::BinaryRef> content;
   std::vector<Relocation> relocations;
 };
 
@@ -141,7 +142,7 @@ struct Object {
   std::vector<LoadCommand> LoadCommands;
   std::vector<Section> Sections;
   LinkEditData LinkEdit;
-  Optional<llvm::yaml::BinaryRef> RawLinkEditSegment;
+  std::optional<llvm::yaml::BinaryRef> RawLinkEditSegment;
   DWARFYAML::Data DWARF;
 };
 

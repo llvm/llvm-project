@@ -18,7 +18,6 @@
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
@@ -33,6 +32,7 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <system_error>
 #include <unordered_map>
 #include <unordered_set>
@@ -132,8 +132,8 @@ private:
     AnnotationInst->addOperand(MCOperand::createImm(AnnotationValue));
   }
 
-  Optional<int64_t> getAnnotationOpValue(const MCInst &Inst,
-                                         unsigned Index) const {
+  std::optional<int64_t> getAnnotationOpValue(const MCInst &Inst,
+                                              unsigned Index) const {
     const MCInst *AnnotationInst = getAnnotationInst(Inst);
     if (!AnnotationInst)
       return std::nullopt;
@@ -1049,7 +1049,7 @@ public:
   }
 
   /// Return handler and action info for invoke instruction if present.
-  Optional<MCPlus::MCLandingPad> getEHInfo(const MCInst &Inst) const;
+  std::optional<MCPlus::MCLandingPad> getEHInfo(const MCInst &Inst) const;
 
   /// Add handler and action info for call instruction.
   void addEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
@@ -1081,7 +1081,7 @@ public:
   bool unsetJumpTable(MCInst &Inst);
 
   /// Return destination of conditional tail call instruction if \p Inst is one.
-  Optional<uint64_t> getConditionalTailCall(const MCInst &Inst) const;
+  std::optional<uint64_t> getConditionalTailCall(const MCInst &Inst) const;
 
   /// Mark the \p Instruction as a conditional tail call, and set its
   /// destination address if it is known. If \p Instruction was already marked,
@@ -1093,7 +1093,7 @@ public:
   bool unsetConditionalTailCall(MCInst &Inst);
 
   /// Return offset of \p Inst in the original function, if available.
-  Optional<uint32_t> getOffset(const MCInst &Inst) const;
+  std::optional<uint32_t> getOffset(const MCInst &Inst) const;
 
   /// Return the offset if the annotation is present, or \p Default otherwise.
   uint32_t getOffsetWithDefault(const MCInst &Inst, uint32_t Default) const;
@@ -1591,8 +1591,8 @@ public:
 
   /// Create a target-specific relocation out of the \p Fixup.
   /// Note that not every fixup could be converted into a relocation.
-  virtual Optional<Relocation> createRelocation(const MCFixup &Fixup,
-                                                const MCAsmBackend &MAB) const {
+  virtual std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup, const MCAsmBackend &MAB) const {
     llvm_unreachable("not implemented");
     return Relocation();
   }
@@ -1666,7 +1666,7 @@ public:
   }
 
   /// Return annotation index matching the \p Name.
-  Optional<unsigned> getAnnotationIndex(StringRef Name) const {
+  std::optional<unsigned> getAnnotationIndex(StringRef Name) const {
     auto AI = AnnotationNameIndexMap.find(Name);
     if (AI != AnnotationNameIndexMap.end())
       return AI->second;
@@ -1744,7 +1744,7 @@ public:
   /// Use hasAnnotation() if the annotation may not exist.
   template <typename ValueType>
   ValueType &getAnnotationAs(const MCInst &Inst, unsigned Index) const {
-    Optional<int64_t> Value = getAnnotationOpValue(Inst, Index);
+    std::optional<int64_t> Value = getAnnotationOpValue(Inst, Index);
     assert(Value && "annotation should exist");
     return reinterpret_cast<MCPlus::MCSimpleAnnotation<ValueType> *>(*Value)
         ->getValue();

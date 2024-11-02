@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"

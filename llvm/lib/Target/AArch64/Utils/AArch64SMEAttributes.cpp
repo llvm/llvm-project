@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64SMEAttributes.h"
-#include "llvm/ADT/None.h"
 #include "llvm/IR/InstrTypes.h"
 #include <cassert>
 

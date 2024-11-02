@@ -18,6 +18,15 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -mattr=+f -mattr=+d \
 ; RUN:   -mattr=+zfh -target-abi lp64d < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64IFDZFH
+; RUN: llc -mtriple=riscv32 -verify-machineinstrs -mattr=+f \
+; RUN:   -mattr=+zfhmin -target-abi ilp32f < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32IFZFHMIN
+; RUN: llc -mtriple=riscv32 -verify-machineinstrs -mattr=+f -mattr=+d \
+; RUN:   -mattr=+zfhmin -target-abi ilp32d < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32IFDZFHMIN
+; RUN: llc -mtriple=riscv64 -verify-machineinstrs -mattr=+f -mattr=+d \
+; RUN:   -mattr=+zfhmin -target-abi lp64d < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64IFDZFHMIN
 
 ; Test fcopysign scenarios where the sign argument is casted to the type of the
 ; magnitude argument. Those casts can be folded away by the DAGCombiner.
@@ -89,6 +98,28 @@ define double @fold_promote_d_s(double %a, float %b) nounwind {
 ; RV64IFDZFH-NEXT:    fcvt.d.s ft0, fa1
 ; RV64IFDZFH-NEXT:    fsgnj.d fa0, fa0, ft0
 ; RV64IFDZFH-NEXT:    ret
+;
+; RV32IFZFHMIN-LABEL: fold_promote_d_s:
+; RV32IFZFHMIN:       # %bb.0:
+; RV32IFZFHMIN-NEXT:    fmv.x.w a2, fa0
+; RV32IFZFHMIN-NEXT:    lui a3, 524288
+; RV32IFZFHMIN-NEXT:    and a2, a2, a3
+; RV32IFZFHMIN-NEXT:    slli a1, a1, 1
+; RV32IFZFHMIN-NEXT:    srli a1, a1, 1
+; RV32IFZFHMIN-NEXT:    or a1, a1, a2
+; RV32IFZFHMIN-NEXT:    ret
+;
+; RV32IFDZFHMIN-LABEL: fold_promote_d_s:
+; RV32IFDZFHMIN:       # %bb.0:
+; RV32IFDZFHMIN-NEXT:    fcvt.d.s ft0, fa1
+; RV32IFDZFHMIN-NEXT:    fsgnj.d fa0, fa0, ft0
+; RV32IFDZFHMIN-NEXT:    ret
+;
+; RV64IFDZFHMIN-LABEL: fold_promote_d_s:
+; RV64IFDZFHMIN:       # %bb.0:
+; RV64IFDZFHMIN-NEXT:    fcvt.d.s ft0, fa1
+; RV64IFDZFHMIN-NEXT:    fsgnj.d fa0, fa0, ft0
+; RV64IFDZFHMIN-NEXT:    ret
   %c = fpext float %b to double
   %t = call double @llvm.copysign.f64(double %a, double %c)
   ret double %t
@@ -178,6 +209,29 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV64IFDZFH-NEXT:    fcvt.d.h ft0, fa1
 ; RV64IFDZFH-NEXT:    fsgnj.d fa0, fa0, ft0
 ; RV64IFDZFH-NEXT:    ret
+;
+; RV32IFZFHMIN-LABEL: fold_promote_d_h:
+; RV32IFZFHMIN:       # %bb.0:
+; RV32IFZFHMIN-NEXT:    fmv.x.h a2, fa0
+; RV32IFZFHMIN-NEXT:    lui a3, 8
+; RV32IFZFHMIN-NEXT:    and a2, a2, a3
+; RV32IFZFHMIN-NEXT:    slli a2, a2, 16
+; RV32IFZFHMIN-NEXT:    slli a1, a1, 1
+; RV32IFZFHMIN-NEXT:    srli a1, a1, 1
+; RV32IFZFHMIN-NEXT:    or a1, a1, a2
+; RV32IFZFHMIN-NEXT:    ret
+;
+; RV32IFDZFHMIN-LABEL: fold_promote_d_h:
+; RV32IFDZFHMIN:       # %bb.0:
+; RV32IFDZFHMIN-NEXT:    fcvt.d.h ft0, fa1
+; RV32IFDZFHMIN-NEXT:    fsgnj.d fa0, fa0, ft0
+; RV32IFDZFHMIN-NEXT:    ret
+;
+; RV64IFDZFHMIN-LABEL: fold_promote_d_h:
+; RV64IFDZFHMIN:       # %bb.0:
+; RV64IFDZFHMIN-NEXT:    fcvt.d.h ft0, fa1
+; RV64IFDZFHMIN-NEXT:    fsgnj.d fa0, fa0, ft0
+; RV64IFDZFHMIN-NEXT:    ret
   %c = fpext half %b to double
   %t = call double @llvm.copysign.f64(double %a, double %c)
   ret double %t
@@ -263,6 +317,24 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV64IFDZFH-NEXT:    fcvt.s.h ft0, fa1
 ; RV64IFDZFH-NEXT:    fsgnj.s fa0, fa0, ft0
 ; RV64IFDZFH-NEXT:    ret
+;
+; RV32IFZFHMIN-LABEL: fold_promote_f_h:
+; RV32IFZFHMIN:       # %bb.0:
+; RV32IFZFHMIN-NEXT:    fcvt.s.h ft0, fa1
+; RV32IFZFHMIN-NEXT:    fsgnj.s fa0, fa0, ft0
+; RV32IFZFHMIN-NEXT:    ret
+;
+; RV32IFDZFHMIN-LABEL: fold_promote_f_h:
+; RV32IFDZFHMIN:       # %bb.0:
+; RV32IFDZFHMIN-NEXT:    fcvt.s.h ft0, fa1
+; RV32IFDZFHMIN-NEXT:    fsgnj.s fa0, fa0, ft0
+; RV32IFDZFHMIN-NEXT:    ret
+;
+; RV64IFDZFHMIN-LABEL: fold_promote_f_h:
+; RV64IFDZFHMIN:       # %bb.0:
+; RV64IFDZFHMIN-NEXT:    fcvt.s.h ft0, fa1
+; RV64IFDZFHMIN-NEXT:    fsgnj.s fa0, fa0, ft0
+; RV64IFDZFHMIN-NEXT:    ret
   %c = fpext half %b to float
   %t = call float @llvm.copysign.f32(float %a, float %c)
   ret float %t
@@ -323,6 +395,24 @@ define float @fold_demote_s_d(float %a, double %b) nounwind {
 ; RV64IFDZFH-NEXT:    fcvt.s.d ft0, fa1
 ; RV64IFDZFH-NEXT:    fsgnj.s fa0, fa0, ft0
 ; RV64IFDZFH-NEXT:    ret
+;
+; RV32IFZFHMIN-LABEL: fold_demote_s_d:
+; RV32IFZFHMIN:       # %bb.0:
+; RV32IFZFHMIN-NEXT:    fmv.w.x ft0, a1
+; RV32IFZFHMIN-NEXT:    fsgnj.s fa0, fa0, ft0
+; RV32IFZFHMIN-NEXT:    ret
+;
+; RV32IFDZFHMIN-LABEL: fold_demote_s_d:
+; RV32IFDZFHMIN:       # %bb.0:
+; RV32IFDZFHMIN-NEXT:    fcvt.s.d ft0, fa1
+; RV32IFDZFHMIN-NEXT:    fsgnj.s fa0, fa0, ft0
+; RV32IFDZFHMIN-NEXT:    ret
+;
+; RV64IFDZFHMIN-LABEL: fold_demote_s_d:
+; RV64IFDZFHMIN:       # %bb.0:
+; RV64IFDZFHMIN-NEXT:    fcvt.s.d ft0, fa1
+; RV64IFDZFHMIN-NEXT:    fsgnj.s fa0, fa0, ft0
+; RV64IFDZFHMIN-NEXT:    ret
   %c = fptrunc double %b to float
   %t = call float @llvm.copysign.f32(float %a, float %c)
   ret float %t
@@ -410,6 +500,53 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV64IFDZFH-NEXT:    fcvt.h.s ft0, fa1
 ; RV64IFDZFH-NEXT:    fsgnj.h fa0, fa0, ft0
 ; RV64IFDZFH-NEXT:    ret
+;
+; RV32IFZFHMIN-LABEL: fold_demote_h_s:
+; RV32IFZFHMIN:       # %bb.0:
+; RV32IFZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IFZFHMIN-NEXT:    fsh fa0, 12(sp)
+; RV32IFZFHMIN-NEXT:    fmv.x.w a0, fa1
+; RV32IFZFHMIN-NEXT:    lbu a1, 13(sp)
+; RV32IFZFHMIN-NEXT:    lui a2, 524288
+; RV32IFZFHMIN-NEXT:    and a0, a0, a2
+; RV32IFZFHMIN-NEXT:    srli a0, a0, 24
+; RV32IFZFHMIN-NEXT:    andi a1, a1, 127
+; RV32IFZFHMIN-NEXT:    or a0, a1, a0
+; RV32IFZFHMIN-NEXT:    sb a0, 13(sp)
+; RV32IFZFHMIN-NEXT:    flh fa0, 12(sp)
+; RV32IFZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IFZFHMIN-NEXT:    ret
+;
+; RV32IFDZFHMIN-LABEL: fold_demote_h_s:
+; RV32IFDZFHMIN:       # %bb.0:
+; RV32IFDZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IFDZFHMIN-NEXT:    fsh fa0, 12(sp)
+; RV32IFDZFHMIN-NEXT:    fmv.x.w a0, fa1
+; RV32IFDZFHMIN-NEXT:    lbu a1, 13(sp)
+; RV32IFDZFHMIN-NEXT:    lui a2, 524288
+; RV32IFDZFHMIN-NEXT:    and a0, a0, a2
+; RV32IFDZFHMIN-NEXT:    srli a0, a0, 24
+; RV32IFDZFHMIN-NEXT:    andi a1, a1, 127
+; RV32IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV32IFDZFHMIN-NEXT:    sb a0, 13(sp)
+; RV32IFDZFHMIN-NEXT:    flh fa0, 12(sp)
+; RV32IFDZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IFDZFHMIN-NEXT:    ret
+;
+; RV64IFDZFHMIN-LABEL: fold_demote_h_s:
+; RV64IFDZFHMIN:       # %bb.0:
+; RV64IFDZFHMIN-NEXT:    addi sp, sp, -16
+; RV64IFDZFHMIN-NEXT:    fsw fa1, 8(sp)
+; RV64IFDZFHMIN-NEXT:    fsh fa0, 0(sp)
+; RV64IFDZFHMIN-NEXT:    lbu a0, 11(sp)
+; RV64IFDZFHMIN-NEXT:    lbu a1, 1(sp)
+; RV64IFDZFHMIN-NEXT:    andi a0, a0, 128
+; RV64IFDZFHMIN-NEXT:    andi a1, a1, 127
+; RV64IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV64IFDZFHMIN-NEXT:    sb a0, 1(sp)
+; RV64IFDZFHMIN-NEXT:    flh fa0, 0(sp)
+; RV64IFDZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IFDZFHMIN-NEXT:    ret
   %c = fptrunc float %b to half
   %t = call half @llvm.copysign.f16(half %a, half %c)
   ret half %t
@@ -501,6 +638,54 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV64IFDZFH-NEXT:    fcvt.h.d ft0, fa1
 ; RV64IFDZFH-NEXT:    fsgnj.h fa0, fa0, ft0
 ; RV64IFDZFH-NEXT:    ret
+;
+; RV32IFZFHMIN-LABEL: fold_demote_h_d:
+; RV32IFZFHMIN:       # %bb.0:
+; RV32IFZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IFZFHMIN-NEXT:    fsh fa0, 8(sp)
+; RV32IFZFHMIN-NEXT:    srli a1, a1, 16
+; RV32IFZFHMIN-NEXT:    fmv.h.x ft0, a1
+; RV32IFZFHMIN-NEXT:    fsh ft0, 12(sp)
+; RV32IFZFHMIN-NEXT:    lbu a0, 9(sp)
+; RV32IFZFHMIN-NEXT:    lbu a1, 13(sp)
+; RV32IFZFHMIN-NEXT:    andi a0, a0, 127
+; RV32IFZFHMIN-NEXT:    andi a1, a1, 128
+; RV32IFZFHMIN-NEXT:    or a0, a0, a1
+; RV32IFZFHMIN-NEXT:    sb a0, 9(sp)
+; RV32IFZFHMIN-NEXT:    flh fa0, 8(sp)
+; RV32IFZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IFZFHMIN-NEXT:    ret
+;
+; RV32IFDZFHMIN-LABEL: fold_demote_h_d:
+; RV32IFDZFHMIN:       # %bb.0:
+; RV32IFDZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IFDZFHMIN-NEXT:    fsd fa1, 8(sp)
+; RV32IFDZFHMIN-NEXT:    fsh fa0, 4(sp)
+; RV32IFDZFHMIN-NEXT:    lbu a0, 15(sp)
+; RV32IFDZFHMIN-NEXT:    lbu a1, 5(sp)
+; RV32IFDZFHMIN-NEXT:    andi a0, a0, 128
+; RV32IFDZFHMIN-NEXT:    andi a1, a1, 127
+; RV32IFDZFHMIN-NEXT:    or a0, a1, a0
+; RV32IFDZFHMIN-NEXT:    sb a0, 5(sp)
+; RV32IFDZFHMIN-NEXT:    flh fa0, 4(sp)
+; RV32IFDZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IFDZFHMIN-NEXT:    ret
+;
+; RV64IFDZFHMIN-LABEL: fold_demote_h_d:
+; RV64IFDZFHMIN:       # %bb.0:
+; RV64IFDZFHMIN-NEXT:    addi sp, sp, -16
+; RV64IFDZFHMIN-NEXT:    fsh fa0, 8(sp)
+; RV64IFDZFHMIN-NEXT:    lbu a0, 9(sp)
+; RV64IFDZFHMIN-NEXT:    andi a0, a0, 127
+; RV64IFDZFHMIN-NEXT:    fmv.x.d a1, fa1
+; RV64IFDZFHMIN-NEXT:    srli a1, a1, 63
+; RV64IFDZFHMIN-NEXT:    slli a1, a1, 63
+; RV64IFDZFHMIN-NEXT:    srli a1, a1, 56
+; RV64IFDZFHMIN-NEXT:    or a0, a0, a1
+; RV64IFDZFHMIN-NEXT:    sb a0, 9(sp)
+; RV64IFDZFHMIN-NEXT:    flh fa0, 8(sp)
+; RV64IFDZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IFDZFHMIN-NEXT:    ret
   %c = fptrunc double %b to half
   %t = call half @llvm.copysign.f16(half %a, half %c)
   ret half %t

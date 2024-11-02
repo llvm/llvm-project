@@ -46,7 +46,7 @@ struct AttrInfo {
 /// \param DIE die to look up in.
 /// \param AbbrevDecl abbrev declaration for the die.
 /// \param Index an index in Abbrev declaration entry.
-Optional<AttrInfo>
+std::optional<AttrInfo>
 findAttributeInfo(const DWARFDie DIE,
                   const DWARFAbbreviationDeclaration *AbbrevDecl,
                   uint32_t Index);
@@ -56,7 +56,8 @@ findAttributeInfo(const DWARFDie DIE,
 /// \param DIE die to look up in.
 /// \param Attr the attribute to extract.
 /// \return an optional AttrInfo with DWARFFormValue and Offset.
-Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE, dwarf::Attribute Attr);
+std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
+                                          dwarf::Attribute Attr);
 
 // DWARF5 Header in order of encoding.
 // Types represent encodnig sizes.

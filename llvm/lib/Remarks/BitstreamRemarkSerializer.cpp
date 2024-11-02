@@ -13,6 +13,7 @@
 
 #include "llvm/Remarks/BitstreamRemarkSerializer.h"
 #include "llvm/Remarks/Remark.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -232,7 +233,7 @@ void BitstreamRemarkSerializerHelper::setupBlockInfo() {
 
 void BitstreamRemarkSerializerHelper::emitMetaBlock(
     uint64_t ContainerVersion, Optional<uint64_t> RemarkVersion,
-    Optional<const StringTable *> StrTab, Optional<StringRef> Filename) {
+    Optional<const StringTable *> StrTab, std::optional<StringRef> Filename) {
   // Emit the meta block
   Bitstream.EnterSubblock(META_BLOCK_ID, 3);
 
@@ -277,7 +278,7 @@ void BitstreamRemarkSerializerHelper::emitRemarkBlock(const Remark &Remark,
   R.push_back(StrTab.add(Remark.FunctionName).first);
   Bitstream.EmitRecordWithAbbrev(RecordRemarkHeaderAbbrevID, R);
 
-  if (const Optional<RemarkLocation> &Loc = Remark.Loc) {
+  if (const std::optional<RemarkLocation> &Loc = Remark.Loc) {
     R.clear();
     R.push_back(RECORD_REMARK_DEBUG_LOC);
     R.push_back(StrTab.add(Loc->SourceFilePath).first);
@@ -286,7 +287,7 @@ void BitstreamRemarkSerializerHelper::emitRemarkBlock(const Remark &Remark,
     Bitstream.EmitRecordWithAbbrev(RecordRemarkDebugLocAbbrevID, R);
   }
 
-  if (Optional<uint64_t> Hotness = Remark.Hotness) {
+  if (std::optional<uint64_t> Hotness = Remark.Hotness) {
     R.clear();
     R.push_back(RECORD_REMARK_HOTNESS);
     R.push_back(*Hotness);
@@ -366,7 +367,7 @@ void BitstreamRemarkSerializer::emit(const Remark &Remark) {
 }
 
 std::unique_ptr<MetaSerializer> BitstreamRemarkSerializer::metaSerializer(
-    raw_ostream &OS, Optional<StringRef> ExternalFilename) {
+    raw_ostream &OS, std::optional<StringRef> ExternalFilename) {
   assert(Helper.ContainerType !=
          BitstreamRemarkContainerType::SeparateRemarksMeta);
   bool IsStandalone =

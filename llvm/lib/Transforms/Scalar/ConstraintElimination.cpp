@@ -955,15 +955,15 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // If both entries have the same In numbers, conditional facts come first.
     // Otherwise use the relative order in the basic block.
     if (A.NumIn == B.NumIn) {
-      if (A.isConditionFact() && B.IsCheck)
-        return true;
-      if (B.isConditionFact() && A.IsCheck)
-        return false;
       if (A.isConditionFact() && B.isConditionFact()) {
         bool NoConstOpA = HasNoConstOp(A);
         bool NoConstOpB = HasNoConstOp(B);
         return NoConstOpA < NoConstOpB;
       }
+      if (A.isConditionFact())
+        return true;
+      if (B.isConditionFact())
+        return false;
       return A.Inst->comesBefore(B.Inst);
     }
     return A.NumIn < B.NumIn;

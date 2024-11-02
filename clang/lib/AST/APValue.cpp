@@ -156,10 +156,10 @@ void APValue::LValuePathEntry::Profile(llvm::FoldingSetNodeID &ID) const {
 
 APValue::LValuePathSerializationHelper::LValuePathSerializationHelper(
     ArrayRef<LValuePathEntry> Path, QualType ElemTy)
-    : ElemTy((const void *)ElemTy.getTypePtrOrNull()), Path(Path) {}
+    : Ty((const void *)ElemTy.getTypePtrOrNull()), Path(Path) {}
 
 QualType APValue::LValuePathSerializationHelper::getType() {
-  return QualType::getFromOpaquePtr(ElemTy);
+  return QualType::getFromOpaquePtr(Ty);
 }
 
 namespace {
