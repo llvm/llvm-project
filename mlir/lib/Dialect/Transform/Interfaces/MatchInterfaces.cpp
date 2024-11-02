@@ -93,7 +93,7 @@ LogicalResult transform::verifyTransformMatchDimsOp(Operation *op,
                                 "'all' is not specified";
   }
   SmallVector<int64_t> rawVector = llvm::to_vector(raw);
-  auto *it = std::unique(rawVector.begin(), rawVector.end());
+  auto *it = llvm::unique(rawVector);
   if (it != rawVector.end())
     return op->emitOpError() << "expected the listed values to be unique";
 

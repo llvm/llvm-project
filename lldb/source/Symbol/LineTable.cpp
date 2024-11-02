@@ -360,7 +360,7 @@ void LineTable::Dump(Stream *s, Target *target, Address::DumpStyle style,
   SupportFileSP prev_file;
   for (size_t idx = 0; idx < count; ++idx) {
     ConvertEntryAtIndexToLineEntry(idx, line_entry);
-    line_entry.Dump(s, target, *prev_file != *line_entry.original_file_sp,
+    line_entry.Dump(s, target, !prev_file->Equal(*line_entry.original_file_sp),
                     style, fallback_style, show_line_ranges);
     s->EOL();
     prev_file = line_entry.original_file_sp;

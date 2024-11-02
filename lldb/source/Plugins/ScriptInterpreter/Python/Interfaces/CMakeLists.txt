@@ -24,6 +24,7 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
   ScriptedPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
+  ScriptedThreadPlanPythonInterface.cpp
   ScriptedPlatformPythonInterface.cpp
 
   LINK_LIBS

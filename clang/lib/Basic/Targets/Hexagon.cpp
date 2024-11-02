@@ -238,6 +238,18 @@ static constexpr CPUSuffix Suffixes[] = {
     {{"hexagonv73"}, {"73"}},
 };
 
+std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {
+  StringRef Arch = Name;
+  Arch.consume_front("hexagonv");
+  Arch.consume_back("t");
+
+  unsigned Val;
+  if (!Arch.getAsInteger(0, Val))
+    return Val;
+
+  return std::nullopt;
+}
+
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {
   const CPUSuffix *Item = llvm::find_if(
       Suffixes, [Name](const CPUSuffix &S) { return S.Name == Name; });

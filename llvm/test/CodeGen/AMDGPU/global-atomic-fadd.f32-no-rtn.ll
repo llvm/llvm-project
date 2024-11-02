@@ -170,9 +170,8 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX908-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 killed [[COPY6]], [[COPY7]], implicit $exec
   ; GFX908-NEXT:   [[V_MBCNT_HI_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_HI_U32_B32_e64 killed [[COPY5]], killed [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
-  ; GFX908-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-  ; GFX908-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 [[COPY]], killed [[S_MOV_B32_1]], implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2147483648, implicit $exec
+  ; GFX908-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 [[COPY]], [[V_MOV_B32_e32_]], implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   [[V_MOV_B32_dpp:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_SET_INACTIVE_B32_]], 273, 15, 15, 0, implicit $exec
   ; GFX908-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_SET_INACTIVE_B32_]], 0, killed [[V_MOV_B32_dpp]], 0, 0, implicit $mode, implicit $exec
   ; GFX908-NEXT:   [[V_MOV_B32_dpp1:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_]], 274, 15, 15, 0, implicit $exec
@@ -185,14 +184,14 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_3]], 0, killed [[V_MOV_B32_dpp4]], 0, 0, implicit $mode, implicit $exec
   ; GFX908-NEXT:   [[V_MOV_B32_dpp5:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_4]], 323, 12, 15, 0, implicit $exec
   ; GFX908-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_4]], 0, killed [[V_MOV_B32_dpp5]], 0, 0, implicit $mode, implicit $exec
-  ; GFX908-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 63
-  ; GFX908-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_2]]
+  ; GFX908-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 63
+  ; GFX908-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_1]]
   ; GFX908-NEXT:   early-clobber %1:sgpr_32 = STRICT_WWM killed [[V_READLANE_B32_]], implicit $exec
   ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX908-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_BRANCH %bb.2
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT: bb.2 (%ir-block.35):
+  ; GFX908-NEXT: bb.2 (%ir-block.31):
   ; GFX908-NEXT:   successors: %bb.3(0x80000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -204,7 +203,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT: bb.4 (%ir-block.37):
+  ; GFX908-NEXT: bb.4 (%ir-block.33):
   ; GFX908-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
@@ -232,9 +231,8 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX90A_GFX940-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 killed [[COPY6]], [[COPY7]], implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_MBCNT_HI_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_HI_U32_B32_e64 killed [[COPY5]], killed [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
-  ; GFX90A_GFX940-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-  ; GFX90A_GFX940-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 [[COPY]], killed [[S_MOV_B32_1]], implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2147483648, implicit $exec
+  ; GFX90A_GFX940-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 [[COPY]], [[V_MOV_B32_e32_]], implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_dpp:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_SET_INACTIVE_B32_]], 273, 15, 15, 0, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_SET_INACTIVE_B32_]], 0, killed [[V_MOV_B32_dpp]], 0, 0, implicit $mode, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_dpp1:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_]], 274, 15, 15, 0, implicit $exec
@@ -247,14 +245,14 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT:   [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_3]], 0, killed [[V_MOV_B32_dpp4]], 0, 0, implicit $mode, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_dpp5:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_4]], 323, 12, 15, 0, implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_4]], 0, killed [[V_MOV_B32_dpp5]], 0, 0, implicit $mode, implicit $exec
-  ; GFX90A_GFX940-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 63
-  ; GFX90A_GFX940-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_2]]
+  ; GFX90A_GFX940-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 63
+  ; GFX90A_GFX940-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_1]]
   ; GFX90A_GFX940-NEXT:   early-clobber %1:sgpr_32 = STRICT_WWM killed [[V_READLANE_B32_]], implicit $exec
   ; GFX90A_GFX940-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX90A_GFX940-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_BRANCH %bb.2
   ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT: bb.2 (%ir-block.35):
+  ; GFX90A_GFX940-NEXT: bb.2 (%ir-block.31):
   ; GFX90A_GFX940-NEXT:   successors: %bb.3(0x80000000)
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -266,7 +264,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX940-NEXT: {{  $}}
   ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT: {{  $}}
-  ; GFX90A_GFX940-NEXT: bb.4 (%ir-block.37):
+  ; GFX90A_GFX940-NEXT: bb.4 (%ir-block.33):
   ; GFX90A_GFX940-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
   ;
@@ -290,9 +288,8 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $exec_lo
   ; GFX11_GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX11_GFX12-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY4]], [[S_MOV_B32_]], implicit $exec
-  ; GFX11_GFX12-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
-  ; GFX11_GFX12-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 [[COPY]], killed [[S_MOV_B32_1]], implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2147483648, implicit $exec
+  ; GFX11_GFX12-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 [[COPY]], [[V_MOV_B32_e32_]], implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_dpp:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_SET_INACTIVE_B32_]], 353, 15, 15, 0, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_SET_INACTIVE_B32_]], 0, killed [[V_MOV_B32_dpp]], 0, 0, implicit $mode, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_dpp1:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_]], 354, 15, 15, 0, implicit $exec
@@ -301,15 +298,15 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT:   [[V_ADD_F32_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_1]], 0, killed [[V_MOV_B32_dpp2]], 0, 0, implicit $mode, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_dpp3:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_2]], 360, 15, 15, 0, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_ADD_F32_e64_3:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_2]], 0, killed [[V_MOV_B32_dpp3]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11_GFX12-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; GFX11_GFX12-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_2]], 0, [[S_MOV_B32_2]], [[V_ADD_F32_e64_3]], 0, implicit $exec
+  ; GFX11_GFX12-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+  ; GFX11_GFX12-NEXT:   [[V_PERMLANEX16_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERMLANEX16_B32_e64 0, [[V_ADD_F32_e64_3]], 0, [[S_MOV_B32_1]], 0, [[S_MOV_B32_1]], [[V_ADD_F32_e64_3]], 0, implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_3]], 0, killed [[V_PERMLANEX16_B32_e64_]], 0, 0, implicit $mode, implicit $exec
   ; GFX11_GFX12-NEXT:   early-clobber %1:vgpr_32 = STRICT_WWM killed [[V_ADD_F32_e64_4]], implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX11_GFX12-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT:   S_BRANCH %bb.2
   ; GFX11_GFX12-NEXT: {{  $}}
-  ; GFX11_GFX12-NEXT: bb.2 (%ir-block.28):
+  ; GFX11_GFX12-NEXT: bb.2 (%ir-block.24):
   ; GFX11_GFX12-NEXT:   successors: %bb.3(0x80000000)
   ; GFX11_GFX12-NEXT: {{  $}}
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -320,7 +317,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT: {{  $}}
   ; GFX11_GFX12-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT: {{  $}}
-  ; GFX11_GFX12-NEXT: bb.4 (%ir-block.30):
+  ; GFX11_GFX12-NEXT: bb.4 (%ir-block.26):
   ; GFX11_GFX12-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic

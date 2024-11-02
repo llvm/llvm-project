@@ -209,7 +209,7 @@ protected:
           << ">, found <";
       Loc.print(Msg, *Result.SourceManager);
       Msg << '>';
-      this->setFailure(Msg.str());
+      this->setFailure(MsgStr);
     }
   }
 
@@ -256,7 +256,7 @@ protected:
       Msg << '-';
       End.print(Msg, *Result.SourceManager);
       Msg << '>';
-      this->setFailure(Msg.str());
+      this->setFailure(MsgStr);
     }
   }
 
@@ -282,12 +282,12 @@ protected:
     llvm::raw_string_ostream Dump(DumpStr);
     Node.dump(Dump, *Result.Context);
 
-    if (Dump.str().find(ExpectSubstring) == std::string::npos) {
+    if (DumpStr.find(ExpectSubstring) == std::string::npos) {
       std::string MsgStr;
       llvm::raw_string_ostream Msg(MsgStr);
       Msg << "Expected dump substring <" << ExpectSubstring << ">, found <"
-          << Dump.str() << '>';
-      this->setFailure(Msg.str());
+          << DumpStr << '>';
+      this->setFailure(MsgStr);
     }
   }
 
@@ -309,12 +309,12 @@ protected:
     llvm::raw_string_ostream Print(PrintStr);
     Node.print(Print, Result.Context->getPrintingPolicy());
 
-    if (Print.str() != ExpectString) {
+    if (PrintStr != ExpectString) {
       std::string MsgStr;
       llvm::raw_string_ostream Msg(MsgStr);
       Msg << "Expected pretty print <" << ExpectString << ">, found <"
-          << Print.str() << '>';
-      this->setFailure(Msg.str());
+          << PrintStr << '>';
+      this->setFailure(MsgStr);
     }
   }
 

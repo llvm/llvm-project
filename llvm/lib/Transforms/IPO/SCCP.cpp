@@ -316,7 +316,7 @@ static bool runIPSCCP(
   SmallSetVector<Function *, 8> FuncZappedReturn;
   for (ReturnInst *RI : ReturnsToZap) {
     Function *F = RI->getParent()->getParent();
-    RI->setOperand(0, UndefValue::get(F->getReturnType()));
+    RI->setOperand(0, PoisonValue::get(F->getReturnType()));
     // Record all functions that are zapped.
     FuncZappedReturn.insert(F);
   }

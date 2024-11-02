@@ -134,7 +134,7 @@ public:
   RT_API_ATTRS bool OpenUnit(Fortran::common::optional<OpenStatus>,
       Fortran::common::optional<Action>, Position, OwningPtr<char> &&path,
       std::size_t pathLength, Convert, IoErrorHandler &);
-  RT_API_ATTRS void OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
+  RT_API_ATTRS bool OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
       Fortran::common::optional<Action>, Position, Convert, IoErrorHandler &);
   RT_API_ATTRS void CloseUnit(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS void DestroyClosed();

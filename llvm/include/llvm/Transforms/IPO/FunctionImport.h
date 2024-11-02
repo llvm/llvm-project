@@ -104,13 +104,10 @@ public:
   /// index's module path string table).
   using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
-  /// The map contains an entry for every global value the module exports.
-  /// The key is ValueInfo, and the value indicates whether the definition
-  /// or declaration is visible to another module. If a function's definition is
-  /// visible to other modules, the global values this function referenced are
-  /// visible and shouldn't be internalized.
-  /// TODO: Rename to `ExportMapTy`.
-  using ExportSetTy = DenseMap<ValueInfo, GlobalValueSummary::ImportKind>;
+  /// The set contains an entry for every global value that the module exports.
+  /// Depending on the user context, this container is allowed to contain
+  /// definitions, declarations or a mix of both.
+  using ExportSetTy = DenseSet<ValueInfo>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =
@@ -217,11 +214,15 @@ bool convertToDeclaration(GlobalValue &GV);
 /// \p ModuleToSummariesForIndex will be populated with the needed summaries
 /// from each required module path. Use a std::map instead of StringMap to get
 /// stable order for bitcode emission.
+///
+/// \p DecSummaries will be popluated with the subset of of summary pointers
+/// that have 'declaration' import type among all summaries the module need.
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
 std::error_code EmitImportsFiles(

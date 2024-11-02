@@ -15,11 +15,12 @@
 
 // Test the feature test macros defined by <optional>
 
-/*  Constant                           Value
-    __cpp_lib_constrained_equality     202403L [C++26]
-    __cpp_lib_freestanding_optional    202311L [C++26]
-    __cpp_lib_optional                 201606L [C++17]
-                                       202110L [C++23]
+/*  Constant                            Value
+    __cpp_lib_constrained_equality      202403L [C++26]
+    __cpp_lib_freestanding_optional     202311L [C++26]
+    __cpp_lib_optional                  201606L [C++17]
+                                        202110L [C++23]
+    __cpp_lib_optional_range_support    202406L [C++26]
 */
 
 #include <optional>
@@ -39,6 +40,10 @@
 #   error "__cpp_lib_optional should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_constrained_equality
@@ -51,6 +56,10 @@
 
 # ifdef __cpp_lib_optional
 #   error "__cpp_lib_optional should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -70,6 +79,10 @@
 #   error "__cpp_lib_optional should have the value 201606L in c++17"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 20
 
 # ifdef __cpp_lib_constrained_equality
@@ -87,6 +100,10 @@
 #   error "__cpp_lib_optional should have the value 201606L in c++20"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 23
 
 # ifdef __cpp_lib_constrained_equality
@@ -102,6 +119,10 @@
 # endif
 # if __cpp_lib_optional != 202110L
 #   error "__cpp_lib_optional should have the value 202110L in c++23"
+# endif
+
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER > 23
@@ -137,6 +158,19 @@
 # endif
 # if __cpp_lib_optional != 202110L
 #   error "__cpp_lib_optional should have the value 202110L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_optional_range_support
+#     error "__cpp_lib_optional_range_support should be defined in c++26"
+#   endif
+#   if __cpp_lib_optional_range_support != 202406L
+#     error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_optional_range_support
+#     error "__cpp_lib_optional_range_support should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 #endif // TEST_STD_VER > 23

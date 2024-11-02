@@ -700,14 +700,14 @@ int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
   std::unique_ptr<ScopedPrinter> Writer = createWriter();
 
   for (const std::string &I : opts::InputFilenames)
-    dumpInput(I, *Writer.get());
+    dumpInput(I, *Writer);
 
   if (opts::CodeViewMergedTypes) {
     if (opts::CodeViewEnableGHash)
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.GlobalIDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.GlobalIDTable.records(),
                               CVTypes.GlobalTypeTable.records());
     else
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.IDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.IDTable.records(),
                               CVTypes.TypeTable.records());
   }
 

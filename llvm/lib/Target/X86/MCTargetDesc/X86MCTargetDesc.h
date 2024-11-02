@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 
+#include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <string>
 
@@ -24,6 +25,7 @@ class MCContext;
 class MCInst;
 class MCInstPrinter;
 class MCInstrInfo;
+class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
 class MCRegister;
@@ -89,6 +91,12 @@ bool needsAddressSizeOverride(const MCInst &MI, const MCSubtargetInfo &STI,
 /// do not need to go through TargetRegistry.
 MCSubtargetInfo *createX86MCSubtargetInfo(const Triple &TT, StringRef CPU,
                                           StringRef FS);
+
+void emitInstruction(MCObjectStreamer &, const MCInst &Inst,
+                     const MCSubtargetInfo &STI);
+
+void emitPrefix(MCCodeEmitter &MCE, const MCInst &MI, SmallVectorImpl<char> &CB,
+                const MCSubtargetInfo &STI);
 }
 
 MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
@@ -122,6 +130,11 @@ MCStreamer *createX86WinCOFFStreamer(MCContext &C,
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&CE,
                                      bool IncrementalLinkerCompatible);
+
+MCStreamer *createX86ELFStreamer(const Triple &T, MCContext &Context,
+                                 std::unique_ptr<MCAsmBackend> &&MAB,
+                                 std::unique_ptr<MCObjectWriter> &&MOW,
+                                 std::unique_ptr<MCCodeEmitter> &&MCE);
 
 /// Construct an X86 Mach-O object writer.
 std::unique_ptr<MCObjectTargetWriter>

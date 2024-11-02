@@ -24,28 +24,28 @@ int main() {
 
 // CHECK: {{^}}[[THREAD_ID0:[0-9]+]]: ompt_event_distribute_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID0:[0-9]+]]
-// CHECK-SAME: parent_task_id=[[TASK_ID0:[0-9]+]]
+// CHECK-SAME: task_id=[[TASK_ID0:[0-9]+]]
 // CHECK: {{^}}[[THREAD_ID0]]: ompt_event_distribute_chunk_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID0]], task_id=[[TASK_ID0]]
 // CHECK-SAME: chunk_start={{[0-9]+}}, chunk_iterations=16
 
 // CHECK: {{^}}[[THREAD_ID1:[0-9]+]]: ompt_event_distribute_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID1:[0-9]+]]
-// CHECK-SAME: parent_task_id=[[TASK_ID1:[0-9]+]]
+// CHECK-SAME: task_id=[[TASK_ID1:[0-9]+]]
 // CHECK: {{^}}[[THREAD_ID1]]: ompt_event_distribute_chunk_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID1]], task_id=[[TASK_ID1]]
 // CHECK-SAME: chunk_start={{[0-9]+}}, chunk_iterations=16
 
 // CHECK: {{^}}[[THREAD_ID2:[0-9]+]]: ompt_event_distribute_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID2:[0-9]+]]
-// CHECK-SAME: parent_task_id=[[TASK_ID2:[0-9]+]]
+// CHECK-SAME: task_id=[[TASK_ID2:[0-9]+]]
 // CHECK: {{^}}[[THREAD_ID2]]: ompt_event_distribute_chunk_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID2]], task_id=[[TASK_ID2]]
 // CHECK-SAME: chunk_start={{[0-9]+}}, chunk_iterations=16
 
 // CHECK: {{^}}[[THREAD_ID3:[0-9]+]]: ompt_event_distribute_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID3:[0-9]+]]
-// CHECK-SAME: parent_task_id=[[TASK_ID3:[0-9]+]]
+// CHECK-SAME: task_id=[[TASK_ID3:[0-9]+]]
 // CHECK: {{^}}[[THREAD_ID3]]: ompt_event_distribute_chunk_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID3]], task_id=[[TASK_ID3]]
 // CHECK-SAME: chunk_start={{[0-9]+}}, chunk_iterations=16

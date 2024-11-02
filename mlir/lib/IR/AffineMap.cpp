@@ -12,7 +12,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -157,6 +156,19 @@ bool AffineMap::isMinorIdentity() const {
   return getNumDims() >= getNumResults() &&
          *this ==
              getMinorIdentityMap(getNumDims(), getNumResults(), getContext());
+}
+
+SmallVector<unsigned> AffineMap::getBroadcastDims() const {
+  SmallVector<unsigned> broadcastedDims;
+  for (const auto &[resIdx, expr] : llvm::enumerate(getResults())) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
+      if (constExpr.getValue() != 0)
+        continue;
+      broadcastedDims.push_back(resIdx);
+    }
+  }
+
+  return broadcastedDims;
 }
 
 /// Returns true if this affine map is a minor identity up to broadcasted
@@ -748,8 +760,7 @@ AffineMap mlir::simplifyAffineMap(AffineMap map) {
 AffineMap mlir::removeDuplicateExprs(AffineMap map) {
   auto results = map.getResults();
   SmallVector<AffineExpr, 4> uniqueExprs(results.begin(), results.end());
-  uniqueExprs.erase(std::unique(uniqueExprs.begin(), uniqueExprs.end()),
-                    uniqueExprs.end());
+  uniqueExprs.erase(llvm::unique(uniqueExprs), uniqueExprs.end());
   return AffineMap::get(map.getNumDims(), map.getNumSymbols(), uniqueExprs,
                         map.getContext());
 }

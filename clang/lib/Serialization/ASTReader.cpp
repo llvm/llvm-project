@@ -935,9 +935,8 @@ LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF, DeclID Value) {
   return ID;
 }
 
-static LocalDeclID getLocalDeclID(ASTReader &Reader, ModuleFile &MF,
-                                  unsigned ModuleFileIndex,
-                                  unsigned LocalDeclID) {
+LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF,
+                             unsigned ModuleFileIndex, unsigned LocalDeclID) {
   DeclID Value = (DeclID)ModuleFileIndex << 32 | (DeclID)LocalDeclID;
   return LocalDeclID::get(Reader, MF, Value);
 }
@@ -2629,7 +2628,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
            "We should only check the content of the inputs with "
            "ValidateASTInputFilesContent enabled.");
 
-    if (StoredContentHash == static_cast<uint64_t>(llvm::hash_code(-1)))
+    if (StoredContentHash == 0)
       return OriginalChange;
 
     auto MemBuffOrError = FileMgr.getBufferForFile(*File);
@@ -3920,13 +3919,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           DelayedDeleteExprs.push_back(IsArrayForm);
         }
       }
-      break;
-
-    case VTABLES_TO_EMIT:
-      if (F.Kind == MK_MainFile ||
-          getContext().getLangOpts().BuildingPCHWithObjectFile)
-        for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
-          VTablesToEmit.push_back(ReadDeclID(F, Record, I));
       break;
 
     case IMPORTED_MODULES:
@@ -7884,7 +7876,7 @@ LocalDeclID ASTReader::mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
   if (!OrignalModuleFileIndex)
     return LocalDeclID();
 
-  return getLocalDeclID(*this, M, OrignalModuleFileIndex, ID);
+  return LocalDeclID::get(*this, M, OrignalModuleFileIndex, ID);
 }
 
 GlobalDeclID ASTReader::ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,
@@ -8116,10 +8108,6 @@ void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
     PassObjCImplDeclToConsumer(ImplD, Consumer);
   else
     Consumer->HandleInterestingDecl(DeclGroupRef(D));
-}
-
-void ASTReader::PassVTableToConsumer(CXXRecordDecl *RD) {
-  Consumer->HandleVTable(RD);
 }
 
 void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
@@ -9887,6 +9875,7 @@ void ASTReader::finishPendingActions() {
             // We only perform ODR checks for decls not in the explicit
             // global module fragment.
             !shouldSkipCheckingODR(FD) &&
+            !shouldSkipCheckingODR(NonConstDefn) &&
             FD->getODRHash() != NonConstDefn->getODRHash()) {
           if (!isa<CXXMethodDecl>(FD)) {
             PendingFunctionOdrMergeFailures[FD].push_back(NonConstDefn);

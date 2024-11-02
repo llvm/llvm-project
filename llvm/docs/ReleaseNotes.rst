@@ -79,6 +79,7 @@ Changes to the LLVM IR
   * ``llvm.instprof.mcdc.tvbitmap.update``: 3rd argument has been
     removed. The next argument has been changed from byte index to bit
     index.
+* Added ``llvm.experimental.vector.compress`` intrinsic.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -129,8 +130,19 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+* Added ``!amdgpu.no.fine.grained.memory`` and
+  ``!amdgpu.no.remote.memory`` metadata to control atomic behavior.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
+* Removed ``llvm.amdgcn.ds.fadd``, ``llvm.amdgcn.ds.fmin`` and
+  ``llvm.amdgcn.ds.fmax`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
+  `fmax` with addrspace(3) instead.
+
+* AMDGPUAttributor is no longer run as part of the codegen pass
+  pipeline. It is expected to run as part of the middle end
+  optimizations.
 
 Changes to the ARM Backend
 --------------------------
@@ -171,7 +183,7 @@ Changes to the RISC-V Backend
 * The names of the majority of the S-prefixed (supervisor-level) extension
   names in the RISC-V profiles specification are now recognised.
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
-* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
+* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 1.0.0 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
@@ -184,6 +196,16 @@ Changes to the RISC-V Backend
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
+* Ztso is no longer experimental.
+* The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
+  supported under the name "Xwchc".
+* ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
+* The version of Zicfilp/Zicfiss is updated to 1.0.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -196,6 +218,9 @@ Changes to the X86 Backend
 
 - Removed knl/knm specific ISA intrinsics: AVX512PF, AVX512ER, PREFETCHWT1,
   while assembly encoding/decoding supports are kept.
+
+- Removed ``3DNow!``-specific ISA intrinsics and codegen support. The ``3dnow`` and ``3dnowa`` target features are no longer supported. The intrinsics ``llvm.x86.3dnow.*``, ``llvm.x86.3dnowa.*``, and ``llvm.x86.mmx.femms`` have been removed. Assembly encoding/decoding for the corresponding instructions remains supported.
+
 
 Changes to the OCaml bindings
 -----------------------------
@@ -282,6 +307,28 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMDIBuilderInsertDbgValueBefore``
   * ``LLVMDIBuilderInsertDbgValueAtEnd``
 
+* Added the following functions for accessing a Target Extension Type's data:
+
+  * ``LLVMGetTargetExtTypeName``
+  * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
+  * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
+
+* Added the following functions for accessing/setting the no-wrap flags for a
+  GetElementPtr instruction:
+
+  * ``LLVMBuildGEPWithNoWrapFlags``
+  * ``LLVMConstGEPWithNoWrapFlags``
+  * ``LLVMGEPGetNoWrapFlags``
+  * ``LLVMGEPSetNoWrapFlags``
+
+* Added the following functions for creating and accessing data for ConstantPtrAuth constants:
+
+  * ``LLVMConstantPtrAuth``
+  * ``LLVMGetConstantPtrAuthPointer``
+  * ``LLVMGetConstantPtrAuthKey``
+  * ``LLVMGetConstantPtrAuthDiscriminator``
+  * ``LLVMGetConstantPtrAuthAddrDiscriminator``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -297,6 +344,13 @@ Changes to the Debug Info
   that interacts with debug intrinsics directly. Debug intrinsics will only be
   supported on a best-effort basis from here onwards; for more information, see
   the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
+
+* When emitting DWARF v2 and not in strict DWARF mode, LLVM will now add
+  a ``DW_AT_type`` to instances of ``DW_TAG_enumeration_type``. This is actually
+  a DWARF v3 feature which tells tools what the enum's underlying type is.
+  Emitting this for v2 as well will help users who have to build binaries with
+  DWARF v2 but are using tools that understand newer DWARF standards. Older
+  tools will ignore it. (`#98335 <https://github.com/llvm/llvm-project/pull/98335>`_)
 
 Changes to the LLVM tools
 ---------------------------------
@@ -343,23 +397,47 @@ Changes to the LLVM tools
   would continue. Additionally, it can now continue when it encounters
   instructions which lack scheduling information. The behaviour can be
   controlled by the newly introduced
-  `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
-  documented in `--help` output and the command guide. (`#90474
-  <https://github.com/llvm/llvm-project/pull/90474>`)
+  ``--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>``, as
+  documented in ``--help`` output and the command guide. (`#90474
+  <https://github.com/llvm/llvm-project/pull/90474>`_)
 
 * llvm-readobj's LLVM output format for ELF core files has been changed.
   Similarly, the JSON format has been fixed for this case. The NT_FILE note
   now has a map for the mapped files. (`#92835
-  <https://github.com/llvm/llvm-project/pull/92835>`).
+  <https://github.com/llvm/llvm-project/pull/92835>`_).
 
 * llvm-cov now generates HTML report with JavaScript code to allow simple
   jumping between uncovered parts (lines/regions/branches) of code 
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
-  <https://github.com/llvm/llvm-project/pull/95662>`).
+  <https://github.com/llvm/llvm-project/pull/95662>`_).
+
+* llvm-objcopy now verifies format of ``.note`` sections for ELF input. This can
+  be disabled by ``--no-verify-note-sections``. (`#90458
+  <https://github.com/llvm/llvm-project/pull/90458>`).
 
 Changes to LLDB
 ---------------------------------
+
+* Register field information is now provided on AArch64 FreeBSD for live
+  processes and core files (previously only provided on AArch64 Linux).
+
+* Register field information can now include enums to represent field
+  values. Enums have been added for ``fpcr.RMode`` and ``mte_ctrl.TCF``
+  for AArch64 targets::
+
+    (lldb) register read fpcr
+        fpcr = 0x00000000
+             = (AHP = 0, DN = 0, FZ = 0, RMode = RN, <...>)
+
+  If you need to know the values of the enum, these can be found in
+  the output of ``register info`` for the same register.
+
+Changes to BOLT
+---------------------------------
+* Now supports ``--match-profile-with-function-hash`` to match profiled and
+  binary functions with exact hash, allowing for the matching of renamed but
+  identical functions.
 
 Changes to Sanitizers
 ---------------------

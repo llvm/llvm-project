@@ -467,7 +467,7 @@ struct AllocaModifier: public Modifier {
 
   void Act() override {
     Type *Tp = pickType();
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     PT->push_back(new AllocaInst(Tp, DL.getAllocaAddrSpace(),
                                  "A", BB->getFirstNonPHI()));
   }

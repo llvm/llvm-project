@@ -748,7 +748,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
       symbol, foldingContext)};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
-  const auto &shape{typeAndShape->shape()};
+  int rank{typeAndShape->Rank()};
   AddValue(values, componentSchema_, "name"s,
       SaveNameAsPointerTarget(scope, symbol.name().ToString()));
   AddValue(values, componentSchema_, "category"s,
@@ -830,7 +830,6 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         SomeExpr{evaluate::NullPointer{}});
   }
   // Shape information
-  int rank{evaluate::GetRank(shape)};
   AddValue(values, componentSchema_, "rank"s, IntExpr<1>(rank));
   if (rank > 0 && !IsAllocatable(symbol) && !IsPointer(symbol)) {
     std::vector<evaluate::StructureConstructor> bounds;
@@ -1143,7 +1142,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
           isArgDescriptorSet |= 1;
         } else {
           which = scalarFinalEnum_;
-          if (int rank{evaluate::GetRank(typeAndShape.shape())}; rank > 0) {
+          if (int rank{typeAndShape.Rank()}; rank > 0) {
             which = IntExpr<1>(ToInt64(which).value() + rank);
             if (dummyData.IsPassedByDescriptor(proc->IsBindC())) {
               argThatMightBeDescriptor = 1;

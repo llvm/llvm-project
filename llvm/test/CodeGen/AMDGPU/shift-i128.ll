@@ -181,7 +181,7 @@ define i128 @v_ashr_i128_kv(i128 %rhs) {
 define amdgpu_kernel void @s_shl_i128_ss(i128 %lhs, i128 %rhs) {
 ; GCN-LABEL: s_shl_i128_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx8 s[0:7], s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -214,7 +214,7 @@ define amdgpu_kernel void @s_shl_i128_ss(i128 %lhs, i128 %rhs) {
 define amdgpu_kernel void @s_lshr_i128_ss(i128 %lhs, i128 %rhs) {
 ; GCN-LABEL: s_lshr_i128_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx8 s[0:7], s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -247,7 +247,7 @@ define amdgpu_kernel void @s_lshr_i128_ss(i128 %lhs, i128 %rhs) {
 define amdgpu_kernel void @s_ashr_i128_ss(i128 %lhs, i128 %rhs) {
 ; GCN-LABEL: s_ashr_i128_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx8 s[0:7], s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -430,7 +430,7 @@ define <2 x i128> @v_ashr_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 define amdgpu_kernel void @s_shl_v2i128ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-LABEL: s_shl_v2i128ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx16 s[0:15], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx16 s[0:15], s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v6, 16
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    v_mov_b32_e32 v7, 0
@@ -502,7 +502,7 @@ define amdgpu_kernel void @s_shl_v2i128ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 define amdgpu_kernel void @s_lshr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-LABEL: s_lshr_v2i128_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx16 s[0:15], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx16 s[0:15], s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v6, 16
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    v_mov_b32_e32 v7, 0
@@ -574,7 +574,7 @@ define amdgpu_kernel void @s_lshr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 define amdgpu_kernel void @s_ashr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-LABEL: s_ashr_v2i128_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx16 s[0:15], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx16 s[0:15], s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v6, 16
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    v_mov_b32_e32 v7, 0

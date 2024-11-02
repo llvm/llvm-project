@@ -11,12 +11,13 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <pthread.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(pthread_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between pthread_t and internal Thread.");
@@ -29,4 +30,4 @@ LLVM_LIBC_FUNCTION(int, pthread_getname_np,
   return thread->get_name(name_stream);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

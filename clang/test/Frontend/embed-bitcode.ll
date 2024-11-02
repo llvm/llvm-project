@@ -10,6 +10,9 @@
 ; RUN: %clang_cc1 -triple aarch64 -emit-llvm \
 ; RUN:    -fembed-bitcode=all -x ir %s -o - \
 ; RUN:    | FileCheck %s -check-prefix=CHECK-ELF
+; RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm \
+; RUN:    -fembed-bitcode=all -x ir %s -o - \
+; RUN:    | FileCheck %s -check-prefix=CHECK-ELF
 
 ; check .bc input
 ; RUN: %clang_cc1 -triple thumbv7-apple-ios8.0.0 -emit-llvm-bc \

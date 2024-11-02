@@ -69,6 +69,7 @@ struct Configuration {
   bool relocatable;
   bool saveTemps;
   bool shared;
+  bool shlibSigCheck;
   bool stripAll;
   bool stripDebug;
   bool stackFirst;

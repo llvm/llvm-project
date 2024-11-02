@@ -387,8 +387,7 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Metadata *Val) {
   NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
   // Replace the flag if it already exists.
-  for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
-    MDNode *Flag = ModFlags->getOperand(I);
+  for (MDNode *Flag : ModFlags->operands()) {
     ModFlagBehavior MFB;
     MDString *K = nullptr;
     Metadata *V = nullptr;

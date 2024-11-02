@@ -37,7 +37,7 @@ void test_ds_bvh_stack_rtn(global uint2* out, uint addr, uint data, uint4 data1)
 }
 
 // CHECK-LABEL: @test_permlane64(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.permlane64(i32 %a)
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.permlane64.i32(i32 %a)
 void test_permlane64(global uint* out, uint a) {
   *out = __builtin_amdgcn_permlane64(a);
 }

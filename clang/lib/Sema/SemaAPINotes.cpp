@@ -674,7 +674,7 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
 
 /// Process API notes for an Objective-C class or protocol.
 static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Handle common type information.
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info),
@@ -683,7 +683,7 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
 
 /// Process API notes for an Objective-C class.
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (auto AsNonGeneric = Info.getSwiftImportAsNonGeneric()) {
     handleAPINotedAttribute<SwiftImportAsNonGenericAttr>(

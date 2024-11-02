@@ -855,7 +855,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -961,6 +960,7 @@ unordered_set type_traits
 unordered_set version
 utility compare
 utility cstddef
+utility cstdint
 utility cstdlib
 utility initializer_list
 utility iosfwd

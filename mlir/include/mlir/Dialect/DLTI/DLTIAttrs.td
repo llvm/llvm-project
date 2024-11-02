@@ -27,9 +27,7 @@ def DataLayoutEntryTrait
 
 def DLTI_DataLayoutEntryAttr :
     DLTIAttr<"DataLayoutEntry", [DataLayoutEntryTrait]> {
-  let summary = [{
-    An attribute to represent an entry of a data layout specification.
-  }];
+  let summary = "An attribute to represent an entry of a data layout specification.";
   let description = [{
     A data layout entry attribute is a key-value pair where the key is a type or
     an identifier and the value is another attribute. These entries form a data
@@ -62,9 +60,7 @@ def DataLayoutSpecTrait
 
 def DLTI_DataLayoutSpecAttr :
     DLTIAttr<"DataLayoutSpec", [DataLayoutSpecTrait]> {
-  let summary = [{
-    An attribute to represent a data layout specification.
-  }];
+  let summary = "An attribute to represent a data layout specification.";
   let description = [{
     A data layout specification is a list of entries that specify (partial) data
     layout information. It is expected to be attached to operations that serve
@@ -111,23 +107,23 @@ def TargetSystemSpecTrait
 
 def DLTI_TargetSystemSpecAttr :
     DLTIAttr<"TargetSystemSpec", [TargetSystemSpecTrait]> {
-  let summary = [{
-    An attribute to represent target system specification.
-  }];
+  let summary = "An attribute to represent target system specification.";
   let description = [{
     A system specification describes the overall system containing
     multiple devices, with each device having a unique ID (string)
     and its corresponding TargetDeviceSpec object.
 
     Example:
-          dlti.target_system_spec =
-           #dlti.target_system_spec<
-            "CPU": #dlti.target_device_spec<
-                    #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096: ui32>>,
-            "GPU": #dlti.target_device_spec<
-                    #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>,
-            "XPU": #dlti.target_device_spec<
-                    #dlti.dl_entry<"dlti.max_vector_op_width", 4096 : ui32>>>
+    ```
+    dlti.target_system_spec =
+     #dlti.target_system_spec<
+      "CPU": #dlti.target_device_spec<
+              #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096: ui32>>,
+      "GPU": #dlti.target_device_spec<
+              #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>,
+      "XPU": #dlti.target_device_spec<
+              #dlti.dl_entry<"dlti.max_vector_op_width", 4096 : ui32>>>
+    ```
   }];
   let parameters = (ins
     ArrayRefParameter<"DeviceIDTargetDeviceSpecPair", "">:$entries
@@ -165,17 +161,17 @@ def TargetDeviceSpecTrait
 
 def DLTI_TargetDeviceSpecAttr :
     DLTIAttr<"TargetDeviceSpec", [TargetDeviceSpecTrait]> {
-  let summary = [{
-    An attribute to represent target device specification.
-  }];
+  let summary = "An attribute to represent target device specification.";
   let description = [{
     Each device specification describes a single device and its
     hardware properties. Each device specification can contain any number
     of optional hardware properties (e.g., max_vector_op_width below).
 
     Example:
-      #dlti.target_device_spec<
-        #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>
+    ```
+    #dlti.target_device_spec<
+      #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>
+    ```
   }];
   let parameters = (ins
     ArrayRefParameter<"DataLayoutEntryInterface", "">:$entries

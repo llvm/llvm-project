@@ -282,14 +282,14 @@ bool HexagonTfrCleanup::runOnMachineFunction(MachineFunction &MF) {
   // Map: 32-bit register -> immediate value.
   // 64-bit registers are stored through their subregisters.
   ImmediateMap IMap;
-  SlotIndexes *Indexes = this->getAnalysisIfAvailable<SlotIndexes>();
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
 
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &B = *I;
+  for (MachineBasicBlock &B : MF) {
     MachineBasicBlock::iterator J, F, NextJ;
     IMap.clear();
     bool Inserted = false, Erased = false;

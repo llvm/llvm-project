@@ -57,16 +57,21 @@
 <tr>
  <td><a href="#c11">C11</a></td>
  <td><tt>-std=c11</tt></td>
- <td class="unknown" align="center">Probably</td>
+ <td class="partial" align="center">Partial</td>
 </tr>
 <tr>
  <td><a href="#c17">C17</a></td>
  <td><tt>-std=c17</tt></td>
- <td class="unknown" align="center">Maybe?</td>
+ <td class="partial" align="center">Partial</td>
 </tr>
 <tr>
  <td><a href="#c2x">C23</a></td>
  <td><tt>-std=c23</tt></td>
+ <td class="partial" align="center">Partial</td>
+</tr>
+<tr>
+ <td><a href="#c2y">C2y</a></td>
+ <td><tt>-std=c2y</tt></td>
  <td class="partial" align="center">Partial</td>
 </tr>
 </table>
@@ -81,7 +86,7 @@ compliance between releases by submitting and tracking
 they become available.</p>
 
 <p>The <a href="https://github.com/llvm/llvm-project/issues/">LLVM bug tracker</a> uses
-the "c", "c99", "c11", "c17", and "c23" labels to track known bugs with Clang's language
+the "c", "c99", "c11", "c17", "c23", and "c2y" labels to track known bugs with Clang's language
 conformance.</p>
 
 <h2 id="c89">C89 implementation status</h2>
@@ -425,7 +430,7 @@ conformance.</p>
     <tr>
       <td>Extending the lifetime of temporary objects (factored approach)</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1285.htm">N1285</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Requiring signed char to have no padding bits</td>
@@ -458,11 +463,6 @@ conformance.</p>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
-      <td>FLT_EVAL_METHOD issues (first change only)</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1353.pdf">N1353</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
       <td>_Bool bit-fields</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1356.htm">N1356</a></td>
       <td class="full" align="center">Yes</td>
@@ -491,11 +491,6 @@ conformance.</p>
     <tr>
       <td>Contractions and expression evaluation methods</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1367.htm">N1367</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
-      <td>FLT_EVAL_METHOD and return</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1382.htm">N1382</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
@@ -610,11 +605,6 @@ conformance.</p>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
-      <td>Synthesis re _Atomic</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1537.htm">N1537</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
       <td>Clarification for wide evaluation</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1531.pdf">N1531</a></td>
       <td class="unknown" align="center">Unknown</td>
@@ -653,11 +643,6 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
-      <td>Clarifying the restrict Keyword v2</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2260.pdf">N2660</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
       <td>Harmonizing static_assert with C++</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2265.pdf">N2665</a></td>
       <td class="full" align="center">Clang 9</td>
@@ -673,7 +658,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr id="TS18661">
-      <td rowspan="9">TS 18661 Integration</td>
+      <td rowspan="10">TS 18661 Integration</td>
     </tr>
       <tr> <!-- Pre-Oct 2019 -->
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2314.pdf">N2314</a></td>
@@ -705,6 +690,10 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
       </tr>
       <tr> <!-- Sep 2021 -->
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2755.htm">N2755</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+      <tr> <!-- Feb 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2931.pdf">N2931</a></td>
         <td class="unknown" align="center">Unknown</td>
       </tr>
     <tr>
@@ -762,11 +751,8 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
       <td class="full" align="center">Clang 15</td>
     </tr>
     <!-- Oct 2019 Papers -->
-    <tr>
-      <td>*_IS_IEC_60559 feature test macros</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2379.htm">N2379</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
+    <!-- WG14 N2379 *_IS_IEC_60559 feature test macros was removed by a later
+         change to C23. -->
     <tr>
       <td>Annex F.8 update for implementation extensions and rounding</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2384.pdf">N2384</a></td>
@@ -999,7 +985,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Clarification for max exponent macros</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2843.pdf">N2843</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="na" align="center">Subsumed by N2882</td>
     </tr>
     <tr>
       <td>Clarification about expression transformations</td>
@@ -1009,7 +995,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Contradiction about INFINITY macro</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf">N2848</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Require exact-width integer type interfaces</td>
@@ -1040,7 +1026,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Disambiguate the storage class of some compound literals</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2819.pdf">N2819</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Add annotations for unreachable control flow v2</td>
@@ -1080,7 +1066,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>char8_t: A type for UTF-8 characters and strings</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2653.htm">N2653</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Clarification for max exponent macros-update</td>
@@ -1109,11 +1095,6 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2930.pdf">N2930</a></td>
         <td class="full" align="center">Clang 16</td>
       </tr>
-    <tr>
-      <td>Type annex tgmath narrowing macros with integer args v2</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2931.pdf">N2931</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
     <tr>
       <td>Revise spelling of keywords v7</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2934.pdf">N2934</a></td>
@@ -1194,7 +1175,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>Comma ommission and deletion (__VA_OPT__)</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3033.htm">N3033</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 12</td>
     </tr>
     <tr>
       <td>Underspecified object definitions</td>
@@ -1240,6 +1221,87 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
       <td>#embed</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm">N3017</a></td>
       <td class="unreleased" align="center">Clang 19</td>
+    </tr>
+</table>
+</details>
+
+<h2 id="c2y">C2y implementation status</h2>
+
+<p>Clang has support for some of the features of the C standard following C23, informally referred to as C2y.</p>
+
+<p>You can use Clang in C2y mode with the <code>-std=c2y</code> option (available in Clang 19 and later).</p>
+
+<details open>
+<summary>List of features and minimum Clang version with support</summary>
+
+<table width="689" border="1" cellspacing="0">
+ <tr>
+    <th>Language Feature</th>
+    <th>C2y Proposal</th>
+    <th>Available in Clang?</th>
+ </tr>
+    <!-- Strasbourg 2024 Papers -->
+    <tr>
+      <td>Sequential hexdigits</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3192.pdf">N3192</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <!-- Jun 2024 Papers -->
+    <tr>
+      <td>Generic selection expression with a type operand</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3260.pdf">N3260</a></td>
+      <td class="full" align="center">Clang 17</td>
+    </tr>
+    <tr>
+      <td>Round-trip rounding</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3232.pdf">N3232</a></td>
+      <td class="full" align="center">Yes</td>
+      <!-- editorial changes, no tests required -->
+    </tr>
+    <tr>
+      <td>Accessing byte arrays</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3254.pdf">N3254</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Slay some earthly demons I</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3244.pdf">N3244</a></td>
+      <td class="partial" align="center">
+      <!-- Voted in:
+             Annex J Item 21 (including additional change)
+             Annex J Item 56
+             Annex J Item 57 Option 1
+             Annex J Item 67
+             Annex J Item 69 (alternative wording for semantics)
+      -->
+        <details><summary>Partial</summary>
+          Clang does not document the implementation-defined behavior for decay
+          of an array with the register storage class specifier. Clang does not
+          diagnose an <code>extern inline</code> function with no definition in
+          the TU. Clang accepts and rejects redeclarations with/without an
+          alignment specifier, depending on the order of the declarations.
+        </details>
+      </td>
+    </tr>
+    <tr>
+      <td>Support ++ and -- on complex values</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3259.pdf">N3259</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Usability of a byte-wise copy of va_list</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3262.pdf">N3262</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>alignof of an incomplete array type</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3273.pdf">N3273</a></td>
+      <td class="full" align="center">Clang 3.5</td>
+    </tr>
+    <tr>
+      <td>Remove imaginary types</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3274.pdf">N3274</a></td>
+      <td class="full" align="center">Yes</td>
     </tr>
 </table>
 </details>

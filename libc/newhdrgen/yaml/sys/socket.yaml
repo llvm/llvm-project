@@ -1,0 +1,26 @@
+header: sys-socket.h
+macros: []
+types:
+  - type_name: struct_sockaddr_un
+  - type_name: struct_sockaddr
+  - type_name: socklen_t
+  - type_name: sa_family_t
+enums: []
+objects: []
+functions:
+  - name: socket
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+      - type: int
+  - name: bind
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: const struct sockaddr *
+      - type: socklen_t

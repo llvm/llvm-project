@@ -1585,7 +1585,7 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   const DIType *DTy = CTy->getBaseType();
   bool IsUnsigned = DTy && DD->isUnsignedDIType(DTy);
   if (DTy) {
-    if (DD->getDwarfVersion() >= 3)
+    if (!Asm->TM.Options.DebugStrictDwarf || DD->getDwarfVersion() >= 3)
       addType(Buffer, DTy);
     if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagEnumClass))
       addFlag(Buffer, dwarf::DW_AT_enum_class);

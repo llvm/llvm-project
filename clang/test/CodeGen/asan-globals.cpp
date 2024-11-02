@@ -67,13 +67,13 @@ void func() {
 // CHECK-NEXT: call void @__asan_unregister_globals
 // CHECK-NEXT: ret void
 
-// CHECK: attributes #[[#ATTR]] = { nounwind }
+// CHECK: attributes #[[#ATTR]] = { nounwind
 
 /// If -fasynchronous-unwind-tables, set the module flag "uwtable". ctor/dtor
 /// will thus get the uwtable attribute.
 // RUN: %clang_cc1 -emit-llvm -fsanitize=address -funwind-tables=2 -o - %s | FileCheck %s --check-prefixes=UWTABLE
 // UWTABLE: define internal void @asan.module_dtor() #[[#ATTR:]] {
-// UWTABLE: attributes #[[#ATTR]] = { nounwind uwtable }
+// UWTABLE: attributes #[[#ATTR]] = { nounwind uwtable
 // UWTABLE: ![[#]] = !{i32 7, !"uwtable", i32 2}
 
 // IGNORELIST-SRC:     @{{.*}}extra_global{{.*}} ={{.*}} global

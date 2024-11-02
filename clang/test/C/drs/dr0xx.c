@@ -430,7 +430,8 @@ void dr081(void) {
   /* Demonstrate that we don't crash when left shifting a signed value; that's
    * implementation defined behavior.
    */
- _Static_assert(-1 << 1 == -2, "fail"); /* Didn't shift a zero into the "sign bit". */
+ _Static_assert(-1 << 1 == -2, "fail"); /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                                           expected-note {{left shift of negative value -1}} */
  _Static_assert(1 << 3 == 1u << 3u, "fail"); /* Shift of a positive signed value does sensible things. */
 }
 

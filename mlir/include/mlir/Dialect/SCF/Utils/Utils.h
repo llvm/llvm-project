@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 
@@ -128,15 +127,8 @@ LogicalResult loopUnrollByFactor(
 /// for operations with results are not supported.
 LogicalResult loopUnrollJamByFactor(scf::ForOp forOp, uint64_t unrollFactor);
 
-/// Transform a loop with a strictly positive step
-///   for %i = %lb to %ub step %s
-/// into a 0-based loop with step 1
-///   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
-///     %i = %ii * %s + %lb
-/// Insert the induction variable remapping in the body of `inner`, which is
-/// expected to be either `loop` or another loop perfectly nested under `loop`.
-/// Insert the definition of new bounds immediate before `outer`, which is
-/// expected to be either `loop` or its parent in the loop nest.
+/// Materialize bounds and step of a zero-based and unit-step loop derived by
+/// normalizing the specified bounds and step.
 Range emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
                                OpFoldResult lb, OpFoldResult ub,
                                OpFoldResult step);

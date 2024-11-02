@@ -1,9 +1,5 @@
 ; Test that global constructors are correctly ordered
 ;
-; Uncovers a pre-existing issue on Arm 32 bit, see
-; https://github.com/llvm/llvm-project/issues/95911.
-; UNSUPPORTED: target=arm{{.*}}
-;
 ; RUN: lli -jit-kind=orc %s | FileCheck %s
 ;
 ; CHECK: H1

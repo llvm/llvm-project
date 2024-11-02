@@ -933,7 +933,7 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
 
   bool EverMadeChange = false;
   bool MadeChange = true;
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   while (MadeChange) {
     MadeChange = false;
     for (BasicBlock &BB : llvm::make_early_inc_range(F)) {

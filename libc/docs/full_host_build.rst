@@ -35,6 +35,14 @@ we've set the Ninja generator, enabled a full compiler suite, set the build
 type to "Debug", and enabled the Scudo allocator.  The build also tells clang
 to use the freshly built lld and compiler-rt.
 
+.. note::
+   if your build fails with an error saying the compiler can't find
+   ``<asm/unistd.h>`` or similar then you're probably missing the symlink from
+   ``/usr/include/asm`` to ``/usr/include/<TARGET TRIPLE>/asm``. Installing the
+   ``gcc-multilib`` package creates this symlink, or you can do it manually with
+   this command:
+   ``sudo ln -s /usr/include/<TARGET TRIPLE>/asm /usr/include/asm``
+
 .. code-block:: sh
 
    $> cd llvm-project  # The llvm-project checkout
@@ -75,6 +83,14 @@ above.
 
 Build and install
 =================
+
+.. TODO: add this warning to the cmake
+.. warning::
+   Running these install commands without setting a ``$SYSROOT`` will install
+   them into your system include path, which may break your system. If you're
+   just trying to develop libc, then just run ``ninja check-libc`` to build the
+   libc and run the tests. If you've already accidentally installed the headers,
+   you may need to delete them from ``/usr/local/include``.
 
 After configuring the build with the above ``cmake`` command, one can build and
 install the libc, clang (and its support libraries and builtins), lld and

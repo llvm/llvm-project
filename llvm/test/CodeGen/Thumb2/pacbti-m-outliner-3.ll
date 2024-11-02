@@ -136,7 +136,7 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NEXT:  aut   r12, lr, sp
 ; CHECK-NEXT:  bx    lr
 
-attributes #0 = { minsize noinline norecurse nounwind optsize readnone uwtable }
+attributes #0 = { minsize noinline norecurse nounwind optsize readnone uwtable "sign-return-address"="non-leaf" }
 
 !llvm.module.flags = !{!0, !1, !2}
 

@@ -18,8 +18,6 @@
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
-
-struct LogicalResult;
 class Region;
 class RewriterBase;
 class Operation;

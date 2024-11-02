@@ -9,12 +9,13 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/big_int.h"
 #include "src/__support/integer_literals.h"        // parse_unsigned_bigint
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #include "hdr/math_macros.h" // HUGE_VALF, HUGE_VALF
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 enum Value { ZERO, ONE, TWO, MIN, MAX };
 
@@ -31,6 +32,7 @@ template <typename T> auto create(Value value) {
   case MAX:
     return T::max();
   }
+  __builtin_unreachable();
 }
 
 using Types = testing::TypeList< //
@@ -263,7 +265,11 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat16) {
   static_assert(cpp::is_trivially_copyable<LL_UInt16>::value);
   static_assert(sizeof(LL_UInt16) == sizeof(float16));
-  const float16 array[] = {0, 0.1, 1};
+  const float16 array[] = {
+      static_cast<float16>(0.0),
+      static_cast<float16>(0.1),
+      static_cast<float16>(1.0),
+  };
   for (float16 value : array) {
     LL_UInt16 back = cpp::bit_cast<LL_UInt16>(value);
     float16 forth = cpp::bit_cast<float16>(back);
@@ -921,4 +927,4 @@ TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
   ASSERT_EQ(static_cast<int>(a >> 64), 1);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

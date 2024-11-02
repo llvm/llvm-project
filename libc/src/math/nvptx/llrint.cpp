@@ -10,9 +10,12 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(long long, llrint, (double x)) { return __nv_llrint(x); }
+LLVM_LIBC_FUNCTION(long long, llrint, (double x)) {
+  return static_cast<long long>(__builtin_rint(x));
+}
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

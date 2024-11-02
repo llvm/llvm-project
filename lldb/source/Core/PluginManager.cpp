@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -639,6 +640,18 @@ static ObjectFileInstances &GetObjectFileInstances() {
   return g_instances;
 }
 
+bool PluginManager::IsRegisteredObjectFilePluginName(llvm::StringRef name) {
+  if (name.empty())
+    return false;
+
+  const auto &instances = GetObjectFileInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.name == name)
+      return true;
+  }
+  return false;
+}
+
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ObjectFileCreateInstance create_callback,
@@ -689,12 +702,22 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style,
-                               llvm::StringRef plugin_name) {
-  if (plugin_name.empty()) {
+                               const lldb_private::SaveCoreOptions &options) {
+  Status error;
+  if (!options.GetOutputFile()) {
+    error.SetErrorString("No output file specified");
+    return error;
+  }
+
+  if (!process_sp) {
+    error.SetErrorString("Invalid process");
+    return error;
+  }
+
+  if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
-    llvm::Expected<bool> ret = process_sp->SaveCore(outfile.GetPath());
+    llvm::Expected<bool> ret =
+        process_sp->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
       return Status(ret.takeError());
     if (ret.get())
@@ -702,17 +725,20 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   }
 
   // Fall back to object plugins.
-  Status error;
+  const auto &plugin_name = options.GetPluginName().value_or("");
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
     if (plugin_name.empty() || instance.name == plugin_name) {
-      if (instance.save_core &&
-          instance.save_core(process_sp, outfile, core_style, error))
+      if (instance.save_core && instance.save_core(process_sp, options, error))
         return error;
     }
   }
-  error.SetErrorString(
-      "no ObjectFile plugins were able to save a core for this process");
+
+  // Check to see if any of the object file plugins tried and failed to save.
+  // If none ran, set the error message.
+  if (error.Success())
+    error.SetErrorString(
+        "no ObjectFile plugins were able to save a core for this process");
   return error;
 }
 

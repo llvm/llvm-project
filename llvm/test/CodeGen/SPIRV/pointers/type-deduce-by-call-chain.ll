@@ -18,11 +18,8 @@
 ; CHECK-SPIRV-DAG: %[[TyFunPtrLong:.*]] = OpTypeFunction %[[TyVoid]] %[[TyPtrLong]]
 ; CHECK-SPIRV-DAG: %[[TyGenPtrPtrLong:.*]] = OpTypePointer Generic %[[TyGenPtrLong]]
 ; CHECK-SPIRV-DAG: %[[TyFunGenPtrLongLong:.*]] = OpTypeFunction %[[TyVoid]] %[[TyGenPtrLong]] %[[TyLong]]
-; CHECK-SPIRV-DAG: %[[TyChar:.*]] = OpTypeInt 8 0
-; CHECK-SPIRV-DAG: %[[TyGenPtrChar:.*]] = OpTypePointer Generic %[[TyChar]]
-; CHECK-SPIRV-DAG: %[[TyGenPtrPtrChar:.*]] = OpTypePointer Generic %[[TyGenPtrChar]]
-; CHECK-SPIRV-DAG: %[[TyFunPtrGenPtrChar:.*]] = OpTypePointer Function %[[TyGenPtrChar]]
 ; CHECK-SPIRV-DAG: %[[Const3:.*]] = OpConstant %[[TyLong]] 3
+; CHECK-SPIRV-DAG: %[[TyFunPtrGenPtrLong:.*]] = OpTypePointer Function %[[TyGenPtrLong]]
 
 ; CHECK-SPIRV: %[[FunTest]] = OpFunction %[[TyVoid]] None %[[TyFunPtrLong]]
 ; CHECK-SPIRV: %[[ArgCum]] = OpFunctionParameter %[[TyPtrLong]]
@@ -41,10 +38,9 @@
 ; CHECK-SPIRV: %[[StubObj]] = OpFunctionParameter %[[TyGenPtrLong]]
 ; CHECK-SPIRV: %[[MemOrder]] = OpFunctionParameter %[[TyLong]]
 
-; CHECK-SPIRV: %[[ObjectAddr:.*]] = OpVariable %[[TyFunPtrGenPtrChar]] Function
-; CHECK-SPIRV-NEXT: %[[ToGeneric:.*]] = OpPtrCastToGeneric %[[TyGenPtrPtrChar]] %[[ObjectAddr]]
-; CHECK-SPIRV-NEXT: %[[Casted:.*]] = OpBitcast %[[TyGenPtrPtrLong]] %[[ToGeneric]]
-; CHECK-SPIRV-NEXT: OpStore %[[Casted]] %[[StubObj]]
+; CHECK-SPIRV: %[[ObjectAddr:.*]] = OpVariable %[[TyFunPtrGenPtrLong]] Function
+; CHECK-SPIRV-NEXT: %[[ToGeneric:.*]] = OpPtrCastToGeneric %[[TyGenPtrPtrLong]] %[[ObjectAddr]]
+; CHECK-SPIRV-NEXT: OpStore %[[ToGeneric]] %[[StubObj]]
 
 ; CHECK-SPIRV: %[[FooFunc]] = OpFunction %[[TyVoid]] None %[[TyFunGenPtrLongLong]]
 ; CHECK-SPIRV: %[[FooObj]] = OpFunctionParameter %[[TyGenPtrLong]]

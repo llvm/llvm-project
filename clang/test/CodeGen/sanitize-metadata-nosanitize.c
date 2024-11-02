@@ -2,13 +2,13 @@
 // RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=covered -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata=uar -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK
 
 //.
-// CHECK: @__start_sanmd_covered = extern_weak hidden global ptr
-// CHECK: @__stop_sanmd_covered = extern_weak hidden global ptr
-// CHECK: @__start_sanmd_atomics = extern_weak hidden global ptr
-// CHECK: @__stop_sanmd_atomics = extern_weak hidden global ptr
-// CHECK: @llvm.used = appending global [4 x ptr] [ptr @__sanitizer_metadata_covered.module_ctor, ptr @__sanitizer_metadata_covered.module_dtor, ptr @__sanitizer_metadata_atomics.module_ctor, ptr @__sanitizer_metadata_atomics.module_dtor], section "llvm.metadata"
-// CHECK: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_covered.module_ctor, ptr @__sanitizer_metadata_covered.module_ctor }, { i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_atomics.module_ctor, ptr @__sanitizer_metadata_atomics.module_ctor }]
-// CHECK: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_covered.module_dtor, ptr @__sanitizer_metadata_covered.module_dtor }, { i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_atomics.module_dtor, ptr @__sanitizer_metadata_atomics.module_dtor }]
+// CHECK: @__start_sanmd_covered2 = extern_weak hidden global ptr
+// CHECK: @__stop_sanmd_covered2 = extern_weak hidden global ptr
+// CHECK: @__start_sanmd_atomics2 = extern_weak hidden global ptr
+// CHECK: @__stop_sanmd_atomics2 = extern_weak hidden global ptr
+// CHECK: @llvm.used = appending global [4 x ptr] [ptr @__sanitizer_metadata_covered2.module_ctor, ptr @__sanitizer_metadata_covered2.module_dtor, ptr @__sanitizer_metadata_atomics2.module_ctor, ptr @__sanitizer_metadata_atomics2.module_dtor], section "llvm.metadata"
+// CHECK: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_covered2.module_ctor, ptr @__sanitizer_metadata_covered2.module_ctor }, { i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_atomics2.module_ctor, ptr @__sanitizer_metadata_atomics2.module_ctor }]
+// CHECK: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_covered2.module_dtor, ptr @__sanitizer_metadata_covered2.module_dtor }, { i32, ptr, ptr } { i32 2, ptr @__sanitizer_metadata_atomics2.module_dtor, ptr @__sanitizer_metadata_atomics2.module_dtor }]
 //.
 // CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
 // CHECK-LABEL: define dso_local void @escape
@@ -93,19 +93,19 @@ __attribute__((no_sanitize("all"))) int test_no_sanitize_all(int *x, int *y) {
 // CHECK: attributes #1 = { mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #2 = { disable_sanitizer_instrumentation mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #3 = { mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) "min-legal-vector-width"="0" "no-trapping-math"="true" "no_sanitize_thread" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// CHECK: attributes #4 = { nounwind }
+// CHECK: attributes #4 = { nounwind "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
-// CHECK: !2 = !{!"sanmd_covered!C", !3}
+// CHECK: !2 = !{!"sanmd_covered2!C", !3}
 // CHECK: !3 = !{i64 0}
-// CHECK: !4 = !{!"sanmd_covered!C", !5}
+// CHECK: !4 = !{!"sanmd_covered2!C", !5}
 // CHECK: !5 = !{i64 3}
 // CHECK: !6 = !{!7, !7, i64 0}
 // CHECK: !7 = !{!"any pointer", !8, i64 0}
 // CHECK: !8 = !{!"omnipotent char", !9, i64 0}
 // CHECK: !9 = !{!"Simple C/C++ TBAA"}
-// CHECK: !10 = !{!"sanmd_atomics!C"}
+// CHECK: !10 = !{!"sanmd_atomics2!C"}
 // CHECK: !11 = !{!12, !12, i64 0}
 // CHECK: !12 = !{!"int", !8, i64 0}
-// CHECK: !13 = !{!"sanmd_covered!C", !14}
+// CHECK: !13 = !{!"sanmd_covered2!C", !14}
 // CHECK: !14 = !{i64 2}
 //.

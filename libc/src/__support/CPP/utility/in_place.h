@@ -9,10 +9,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_IN_PLACE_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
+#include "src/__support/macros/config.h"
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // in_place
 struct in_place_t {
@@ -31,6 +33,7 @@ template <size_t I> struct in_place_index_t {
 template <size_t I>
 LIBC_INLINE_VAR constexpr in_place_index_t<I> in_place_index{};
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_IN_PLACE_H

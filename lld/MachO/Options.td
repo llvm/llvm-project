@@ -111,6 +111,12 @@ def no_warn_dylib_install_name: Flag<["--"], "no-warn-dylib-install-name">,
 def warn_dylib_install_name: Flag<["--"], "warn-dylib-install-name">,
     HelpText<"Warn on -install_name if -dylib is not passed">,
     Group<grp_lld>;
+def warn_duplicate_rpath: Flag<["--"], "warn-duplicate-rpath">,
+    HelpText<"Warn if the same -rpath is specified multiple times (default)">,
+    Group<grp_lld>;
+def no_warn_duplicate_rpath: Flag<["--"], "no-warn-duplicate-rpath">,
+    HelpText<"Do not warn if the same -rpath is specified multiple times">,
+    Group<grp_lld>;
 def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
     HelpText<"Reorder sections with call graph profile (default)">,
     Group<grp_lld>;
@@ -147,6 +153,9 @@ def cs_profile_path: Joined<["--"], "cs-profile-path=">,
 defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
+defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
+  "Warn on missing object files referenced by thin archives (default)",
+  "Do not warn on missing object files referenced by thin archives">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

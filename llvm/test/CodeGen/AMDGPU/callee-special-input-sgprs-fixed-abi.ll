@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5]

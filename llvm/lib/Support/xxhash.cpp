@@ -453,18 +453,7 @@ uint64_t llvm::xxh3_64bits(ArrayRef<uint8_t> data) {
 #define XXH_rotl64(x, r) (((x) << (r)) | ((x) >> (64 - (r))))
 #endif
 
-#if defined(_MSC_VER) && defined(_M_IX86)
-#define XXH_mult32to64(x, y) __emulu((unsigned)(x), (unsigned)(y))
-#else
-/*
- * Downcast + upcast is usually better than masking on older compilers like
- * GCC 4.2 (especially 32-bit ones), all without affecting newer compilers.
- *
- * The other method, (x & 0xFFFFFFFF) * (y & 0xFFFFFFFF), will AND both operands
- * and perform a full 64x64 multiply -- entirely redundant on 32-bit.
- */
 #define XXH_mult32to64(x, y) ((uint64_t)(uint32_t)(x) * (uint64_t)(uint32_t)(y))
-#endif
 
 /*!
  * @brief Calculates a 64->128-bit long multiply.

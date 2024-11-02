@@ -340,11 +340,7 @@ define i1 @negative4_logical(i32 %x, i32 %n) {
 
 define i1 @negative5(i32 %x, i32 %n) {
 ; CHECK-LABEL: @negative5(
-; CHECK-NEXT:    [[NN:%.*]] = and i32 [[N:%.*]], 2147483647
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[NN]], [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nn = and i32 %n, 2147483647
   %a = icmp slt i32 %x, %nn
@@ -355,11 +351,7 @@ define i1 @negative5(i32 %x, i32 %n) {
 
 define i1 @negative5_logical(i32 %x, i32 %n) {
 ; CHECK-LABEL: @negative5_logical(
-; CHECK-NEXT:    [[NN:%.*]] = and i32 [[N:%.*]], 2147483647
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[NN]], [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nn = and i32 %n, 2147483647
   %a = icmp slt i32 %x, %nn

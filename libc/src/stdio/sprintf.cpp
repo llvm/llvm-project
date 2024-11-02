@@ -10,12 +10,13 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sprintf,
                    (char *__restrict buffer, const char *__restrict format,
@@ -35,4 +36,4 @@ LLVM_LIBC_FUNCTION(int, sprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -45,7 +45,7 @@
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
-define amdgpu_kernel void @minimal_kernel_inputs() {
+define amdgpu_kernel void @minimal_kernel_inputs() #0 {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   store volatile i32 %id, ptr addrspace(1) undef
   ret void
@@ -74,7 +74,7 @@ define amdgpu_kernel void @minimal_kernel_inputs() {
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
-define amdgpu_kernel void @minimal_kernel_inputs_with_stack() {
+define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
   %alloca = alloca i32, addrspace(5)
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   store volatile i32 %id, ptr addrspace(1) undef
@@ -107,7 +107,7 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() {
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 2
-define amdgpu_kernel void @queue_ptr() {
+define amdgpu_kernel void @queue_ptr() #1 {
   %queue.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
   %load = load volatile i8, ptr addrspace(4) %queue.ptr
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -154,7 +154,7 @@ define amdgpu_kernel void @queue_ptr() {
 ; GCN-NEXT: .amdhsa_system_vgpr_workitem_id 0
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 13
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 6
-define amdgpu_kernel void @all_inputs() {
+define amdgpu_kernel void @all_inputs() #2 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, ptr addrspace(5) %alloca
 
@@ -182,16 +182,19 @@ define amdgpu_kernel void @all_inputs() {
   ret void
 }
 
-declare i32 @llvm.amdgcn.workgroup.id.x() #0
-declare i32 @llvm.amdgcn.workgroup.id.y() #0
-declare i32 @llvm.amdgcn.workgroup.id.z() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
-declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
-declare i64 @llvm.amdgcn.dispatch.id() #0
+declare i32 @llvm.amdgcn.workgroup.id.x() #3
+declare i32 @llvm.amdgcn.workgroup.id.y() #3
+declare i32 @llvm.amdgcn.workgroup.id.z() #3
+declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #3
+declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #3
+declare align 4 ptr addrspace(4) @llvm.amdgcn.queue.ptr() #3
+declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #3
+declare i64 @llvm.amdgcn.dispatch.id() #3
 
-attributes #0 = { nounwind readnone speculatable willreturn }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #1 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #2 = { "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

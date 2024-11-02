@@ -14,7 +14,7 @@ define amdgpu_kernel void @non_constant_index(i32 %arg) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <2 x float> [ [[TMP2:%.*]], [[BB3]] ], [ undef, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <2 x float> [ [[TMP2:%.*]], [[BB3]] ], [ poison, [[BB2:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> [[PROMOTEALLOCA]], float 0.000000e+00, i32 [[ARG]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ARG]], 1
 ; CHECK-NEXT:    [[TMP2]] = insertelement <2 x float> [[TMP0]], float 0.000000e+00, i32 [[TMP1]]

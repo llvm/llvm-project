@@ -914,8 +914,6 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
     LR.resolveKind();
 }
 
-/// Lookup a builtin function, when name lookup would otherwise
-/// fail.
 bool Sema::LookupBuiltin(LookupResult &R) {
   Sema::LookupNameKind NameKind = R.getLookupKind();
 
@@ -1594,7 +1592,6 @@ llvm::DenseSet<Module*> &Sema::getLookupModules() {
   return LookupModulesCache;
 }
 
-/// Determine if we could use all the declarations in the module.
 bool Sema::isUsableModule(const Module *M) {
   assert(M && "We shouldn't check nullness for module here");
   // Return quickly if we cached the result.
@@ -1606,22 +1603,32 @@ bool Sema::isUsableModule(const Module *M) {
   // [module.global.frag]p1:
   //   The global module fragment can be used to provide declarations that are
   //   attached to the global module and usable within the module unit.
-  if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment ||
-      // If M is the module we're parsing, it should be usable. This covers the
-      // private module fragment. The private module fragment is usable only if
-      // it is within the current module unit. And it must be the current
-      // parsing module unit if it is within the current module unit according
-      // to the grammar of the private module fragment. NOTE: This is covered by
-      // the following condition. The intention of the check is to avoid string
-      // comparison as much as possible.
-      M == getCurrentModule() ||
-      // The module unit which is in the same module with the current module
-      // unit is usable.
-      //
-      // FIXME: Here we judge if they are in the same module by comparing the
-      // string. Is there any better solution?
-      M->getPrimaryModuleInterfaceName() ==
-          llvm::StringRef(getLangOpts().CurrentModule).split(':').first) {
+  if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment) {
+    UsableModuleUnitsCache.insert(M);
+    return true;
+  }
+
+  // Otherwise, the global module fragment from other translation unit is not
+  // directly usable.
+  if (M->isGlobalModule())
+    return false;
+
+  Module *Current = getCurrentModule();
+
+  // If we're not parsing a module, we can't use all the declarations from
+  // another module easily.
+  if (!Current)
+    return false;
+
+  // If M is the module we're parsing or M and the current module unit lives in
+  // the same module, M should be usable.
+  //
+  // Note: It should be fine to search the vector `ModuleScopes` linearly since
+  // it should be generally small enough. There should be rare module fragments
+  // in a named module unit.
+  if (llvm::count_if(ModuleScopes,
+                     [&M](const ModuleScope &MS) { return MS.Module == M; }) ||
+      getASTContext().isInSameModule(M, Current)) {
     UsableModuleUnitsCache.insert(M);
     return true;
   }
@@ -2165,34 +2172,6 @@ bool LookupResult::isAvailableForLookup(Sema &SemaRef, NamedDecl *ND) {
   return false;
 }
 
-/// Perform unqualified name lookup starting from a given
-/// scope.
-///
-/// Unqualified name lookup (C++ [basic.lookup.unqual], C99 6.2.1) is
-/// used to find names within the current scope. For example, 'x' in
-/// @code
-/// int x;
-/// int f() {
-///   return x; // unqualified name look finds 'x' in the global scope
-/// }
-/// @endcode
-///
-/// Different lookup criteria can find different names. For example, a
-/// particular scope can have both a struct and a function of the same
-/// name, and each can be found by certain lookup criteria. For more
-/// information about lookup criteria, see the documentation for the
-/// class LookupCriteria.
-///
-/// @param S        The scope from which unqualified name lookup will
-/// begin. If the lookup criteria permits, name lookup may also search
-/// in the parent scopes.
-///
-/// @param [in,out] R Specifies the lookup to perform (e.g., the name to
-/// look up and the lookup kind), and is updated with the results of lookup
-/// including zero or more declarations and possibly additional information
-/// used to diagnose ambiguities.
-///
-/// @returns \c true if lookup succeeded and false otherwise.
 bool Sema::LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation,
                       bool ForceNoCPlusPlus) {
   DeclarationName Name = R.getLookupName();
@@ -2346,7 +2325,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
   // We have already looked into the initial namespace; seed the queue
   // with its using-children.
   for (auto *I : StartDC->using_directives()) {
-    NamespaceDecl *ND = I->getNominatedNamespace()->getOriginalNamespace();
+    NamespaceDecl *ND = I->getNominatedNamespace()->getFirstDecl();
     if (S.isVisible(I) && Visited.insert(ND).second)
       Queue.push_back(ND);
   }
@@ -2410,28 +2389,6 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
   return Found;
 }
 
-/// Perform qualified name lookup into a given context.
-///
-/// Qualified name lookup (C++ [basic.lookup.qual]) is used to find
-/// names when the context of those names is explicit specified, e.g.,
-/// "std::vector" or "x->member", or as part of unqualified name lookup.
-///
-/// Different lookup criteria can find different names. For example, a
-/// particular scope can have both a struct and a function of the same
-/// name, and each can be found by certain lookup criteria. For more
-/// information about lookup criteria, see the documentation for the
-/// class LookupCriteria.
-///
-/// \param R captures both the lookup criteria and any lookup results found.
-///
-/// \param LookupCtx The context in which qualified name lookup will
-/// search. If the lookup criteria permits, name lookup may also search
-/// in the parent contexts or (for C++ classes) base classes.
-///
-/// \param InUnqualifiedLookup true if this is qualified name lookup that
-/// occurs as part of unqualified name lookup.
-///
-/// \returns true if lookup succeeded, false if it failed.
 bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                                bool InUnqualifiedLookup) {
   assert(LookupCtx && "Sema::LookupQualifiedName requires a lookup context");
@@ -2706,21 +2663,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   return true;
 }
 
-/// Performs qualified name lookup or special type of lookup for
-/// "__super::" scope specifier.
-///
-/// This routine is a convenience overload meant to be called from contexts
-/// that need to perform a qualified name lookup with an optional C++ scope
-/// specifier that might require special kind of lookup.
-///
-/// \param R captures both the lookup criteria and any lookup results found.
-///
-/// \param LookupCtx The context in which qualified name lookup will
-/// search.
-///
-/// \param SS An optional C++ scope-specifier.
-///
-/// \returns true if lookup succeeded, false if it failed.
 bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                                CXXScopeSpec &SS) {
   auto *NNS = SS.getScopeRep();
@@ -2731,25 +2673,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     return LookupQualifiedName(R, LookupCtx);
 }
 
-/// Performs name lookup for a name that was parsed in the
-/// source code, and may contain a C++ scope specifier.
-///
-/// This routine is a convenience routine meant to be called from
-/// contexts that receive a name and an optional C++ scope specifier
-/// (e.g., "N::M::x"). It will then perform either qualified or
-/// unqualified name lookup (with LookupQualifiedName or LookupName,
-/// respectively) on the given name and return those results. It will
-/// perform a special type of lookup for "__super::" scope specifier.
-///
-/// @param S        The scope from which unqualified name lookup will
-/// begin.
-///
-/// @param SS       An optional C++ scope-specifier, e.g., "::N::M".
-///
-/// @param EnteringContext Indicates whether we are going to enter the
-/// context of the scope-specifier SS (if present).
-///
-/// @returns True if any decls were found (but possibly ambiguous)
 bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
                             QualType ObjectType, bool AllowBuiltinCreation,
                             bool EnteringContext) {
@@ -2804,15 +2727,6 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
   return false;
 }
 
-/// Perform qualified name lookup into all base classes of the given
-/// class.
-///
-/// \param R captures both the lookup criteria and any lookup results found.
-///
-/// \param Class The context in which qualified name lookup will
-/// search. Name lookup will search in all base classes merging the results.
-///
-/// @returns True if any decls were found (but possibly ambiguous)
 bool Sema::LookupInSuper(LookupResult &R, CXXRecordDecl *Class) {
   // The access-control rules we use here are essentially the rules for
   // doing a lookup in Class that just magically skipped the direct
@@ -2842,10 +2756,6 @@ bool Sema::LookupInSuper(LookupResult &R, CXXRecordDecl *Class) {
   return !R.empty();
 }
 
-/// Produce a diagnostic describing the ambiguity that resulted
-/// from name lookup.
-///
-/// \param Result The result of the ambiguous lookup to be diagnosed.
 void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
   assert(Result.isAmbiguous() && "Lookup result must be ambiguous");
 
@@ -3308,13 +3218,6 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
   }
 }
 
-/// Find the associated classes and namespaces for
-/// argument-dependent lookup for a call with the given set of
-/// arguments.
-///
-/// This routine computes the sets of associated classes and associated
-/// namespaces searched by argument-dependent lookup
-/// (C++ [basic.lookup.argdep]) for a given set of arguments.
 void Sema::FindAssociatedClassesAndNamespaces(
     SourceLocation InstantiationLoc, ArrayRef<Expr *> Args,
     AssociatedNamespaceSet &AssociatedNamespaces,
@@ -3607,7 +3510,6 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
   return *Result;
 }
 
-/// Look up the default constructor for the given class.
 CXXConstructorDecl *Sema::LookupDefaultConstructor(CXXRecordDecl *Class) {
   SpecialMemberOverloadResult Result =
       LookupSpecialMember(Class, CXXSpecialMemberKind::DefaultConstructor,
@@ -3616,7 +3518,6 @@ CXXConstructorDecl *Sema::LookupDefaultConstructor(CXXRecordDecl *Class) {
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
 
-/// Look up the copying constructor for the given class.
 CXXConstructorDecl *Sema::LookupCopyingConstructor(CXXRecordDecl *Class,
                                                    unsigned Quals) {
   assert(!(Quals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
@@ -3628,7 +3529,6 @@ CXXConstructorDecl *Sema::LookupCopyingConstructor(CXXRecordDecl *Class,
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
 
-/// Look up the moving constructor for the given class.
 CXXConstructorDecl *Sema::LookupMovingConstructor(CXXRecordDecl *Class,
                                                   unsigned Quals) {
   SpecialMemberOverloadResult Result = LookupSpecialMember(
@@ -3638,7 +3538,6 @@ CXXConstructorDecl *Sema::LookupMovingConstructor(CXXRecordDecl *Class,
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
 
-/// Look up the constructors for the given class.
 DeclContext::lookup_result Sema::LookupConstructors(CXXRecordDecl *Class) {
   // If the implicit constructors have not yet been declared, do so now.
   if (CanDeclareSpecialMemberFunction(Class)) {
@@ -3657,7 +3556,6 @@ DeclContext::lookup_result Sema::LookupConstructors(CXXRecordDecl *Class) {
   return Class->lookup(Name);
 }
 
-/// Look up the copying assignment operator for the given class.
 CXXMethodDecl *Sema::LookupCopyingAssignment(CXXRecordDecl *Class,
                                              unsigned Quals, bool RValueThis,
                                              unsigned ThisQuals) {
@@ -3673,7 +3571,6 @@ CXXMethodDecl *Sema::LookupCopyingAssignment(CXXRecordDecl *Class,
   return Result.getMethod();
 }
 
-/// Look up the moving assignment operator for the given class.
 CXXMethodDecl *Sema::LookupMovingAssignment(CXXRecordDecl *Class,
                                             unsigned Quals,
                                             bool RValueThis,
@@ -3688,12 +3585,6 @@ CXXMethodDecl *Sema::LookupMovingAssignment(CXXRecordDecl *Class,
   return Result.getMethod();
 }
 
-/// Look for the destructor of the given class.
-///
-/// During semantic analysis, this routine should be used in lieu of
-/// CXXRecordDecl::getDestructor().
-///
-/// \returns The destructor for this class.
 CXXDestructorDecl *Sema::LookupDestructor(CXXRecordDecl *Class) {
   return cast_or_null<CXXDestructorDecl>(
       LookupSpecialMember(Class, CXXSpecialMemberKind::Destructor, false, false,
@@ -3701,12 +3592,6 @@ CXXDestructorDecl *Sema::LookupDestructor(CXXRecordDecl *Class) {
           .getMethod());
 }
 
-/// LookupLiteralOperator - Determine which literal operator should be used for
-/// a user-defined literal, per C++11 [lex.ext].
-///
-/// Normal overload resolution is not used to select which literal operator to
-/// call for a user-defined literal. Look up the provided literal operator name,
-/// and filter the results to the appropriate set for the given argument types.
 Sema::LiteralOperatorLookupResult
 Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
                             ArrayRef<QualType> ArgTys, bool AllowRaw,
@@ -4474,10 +4359,6 @@ void Sema::LookupVisibleDecls(DeclContext *Ctx, LookupNameKind Kind,
   H.lookupVisibleDecls(*this, Ctx, Kind, IncludeGlobalScope);
 }
 
-/// LookupOrCreateLabel - Do a name lookup of a label with the specified name.
-/// If GnuLabelLoc is a valid source location, then this is a definition
-/// of an __label__ label name, otherwise it is a normal label definition
-/// or use.
 LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
                                      SourceLocation GnuLabelLoc) {
   // Do a lookup to see if we have a label with this name already.
@@ -5102,13 +4983,16 @@ static void AddKeywordsToConsumer(Sema &SemaRef,
     static const char *const CTypeSpecs[] = {
       "char", "const", "double", "enum", "float", "int", "long", "short",
       "signed", "struct", "union", "unsigned", "void", "volatile",
-      "_Complex", "_Imaginary",
+      "_Complex",
       // storage-specifiers as well
       "extern", "inline", "static", "typedef"
     };
 
     for (const auto *CTS : CTypeSpecs)
       Consumer.addKeywordResult(CTS);
+
+    if (SemaRef.getLangOpts().C99 && !SemaRef.getLangOpts().C2y)
+      Consumer.addKeywordResult("_Imaginary");
 
     if (SemaRef.getLangOpts().C99)
       Consumer.addKeywordResult("restrict");
@@ -5374,37 +5258,6 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
   return Consumer;
 }
 
-/// Try to "correct" a typo in the source code by finding
-/// visible declarations whose names are similar to the name that was
-/// present in the source code.
-///
-/// \param TypoName the \c DeclarationNameInfo structure that contains
-/// the name that was present in the source code along with its location.
-///
-/// \param LookupKind the name-lookup criteria used to search for the name.
-///
-/// \param S the scope in which name lookup occurs.
-///
-/// \param SS the nested-name-specifier that precedes the name we're
-/// looking for, if present.
-///
-/// \param CCC A CorrectionCandidateCallback object that provides further
-/// validation of typo correction candidates. It also provides flags for
-/// determining the set of keywords permitted.
-///
-/// \param MemberContext if non-NULL, the context in which to look for
-/// a member access expression.
-///
-/// \param EnteringContext whether we're entering the context described by
-/// the nested-name-specifier SS.
-///
-/// \param OPT when non-NULL, the search for visible declarations will
-/// also walk the protocols in the qualified interfaces of \p OPT.
-///
-/// \returns a \c TypoCorrection containing the corrected name if the typo
-/// along with information such as the \c NamedDecl where the corrected name
-/// was declared, and any additional \c NestedNameSpecifier needed to access
-/// it (C++ only). The \c TypoCorrection is empty if there is no correction.
 TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
                                  Sema::LookupNameKind LookupKind,
                                  Scope *S, CXXScopeSpec *SS,
@@ -5502,44 +5355,6 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
   return FailedCorrection(Typo, TypoName.getLoc(), RecordFailure && !SecondBestTC);
 }
 
-/// Try to "correct" a typo in the source code by finding
-/// visible declarations whose names are similar to the name that was
-/// present in the source code.
-///
-/// \param TypoName the \c DeclarationNameInfo structure that contains
-/// the name that was present in the source code along with its location.
-///
-/// \param LookupKind the name-lookup criteria used to search for the name.
-///
-/// \param S the scope in which name lookup occurs.
-///
-/// \param SS the nested-name-specifier that precedes the name we're
-/// looking for, if present.
-///
-/// \param CCC A CorrectionCandidateCallback object that provides further
-/// validation of typo correction candidates. It also provides flags for
-/// determining the set of keywords permitted.
-///
-/// \param TDG A TypoDiagnosticGenerator functor that will be used to print
-/// diagnostics when the actual typo correction is attempted.
-///
-/// \param TRC A TypoRecoveryCallback functor that will be used to build an
-/// Expr from a typo correction candidate.
-///
-/// \param MemberContext if non-NULL, the context in which to look for
-/// a member access expression.
-///
-/// \param EnteringContext whether we're entering the context described by
-/// the nested-name-specifier SS.
-///
-/// \param OPT when non-NULL, the search for visible declarations will
-/// also walk the protocols in the qualified interfaces of \p OPT.
-///
-/// \returns a new \c TypoExpr that will later be replaced in the AST with an
-/// Expr representing the result of performing typo correction, or nullptr if
-/// typo correction is not possible. If nullptr is returned, no diagnostics will
-/// be emitted and it is the responsibility of the caller to emit any that are
-/// needed.
 TypoExpr *Sema::CorrectTypoDelayed(
     const DeclarationNameInfo &TypoName, Sema::LookupNameKind LookupKind,
     Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
@@ -5816,19 +5631,13 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
     if (M->isModuleMapModule())
       return M->getFullModuleName();
 
-    Module *CurrentModule = getCurrentModule();
-
     if (M->isImplicitGlobalModule())
       M = M->getTopLevelModule();
-
-    bool IsInTheSameModule =
-        CurrentModule && CurrentModule->getPrimaryModuleInterfaceName() ==
-                             M->getPrimaryModuleInterfaceName();
 
     // If the current module unit is in the same module with M, it is OK to show
     // the partition name. Otherwise, it'll be sufficient to show the primary
     // module name.
-    if (IsInTheSameModule)
+    if (getASTContext().isInSameModule(M, getCurrentModule()))
       return M->getTopLevelModuleName().str();
     else
       return M->getPrimaryModuleInterfaceName().str();
@@ -5861,18 +5670,6 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
     createImplicitModuleImportForErrorRecovery(UseLoc, Modules[0]);
 }
 
-/// Diagnose a successfully-corrected typo. Separated from the correction
-/// itself to allow external validation of the result, etc.
-///
-/// \param Correction The result of performing typo correction.
-/// \param TypoDiag The diagnostic to produce. This will have the corrected
-///        string added to it (and usually also a fixit).
-/// \param PrevNote A note to use when indicating the location of the entity to
-///        which we are correcting. Will have the correction string added to it.
-/// \param ErrorRecovery If \c true (the default), the caller is going to
-///        recover from the typo as if the corrected string had been typed.
-///        In this case, \c PDiag must be an error, and we will attach a fixit
-///        to it.
 void Sema::diagnoseTypo(const TypoCorrection &Correction,
                         const PartialDiagnostic &TypoDiag,
                         const PartialDiagnostic &PrevNote,
@@ -5961,7 +5758,7 @@ RedeclarationKind Sema::forRedeclarationInCurContext() const {
   // anything that is not visible. We don't need to check linkage here; if
   // the context has internal linkage, redeclaration lookup won't find things
   // from other TUs, and we can't safely compute linkage yet in general.
-  if (cast<Decl>(CurContext)->getOwningModuleForLinkage(/*IgnoreLinkage*/ true))
+  if (cast<Decl>(CurContext)->getOwningModuleForLinkage())
     return RedeclarationKind::ForVisibleRedeclaration;
   return RedeclarationKind::ForExternalRedeclaration;
 }

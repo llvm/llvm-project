@@ -30,12 +30,13 @@
 # GNU-NEXT:    description data: ab cd ef
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSections [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.foo
 # LLVM-NEXT:     Offset: 0x40
 # LLVM-NEXT:     Size: 0xE8
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:	 Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMDGPU
 # LLVM-NEXT:       Data size: 0xD4
 # LLVM-NEXT:       Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
@@ -55,12 +56,14 @@
 # LLVM-NEXT: ...
 # LLVM-EMPTY:
 # LLVM-NEXT:     }
+# LLVM-NEXT:	]
 # LLVM-NEXT:   }
 # LLVM-NEXT:  NoteSection {
 # LLVM-NEXT:    Name: .note.bar
 # LLVM-NEXT:    Offset: 0x128
 # LLVM-NEXT:    Size: 0x30
-# LLVM-NEXT:    Note {
+# LLVM-NEXT:	Notes [
+# LLVM-NEXT:    {
 # LLVM-NEXT:      Owner: AMDGPU
 # LLVM-NEXT:      Data size: 0x3
 # LLVM-NEXT:      Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
@@ -68,7 +71,7 @@
 # LLVM-NEXT:        0000: 123456                               |.4V|
 # LLVM-NEXT:      )
 # LLVM-NEXT:    }
-# LLVM-NEXT:    Note {
+# LLVM-NEXT:    {
 # LLVM-NEXT:      Owner: AMDGPU
 # LLVM-NEXT:      Data size: 0x3
 # LLVM-NEXT:      Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
@@ -76,6 +79,7 @@
 # LLVM-NEXT:        0000: ABCDEF                               |...|
 # LLVM-NEXT:      )
 # LLVM-NEXT:    }
+# LLVM-NEXT:   ]
 # LLVM-NEXT:  }
 # LLVM-NEXT:]
 

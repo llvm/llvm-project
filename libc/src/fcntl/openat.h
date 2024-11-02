@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_FCNTL_OPENAT_H
 #define LLVM_LIBC_SRC_FCNTL_OPENAT_H
 
+#include "src/__support/macros/config.h"
 #include <fcntl.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int openat(int dfd, const char *path, int flags, ...);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_FCNTL_OPENAT_H

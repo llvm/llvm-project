@@ -29,8 +29,6 @@ inline _LIBCPP_HIDE_FROM_ABI int isalnum_l(int __c, locale_t) { return ::isalnum
 
 inline _LIBCPP_HIDE_FROM_ABI int isalpha_l(int __c, locale_t) { return ::isalpha(__c); }
 
-inline _LIBCPP_HIDE_FROM_ABI int isblank_l(int __c, locale_t) { return ::isblank(__c); }
-
 inline _LIBCPP_HIDE_FROM_ABI int iscntrl_l(int __c, locale_t) { return ::iscntrl(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int isdigit_l(int __c, locale_t) { return ::isdigit(__c); }

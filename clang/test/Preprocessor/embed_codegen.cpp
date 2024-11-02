@@ -3,6 +3,7 @@
 // CHECK: @__const._Z3fooi.ca = private unnamed_addr constant [3 x i32] [i32 0, i32 106, i32 107], align 4
 // CHECK: @__const._Z3fooi.sc = private unnamed_addr constant %struct.S1 { i32 106, i32 107, i32 0 }, align 4
 // CHECK: @__const._Z3fooi.t = private unnamed_addr constant [3 x %struct.T] [%struct.T { [2 x i32] [i32 48, i32 49], %struct.S1 { i32 50, i32 51, i32 52 } }, %struct.T { [2 x i32] [i32 53, i32 54], %struct.S1 { i32 55, i32 56, i32 57 } }, %struct.T { [2 x i32] [i32 10, i32 0], %struct.S1 zeroinitializer }], align 16
+// CHECK: @__const._Z3fooi.W = private unnamed_addr constant %struct.Wrapper { i32 48, %struct.HasCharArray { [10 x i8] c"123456789\0A" } }, align 4
 void foo(int a) {
 // CHECK: %a.addr = alloca i32, align 4
 // CHECK: store i32 %a, ptr %a.addr, align 4
@@ -43,8 +44,9 @@ a
 };
 
 // CHECK: store i32 107, ptr %b, align 4
-int b =
+int b = (
 #embed<jk.txt>
+    )
 ;
 
 
@@ -79,6 +81,13 @@ constexpr struct T t[] = {
 struct T tnonc[] = {
   a, 300, 1, 2, 3
 #embed <jk.txt> prefix(,)
+};
+
+
+struct HasCharArray { unsigned char h[10]; };
+struct Wrapper { int a; struct HasCharArray d;  };
+constexpr struct Wrapper W = {
+#embed "numbers.txt"
 };
 
 }

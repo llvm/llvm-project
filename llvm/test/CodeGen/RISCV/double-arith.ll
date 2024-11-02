@@ -320,9 +320,7 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fsgnjn_d:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    li a2, -1
-; RV64IZFINXZDINX-NEXT:    slli a2, a2, 63
-; RV64IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV64IZFINXZDINX-NEXT:    not a1, a1
 ; RV64IZFINXZDINX-NEXT:    fsgnj.d a0, a0, a1
 ; RV64IZFINXZDINX-NEXT:    ret
 ;

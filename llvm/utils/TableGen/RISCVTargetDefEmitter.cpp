@@ -164,7 +164,8 @@ static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
 
 static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
-     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)\n"
+     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN"
+     << ", FAST_VECTOR_UNALIGN)\n"
      << "#endif\n\n";
 
   // Iterate on all definition records.
@@ -180,9 +181,6 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
       return Feature->getValueAsString("Name") == "unaligned-vector-mem";
     });
 
-    bool FastUnalignedAccess =
-        FastScalarUnalignedAccess && FastVectorUnalignedAccess;
-
     OS << "PROC(" << Rec->getName() << ", {\"" << Rec->getValueAsString("Name")
        << "\"}, {\"";
 
@@ -193,7 +191,8 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
       printMArch(OS, Features);
     else
       OS << MArch;
-    OS << "\"}, " << FastUnalignedAccess << ")\n";
+    OS << "\"}, " << FastScalarUnalignedAccess << ", "
+       << FastVectorUnalignedAccess << ")\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";

@@ -835,7 +835,7 @@ let Command = "container add" in {
   Desc<"Overwrite an existing command at this node.">;
 }
 
-let Command = "script" in {
+let Command = "scripting run" in {
   def script_language : Option<"language", "l">,
     EnumArg<"ScriptLang">, Desc<"Specify the scripting "
     " language. If none is specific the default scripting language is used.">;
@@ -1429,9 +1429,8 @@ let Command = "statistics dump" in {
     Arg<"Boolean">,
     Desc<"Dump statistics for the targets, including breakpoints, expression "
     "evaluations, frame variables, etc. "
-    "Defaults to true, unless the '--summary' mode is enabled, in which case "
-    "this is turned off unless specified. "
-    "If both the '--targets' and the '--modules' options are 'true', a list "
+    "Defaults to true in both default mode and summary mode. "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
     "of module identifiers will be added to the 'targets' section.">;
   def statistics_dump_modules: Option<"modules", "m">, Group<1>,
     Arg<"Boolean">,
@@ -1439,7 +1438,7 @@ let Command = "statistics dump" in {
     "aspects of the module and debug information, type system, path, etc. "
     "Defaults to true, unless the '--summary' mode is enabled, in which case "
     "this is turned off unless specified. "
-    "If both the '--targets' and the '--modules' options are 'true', a list "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
     "of module identifiers will be added to the 'targets' section.">;
   def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
     Arg<"Boolean">,
