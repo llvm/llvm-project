@@ -1098,7 +1098,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
   if (S.isKeywordSelector()) {
     for (unsigned i = 0, e = S.getNumArgs(); i != e; ++i) {
       StringRef Slot = S.getNameForSlot(i);
-      if (Slot.substr(Slot.size() - 8).equals_insensitive("delegate")) {
+      if (Slot.ends_with_insensitive("delegate")) {
         if (ResultEff == ObjCInitRetE)
           ResultEff = RetEffect::MakeNoRetHard();
         else

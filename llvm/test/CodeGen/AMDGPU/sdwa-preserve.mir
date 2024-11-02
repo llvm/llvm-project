@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -start-before=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=SDWA %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=SDWA %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -start-before=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=SDWA %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=SDWA %s
 
 # SDWA-LABEL: {{^}}add_f16_u32_preserve
 

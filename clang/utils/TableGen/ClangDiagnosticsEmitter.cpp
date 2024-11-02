@@ -1343,7 +1343,7 @@ static std::string getDiagCategoryEnum(llvm::StringRef name) {
   SmallString<256> enumName = llvm::StringRef("DiagCat_");
   for (llvm::StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
     enumName += isalnum(*I) ? *I : '_';
-  return std::string(enumName.str());
+  return std::string(enumName);
 }
 
 /// Emit the array of diagnostic subgroups.

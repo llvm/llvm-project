@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK: global.arr:
 ; CHECK: .zero 1024

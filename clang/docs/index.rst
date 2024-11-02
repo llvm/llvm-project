@@ -35,6 +35,8 @@ Using Clang as a Compiler
    SanitizerCoverage
    SanitizerStats
    SanitizerSpecialCaseList
+   BoundsSafety
+   BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
    SafeStack

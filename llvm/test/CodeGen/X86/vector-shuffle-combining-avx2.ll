@@ -128,7 +128,7 @@ define <8 x i32> @combine_as_vpermd(<8 x i32> %a0) {
 define <8 x float> @combine_as_vpermps(<8 x float> %a0) {
 ; CHECK-LABEL: combine_as_vpermps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = <6,4,7,5,1,u,4,7>
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [6,4,7,5,1,u,4,7]
 ; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <8 x float> %a0, <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -784,7 +784,7 @@ define <8 x float> @constant_fold_permps() {
 define <32 x i8> @constant_fold_pshufb_256() {
 ; CHECK-LABEL: constant_fold_pshufb_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = <14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9,255,0,0,0,u,u,0,0,241,0,0,0,0,0,249,250>
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9,255,0,0,0,u,u,0,0,241,0,0,0,0,0,249,250]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 -1, i8 -2, i8 -3, i8 -4, i8 -5, i8 -6, i8 -7, i8 -8, i8 -9, i8 -10, i8 -11, i8 -12, i8 -13, i8 -14, i8 -15>, <32 x i8> <i8 1, i8 -1, i8 -1, i8 -1, i8 undef, i8 undef, i8 -1, i8 -1, i8 15, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 7, i8 6, i8 1, i8 -1, i8 -1, i8 -1, i8 undef, i8 undef, i8 -1, i8 -1, i8 15, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 7, i8 6>)
   ret <32 x i8> %1
@@ -832,7 +832,7 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
 ; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = [u,u,7,2,u,u,3,2]
 ; AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
@@ -843,7 +843,7 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5],ymm2[6,7]
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = <23,18,7,2,20,u,3,2>
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [23,18,7,2,20,u,3,2]
 ; AVX512-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    ret{{[l|q]}}

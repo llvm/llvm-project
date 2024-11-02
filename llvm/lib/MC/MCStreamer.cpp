@@ -1313,6 +1313,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::DriverKit:
     // DriverKit always uses the build version load command.
     return VersionTuple();
+  case Triple::XROS:
+    // XROS always uses the build version load command.
+    return VersionTuple();
   default:
     break;
   }
@@ -1339,6 +1342,9 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
                                            : MachO::PLATFORM_WATCHOS;
   case Triple::DriverKit:
     return MachO::PLATFORM_DRIVERKIT;
+  case Triple::XROS:
+    return Target.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
   default:
     break;
   }
@@ -1370,6 +1376,9 @@ void MCStreamer::emitVersionForTarget(
     break;
   case Triple::DriverKit:
     Version = Target.getDriverKitVersion();
+    break;
+  case Triple::XROS:
+    Version = Target.getOSVersion();
     break;
   default:
     llvm_unreachable("unexpected OS type");

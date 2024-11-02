@@ -343,3 +343,35 @@ StringRef object::getImageKindName(ImageKind Kind) {
     return "";
   }
 }
+
+bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
+                                  const OffloadFile::TargetID &RHS) {
+  // Exact matches are not considered compatible because they are the same
+  // target. We are interested in different targets that are compatible.
+  if (LHS == RHS)
+    return false;
+
+  // The triples must match at all times.
+  if (LHS.first != RHS.first)
+    return false;
+
+  // Only The AMDGPU target requires additional checks.
+  llvm::Triple T(LHS.first);
+  if (!T.isAMDGPU())
+    return false;
+
+  // The base processor must always match.
+  if (LHS.second.split(":").first != RHS.second.split(":").first)
+    return false;
+
+  // Check combintions of on / off features that must match.
+  if (LHS.second.contains("xnack+") && RHS.second.contains("xnack-"))
+    return false;
+  if (LHS.second.contains("xnack-") && RHS.second.contains("xnack+"))
+    return false;
+  if (LHS.second.contains("sramecc-") && RHS.second.contains("sramecc+"))
+    return false;
+  if (LHS.second.contains("sramecc+") && RHS.second.contains("sramecc-"))
+    return false;
+  return true;
+}

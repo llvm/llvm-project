@@ -3,7 +3,7 @@
 
 // REQUIRES: aarch64-registered-target
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 void test_multivector_read(uint32_t base) __arm_streaming __arm_in("za") {
 

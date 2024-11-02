@@ -87,31 +87,6 @@ if (LIBCXX_INCLUDE_TESTS)
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS cxx-test-depends)
 
-  if(LIBCXX_ENABLE_STD_MODULES)
-    # Generates the modules used in the test.
-    # Note the test will regenerate this with the proper setting
-    # - the right DCMAKE_CXX_STANDARD
-    # - the right test compilation flags
-    # Since modules depend on these flags there currently is no way to
-    # avoid generating these for the tests. The advantage of the
-    # pre generation is that less build information needs to be shared
-    # in the bridge.
-    add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/test/__config_module__/CMakeCache.txt"
-        COMMAND
-        ${CMAKE_COMMAND}
-            "-G${CMAKE_GENERATOR}"
-            "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
-            "-B${CMAKE_BINARY_DIR}/test/__config_module__"
-            "-H${LIBCXX_GENERATED_MODULE_DIR}"
-            "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-            "-DCMAKE_CXX_STANDARD=23"
-            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-            )
-  add_custom_target(generate-test-module-std
-      DEPENDS "${CMAKE_BINARY_DIR}/test/__config_module__/CMakeCache.txt"
-      COMMENT "Builds generic module std.")
-  endif()
 endif()
 
 if (LIBCXX_GENERATE_COVERAGE)

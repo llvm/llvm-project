@@ -288,7 +288,7 @@ define <32 x i16> @constant_shift_v32i16(<32 x i16> %a) nounwind {
 ; AVX512DQ-LABEL: constant_shift_v32i16:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,32768,16384,8192,4096,2048,1024,512,256,128,64,32,16,8,4,2>
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm2 = [u,32768,16384,8192,4096,2048,1024,512,256,128,64,32,16,8,4,2]
 ; AVX512DQ-NEXT:    vpmulhuw %ymm2, %ymm1, %ymm3
 ; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm3[1,2,3,4,5,6,7]
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5,6,7]

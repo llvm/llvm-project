@@ -529,12 +529,18 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
-    ; GCN-LABEL: name: extload_constant_i8_to_i32_uniform
-    ; GCN: liveins: $sgpr0_sgpr1
-    ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
+    ; GFX7-LABEL: name: extload_constant_i8_to_i32_uniform
+    ; GFX7: liveins: $sgpr0_sgpr1
+    ; GFX7-NEXT: {{  $}}
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
+    ;
+    ; GFX12-LABEL: name: extload_constant_i8_to_i32_uniform
+    ; GFX12: liveins: $sgpr0_sgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s8), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s8), addrspace 4, align 1)
 ...
@@ -565,12 +571,18 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
 
-    ; GCN-LABEL: name: extload_constant_i16_to_i32_uniform
-    ; GCN: liveins: $sgpr0_sgpr1
-    ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
+    ; GFX7-LABEL: name: extload_constant_i16_to_i32_uniform
+    ; GFX7: liveins: $sgpr0_sgpr1
+    ; GFX7-NEXT: {{  $}}
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
+    ;
+    ; GFX12-LABEL: name: extload_constant_i16_to_i32_uniform
+    ; GFX12: liveins: $sgpr0_sgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s16), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s16), addrspace 4, align 2)
 ...

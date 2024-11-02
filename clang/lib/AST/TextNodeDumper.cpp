@@ -1875,7 +1875,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (D->isModulePrivate())
     OS << " __module_private__";
 
-  if (D->isPure())
+  if (D->isPureVirtual())
     OS << " pure";
   if (D->isDefaulted()) {
     OS << " default";

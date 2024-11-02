@@ -232,13 +232,11 @@ class ELFAMDGPUAsmBackend : public AMDGPUAsmBackend {
   bool Is64Bit;
   bool HasRelocationAddend;
   uint8_t OSABI = ELF::ELFOSABI_NONE;
-  uint8_t ABIVersion = 0;
 
 public:
-  ELFAMDGPUAsmBackend(const Target &T, const Triple &TT, uint8_t ABIVersion) :
-      AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
-      HasRelocationAddend(TT.getOS() == Triple::AMDHSA),
-      ABIVersion(ABIVersion) {
+  ELFAMDGPUAsmBackend(const Target &T, const Triple &TT)
+      : AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
+        HasRelocationAddend(TT.getOS() == Triple::AMDHSA) {
     switch (TT.getOS()) {
     case Triple::AMDHSA:
       OSABI = ELF::ELFOSABI_AMDGPU_HSA;
@@ -256,8 +254,7 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend,
-                                       ABIVersion);
+    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend);
   }
 };
 
@@ -267,6 +264,5 @@ MCAsmBackend *llvm::createAMDGPUAsmBackend(const Target &T,
                                            const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
-  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple(),
-                                 getHsaAbiVersion(&STI).value_or(0));
+  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple());
 }

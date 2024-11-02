@@ -122,13 +122,18 @@ template <class Mutex>
 
 */
 
+#include <__config>
+
+#  ifdef _LIBCPP_HAS_NO_THREADS
+#    error "<shared_mutex> is not supported since libc++ has been configured without support for threads."
+#  endif
+
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__chrono/steady_clock.h>
 #include <__chrono/time_point.h>
 #include <__condition_variable/condition_variable.h>
-#include <__config>
 #include <__memory/addressof.h>
 #include <__mutex/mutex.h>
 #include <__mutex/tag_types.h>
@@ -145,10 +150,6 @@ _LIBCPP_PUSH_MACROS
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
-#  endif
-
-#  ifdef _LIBCPP_HAS_NO_THREADS
-#    error "<shared_mutex> is not supported since libc++ has been configured without support for threads."
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD

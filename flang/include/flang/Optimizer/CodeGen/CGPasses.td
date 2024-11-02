@@ -27,6 +27,8 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
            "Override module's target triple.">,
+    Option<"forcedDataLayout", "datalayout", "std::string", /*default=*/"",
+           "Override module's data layout.">,
     Option<"applyTBAA", "apply-tbaa", "bool", /*default=*/"false",
            "Attach TBAA tags to memory accessing operations.">
   ];

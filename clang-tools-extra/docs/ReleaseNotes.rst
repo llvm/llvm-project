@@ -143,6 +143,12 @@ New checks
 
   Detects unsafe or redundant two-step casting operations involving ``void*``.
 
+- New :doc:`bugprone-chained-comparison
+  <clang-tidy/checks/bugprone/chained-comparison>` check.
+
+  Check detects chained comparison operators that can lead to unintended
+  behavior or logical errors.
+
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.
 
@@ -235,6 +241,17 @@ New checks
   Finds return statements with ``void`` values used within functions with
   ``void`` result types.
 
+- New :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check.
+
+  Detects explicit type casting operations that involve the same source and
+  destination types, and subsequently recommend their removal.
+  
+- New :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check.
+
+  Detects redundant ``inline`` specifiers on function and variable declarations.
+
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
 
@@ -326,7 +343,8 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   ignore delegate constructors and ignore re-assignment for reference or when
-  initialization depend on field that is initialized before.
+  initialization depend on field that is initialized before. Additionally, it
+  now provides valid fixes for member variables initialized with macros.
 
 - Improved :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check
@@ -359,6 +377,13 @@ Changes in existing checks
   to ignore unused parameters when they are marked as unused and parameters of
   deleted functions and constructors.
 
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check to ignore constructor
+  calls disguised as functional casts.
+
+- Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
+  check to ignore false positives on user defined-literals.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
@@ -382,7 +407,8 @@ Changes in existing checks
   using pointer to member function. Additionally, the check no longer emits
   a diagnostic when a variable that is not type-dependent is an operand of a
   type-dependent binary operator. Improved performance of the check through
-  optimizations.
+  optimizations. The check no longer emits a diagnostic for non-parameter-pack
+  variables in C++17 fold expressions.
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
@@ -410,7 +436,8 @@ Changes in existing checks
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
-  and avoid crash for array of dependent array.
+  and avoid crash for array of dependent array and non-dereferenceable builtin
+  types used as iterators.
 
 - Improved :doc:`modernize-make-shared
   <clang-tidy/checks/modernize/make-shared>` check to support
@@ -421,6 +448,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
   false-positives when constructing the container with ``count`` copies of
   elements with value ``value``.
+
+- Improved :doc:`modernize-use-auto
+  <clang-tidy/checks/modernize/use-auto>` to avoid create incorrect fix hints
+  for pointer to array type and pointer to function type.
 
 - Improved :doc:`modernize-use-emplace
   <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
@@ -446,6 +477,10 @@ Changes in existing checks
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
   single quotes.
+
+- Improved :doc:`performance-for-range-copy
+  <clang-tidy/checks/performance/for-range-copy>` check to handle cases where
+  the loop variable is a structured binding.
 
 - Improved :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` to better handle
@@ -498,8 +533,8 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options. It also now provides more consistent
-  suggestions when parentheses are added to the return value. It also ignores
-  false-positives for comparison containing bool bitfield.
+  suggestions when parentheses are added to the return value or expressions.
+  It also ignores false-positives for comparison containing bool bitfield.
 
 - Improved :doc:`readability-misleading-indentation
   <clang-tidy/checks/readability/misleading-indentation>` check to ignore

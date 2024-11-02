@@ -18,14 +18,14 @@ define i32 @lower_lshr(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <
 ; CHECK-NEXT:    mov v4.s[2], v6.s[0]
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    mov v4.s[3], v3.s[0]
-; CHECK-NEXT:    xtn v2.4h, v0.4s
+; CHECK-NEXT:    xtn v1.4h, v0.4s
 ; CHECK-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-NEXT:    xtn v1.4h, v4.4s
+; CHECK-NEXT:    xtn v2.4h, v4.4s
 ; CHECK-NEXT:    shrn v3.4h, v4.4s, #16
-; CHECK-NEXT:    uhadd v0.4h, v2.4h, v0.4h
-; CHECK-NEXT:    uhadd v1.4h, v1.4h, v3.4h
-; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    uhadd v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    uhadd v1.4h, v2.4h, v3.4h
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %l87  = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)

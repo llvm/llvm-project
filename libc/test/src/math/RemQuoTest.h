@@ -22,12 +22,20 @@ template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = T(FPBits::inf(Sign::POS));
+  const T neg_inf = T(FPBits::inf(Sign::NEG));
+  const T zero = T(FPBits::zero(Sign::POS));
+  const T neg_zero = T(FPBits::zero(Sign::NEG));
+  const T nan = T(FPBits::build_quiet_nan());
+
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -96,11 +104,9 @@ public:
 
   void testSubnormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
-         v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
-         v += STEP, w -= STEP) {
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
+         v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
@@ -111,11 +117,9 @@ public:
 
   void testNormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 1'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
-         v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += STEP, w -= STEP) {
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
+         v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};

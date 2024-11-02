@@ -3932,6 +3932,10 @@ struct FormatStyle {
   /// \version 13
   unsigned ShortNamespaceLines;
 
+  /// Do not format macro definition body.
+  /// \version 18
+  bool SkipMacroDefinitionBody;
+
   /// Include sorting options.
   enum SortIncludesOptions : int8_t {
     /// Includes are never sorted.
@@ -4895,6 +4899,7 @@ struct FormatStyle {
            RequiresExpressionIndentation == R.RequiresExpressionIndentation &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
+           SkipMacroDefinitionBody == R.SkipMacroDefinitionBody &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&

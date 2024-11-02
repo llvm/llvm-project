@@ -3724,6 +3724,25 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
+TEST_F(ValueAsMetadataTest, handleRAUWWithTypeChange) {
+  // Test that handleRAUW supports type changes.
+  // This is helpful in cases where poison values are used to encode
+  // types in metadata, e.g. in type annotations.
+  // Changing the type stored in metadata requires to change the type of
+  // the stored poison value.
+  auto *I32Poison = PoisonValue::get(Type::getInt32Ty(Context));
+  auto *I64Poison = PoisonValue::get(Type::getInt64Ty(Context));
+  auto *MD = ConstantAsMetadata::get(I32Poison);
+
+  EXPECT_EQ(MD->getValue(), I32Poison);
+  EXPECT_NE(MD->getValue(), I64Poison);
+
+  ValueAsMetadata::handleRAUW(I32Poison, I64Poison);
+
+  EXPECT_NE(MD->getValue(), I32Poison);
+  EXPECT_EQ(MD->getValue(), I64Poison);
+}
+
 TEST_F(ValueAsMetadataTest, TempTempReplacement) {
   // Create a constant.
   ConstantAsMetadata *CI =

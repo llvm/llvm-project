@@ -329,15 +329,16 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
   }
 
   Value *Exec = popSaved();
-  Instruction *FirstInsertionPt = &*BB->getFirstInsertionPt();
+  BasicBlock::iterator FirstInsertionPt = BB->getFirstInsertionPt();
   if (!isa<UndefValue>(Exec) && !isa<UnreachableInst>(FirstInsertionPt)) {
     Instruction *ExecDef = cast<Instruction>(Exec);
     BasicBlock *DefBB = ExecDef->getParent();
     if (!DT->dominates(DefBB, BB)) {
       // Split edge to make Def dominate Use
-      FirstInsertionPt = &*SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
+      FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    IRBuilder<>(FirstInsertionPt).CreateCall(EndCf, {Exec});
+    IRBuilder<>(FirstInsertionPt->getParent(), FirstInsertionPt)
+        .CreateCall(EndCf, {Exec});
   }
 
   return true;

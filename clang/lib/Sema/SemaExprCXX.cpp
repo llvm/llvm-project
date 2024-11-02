@@ -1931,7 +1931,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
     }
   }
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, /*Scope=*/nullptr);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType AllocType = TInfo->getType();
   if (D.isInvalidType())
     return ExprError();
@@ -1947,17 +1947,17 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
 }
 
 static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
-                                       Expr *Init) {
+                                       Expr *Init, bool IsCPlusPlus20) {
   if (!Init)
     return true;
   if (ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init))
-    return PLE->getNumExprs() == 0;
+    return IsCPlusPlus20 || PLE->getNumExprs() == 0;
   if (isa<ImplicitValueInitExpr>(Init))
     return true;
   else if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init))
     return !CCE->isListInitialization() &&
            CCE->getConstructor()->isDefaultConstructor();
-  else if (Style == CXXNewInitializationStyle::List) {
+  else if (Style == CXXNewInitializationStyle::Braces) {
     assert(isa<InitListExpr>(Init) &&
            "Shouldn't create list CXXConstructExprs for arrays.");
     return true;
@@ -2011,9 +2011,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   CXXNewInitializationStyle InitStyle;
   if (DirectInitRange.isValid()) {
     assert(Initializer && "Have parens but no initializer.");
-    InitStyle = CXXNewInitializationStyle::Call;
+    InitStyle = CXXNewInitializationStyle::Parens;
   } else if (Initializer && isa<InitListExpr>(Initializer))
-    InitStyle = CXXNewInitializationStyle::List;
+    InitStyle = CXXNewInitializationStyle::Braces;
   else {
     assert((!Initializer || isa<ImplicitValueInitExpr>(Initializer) ||
             isa<CXXConstructExpr>(Initializer)) &&
@@ -2023,7 +2023,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   MultiExprArg Exprs(&Initializer, Initializer ? 1 : 0);
   if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer)) {
-    assert(InitStyle == CXXNewInitializationStyle::Call &&
+    assert(InitStyle == CXXNewInitializationStyle::Parens &&
            "paren init for non-call init");
     Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
   }
@@ -2037,15 +2037,14 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     //       initialized (8.5); if no initialization is performed,
     //       the object has indeterminate value
     case CXXNewInitializationStyle::None:
-    case CXXNewInitializationStyle::Implicit:
       return InitializationKind::CreateDefault(TypeRange.getBegin());
     //     - Otherwise, the new-initializer is interpreted according to the
     //       initialization rules of 8.5 for direct-initialization.
-    case CXXNewInitializationStyle::Call:
+    case CXXNewInitializationStyle::Parens:
       return InitializationKind::CreateDirect(TypeRange.getBegin(),
                                               DirectInitRange.getBegin(),
                                               DirectInitRange.getEnd());
-    case CXXNewInitializationStyle::List:
+    case CXXNewInitializationStyle::Braces:
       return InitializationKind::CreateDirectList(TypeRange.getBegin(),
                                                   Initializer->getBeginLoc(),
                                                   Initializer->getEndLoc());
@@ -2072,14 +2071,13 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       return ExprError();
   } else if (Deduced && !Deduced->isDeduced()) {
     MultiExprArg Inits = Exprs;
-    bool Braced = (InitStyle == CXXNewInitializationStyle::List);
+    bool Braced = (InitStyle == CXXNewInitializationStyle::Braces);
     if (Braced) {
       auto *ILE = cast<InitListExpr>(Exprs[0]);
       Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
-    if (InitStyle == CXXNewInitializationStyle::None ||
-        InitStyle == CXXNewInitializationStyle::Implicit || Inits.empty())
+    if (InitStyle == CXXNewInitializationStyle::None || Inits.empty())
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);
     if (Inits.size() > 1) {
@@ -2286,6 +2284,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   bool PassAlignment = getLangOpts().AlignedAllocation &&
                        Alignment > NewAlignment;
 
+  if (CheckArgsForPlaceholders(PlacementArgs))
+    return ExprError();
+
   AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
   if (!AllocType->isDependentType() &&
       !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
@@ -2403,7 +2404,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // Array 'new' can't have any initializers except empty parentheses.
   // Initializer lists are also allowed, in C++11. Rely on the parser for the
   // dialect distinction.
-  if (ArraySize && !isLegalArrayNewInitializer(InitStyle, Initializer)) {
+  if (ArraySize && !isLegalArrayNewInitializer(InitStyle, Initializer,
+                                               getLangOpts().CPlusPlus20)) {
     SourceRange InitRange(Exprs.front()->getBeginLoc(),
                           Exprs.back()->getEndLoc());
     Diag(StartLoc, diag::err_new_array_init_args) << InitRange;
@@ -2443,14 +2445,6 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       FullInit = Binder->getSubExpr();
 
     Initializer = FullInit.get();
-    // We don't know that we're generating an implicit initializer until now, so
-    // we have to update the initialization style as well.
-    //
-    // FIXME: it would be nice to determine the correct initialization style
-    // earlier so InitStyle doesn't need adjusting.
-    if (InitStyle == CXXNewInitializationStyle::None && Initializer) {
-      InitStyle = CXXNewInitializationStyle::Implicit;
-    }
 
     // FIXME: If we have a KnownArraySize, check that the array bound of the
     // initializer is no greater than that constant value.
@@ -3222,10 +3216,13 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
       Alloc->setLocalOwningModule(TheGlobalModuleFragment);
     }
 
-    Alloc->addAttr(VisibilityAttr::CreateImplicit(
-        Context, LangOpts.GlobalAllocationFunctionVisibilityHidden
-                     ? VisibilityAttr::Hidden
-                     : VisibilityAttr::Default));
+    if (LangOpts.hasGlobalAllocationFunctionVisibility())
+      Alloc->addAttr(VisibilityAttr::CreateImplicit(
+          Context, LangOpts.hasHiddenGlobalAllocationFunctionVisibility()
+                       ? VisibilityAttr::Hidden
+                   : LangOpts.hasProtectedGlobalAllocationFunctionVisibility()
+                       ? VisibilityAttr::Protected
+                       : VisibilityAttr::Default));
 
     llvm::SmallVector<ParmVarDecl *, 3> ParamDecls;
     for (QualType T : Params) {

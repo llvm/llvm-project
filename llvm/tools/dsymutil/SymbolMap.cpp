@@ -26,12 +26,8 @@ StringRef SymbolMapTranslator::operator()(StringRef Input) {
   if (!Input.starts_with("__hidden#") && !Input.starts_with("___hidden#"))
     return Input;
 
-  bool MightNeedUnderscore = false;
   StringRef Line = Input.drop_front(sizeof("__hidden#") - 1);
-  if (Line[0] == '#') {
-    Line = Line.drop_front();
-    MightNeedUnderscore = true;
-  }
+  bool MightNeedUnderscore = Line.consume_front("#");
 
   std::size_t LineNumber = std::numeric_limits<std::size_t>::max();
   Line.split('_').first.getAsInteger(10, LineNumber);

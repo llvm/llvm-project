@@ -226,6 +226,7 @@ add_entrypoint_object(
     ../isatty.h
   DEPENDS
     libc.include.unistd
+    libc.include.sys_ioctl
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

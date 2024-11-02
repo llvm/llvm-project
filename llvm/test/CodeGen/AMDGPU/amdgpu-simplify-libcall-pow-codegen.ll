@@ -147,13 +147,13 @@ define double @test_pow_fast_f64__integral_y(double %x, i32 %y.i) {
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
+; CHECK-NEXT:    v_mov_b32_e32 v42, v2
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
-; CHECK-NEXT:    v_mov_b32_e32 v42, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_cvt_f64_i32_e32 v[2:3], v42
@@ -286,14 +286,14 @@ define double @test_powr_fast_f64(double %x, double %y) {
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v43, v31
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
+; CHECK-NEXT:    v_mov_b32_e32 v42, v3
+; CHECK-NEXT:    v_mov_b32_e32 v41, v2
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
-; CHECK-NEXT:    v_mov_b32_e32 v42, v3
-; CHECK-NEXT:    v_mov_b32_e32 v41, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mul_f64 v[0:1], v[0:1], v[41:42]
@@ -431,13 +431,13 @@ define double @test_pown_fast_f64(double %x, i32 %y) {
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
+; CHECK-NEXT:    v_mov_b32_e32 v42, v2
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
-; CHECK-NEXT:    v_mov_b32_e32 v42, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_cvt_f64_i32_e32 v[2:3], v42

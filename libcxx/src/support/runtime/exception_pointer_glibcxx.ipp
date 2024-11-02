@@ -23,6 +23,7 @@ namespace __exception_ptr {
 struct exception_ptr {
   void* __ptr_;
 
+  explicit exception_ptr(void*) noexcept;
   exception_ptr(const exception_ptr&) noexcept;
   exception_ptr& operator=(const exception_ptr&) noexcept;
   ~exception_ptr() noexcept;
@@ -43,6 +44,13 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
   *reinterpret_cast<__exception_ptr::exception_ptr*>(this) =
       reinterpret_cast<const __exception_ptr::exception_ptr&>(other);
   return *this;
+}
+
+exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {
+  exception_ptr ptr{};
+  new (reinterpret_cast<void*>(&ptr)) __exception_ptr::exception_ptr(__e);
+
+  return ptr;
 }
 
 nested_exception::nested_exception() noexcept : __ptr_(current_exception()) {}

@@ -140,6 +140,18 @@ template<class T>
 template<class T>
     constexpr T* midpoint(T* a, T* b);        // C++20
 
+// [numeric.sat], saturation arithmetic
+template<class T>
+constexpr T add_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+template<class T>
+constexpr T sub_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+template<class T>
+constexpr T mul_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+template<class T>
+constexpr T div_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+template<class T, class U>
+constexpr T saturate_cast(U x) noexcept;                    // freestanding, Since C++26
+
 }  // std
 
 */
@@ -160,6 +172,7 @@ template<class T>
 #include <__numeric/pstl_reduce.h>
 #include <__numeric/pstl_transform_reduce.h>
 #include <__numeric/reduce.h>
+#include <__numeric/saturation_arithmetic.h>
 #include <__numeric/transform_exclusive_scan.h>
 #include <__numeric/transform_inclusive_scan.h>
 #include <__numeric/transform_reduce.h>

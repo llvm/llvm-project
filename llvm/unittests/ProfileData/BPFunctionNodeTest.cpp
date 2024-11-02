@@ -24,17 +24,24 @@ void PrintTo(const BPFunctionNode &Node, std::ostream *OS) {
 }
 
 TEST(BPFunctionNodeTest, Basic) {
-  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes({
-      TemporalProfTraceTy({0, 1, 2, 3, 4}),
-      TemporalProfTraceTy({4, 2}),
-  });
-
   auto NodeIs = [](BPFunctionNode::IDT Id,
                    ArrayRef<BPFunctionNode::UtilityNodeT> UNs) {
     return AllOf(Field("Id", &BPFunctionNode::Id, Id),
                  Field("UtilityNodes", &BPFunctionNode::UtilityNodes,
                        UnorderedElementsAreArray(UNs)));
   };
+
+  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes({
+      TemporalProfTraceTy({0, 1, 2, 3}),
+  });
+  EXPECT_THAT(Nodes,
+              UnorderedElementsAre(NodeIs(0, {0, 1, 2}), NodeIs(1, {1, 2}),
+                                   NodeIs(2, {1, 2}), NodeIs(3, {2})));
+
+  Nodes = TemporalProfTraceTy::createBPFunctionNodes({
+      TemporalProfTraceTy({0, 1, 2, 3, 4}),
+      TemporalProfTraceTy({4, 2}),
+  });
 
   EXPECT_THAT(Nodes,
               UnorderedElementsAre(NodeIs(0, {0, 1, 2}), NodeIs(1, {1, 2}),

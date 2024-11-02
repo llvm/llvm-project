@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -std=c++20 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
 // CHECK-NOT: [-Wunsafe-buffer-usage]
 
+#include <stdint.h>
 #ifndef INCLUDED
 #define INCLUDED
 #pragma clang system_header
@@ -90,15 +91,18 @@ void cast_without_data(int *ptr) {
 void warned_patterns(std::span<int> span_ptr, std::span<Base> base_span, span<int> span_without_qual) {
     A *a1 = (A*)span_ptr.data(); // expected-warning{{unsafe invocation of span::data}}
     a1 = (A*)span_ptr.data(); // expected-warning{{unsafe invocation of span::data}}
-  
-    A *a2 = (A*) span_without_qual.data(); // expected-warning{{unsafe invocation of span::data}}
-   
-    // TODO:: Should we warn when we cast from base to derived type?
-    Derived *b = dynamic_cast<Derived*> (base_span.data());// expected-warning{{unsafe invocation of span::data}}
 
-   // TODO:: This pattern is safe. We can add special handling for it, if we decide this
-   // is the recommended fixit for the unsafe invocations.
-   A *a3 = (A*)span_ptr.subspan(0, sizeof(A)).data(); // expected-warning{{unsafe invocation of span::data}}
+    a1 = (A*)(span_ptr.data()); // expected-warning{{unsafe invocation of span::data}}
+    A *a2 = (A*) (span_without_qual.data()); // expected-warning{{unsafe invocation of span::data}}
+
+    a2 = (A*) span_without_qual.data(); // expected-warning{{unsafe invocation of span::data}}
+
+     // TODO:: Should we warn when we cast from base to derived type?
+     Derived *b = dynamic_cast<Derived*> (base_span.data());// expected-warning{{unsafe invocation of span::data}}
+
+    // TODO:: This pattern is safe. We can add special handling for it, if we decide this
+    // is the recommended fixit for the unsafe invocations.
+    A *a3 = (A*)span_ptr.subspan(0, sizeof(A)).data(); // expected-warning{{unsafe invocation of span::data}}
 }
 
 void not_warned_patterns(std::span<A> span_ptr, std::span<Base> base_span) {
@@ -108,6 +112,9 @@ void not_warned_patterns(std::span<A> span_ptr, std::span<Base> base_span) {
 
     p = (int*) span_ptr.data();
     A *a = (A*) span_ptr.hello(); // Invoking other methods.
+   
+     intptr_t k = (intptr_t) span_ptr.data();
+    k = (intptr_t) (span_ptr.data());
 }
 
 // We do not want to warn about other types

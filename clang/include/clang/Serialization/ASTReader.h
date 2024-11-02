@@ -550,6 +550,10 @@ private:
   /// declaration and the value is the deduced return type.
   llvm::SmallMapVector<FunctionDecl *, QualType, 4> PendingDeducedTypeUpdates;
 
+  /// Functions has undededuced return type and we wish we can find the deduced
+  /// return type by iterating the redecls in other modules.
+  llvm::SmallVector<FunctionDecl *, 4> PendingUndeducedFunctionDecls;
+
   /// Declarations that have been imported and have typedef names for
   /// linkage purposes.
   llvm::DenseMap<std::pair<DeclContext *, IdentifierInfo *>, NamedDecl *>

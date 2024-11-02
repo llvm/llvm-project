@@ -82,8 +82,8 @@ clang_tablegen("AttrSubMatchRulesList") {
   td_file = "Attr.td"
 }
 
-clang_tablegen("AttrTokenKinds") {
-  args = [ "-gen-clang-attr-token-kinds" ]
+clang_tablegen("RegularKeywordAttrInfo") {
+  args = [ "-gen-clang-regular-keyword-attr-info" ]
   td_file = "Attr.td"
 }
 

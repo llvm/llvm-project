@@ -273,7 +273,8 @@ private:
 
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
-                                     ArrayRef<SDValue> Ops, MemSDNode *M) const;
+                                     ArrayRef<SDValue> Ops,
+                                     MachineMemOperand *MMO) const;
 
   // Handle 8 bit and 16 bit buffer stores
   SDValue handleByteShortBufferStores(SelectionDAG &DAG, EVT VDataType,

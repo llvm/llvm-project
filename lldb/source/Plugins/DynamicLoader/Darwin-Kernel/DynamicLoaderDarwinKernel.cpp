@@ -166,6 +166,7 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
+    case llvm::Triple::XROS:
     // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
       if (triple_ref.getVendor() != llvm::Triple::Apple) {
         return nullptr;

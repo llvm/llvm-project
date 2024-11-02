@@ -14,6 +14,7 @@
 #define OPENACC_OPS
 
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/EnumAttr.td"
@@ -1474,29 +1475,34 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data",
 
 def OpenACC_LoopOp : OpenACC_Op<"loop",
     [AttrSizedOperandSegments, RecursiveMemoryEffects,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
+     MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
   let summary = "loop construct";
 
   let description = [{
-    The "acc.loop" operation represents the OpenACC loop construct.
+    The "acc.loop" operation represents the OpenACC loop construct. The lower
+    and upper bounds specify a half-open range: the range includes the lower
+    bound but does not include the upper bound. If the `inclusive` attribute is
+    set then the upper bound is included.
 
     Example:
 
     ```mlir
-    acc.loop gang vector {
-      scf.for %arg3 = %c0 to %c10 step %c1 {
-        scf.for %arg4 = %c0 to %c10 step %c1 {
-          scf.for %arg5 = %c0 to %c10 step %c1 {
-            // ... body
-          }
-        }
-      }
+    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) = 
+        (%c0, %c0, %c0 : index, index, index) to 
+        (%c10, %c10, %c10 : index, index, index) step 
+        (%c1, %c1, %c1 : index, index, index) {
+      // Loop body
       acc.yield
     } attributes { collapse = [3] }
     ```
   }];
 
   let arguments = (ins
+      Variadic<IntOrIndex>:$lowerbound,
+      Variadic<IntOrIndex>:$upperbound,
+      Variadic<IntOrIndex>:$step,
+      OptionalAttr<DenseBoolArrayAttr>:$inclusiveUpperbound,
       OptionalAttr<I64ArrayAttr>:$collapse,
       OptionalAttr<DeviceTypeArrayAttr>:$collapseDeviceType,
       Variadic<IntOrIndex>:$gangOperands,
@@ -1521,7 +1527,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes
-      );
+  );
 
   let results = (outs Variadic<AnyType>:$results);
 
@@ -1538,6 +1544,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    Block &getBody() { return getLoopRegions().front()->front(); }
 
     /// Return true if the op has the auto attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -1628,7 +1636,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
         `)`
       | `cache` `(` $cacheOperands `:` type($cacheOperands) `)`
     )
-    $region
+    custom<LoopControl>($region, $lowerbound, type($lowerbound), $upperbound,
+        type($upperbound), $step, type($step))
     ( `(` type($results)^ `)` )?
     attr-dict-with-keyword
   }];
@@ -1994,27 +2003,63 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        SymbolNameAttr:$func_name,
-                       OptionalAttr<StrAttr>:$bind_name,
-                       UnitAttr:$gang,
-                       UnitAttr:$worker,
-                       UnitAttr:$vector,
-                       UnitAttr:$seq,
+                       OptionalAttr<StrArrayAttr>:$bindName,
+                       OptionalAttr<DeviceTypeArrayAttr>:$bindNameDeviceType,
+                       OptionalAttr<DeviceTypeArrayAttr>:$worker,
+                       OptionalAttr<DeviceTypeArrayAttr>:$vector,
+                       OptionalAttr<DeviceTypeArrayAttr>:$seq,
                        UnitAttr:$nohost,
                        UnitAttr:$implicit,
-                       OptionalAttr<APIntAttr>:$gangDim);
+                       OptionalAttr<DeviceTypeArrayAttr>:$gang,
+                       OptionalAttr<I64ArrayAttr>:$gangDim,
+                       OptionalAttr<DeviceTypeArrayAttr>:$gangDimDeviceType);
 
   let extraClassDeclaration = [{
     static StringRef getGangDimKeyword() { return "dim"; }
+
+    /// Return true if the op has the worker attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasWorker();
+    /// Return true if the op has the worker attribute for the given
+    /// device_type.
+    bool hasWorker(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has the vector attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasVector();
+    /// Return true if the op has the vector attribute for the given
+    /// device_type.
+    bool hasVector(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has the seq attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasSeq();
+    /// Return true if the op has the seq attribute for the given
+    /// device_type.
+    bool hasSeq(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has the gang attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasGang();
+    /// Return true if the op has the gang attribute for the given
+    /// device_type.
+    bool hasGang(mlir::acc::DeviceType deviceType);
+
+    std::optional<int64_t> getGangDimValue();
+    std::optional<int64_t> getGangDimValue(mlir::acc::DeviceType deviceType);
+
+    std::optional<llvm::StringRef> getBindNameValue();
+    std::optional<llvm::StringRef> getBindNameValue(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     $sym_name `func` `(` $func_name `)`
     oilist (
-        `bind` `(` $bind_name `)`
-      | `gang` `` custom<RoutineGangClause>($gang, $gangDim)
-      | `worker` $worker
-      | `vector` $vector
-      | `seq` $seq
+        `bind` `(` custom<BindName>($bindName, $bindNameDeviceType) `)`
+      | `gang` `` custom<RoutineGangClause>($gang, $gangDim, $gangDimDeviceType)
+      | `worker` custom<DeviceTypeArrayAttr>($worker)
+      | `vector` custom<DeviceTypeArrayAttr>($vector)
+      | `seq` custom<DeviceTypeArrayAttr>($seq)
       | `nohost` $nohost
       | `implicit` $implicit
     ) attr-dict-with-keyword

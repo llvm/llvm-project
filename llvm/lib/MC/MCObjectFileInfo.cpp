@@ -52,6 +52,10 @@ static bool useCompactUnwind(const Triple &T) {
   if (T.isSimulatorEnvironment())
     return true;
 
+  // XROS always has it.
+  if (T.isXROS())
+    return true;
+
   return false;
 }
 

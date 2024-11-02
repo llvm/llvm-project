@@ -1889,9 +1889,6 @@ void __r_anchor_multiline<_CharT>::__exec(__state& __s) const {
   if (__s.__current_ == __s.__last_ && !(__s.__flags_ & regex_constants::match_not_eol)) {
     __s.__do_   = __state::__accept_but_not_consume;
     __s.__node_ = this->first();
-  } else if (__s.__current_ == __s.__first_ && !(__s.__flags_ & regex_constants::match_not_eol)) {
-    __s.__do_   = __state::__accept_but_not_consume;
-    __s.__node_ = this->first();
   } else if (__multiline_ && std::__is_eol(*__s.__current_)) {
     __s.__do_   = __state::__accept_but_not_consume;
     __s.__node_ = this->first();
@@ -5126,6 +5123,14 @@ bool basic_regex<_CharT, _Traits>::__search(
         return true;
       }
       __m.__matches_.assign(__m.size(), __m.__unmatched_);
+    }
+    __m.__matches_.assign(__m.size(), __m.__unmatched_);
+    if (__match_at_start(__first, __last, __m, __flags, false)) {
+      __m.__prefix_.second  = __m[0].first;
+      __m.__prefix_.matched = __m.__prefix_.first != __m.__prefix_.second;
+      __m.__suffix_.first   = __m[0].second;
+      __m.__suffix_.matched = __m.__suffix_.first != __m.__suffix_.second;
+      return true;
     }
   }
   __m.__matches_.clear();

@@ -692,6 +692,13 @@ def warn_maybe_falloff_nonvoid_function : Warning<
 def warn_falloff_nonvoid_function : Warning<
   "non-void function does not return a value">,
   InGroup<ReturnType>;
+def warn_const_attr_with_pure_attr : Warning<
+  "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def warn_pure_function_returns_void : Warning<
+  "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
+  InGroup<IgnoredAttributes>;
+
 def err_maybe_falloff_nonvoid_block : Error<
   "non-void block does not return a value in all control paths">;
 def err_falloff_nonvoid_block : Error<
@@ -2411,7 +2418,8 @@ def err_auto_not_allowed : Error<
   "|in type allocated by 'new'|in K&R-style function parameter"
   "|in template parameter|in friend declaration|in function prototype that is "
   "not a function declaration|in requires expression parameter"
-  "|in array declaration}1">;
+  "|in array declaration"
+  "|in declaration of conversion function template}1">;
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -3113,6 +3121,8 @@ def err_musttail_scope : Error<
   "cannot perform a tail call from this return statement">;
 def err_musttail_no_variadic : Error<
   "%0 attribute may not be used with variadic functions">;
+def err_musttail_no_return : Error<
+  "%0 attribute may not be used with no-return-attribute functions">;
 
 def err_nsobject_attribute : Error<
   "'NSObject' attribute is for pointer types only">;
@@ -3696,10 +3706,14 @@ def err_sme_call_in_non_sme_target : Error<
   "call to a streaming function requires 'sme'">;
 def err_sme_za_call_no_za_state : Error<
   "call to a shared ZA function requires the caller to have ZA state">;
+def err_sme_zt0_call_no_zt0_state : Error<
+  "call to a shared ZT0 function requires the caller to have ZT0 state">;
 def err_sme_definition_using_sm_in_non_sme_target : Error<
   "function executed in streaming-SVE mode requires 'sme'">;
 def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
+def err_sme_definition_using_zt0_in_non_sme2_target : Error<
+  "function using ZT0 state requires 'sme2'">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_unknown_arm_state : Error<
@@ -5144,8 +5158,6 @@ def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<
   "template argument / label address difference / what did you expect?">;
-def err_non_type_template_arg_unsupported : Error<
-  "non-type template argument of type %0 is not yet supported">;
 def err_template_arg_not_convertible : Error<
   "non-type template argument of type %0 cannot be converted to a value "
   "of type %1">;
@@ -5197,9 +5209,6 @@ def err_template_arg_not_object_or_func : Error<
   "non-type template argument does not refer to an object or function">;
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
-def err_template_arg_member_ptr_base_derived_not_supported : Error<
-  "non-type template argument of pointer-to-member type %1 that refers "
-  "to member %q0 of a different class is not supported yet">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
 def ext_template_arg_extra_parens : ExtWarn<
@@ -6447,6 +6456,19 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
 
+def err_flexible_array_count_not_in_same_struct : Error<
+  "'counted_by' field %0 isn't within the same struct as the flexible array">;
+def err_counted_by_attr_not_on_flexible_array_member : Error<
+  "'counted_by' only applies to C99 flexible array members">;
+def err_counted_by_attr_refers_to_flexible_array : Error<
+  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_must_be_in_structure : Error<
+  "field %0 in 'counted_by' not inside structure">;
+def err_flexible_array_counted_by_attr_field_not_integer : Error<
+  "field %0 in 'counted_by' must be a non-boolean integer type">;
+def note_flexible_array_counted_by_attr_field : Note<
+  "field %0 declared here">;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.
@@ -6993,6 +7015,11 @@ def err_member_decl_does_not_match : Error<
   "does not match any declaration in %1">;
 def err_friend_decl_with_def_arg_must_be_def : Error<
   "friend declaration specifying a default argument must be a definition">;
+def err_friend_decl_with_enclosing_temp_constraint_must_be_def : Error<
+  "friend declaration with a constraint that depends on an enclosing "
+  "template parameter must be a definition">;
+def err_non_temp_friend_decl_with_requires_clause_must_be_def : Error<
+  "non-template friend declaration with a requires clause must be a definition">;
 def err_friend_decl_with_def_arg_redeclared : Error<
   "friend declaration specifying a default argument must be the only declaration">;
 def err_friend_decl_does_not_match : Error<

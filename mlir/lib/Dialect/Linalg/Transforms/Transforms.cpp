@@ -202,7 +202,7 @@ struct PackedOperandsDim {
 
 /// Helper struct to encode packing along all dimensions of a LinalgOp.
 struct PackedOperandsDimList {
-  void push_back(PackedOperandsDim &&packedOperandsDims) {
+  void pushBack(PackedOperandsDim &&packedOperandsDims) {
     spec.emplace_back(packedOperandsDims);
   }
   /// Return all the dims that have been packed for operand @ `operandPos`.
@@ -482,10 +482,10 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
 SmallVector<int64_t>
 PackedOperandsDimList::extractPackedDimsForOperand(int64_t operandPos) {
   SmallVector<int64_t> res;
-  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
-    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+  for (auto &i : spec) {
+    if (!i.packedDimForEachOperand[operandPos].has_value())
       continue;
-    res.push_back(spec[i].packedDimForEachOperand[operandPos].value());
+    res.push_back(i.packedDimForEachOperand[operandPos].value());
   }
   return res;
 }
@@ -493,10 +493,10 @@ PackedOperandsDimList::extractPackedDimsForOperand(int64_t operandPos) {
 SmallVector<OpFoldResult>
 PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
   SmallVector<OpFoldResult> res;
-  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
-    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+  for (auto &i : spec) {
+    if (!i.packedDimForEachOperand[operandPos].has_value())
       continue;
-    res.push_back(spec[i].packedSize);
+    res.push_back(i.packedSize);
   }
   return res;
 }
@@ -539,7 +539,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     if (failed(maybePackedDimForEachOperand))
       return failure();
     packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
-    listOfPackedOperandsDim.push_back(std::move(packedOperandsDims));
+    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
 
     LLVM_DEBUG(
         DBGS() << "++++ After pack size #" << i << ": " << packedSizes[i]

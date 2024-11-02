@@ -25,6 +25,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #define GET_TYPEDEF_CLASSES

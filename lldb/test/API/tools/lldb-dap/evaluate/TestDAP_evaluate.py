@@ -87,7 +87,13 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             )
             self.assertEvaluate("struct3", "0x.*0")
 
-        self.assertEvaluateFailure("var")  # local variable of a_function
+        if context == "repl":
+            # In the repl context expressions may be interpreted as lldb
+            # commands since no variables have the same name as the command.
+            self.assertEvaluate("var", r"\(lldb\) var\n.*")
+        else:
+            self.assertEvaluateFailure("var")  # local variable of a_function
+
         self.assertEvaluateFailure("my_struct")  # type name
         self.assertEvaluateFailure("int")  # type name
         self.assertEvaluateFailure("foo")  # member of my_struct

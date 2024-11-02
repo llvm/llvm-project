@@ -216,10 +216,11 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
       spec = (*m_files)[record->FileNum];
   }
 
-  auto cu_sp = std::make_shared<CompileUnit>(m_objfile_sp->GetModule(),
-                                             /*user_data*/ nullptr, spec, index,
-                                             eLanguageTypeUnknown,
-                                             /*is_optimized*/ eLazyBoolNo);
+  auto cu_sp = std::make_shared<CompileUnit>(
+      m_objfile_sp->GetModule(),
+      /*user_data*/ nullptr, std::make_shared<SupportFile>(spec), index,
+      eLanguageTypeUnknown,
+      /*is_optimized*/ eLazyBoolNo);
 
   SetCompileUnitAtIndex(index, cu_sp);
   return cu_sp;

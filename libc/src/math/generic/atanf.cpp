@@ -17,18 +17,20 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+  using Sign = fputil::Sign;
 
   // x == 0.0
   if (LIBC_UNLIKELY(x == 0.0f))
     return x;
 
   FPBits xbits(x);
-  bool sign = xbits.get_sign();
-  xbits.set_sign(false);
+  Sign sign = xbits.sign();
+  xbits.set_sign(Sign::POS);
 
   if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
     if (xbits.is_inf())
-      return static_cast<float>(opt_barrier(sign ? -M_MATH_PI_2 : M_MATH_PI_2));
+      return static_cast<float>(
+          opt_barrier(sign.is_neg() ? -M_MATH_PI_2 : M_MATH_PI_2));
     else
       return x;
   }
@@ -45,7 +47,7 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   // |x| == 1.8670953512191772
   if (LIBC_UNLIKELY(xbits.uintval() == 0x3feefcfbU)) {
     int rounding_mode = fputil::quick_get_round();
-    if (sign) {
+    if (sign.is_neg()) {
       if (rounding_mode == FE_DOWNWARD) {
         // -1.0790828466415405
         return FPBits(0xbf8a1f63U).get_val();

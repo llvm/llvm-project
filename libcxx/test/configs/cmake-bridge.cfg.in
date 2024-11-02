@@ -31,10 +31,3 @@ config.substitutions.append(('%{target-include}', '@LIBCXX_GENERATED_INCLUDE_TAR
 config.substitutions.append(('%{lib}', '@LIBCXX_LIBRARY_DIR@'))
 config.substitutions.append(('%{module}', '@LIBCXX_GENERATED_MODULE_DIR@'))
 config.substitutions.append(('%{test-tools}', '@LIBCXX_TEST_TOOLS_PATH@'))
-
-# The test needs to manually rebuild the module. The compiler flags used in the
-# test need to be the same as the compiler flags used to generate the module.
-# In the future, when CMake can generated modules this may no longer be
-# necessary.
-# TODO MODULES whether it's possible to remove this substitution.
-config.substitutions.append(('%{cmake}', '@CMAKE_COMMAND@'))

@@ -331,7 +331,7 @@ promoteSubViews(ImplicitLocOpBuilder &b,
 
   // Copy data into the promoted buffers. Use callback if provided.
   for (auto v : options.subViews) {
-    auto info = promotionInfoMap.find(v.first);
+    auto *info = promotionInfoMap.find(v.first);
     if (info == promotionInfoMap.end())
       continue;
     if (options.operandsNumbersToCopyIn.count(v.first) == 0)

@@ -184,6 +184,29 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 #endif
 }
 
+Expected<std::string> getTargetTripleAndFeatures(hsa_agent_t Agent) {
+  std::string Target;
+  auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
+    uint32_t Length;
+    hsa_status_t Status;
+    Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME_LENGTH, &Length);
+    if (Status != HSA_STATUS_SUCCESS)
+      return Status;
+
+    llvm::SmallVector<char> ISAName(Length);
+    Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName.begin());
+    if (Status != HSA_STATUS_SUCCESS)
+      return Status;
+
+    llvm::StringRef TripleTarget(ISAName.begin(), Length);
+    if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
+      Target = TripleTarget.ltrim('-').rtrim('\0').str();
+    return HSA_STATUS_SUCCESS;
+  });
+  if (Err)
+    return Err;
+  return Target;
+}
 } // namespace utils
 
 /// Utility class representing generic resource references to AMDGPU resources.
@@ -416,8 +439,9 @@ private:
 /// Class implementing the AMDGPU device images' properties.
 struct AMDGPUDeviceImageTy : public DeviceImageTy {
   /// Create the AMDGPU image with the id and the target image pointer.
-  AMDGPUDeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage) {}
+  AMDGPUDeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                      const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage) {}
 
   /// Prepare and load the executable corresponding to the image.
   Error loadExecutable(const AMDGPUDeviceTy &Device);
@@ -1849,8 +1873,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         OMPX_UseMultipleSdmaEngines(
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
-        AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
-        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
+        OMPX_ApuMaps("OMPX_APU_MAPS", false), AMDGPUStreamManager(*this, Agent),
+        AMDGPUEventManager(*this), AMDGPUSignalManager(*this), Agent(Agent),
+        HostDevice(HostDevice) {}
 
   ~AMDGPUDeviceTy() {}
 
@@ -1939,6 +1964,19 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Initialize signal pool.
     if (auto Err = AMDGPUSignalManager.init(OMPX_InitialNumSignals))
+      return Err;
+
+    // Detect if XNACK is enabled
+    auto TargeTripleAndFeaturesOrError =
+        utils::getTargetTripleAndFeatures(Agent);
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    if (static_cast<StringRef>(*TargeTripleAndFeaturesOrError)
+            .contains("xnack+"))
+      IsXnackEnabled = true;
+
+    // detect if device is an APU.
+    if (auto Err = checkIfAPU())
       return Err;
 
     return Plugin::success();
@@ -2068,14 +2106,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   uint64_t getClockFrequency() const override { return ClockFrequency; }
 
   /// Allocate and construct an AMDGPU kernel.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin::get().allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
       return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
-    new (AMDGPUKernel) AMDGPUKernelTy(KernelEntry.name);
+    new (AMDGPUKernel) AMDGPUKernelTy(Name);
 
     return *AMDGPUKernel;
   }
@@ -2123,7 +2160,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Allocate and initialize the image object.
     AMDGPUDeviceImageTy *AMDImage =
         Plugin::get().allocate<AMDGPUDeviceImageTy>();
-    new (AMDImage) AMDGPUDeviceImageTy(ImageId, TgtImage);
+    new (AMDImage) AMDGPUDeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the HSA executable.
     if (Error Err = AMDImage->loadExecutable(*this))
@@ -2650,6 +2687,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Returns true if auto zero-copy the best configuration for the current
+  /// arch.
+  /// On AMDGPUs, automatic zero-copy is turned on
+  /// when running on an APU with XNACK (unified memory) support
+  /// enabled. On discrete GPUs, automatic zero-copy is triggered
+  /// if the user sets the environment variable OMPX_APU_MAPS=1
+  /// and if XNACK is enabled. The rationale is that zero-copy
+  /// is the best configuration (performance, memory footprint) on APUs,
+  /// while it is often not the best on discrete GPUs.
+  /// XNACK can be enabled with a kernel boot parameter or with
+  /// the HSA_XNACK environment variable.
+  bool useAutoZeroCopyImpl() override {
+    return ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled);
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = StackSize;
@@ -2749,6 +2801,34 @@ private:
     return Err;
   }
 
+  /// Detect if current architecture is an APU.
+  Error checkIfAPU() {
+    // TODO: replace with ROCr API once it becomes available.
+    llvm::StringRef StrGfxName(ComputeUnitKind);
+    IsAPU = llvm::StringSwitch<bool>(StrGfxName)
+                .Case("gfx940", true)
+                .Default(false);
+    if (IsAPU)
+      return Plugin::success();
+
+    bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
+                        .Case("gfx942", true)
+                        .Default(false);
+    if (!MayBeAPU)
+      return Plugin::success();
+
+    // can be MI300A or MI300X
+    uint32_t ChipID = 0;
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_CHIP_ID, ChipID))
+      return Err;
+
+    if (!(ChipID & 0x1)) {
+      IsAPU = true;
+      return Plugin::success();
+    }
+    return Plugin::success();
+  }
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;
@@ -2785,6 +2865,10 @@ private:
   /// Use ROCm 5.7 interface for multiple SDMA engines
   BoolEnvar OMPX_UseMultipleSdmaEngines;
 
+  /// Value of OMPX_APU_MAPS env var used to force
+  /// automatic zero-copy behavior on non-APU GPUs.
+  BoolEnvar OMPX_ApuMaps;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -2815,6 +2899,13 @@ private:
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
   uint64_t StackSize = 16 * 1024 /* 16 KB */;
+
+  /// Is the plugin associated with an APU?
+  bool IsAPU = false;
+
+  /// True is the system is configured with XNACK-Enabled.
+  /// False otherwise.
+  bool IsXnackEnabled = false;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -3059,30 +3150,13 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
 
     for (hsa_agent_t Agent : KernelAgents) {
-      std::string Target;
-      auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
-        uint32_t Length;
-        hsa_status_t Status;
-        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME_LENGTH, &Length);
-        if (Status != HSA_STATUS_SUCCESS)
-          return Status;
-
-        llvm::SmallVector<char> ISAName(Length);
-        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName.begin());
-        if (Status != HSA_STATUS_SUCCESS)
-          return Status;
-
-        llvm::StringRef TripleTarget(ISAName.begin(), Length);
-        if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
-          Target = TripleTarget.ltrim('-').rtrim('\0').str();
-        return HSA_STATUS_SUCCESS;
-      });
-      if (Err)
-        return std::move(Err);
-
+      auto TargeTripleAndFeaturesOrError =
+          utils::getTargetTripleAndFeatures(Agent);
+      if (!TargeTripleAndFeaturesOrError)
+        return TargeTripleAndFeaturesOrError.takeError();
       if (!utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
                                            ElfOrErr->getPlatformFlags(),
-                                           Target))
+                                           *TargeTripleAndFeaturesOrError))
         return false;
     }
     return true;

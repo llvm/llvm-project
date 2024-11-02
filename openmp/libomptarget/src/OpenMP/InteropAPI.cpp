@@ -199,7 +199,7 @@ static const char *copyErrorString(llvm::Error &&Err) {
   char *UsrMsg = reinterpret_cast<char *>(malloc(ErrMsg.size() + 1));
   strcpy(UsrMsg, ErrMsg.c_str());
   return UsrMsg;
-};
+}
 
 extern "C" {
 

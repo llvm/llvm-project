@@ -44,7 +44,7 @@ static WasmYAML::Table makeTable(uint32_t Index,
                                  const wasm::WasmTableType &Type) {
   WasmYAML::Table T;
   T.Index = Index;
-  T.ElemType = Type.ElemType;
+  T.ElemType = (uint32_t)Type.ElemType;
   T.TableLimits = makeLimits(Type.Limits);
   return T;
 }
@@ -334,7 +334,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         WasmYAML::ElemSegment Seg;
         Seg.Flags = Segment.Flags;
         Seg.TableNumber = Segment.TableNumber;
-        Seg.ElemKind = Segment.ElemKind;
+        Seg.ElemKind = (uint32_t)Segment.ElemKind;
         Seg.Offset.Extended = Segment.Offset.Extended;
         if (Seg.Offset.Extended) {
           Seg.Offset.Body = yaml::BinaryRef(Segment.Offset.Body);

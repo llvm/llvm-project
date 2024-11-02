@@ -11,7 +11,7 @@ define i32 @PR63108() {
 ; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    je .LBB0_2
 ; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE-NEXT:    jmp .LBB0_5
 ; SSE-NEXT:  .LBB0_2: # %vector.body.preheader
 ; SSE-NEXT:    pxor %xmm0, %xmm0

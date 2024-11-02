@@ -680,7 +680,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   FunctionDeclBits.addBit(D->isInlined());
   FunctionDeclBits.addBit(D->hasSkippedBody());
   FunctionDeclBits.addBit(D->isVirtualAsWritten());
-  FunctionDeclBits.addBit(D->isPure());
+  FunctionDeclBits.addBit(D->isPureVirtual());
   FunctionDeclBits.addBit(D->hasInheritedPrototype());
   FunctionDeclBits.addBit(D->hasWrittenPrototype());
   FunctionDeclBits.addBit(D->isDeletedBit());

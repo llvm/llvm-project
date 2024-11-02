@@ -172,7 +172,8 @@ public:
   ///
   /// Requirements:
   ///
-  ///  The function must have a body.
+  ///  The function must have a body, i.e.
+  ///  `FunctionDecl::doesThisDecalarationHaveABody()` must be true.
   void initialize();
 
   /// Returns a new environment that is a copy of this one.

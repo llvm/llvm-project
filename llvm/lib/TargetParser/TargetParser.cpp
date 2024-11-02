@@ -275,12 +275,15 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1201:
     case GK_GFX1200:
       Features["ci-insts"] = true;
-      Features["dot5-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
       Features["dot9-insts"] = true;
       Features["dot10-insts"] = true;
       Features["dl-insts"] = true;
+      Features["atomic-ds-pk-add-16-insts"] = true;
+      Features["atomic-flat-pk-add-16-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-global-pk-add-bf16-inst"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["gfx8-insts"] = true;
@@ -291,7 +294,6 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx12-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
-      Features["gws"] = true;
       break;
     case GK_GFX1151:
     case GK_GFX1150:
@@ -371,6 +373,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX940:
       Features["gfx940-insts"] = true;
       Features["fp8-insts"] = true;
+      Features["fp8-conversion-insts"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;

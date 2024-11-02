@@ -113,7 +113,9 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0xc01"),
             "saphira");
-
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x6d\n"
+                                              "CPU part        : 0xd49"),
+            "neoverse-n2");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
                                               "CPU part        : 0xac3"),
             "ampere1");

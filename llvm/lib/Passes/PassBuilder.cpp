@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -92,6 +93,7 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -315,7 +317,8 @@ namespace {
 /// We currently only use this for --print-before/after.
 bool shouldPopulateClassToPassNames() {
   return PrintPipelinePasses || !printBeforePasses().empty() ||
-         !printAfterPasses().empty() || !isFilterPassesEmpty();
+         !printAfterPasses().empty() || !isFilterPassesEmpty() ||
+         TargetPassConfig::hasLimitedCodeGenPipeline();
 }
 
 // A pass for testing -print-on-crash.
@@ -656,6 +659,10 @@ Expected<bool> parseSinglePassOption(StringRef Params, StringRef OptionName,
 
 Expected<bool> parseGlobalDCEPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "vfe-linkage-unit-visibility", "GlobalDCE");
+}
+
+Expected<bool> parseCGProfilePassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "in-lto-post-link", "CGProfile");
 }
 
 Expected<bool> parseInlinerPassOptions(StringRef Params) {
@@ -1080,6 +1087,32 @@ Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
   return parseSinglePassOption(Params, "demote-catchswitch-only",
                                "WinEHPreparePass");
+}
+
+Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
+  GlobalMergeOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "group-by-use")
+      Result.GroupByUse = Enable;
+    else if (ParamName == "ignore-single-use")
+      Result.IgnoreSingleUse = Enable;
+    else if (ParamName == "merge-const")
+      Result.MergeConst = Enable;
+    else if (ParamName == "merge-external")
+      Result.MergeExternal = Enable;
+    else if (ParamName.consume_front("max-offset=")) {
+      if (ParamName.getAsInteger(0, Result.MaxOffset))
+        return make_error<StringError>(
+            formatv("invalid GlobalMergePass parameter '{0}' ", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 } // namespace

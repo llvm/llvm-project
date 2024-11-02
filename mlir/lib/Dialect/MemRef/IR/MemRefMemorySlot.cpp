@@ -227,7 +227,7 @@ DeletionKind memref::LoadOp::rewire(const DestructurableMemorySlot &slot,
   Attribute index = getAttributeIndexFromIndexOperands(
       getContext(), getIndices(), getMemRefType());
   const MemorySlot &memorySlot = subslots.at(index);
-  rewriter.updateRootInPlace(*this, [&]() {
+  rewriter.modifyOpInPlace(*this, [&]() {
     setMemRef(memorySlot.ptr);
     getIndicesMutable().clear();
   });
@@ -280,7 +280,7 @@ DeletionKind memref::StoreOp::rewire(const DestructurableMemorySlot &slot,
   Attribute index = getAttributeIndexFromIndexOperands(
       getContext(), getIndices(), getMemRefType());
   const MemorySlot &memorySlot = subslots.at(index);
-  rewriter.updateRootInPlace(*this, [&]() {
+  rewriter.modifyOpInPlace(*this, [&]() {
     setMemRef(memorySlot.ptr);
     getIndicesMutable().clear();
   });

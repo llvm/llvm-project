@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX1100 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1150 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX1150 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX1100 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX1150 %s
 
 declare float @llvm.fabs.f32(float)
 declare float @llvm.fma.f32(float, float, float)

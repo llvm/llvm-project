@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -global-isel -stop-after=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -global-isel -stop-after=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -global-isel -stop-after=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -global-isel -stop-after=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
-; RUN: not llc -march=amdgcn -mcpu=tahiti -global-isel < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=amdgcn -mcpu=tonga -global-isel < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn -mcpu=tahiti -global-isel < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn -mcpu=tonga -global-isel < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: lds: unsupported initializer for address space
 

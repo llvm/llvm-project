@@ -125,6 +125,7 @@ bool ProcessKDP::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {
     case llvm::Triple::IOS:    // For arm targets
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
+    case llvm::Triple::XROS:
       if (triple_ref.getVendor() == llvm::Triple::Apple) {
         ObjectFile *exe_objfile = exe_module->GetObjectFile();
         if (exe_objfile->GetType() == ObjectFile::eTypeExecutable &&

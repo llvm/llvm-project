@@ -252,6 +252,46 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
   DeclarationFragments Fragments;
 
+  // An ElaboratedType is a sugar for types that are referred to using an
+  // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
+  // qualified name, e.g., `N::M::type`, or both.
+  if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(T)) {
+    ElaboratedTypeKeyword Keyword = ET->getKeyword();
+    if (Keyword != ElaboratedTypeKeyword::None) {
+      Fragments
+          .append(ElaboratedType::getKeywordName(Keyword),
+                  DeclarationFragments::FragmentKind::Keyword)
+          .appendSpace();
+    }
+
+    if (const NestedNameSpecifier *NNS = ET->getQualifier())
+      Fragments.append(getFragmentsForNNS(NNS, Context, After));
+
+    // After handling the elaborated keyword or qualified name, build
+    // declaration fragments for the desugared underlying type.
+    return Fragments.append(getFragmentsForType(ET->desugar(), Context, After));
+  }
+
+  // If the type is a typedefed type, get the underlying TypedefNameDecl for a
+  // direct reference to the typedef instead of the wrapped type.
+
+  // 'id' type is a typedef for an ObjCObjectPointerType
+  //  we treat it as a typedef
+  if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
+    const TypedefNameDecl *Decl = TypedefTy->getDecl();
+    TypedefUnderlyingTypeResolver TypedefResolver(Context);
+    std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
+
+    if (T->isObjCIdType()) {
+      return Fragments.append(Decl->getName(),
+                              DeclarationFragments::FragmentKind::Keyword);
+    }
+
+    return Fragments.append(
+        Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
+        USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
+  }
+
   // Declaration fragments of a pointer type is the declaration fragments of
   // the pointee type followed by a `*`,
   if (T->isPointerType() && !T->isFunctionPointerType())
@@ -326,46 +366,6 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
     return Fragments.append(
         getFragmentsForType(AT->getElementType(), Context, After));
-  }
-
-  // An ElaboratedType is a sugar for types that are referred to using an
-  // elaborated keyword, e.g., `struct S`, `enum E`, or (in C++) via a
-  // qualified name, e.g., `N::M::type`, or both.
-  if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(T)) {
-    ElaboratedTypeKeyword Keyword = ET->getKeyword();
-    if (Keyword != ElaboratedTypeKeyword::None) {
-      Fragments
-          .append(ElaboratedType::getKeywordName(Keyword),
-                  DeclarationFragments::FragmentKind::Keyword)
-          .appendSpace();
-    }
-
-    if (const NestedNameSpecifier *NNS = ET->getQualifier())
-      Fragments.append(getFragmentsForNNS(NNS, Context, After));
-
-    // After handling the elaborated keyword or qualified name, build
-    // declaration fragments for the desugared underlying type.
-    return Fragments.append(getFragmentsForType(ET->desugar(), Context, After));
-  }
-
-  // If the type is a typedefed type, get the underlying TypedefNameDecl for a
-  // direct reference to the typedef instead of the wrapped type.
-
-  // 'id' type is a typedef for an ObjCObjectPointerType
-  //  we treat it as a typedef
-  if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
-    const TypedefNameDecl *Decl = TypedefTy->getDecl();
-    TypedefUnderlyingTypeResolver TypedefResolver(Context);
-    std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
-
-    if (T->isObjCIdType()) {
-      return Fragments.append(Decl->getName(),
-                              DeclarationFragments::FragmentKind::Keyword);
-    }
-
-    return Fragments.append(
-        Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
-        USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
   }
 
   // Everything we care about has been handled now, reduce to the canonical
@@ -760,13 +760,16 @@ DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
       .append(";", DeclarationFragments::FragmentKind::Text);
 }
 
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForRecordDecl(
+    const RecordDecl *Record) {
   if (const auto *TypedefNameDecl = Record->getTypedefNameForAnonDecl())
     return getFragmentsForTypedef(TypedefNameDecl);
 
   DeclarationFragments Fragments;
-  Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
+  if (Record->isUnion())
+    Fragments.append("union", DeclarationFragments::FragmentKind::Keyword);
+  else
+    Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
 
   if (!Record->getName().empty())
     Fragments.appendSpace().append(

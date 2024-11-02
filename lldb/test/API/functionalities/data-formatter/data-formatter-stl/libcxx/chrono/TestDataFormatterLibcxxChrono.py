@@ -32,6 +32,102 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
         self.expect("frame variable m", substrs=["m = 4321 months"])
         self.expect("frame variable y", substrs=["y = 321 years"])
 
+        self.expect(
+            "frame variable ss_tp",
+            substrs=["ss_tp = date/time=1970-01-01T00:00:00Z timestamp=0 s"],
+        )
+        self.expect(
+            "frame variable ss_tp_d",
+            substrs=["ss_tp_d = date/time=1970-01-01T00:00:00Z timestamp=0 s"],
+        )
+        self.expect(
+            "frame variable ss_tp_d_r",
+            substrs=["ss_tp_d_r = date/time=1970-01-01T00:00:00Z timestamp=0 s"],
+        )
+        self.expect(
+            "frame variable ss_tp_d_r2",
+            substrs=["ss_tp_d_r2 = date/time=1970-01-01T00:00:00Z timestamp=0 s"],
+        )
+
+        self.expect(
+            "frame variable ss_0",
+            substrs=["ss_0 = date/time=1970-01-01T00:00:00Z timestamp=0 s"],
+        )
+
+        self.expect(
+            "frame variable ss_neg_date_time",
+            substrs=[
+                "ss_neg_date_time = date/time=-32767-01-01T00:00:00Z timestamp=-1096193779200 s"
+            ],
+        )
+        self.expect(
+            "frame variable ss_neg_seconds",
+            substrs=["ss_neg_seconds = timestamp=-1096193779201 s"],
+        )
+
+        self.expect(
+            "frame variable ss_pos_date_time",
+            substrs=[
+                "ss_pos_date_time = date/time=32767-12-31T23:59:59Z timestamp=971890963199 s"
+            ],
+        )
+        self.expect(
+            "frame variable ss_pos_seconds",
+            substrs=["ss_pos_seconds = timestamp=971890963200 s"],
+        )
+
+        self.expect(
+            "frame variable ss_min",
+            substrs=["ss_min = timestamp=-9223372036854775808 s"],
+        )
+        self.expect(
+            "frame variable ss_max",
+            substrs=["ss_max = timestamp=9223372036854775807 s"],
+        )
+
+        self.expect(
+            "frame variable sd_tp",
+            substrs=["sd_tp = date=1970-01-01Z timestamp=0 days"],
+        )
+        self.expect(
+            "frame variable sd_tp_d_r",
+            substrs=["sd_tp_d_r = date=1970-01-01Z timestamp=0 days"],
+        )
+        self.expect(
+            "frame variable sd_tp_d_r2",
+            substrs=["sd_tp_d_r2 = date=1970-01-01Z timestamp=0 days"],
+        )
+
+        self.expect(
+            "frame variable sd_0", substrs=["sd_0 = date=1970-01-01Z timestamp=0 days"]
+        )
+        self.expect(
+            "frame variable sd_neg_date",
+            substrs=["sd_neg_date = date=-32767-01-01Z timestamp=-12687428 days"],
+        )
+        self.expect(
+            "frame variable sd_neg_days",
+            substrs=["sd_neg_days = timestamp=-12687429 days"],
+        )
+
+        self.expect(
+            "frame variable sd_pos_date",
+            substrs=["sd_pos_date = date=32767-12-31Z timestamp=11248737 days"],
+        )
+        self.expect(
+            "frame variable sd_pos_days",
+            substrs=["sd_pos_days = timestamp=11248738 days"],
+        )
+
+        self.expect(
+            "frame variable sd_min",
+            substrs=["sd_min = timestamp=-2147483648 days"],
+        )
+        self.expect(
+            "frame variable sd_max",
+            substrs=["sd_max = timestamp=2147483647 days"],
+        )
+
         self.expect("frame variable d_0", substrs=["d_0 = day=0"])
         self.expect("frame variable d_1", substrs=["d_1 = day=1"])
         self.expect("frame variable d_31", substrs=["d_31 = day=31"])

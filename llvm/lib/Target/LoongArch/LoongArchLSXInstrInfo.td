@@ -892,6 +892,10 @@ def VFRECIP_S : LSX2R_VV<0x729cf400>;
 def VFRECIP_D : LSX2R_VV<0x729cf800>;
 def VFRSQRT_S : LSX2R_VV<0x729d0400>;
 def VFRSQRT_D : LSX2R_VV<0x729d0800>;
+def VFRECIPE_S : LSX2R_VV<0x729d1400>;
+def VFRECIPE_D : LSX2R_VV<0x729d1800>;
+def VFRSQRTE_S : LSX2R_VV<0x729d2400>;
+def VFRSQRTE_D : LSX2R_VV<0x729d2800>;
 
 def VFCVTL_S_H : LSX2R_VV<0x729de800>;
 def VFCVTH_S_H : LSX2R_VV<0x729dec00>;
@@ -1742,6 +1746,22 @@ foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
 def : Pat<(fneg (v4f32 LSX128:$vj)), (VBITREVI_W LSX128:$vj, 31)>;
 def : Pat<(fneg (v2f64 LSX128:$vj)), (VBITREVI_D LSX128:$vj, 63)>;
 
+// VFFINT_{S_W/D_L}
+def : Pat<(v4f32 (sint_to_fp v4i32:$vj)), (VFFINT_S_W v4i32:$vj)>;
+def : Pat<(v2f64 (sint_to_fp v2i64:$vj)), (VFFINT_D_L v2i64:$vj)>;
+
+// VFFINT_{S_WU/D_LU}
+def : Pat<(v4f32 (uint_to_fp v4i32:$vj)), (VFFINT_S_WU v4i32:$vj)>;
+def : Pat<(v2f64 (uint_to_fp v2i64:$vj)), (VFFINT_D_LU v2i64:$vj)>;
+
+// VFTINTRZ_{W_S/L_D}
+def : Pat<(v4i32 (fp_to_sint v4f32:$vj)), (VFTINTRZ_W_S v4f32:$vj)>;
+def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
+
+// VFTINTRZ_{W_SU/L_DU}
+def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
+def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;
+
 } // Predicates = [HasExtLSX]
 
 /// Intrinsic pattern
@@ -2026,6 +2046,16 @@ foreach Inst = ["VFLOGB_D", "VFCLASS_D", "VFSQRT_D", "VFRECIP_D", "VFRSQRT_D",
                 "VFTINT_L_D", "VFTINTRZ_LU_D", "VFTINT_LU_D"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2f64 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
+
+// 128-Bit vector FP approximate reciprocal operation
+let Predicates = [HasFrecipe] in {
+foreach Inst = ["VFRECIPE_S", "VFRSQRTE_S"] in
+  def : Pat<(deriveLSXIntrinsic<Inst>.ret (v4f32 LSX128:$vj)),
+            (!cast<LAInst>(Inst) LSX128:$vj)>;
+foreach Inst = ["VFRECIPE_D", "VFRSQRTE_D"] in
+  def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2f64 LSX128:$vj)),
+            (!cast<LAInst>(Inst) LSX128:$vj)>;
+}
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

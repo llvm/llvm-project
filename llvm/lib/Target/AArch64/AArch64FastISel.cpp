@@ -3176,6 +3176,9 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (IsVarArg)
     return false;
 
+  if (Subtarget->isWindowsArm64EC())
+    return false;
+
   for (auto Flag : CLI.OutFlags)
     if (Flag.isInReg() || Flag.isSRet() || Flag.isNest() || Flag.isByVal() ||
         Flag.isSwiftSelf() || Flag.isSwiftAsync() || Flag.isSwiftError())

@@ -48,8 +48,9 @@ protected:
       Str << " declare <8 x i32> @llvm.vp." << BinaryIntOpcode
           << ".v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ";
 
-    const char *BinaryFPOpcodes[] = {"fadd", "fsub",   "fmul",   "fdiv",
-                                     "frem", "minnum", "maxnum", "copysign"};
+    const char *BinaryFPOpcodes[] = {"fadd",    "fsub",    "fmul",   "fdiv",
+                                     "frem",    "minnum",  "maxnum", "minimum",
+                                     "maximum", "copysign"};
     for (const char *BinaryFPOpcode : BinaryFPOpcodes)
       Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
           << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";

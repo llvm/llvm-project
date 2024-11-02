@@ -587,7 +587,7 @@ define <2 x i16> @fold_v2i16() {
 ;
 ; X64-LABEL: fold_v2i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <61440,240,u,u,u,u,u,u>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [61440,240,u,u,u,u,u,u]
 ; X64-NEXT:    retq
 ;
 ; X86XOP-LABEL: fold_v2i16:

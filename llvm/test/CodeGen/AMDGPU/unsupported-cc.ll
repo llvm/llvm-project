@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; These tests are for condition codes that are not supported by the hardware
 

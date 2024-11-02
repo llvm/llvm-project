@@ -664,8 +664,8 @@ private:
 
 } // namespace
 
-[[maybe_unused]] static raw_ostream &operator<<(raw_ostream &os,
-                               const SmallVector<SourceElementRangeList> &vec) {
+[[maybe_unused]] static raw_ostream &
+operator<<(raw_ostream &os, const SmallVector<SourceElementRangeList> &vec) {
   for (const auto &l : vec) {
     for (auto it : llvm::enumerate(l)) {
       os << "{ " << it.value().sourceElementIdx << ": b@["
@@ -847,11 +847,19 @@ struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
     bool narrowing = targetVectorType.getElementTypeBitWidth() <=
                      shuffledElementType.getIntOrFloatBitWidth();
     if (narrowing) {
-      rewriter.replaceOpWithNewOp<arith::TruncIOp>(
-          bitCastOp, bitCastOp.getResultVectorType(), runningResult);
+      if (runningResult.getType() == bitCastOp.getResultVectorType()) {
+        rewriter.replaceOp(bitCastOp, runningResult);
+      } else {
+        rewriter.replaceOpWithNewOp<arith::TruncIOp>(
+            bitCastOp, bitCastOp.getResultVectorType(), runningResult);
+      }
     } else {
-      rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
-          bitCastOp, bitCastOp.getResultVectorType(), runningResult);
+      if (runningResult.getType() == bitCastOp.getResultVectorType()) {
+        rewriter.replaceOp(bitCastOp, runningResult);
+      } else {
+        rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
+            bitCastOp, bitCastOp.getResultVectorType(), runningResult);
+      }
     }
 
     return success();

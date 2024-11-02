@@ -291,6 +291,7 @@ CodeGenTarget::CodeGenTarget(RecordKeeper &records)
   if (Targets.size() != 1)
     PrintFatalError("Multiple subclasses of Target defined!");
   TargetRec = Targets[0];
+  MacroFusions = Records.getAllDerivedDefinitions("Fusion");
 }
 
 CodeGenTarget::~CodeGenTarget() {

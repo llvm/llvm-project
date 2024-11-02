@@ -893,7 +893,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     llvm::raw_svector_ostream OS(ModuleID);
     OS << ModuleIDPrefix << llvm::format("%" PRIx64, FatbinWrapper->getGUID());
     llvm::Constant *ModuleIDConstant = makeConstantArray(
-        std::string(ModuleID.str()), "", ModuleIDSectionName, 32, /*AddNull=*/true);
+        std::string(ModuleID), "", ModuleIDSectionName, 32, /*AddNull=*/true);
 
     // Create an alias for the FatbinWrapper that nvcc will look for.
     llvm::GlobalAlias::create(llvm::GlobalValue::ExternalLinkage,

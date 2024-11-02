@@ -32,7 +32,8 @@ define void @f0() "patchable-function"="prologue-short-redirect" {
 
 define void @f1() "patchable-function"="prologue-short-redirect" "frame-pointer"="all" {
 ; CHECK-LABEL: _f1
-; CHECK-NEXT: ff f5 	pushq	%rbp
+; CHECK-NEXT: 66 90     nop
+; CHECK-NEXT: 55		pushq	%rbp
 
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _f1:
@@ -47,6 +48,7 @@ define void @f1() "patchable-function"="prologue-short-redirect" "frame-pointer"
 ; 64: f1:
 ; 64-NEXT: .seh_proc f1
 ; 64-NEXT: # %bb.0:
+; 64-NEXT: xchgw %ax, %ax
 ; 64-NEXT: pushq   %rbp
 		
   ret void

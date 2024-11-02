@@ -165,6 +165,15 @@ def ConvertArithToSPIRV : Pass<"convert-arith-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToArmSME
+//===----------------------------------------------------------------------===//
+
+def ArithToArmSMEConversionPass : Pass<"convert-arith-to-arm-sme"> {
+  let summary = "Convert Arith dialect to ArmSME dialect";
+  let dependentDialects = ["arm_sme::ArmSMEDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArmNeon2dToIntr
 //===----------------------------------------------------------------------===//
 

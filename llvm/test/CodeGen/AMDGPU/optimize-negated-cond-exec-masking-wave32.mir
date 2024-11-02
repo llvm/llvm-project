@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN: name: negated_cond_vop2
 # GCN:      %0:sgpr_32 = IMPLICIT_DEF

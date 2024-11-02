@@ -8,7 +8,10 @@
 ## associated file or linker script line number).
 
 # CHECK:      error: {{.*}}:(.text+0x2): relocation R_X86_64_GOTPCRELX out of range: 2147483658 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK-NEXT: >>> defined in <internal>
+# CHECK-EMPTY:
 # CHECK-NEXT: error: {{.*}}:(.text+0x9): relocation R_X86_64_REX_GOTPCRELX out of range: 2147483651 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK-NEXT: >>> defined in <internal>
 
 #--- a.s
   movl __stop_data@GOTPCREL(%rip), %eax  # out of range

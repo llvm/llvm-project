@@ -146,6 +146,19 @@ There are several kinds of mapping regions:
   <span>}</span>
   </pre>`
 
+* Decision regions associate multiple branch regions with a boolean
+  expression in the source code.  This information also includes the number of
+  bitmap bytes needed to represent the expression's executed test vectors as
+  well as the total number of instrumentable branch conditions that comprise
+  the expression.  Decision regions are used to visualize Modified
+  Condition/Decision Coverage (MC/DC) in *llvm-cov* for each boolean
+  expression.  When decision regions are used, control flow IDs are assigned to
+  each associated branch region. One ID represents the current branch
+  condition, and two additional IDs represent the next branch condition in the
+  control flow given a true or false evaluation, respectively.  This allows
+  *llvm-cov* to reconstruct the control flow around the conditions in order to
+  comprehend the full list of potential executable test vectors.
+
 .. _source code range:
 
 Source Range:

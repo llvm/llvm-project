@@ -261,9 +261,9 @@ void PreferMemberInitializerCheck::check(
 
       SmallString<128> Insertion(
           {UseAssignment ? " = " : "{",
-           Lexer::getSourceText(
-               CharSourceRange(InitValue->getSourceRange(), true),
-               *Result.SourceManager, getLangOpts()),
+           Lexer::getSourceText(Result.SourceManager->getExpansionRange(
+                                    InitValue->getSourceRange()),
+                                *Result.SourceManager, getLangOpts()),
            UseAssignment ? "" : "}"});
 
       Diag << FixItHint::CreateInsertion(FieldEnd, Insertion)
@@ -346,7 +346,7 @@ void PreferMemberInitializerCheck::check(
       if (InvalidFix)
         continue;
       StringRef NewInit = Lexer::getSourceText(
-          CharSourceRange(InitValue->getSourceRange(), true),
+          Result.SourceManager->getExpansionRange(InitValue->getSourceRange()),
           *Result.SourceManager, getLangOpts());
       if (HasInitAlready) {
         if (InsertPos.isValid())

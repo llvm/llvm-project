@@ -38,9 +38,10 @@ extern int ༀ;
 extern int 𑩐;
 extern int 𐠈;
 extern int ꙮ;
-extern int  \u1B4C;     // BALINESE LETTER ARCHAIC JNYA - Added in Unicode 14
-extern int  \U00016AA2; // TANGSA LETTER GA - Added in Unicode 14
-extern int  \U0001E4D0; // 𞓐 NAG MUNDARI LETTER O - Added in Unicode 15
+extern int \u1B4C;     // BALINESE LETTER ARCHAIC JNYA - Added in Unicode 14
+extern int \U00016AA2; // TANGSA LETTER GA - Added in Unicode 14
+extern int \U0001E4D0; // 𞓐 NAG MUNDARI LETTER O - Added in Unicode 15
+extern int \u{2EBF0}; // CJK UNIFIED IDEOGRAPH-2EBF0 - Added in Unicode 15.1
 extern int a\N{TANGSA LETTER GA};
 extern int a\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a valid Unicode character name}} \
                                 // expected-error {{expected ';' after top level declarator}} \
@@ -74,7 +75,7 @@ extern int 👷; // expected-error {{unexpected character <U+1F477>}} \
 
 extern int 👷‍♀; // expected-warning {{declaration does not declare anything}} \
                   expected-error {{unexpected character <U+1F477>}} \
-                  expected-error {{unexpected character <U+200D>}} \
+                  expected-error {{character <U+200D> not allowed at the start of an identifier}} \
                   expected-error {{unexpected character <U+2640>}}
 #else
 

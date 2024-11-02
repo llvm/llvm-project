@@ -151,6 +151,11 @@ ARM_ARCH("armv9.4-a", ARMV9_4A, "9.4-A", "+v9.4a",
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
           ARM::AEK_DOTPROD | ARM::AEK_BF16 | ARM::AEK_I8MM))
+ARM_ARCH("armv9.5-a", ARMV9_5A, "9.5-A", "+v9.5a",
+         ARMBuildAttrs::CPUArch::v9_A, FK_NEON_FP_ARMV8,
+         (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
+          ARM::AEK_DOTPROD | ARM::AEK_BF16 | ARM::AEK_I8MM))
 ARM_ARCH("armv8-r", ARMV8R, "8-R", "+v8r", ARMBuildAttrs::CPUArch::v8_R,
           FK_NEON_FP_ARMV8,
           (ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |

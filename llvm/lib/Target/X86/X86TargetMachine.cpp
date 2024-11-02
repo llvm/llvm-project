@@ -113,6 +113,9 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
+
+  if (TT.getArch() == Triple::x86_64)
+    return std::make_unique<X86_64ELFTargetObjectFile>();
   return std::make_unique<X86ELFTargetObjectFile>();
 }
 

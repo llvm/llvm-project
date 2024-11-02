@@ -112,6 +112,8 @@ int openListener(std::string Host, std::string PortStr) {
 #endif // LLVM_ON_UNIX
 }
 
+#if LLVM_ENABLE_THREADS
+
 // JITLink debug support plugins put information about JITed code in this GDB
 // JIT Interface global from OrcTargetProcess.
 extern "C" struct jit_descriptor __jit_debug_descriptor;
@@ -122,6 +124,8 @@ static void *findLastDebugDescriptorEntryPtr() {
     Last = Last->next_entry;
   return Last;
 }
+
+#endif
 
 int main(int argc, char *argv[]) {
 #if LLVM_ENABLE_THREADS

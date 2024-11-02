@@ -22,9 +22,6 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-  COMPILE_OPTIONS
-    # TODO: https://github.com/llvm/llvm-project/issues/77395
-    -Wno-shorten-64-to-32
 )
 
 add_entrypoint_object(

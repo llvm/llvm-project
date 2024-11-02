@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -S -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefixes=CHECK,CHECK-CXX
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -S -O1 -Werror -o /dev/null %s
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 // CHECK-C-LABEL: define dso_local void @test_svld1_hor_za8(
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {

@@ -375,9 +375,6 @@ struct BufferizationOptions {
   SmallVector<AnalysisStateInitFn> stateInitializers;
 };
 
-/// Return `true` if the given value is a BlockArgument of a func::FuncOp.
-bool isFunctionArgument(Value value);
-
 /// Traversal parameters for `findValueInReverseUseDefChain`.
 struct TraversalConfig {
   /// Specifies if leaves (that do not have further OpOperands to follow)
@@ -601,6 +598,12 @@ FailureOr<BaseMemRefType> getBufferType(Value value,
                                         const BufferizationOptions &options,
                                         SmallVector<Value> &invocationStack);
 
+/// Return "true" if the given op has tensor semantics and should be bufferized.
+/// If the op is bufferizable, the BufferizableOpInterface is queried.
+/// Otherwise, an op has tensor semantics if it has tensor operands, tensor
+/// op results and/or tensor block arguments.
+bool hasTensorSemantics(Operation *op);
+
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
 void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
@@ -694,6 +697,10 @@ AliasingOpOperandList unknownGetAliasingOpOperands(Value value);
 /// This is the default implementation of getAliasingValues in case the owner
 /// op does not implement the BufferizableOpInterface.
 AliasingValueList unknownGetAliasingValues(OpOperand &opOperand);
+
+/// This is the default implementation of
+/// BufferizableOpInterface::hasTensorSemantics
+bool defaultHasTensorSemantics(Operation *op);
 } // namespace detail
 
 } // namespace bufferization

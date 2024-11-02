@@ -98,13 +98,6 @@ void OpenMPDialect::initialize() {
       *getContext());
   mlir::func::FuncOp::attachInterface<
       mlir::omp::DeclareTargetDefaultModel<mlir::func::FuncOp>>(*getContext());
-
-  // Attach default early outlining interface to func ops.
-  mlir::func::FuncOp::attachInterface<
-      mlir::omp::EarlyOutliningDefaultModel<mlir::func::FuncOp>>(*getContext());
-  mlir::LLVM::LLVMFuncOp::attachInterface<
-      mlir::omp::EarlyOutliningDefaultModel<mlir::LLVM::LLVMFuncOp>>(
-      *getContext());
 }
 
 //===----------------------------------------------------------------------===//

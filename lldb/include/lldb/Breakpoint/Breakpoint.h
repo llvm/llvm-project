@@ -672,7 +672,7 @@ private:
 
   void SendBreakpointChangedEvent(lldb::BreakpointEventType eventKind);
 
-  void SendBreakpointChangedEvent(BreakpointEventData *data);
+  void SendBreakpointChangedEvent(const lldb::EventDataSP &breakpoint_data_sp);
 
   Breakpoint(const Breakpoint &) = delete;
   const Breakpoint &operator=(const Breakpoint &) = delete;

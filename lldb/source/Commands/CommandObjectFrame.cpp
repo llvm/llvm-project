@@ -494,6 +494,7 @@ protected:
     case eValueTypeVTableEntry:
       return false;
     }
+    llvm_unreachable("Unexpected scope value");
   }
 
   /// Finds all the variables in `all_variables` whose name matches `regex`,

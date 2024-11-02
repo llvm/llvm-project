@@ -1,4 +1,5 @@
 ; RUN: opt -S %s -passes=sroa -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=sroa -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; #include <cstddef>

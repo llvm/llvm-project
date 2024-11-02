@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck %s
 
 ; This test just checks that the compiler doesn't crash.
 

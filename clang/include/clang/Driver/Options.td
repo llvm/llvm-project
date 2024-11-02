@@ -3459,6 +3459,10 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
+def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Force behvaior as if the user specified pragma omp requires unified_shared_memory.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPForceUSM">>;
 def fopenmp_target_jit : Flag<["-"], "fopenmp-target-jit">, Group<f_Group>,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Emit code that can be JIT compiled for OpenMP offloading. Implies -foffload-lto=full">;
@@ -3664,6 +3668,10 @@ def ftrivial_auto_var_init_stop_after : Joined<["-"], "ftrivial-auto-var-init-st
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Stop initializing trivial automatic stack variables after the specified number of instances">,
   MarshallingInfoInt<LangOpts<"TrivialAutoVarInitStopAfter">>;
+def ftrivial_auto_var_init_max_size : Joined<["-"], "ftrivial-auto-var-init-max-size=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  HelpText<"Stop initializing trivial automatic stack variables if var size exceeds the specified number of instances (in bytes)">,
+  MarshallingInfoInt<LangOpts<"TrivialAutoVarInitMaxSize">>;
 def fstandalone_debug : Flag<["-"], "fstandalone-debug">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Emit full debug info for all types used by the program">;
@@ -3858,27 +3866,32 @@ def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
 defm visibility_from_dllstorageclass : BoolFOption<"visibility-from-dllstorageclass",
   LangOpts<"VisibilityFromDLLStorageClass">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Set the visibility of symbols in the generated code from their DLL storage class">,
+          "Override the visibility of globals based on their final DLL storage class.">,
   NegFlag<SetFalse>>;
+class MarshallingInfoVisibilityFromDLLStorage<KeyPathAndMacro kpm, code default>
+  : MarshallingInfoEnum<kpm, default>,
+    Values<"keep,hidden,protected,default">,
+    NormalizedValuesScope<"LangOptions::VisibilityFromDLLStorageClassKinds">,
+    NormalizedValues<["Keep", "Hidden", "Protected", "Default"]> {}
 def fvisibility_dllexport_EQ : Joined<["-"], "fvisibility-dllexport=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for dllexport definitions [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"DLLExportVisibility">, "DefaultVisibility">,
+  HelpText<"The visibility for dllexport definitions. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"DLLExportVisibility">, "Default">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_nodllstorageclass_EQ : Joined<["-"], "fvisibility-nodllstorageclass=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for definitions without an explicit DLL export class [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"NoDLLStorageClassVisibility">, "HiddenVisibility">,
+  HelpText<"The visibility for definitions without an explicit DLL storage class. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"NoDLLStorageClassVisibility">, "Hidden">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_externs_dllimport_EQ : Joined<["-"], "fvisibility-externs-dllimport=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for dllimport external declarations [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"ExternDeclDLLImportVisibility">, "DefaultVisibility">,
+  HelpText<"The visibility for dllimport external declarations. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"ExternDeclDLLImportVisibility">, "Default">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_externs_nodllstorageclass_EQ : Joined<["-"], "fvisibility-externs-nodllstorageclass=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for external declarations without an explicit DLL dllstorageclass [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"ExternDeclNoDLLStorageClassVisibility">, "HiddenVisibility">,
+  HelpText<"The visibility for external declarations without an explicit DLL storage class. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"ExternDeclNoDLLStorageClassVisibility">, "Hidden">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_EQ : Joined<["-"], "fvisibility=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -3901,9 +3914,16 @@ def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>
   HelpText<"Give global types 'default' visibility and global functions and "
            "variables 'hidden' visibility by default">;
 def fvisibility_global_new_delete_hidden : Flag<["-"], "fvisibility-global-new-delete-hidden">, Group<f_Group>,
-  HelpText<"Give global C++ operator new and delete declarations hidden visibility">,
+  HelpText<"Give global C++ operator new and delete declarations hidden visibility">;
+class MarshallingInfoVisibilityGlobalNewDelete<KeyPathAndMacro kpm, code default>
+  : MarshallingInfoEnum<kpm, default>,
+    Values<"force-default,force-protected,force-hidden,source">,
+    NormalizedValuesScope<"LangOptions::VisibilityForcedKinds">,
+    NormalizedValues<["ForceDefault", "ForceProtected", "ForceHidden", "Source"]> {}
+def fvisibility_global_new_delete_EQ : Joined<["-"], "fvisibility-global-new-delete=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"GlobalAllocationFunctionVisibilityHidden">>;
+  HelpText<"The visibility for global C++ operator new and delete declarations. If 'source' is specified the visibility is not adjusted">,
+  MarshallingInfoVisibilityGlobalNewDelete<LangOpts<"GlobalAllocationFunctionVisibility">, "ForceDefault">;
 def mdefault_visibility_export_mapping_EQ : Joined<["-"], "mdefault-visibility-export-mapping=">,
   Values<"none,explicit,all">,
   NormalizedValuesScope<"LangOptions::DefaultVisiblityExportMapping">,
@@ -4761,12 +4781,12 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>, Group<m_Group>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
+  HelpText<"Specify code object ABI version. Defaults to 5. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5">,
   NormalizedValuesScope<"llvm::CodeObjectVersionKind">,
   NormalizedValues<["COV_None", "COV_4", "COV_5"]>,
-  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
+  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_5">;
 
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",
@@ -5307,7 +5327,8 @@ def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
   LangOpts<"POSIXThreads">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Support POSIX threads in generated code">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  NegFlag<SetFalse>,
+  BothFlags<[], [ClangOption, CC1Option, FlangOption, FC1Option]>>;
 def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;
@@ -6043,11 +6064,11 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
-// Features egpr, push2pop2 and ppx are validated with llvm-test-suite && cpu2017 on Intel SDE.
+// Features egpr, push2pop2, ppx and ndd are validated with llvm-test-suite && cpu2017 on Intel SDE.
 // For stability, we turn on these features only for -mapxf. After a feature pass the validation,
 // we will add it to -mapxf.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx", "ndd"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd"]>;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags
@@ -6296,6 +6317,11 @@ def fsycl : Flag<["-"], "fsycl">,
 def fno_sycl : Flag<["-"], "fno-sycl">,
   Visibility<[ClangOption, CLOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
+
+// OS-specific options
+let Flags = [TargetSpecific] in {
+defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
+} // let Flags = [TargetSpecific]
 
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
@@ -8457,3 +8483,6 @@ def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   HelpText<"Embed PDB in shader container (ignored)">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
+def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
+  HelpText<"Specify the target environment">,
+  Values<"vulkan1.2, vulkan1.3">;

@@ -61,6 +61,16 @@ func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
   return
 }
 
+// CHECK-LABEL: llvm.func @target_cpu()
+// CHECK-SAME: target_cpu = "gfx90a"
+func.func private @target_cpu() attributes { "target_cpu" = "gfx90a" }
+
+// CHECK-LABEL: llvm.func @target_features()
+// CHECK-SAME: target_features = #llvm.target_features<["+sme", "+sve"]>
+func.func private @target_features() attributes {
+  "target_features" = #llvm.target_features<["+sme", "+sve"]>
+}
+
 // -----
 
 // CHECK-LABEL: llvm.func @private_callee

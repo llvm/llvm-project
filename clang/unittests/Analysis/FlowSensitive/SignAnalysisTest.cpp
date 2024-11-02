@@ -895,6 +895,33 @@ TEST(SignAnalysisTest, BinaryEQ) {
       LangStandard::lang_cxx17);
 }
 
+TEST(SignAnalysisTest, ComplexLoopCondition) {
+  std::string Code = R"(
+    int foo();
+    void fun() {
+      int a, b;
+      while ((a = foo()) > 0 && (b = foo()) > 0) {
+        a;
+        b;
+        // [[p]]
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *A = findValueDecl(ASTCtx, "a");
+        const ValueDecl *B = findValueDecl(ASTCtx, "b");
+
+        EXPECT_TRUE(isPositive(A, ASTCtx, Env));
+        EXPECT_TRUE(isPositive(B, ASTCtx, Env));
+      },
+      LangStandard::lang_cxx17);
+}
+
 TEST(SignAnalysisTest, JoinToTop) {
   std::string Code = R"(
     int foo();

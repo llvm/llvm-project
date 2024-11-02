@@ -2210,14 +2210,11 @@ enum class CXXNewInitializationStyle {
   /// New-expression has no initializer as written.
   None,
 
-  /// New-expression has no written initializer, but has an implicit one.
-  Implicit,
-
   /// New-expression has a C++98 paren-delimited initializer.
-  Call,
+  Parens,
 
   /// New-expression has a C++11 list-initializer.
-  List
+  Braces
 };
 
 /// Represents a new-expression for memory allocation and constructor
@@ -2388,17 +2385,7 @@ public:
   bool isGlobalNew() const { return CXXNewExprBits.IsGlobalNew; }
 
   /// Whether this new-expression has any initializer at all.
-  bool hasInitializer() const {
-    switch (getInitializationStyle()) {
-    case CXXNewInitializationStyle::None:
-      return false;
-    case CXXNewInitializationStyle::Implicit:
-    case CXXNewInitializationStyle::Call:
-    case CXXNewInitializationStyle::List:
-      return true;
-    }
-    llvm_unreachable("Unknown initializer");
-  }
+  bool hasInitializer() const { return CXXNewExprBits.HasInitializer; }
 
   /// The kind of initializer this new-expression has.
   CXXNewInitializationStyle getInitializationStyle() const {

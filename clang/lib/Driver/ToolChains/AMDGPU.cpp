@@ -545,26 +545,35 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
   }
 
   const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
-    if (!hasHIPStdParLibrary()) {
-      D.Diag(diag::err_drv_no_hipstdpar_lib);
-      return;
-    }
-    if (!HasRocThrustLibrary &&
-        !D.getVFS().exists(getIncludePath() + "/thrust")) {
+    StringRef Inc = getIncludePath();
+    auto &FS = D.getVFS();
+
+    if (!hasHIPStdParLibrary())
+      if (!HIPStdParPathArg.empty() ||
+          !FS.exists(Inc + "/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
+        D.Diag(diag::err_drv_no_hipstdpar_lib);
+        return;
+      }
+    if (!HasRocThrustLibrary && !FS.exists(Inc + "/thrust")) {
       D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
       return;
     }
-    if (!HasRocPrimLibrary &&
-        !D.getVFS().exists(getIncludePath() + "/rocprim")) {
+    if (!HasRocPrimLibrary && !FS.exists(Inc + "/rocprim")) {
       D.Diag(diag::err_drv_no_hipstdpar_prim_lib);
       return;
     }
-
     const char *ThrustPath;
     if (HasRocThrustLibrary)
       ThrustPath = DriverArgs.MakeArgString(HIPRocThrustPathArg);
     else
-      ThrustPath = DriverArgs.MakeArgString(getIncludePath() + "/thrust");
+      ThrustPath = DriverArgs.MakeArgString(Inc + "/thrust");
+
+    const char *HIPStdParPath;
+    if (hasHIPStdParLibrary())
+      HIPStdParPath = DriverArgs.MakeArgString(HIPStdParPathArg);
+    else
+      HIPStdParPath = DriverArgs.MakeArgString(StringRef(ThrustPath) +
+                                               "/system/hip/hipstdpar");
 
     const char *PrimPath;
     if (HasRocPrimLibrary)
@@ -573,8 +582,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
       PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
 
     CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
-                    "-idirafter", DriverArgs.MakeArgString(HIPStdParPathArg),
-                    "-include", "hipstdpar_lib.hpp"});
+                    "-idirafter", HIPStdParPath, "-include",
+                    "hipstdpar_lib.hpp"});
   };
 
   if (DriverArgs.hasArg(options::OPT_nogpuinc)) {

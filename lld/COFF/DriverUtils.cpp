@@ -350,7 +350,7 @@ public:
     SmallString<128> s;
     if (auto ec = sys::fs::createTemporaryFile("lld-" + prefix, extn, s))
       fatal("cannot create a temporary file: " + ec.message());
-    path = std::string(s.str());
+    path = std::string(s);
 
     if (!contents.empty()) {
       std::error_code ec;

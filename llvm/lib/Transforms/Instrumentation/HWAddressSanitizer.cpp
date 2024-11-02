@@ -1435,6 +1435,11 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
         if (DDI->getVariableLocationOp(LocNo) == AI)
           DDI->setExpression(DIExpression::appendOpsToArg(DDI->getExpression(),
                                                           NewOps, LocNo));
+      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DDI)) {
+        if (DAI->getAddress() == AI)
+          DAI->setAddressExpression(DIExpression::prependOpcodes(
+              DAI->getAddressExpression(), NewOps));
+      }
     }
 
     auto TagEnd = [&](Instruction *Node) {

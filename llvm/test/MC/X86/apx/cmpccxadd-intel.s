@@ -1,20 +1,20 @@
 # RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
-# CHECK: {evex}	cmpaxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# CHECK: {evex}	cmpnbexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe7,0x54,0x98,0x7b]
-         {evex}	cmpaxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+         {evex}	cmpnbexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 
-# CHECK: {evex}	cmpaxadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# CHECK: {evex}	cmpnbexadd	qword ptr [rax + 4*rbx + 123], r15, r9
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xe7,0x7c,0x98,0x7b]
-         {evex}	cmpaxadd	qword ptr [rax + 4*rbx + 123], r15, r9
+         {evex}	cmpnbexadd	qword ptr [rax + 4*rbx + 123], r15, r9
 
-# CHECK: cmpaxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# CHECK: cmpnbexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe7,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpaxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+         cmpnbexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 
-# CHECK: cmpaxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# CHECK: cmpnbexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe7,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpaxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+         cmpnbexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 
 # CHECK: {evex}	cmpbexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe6,0x54,0x98,0x7b]
@@ -48,53 +48,53 @@
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe2,0xbc,0xac,0x23,0x01,0x00,0x00]
          cmpbxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 
-# CHECK: {evex}	cmpexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# CHECK: {evex}	cmpzxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe4,0x54,0x98,0x7b]
-         {evex}	cmpexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+         {evex}	cmpzxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 
-# CHECK: {evex}	cmpexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# CHECK: {evex}	cmpzxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xe4,0x7c,0x98,0x7b]
-         {evex}	cmpexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+         {evex}	cmpzxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 
-# CHECK: cmpexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# CHECK: cmpzxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe4,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+         cmpzxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 
-# CHECK: cmpexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# CHECK: cmpzxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe4,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+         cmpzxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 
-# CHECK: {evex}	cmpgexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# CHECK: {evex}	cmpnlxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xed,0x54,0x98,0x7b]
-         {evex}	cmpgexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+         {evex}	cmpnlxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 
-# CHECK: {evex}	cmpgexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# CHECK: {evex}	cmpnlxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xed,0x7c,0x98,0x7b]
-         {evex}	cmpgexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+         {evex}	cmpnlxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 
-# CHECK: cmpgexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# CHECK: cmpnlxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xed,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpgexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+         cmpnlxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 
-# CHECK: cmpgexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# CHECK: cmpnlxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xed,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpgexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+         cmpnlxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 
-# CHECK: {evex}	cmpgxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# CHECK: {evex}	cmpnlexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xef,0x54,0x98,0x7b]
-         {evex}	cmpgxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+         {evex}	cmpnlexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 
-# CHECK: {evex}	cmpgxadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# CHECK: {evex}	cmpnlexadd	qword ptr [rax + 4*rbx + 123], r15, r9
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xef,0x7c,0x98,0x7b]
-         {evex}	cmpgxadd	qword ptr [rax + 4*rbx + 123], r15, r9
+         {evex}	cmpnlexadd	qword ptr [rax + 4*rbx + 123], r15, r9
 
-# CHECK: cmpgxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# CHECK: cmpnlexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xef,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpgxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+         cmpnlexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 
-# CHECK: cmpgxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# CHECK: cmpnlexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xef,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpgxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+         cmpnlexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 
 # CHECK: {evex}	cmplexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xee,0x54,0x98,0x7b]
@@ -128,21 +128,21 @@
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xec,0xbc,0xac,0x23,0x01,0x00,0x00]
          cmplxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 
-# CHECK: {evex}	cmpnexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# CHECK: {evex}	cmpnzxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe5,0x54,0x98,0x7b]
-         {evex}	cmpnexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+         {evex}	cmpnzxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 
-# CHECK: {evex}	cmpnexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# CHECK: {evex}	cmpnzxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xe5,0x7c,0x98,0x7b]
-         {evex}	cmpnexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+         {evex}	cmpnzxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 
-# CHECK: cmpnexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# CHECK: cmpnzxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe5,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpnexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+         cmpnzxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 
-# CHECK: cmpnexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# CHECK: cmpnzxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe5,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpnexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+         cmpnzxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 
 # CHECK: {evex}	cmpnoxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe1,0x54,0x98,0x7b]

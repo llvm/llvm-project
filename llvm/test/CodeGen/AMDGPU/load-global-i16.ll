@@ -2,8 +2,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN-NOHSA-SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN-HSA %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=GCN-NOHSA-VI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=EG %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cayman -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=CM %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=EG %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cayman -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefix=CM %s
 
 ; FIXME: r600 is broken because the bigger testcases spill and it's not implemented
 

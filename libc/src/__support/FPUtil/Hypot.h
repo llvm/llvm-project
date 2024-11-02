@@ -197,7 +197,7 @@ LIBC_INLINE T hypot(T x, T y) {
         if (int round_mode = quick_get_round();
             round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
           return T(FPBits_t::inf());
-        return T(FPBits_t(FPBits_t::MAX_NORMAL));
+        return T(FPBits_t::max_normal());
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -254,7 +254,7 @@ LIBC_INLINE T hypot(T x, T y) {
     if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
       if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
         return T(FPBits_t::inf());
-      return T(FPBits_t(FPBits_t::MAX_NORMAL));
+      return T(FPBits_t::max_normal());
     }
   }
 

@@ -42,6 +42,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   assert(BlockIt != CFCtx.getStmtToBlock().end());
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
+  if (BlockIt->getSecond()->getBlockID() == CurBlockID)
+    return &CurState.Env;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
   if (!(State))
     return nullptr;

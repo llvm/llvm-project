@@ -291,7 +291,9 @@ namespace clang {
     bool isZExtReturn() const { return Flags & IsZExtReturn; }
     bool isByteIndexed() const { return Flags & IsByteIndexed; }
     bool isOverloadNone() const { return Flags & IsOverloadNone; }
-    bool isOverloadWhile() const { return Flags & IsOverloadWhile; }
+    bool isOverloadWhileOrMultiVecCvt() const {
+      return Flags & IsOverloadWhileOrMultiVecCvt;
+    }
     bool isOverloadDefault() const { return !(Flags & OverloadKindMask); }
     bool isOverloadWhileRW() const { return Flags & IsOverloadWhileRW; }
     bool isOverloadCvt() const { return Flags & IsOverloadCvt; }

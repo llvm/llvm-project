@@ -233,8 +233,8 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, value.type,
-                 symValue, 0, sec);
+  Defined newSym(createInternalFile(cmd->location), cmd->name, STB_GLOBAL,
+                 visibility, value.type, symValue, 0, sec);
 
   Symbol *sym = symtab.insert(cmd->name);
   sym->mergeProperties(newSym);
@@ -250,8 +250,8 @@ static void declareSymbol(SymbolAssignment *cmd) {
     return;
 
   uint8_t visibility = cmd->hidden ? STV_HIDDEN : STV_DEFAULT;
-  Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, STT_NOTYPE, 0, 0,
-                 nullptr);
+  Defined newSym(ctx.internalFile, cmd->name, STB_GLOBAL, visibility,
+                 STT_NOTYPE, 0, 0, nullptr);
 
   // If the symbol is already defined, its order is 0 (with absence indicating
   // 0); otherwise it's assigned the order of the SymbolAssignment.

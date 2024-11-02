@@ -401,6 +401,12 @@ std::string TokenBuffer::Mapping::str() const {
 
 std::optional<llvm::ArrayRef<syntax::Token>>
 TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
+  // In cases of invalid code, AST nodes can have source ranges that include
+  // the `eof` token. As there's no spelling for this token, exclude it from
+  // the range.
+  if (!Expanded.empty() && Expanded.back().kind() == tok::eof) {
+    Expanded = Expanded.drop_back();
+  }
   // Mapping an empty range is ambiguous in case of empty mappings at either end
   // of the range, bail out in that case.
   if (Expanded.empty())

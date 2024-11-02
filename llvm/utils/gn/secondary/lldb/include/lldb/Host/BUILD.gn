@@ -25,6 +25,7 @@ write_cmake_config("Config") {
     "LLDB_GLOBAL_INIT_DIRECTORY=",
 
     "LLDB_PYTHON_HOME=",
+    "LLDB_BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
 
     "HAVE_LIBCOMPRESSION=",
   ]

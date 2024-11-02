@@ -944,7 +944,7 @@ define <4 x i1> @eq_or_to_abs_vec4x16(<4 x i16> %x) {
 ;
 ; SSE41-LABEL: eq_or_to_abs_vec4x16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u]
 ; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
@@ -953,7 +953,7 @@ define <4 x i1> @eq_or_to_abs_vec4x16(<4 x i16> %x) {
 ;
 ; SSE2-LABEL: eq_or_to_abs_vec4x16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u>
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u]
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -989,7 +989,7 @@ define <4 x i8> @eq_or_to_abs_vec4x8_sext(<4 x i8> %x) {
 ;
 ; SSE41-LABEL: eq_or_to_abs_vec4x8_sext:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
@@ -997,7 +997,7 @@ define <4 x i8> @eq_or_to_abs_vec4x8_sext(<4 x i8> %x) {
 ;
 ; SSE2-LABEL: eq_or_to_abs_vec4x8_sext:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1038,7 +1038,7 @@ define <4 x i1> @ne_and_to_abs_vec4x8(<4 x i8> %x) {
 ;
 ; SSE41-LABEL: ne_and_to_abs_vec4x8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE41-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -1049,7 +1049,7 @@ define <4 x i1> @ne_and_to_abs_vec4x8(<4 x i8> %x) {
 ;
 ; SSE2-LABEL: ne_and_to_abs_vec4x8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1093,7 +1093,7 @@ define <4 x i16> @ne_and_to_abs_vec4x16_sext(<4 x i16> %x) {
 ;
 ; SSE41-LABEL: ne_and_to_abs_vec4x16_sext:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u]
 ; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE41-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -1103,7 +1103,7 @@ define <4 x i16> @ne_and_to_abs_vec4x16_sext(<4 x i16> %x) {
 ;
 ; SSE2-LABEL: ne_and_to_abs_vec4x16_sext:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u>
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [88,88,88,88,u,u,u,u]
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0

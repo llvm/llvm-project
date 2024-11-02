@@ -2,6 +2,11 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
+// REQUIRES: system-linux
+
+// An externally visible variable so static libraries extract.
+__attribute__((visibility("protected"), used)) int x;
+
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.elf.o
 // RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -o %t.nvptx.bc
 // RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
@@ -150,3 +155,19 @@
 // RUN:   --linker-path=/usr/bin/lld-link -- %t.o -libpath:./ -out:a.exe 2>&1 | FileCheck %s --check-prefix=COFF
 
 // COFF: "/usr/bin/lld-link" {{.*}}.o -libpath:./ -out:a.exe {{.*}}openmp.image.wrapper{{.*}}
+
+// RUN: clang-offload-packager -o %t-lib.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: clang-offload-packager -o %t-on.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-on.o -fembed-offload-object=%t-on.out
+// RUN: clang-offload-packager -o %t-off.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack-
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-off.o -fembed-offload-object=%t-off.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld -- %t-on.o %t-off.o %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=AMD-TARGET-ID
+
+// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o

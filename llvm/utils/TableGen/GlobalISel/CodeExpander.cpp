@@ -31,9 +31,8 @@ void CodeExpander::emit(raw_ostream &OS) const {
     OS << Current.substr(0, Pos);
     Current = Current.substr(Pos);
 
-    if (Current.starts_with("\n")) {
+    if (Current.consume_front("\n")) {
       OS << "\n" << Indent;
-      Current = Current.drop_front(1);
       continue;
     }
 
@@ -43,10 +42,8 @@ void CodeExpander::emit(raw_ostream &OS) const {
       continue;
     }
 
-    if (Current.starts_with("\\")) {
-      Current = Current.drop_front(1);
+    if (Current.consume_front("\\"))
       continue;
-    }
 
     if (Current.starts_with("${")) {
       StringRef StartVar = Current;

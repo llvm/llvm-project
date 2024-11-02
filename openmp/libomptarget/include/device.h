@@ -70,7 +70,7 @@ struct DeviceTy {
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
-  __tgt_target_table *loadBinary(__tgt_device_image *Img);
+  llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -163,6 +163,9 @@ struct DeviceTy {
 
   /// Print all offload entries to stderr.
   void dumpOffloadEntries();
+
+  /// Ask the device whether the runtime should use auto zero-copy.
+  bool useAutoZeroCopy();
 
 private:
   /// Deinitialize the device (and plugin).
