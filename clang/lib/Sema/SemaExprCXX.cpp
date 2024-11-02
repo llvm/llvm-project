@@ -2157,7 +2157,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   // Per C++0x [expr.new]p5, the type being constructed may be a
   // typedef of an array type.
-  if (!ArraySize) {
+  // Dependent case will be handled separately.
+  if (!ArraySize && !AllocType->isDependentType()) {
     if (const ConstantArrayType *Array
                               = Context.getAsConstantArrayType(AllocType)) {
       ArraySize = IntegerLiteral::Create(Context, Array->getSize(),
@@ -5712,7 +5713,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (DiagnoseVLAInCXXTypeTrait(Self, TInfo,
                                   tok::kw___builtin_hlsl_is_intangible))
       return false;
-    return Self.HLSL().IsIntangibleType(T);
+    return T->isHLSLIntangibleType();
   }
 }
 
@@ -8686,7 +8687,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   assert(
-      CurrentLSI->CallOperator == DC &&
+      (CurrentLSI->CallOperator == DC || !CurrentLSI->AfterParameterList) &&
       "The current call operator must be synchronized with Sema's CurContext");
 #endif // NDEBUG
 
@@ -9443,11 +9444,11 @@ Sema::BuildExprRequirement(
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     if (Constraint.isInvalid()) {
       return new (Context) concepts::ExprRequirement(
-          concepts::createSubstDiagAt(*this, IDC->getExprLoc(),
-                                      [&](llvm::raw_ostream &OS) {
-                                        IDC->printPretty(OS, /*Helper=*/nullptr,
-                                                         getPrintingPolicy());
-                                      }),
+          createSubstDiagAt(IDC->getExprLoc(),
+                            [&](llvm::raw_ostream &OS) {
+                              IDC->printPretty(OS, /*Helper=*/nullptr,
+                                               getPrintingPolicy());
+                            }),
           IsSimple, NoexceptLoc, ReturnTypeRequirement);
     }
     SubstitutedConstraintExpr =

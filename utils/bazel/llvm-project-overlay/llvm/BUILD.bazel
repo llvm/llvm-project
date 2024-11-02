@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
@@ -1158,6 +1159,7 @@ cc_library(
     hdrs = glob(["include/llvm/ProfileData/Coverage/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -2218,7 +2220,8 @@ llvm_target_lib_list = [lib for lib in [
         "short_name": "SystemZ",
         "tbl_outs": [
             ("-gen-asm-matcher", "lib/Target/SystemZ/SystemZGenAsmMatcher.inc"),
-            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenAsmWriter.inc"),
+            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenGNUAsmWriter.inc"),
+            ("-gen-asm-writer -asmwriternum=1", "lib/Target/SystemZ/SystemZGenHLASMAsmWriter.inc"),
             ("-gen-callingconv", "lib/Target/SystemZ/SystemZGenCallingConv.inc"),
             ("-gen-dag-isel", "lib/Target/SystemZ/SystemZGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc"),

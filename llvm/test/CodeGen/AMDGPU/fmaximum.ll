@@ -273,8 +273,6 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_maximum_f32 v1, v1, v2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[4:5]
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -297,8 +295,6 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_maximum_f16 v1, v1, v2
 ; GCN-NEXT:    global_store_b16 v0, v1, s[4:5]
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 4
   %b = load volatile half, ptr addrspace(1) %bptr, align 4

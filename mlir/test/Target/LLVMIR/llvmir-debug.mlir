@@ -327,8 +327,8 @@ llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
 #di_file_2 = #llvm.di_file<"not" in "existence">
 #di_compile_unit_2 = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = Full>
 #di_basic_type_2 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint64_t", sizeInBits = 64, encoding = DW_ATE_unsigned>
-llvm.mlir.global external @global_with_expr_1() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_1", linkageName = "global_with_expr_1", file = #di_file_2, line = 370, type = #di_basic_type_2>, expr = <>>} : i64
-llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #di_file_2, line = 371, type = #di_basic_type_2, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <>>} : i64
+llvm.mlir.global external @global_with_expr_1() {addr_space = 0 : i32, dbg_exprs = [#llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_1", linkageName = "global_with_expr_1", file = #di_file_2, line = 370, type = #di_basic_type_2>, expr = <>>]} : i64
+llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_exprs = [#llvm.di_global_variable_expression<var = <scope = #di_compile_unit_2, name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #di_file_2, line = 371, type = #di_basic_type_2, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <>>]} : i64
 
 // -----
 
@@ -347,7 +347,7 @@ llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr 
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = Full>
 #di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
 #di_module = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "module2", configMacros = "", includePath = "", apinotes = "", line = 120, isDecl = false >
-llvm.mlir.global external @module_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_module, name = "module_global", linkageName = "module_global", file = #di_file, line = 121, type = #di_basic_type, isLocalToUnit = false, isDefined = true>, expr = <>>} : i64
+llvm.mlir.global external @module_global() {dbg_exprs = [#llvm.di_global_variable_expression<var = <scope = #di_module, name = "module_global", linkageName = "module_global", file = #di_file, line = 121, type = #di_basic_type, isLocalToUnit = false, isDefined = true>, expr = <>>]} : i64
 
 // -----
 
@@ -362,7 +362,7 @@ llvm.mlir.global external @module_global() {dbg_expr = #llvm.di_global_variable_
 #cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #file, producer = "MLIR", isOptimized = true, emissionKind = Full>
 #ty1 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "fn_with_gl", file = #file, subprogramFlags = "Definition|Optimized">
-llvm.mlir.global @func_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #sp, name = "func_global", linkageName = "func_global", file = #file, line = 121, type = #ty1, isLocalToUnit = true, isDefined = true>, expr = <>>} : i64
+llvm.mlir.global @func_global() {dbg_exprs = [#llvm.di_global_variable_expression<var = <scope = #sp, name = "func_global", linkageName = "func_global", file = #file, line = 121, type = #ty1, isLocalToUnit = true, isDefined = true>, expr = <>>]} : i64
 
 llvm.func @fn_with_gl() {
   llvm.return
@@ -419,7 +419,7 @@ llvm.func @imp_fn() {
 #di_global_variable = #llvm.di_global_variable<file = #di_file, line = 268, type = #di_composite_type, isLocalToUnit = true, isDefined = true>
 #di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable, expr = <>>
 
-llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr = #di_global_variable_expression} : !llvm.array<10 x i8>
+llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_exprs = [#di_global_variable_expression]} : !llvm.array<10 x i8>
 
 // -----
 
@@ -514,7 +514,7 @@ llvm.func @class_method() {
 #di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_composite_type>
 #di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
 
-llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
+llvm.mlir.global @global_variable() {dbg_exprs = [#di_global_variable_expression]} : !llvm.struct<()>
 
 // CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
 // CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]]
@@ -544,7 +544,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 #di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_var_type>
 #di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
 
-llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
+llvm.mlir.global @global_variable() {dbg_exprs = [#di_global_variable_expression]} : !llvm.struct<()>
 
 // CHECK: distinct !DIGlobalVariable({{.*}}type: ![[VAR:[0-9]+]],
 // CHECK: ![[VAR]] = !DISubroutineType(types: ![[COMPS:[0-9]+]])
@@ -616,7 +616,7 @@ llvm.func @fn_with_composite() {
 #loc1 = loc("test.f90": 1:1)
 #loc2 = loc(fused<#sp>[#loc1])
 
-llvm.mlir.global external @gv() {dbg_expr = #gve} : i64
+llvm.mlir.global external @gv() {dbg_exprs = [#gve]} : i64
 
 llvm.func @subranges(%arg: !llvm.ptr) {
   llvm.intr.dbg.declare #lvar2 = %arg : !llvm.ptr
@@ -678,7 +678,7 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
  expr = <>>
 
 llvm.mlir.global common @block_(dense<0> : tensor<8xi8>)
-  {dbg_expr = #var_expression} : !llvm.array<8 x i8>
+  {dbg_exprs = [#var_expression]} : !llvm.array<8 x i8>
 
 llvm.func @test() {
   llvm.return
@@ -690,3 +690,27 @@ llvm.func @test() {
 // CHECK: !DICommonBlock(scope: ![[SCOPE:[0-9]+]], declaration: null, name: "block", file: ![[FILE:[0-9]+]], line: 3)
 // CHECK: ![[SCOPE]] = {{.*}}!DISubprogram(name: "test"{{.*}})
 // CHECK: ![[FILE]] = !DIFile(filename: "test.f90"{{.*}})
+
+// -----
+
+// Test multiple DIGlobalVariableExpression on a global.
+#bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32>
+#file = #llvm.di_file<"test.f90" in "">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C,
+ file = #file, isOptimized = false, emissionKind = Full>
+#global_var = #llvm.di_global_variable<scope = #cu, name = "a",
+ file = #file, line = 2, type = #bt>
+#var_expression = #llvm.di_global_variable_expression<var = #global_var,
+ expr = <>>
+#global_var1 = #llvm.di_global_variable<scope = #cu, name = "b",
+ file = #file, line = 3, type = #bt>
+#var_expression1 = #llvm.di_global_variable_expression<var = #global_var1,
+ expr = <>>
+
+llvm.mlir.global @data() {dbg_exprs = [#var_expression, #var_expression1]} : i64
+
+// CHECK: @data = external global i64, !dbg ![[EXP1:[0-9]+]], !dbg ![[EXP2:[0-9]+]]
+// CHECK: ![[EXP1]] = !DIGlobalVariableExpression(var: ![[VAR1:[0-9]+]], expr: !DIExpression())
+// CHECK: ![[VAR1]] = {{.*}}!DIGlobalVariable(name: "a"{{.*}})
+// CHECK: ![[EXP2]] = !DIGlobalVariableExpression(var: ![[VAR2:[0-9]+]], expr: !DIExpression())
+// CHECK: ![[VAR2]] = {{.*}}!DIGlobalVariable(name: "b"{{.*}})

@@ -168,6 +168,14 @@ static cl::list<std::string>
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
 
+/// If explicitly specified, the devirt module pass will stop transformation
+/// once the total number of devirtualizations reach the cutoff value. Setting
+/// this option to 0 explicitly will do 0 devirtualization.
+static cl::opt<unsigned> WholeProgramDevirtCutoff(
+    "wholeprogramdevirt-cutoff",
+    cl::desc("Max number of devirtualizations for devirt module pass"),
+    cl::init(0));
+
 /// Mechanism to add runtime checking of devirtualization decisions, optionally
 /// trapping or falling back to indirect call on any that are not correct.
 /// Trapping mode is useful for debugging undefined behavior leading to failures
@@ -315,6 +323,9 @@ VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
       WasDevirt(false) {}
 
 namespace {
+
+// Tracks the number of devirted calls in the IR transformation.
+static unsigned NumDevirtCalls = 0;
 
 // A slot in a set of virtual tables. The TypeID identifies the set of virtual
 // tables, and the ByteOffset is the offset in bytes from the address point to
@@ -851,7 +862,7 @@ void llvm::updateVCallVisibilityInModule(
 void llvm::updatePublicTypeTestCalls(Module &M,
                                      bool WholeProgramVisibilityEnabledInLTO) {
   Function *PublicTypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (!PublicTypeTestFunc)
     return;
   if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO)) {
@@ -1169,10 +1180,16 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       if (!OptimizedCalls.insert(&VCallSite.CB).second)
         continue;
 
+      // Stop when the number of devirted calls reaches the cutoff.
+      if (WholeProgramDevirtCutoff.getNumOccurrences() > 0 &&
+          NumDevirtCalls >= WholeProgramDevirtCutoff)
+        return;
+
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
       NumSingleImpl++;
+      NumDevirtCalls++;
       auto &CB = VCallSite.CB;
       assert(!CB.getCalledFunction() && "devirtualizing direct call?");
       IRBuilder<> Builder(&CB);
@@ -2247,12 +2264,13 @@ bool DevirtModule::run() {
     return false;
 
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   Function *TypeCheckedLoadFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
-  Function *TypeCheckedLoadRelativeFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
-  Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
+  Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+      &M, Intrinsic::type_checked_load_relative);
+  Function *AssumeFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::assume);
 
   // Normally if there are no users of the devirtualization intrinsics in the
   // module, this pass has nothing to do. But if we are exporting, we also need

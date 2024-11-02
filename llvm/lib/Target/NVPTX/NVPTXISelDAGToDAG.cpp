@@ -1028,6 +1028,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
           formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
                   ScopeToString(S)));
     }
+    break;
   }
   case NVPTX::Ordering::SequentiallyConsistent: {
     switch (S) {
@@ -1046,6 +1047,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
       report_fatal_error(formatv("Unsupported scope \"{}\" for seq_cst fence.",
                                  ScopeToString(S)));
     }
+    break;
   }
   case NVPTX::Ordering::NotAtomic:
   case NVPTX::Ordering::Relaxed:

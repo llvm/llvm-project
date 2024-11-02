@@ -241,13 +241,18 @@ static void printOneOpBundle(OpAsmPrinter &p, OperandRange operands,
 static void printOpBundles(OpAsmPrinter &p, Operation *op,
                            OperandRangeRange opBundleOperands,
                            TypeRangeRange opBundleOperandTypes,
-                           ArrayRef<std::string> opBundleTags) {
+                           std::optional<ArrayAttr> opBundleTags) {
+  if (opBundleOperands.empty())
+    return;
+  assert(opBundleTags && "expect operand bundle tags");
+
   p << "[";
   llvm::interleaveComma(
-      llvm::zip(opBundleOperands, opBundleOperandTypes, opBundleTags), p,
+      llvm::zip(opBundleOperands, opBundleOperandTypes, *opBundleTags), p,
       [&p](auto bundle) {
+        auto bundleTag = cast<StringAttr>(std::get<2>(bundle)).getValue();
         printOneOpBundle(p, std::get<0>(bundle), std::get<1>(bundle),
-                         std::get<2>(bundle));
+                         bundleTag);
       });
   p << "]";
 }
@@ -256,7 +261,7 @@ static ParseResult parseOneOpBundle(
     OpAsmParser &p,
     SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
     SmallVector<SmallVector<Type>> &opBundleOperandTypes,
-    SmallVector<std::string> &opBundleTags) {
+    SmallVector<Attribute> &opBundleTags) {
   SMLoc currentParserLoc = p.getCurrentLocation();
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
   SmallVector<Type> types;
@@ -276,7 +281,7 @@ static ParseResult parseOneOpBundle(
 
   opBundleOperands.push_back(std::move(operands));
   opBundleOperandTypes.push_back(std::move(types));
-  opBundleTags.push_back(std::move(tag));
+  opBundleTags.push_back(StringAttr::get(p.getContext(), tag));
 
   return success();
 }
@@ -285,22 +290,25 @@ static std::optional<ParseResult> parseOpBundles(
     OpAsmParser &p,
     SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> &opBundleOperands,
     SmallVector<SmallVector<Type>> &opBundleOperandTypes,
-    SmallVector<std::string> &opBundleTags) {
+    ArrayAttr &opBundleTags) {
   if (p.parseOptionalLSquare())
     return std::nullopt;
 
   if (succeeded(p.parseOptionalRSquare()))
     return success();
 
+  SmallVector<Attribute> opBundleTagAttrs;
   auto bundleParser = [&] {
     return parseOneOpBundle(p, opBundleOperands, opBundleOperandTypes,
-                            opBundleTags);
+                            opBundleTagAttrs);
   };
   if (p.parseCommaSeparatedList(bundleParser))
     return failure();
 
   if (p.parseRSquare())
     return failure();
+
+  opBundleTags = ArrayAttr::get(p.getContext(), opBundleTagAttrs);
 
   return success();
 }
@@ -598,7 +606,7 @@ static ParseResult parseSwitchOpCases(
     int64_t value = 0;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value));
+    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -1039,7 +1047,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr,
         /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/std::nullopt,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1066,7 +1074,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr,
         /*no_unwind=*/nullptr, /*will_return=*/nullptr,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/std::nullopt,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1079,7 +1087,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/std::nullopt,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1092,7 +1100,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/std::nullopt,
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1192,12 +1200,20 @@ LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
 template <typename OpType>
 static LogicalResult verifyOperandBundles(OpType &op) {
   OperandRangeRange opBundleOperands = op.getOpBundleOperands();
-  ArrayRef<std::string> opBundleTags = op.getOpBundleTags();
+  std::optional<ArrayAttr> opBundleTags = op.getOpBundleTags();
 
-  if (opBundleTags.size() != opBundleOperands.size())
+  auto isStringAttr = [](Attribute tagAttr) {
+    return isa<StringAttr>(tagAttr);
+  };
+  if (opBundleTags && !llvm::all_of(*opBundleTags, isStringAttr))
+    return op.emitError("operand bundle tag must be a StringAttr");
+
+  size_t numOpBundles = opBundleOperands.size();
+  size_t numOpBundleTags = opBundleTags ? opBundleTags->size() : 0;
+  if (numOpBundles != numOpBundleTags)
     return op.emitError("expected ")
-           << opBundleOperands.size()
-           << " operand bundle tags, but actually got " << opBundleTags.size();
+           << numOpBundles << " operand bundle tags, but actually got "
+           << numOpBundleTags;
 
   return success();
 }
@@ -1329,7 +1345,8 @@ void CallOp::print(OpAsmPrinter &p) {
                           {getCalleeAttrName(), getTailCallKindAttrName(),
                            getVarCalleeTypeAttrName(), getCConvAttrName(),
                            getOperandSegmentSizesAttrName(),
-                           getOpBundleSizesAttrName()});
+                           getOpBundleSizesAttrName(),
+                           getOpBundleTagsAttrName()});
 
   p << " : ";
   if (!isDirect)
@@ -1437,7 +1454,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
   SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands;
   SmallVector<SmallVector<Type>> opBundleOperandTypes;
-  SmallVector<std::string> opBundleTags;
+  ArrayAttr opBundleTags;
 
   // Default to C Calling Convention if no keyword is provided.
   result.addAttribute(
@@ -1483,9 +1500,9 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
           parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
       result && failed(*result))
     return failure();
-  if (!opBundleTags.empty())
-    result.getOrAddProperties<CallOp::Properties>().op_bundle_tags =
-        std::move(opBundleTags);
+  if (opBundleTags && !opBundleTags.empty())
+    result.addAttribute(CallOp::getOpBundleTagsAttrName(result.name).getValue(),
+                        opBundleTags);
 
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
@@ -1525,8 +1542,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
-        normalOps, unwindOps, nullptr, nullptr, {}, std::nullopt, normal,
-        unwind);
+        normalOps, unwindOps, nullptr, nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1535,7 +1551,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange unwindOps) {
   build(builder, state, tys,
         /*var_callee_type=*/nullptr, callee, ops, normalOps, unwindOps, nullptr,
-        nullptr, {}, std::nullopt, normal, unwind);
+        nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1544,7 +1560,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      Block *unwind, ValueRange unwindOps) {
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, ops, normalOps, unwindOps,
-        nullptr, nullptr, {}, std::nullopt, normal, unwind);
+        nullptr, nullptr, {}, {}, normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -1634,7 +1650,8 @@ void InvokeOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {getCalleeAttrName(), getOperandSegmentSizeAttr(),
                            getCConvAttrName(), getVarCalleeTypeAttrName(),
-                           getOpBundleSizesAttrName()});
+                           getOpBundleSizesAttrName(),
+                           getOpBundleTagsAttrName()});
 
   p << " : ";
   if (!isDirect)
@@ -1657,7 +1674,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   TypeAttr varCalleeType;
   SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands;
   SmallVector<SmallVector<Type>> opBundleOperandTypes;
-  SmallVector<std::string> opBundleTags;
+  ArrayAttr opBundleTags;
   Block *normalDest, *unwindDest;
   SmallVector<Value, 4> normalOperands, unwindOperands;
   Builder &builder = parser.getBuilder();
@@ -1703,9 +1720,10 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
           parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
       result && failed(*result))
     return failure();
-  if (!opBundleTags.empty())
-    result.getOrAddProperties<InvokeOp::Properties>().op_bundle_tags =
-        std::move(opBundleTags);
+  if (opBundleTags && !opBundleTags.empty())
+    result.addAttribute(
+        InvokeOp::getOpBundleTagsAttrName(result.name).getValue(),
+        opBundleTags);
 
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
@@ -2089,7 +2107,7 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
                      bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
                      ArrayRef<NamedAttribute> attrs,
-                     DIGlobalVariableExpressionAttr dbgExpr) {
+                     ArrayRef<Attribute> dbgExprs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
@@ -2121,8 +2139,9 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                         builder.getI32IntegerAttr(addrSpace));
   result.attributes.append(attrs.begin(), attrs.end());
 
-  if (dbgExpr)
-    result.addAttribute(getDbgExprAttrName(result.name), dbgExpr);
+  if (!dbgExprs.empty())
+    result.addAttribute(getDbgExprsAttrName(result.name),
+                        ArrayAttr::get(builder.getContext(), dbgExprs));
 
   result.addRegion();
 }
@@ -3332,7 +3351,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3340,14 +3359,14 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         fastMathFlags,
-        /*op_bundle_operands=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::Type resultType, mlir::StringAttr intrin,
                             mlir::ValueRange args) {
   build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3355,7 +3374,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, resultTypes, intrin, args, fastMathFlags,
-        /*op_bundle_operands=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -3411,6 +3430,18 @@ void InlineAsmOp::getEffects(
     effects.emplace_back(MemoryEffects::Read::get());
   }
 }
+
+//===----------------------------------------------------------------------===//
+// AssumeOp (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
+                           mlir::Value cond) {
+  return build(builder, state, cond, /*op_bundle_operands=*/{},
+               /*op_bundle_tags=*/{});
+}
+
+LogicalResult LLVM::AssumeOp::verify() { return verifyOperandBundles(*this); }
 
 //===----------------------------------------------------------------------===//
 // masked_gather (intrinsic)

@@ -52,6 +52,38 @@ define void @foo(ptr %ptr) {
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
   sandboxir::LegalityAnalysis Legality;
-  auto Result = Legality.canVectorize({St0, St1});
+  const auto &Result = Legality.canVectorize({St0, St1});
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
+
+  {
+    // Check NotInstructions
+    auto &Result = Legality.canVectorize({F, St0});
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::NotInstructions);
+  }
 }
+
+#ifndef NDEBUG
+TEST_F(LegalityTest, LegalityResultDump) {
+  auto Matches = [](const sandboxir::LegalityResult &Result,
+                    const std::string &ExpectedStr) -> bool {
+    std::string Buff;
+    raw_string_ostream OS(Buff);
+    Result.print(OS);
+    return Buff == ExpectedStr;
+  };
+  sandboxir::LegalityAnalysis Legality;
+  EXPECT_TRUE(
+      Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
+  EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
+                          sandboxir::ResultReason::NotInstructions),
+                      "Pack Reason: NotInstructions"));
+  EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
+                          sandboxir::ResultReason::DiffOpcodes),
+                      "Pack Reason: DiffOpcodes"));
+  EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
+                          sandboxir::ResultReason::DiffTypes),
+                      "Pack Reason: DiffTypes"));
+}
+#endif // NDEBUG

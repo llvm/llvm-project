@@ -1375,7 +1375,7 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
   if (!RuleDef.getValue("Predicates"))
     return true;
 
-  ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
+  const ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
   for (const Init *PI : Preds->getValues()) {
     const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)

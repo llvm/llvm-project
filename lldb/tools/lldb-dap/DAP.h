@@ -144,6 +144,11 @@ struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
                  lldb::SBCommandReturnObject &result) override;
 };
 
+struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
+  bool DoExecute(lldb::SBDebugger debugger, char **command,
+                 lldb::SBCommandReturnObject &result) override;
+};
+
 struct DAP {
   std::string debug_adaptor_path;
   InputStream input;

@@ -14,6 +14,22 @@
 // CHECK-NO-PIE-NOT: "-pie"
 // CHECK-SHARED: "--shared"
 
+// Test the driver passes PlayStation-specific -z options to the linker.
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-Z %s
+
+// CHECK-Z: {{ld(\.exe)?}}"
+// CHECK-Z-SAME: "-z" "now"
+// CHECK-Z-SAME: "-z" "start-stop-visibility=hidden"
+// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
+// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe"
+// CHECK-Z-SAME: "-z" "dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe"
+
+// RUN: %clang --target=x86_64-sie-ps5 -r %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-Z %s
+
+// CHECK-NO-Z: {{ld(\.exe)?}}"
+// CHECK-NO-Z-NOT: "-z"
+
 // Test that -static is forwarded to the linker
 
 // RUN: %clang --target=x86_64-sie-ps5 -static %s -### 2>&1 | FileCheck --check-prefixes=CHECK-STATIC %s

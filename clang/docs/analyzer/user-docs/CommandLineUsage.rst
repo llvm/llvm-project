@@ -2,7 +2,7 @@ Command Line Usage: scan-build and CodeChecker
 ==============================================
 
 This document provides guidelines for running the static analyzer from the command line on whole projects.
-CodeChecker and scan-build are two CLI tools for using CSA on multiple files (tranlation units).
+CodeChecker and scan-build are two CLI tools for using CSA on multiple files (translation units).
 Both provide a way of driving the analyzer, detecting compilation flags, and generating reports.
 CodeChecker is more actively maintained, provides heuristics for working with multiple versions of popular compilers and it also comes with a web-based GUI for viewing, filtering, categorizing and suppressing the results.
 Therefore CodeChecker is recommended in case you need any of the above features or just more customizability in general.

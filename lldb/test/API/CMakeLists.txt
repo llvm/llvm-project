@@ -57,9 +57,9 @@ else()
     message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
   else()
     message(STATUS "Not found: make")
-    message(SEND_ERROR
-          "LLDB tests require 'make' tool. Please pass via `LLDB_TEST_MAKE` "
-          "(or otherwise disable tests with `LLDB_INCLUDE_TESTS=OFF`)")
+    message(WARNING
+          "Many LLDB API tests require 'make' tool. Please provide it in Path "
+          "or pass via LLDB_TEST_MAKE.")
   endif()
 endif()
 
@@ -94,14 +94,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   if (NOT LLDB_TEST_HIDE_CONSOLE_WINDOWS)
     set(LLDB_TEST_COMMON_ARGS_VAR ${LLDB_TEST_COMMON_ARGS_VAR} --show-inferior-console)
   endif()
-endif()
-
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
-else()
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env OBJCOPY=${LLVM_TOOLS_BINARY_DIR}/llvm-objcopy${CMAKE_EXECUTABLE_SUFFIX})
 endif()
 
 if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")

@@ -3037,7 +3037,11 @@ bool AsmParser::parseEscapedString(std::string &Data) {
   StringRef Str = getTok().getStringContents();
   for (unsigned i = 0, e = Str.size(); i != e; ++i) {
     if (Str[i] != '\\') {
-      if (Str[i] == '\n') {
+      if ((Str[i] == '\n') || (Str[i] == '\r')) {
+        // Don't double-warn for Windows newlines.
+        if ((Str[i] == '\n') && (i > 0) && (Str[i - 1] == '\r'))
+          continue;
+
         SMLoc NewlineLoc = SMLoc::getFromPointer(Str.data() + i);
         if (Warning(NewlineLoc, "unterminated string; newline inserted"))
           return true;

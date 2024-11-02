@@ -48,6 +48,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::FoldingFailure);
   warnUsage_.set(UsageWarning::FoldingLimit);
   warnUsage_.set(UsageWarning::Interoperability);
+  // CharacterInteroperability warnings about length are off by default
   warnUsage_.set(UsageWarning::Bounds);
   warnUsage_.set(UsageWarning::Preprocessing);
   warnUsage_.set(UsageWarning::Scanning);

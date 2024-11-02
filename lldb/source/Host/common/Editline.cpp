@@ -1574,7 +1574,9 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
   out = (unsigned char)ch;
   return true;
 #else
+  LLDB_DEPRECATED_WARNING_DISABLE
   std::codecvt_utf8<wchar_t> cvt;
+  LLDB_DEPRECATED_WARNING_RESTORE
   llvm::SmallString<4> input;
   for (;;) {
     const char *from_next;

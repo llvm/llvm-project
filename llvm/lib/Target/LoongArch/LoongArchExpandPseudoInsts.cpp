@@ -13,6 +13,7 @@
 
 #include "LoongArch.h"
 #include "LoongArchInstrInfo.h"
+#include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchTargetMachine.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
@@ -26,6 +27,8 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+
+extern cl::opt<bool> LArchAnnotateTableJump;
 
 #define LOONGARCH_PRERA_EXPAND_PSEUDO_NAME                                     \
   "LoongArch Pre-RA pseudo instruction expansion pass"
@@ -103,6 +106,8 @@ private:
                           MachineBasicBlock::iterator MBBI,
                           MachineBasicBlock::iterator &NextMBBI,
                           bool IsTailCall);
+  void annotateTableJump(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI);
 };
 
 char LoongArchPreRAExpandPseudo::ID = 0;
@@ -155,9 +160,9 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_GD_LARGE:
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoLA_TLS_DESC_PC:
+  case LoongArch::PseudoLA_TLS_DESC:
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoLA_TLS_DESC_PC_LARGE:
+  case LoongArch::PseudoLA_TLS_DESC_LARGE:
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, /*Large=*/true);
   case LoongArch::PseudoCALL:
   case LoongArch::PseudoCALL_MEDIUM:
@@ -167,6 +172,12 @@ bool LoongArchPreRAExpandPseudo::expandMI(
   case LoongArch::PseudoTAIL_MEDIUM:
   case LoongArch::PseudoTAIL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
+  case LoongArch::PseudoBRIND:
+    // If the PseudoBRIND is used to table jump, then emit a label to annotate
+    // the `jr` instruction, and save the instructions.
+    if (LArchAnnotateTableJump)
+      annotateTableJump(MBB, MBBI);
+    break;
   }
   return false;
 }
@@ -599,6 +610,44 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
 
   MI.eraseFromParent();
   return true;
+}
+
+void LoongArchPreRAExpandPseudo::annotateTableJump(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  MachineFunction *MF = MBB.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  bool IsFound = false;
+
+  std::function<void(MachineInstr *, int)> FindJTIMI = [&](MachineInstr *MInst,
+                                                           int FindDepth) {
+    if (FindDepth < 0)
+      return;
+    for (auto &MO : MInst->all_uses()) {
+      if (IsFound)
+        return;
+      Register Reg = MO.getReg();
+      if (!Reg.isVirtual())
+        continue;
+      MachineInstr *DefMI = MRI.getVRegDef(Reg);
+      if (!DefMI)
+        continue;
+      for (unsigned Idx = 0; Idx < DefMI->getNumOperands(); ++Idx) {
+        MachineOperand &MO = DefMI->getOperand(Idx);
+        if (MO.isJTI()) {
+          MBBI->setPreInstrSymbol(
+              *MF, MF->getContext().createNamedTempSymbol("jrtb_"));
+          MF->getInfo<LoongArchMachineFunctionInfo>()->setJumpInfo(&*MBBI, &MO);
+          IsFound = true;
+          return;
+        }
+      }
+      FindJTIMI(DefMI, --FindDepth);
+    }
+  };
+
+  // FindDepth = 3, probably sufficient.
+  FindJTIMI(&*MBBI, /*FindDepth=*/3);
 }
 
 class LoongArchExpandPseudo : public MachineFunctionPass {

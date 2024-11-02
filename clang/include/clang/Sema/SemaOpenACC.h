@@ -118,6 +118,16 @@ public:
   /// 'kernel' construct, this will have the source location for it. This
   /// permits us to implement the restriction of no further 'gang' clauses.
   SourceLocation LoopGangClauseOnKernelLoc;
+  /// If there is a current 'active' loop construct with a 'worker' clause on it
+  /// (on any sort of construct), this has the source location for it.  This
+  /// permits us to implement the restriction of no further 'gang' or 'worker'
+  /// clauses.
+  SourceLocation LoopWorkerClauseLoc;
+  /// If there is a current 'active' loop construct with a 'vector' clause on it
+  /// (on any sort of construct), this has the source location for it.  This
+  /// permits us to implement the restriction of no further 'gang', 'vector', or
+  /// 'worker' clauses.
+  SourceLocation LoopVectorClauseLoc;
 
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
@@ -224,11 +234,15 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
       // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
       if ((ClauseKind == OpenACCClauseKind::Async ||
+           ClauseKind == OpenACCClauseKind::Worker ||
+           ClauseKind == OpenACCClauseKind::Vector ||
            ClauseKind == OpenACCClauseKind::Wait) &&
           std::holds_alternative<std::monostate>(Details))
         return 0;
@@ -260,7 +274,7 @@ public:
              "Parsed clause kind does not have a queue id expr list");
 
       if (std::holds_alternative<std::monostate>(Details))
-        return ArrayRef<Expr *>{std::nullopt};
+        return ArrayRef<Expr *>();
 
       return std::get<WaitDetails>(Details).QueueIdExprs;
     }
@@ -271,6 +285,8 @@ public:
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Gang ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
@@ -401,6 +417,8 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
@@ -410,6 +428,8 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Worker ||
+              ClauseKind == OpenACCClauseKind::Vector ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
@@ -663,6 +683,8 @@ public:
     ComputeConstructInfo OldActiveComputeConstructInfo;
     OpenACCDirectiveKind DirKind;
     SourceLocation OldLoopGangClauseOnKernelLoc;
+    SourceLocation OldLoopWorkerClauseLoc;
+    SourceLocation OldLoopVectorClauseLoc;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
     LoopInConstructRAII LoopRAII;
 

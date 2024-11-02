@@ -21,3 +21,8 @@
 	mrs   x0, rndrrs
 # CHECK:        mrs     x0, RNDR
 # CHECK:        mrs     x0, RNDRRS
+
+	.arch armv9-a+cmpbr
+	cbne x5, #31, lbl
+# CHECK:        cbne x5, #31, lbl
+

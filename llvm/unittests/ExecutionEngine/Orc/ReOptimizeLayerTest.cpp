@@ -38,6 +38,18 @@ protected:
       GTEST_SKIP();
     }
 
+    // COFF-ARM64 is not supported yet
+    auto Triple = JTMB->getTargetTriple();
+    if (Triple.isOSBinFormatCOFF() && Triple.isAArch64())
+      GTEST_SKIP();
+
+    // SystemZ is not supported yet.
+    if (Triple.isSystemZ())
+      GTEST_SKIP();
+
+    if (Triple.isPPC())
+      GTEST_SKIP();
+
     auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC) {
       consumeError(EPC.takeError());

@@ -6,11 +6,11 @@
 define void @reduce_fmul_bfloat() {
 ; FP-REDUCE-LABEL: 'reduce_fmul_bfloat'
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call fast bfloat @llvm.vector.reduce.fmul.v1bf16(bfloat 0xR0000, <1 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2 = call fast bfloat @llvm.vector.reduce.fmul.v2bf16(bfloat 0xR0000, <2 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4 = call fast bfloat @llvm.vector.reduce.fmul.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V8 = call fast bfloat @llvm.vector.reduce.fmul.v8bf16(bfloat 0xR0000, <8 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %V16 = call fast bfloat @llvm.vector.reduce.fmul.v16bf16(bfloat 0xR0000, <16 x bfloat> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %v32 = call fast bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0xR0000, <32 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2 = call fast bfloat @llvm.vector.reduce.fmul.v2bf16(bfloat 0xR0000, <2 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4 = call fast bfloat @llvm.vector.reduce.fmul.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8 = call fast bfloat @llvm.vector.reduce.fmul.v8bf16(bfloat 0xR0000, <8 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 73 for instruction: %V16 = call fast bfloat @llvm.vector.reduce.fmul.v16bf16(bfloat 0xR0000, <16 x bfloat> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 211 for instruction: %v32 = call fast bfloat @llvm.vector.reduce.fmul.v32bf16(bfloat 0xR0000, <32 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 541 for instruction: %V64 = call fast bfloat @llvm.vector.reduce.fmul.v64bf16(bfloat 0xR0000, <64 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 573 for instruction: %V128 = call fast bfloat @llvm.vector.reduce.fmul.v128bf16(bfloat 0xR0000, <128 x bfloat> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void

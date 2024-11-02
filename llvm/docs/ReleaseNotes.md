@@ -110,6 +110,9 @@ Changes to the AArch64 Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 
+* Assembler/disassembler support has been added for Armv9.6-A (2024)
+  architecture extensions.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -124,6 +127,17 @@ Changes to the ARM Backend
 * `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
+
+* The default behavior for frame pointers in leaf functions has been updated.
+  When the `-fno-omit-frame-pointer` option is specified, `FPKeepKindStr` is
+  set to `-mframe-pointer=all`, meaning the frame pointer (FP) is now retained
+  in leaf functions by default. To eliminate the frame pointer in leaf functions,
+  you must explicitly use the `-momit-leaf-frame-pointer` option.
+
+* When using the `MOVT` or `MOVW` instructions, the Assembler will now check to
+  ensure that any addend that is used is within a 16-bit signed value range. If the
+  addend falls outside of this range, the LLVM backend will emit an error like so
+  `Relocation Not In Range`.
 
 Changes to the AVR Backend
 --------------------------
@@ -160,9 +174,20 @@ Changes to the RISC-V Backend
 * Added `Smctr` and `Ssctr` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
+  are no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
+
+The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+and [Non-trapping float-to-int Conversions] language features, which are
+[widely implemented in engines].
+
+[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
+[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[widely implemented in engines]: https://webassembly.org/features/
 
 Changes to the Windows Target
 -----------------------------
@@ -184,6 +209,8 @@ Changes to the X86 Backend
   not expected to result in real-world compatibility problems.
 
 * Support ISA of `AVX10.2-256` and `AVX10.2-512`.
+
+* Supported instructions of `MOVRS AND AVX10.2`
 
 Changes to the OCaml bindings
 -----------------------------
@@ -256,6 +283,10 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
+  files.
+
 
 Changes to BOLT
 ---------------------------------

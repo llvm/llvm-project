@@ -18,3 +18,4 @@
 
 RTSAN_FLAG(bool, halt_on_error, true, "Exit after first reported error.")
 RTSAN_FLAG(bool, print_stats_on_exit, false, "Print stats on exit.")
+RTSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")

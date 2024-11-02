@@ -851,7 +851,7 @@ void ARMInstPrinter::printPKHASRShiftImm(const MCInst *MI, unsigned OpNum,
 void ARMInstPrinter::printRegisterList(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
-  if (MI->getOpcode() != ARM::t2CLRM) {
+  if (MI->getOpcode() != ARM::t2CLRM && MI->getOpcode() != ARM::VSCCLRMS) {
     assert(is_sorted(drop_begin(*MI, OpNum),
                      [&](const MCOperand &LHS, const MCOperand &RHS) {
                        return MRI.getEncodingValue(LHS.getReg()) <

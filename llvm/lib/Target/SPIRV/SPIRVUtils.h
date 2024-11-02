@@ -341,5 +341,8 @@ inline const Type *unifyPtrType(const Type *Ty) {
 
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
+#define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
+bool getVacantFunctionName(Module &M, std::string &Name);
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

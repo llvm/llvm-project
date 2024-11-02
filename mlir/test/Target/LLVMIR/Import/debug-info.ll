@@ -867,3 +867,27 @@ define void @test() !dbg !3 {
 ; CHECK: #[[FILE:.+]] = #llvm.di_file<"test.f90" in "">
 ; CHECK: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
 ; CHECK: #llvm.di_common_block<scope = #[[SP]], name = "block", file = #[[FILE]], line = 3>
+
+; // -----
+
+@data = external global i64, !dbg !0, !dbg !5
+
+!llvm.module.flags = !{!8}
+!llvm.dbg.cu = !{!2}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 2, type: !7)
+!2 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, globals: !4)
+!3 = !DIFile(filename: "test.c", directory: "")
+!4 = !{!0, !5}
+!5 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression())
+!6 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 3, type: !7)
+!7 = !DIBasicType(name: "int", size: 32)
+!8 = !{i32 2, !"Debug Info Version", i32 3}
+
+
+; CHECK: #[[VAR1:.+]] =  #llvm.di_global_variable<{{.*}}name = "a"{{.*}}>
+; CHECK: #[[VAR2:.+]] =  #llvm.di_global_variable<{{.*}}name = "b"{{.*}}>
+; CHECK: #[[EXP1:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR1]], expr = <>>
+; CHECK: #[[EXP2:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR2]], expr = <>>
+; CHECK: llvm.mlir.global external @data() {{{.*}}dbg_exprs = [#[[EXP1]], #[[EXP2]]]} : i64

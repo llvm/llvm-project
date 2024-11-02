@@ -213,12 +213,12 @@ static unsigned canModifyToInlineImmOp32(const SIInstrInfo *TII,
     // that SCC is not live as S_NOT_B32 clobbers it. It's probably not worth
     // it, as the reasonable values are already covered by s_movk_i32.
     ModifiedImm = ~SrcImm;
-    if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+    if (TII->isInlineConstant(APInt(32, ModifiedImm, true)))
       return AMDGPU::V_NOT_B32_e32;
   }
 
   ModifiedImm = reverseBits<int32_t>(SrcImm);
-  if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+  if (TII->isInlineConstant(APInt(32, ModifiedImm, true)))
     return Scalar ? AMDGPU::S_BREV_B32 : AMDGPU::V_BFREV_B32_e32;
 
   return 0;

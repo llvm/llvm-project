@@ -2069,13 +2069,15 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     Status error = ModuleList::GetSharedModule(dwo_module_spec, module_sp,
                                                nullptr, nullptr, nullptr);
     if (!module_sp) {
+      // ReportWarning also rate-limits based on the warning string,
+      // but in a -gmodules build, each object file has a similar DAG
+      // of module dependencies that would all be listed here.
       GetObjectFile()->GetModule()->ReportWarning(
-          "{0:x16}: unable to locate module needed for external types: "
-          "{1}\nerror: {2}\nDebugging will be degraded due to missing "
-          "types. Rebuilding the project will regenerate the needed "
-          "module files.",
-          die.GetOffset(), dwo_module_spec.GetFileSpec().GetPath().c_str(),
-          error.AsCString("unknown error"));
+          "{0}", error.AsCString("unknown error"));
+      GetObjectFile()->GetModule()->ReportWarning(
+          "Unable to locate module needed for external types.\n"
+          "Debugging will be degraded due to missing types. Rebuilding the "
+          "project will regenerate the needed module files.");
       continue;
     }
 
@@ -2095,12 +2097,11 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
     if (dwo_id != dwo_dwo_id) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "{0:x16}: Module {1} is out-of-date (hash mismatch). Type "
-          "information "
-          "from this module may be incomplete or inconsistent with the rest of "
-          "the program. Rebuilding the project will regenerate the needed "
-          "module files.",
-          die.GetOffset(), dwo_module_spec.GetFileSpec().GetPath().c_str());
+          "Module {0} is out-of-date (hash mismatch).\n"
+          "Type information from this module may be incomplete or inconsistent "
+          "with the rest of the program. Rebuilding the project will "
+          "regenerate the needed module files.",
+          dwo_module_spec.GetFileSpec().GetPath());
     }
   }
 }

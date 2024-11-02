@@ -151,10 +151,9 @@ define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64
 define <64 x i8> @combine_vpermi2var_v64i8_with_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %a2) {
 ; CHECK-LABEL: combine_vpermi2var_v64i8_with_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermt2b %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vpmovb2m %zmm1, %k0
-; CHECK-NEXT:    vpmovm2b %k0, %zmm1
-; CHECK-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    knotq %k0, %k1
+; CHECK-NEXT:    vpermt2b %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    ret{{[l|q]}}
   %perm = tail call <64 x i8> @llvm.x86.avx512.vpermi2var.qi.512(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %a2)
   %cmp = icmp slt <64 x i8> %a1, zeroinitializer

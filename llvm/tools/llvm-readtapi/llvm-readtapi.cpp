@@ -325,8 +325,8 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
         continue;
       }
 
-      auto itr = SymLinks.insert({LinkTarget.c_str(), std::vector<SymLink>()});
-      itr.first->second.emplace_back(LinkSrc.str(), std::string(SymPath.str()));
+      SymLinks[LinkTarget.c_str()].emplace_back(LinkSrc.str(),
+                                                std::string(SymPath.str()));
 
       continue;
     }
@@ -382,7 +382,7 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     // libraries to stubify.
     StringRef LibToCheck = Found->second;
     for (int i = 0; i < 20; ++i) {
-      auto LinkIt = SymLinks.find(LibToCheck.str());
+      auto LinkIt = SymLinks.find(LibToCheck);
       if (LinkIt != SymLinks.end()) {
         for (auto &SymInfo : LinkIt->second) {
           SmallString<PATH_MAX> LinkSrc(SymInfo.SrcPath);

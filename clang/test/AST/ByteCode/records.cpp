@@ -1661,3 +1661,18 @@ namespace NullptrUpcast {
   constexpr A &ra = *nb; // both-error {{constant expression}} \
                          // both-note {{cannot access base class of null pointer}}
 }
+
+namespace NonConst {
+  template <int I>
+  struct S {
+    static constexpr int Size = I;
+    constexpr int getSize() const { return I; }
+    explicit S(int a) {}
+  };
+
+  void func() {
+    int a,b ;
+    const S<10> s{a};
+    static_assert(s.getSize() == 10, "");
+  }
+}

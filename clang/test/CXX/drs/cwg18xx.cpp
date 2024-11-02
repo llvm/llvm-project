@@ -640,3 +640,86 @@ namespace H {
   struct S s;
 }
 }
+
+namespace cwg1898 { // cwg1898: 2.7
+void e(int) {} // #cwg1898-e
+void e(int) {}
+// expected-error@-1 {{redefinition of 'e'}}
+//   expected-note@#cwg1898-e {{previous definition is here}}
+
+void e2(int) {}
+void e2(long) {} // OK, different type
+
+void f(int) {} // #cwg1898-f
+void f(const int) {}
+// expected-error@-1 {{redefinition of 'f'}}
+//   expected-note@#cwg1898-f {{previous definition is here}}
+
+void g(int) {} // #cwg1898-g
+void g(volatile int) {}
+// since-cxx20-warning@-1 {{volatile-qualified parameter type 'volatile int' is deprecated}}
+// expected-error@-2 {{redefinition of 'g'}}
+//   expected-note@#cwg1898-g {{previous definition is here}}
+
+void h(int *) {} // #cwg1898-h
+void h(int[]) {}
+// expected-error@-1 {{redefinition of 'h'}}
+//   expected-note@#cwg1898-h {{previous definition is here}}
+
+void h2(int *) {} // #cwg1898-h2
+void h2(int[2]) {}
+// expected-error@-1 {{redefinition of 'h2'}}
+//   expected-note@#cwg1898-h2 {{previous definition is here}}
+
+void h3(int (*)[2]) {} // #cwg1898-h3
+void h3(int [3][2]) {}
+// expected-error@-1 {{redefinition of 'h3'}}
+//   expected-note@#cwg1898-h3 {{previous definition is here}}
+
+void h4(int (*)[2]) {}
+void h4(int [3][3]) {} // OK, differ in non-top-level extent of array
+
+void i(int *) {}
+void i(const int *) {} // OK, pointee cv-qualification is not discarded
+
+void i2(int *) {} // #cwg1898-i2
+void i2(int * const) {}
+// expected-error@-1 {{redefinition of 'i2'}}
+//   expected-note@#cwg1898-i2 {{previous definition is here}}
+
+void j(void(*)()) {} // #cwg1898-j
+void j(void()) {}
+// expected-error@-1 {{redefinition of 'j'}}
+//   expected-note@#cwg1898-j {{previous definition is here}}
+
+void j2(void(int)) {} // #cwg1898-j2
+void j2(void(const int)) {}
+// expected-error@-1 {{redefinition of 'j2'}}
+//   expected-note@#cwg1898-j2 {{previous definition is here}}
+
+struct A {
+  void k(int) {} // #cwg1898-k
+  void k(int) {}
+  // expected-error@-1 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1898-k {{previous definition is here}}
+};
+
+struct B : A {
+  void k(int) {} // OK, shadows A::k
+};
+
+void l() {}
+void l(...) {}
+
+#if __cplusplus >= 201103L
+template <typename T>
+void m(T) {}
+template <typename... Ts>
+void m(Ts...) {}
+
+template <typename T, typename U>
+void m2(T, U) {}
+template <typename... Ts, typename U>
+void m2(Ts..., U) {}
+#endif
+} // namespace cwg1898

@@ -998,8 +998,8 @@ define nofpclass(nan inf) float @pow_f32(float nofpclass(nan inf) %arg, float no
 ; CHECK-NEXT:    [[I12:%.*]] = select i1 [[I11]], float [[ARG]], float 1.000000e+00
 ; CHECK-NEXT:    [[I13:%.*]] = tail call noundef float @llvm.copysign.f32(float noundef [[I4]], float noundef [[I12]])
 ; CHECK-NEXT:    [[I17:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    [[I21:%.*]] = select i1 [[I11]], float [[ARG]], float 0.000000e+00
-; CHECK-NEXT:    [[I22:%.*]] = tail call noundef nofpclass(nan sub norm) float @llvm.copysign.f32(float noundef 0.000000e+00, float noundef [[I21]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call nofpclass(nan sub norm) float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    [[I22:%.*]] = select i1 [[I11]], float [[TMP0]], float 0.000000e+00
 ; CHECK-NEXT:    [[I23:%.*]] = select i1 [[I17]], float [[I22]], float [[I13]]
 ; CHECK-NEXT:    [[I24:%.*]] = fcmp oeq float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[I25:%.*]] = fcmp oeq float [[ARG1]], 0.000000e+00

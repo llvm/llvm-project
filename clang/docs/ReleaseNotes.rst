@@ -99,6 +99,26 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
+- Clang will now correctly not consider pointers to non classes for covariance
+  and disallow changing return type to a type that doesn't have the same or less cv-qualifications.
+
+  .. code-block:: c++
+
+    struct A {
+      virtual const int *f() const;
+      virtual const std::string *g() const;
+    };
+    struct B : A {
+      // Return type has less cv-qualification but doesn't point to a class.
+      // Error will be generated.
+      int *f() const override;
+
+      // Return type doesn't have more cv-qualification also not the same or
+      // less cv-qualification.
+      // Error will be generated.
+      volatile std::string *g() const override;
+    };
+
 - The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
   something that WG21 has shown interest in removing from the language. The
   result is that anyone who is compiling with ``-Werror`` should see this
@@ -112,6 +132,15 @@ C++ Specific Potentially Breaking Changes
     unsigned operator"" _udl_name(unsigned long long);
     // Fixed version:
     unsigned operator""_udl_name(unsigned long long);
+
+- Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
+  applied on a parameter of a function that returns void. This was previously 
+  ignored and had no effect. (#GH107556)
+
+  .. code-block:: c++
+
+    // Now diagnoses with an error.
+    void f(int& i [[clang::lifetimebound]]);
 
 ABI Changes in This Version
 ---------------------------
@@ -252,6 +281,7 @@ Non-comprehensive list of changes in this release
   ``__builtin_signbit`` can now be used in constant expressions.
 - Plugins can now define custom attributes that apply to statements
   as well as declarations.
+- ``__builtin_abs`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -280,6 +310,11 @@ Modified Compiler Flags
   ``-ffp-model=fast`` behavior no longer assumes finite math only and uses
   the ``promoted`` algorithm for complex division when possible rather than the
   less basic (limited range) algorithm.
+
+- The ``-fveclib`` option has been updated to enable ``-fno-math-errno`` for
+  ``-fveclib=ArmPL`` and ``-fveclib=SLEEF``. This gives Clang more opportunities
+  to utilize these vector libraries. The behavior for all other vector function
+  libraries remains unchanged.
 
 Removed Compiler Flags
 -------------------------
@@ -398,10 +433,12 @@ Improvements to Clang's diagnostics
 - The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
   instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
   suboptimal in some way the error fails to mention (#GH111550).
-  
+
 - Clang now emits a ``-Wdepredcated-literal-operator`` diagnostic, even if the
   name was a reserved name, which we improperly allowed to suppress the
   diagnostic.
+
+- Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -418,8 +455,10 @@ Bug Fixes in This Version
 - Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
+- Fixed a crash using ``__array_rank`` on 64-bit targets. (#GH113044).
 - The warning emitted for an unsupported register variable type now points to
   the unsupported type instead of the ``register`` keyword (#GH109776).
+- Fixed a crash when emit ctor for global variant with flexible array init  (#GH113187).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -486,7 +525,7 @@ Bug Fixes to C++ Support
 - Clang no longer tries to capture non-odr used default arguments of template parameters of generic lambdas (#GH107048)
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
-- A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
+- A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361), (#GH112352)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
   pack. (#GH63819), (#GH107560)
@@ -509,10 +548,19 @@ Bug Fixes to C++ Support
   a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
-  and undeclared templates. (#GH107047, #GH49093)
+  and undeclared templates. (#GH107047), (#GH49093)
 - Clang no longer crashes when a lambda contains an invalid block declaration that contains an unexpanded
   parameter pack. (#GH109148)
 - Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
+- Fixed a bug in lambda captures where ``constexpr`` class-type objects were not properly considered ODR-used in
+  certain situations. (#GH47400), (#GH90896)
+- Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
+- During the lookup for a base class name, non-type names are ignored. (#GH16855)
+- Fix a crash when recovering an invalid expression involving an explicit object member conversion operator. (#GH112559)
+- Clang incorrectly considered a class with an anonymous union member to not be
+  const-default-constructible even if a union member has a default member initializer.
+  (#GH95854).
+- Fixed an assertion failure when evaluating an invalid expression in an array initializer (#GH112140)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -592,14 +640,24 @@ X86 Support
 
 - All intrinsics in tbmintrin.h can now be used in constant expressions.
 
+- Supported intrinsics for ``MOVRS AND AVX10.2``.
+  * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- In the ARM Target, the frame pointer (FP) of a leaf function can be retained
+  by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
+  in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
+  the ``-momit-leaf-frame-pointer`` option.
 
 Android Support
 ^^^^^^^^^^^^^^^
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- clang-cl now supports ``/std:c++23preview`` which enables C++23 features.
 
 - Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
   Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
@@ -620,6 +678,8 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+- Clang now supports CUDA SDK up to 12.6
+- Added support for sm_100
 
 AIX Support
 ^^^^^^^^^^^
@@ -630,8 +690,19 @@ NetBSD Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
+The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+and [Non-trapping float-to-int Conversions] language features, which are
+[widely implemented in engines].
+
+[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
+[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[widely implemented in engines]: https://webassembly.org/features/
+
 AVR Support
 ^^^^^^^^^^^
+
+- Reject C/C++ compilation for avr1 devices which have no SRAM.
 
 DWARF Support in Clang
 ----------------------
@@ -664,8 +735,11 @@ clang-format
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
 - Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
-- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of multi-line comments
-  without touching their contents, renames ``false`` to ``Never``, and ``true`` to ``Always``.
+- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of
+  multi-line comments without touching their contents, renames ``false`` to
+  ``Never``, and ``true`` to ``Always``.
+- Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
+- Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
 
 libclang
 --------

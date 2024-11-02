@@ -135,7 +135,16 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
          || FunctionName == "Identifier";
 }
 
-bool isRefType(const clang::QualType T) {
+bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
+  assert(F);
+  return isCheckedPtr(safeGetName(F));
+}
+
+bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
+  return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F);
+}
+
+bool isSafePtrType(const clang::QualType T) {
   QualType type = T;
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
@@ -145,7 +154,7 @@ bool isRefType(const clang::QualType T) {
     if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
       if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
         auto name = decl->getNameAsString();
-        return isRefType(name);
+        return isRefType(name) || isCheckedPtr(name);
       }
       return false;
     }
@@ -177,6 +186,12 @@ std::optional<bool> isUncounted(const CXXRecordDecl* Class)
   return (*IsRefCountable);
 }
 
+std::optional<bool> isUnchecked(const CXXRecordDecl *Class) {
+  if (isCheckedPtr(Class))
+    return false; // Cheaper than below
+  return isCheckedPtrCapable(Class);
+}
+
 std::optional<bool> isUncountedPtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl())
@@ -185,14 +200,25 @@ std::optional<bool> isUncountedPtr(const QualType T) {
   return false;
 }
 
-std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
-{
+std::optional<bool> isUnsafePtr(const QualType T) {
+  if (T->isPointerType() || T->isReferenceType()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
+      return isUncounted(CXXRD) || isUnchecked(CXXRD);
+    }
+  }
+  return false;
+}
+
+std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
   if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);
     auto method = safeGetName(M);
+
+    if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
+      return true;
 
     if ((isRefType(className) && (method == "get" || method == "ptr")) ||
         ((className == "String" || className == "AtomString" ||
@@ -205,7 +231,12 @@ std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
     // FIXME: Currently allowing any Ref<T> -> whatever cast.
     if (isRefType(className)) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUncountedPtr(maybeRefToRawOperator->getConversionType());
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
+    }
+
+    if (isCheckedPtr(className)) {
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
     }
   }
   return false;
@@ -273,16 +304,29 @@ class TrivialFunctionAnalysisVisitor
     return true;
   }
 
-  template <typename CheckFunction>
-  bool WithCachedResult(const Stmt *S, CheckFunction Function) {
-    // If the statement isn't in the cache, conservatively assume that
-    // it's not trivial until analysis completes. Insert false to the cache
-    // first to avoid infinite recursion.
-    auto [It, IsNew] = Cache.insert(std::make_pair(S, false));
+  template <typename StmtOrDecl, typename CheckFunction>
+  bool WithCachedResult(const StmtOrDecl *S, CheckFunction Function) {
+    auto CacheIt = Cache.find(S);
+    if (CacheIt != Cache.end())
+      return CacheIt->second;
+
+    // Treat a recursive statement to be trivial until proven otherwise.
+    auto [RecursiveIt, IsNew] = RecursiveFn.insert(std::make_pair(S, true));
     if (!IsNew)
-      return It->second;
+      return RecursiveIt->second;
+
     bool Result = Function();
+
+    if (!Result) {
+      for (auto &It : RecursiveFn)
+        It.second = false;
+    }
+    RecursiveIt = RecursiveFn.find(S);
+    assert(RecursiveIt != RecursiveFn.end());
+    Result = RecursiveIt->second;
+    RecursiveFn.erase(RecursiveIt);
     Cache[S] = Result;
+
     return Result;
   }
 
@@ -292,16 +336,7 @@ public:
   TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
   bool IsFunctionTrivial(const Decl *D) {
-    auto CacheIt = Cache.find(D);
-    if (CacheIt != Cache.end())
-      return CacheIt->second;
-
-    // Treat a recursive function call to be trivial until proven otherwise.
-    auto [RecursiveIt, IsNew] = RecursiveFn.insert(std::make_pair(D, true));
-    if (!IsNew)
-      return RecursiveIt->second;
-
-    bool Result = [&]() {
+    return WithCachedResult(D, [&]() {
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
         for (auto *CtorInit : CtorDecl->inits()) {
           if (!Visit(CtorInit->getInit()))
@@ -312,20 +347,7 @@ public:
       if (!Body)
         return false;
       return Visit(Body);
-    }();
-
-    if (!Result) {
-      // D and its mutually recursive callers are all non-trivial.
-      for (auto &It : RecursiveFn)
-        It.second = false;
-    }
-    RecursiveIt = RecursiveFn.find(D);
-    assert(RecursiveIt != RecursiveFn.end());
-    Result = RecursiveIt->second;
-    RecursiveFn.erase(RecursiveIt);
-    Cache[D] = Result;
-
-    return Result;
+    });
   }
 
   bool VisitStmt(const Stmt *S) {
@@ -423,7 +445,8 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || Name.find("__builtin") == 0)
+        Name == "bitwise_cast" || Name.find("__builtin") == 0 ||
+        Name == "__libcpp_verbose_abort")
       return true;
 
     return IsFunctionTrivial(Callee);
@@ -456,7 +479,7 @@ public:
     if (!Callee)
       return false;
 
-    std::optional<bool> IsGetterOfRefCounted = isGetterOfRefCounted(Callee);
+    std::optional<bool> IsGetterOfRefCounted = isGetterOfSafePtr(Callee);
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
       return true;
 
@@ -586,11 +609,6 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
-  // If the statement isn't in the cache, conservatively assume that
-  // it's not trivial until analysis completes. Unlike a function case,
-  // we don't insert an entry into the cache until Visit returns
-  // since Visit* functions themselves make use of the cache.
-
   TrivialFunctionAnalysisVisitor V(Cache);
   bool Result = V.Visit(S);
   assert(Cache.contains(S) && "Top-level statement not properly cached!");

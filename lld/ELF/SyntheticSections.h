@@ -411,14 +411,14 @@ class DynamicReloc {
 public:
   enum Kind {
     /// The resulting dynamic relocation does not reference a symbol (#sym must
-    /// be nullptr) and uses #addend as the result of computeAddend().
+    /// be nullptr) and uses #addend as the result of computeAddend(ctx).
     AddendOnly,
     /// The resulting dynamic relocation will not reference a symbol: #sym is
     /// only used to compute the addend with InputSection::getRelocTargetVA().
     /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
     AddendOnlyWithTargetVA,
     /// The resulting dynamic relocation references symbol #sym from the dynamic
-    /// symbol table and uses #addend as the value of computeAddend().
+    /// symbol table and uses #addend as the value of computeAddend(ctx).
     AgainstSymbol,
     /// The resulting dynamic relocation references symbol #sym from the dynamic
     /// symbol table and uses InputSection::getRelocTargetVA() + #addend for the
@@ -458,9 +458,9 @@ public:
   /// Computes the addend of the dynamic relocation. Note that this is not the
   /// same as the #addend member variable as it may also include the symbol
   /// address/the address of the corresponding GOT entry/etc.
-  int64_t computeAddend() const;
+  int64_t computeAddend(Ctx &) const;
 
-  void computeRaw(SymbolTableBaseSection *symt);
+  void computeRaw(Ctx &, SymbolTableBaseSection *symt);
 
   Symbol *sym;
   const OutputSection *outputSec = nullptr;
@@ -547,13 +547,7 @@ public:
   void mergeRels();
   void partitionRels();
   void finalizeContents() override;
-  static bool classof(const SectionBase *d) {
-    return SyntheticSection::classof(d) &&
-           (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
-            d->type == llvm::ELF::SHT_RELR ||
-            (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
-             elf::ctx.arg.emachine == llvm::ELF::EM_AARCH64));
-  }
+
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
 
@@ -1443,7 +1437,7 @@ Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                            uint64_t value, uint64_t size,
                            InputSectionBase &section);
 
-void addVerneed(Symbol *ss);
+void addVerneed(Ctx &, Symbol &ss);
 
 // Linker generated per-partition sections.
 struct Partition {
@@ -1475,10 +1469,10 @@ struct Partition {
   std::unique_ptr<VersionTableSection> verSym;
 
   Partition(Ctx &ctx) : ctx(ctx) {}
-  unsigned getNumber() const { return this - &ctx.partitions[0] + 1; }
+  unsigned getNumber(Ctx &ctx) const { return this - &ctx.partitions[0] + 1; }
 };
 
-inline Partition &SectionBase::getPartition() const {
+inline Partition &SectionBase::getPartition(Ctx &ctx) const {
   assert(isLive());
   return ctx.partitions[partition - 1];
 }

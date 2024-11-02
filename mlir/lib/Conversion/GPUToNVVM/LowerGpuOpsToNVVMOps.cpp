@@ -373,8 +373,9 @@ void mlir::populateGpuToNVVMConversionPatterns(
       NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>>(
       converter, IndexKind::Other, IntrType::Id);
   patterns.add<gpu::index_lowering::OpLowering<
-      gpu::ClusterDimOp, NVVM::ClusterDimXOp, NVVM::ClusterDimYOp,
-      NVVM::ClusterDimZOp>>(converter, IndexKind::Other, IntrType::Dim);
+      gpu::ClusterDimBlocksOp, NVVM::ClusterDimBlocksXOp,
+      NVVM::ClusterDimBlocksYOp, NVVM::ClusterDimBlocksZOp>>(
+      converter, IndexKind::Other, IntrType::Dim);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::BlockIdOp, NVVM::BlockIdXOp, NVVM::BlockIdYOp, NVVM::BlockIdZOp>>(
       converter, IndexKind::Grid, IntrType::Id);
