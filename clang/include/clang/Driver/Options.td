@@ -949,7 +949,7 @@ def : Flag<["-"], "fident">, Group<f_Group>, Alias<Qy>,
 def : Flag<["-"], "fno-ident">, Group<f_Group>, Alias<Qn>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>;
 def Qunused_arguments : Flag<["-"], "Qunused-arguments">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Don't emit warning for unused driver arguments">;
 def Q : Flag<["-"], "Q">, IgnoredGCCCompat;
 def S : Flag<["-"], "S">, Flags<[NoXarchOption]>,
@@ -3545,6 +3545,7 @@ def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Flags<[NoArgumentUnused]>;
 class OpenMPVersionHelp<string program, string default> {
   string str = !strconcat(
@@ -6761,6 +6762,14 @@ def fdefault_integer_8 : Flag<["-"],"fdefault-integer-8">, Group<f_Group>,
   HelpText<"Set the default integer and logical kind to an 8 byte wide type">;
 def fdefault_real_8 : Flag<["-"],"fdefault-real-8">, Group<f_Group>,
   HelpText<"Set the default real kind to an 8 byte wide type">;
+def fdisable_real_3 : Flag<["-"],"fdisable-real-3">, Group<f_Group>,
+   HelpText<"Disable real(KIND=3) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_real_10 : Flag<["-"],"fdisable-real-10">, Group<f_Group>,
+  HelpText<"Disable real(KIND=10) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_integer_2 : Flag<["-"],"fdisable-integer-2">, Group<f_Group>,
+  HelpText<"Disable integer(KIND=2) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_integer_16 : Flag<["-"],"fdisable-integer-16">, Group<f_Group>,
+  HelpText<"Disable integer(KIND=16) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def flarge_sizes : Flag<["-"],"flarge-sizes">, Group<f_Group>,
   HelpText<"Use INTEGER(KIND=8) for the result type in size-related intrinsics">;
 

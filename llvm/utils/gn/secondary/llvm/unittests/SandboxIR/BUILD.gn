@@ -9,5 +9,6 @@ unittest("SandboxIRTests") {
   sources = [
     "SandboxIRTest.cpp",
     "TrackerTest.cpp",
+    "TypesTest.cpp",
   ]
 }

@@ -1021,9 +1021,8 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
     llvm::Constant *current = workList.back();
     // Collect all dependencies of the current constant and add them to the
     // adjacency list if none has been computed before.
-    auto adjacencyIt = adjacencyLists.find(current);
-    if (adjacencyIt == adjacencyLists.end()) {
-      adjacencyIt = adjacencyLists.try_emplace(current).first;
+    auto [adjacencyIt, inserted] = adjacencyLists.try_emplace(current);
+    if (inserted) {
       // Add all constant operands to the adjacency list and skip any other
       // values such as basic block addresses.
       for (llvm::Value *operand : current->operands())

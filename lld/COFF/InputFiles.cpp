@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -99,6 +100,20 @@ ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
   file = CHECK(Archive::create(mb), this);
+
+  // Try to read symbols from ECSYMBOLS section on ARM64EC.
+  if (isArm64EC(ctx.config.machine)) {
+    iterator_range<Archive::symbol_iterator> symbols =
+        CHECK(file->ec_symbols(), this);
+    if (!symbols.empty()) {
+      for (const Archive::Symbol &sym : symbols)
+        ctx.symtab.addLazyArchive(this, sym);
+
+      // Read both EC and native symbols on ARM64X.
+      if (ctx.config.machine != ARM64X)
+        return;
+    }
+  }
 
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &sym : file->symbols())
@@ -1005,9 +1020,17 @@ void ImportFile::parse() {
 
   // Read names and create an __imp_ symbol.
   StringRef buf = mb.getBuffer().substr(sizeof(*hdr));
-  StringRef name = saver().save(buf.split('\0').first);
+  auto split = buf.split('\0');
+  buf = split.second;
+  StringRef name;
+  if (isArm64EC(hdr->Machine)) {
+    if (std::optional<std::string> demangledName =
+            getArm64ECDemangledFunctionName(split.first))
+      name = saver().save(*demangledName);
+  }
+  if (name.empty())
+    name = saver().save(split.first);
   StringRef impName = saver().save("__imp_" + name);
-  buf = buf.substr(name.size() + 1);
   dllName = buf.split('\0').first;
   StringRef extName;
   switch (hdr->getNameType()) {
@@ -1044,9 +1067,14 @@ void ImportFile::parse() {
   // If type is function, we need to create a thunk which jump to an
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
-  if (hdr->getType() == llvm::COFF::IMPORT_CODE)
-    thunkSym = ctx.symtab.addImportThunk(
-        name, cast_or_null<DefinedImportData>(impSym), hdr->Machine);
+  if (hdr->getType() == llvm::COFF::IMPORT_CODE) {
+    if (ctx.config.machine != ARM64EC) {
+      thunkSym = ctx.symtab.addImportThunk(name, impSym, hdr->Machine);
+    } else {
+      thunkSym = ctx.symtab.addImportThunk(name, impSym, AMD64);
+      // FIXME: Add aux IAT symbols.
+    }
+  }
 }
 
 BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,

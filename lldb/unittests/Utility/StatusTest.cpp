@@ -27,21 +27,20 @@ TEST(StatusTest, Formatv) {
 }
 
 TEST(StatusTest, ErrorConstructor) {
-  EXPECT_TRUE(Status(llvm::Error::success()).Success());
+  EXPECT_TRUE(Status::FromError(llvm::Error::success()).Success());
 
-  Status eagain(
+  Status eagain = Status::FromError(
       llvm::errorCodeToError(std::error_code(EAGAIN, std::generic_category())));
   EXPECT_TRUE(eagain.Fail());
   EXPECT_EQ(eErrorTypePOSIX, eagain.GetType());
   EXPECT_EQ(Status::ValueType(EAGAIN), eagain.GetError());
 
-  Status foo(llvm::make_error<llvm::StringError>(
-      "foo", llvm::inconvertibleErrorCode()));
+  Status foo = Status::FromError(llvm::createStringError("foo"));
   EXPECT_TRUE(foo.Fail());
   EXPECT_EQ(eErrorTypeGeneric, foo.GetType());
   EXPECT_STREQ("foo", foo.AsCString());
 
-  foo = llvm::Error::success();
+  foo = Status::FromError(llvm::Error::success());
   EXPECT_TRUE(foo.Success());
 }
 
@@ -52,6 +51,11 @@ TEST(StatusTest, ErrorCodeConstructor) {
   EXPECT_TRUE(eagain.Fail());
   EXPECT_EQ(eErrorTypePOSIX, eagain.GetType());
   EXPECT_EQ(Status::ValueType(EAGAIN), eagain.GetError());
+
+  llvm::Error list = llvm::joinErrors(llvm::createStringError("foo"),
+                                      llvm::createStringError("bar"));
+  Status foobar = Status::FromError(std::move(list));
+  EXPECT_EQ(std::string("foo\nbar"), std::string(foobar.AsCString()));
 }
 
 TEST(StatusTest, ErrorConversion) {

@@ -26,6 +26,8 @@ class raw_ostream;
 
 namespace lldb_private {
 
+const char *ExpressionResultAsCString(lldb::ExpressionResults result);
+
 /// \class Status Status.h "lldb/Utility/Status.h" An error handling class.
 ///
 /// This class is designed to be able to hold any error code that can be
@@ -41,13 +43,32 @@ namespace lldb_private {
 /// of themselves for printing results and error codes. The string value will
 /// be fetched on demand and its string value will be cached until the error
 /// is cleared of the value of the error changes.
+///
+/// API design notes:
+///
+/// Most APIs that currently vend a Status would be better served by
+/// returning llvm::Expected<> instead. If possibles APIs should be
+/// refactored to avoid Status. The only legitimate long-term uses of
+/// Status are objects that need to store an error for a long time
+/// (which should be questioned as a design decision, too).
+///
+/// Implementation notes:
+///
+/// Internally, Status stores an llvm::Error.
+///   eErrorTypeInvalid
+///   eErrorTypeGeneric      llvm::StringError
+///   eErrorTypePOSIX        llvm::ECError
+///   eErrorTypeMachKernel   MachKernelError
+///   eErrorTypeExpression   llvm::ErrorList<ExpressionError>
+///   eErrorTypeWin32        Win32Error
+
 class Status {
 public:
-  /// Every error value that this object can contain needs to be able to fit
   /// into ValueType.
   typedef uint32_t ValueType;
 
   Status();
+  Status(Status &&other) = default;
 
   /// Initialize the error object with a generic success value.
   ///
@@ -91,10 +112,14 @@ public:
 
   ~Status();
 
-  // llvm::Error support
-  explicit Status(llvm::Error error) { *this = std::move(error); }
-  const Status &operator=(llvm::Error error);
+  const Status &operator=(Status &&);
+  /// Avoid using this in new code. Migrate APIs to llvm::Expected instead.
+  static Status FromError(llvm::Error error);
+  /// FIXME: Replace this with a takeError() method.
   llvm::Error ToError() const;
+  /// Don't call this function in new code. Instead, redesign the API
+  /// to use llvm::Expected instead of Status.
+  Status Clone() const { return Status(ToError()); }
 
   /// Get the error string associated with the current error.
   //
@@ -145,6 +170,7 @@ public:
   bool Success() const;
 
 protected:
+  Status(llvm::Error error);
   /// Status code as an integer value.
   ValueType m_code = 0;
   /// The type of the above error code.

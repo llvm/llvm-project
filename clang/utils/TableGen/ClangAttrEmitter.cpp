@@ -189,7 +189,7 @@ static StringRef NormalizeGNUAttrSpelling(StringRef AttrSpelling) {
 
 typedef std::vector<std::pair<std::string, const Record *>> ParsedAttrMap;
 
-static ParsedAttrMap getParsedAttrList(const RecordKeeper &Records,
+static ParsedAttrMap getParsedAttrList(RecordKeeper &Records,
                                        ParsedAttrMap *Dupes = nullptr,
                                        bool SemaOnly = true) {
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -4344,7 +4344,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
 // written into OS and the checks for merging declaration attributes are
 // written into MergeOS.
 static void GenerateMutualExclusionsChecks(const Record &Attr,
-                                           const RecordKeeper &Records,
+                                           RecordKeeper &Records,
                                            raw_ostream &OS,
                                            raw_ostream &MergeDeclOS,
                                            raw_ostream &MergeStmtOS) {

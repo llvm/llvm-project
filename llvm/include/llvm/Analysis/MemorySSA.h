@@ -689,7 +689,7 @@ inline void MemoryUseOrDef::resetOptimized() {
     cast<MemoryUse>(this)->resetOptimized();
 }
 
-template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
+template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 
 /// Encapsulates MemorySSA, including all data associated with memory

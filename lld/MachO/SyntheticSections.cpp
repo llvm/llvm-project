@@ -1231,7 +1231,8 @@ void SymtabSection::emitStabs() {
 
       // Constant-folded symbols go in the executable's symbol table, but don't
       // get a stabs entry unless --keep-icf-stabs flag is specified
-      if (!config->keepICFStabs && defined->wasIdenticalCodeFolded)
+      if (!config->keepICFStabs &&
+          defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
         continue;
 
       ObjFile *file = defined->getObjectFile();

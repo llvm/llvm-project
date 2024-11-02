@@ -2763,7 +2763,7 @@ ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
   if (!valobj_sp) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     valobj_sp = ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(), m_error);
+        exe_ctx.GetBestExecutionContextScope(), m_error.Clone());
   }
   return valobj_sp;
 }
@@ -2974,7 +2974,7 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
 
   return ValueObjectConstResult::Create(
       ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope(),
-                       error);
+      std::move(error));
 }
 
 lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {

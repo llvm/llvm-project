@@ -14,7 +14,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GCN-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GCN-NEXT:  .LBB0_2: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
 ; GCN-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
@@ -149,6 +149,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCN-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GCN-NEXT:  .LBB3_1: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    v_mov_b32_e32 v4, s0
 ; GCN-NEXT:    s_add_co_i32 s2, s2, -1

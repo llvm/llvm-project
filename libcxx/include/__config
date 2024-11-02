@@ -888,7 +888,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
-      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
+      defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__) || defined(__LLVM_LIBC__)
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 
@@ -997,21 +997,9 @@ typedef __char32_t char32_t;
 // (If/when MSVC breaks its C++ ABI, it will be changed to work as intended.)
 // However, MSVC implements [[msvc::no_unique_address]] which does what
 // [[no_unique_address]] is supposed to do, in general.
-
-// Clang-cl does not yet (14.0) implement either [[no_unique_address]] or
-// [[msvc::no_unique_address]] though. If/when it does implement
-// [[msvc::no_unique_address]], this should be preferred though.
 #    define _LIBCPP_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
-#  elif __has_cpp_attribute(no_unique_address)
-#    define _LIBCPP_NO_UNIQUE_ADDRESS [[__no_unique_address__]]
 #  else
-#    define _LIBCPP_NO_UNIQUE_ADDRESS /* nothing */
-// Note that this can be replaced by #error as soon as clang-cl
-// implements msvc::no_unique_address, since there should be no C++20
-// compiler that doesn't support one of the two attributes at that point.
-// We generally don't want to use this macro outside of C++20-only code,
-// because using it conditionally in one language version only would make
-// the ABI inconsistent.
+#    define _LIBCPP_NO_UNIQUE_ADDRESS [[__no_unique_address__]]
 #  endif
 
 // c8rtomb() and mbrtoc8() were added in C++20 and C23. Support for these

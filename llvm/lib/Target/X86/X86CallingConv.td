@@ -13,14 +13,14 @@
 
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
 class CCIfSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfNotSubtarget - Match if the current subtarget doesn't has a feature F.
 class CCIfNotSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("!static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("!State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfRegCallv4 - Match if RegCall ABIv4 is respected.

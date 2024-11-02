@@ -67,6 +67,18 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertIn(thread_id, stacks_to_registers_map)
             register_val_list = stacks_to_registers_map[thread_id]
             frame_register_list = frame.GetRegisters()
+            # explicitly verify we collected fs and gs base for x86_64
+            explicit_registers = ["fs_base", "gs_base"]
+            for reg in explicit_registers:
+                register = frame_register_list.GetFirstValueByName(reg)
+                self.assertNotEqual(None, register)
+                self.assertEqual(
+                    register.GetValueAsUnsigned(),
+                    stacks_to_registers_map[thread_id]
+                    .GetFirstValueByName("fs_base")
+                    .GetValueAsUnsigned(),
+                )
+
             for x in register_val_list:
                 self.assertEqual(
                     x.GetValueAsUnsigned(),

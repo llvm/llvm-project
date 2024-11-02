@@ -284,6 +284,8 @@ endif()
 option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
 
+option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
+
 include(config-ix)
 
 #================================

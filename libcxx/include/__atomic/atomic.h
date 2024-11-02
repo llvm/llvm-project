@@ -16,8 +16,10 @@
 #include <__config>
 #include <__functional/operations.h>
 #include <__memory/addressof.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_function.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>

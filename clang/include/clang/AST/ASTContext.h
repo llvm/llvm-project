@@ -265,6 +265,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<SubstTemplateTemplateParmPackStorage,
                                      ASTContext&>
     SubstTemplateTemplateParmPacks;
+  mutable llvm::ContextualFoldingSet<DeducedTemplateStorage, ASTContext &>
+      DeducedTemplates;
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
@@ -1381,6 +1383,14 @@ public:
   /// in the return type and parameter types.
   bool hasSameFunctionTypeIgnoringPtrSizes(QualType T, QualType U);
 
+  /// Get or construct a function type that is equivalent to the input type
+  /// except that the parameter ABI annotations are stripped.
+  QualType getFunctionTypeWithoutParamABIs(QualType T) const;
+
+  /// Determine if two function types are the same, ignoring parameter ABI
+  /// annotations.
+  bool hasSameFunctionTypeIgnoringParamABI(QualType T, QualType U) const;
+
   /// Return the uniqued reference to the type for a complex
   /// number with the specified element type.
   QualType getComplexType(QualType T) const;
@@ -2296,6 +2306,15 @@ public:
                                                 unsigned Index,
                                                 bool Final) const;
 
+  /// Represents a TemplateName which had some of its default arguments
+  /// deduced. This both represents this default argument deduction as sugar,
+  /// and provides the support for it's equivalences through canonicalization.
+  /// For example DeducedTemplateNames which have the same set of default
+  /// arguments are equivalent, and are also equivalent to the underlying
+  /// template when the deduced template arguments are the same.
+  TemplateName getDeducedTemplateName(TemplateName Underlying,
+                                      DefaultArguments DefaultArgs) const;
+
   enum GetBuiltinTypeError {
     /// No error
     GE_None,
@@ -2714,9 +2733,9 @@ public:
                            const ObjCMethodDecl *MethodImp);
 
   bool UnwrapSimilarTypes(QualType &T1, QualType &T2,
-                          bool AllowPiMismatch = true);
+                          bool AllowPiMismatch = true) const;
   void UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
-                               bool AllowPiMismatch = true);
+                               bool AllowPiMismatch = true) const;
 
   /// Determine if two types are similar, according to the C++ rules. That is,
   /// determine if they are the same other than qualifiers on the initial
@@ -2725,7 +2744,7 @@ public:
   ///
   /// Clang offers a number of qualifiers in addition to the C++ qualifiers;
   /// those qualifiers are also ignored in the 'similarity' check.
-  bool hasSimilarType(QualType T1, QualType T2);
+  bool hasSimilarType(QualType T1, QualType T2) const;
 
   /// Determine if two types are similar, ignoring only CVR qualifiers.
   bool hasCvrSimilarType(QualType T1, QualType T2);
@@ -2779,11 +2798,13 @@ public:
   /// template name uses the shortest form of the dependent
   /// nested-name-specifier, which itself contains all canonical
   /// types, values, and templates.
-  TemplateName getCanonicalTemplateName(const TemplateName &Name) const;
+  TemplateName getCanonicalTemplateName(TemplateName Name,
+                                        bool IgnoreDeduced = false) const;
 
   /// Determine whether the given template names refer to the same
   /// template.
-  bool hasSameTemplateName(const TemplateName &X, const TemplateName &Y) const;
+  bool hasSameTemplateName(const TemplateName &X, const TemplateName &Y,
+                           bool IgnoreDeduced = false) const;
 
   /// Determine whether the two declarations refer to the same entity.
   bool isSameEntity(const NamedDecl *X, const NamedDecl *Y) const;

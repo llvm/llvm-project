@@ -608,12 +608,29 @@ void HWAddressSanitizer::initializeModule() {
     // infer those attributes on libc functions, which is not true if those
     // are instrumented (Android) or intercepted.
 
-    // nobuiltin makes sure later passes don't restore assumptions about
-    // the function.
-    F.addFnAttr(llvm::Attribute::NoBuiltin);
-    F.removeFnAttr(llvm::Attribute::Memory);
-    for (auto &A : F.args())
-      A.removeAttr(llvm::Attribute::WriteOnly);
+    // The API is weird. `onlyReadsMemory` actually means "does not write", and
+    // `onlyWritesMemory` actually means "does not read". So we reconstruct
+    // "accesses memory" && "does not read" <=> "writes".
+    bool Changed = false;
+    if (!F.doesNotAccessMemory()) {
+      bool WritesMemory = !F.onlyReadsMemory();
+      bool ReadsMemory = !F.onlyWritesMemory();
+      if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
+        F.removeFnAttr(Attribute::Memory);
+        Changed = true;
+      }
+    }
+    for (Argument &A : F.args()) {
+      if (A.hasAttribute(Attribute::WriteOnly)) {
+        Changed = true;
+        A.removeAttr(Attribute::WriteOnly);
+      }
+    }
+    if (Changed) {
+      // nobuiltin makes sure later passes don't restore assumptions about
+      // the function.
+      F.addFnAttr(Attribute::NoBuiltin);
+    }
   }
 
   // x86_64 currently has two modes:

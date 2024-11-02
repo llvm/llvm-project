@@ -1483,6 +1483,7 @@ Generic lambda expressions                   __cpp_generic_lambdas            C+
 variable templates                           __cpp_variable_templates         C++14         C++03
 Binary literals                              __cpp_binary_literals            C++14         C++03
 Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
+Static assert with no message                __cpp_static_assert >= 201411L   C++17         C++11
 Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
 ``if constexpr``                             __cpp_if_constexpr               C++17         C++11
 fold expressions                             __cpp_fold_expressions           C++17         C++03
@@ -1503,6 +1504,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
 Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
 Variadic Friends                             __cpp_variadic_friend            C++26         C++03

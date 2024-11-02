@@ -1296,8 +1296,6 @@ public:
                 const EvaluateExpressionOptions &options,
                 DiagnosticManager &diagnostic_manager);
 
-  static const char *ExecutionResultAsCString(lldb::ExpressionResults result);
-
   void GetStatus(Stream &ostrm);
 
   size_t GetThreadStatus(Stream &ostrm, bool only_threads_with_stop_reason,

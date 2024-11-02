@@ -18,7 +18,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__hwasan_shadow = external global [0 x i8]
 ;.
 define i8 @test_load8(ptr %a) sanitize_hwaddress {
-; CHECK: Function Attrs: nobuiltin sanitize_hwaddress
+; CHECK: Function Attrs: sanitize_hwaddress
 ; CHECK-LABEL: define i8 @test_load8
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -33,7 +33,7 @@ entry:
   ret i8 %b
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nobuiltin sanitize_hwaddress }
+; CHECK: attributes #[[ATTR0]] = { sanitize_hwaddress }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ;.
 ; CHECK: [[META0]] = !{ptr @hwasan.note}

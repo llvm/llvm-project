@@ -2650,9 +2650,9 @@ static int ComputeCudaMatchingDistance(
 // Handles a forward reference to a module function from what must
 // be a specification expression.  Return false if the symbol is
 // an invalid forward reference.
-bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
+const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
   if (context_.HasError(symbol)) {
-    return false;
+    return nullptr;
   }
   if (const auto *details{
           symbol.detailsIf<semantics::SubprogramNameDetails>()}) {
@@ -2661,8 +2661,13 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
       // checking a specification expression in a sibling module
       // procedure.  Resolve its names now so that its interface
       // is known.
+      const semantics::Scope &scope{symbol.owner()};
       semantics::ResolveSpecificationParts(context_, symbol);
-      if (symbol.has<semantics::SubprogramNameDetails>()) {
+      const Symbol *resolved{nullptr};
+      if (auto iter{scope.find(symbol.name())}; iter != scope.cend()) {
+        resolved = &*iter->second;
+      }
+      if (!resolved || resolved->has<semantics::SubprogramNameDetails>()) {
         // When the symbol hasn't had its details updated, we must have
         // already been in the process of resolving the function's
         // specification part; but recursive function calls are not
@@ -2670,8 +2675,8 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
         Say("The module function '%s' may not be referenced recursively in a specification expression"_err_en_US,
             symbol.name());
         context_.SetError(symbol);
-        return false;
       }
+      return resolved;
     } else if (inStmtFunctionDefinition_) {
       semantics::ResolveSpecificationParts(context_, symbol);
       CHECK(symbol.has<semantics::SubprogramDetails>());
@@ -2679,10 +2684,10 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
       Say("The internal function '%s' may not be referenced in a specification expression"_err_en_US,
           symbol.name());
       context_.SetError(symbol);
-      return false;
+      return nullptr;
     }
   }
-  return true;
+  return &symbol;
 }
 
 // Resolve a call to a generic procedure with given actual arguments.
@@ -2709,20 +2714,21 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   }
   if (const auto *details{ultimate.detailsIf<semantics::GenericDetails>()}) {
     for (const Symbol &specific0 : details->specificProcs()) {
-      const Symbol &specific{BypassGeneric(specific0)};
-      if (isSubroutine != !IsFunction(specific)) {
+      const Symbol &specific1{BypassGeneric(specific0)};
+      if (isSubroutine != !IsFunction(specific1)) {
         continue;
       }
-      if (!ResolveForward(specific)) {
+      const Symbol *specific{ResolveForward(specific1)};
+      if (!specific) {
         continue;
       }
       if (std::optional<characteristics::Procedure> procedure{
               characteristics::Procedure::Characterize(
-                  ProcedureDesignator{specific}, context_.foldingContext(),
+                  ProcedureDesignator{*specific}, context_.foldingContext(),
                   /*emitError=*/false)}) {
         ActualArguments localActuals{actuals};
-        if (specific.has<semantics::ProcBindingDetails>()) {
-          if (!adjustActuals.value()(specific, localActuals)) {
+        if (specific->has<semantics::ProcBindingDetails>()) {
+          if (!adjustActuals.value()(*specific, localActuals)) {
             continue;
           }
         }
@@ -2751,9 +2757,9 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           }
           if (!procedure->IsElemental()) {
             // takes priority over elemental match
-            nonElemental = &specific;
+            nonElemental = specific;
           } else {
-            elemental = &specific;
+            elemental = specific;
           }
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
@@ -2866,7 +2872,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   if (context_.HasError(symbol)) {
     return std::nullopt; // also handles null symbol
   }
-  const Symbol &ultimate{DEREF(symbol).GetUltimate()};
+  symbol = ResolveForward(*symbol);
+  if (!symbol) {
+    return std::nullopt;
+  }
+  name.symbol = const_cast<Symbol *>(symbol);
+  const Symbol &ultimate{symbol->GetUltimate()};
   CheckForBadRecursion(name.source, ultimate);
   bool dueToAmbiguity{false};
   bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};
@@ -4016,7 +4027,8 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget)) {
+    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget) &&
+        !context_.IsInModuleFile(GetContextualMessages().at())) {
       Say("%s(KIND=%jd) is not an enabled type for this target"_warn_en_US,
           ToUpperCase(EnumToString(category)), kind);
     }

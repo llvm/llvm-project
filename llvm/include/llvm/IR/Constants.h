@@ -1381,7 +1381,7 @@ private:
 
 template <>
 struct OperandTraits<ConstantExpr>
-    : public VariadicOperandTraits<ConstantExpr, 1> {};
+    : public VariadicOperandTraits<ConstantExpr> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantExpr, Constant)
 

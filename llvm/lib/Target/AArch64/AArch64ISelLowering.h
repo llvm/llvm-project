@@ -998,6 +998,9 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
+  bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
+
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a

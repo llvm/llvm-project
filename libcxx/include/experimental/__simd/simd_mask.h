@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
 #include <cstddef>
 #include <experimental/__config>

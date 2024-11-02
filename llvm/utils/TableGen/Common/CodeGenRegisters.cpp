@@ -664,7 +664,7 @@ struct TupleExpander : SetTheory::Expander {
         if (i)
           Name += '_';
         Name += Reg->getName();
-        Tuple.push_back(DefInit::get(Reg));
+        Tuple.push_back(Reg->getDefInit());
       }
 
       // Take the cost list of the first register in the tuple.

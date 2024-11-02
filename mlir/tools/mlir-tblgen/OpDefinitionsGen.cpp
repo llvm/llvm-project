@@ -4503,7 +4503,7 @@ void OpOperandAdaptorEmitter::emitDef(
 /// Emit the class declarations or definitions for the given op defs.
 static void
 emitOpClasses(const RecordKeeper &recordKeeper,
-              const std::vector<Record *> &defs, raw_ostream &os,
+              const std::vector<const Record *> &defs, raw_ostream &os,
               const StaticVerifierFunctionEmitter &staticVerifierEmitter,
               bool emitDecl) {
   if (defs.empty())
@@ -4540,7 +4540,7 @@ emitOpClasses(const RecordKeeper &recordKeeper,
 
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &recordKeeper,
-                             const std::vector<Record *> &defs,
+                             const std::vector<const Record *> &defs,
                              raw_ostream &os) {
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
@@ -4562,7 +4562,7 @@ static void emitOpClassDecls(const RecordKeeper &recordKeeper,
 
 /// Emit the definitions for the provided op classes.
 static void emitOpClassDefs(const RecordKeeper &recordKeeper,
-                            ArrayRef<Record *> defs, raw_ostream &os,
+                            ArrayRef<const Record *> defs, raw_ostream &os,
                             StringRef constraintPrefix = "") {
   if (defs.empty())
     return;
@@ -4583,12 +4583,12 @@ static void emitOpClassDefs(const RecordKeeper &recordKeeper,
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpClassDecls(recordKeeper, defs, os);
 
   // If we are generating sharded op definitions, emit the sharded op
   // registration hooks.
-  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
   if (defs.empty() || shardedDefs.size() <= 1)
     return false;
@@ -4611,9 +4611,9 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 /// Generate the dialect op registration hook and the op class definitions for a
 /// shard of ops.
 static void emitOpDefShard(const RecordKeeper &recordKeeper,
-                           ArrayRef<Record *> defs, const Dialect &dialect,
-                           unsigned shardIndex, unsigned shardCount,
-                           raw_ostream &os) {
+                           ArrayRef<const Record *> defs,
+                           const Dialect &dialect, unsigned shardIndex,
+                           unsigned shardCount, raw_ostream &os) {
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
@@ -4637,7 +4637,7 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
                 "Op Registration Hook")
      << formatv(opRegistrationHook, dialect.getCppNamespace(),
                 dialect.getCppClassName(), shardIndex);
-  for (Record *def : defs) {
+  for (const Record *def : defs) {
     os << formatv("  ::mlir::RegisteredOperationName::insert<{0}>(*dialect);\n",
                   Operator(def).getQualCppClassName());
   }
@@ -4651,8 +4651,8 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
-  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
 
   // If no shard was requested, emit the regular op list and class definitions.
@@ -4661,7 +4661,7 @@ static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
       IfDefScope scope("GET_OP_LIST", os);
       interleave(
           defs, os,
-          [&](Record *def) { os << Operator(def).getQualCppClassName(); },
+          [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
           ",\n");
     }
     {

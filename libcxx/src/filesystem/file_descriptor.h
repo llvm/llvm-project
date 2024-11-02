@@ -284,7 +284,7 @@ inline file_status FileDescriptor::refresh_status(error_code& ec) {
   return m_status;
 }
 
-} // end namespace detail
+} // namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

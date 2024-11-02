@@ -334,6 +334,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/noexcept_move_assign_container.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/temp_value.h>
@@ -348,7 +349,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
@@ -2938,8 +2938,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const vector<_Tp, _Allocator>& __x,
 template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr __synth_three_way_result<_Tp>
 operator<=>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17

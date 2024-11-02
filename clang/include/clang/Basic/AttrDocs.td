@@ -7421,6 +7421,43 @@ flag.
   }];
 }
 
+def WaveSizeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``WaveSize`` attribute specify a wave size on a shader entry point in order
+to indicate either that a shader depends on or strongly prefers a specific wave
+size.
+There're 2 versions of the attribute: ``WaveSize`` and ``RangedWaveSize``.
+The syntax for ``WaveSize`` is:
+
+.. code-block:: text
+
+  ``[WaveSize(<numLanes>)]``
+
+The allowed wave sizes that an HLSL shader may specify are the powers of 2
+between 4 and 128, inclusive.
+In other words, the set: [4, 8, 16, 32, 64, 128].
+
+The syntax for ``RangedWaveSize`` is:
+
+.. code-block:: text
+
+  ``[WaveSize(<minWaveSize>, <maxWaveSize>, [prefWaveSize])]``
+
+Where minWaveSize is the minimum wave size supported by the shader representing
+the beginning of the allowed range, maxWaveSize is the maximum wave size
+supported by the shader representing the end of the allowed range, and
+prefWaveSize is the optional preferred wave size representing the size expected
+to be the most optimal for this shader.
+
+``WaveSize`` is available for HLSL shader model 6.6 and later.
+``RangedWaveSize`` available for HLSL shader model 6.8 and later.
+
+The full documentation is available here: https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_WaveSize.html
+and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
+  }];
+}
+
 def NumThreadsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8218,6 +8255,38 @@ but do not pass them to the underlying coroutine or pass them by value.
 }];
 }
 
+def CoroAwaitElidableDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``[[clang::coro_await_elidable]]`` is a class attribute which can be applied
+to a coroutine return type.
+
+When a coroutine function that returns such a type calls another coroutine function,
+the compiler performs heap allocation elision when the call to the coroutine function
+is immediately co_awaited as a prvalue. In this case, the coroutine frame for the
+callee will be a local variable within the enclosing braces in the caller's stack
+frame. And the local variable, like other variables in coroutines, may be collected
+into the coroutine frame, which may be allocated on the heap.
+
+Example:
+
+.. code-block:: c++
+
+  class [[clang::coro_await_elidable]] Task { ... };
+
+  Task foo();
+  Task bar() {
+    co_await foo(); // foo()'s coroutine frame on this line is elidable
+    auto t = foo(); // foo()'s coroutine frame on this line is NOT elidable
+    co_await t;
+  }
+
+The behavior is undefined if the caller coroutine is destroyed earlier than the
+callee coroutine.
+
+}];
+}
+
 def CountedByDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
@@ -8377,4 +8446,3 @@ Declares that a function potentially allocates heap memory, and prevents any pot
 of ``nonallocating`` by the compiler.
   }];
 }
-

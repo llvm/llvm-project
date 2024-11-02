@@ -4,6 +4,7 @@ static_library("Vectorize") {
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/SandboxIR",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
@@ -12,6 +13,7 @@ static_library("Vectorize") {
     "LoopVectorizationLegality.cpp",
     "LoopVectorize.cpp",
     "SLPVectorizer.cpp",
+    "SandboxVectorizer/SandboxVectorizer.cpp",
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
     "VPlanHCFGBuilder.cpp",

@@ -31,6 +31,25 @@ set(MODULES_WITHOUT_IMPLEMENTATION
 
 set(MODULES ${MODULES_WITH_IMPLEMENTATION} ${MODULES_WITHOUT_IMPLEMENTATION})
 
+# Check if 128-bit float computations can be done via long double.
+check_cxx_source_compiles(
+  "#include <cfloat>
+   #if LDBL_MANT_DIG != 113
+   #error LDBL_MANT_DIG != 113
+   #endif
+   int main() { return 0; }
+  "
+  HAVE_LDBL_MANT_DIG_113)
+
+# Figure out whether we can support REAL(KIND=16)
+if (FLANG_RUNTIME_F128_MATH_LIB)
+  set(FLANG_SUPPORT_R16 "1")
+elseif (HAVE_LDBL_MANT_DIG_113)
+  set(FLANG_SUPPORT_R16 "1")
+else()
+  set(FLANG_SUPPORT_R16 "0")
+endif()
+
 # Init variable to hold extra object files coming from the Fortran modules;
 # these module files will be contributed from the CMakeLists in flang/tools/f18.
 set(module_objects "")
@@ -76,6 +95,10 @@ if (NOT CMAKE_CROSSCOMPILING)
       endif()
     endif()
 
+    set(decls "")
+    if (FLANG_SUPPORT_R16)
+      set(decls "-DFLANG_SUPPORT_R16")
+    endif()
 
     # Some modules have an implementation part that needs to be added to the
     # FortranRuntime library.
@@ -92,7 +115,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
     add_custom_command(OUTPUT ${base}.mod ${object_output}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new ${opts} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new ${opts} ${decls} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )

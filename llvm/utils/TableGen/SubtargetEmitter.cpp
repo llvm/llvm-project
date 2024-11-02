@@ -1545,7 +1545,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   EmitProcessorModels(OS);
 }
 
-static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
+static void emitPredicateProlog(RecordKeeper &Records, raw_ostream &OS) {
   std::string Buffer;
   raw_string_ostream Stream(Buffer);
 

@@ -68,7 +68,6 @@
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
-#include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
@@ -76,6 +75,7 @@
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -154,11 +154,6 @@ static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
                clEnumValN(InliningAdvisorMode::Release, "release",
                           "Use release mode (AOT-compiled model)")));
 
-static cl::opt<bool> EnableSyntheticCounts(
-    "enable-npm-synthetic-counts", cl::Hidden,
-    cl::desc("Run synthetic function entry count generation "
-             "pass"));
-
 /// Flag to enable inline deferral during PGO.
 static cl::opt<bool>
     EnablePGOInlineDeferral("enable-npm-pgo-inline-deferral", cl::init(true),
@@ -226,12 +221,6 @@ static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
-
-// TODO: turn on and remove flag
-static cl::opt<bool> EnablePGOForceFunctionAttrs(
-    "enable-pgo-force-function-attrs",
-    cl::desc("Enable pass to set function attributes based on PGO profiles"),
-    cl::init(false));
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -1218,11 +1207,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (IsMemprofUse)
     MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
 
-  // Synthesize function entry counts for non-PGO compilation.
-  if (EnableSyntheticCounts && !PGOOpt)
-    MPM.addPass(SyntheticCountsPropagation());
-
-  if (EnablePGOForceFunctionAttrs && PGOOpt)
+  if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
+                 PGOOpt->Action == PGOOptions::SampleUse))
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));

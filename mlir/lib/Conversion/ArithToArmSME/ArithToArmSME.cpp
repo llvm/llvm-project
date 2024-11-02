@@ -64,7 +64,7 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
       return success();
     }
 
-    // Lower non-zero constants to a loop of 'arm_sme.move_vector_to_tile_slice'
+    // Lower non-zero constants to a loop of 'arm_sme.insert_tile_slice'
     // ops that broadcast the constant to each tile slice.
     auto loc = constantOp.getLoc();
 
@@ -79,9 +79,9 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
-      // Create 'arm_sme.move_vector_to_tile_slice' to write vector to tile
+      // Create 'arm_sme.insert_tile_slice' to write vector to tile
       // slice.
-      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
+      auto nextTile = b.create<arm_sme::InsertTileSliceOp>(
           loc, tileType, constantOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };

@@ -75,7 +75,8 @@ Parts:
           LowerBound:      0
           UpperBound:      0
           Kind:            CBuffer
-          Flags:           0
+          Flags:
+            UsedByAtomic64:  true
       SigInputElements:
         - Name:            AAA_HSFoo
           Indices:         [ 0 ]

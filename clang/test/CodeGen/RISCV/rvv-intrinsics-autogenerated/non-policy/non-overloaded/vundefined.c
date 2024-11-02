@@ -420,1776 +420,1776 @@ vuint64m4_t test_vundefined_u64m4() { return __riscv_vundefined_u64m4(); }
 //
 vuint64m8_t test_vundefined_u64m8() { return __riscv_vundefined_u64m8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half> } @test_vundefined_f16mf4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vundefined_f16mf4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison
 //
 vfloat16mf4x2_t test_vundefined_f16mf4x2() {
   return __riscv_vundefined_f16mf4x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @test_vundefined_f16mf4x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vundefined_f16mf4x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison
 //
 vfloat16mf4x3_t test_vundefined_f16mf4x3() {
   return __riscv_vundefined_f16mf4x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @test_vundefined_f16mf4x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vundefined_f16mf4x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison
 //
 vfloat16mf4x4_t test_vundefined_f16mf4x4() {
   return __riscv_vundefined_f16mf4x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @test_vundefined_f16mf4x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vundefined_f16mf4x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison
 //
 vfloat16mf4x5_t test_vundefined_f16mf4x5() {
   return __riscv_vundefined_f16mf4x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @test_vundefined_f16mf4x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vundefined_f16mf4x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison
 //
 vfloat16mf4x6_t test_vundefined_f16mf4x6() {
   return __riscv_vundefined_f16mf4x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @test_vundefined_f16mf4x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vundefined_f16mf4x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison
 //
 vfloat16mf4x7_t test_vundefined_f16mf4x7() {
   return __riscv_vundefined_f16mf4x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @test_vundefined_f16mf4x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vundefined_f16mf4x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison
 //
 vfloat16mf4x8_t test_vundefined_f16mf4x8() {
   return __riscv_vundefined_f16mf4x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half> } @test_vundefined_f16mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_f16mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vfloat16mf2x2_t test_vundefined_f16mf2x2() {
   return __riscv_vundefined_f16mf2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @test_vundefined_f16mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_f16mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vfloat16mf2x3_t test_vundefined_f16mf2x3() {
   return __riscv_vundefined_f16mf2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @test_vundefined_f16mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_f16mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vfloat16mf2x4_t test_vundefined_f16mf2x4() {
   return __riscv_vundefined_f16mf2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @test_vundefined_f16mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_f16mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vfloat16mf2x5_t test_vundefined_f16mf2x5() {
   return __riscv_vundefined_f16mf2x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @test_vundefined_f16mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_f16mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vfloat16mf2x6_t test_vundefined_f16mf2x6() {
   return __riscv_vundefined_f16mf2x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @test_vundefined_f16mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_f16mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vfloat16mf2x7_t test_vundefined_f16mf2x7() {
   return __riscv_vundefined_f16mf2x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @test_vundefined_f16mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_f16mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vfloat16mf2x8_t test_vundefined_f16mf2x8() {
   return __riscv_vundefined_f16mf2x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half> } @test_vundefined_f16m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_f16m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vfloat16m1x2_t test_vundefined_f16m1x2() {
   return __riscv_vundefined_f16m1x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @test_vundefined_f16m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_f16m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vfloat16m1x3_t test_vundefined_f16m1x3() {
   return __riscv_vundefined_f16m1x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @test_vundefined_f16m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_f16m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vfloat16m1x4_t test_vundefined_f16m1x4() {
   return __riscv_vundefined_f16m1x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @test_vundefined_f16m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_f16m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vfloat16m1x5_t test_vundefined_f16m1x5() {
   return __riscv_vundefined_f16m1x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @test_vundefined_f16m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_f16m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vfloat16m1x6_t test_vundefined_f16m1x6() {
   return __riscv_vundefined_f16m1x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @test_vundefined_f16m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_f16m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vfloat16m1x7_t test_vundefined_f16m1x7() {
   return __riscv_vundefined_f16m1x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @test_vundefined_f16m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_f16m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vfloat16m1x8_t test_vundefined_f16m1x8() {
   return __riscv_vundefined_f16m1x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half> } @test_vundefined_f16m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_f16m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vfloat16m2x2_t test_vundefined_f16m2x2() {
   return __riscv_vundefined_f16m2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @test_vundefined_f16m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_f16m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vfloat16m2x3_t test_vundefined_f16m2x3() {
   return __riscv_vundefined_f16m2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @test_vundefined_f16m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_f16m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vfloat16m2x4_t test_vundefined_f16m2x4() {
   return __riscv_vundefined_f16m2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x half>, <vscale x 16 x half> } @test_vundefined_f16m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_f16m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x half>, <vscale x 16 x half> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vfloat16m4x2_t test_vundefined_f16m4x2() {
   return __riscv_vundefined_f16m4x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float> } @test_vundefined_f32mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_f32mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vfloat32mf2x2_t test_vundefined_f32mf2x2() {
   return __riscv_vundefined_f32mf2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @test_vundefined_f32mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_f32mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vfloat32mf2x3_t test_vundefined_f32mf2x3() {
   return __riscv_vundefined_f32mf2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @test_vundefined_f32mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_f32mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vfloat32mf2x4_t test_vundefined_f32mf2x4() {
   return __riscv_vundefined_f32mf2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @test_vundefined_f32mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_f32mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vfloat32mf2x5_t test_vundefined_f32mf2x5() {
   return __riscv_vundefined_f32mf2x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @test_vundefined_f32mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_f32mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vfloat32mf2x6_t test_vundefined_f32mf2x6() {
   return __riscv_vundefined_f32mf2x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @test_vundefined_f32mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_f32mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vfloat32mf2x7_t test_vundefined_f32mf2x7() {
   return __riscv_vundefined_f32mf2x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @test_vundefined_f32mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_f32mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vfloat32mf2x8_t test_vundefined_f32mf2x8() {
   return __riscv_vundefined_f32mf2x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float> } @test_vundefined_f32m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_f32m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vfloat32m1x2_t test_vundefined_f32m1x2() {
   return __riscv_vundefined_f32m1x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @test_vundefined_f32m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_f32m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vfloat32m1x3_t test_vundefined_f32m1x3() {
   return __riscv_vundefined_f32m1x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @test_vundefined_f32m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_f32m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vfloat32m1x4_t test_vundefined_f32m1x4() {
   return __riscv_vundefined_f32m1x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @test_vundefined_f32m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_f32m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vfloat32m1x5_t test_vundefined_f32m1x5() {
   return __riscv_vundefined_f32m1x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @test_vundefined_f32m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_f32m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vfloat32m1x6_t test_vundefined_f32m1x6() {
   return __riscv_vundefined_f32m1x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @test_vundefined_f32m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_f32m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vfloat32m1x7_t test_vundefined_f32m1x7() {
   return __riscv_vundefined_f32m1x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @test_vundefined_f32m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_f32m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vfloat32m1x8_t test_vundefined_f32m1x8() {
   return __riscv_vundefined_f32m1x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x float>, <vscale x 4 x float> } @test_vundefined_f32m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_f32m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vfloat32m2x2_t test_vundefined_f32m2x2() {
   return __riscv_vundefined_f32m2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @test_vundefined_f32m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_f32m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vfloat32m2x3_t test_vundefined_f32m2x3() {
   return __riscv_vundefined_f32m2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @test_vundefined_f32m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_f32m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vfloat32m2x4_t test_vundefined_f32m2x4() {
   return __riscv_vundefined_f32m2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x float>, <vscale x 8 x float> } @test_vundefined_f32m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_f32m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x float>, <vscale x 8 x float> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vfloat32m4x2_t test_vundefined_f32m4x2() {
   return __riscv_vundefined_f32m4x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double> } @test_vundefined_f64m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_f64m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vfloat64m1x2_t test_vundefined_f64m1x2() {
   return __riscv_vundefined_f64m1x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @test_vundefined_f64m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_f64m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vfloat64m1x3_t test_vundefined_f64m1x3() {
   return __riscv_vundefined_f64m1x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @test_vundefined_f64m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_f64m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vfloat64m1x4_t test_vundefined_f64m1x4() {
   return __riscv_vundefined_f64m1x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @test_vundefined_f64m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_f64m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vfloat64m1x5_t test_vundefined_f64m1x5() {
   return __riscv_vundefined_f64m1x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @test_vundefined_f64m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_f64m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vfloat64m1x6_t test_vundefined_f64m1x6() {
   return __riscv_vundefined_f64m1x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @test_vundefined_f64m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_f64m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vfloat64m1x7_t test_vundefined_f64m1x7() {
   return __riscv_vundefined_f64m1x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @test_vundefined_f64m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_f64m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vfloat64m1x8_t test_vundefined_f64m1x8() {
   return __riscv_vundefined_f64m1x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x double>, <vscale x 2 x double> } @test_vundefined_f64m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_f64m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vfloat64m2x2_t test_vundefined_f64m2x2() {
   return __riscv_vundefined_f64m2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @test_vundefined_f64m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_f64m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vfloat64m2x3_t test_vundefined_f64m2x3() {
   return __riscv_vundefined_f64m2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @test_vundefined_f64m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_f64m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vfloat64m2x4_t test_vundefined_f64m2x4() {
   return __riscv_vundefined_f64m2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x double>, <vscale x 4 x double> } @test_vundefined_f64m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_f64m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x double>, <vscale x 4 x double> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vfloat64m4x2_t test_vundefined_f64m4x2() {
   return __riscv_vundefined_f64m4x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_i8mf8x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @test_vundefined_i8mf8x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 2) poison
 //
 vint8mf8x2_t test_vundefined_i8mf8x2() { return __riscv_vundefined_i8mf8x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_i8mf8x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @test_vundefined_i8mf8x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 3) poison
 //
 vint8mf8x3_t test_vundefined_i8mf8x3() { return __riscv_vundefined_i8mf8x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_i8mf8x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @test_vundefined_i8mf8x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 4) poison
 //
 vint8mf8x4_t test_vundefined_i8mf8x4() { return __riscv_vundefined_i8mf8x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_i8mf8x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @test_vundefined_i8mf8x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 5) poison
 //
 vint8mf8x5_t test_vundefined_i8mf8x5() { return __riscv_vundefined_i8mf8x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_i8mf8x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @test_vundefined_i8mf8x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 6) poison
 //
 vint8mf8x6_t test_vundefined_i8mf8x6() { return __riscv_vundefined_i8mf8x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_i8mf8x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @test_vundefined_i8mf8x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 7) poison
 //
 vint8mf8x7_t test_vundefined_i8mf8x7() { return __riscv_vundefined_i8mf8x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_i8mf8x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @test_vundefined_i8mf8x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 8) poison
 //
 vint8mf8x8_t test_vundefined_i8mf8x8() { return __riscv_vundefined_i8mf8x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_i8mf4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vundefined_i8mf4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison
 //
 vint8mf4x2_t test_vundefined_i8mf4x2() { return __riscv_vundefined_i8mf4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_i8mf4x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vundefined_i8mf4x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison
 //
 vint8mf4x3_t test_vundefined_i8mf4x3() { return __riscv_vundefined_i8mf4x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_i8mf4x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vundefined_i8mf4x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison
 //
 vint8mf4x4_t test_vundefined_i8mf4x4() { return __riscv_vundefined_i8mf4x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_i8mf4x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vundefined_i8mf4x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison
 //
 vint8mf4x5_t test_vundefined_i8mf4x5() { return __riscv_vundefined_i8mf4x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_i8mf4x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vundefined_i8mf4x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison
 //
 vint8mf4x6_t test_vundefined_i8mf4x6() { return __riscv_vundefined_i8mf4x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_i8mf4x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vundefined_i8mf4x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison
 //
 vint8mf4x7_t test_vundefined_i8mf4x7() { return __riscv_vundefined_i8mf4x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_i8mf4x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vundefined_i8mf4x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison
 //
 vint8mf4x8_t test_vundefined_i8mf4x8() { return __riscv_vundefined_i8mf4x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_i8mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_i8mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vint8mf2x2_t test_vundefined_i8mf2x2() { return __riscv_vundefined_i8mf2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_i8mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_i8mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vint8mf2x3_t test_vundefined_i8mf2x3() { return __riscv_vundefined_i8mf2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_i8mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_i8mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vint8mf2x4_t test_vundefined_i8mf2x4() { return __riscv_vundefined_i8mf2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_i8mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_i8mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vint8mf2x5_t test_vundefined_i8mf2x5() { return __riscv_vundefined_i8mf2x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_i8mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_i8mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vint8mf2x6_t test_vundefined_i8mf2x6() { return __riscv_vundefined_i8mf2x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_i8mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_i8mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vint8mf2x7_t test_vundefined_i8mf2x7() { return __riscv_vundefined_i8mf2x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_i8mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_i8mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vint8mf2x8_t test_vundefined_i8mf2x8() { return __riscv_vundefined_i8mf2x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_i8m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_i8m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vint8m1x2_t test_vundefined_i8m1x2() { return __riscv_vundefined_i8m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_i8m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_i8m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vint8m1x3_t test_vundefined_i8m1x3() { return __riscv_vundefined_i8m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_i8m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_i8m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vint8m1x4_t test_vundefined_i8m1x4() { return __riscv_vundefined_i8m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_i8m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_i8m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vint8m1x5_t test_vundefined_i8m1x5() { return __riscv_vundefined_i8m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_i8m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_i8m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vint8m1x6_t test_vundefined_i8m1x6() { return __riscv_vundefined_i8m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_i8m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_i8m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vint8m1x7_t test_vundefined_i8m1x7() { return __riscv_vundefined_i8m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_i8m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_i8m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vint8m1x8_t test_vundefined_i8m1x8() { return __riscv_vundefined_i8m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vundefined_i8m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_i8m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vint8m2x2_t test_vundefined_i8m2x2() { return __riscv_vundefined_i8m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vundefined_i8m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_i8m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vint8m2x3_t test_vundefined_i8m2x3() { return __riscv_vundefined_i8m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vundefined_i8m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_i8m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vint8m2x4_t test_vundefined_i8m2x4() { return __riscv_vundefined_i8m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 32 x i8>, <vscale x 32 x i8> } @test_vundefined_i8m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_i8m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 32 x i8>, <vscale x 32 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vint8m4x2_t test_vundefined_i8m4x2() { return __riscv_vundefined_i8m4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_i16mf4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vundefined_i16mf4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison
 //
 vint16mf4x2_t test_vundefined_i16mf4x2() {
   return __riscv_vundefined_i16mf4x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_i16mf4x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vundefined_i16mf4x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison
 //
 vint16mf4x3_t test_vundefined_i16mf4x3() {
   return __riscv_vundefined_i16mf4x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_i16mf4x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vundefined_i16mf4x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison
 //
 vint16mf4x4_t test_vundefined_i16mf4x4() {
   return __riscv_vundefined_i16mf4x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_i16mf4x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vundefined_i16mf4x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison
 //
 vint16mf4x5_t test_vundefined_i16mf4x5() {
   return __riscv_vundefined_i16mf4x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_i16mf4x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vundefined_i16mf4x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison
 //
 vint16mf4x6_t test_vundefined_i16mf4x6() {
   return __riscv_vundefined_i16mf4x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_i16mf4x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vundefined_i16mf4x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison
 //
 vint16mf4x7_t test_vundefined_i16mf4x7() {
   return __riscv_vundefined_i16mf4x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_i16mf4x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vundefined_i16mf4x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison
 //
 vint16mf4x8_t test_vundefined_i16mf4x8() {
   return __riscv_vundefined_i16mf4x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_i16mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_i16mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vint16mf2x2_t test_vundefined_i16mf2x2() {
   return __riscv_vundefined_i16mf2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_i16mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_i16mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vint16mf2x3_t test_vundefined_i16mf2x3() {
   return __riscv_vundefined_i16mf2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_i16mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_i16mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vint16mf2x4_t test_vundefined_i16mf2x4() {
   return __riscv_vundefined_i16mf2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_i16mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_i16mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vint16mf2x5_t test_vundefined_i16mf2x5() {
   return __riscv_vundefined_i16mf2x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_i16mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_i16mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vint16mf2x6_t test_vundefined_i16mf2x6() {
   return __riscv_vundefined_i16mf2x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_i16mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_i16mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vint16mf2x7_t test_vundefined_i16mf2x7() {
   return __riscv_vundefined_i16mf2x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_i16mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_i16mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vint16mf2x8_t test_vundefined_i16mf2x8() {
   return __riscv_vundefined_i16mf2x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_i16m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_i16m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vint16m1x2_t test_vundefined_i16m1x2() { return __riscv_vundefined_i16m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_i16m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_i16m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vint16m1x3_t test_vundefined_i16m1x3() { return __riscv_vundefined_i16m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_i16m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_i16m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vint16m1x4_t test_vundefined_i16m1x4() { return __riscv_vundefined_i16m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_i16m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_i16m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vint16m1x5_t test_vundefined_i16m1x5() { return __riscv_vundefined_i16m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_i16m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_i16m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vint16m1x6_t test_vundefined_i16m1x6() { return __riscv_vundefined_i16m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_i16m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_i16m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vint16m1x7_t test_vundefined_i16m1x7() { return __riscv_vundefined_i16m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_i16m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_i16m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vint16m1x8_t test_vundefined_i16m1x8() { return __riscv_vundefined_i16m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vundefined_i16m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_i16m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vint16m2x2_t test_vundefined_i16m2x2() { return __riscv_vundefined_i16m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vundefined_i16m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_i16m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vint16m2x3_t test_vundefined_i16m2x3() { return __riscv_vundefined_i16m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vundefined_i16m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_i16m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vint16m2x4_t test_vundefined_i16m2x4() { return __riscv_vundefined_i16m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vundefined_i16m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_i16m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vint16m4x2_t test_vundefined_i16m4x2() { return __riscv_vundefined_i16m4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_i32mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_i32mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vint32mf2x2_t test_vundefined_i32mf2x2() {
   return __riscv_vundefined_i32mf2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_i32mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_i32mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vint32mf2x3_t test_vundefined_i32mf2x3() {
   return __riscv_vundefined_i32mf2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_i32mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_i32mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vint32mf2x4_t test_vundefined_i32mf2x4() {
   return __riscv_vundefined_i32mf2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_i32mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_i32mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vint32mf2x5_t test_vundefined_i32mf2x5() {
   return __riscv_vundefined_i32mf2x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_i32mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_i32mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vint32mf2x6_t test_vundefined_i32mf2x6() {
   return __riscv_vundefined_i32mf2x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_i32mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_i32mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vint32mf2x7_t test_vundefined_i32mf2x7() {
   return __riscv_vundefined_i32mf2x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_i32mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_i32mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vint32mf2x8_t test_vundefined_i32mf2x8() {
   return __riscv_vundefined_i32mf2x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_i32m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_i32m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vint32m1x2_t test_vundefined_i32m1x2() { return __riscv_vundefined_i32m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_i32m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_i32m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vint32m1x3_t test_vundefined_i32m1x3() { return __riscv_vundefined_i32m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_i32m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_i32m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vint32m1x4_t test_vundefined_i32m1x4() { return __riscv_vundefined_i32m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_i32m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_i32m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vint32m1x5_t test_vundefined_i32m1x5() { return __riscv_vundefined_i32m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_i32m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_i32m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vint32m1x6_t test_vundefined_i32m1x6() { return __riscv_vundefined_i32m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_i32m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_i32m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vint32m1x7_t test_vundefined_i32m1x7() { return __riscv_vundefined_i32m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_i32m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_i32m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vint32m1x8_t test_vundefined_i32m1x8() { return __riscv_vundefined_i32m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vundefined_i32m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_i32m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vint32m2x2_t test_vundefined_i32m2x2() { return __riscv_vundefined_i32m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vundefined_i32m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_i32m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vint32m2x3_t test_vundefined_i32m2x3() { return __riscv_vundefined_i32m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vundefined_i32m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_i32m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vint32m2x4_t test_vundefined_i32m2x4() { return __riscv_vundefined_i32m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i32>, <vscale x 8 x i32> } @test_vundefined_i32m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_i32m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i32>, <vscale x 8 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vint32m4x2_t test_vundefined_i32m4x2() { return __riscv_vundefined_i32m4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_i64m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_i64m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vint64m1x2_t test_vundefined_i64m1x2() { return __riscv_vundefined_i64m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_i64m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_i64m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vint64m1x3_t test_vundefined_i64m1x3() { return __riscv_vundefined_i64m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_i64m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_i64m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vint64m1x4_t test_vundefined_i64m1x4() { return __riscv_vundefined_i64m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_i64m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_i64m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vint64m1x5_t test_vundefined_i64m1x5() { return __riscv_vundefined_i64m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_i64m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_i64m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vint64m1x6_t test_vundefined_i64m1x6() { return __riscv_vundefined_i64m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_i64m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_i64m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vint64m1x7_t test_vundefined_i64m1x7() { return __riscv_vundefined_i64m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_i64m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_i64m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vint64m1x8_t test_vundefined_i64m1x8() { return __riscv_vundefined_i64m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vundefined_i64m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_i64m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vint64m2x2_t test_vundefined_i64m2x2() { return __riscv_vundefined_i64m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vundefined_i64m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_i64m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vint64m2x3_t test_vundefined_i64m2x3() { return __riscv_vundefined_i64m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vundefined_i64m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_i64m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vint64m2x4_t test_vundefined_i64m2x4() { return __riscv_vundefined_i64m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i64>, <vscale x 4 x i64> } @test_vundefined_i64m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_i64m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i64>, <vscale x 4 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vint64m4x2_t test_vundefined_i64m4x2() { return __riscv_vundefined_i64m4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_u8mf8x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 2) @test_vundefined_u8mf8x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 2) poison
 //
 vuint8mf8x2_t test_vundefined_u8mf8x2() { return __riscv_vundefined_u8mf8x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_u8mf8x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @test_vundefined_u8mf8x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 3) poison
 //
 vuint8mf8x3_t test_vundefined_u8mf8x3() { return __riscv_vundefined_u8mf8x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_u8mf8x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @test_vundefined_u8mf8x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 4) poison
 //
 vuint8mf8x4_t test_vundefined_u8mf8x4() { return __riscv_vundefined_u8mf8x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_u8mf8x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @test_vundefined_u8mf8x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 5) poison
 //
 vuint8mf8x5_t test_vundefined_u8mf8x5() { return __riscv_vundefined_u8mf8x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_u8mf8x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @test_vundefined_u8mf8x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 6) poison
 //
 vuint8mf8x6_t test_vundefined_u8mf8x6() { return __riscv_vundefined_u8mf8x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_u8mf8x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @test_vundefined_u8mf8x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 7) poison
 //
 vuint8mf8x7_t test_vundefined_u8mf8x7() { return __riscv_vundefined_u8mf8x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vundefined_u8mf8x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @test_vundefined_u8mf8x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 1 x i8>, 8) poison
 //
 vuint8mf8x8_t test_vundefined_u8mf8x8() { return __riscv_vundefined_u8mf8x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_u8mf4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vundefined_u8mf4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison
 //
 vuint8mf4x2_t test_vundefined_u8mf4x2() { return __riscv_vundefined_u8mf4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_u8mf4x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vundefined_u8mf4x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison
 //
 vuint8mf4x3_t test_vundefined_u8mf4x3() { return __riscv_vundefined_u8mf4x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_u8mf4x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vundefined_u8mf4x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison
 //
 vuint8mf4x4_t test_vundefined_u8mf4x4() { return __riscv_vundefined_u8mf4x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_u8mf4x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vundefined_u8mf4x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison
 //
 vuint8mf4x5_t test_vundefined_u8mf4x5() { return __riscv_vundefined_u8mf4x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_u8mf4x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vundefined_u8mf4x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison
 //
 vuint8mf4x6_t test_vundefined_u8mf4x6() { return __riscv_vundefined_u8mf4x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_u8mf4x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vundefined_u8mf4x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison
 //
 vuint8mf4x7_t test_vundefined_u8mf4x7() { return __riscv_vundefined_u8mf4x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vundefined_u8mf4x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vundefined_u8mf4x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison
 //
 vuint8mf4x8_t test_vundefined_u8mf4x8() { return __riscv_vundefined_u8mf4x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_u8mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_u8mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vuint8mf2x2_t test_vundefined_u8mf2x2() { return __riscv_vundefined_u8mf2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_u8mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_u8mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vuint8mf2x3_t test_vundefined_u8mf2x3() { return __riscv_vundefined_u8mf2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_u8mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_u8mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vuint8mf2x4_t test_vundefined_u8mf2x4() { return __riscv_vundefined_u8mf2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_u8mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_u8mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vuint8mf2x5_t test_vundefined_u8mf2x5() { return __riscv_vundefined_u8mf2x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_u8mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_u8mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vuint8mf2x6_t test_vundefined_u8mf2x6() { return __riscv_vundefined_u8mf2x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_u8mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_u8mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vuint8mf2x7_t test_vundefined_u8mf2x7() { return __riscv_vundefined_u8mf2x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vundefined_u8mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_u8mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vuint8mf2x8_t test_vundefined_u8mf2x8() { return __riscv_vundefined_u8mf2x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_u8m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_u8m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vuint8m1x2_t test_vundefined_u8m1x2() { return __riscv_vundefined_u8m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_u8m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_u8m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vuint8m1x3_t test_vundefined_u8m1x3() { return __riscv_vundefined_u8m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_u8m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_u8m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vuint8m1x4_t test_vundefined_u8m1x4() { return __riscv_vundefined_u8m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_u8m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_u8m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vuint8m1x5_t test_vundefined_u8m1x5() { return __riscv_vundefined_u8m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_u8m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_u8m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vuint8m1x6_t test_vundefined_u8m1x6() { return __riscv_vundefined_u8m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_u8m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_u8m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vuint8m1x7_t test_vundefined_u8m1x7() { return __riscv_vundefined_u8m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vundefined_u8m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_u8m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vuint8m1x8_t test_vundefined_u8m1x8() { return __riscv_vundefined_u8m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vundefined_u8m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_u8m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vuint8m2x2_t test_vundefined_u8m2x2() { return __riscv_vundefined_u8m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vundefined_u8m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_u8m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vuint8m2x3_t test_vundefined_u8m2x3() { return __riscv_vundefined_u8m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vundefined_u8m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_u8m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vuint8m2x4_t test_vundefined_u8m2x4() { return __riscv_vundefined_u8m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 32 x i8>, <vscale x 32 x i8> } @test_vundefined_u8m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_u8m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 32 x i8>, <vscale x 32 x i8> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vuint8m4x2_t test_vundefined_u8m4x2() { return __riscv_vundefined_u8m4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_u16mf4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 2) @test_vundefined_u16mf4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 2) poison
 //
 vuint16mf4x2_t test_vundefined_u16mf4x2() {
   return __riscv_vundefined_u16mf4x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_u16mf4x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @test_vundefined_u16mf4x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 3) poison
 //
 vuint16mf4x3_t test_vundefined_u16mf4x3() {
   return __riscv_vundefined_u16mf4x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_u16mf4x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @test_vundefined_u16mf4x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 4) poison
 //
 vuint16mf4x4_t test_vundefined_u16mf4x4() {
   return __riscv_vundefined_u16mf4x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_u16mf4x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @test_vundefined_u16mf4x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 5) poison
 //
 vuint16mf4x5_t test_vundefined_u16mf4x5() {
   return __riscv_vundefined_u16mf4x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_u16mf4x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @test_vundefined_u16mf4x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 6) poison
 //
 vuint16mf4x6_t test_vundefined_u16mf4x6() {
   return __riscv_vundefined_u16mf4x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_u16mf4x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @test_vundefined_u16mf4x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 7) poison
 //
 vuint16mf4x7_t test_vundefined_u16mf4x7() {
   return __riscv_vundefined_u16mf4x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vundefined_u16mf4x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @test_vundefined_u16mf4x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 2 x i8>, 8) poison
 //
 vuint16mf4x8_t test_vundefined_u16mf4x8() {
   return __riscv_vundefined_u16mf4x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_u16mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_u16mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vuint16mf2x2_t test_vundefined_u16mf2x2() {
   return __riscv_vundefined_u16mf2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_u16mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_u16mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vuint16mf2x3_t test_vundefined_u16mf2x3() {
   return __riscv_vundefined_u16mf2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_u16mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_u16mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vuint16mf2x4_t test_vundefined_u16mf2x4() {
   return __riscv_vundefined_u16mf2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_u16mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_u16mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vuint16mf2x5_t test_vundefined_u16mf2x5() {
   return __riscv_vundefined_u16mf2x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_u16mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_u16mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vuint16mf2x6_t test_vundefined_u16mf2x6() {
   return __riscv_vundefined_u16mf2x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_u16mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_u16mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vuint16mf2x7_t test_vundefined_u16mf2x7() {
   return __riscv_vundefined_u16mf2x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vundefined_u16mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_u16mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vuint16mf2x8_t test_vundefined_u16mf2x8() {
   return __riscv_vundefined_u16mf2x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_u16m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_u16m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vuint16m1x2_t test_vundefined_u16m1x2() { return __riscv_vundefined_u16m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_u16m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_u16m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vuint16m1x3_t test_vundefined_u16m1x3() { return __riscv_vundefined_u16m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_u16m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_u16m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vuint16m1x4_t test_vundefined_u16m1x4() { return __riscv_vundefined_u16m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_u16m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_u16m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vuint16m1x5_t test_vundefined_u16m1x5() { return __riscv_vundefined_u16m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_u16m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_u16m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vuint16m1x6_t test_vundefined_u16m1x6() { return __riscv_vundefined_u16m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_u16m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_u16m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vuint16m1x7_t test_vundefined_u16m1x7() { return __riscv_vundefined_u16m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vundefined_u16m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_u16m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vuint16m1x8_t test_vundefined_u16m1x8() { return __riscv_vundefined_u16m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vundefined_u16m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_u16m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vuint16m2x2_t test_vundefined_u16m2x2() { return __riscv_vundefined_u16m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vundefined_u16m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_u16m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vuint16m2x3_t test_vundefined_u16m2x3() { return __riscv_vundefined_u16m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vundefined_u16m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_u16m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vuint16m2x4_t test_vundefined_u16m2x4() { return __riscv_vundefined_u16m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vundefined_u16m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_u16m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vuint16m4x2_t test_vundefined_u16m4x2() { return __riscv_vundefined_u16m4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_u32mf2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @test_vundefined_u32mf2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison
 //
 vuint32mf2x2_t test_vundefined_u32mf2x2() {
   return __riscv_vundefined_u32mf2x2();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_u32mf2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @test_vundefined_u32mf2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison
 //
 vuint32mf2x3_t test_vundefined_u32mf2x3() {
   return __riscv_vundefined_u32mf2x3();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_u32mf2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @test_vundefined_u32mf2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison
 //
 vuint32mf2x4_t test_vundefined_u32mf2x4() {
   return __riscv_vundefined_u32mf2x4();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_u32mf2x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @test_vundefined_u32mf2x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison
 //
 vuint32mf2x5_t test_vundefined_u32mf2x5() {
   return __riscv_vundefined_u32mf2x5();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_u32mf2x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @test_vundefined_u32mf2x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison
 //
 vuint32mf2x6_t test_vundefined_u32mf2x6() {
   return __riscv_vundefined_u32mf2x6();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_u32mf2x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @test_vundefined_u32mf2x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison
 //
 vuint32mf2x7_t test_vundefined_u32mf2x7() {
   return __riscv_vundefined_u32mf2x7();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vundefined_u32mf2x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @test_vundefined_u32mf2x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison
 //
 vuint32mf2x8_t test_vundefined_u32mf2x8() {
   return __riscv_vundefined_u32mf2x8();
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_u32m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_u32m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vuint32m1x2_t test_vundefined_u32m1x2() { return __riscv_vundefined_u32m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_u32m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_u32m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vuint32m1x3_t test_vundefined_u32m1x3() { return __riscv_vundefined_u32m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_u32m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_u32m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vuint32m1x4_t test_vundefined_u32m1x4() { return __riscv_vundefined_u32m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_u32m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_u32m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vuint32m1x5_t test_vundefined_u32m1x5() { return __riscv_vundefined_u32m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_u32m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_u32m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vuint32m1x6_t test_vundefined_u32m1x6() { return __riscv_vundefined_u32m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_u32m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_u32m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vuint32m1x7_t test_vundefined_u32m1x7() { return __riscv_vundefined_u32m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vundefined_u32m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_u32m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vuint32m1x8_t test_vundefined_u32m1x8() { return __riscv_vundefined_u32m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vundefined_u32m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_u32m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vuint32m2x2_t test_vundefined_u32m2x2() { return __riscv_vundefined_u32m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vundefined_u32m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_u32m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vuint32m2x3_t test_vundefined_u32m2x3() { return __riscv_vundefined_u32m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vundefined_u32m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_u32m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vuint32m2x4_t test_vundefined_u32m2x4() { return __riscv_vundefined_u32m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i32>, <vscale x 8 x i32> } @test_vundefined_u32m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_u32m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x i32>, <vscale x 8 x i32> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vuint32m4x2_t test_vundefined_u32m4x2() { return __riscv_vundefined_u32m4x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_u64m1x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @test_vundefined_u64m1x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 2) poison
 //
 vuint64m1x2_t test_vundefined_u64m1x2() { return __riscv_vundefined_u64m1x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_u64m1x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @test_vundefined_u64m1x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 3) poison
 //
 vuint64m1x3_t test_vundefined_u64m1x3() { return __riscv_vundefined_u64m1x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_u64m1x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @test_vundefined_u64m1x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 4) poison
 //
 vuint64m1x4_t test_vundefined_u64m1x4() { return __riscv_vundefined_u64m1x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_u64m1x5(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @test_vundefined_u64m1x5(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 5) poison
 //
 vuint64m1x5_t test_vundefined_u64m1x5() { return __riscv_vundefined_u64m1x5(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_u64m1x6(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @test_vundefined_u64m1x6(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 6) poison
 //
 vuint64m1x6_t test_vundefined_u64m1x6() { return __riscv_vundefined_u64m1x6(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_u64m1x7(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @test_vundefined_u64m1x7(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 7) poison
 //
 vuint64m1x7_t test_vundefined_u64m1x7() { return __riscv_vundefined_u64m1x7(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vundefined_u64m1x8(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @test_vundefined_u64m1x8(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 8 x i8>, 8) poison
 //
 vuint64m1x8_t test_vundefined_u64m1x8() { return __riscv_vundefined_u64m1x8(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vundefined_u64m2x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @test_vundefined_u64m2x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison
 //
 vuint64m2x2_t test_vundefined_u64m2x2() { return __riscv_vundefined_u64m2x2(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vundefined_u64m2x3(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @test_vundefined_u64m2x3(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 3) poison
 //
 vuint64m2x3_t test_vundefined_u64m2x3() { return __riscv_vundefined_u64m2x3(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vundefined_u64m2x4(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @test_vundefined_u64m2x4(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 16 x i8>, 4) poison
 //
 vuint64m2x4_t test_vundefined_u64m2x4() { return __riscv_vundefined_u64m2x4(); }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i64>, <vscale x 4 x i64> } @test_vundefined_u64m4x2(
+// CHECK-RV64-LABEL: define dso_local target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @test_vundefined_u64m4x2(
 // CHECK-RV64-SAME: ) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x i64>, <vscale x 4 x i64> } poison
+// CHECK-RV64-NEXT:    ret target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison
 //
 vuint64m4x2_t test_vundefined_u64m4x2() { return __riscv_vundefined_u64m4x2(); }

@@ -98,7 +98,7 @@ using format_parse_context = basic_format_parse_context<char>;
 using wformat_parse_context = basic_format_parse_context<wchar_t>;
 #  endif
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

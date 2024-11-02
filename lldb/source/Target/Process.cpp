@@ -114,33 +114,6 @@ public:
   }
 };
 
-class ProcessMemoryIterator {
-public:
-  ProcessMemoryIterator(Process &process, lldb::addr_t base)
-      : m_process(process), m_base_addr(base) {}
-
-  bool IsValid() { return m_is_valid; }
-
-  uint8_t operator[](lldb::addr_t offset) {
-    if (!IsValid())
-      return 0;
-
-    uint8_t retval = 0;
-    Status error;
-    if (0 == m_process.ReadMemory(m_base_addr + offset, &retval, 1, error)) {
-      m_is_valid = false;
-      return 0;
-    }
-
-    return retval;
-  }
-
-private:
-  Process &m_process;
-  const lldb::addr_t m_base_addr;
-  bool m_is_valid = true;
-};
-
 static constexpr OptionEnumValueElement g_follow_fork_mode_values[] = {
     {
         eFollowParent,
@@ -2174,7 +2147,6 @@ size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
     result_error.Clear();
     // NULL out everything just to be safe
     memset(dst, 0, dst_max_len);
-    Status error;
     addr_t curr_addr = addr;
     const size_t cache_line_size = m_memory_cache.GetMemoryCacheLineSize();
     size_t bytes_left = dst_max_len - 1;
@@ -2185,10 +2157,11 @@ size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
           cache_line_size - (curr_addr % cache_line_size);
       addr_t bytes_to_read =
           std::min<addr_t>(bytes_left, cache_line_bytes_left);
+      Status error;
       size_t bytes_read = ReadMemory(curr_addr, curr_dst, bytes_to_read, error);
 
       if (bytes_read == 0) {
-        result_error = error;
+        result_error = std::move(error);
         dst[total_cstr_len] = '\0';
         break;
       }
@@ -3379,21 +3352,50 @@ lldb::addr_t Process::FindInMemory(lldb::addr_t low, lldb::addr_t high,
   if (region_size < size)
     return LLDB_INVALID_ADDRESS;
 
+  // See "Boyer-Moore string search algorithm".
   std::vector<size_t> bad_char_heuristic(256, size);
-  ProcessMemoryIterator iterator(*this, low);
-
   for (size_t idx = 0; idx < size - 1; idx++) {
     decltype(bad_char_heuristic)::size_type bcu_idx = buf[idx];
     bad_char_heuristic[bcu_idx] = size - idx - 1;
   }
-  for (size_t s = 0; s <= (region_size - size);) {
+
+  // Memory we're currently searching through.
+  llvm::SmallVector<uint8_t, 0> mem;
+  // Position of the memory buffer.
+  addr_t mem_pos = low;
+  // Maximum number of bytes read (and buffered). We need to read at least
+  // `size` bytes for a successful match.
+  const size_t max_read_size = std::max<size_t>(size, 0x10000);
+
+  for (addr_t cur_addr = low; cur_addr <= (high - size);) {
+    if (cur_addr + size > mem_pos + mem.size()) {
+      // We need to read more data. We don't attempt to reuse the data we've
+      // already read (up to `size-1` bytes from `cur_addr` to
+      // `mem_pos+mem.size()`).  This is fine for patterns much smaller than
+      // max_read_size. For very
+      // long patterns we may need to do something more elaborate.
+      mem.resize_for_overwrite(max_read_size);
+      Status error;
+      mem.resize(ReadMemory(cur_addr, mem.data(),
+                            std::min<addr_t>(mem.size(), high - cur_addr),
+                            error));
+      mem_pos = cur_addr;
+      if (size > mem.size()) {
+        // We didn't read enough data. Skip to the next memory region.
+        MemoryRegionInfo info;
+        error = GetMemoryRegionInfo(mem_pos + mem.size(), info);
+        if (error.Fail())
+          break;
+        cur_addr = info.GetRange().GetRangeEnd();
+        continue;
+      }
+    }
     int64_t j = size - 1;
-    while (j >= 0 && buf[j] == iterator[s + j])
+    while (j >= 0 && buf[j] == mem[cur_addr + j - mem_pos])
       j--;
     if (j < 0)
-      return low + s;
-    else
-      s += bad_char_heuristic[iterator[s + size - 1]];
+      return cur_addr; // We have a match.
+    cur_addr += bad_char_heuristic[mem[cur_addr + size - 1 - mem_pos]];
   }
 
   return LLDB_INVALID_ADDRESS;
@@ -5741,43 +5743,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-const char *Process::ExecutionResultAsCString(ExpressionResults result) {
-  const char *result_name = "<unknown>";
-
-  switch (result) {
-  case eExpressionCompleted:
-    result_name = "eExpressionCompleted";
-    break;
-  case eExpressionDiscarded:
-    result_name = "eExpressionDiscarded";
-    break;
-  case eExpressionInterrupted:
-    result_name = "eExpressionInterrupted";
-    break;
-  case eExpressionHitBreakpoint:
-    result_name = "eExpressionHitBreakpoint";
-    break;
-  case eExpressionSetupError:
-    result_name = "eExpressionSetupError";
-    break;
-  case eExpressionParseError:
-    result_name = "eExpressionParseError";
-    break;
-  case eExpressionResultUnavailable:
-    result_name = "eExpressionResultUnavailable";
-    break;
-  case eExpressionTimedOut:
-    result_name = "eExpressionTimedOut";
-    break;
-  case eExpressionStoppedForDebug:
-    result_name = "eExpressionStoppedForDebug";
-    break;
-  case eExpressionThreadVanished:
-    result_name = "eExpressionThreadVanished";
-  }
-  return result_name;
-}
-
 void Process::GetStatus(Stream &strm) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
@@ -6484,13 +6449,13 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
   llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
       GetMemoryTagManager();
   if (!tag_manager_or_err)
-    return Status(tag_manager_or_err.takeError());
+    return Status::FromError(tag_manager_or_err.takeError());
 
   const MemoryTagManager *tag_manager = *tag_manager_or_err;
   llvm::Expected<std::vector<uint8_t>> packed_tags =
       tag_manager->PackTags(tags);
   if (!packed_tags) {
-    return Status(packed_tags.takeError());
+    return Status::FromError(packed_tags.takeError());
   }
 
   return DoWriteMemoryTags(addr, len, tag_manager->GetAllocationTagType(),

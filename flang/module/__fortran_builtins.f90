@@ -102,6 +102,10 @@ module __fortran_builtins
     __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, &
     __builtin_gridDim
   integer, parameter, public :: __builtin_warpsize = 32
+  
+  type, public, bind(c) :: __builtin_c_devptr
+    type(__builtin_c_ptr) :: cptr
+  end type
 
   intrinsic :: __builtin_fma
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &

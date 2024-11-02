@@ -10,6 +10,9 @@ inputs:
     required: true
     type: 'string'
 
+permissions:
+  contents: read
+
 runs:
   using: "composite"
   steps:
@@ -18,6 +21,9 @@ runs:
     - name: Package Build and Source Directories
       shell: bash
       run: |
+        # Remove .git/config to avoid leaking GITHUB_TOKEN stored there.
+        # See https://unit42.paloaltonetworks.com/github-repo-artifacts-leak-tokens/
+        rm -Rf .git/config
         # Windows does not support symlinks, so we need to dereference them.
         tar --exclude build/ ${{ (runner.os == 'Windows' && '-h') || '' }} -c . | zstd -T0 -c > ../llvm-project.tar.zst
         mv ../llvm-project.tar.zst .

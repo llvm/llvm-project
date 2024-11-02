@@ -6822,7 +6822,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             outfile, File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
                          File::eOpenOptionCanCreate);
         if (!core_file) {
-          error = core_file.takeError();
+          error = Status::FromError(core_file.takeError());
         } else {
           // Read 1 page at a time
           uint8_t bytes[0x1000];

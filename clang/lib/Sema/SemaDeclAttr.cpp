@@ -6886,6 +6886,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLNumThreads:
     S.HLSL().handleNumThreadsAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLWaveSize:
+    S.HLSL().handleWaveSizeAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLSV_GroupIndex:
     handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
     break;
@@ -6903,12 +6906,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
-    break;
-  case ParsedAttr::AT_HLSLROV:
-    handleSimpleAttribute<HLSLROVAttr>(S, D, AL);
-    break;
-  case ParsedAttr::AT_HLSLResourceClass:
-    S.HLSL().handleResourceClassAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);

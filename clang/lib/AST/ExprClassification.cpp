@@ -142,6 +142,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
+  case Expr::HLSLOutArgExprClass:
     return Cl::CL_LValue;
 
     // C++ [expr.prim.general]p1: A string literal is an lvalue.

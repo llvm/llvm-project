@@ -233,7 +233,9 @@ namespace std {
 #include <__type_traits/conjunction.h>
 #include <__type_traits/dependent_type.h>
 #include <__type_traits/is_array.h>
+#include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_destructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>

@@ -27,6 +27,7 @@ static_library("Instrumentation") {
     "MemProfiler.cpp",
     "MemorySanitizer.cpp",
     "NumericalStabilitySanitizer.cpp",
+    "PGOCtxProfFlattening.cpp",
     "PGOCtxProfLowering.cpp",
     "PGOForceFunctionAttrs.cpp",
     "PGOInstrumentation.cpp",

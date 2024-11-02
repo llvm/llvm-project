@@ -87,14 +87,14 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ("", Replacements[0].Options);
 
   Replacements = parseFormatString("{1}");
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(1u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
@@ -103,7 +103,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
@@ -112,7 +112,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
@@ -121,7 +121,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
@@ -130,7 +130,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("foo", Replacements[0].Options);
 
@@ -139,7 +139,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
   EXPECT_EQ("foo", Replacements[0].Options);
 
@@ -148,7 +148,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
   EXPECT_EQ("foo", Replacements[0].Options);
 
@@ -159,7 +159,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ("0:0:1", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("0:1", Replacements[0].Options);
 
@@ -169,7 +169,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ("0,p+4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ('p', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
@@ -180,7 +180,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ("0,-+4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ('-', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
@@ -190,7 +190,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ("0,+-4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
   EXPECT_EQ('+', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
@@ -200,7 +200,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ("0,==4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
   EXPECT_EQ('=', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
@@ -210,7 +210,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ("0,:=4:foo", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(4u, Replacements[0].Align);
+  EXPECT_EQ(4u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Center, Replacements[0].Where);
   EXPECT_EQ(':', Replacements[0].Pad);
   EXPECT_EQ("foo", Replacements[0].Options);
@@ -222,7 +222,7 @@ TEST(FormatVariadicTest, DefaultReplacementValues) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ("", Replacements[0].Options);
 
   // Including if the colon is present but contains no text.
@@ -230,7 +230,7 @@ TEST(FormatVariadicTest, DefaultReplacementValues) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(3u, Replacements[0].Align);
+  EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ("", Replacements[0].Options);
 
   // 3. If alignment is missing, it defaults to 0, right, space
@@ -240,7 +240,7 @@ TEST(FormatVariadicTest, DefaultReplacementValues) {
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ(' ', Replacements[0].Pad);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ("foo", Replacements[0].Options);
 }
 
@@ -250,7 +250,7 @@ TEST(FormatVariadicTest, MultipleReplacements) {
   // {0}
   EXPECT_EQ(ReplacementType::Format, Replacements[0].Type);
   EXPECT_EQ(0u, Replacements[0].Index);
-  EXPECT_EQ(0u, Replacements[0].Align);
+  EXPECT_EQ(0u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[0].Where);
   EXPECT_EQ("", Replacements[0].Options);
 
@@ -261,7 +261,7 @@ TEST(FormatVariadicTest, MultipleReplacements) {
   // {1:foo} - Options=foo
   EXPECT_EQ(ReplacementType::Format, Replacements[2].Type);
   EXPECT_EQ(1u, Replacements[2].Index);
-  EXPECT_EQ(0u, Replacements[2].Align);
+  EXPECT_EQ(0u, Replacements[2].Width);
   EXPECT_EQ(AlignStyle::Right, Replacements[2].Where);
   EXPECT_EQ("foo", Replacements[2].Options);
 
@@ -272,7 +272,7 @@ TEST(FormatVariadicTest, MultipleReplacements) {
   // {2:bar,-3} - Options=bar, Align=-3
   EXPECT_EQ(ReplacementType::Format, Replacements[4].Type);
   EXPECT_EQ(2u, Replacements[4].Index);
-  EXPECT_EQ(3u, Replacements[4].Align);
+  EXPECT_EQ(3u, Replacements[4].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[4].Where);
   EXPECT_EQ("bar", Replacements[4].Options);
 }
@@ -708,6 +708,23 @@ TEST(FormatVariadicTest, FormatFilterRange) {
   std::vector<int> Vec{0, 1, 2};
   auto Range = map_range(Vec, [](int V) { return V + 1; });
   EXPECT_EQ("1, 2, 3", formatv("{0}", Range).str());
+}
+
+TEST(FormatVariadicTest, Validate) {
+#ifndef NDEBUG
+#if GTEST_HAS_DEATH_TEST
+  // If asserts are enabled, verify that invalid formatv calls cause assertions.
+  EXPECT_DEATH(formatv("{0}", 1, 2).str(), "Expected 1 Args, but got 2");
+  EXPECT_DEATH(formatv("{0} {2}", 1, 2, 3).str(),
+               "Replacement field indices cannot have holes");
+#else  // GTEST_HAS_DEATH_TEST
+  GTEST_SKIP() << "No support for EXPECT_DEATH";
+#endif // GTEST_HAS_DEATH_TEST
+#else  // NDEBUG
+  // If asserts are disabled, verify that validation is disabled.
+  EXPECT_EQ(formatv("{0}", 1, 2).str(), "1");
+  EXPECT_EQ(formatv("{0} {2}", 1, 2, 3).str(), "1 3");
+#endif // NDEBUG
 }
 
 namespace {

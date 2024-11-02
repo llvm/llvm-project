@@ -33,8 +33,7 @@ define float @fneg(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: fneg:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 524288
-; RV32IZFINX-NEXT:    xor a0, a0, a1
+; RV32IZFINX-NEXT:    fneg.s a0, a0
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fneg:
@@ -75,8 +74,7 @@ define float @fabs(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: fabs:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    slli a0, a0, 1
-; RV32IZFINX-NEXT:    srli a0, a0, 1
+; RV32IZFINX-NEXT:    fabs.s a0, a0
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs:
@@ -128,8 +126,7 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ;
 ; RV32IZFINX-LABEL: fcopysign_fneg:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    not a1, a1
-; RV32IZFINX-NEXT:    fsgnj.s a0, a0, a1
+; RV32IZFINX-NEXT:    fsgnjn.s a0, a0, a1
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fcopysign_fneg:

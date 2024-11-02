@@ -45,62 +45,62 @@ define void @test(ptr %dp0, ptr addrspace(1) %dp1, ptr addrspace(3) %dp3, bfloat
 ;
 ; CHECKPTX71-LABEL: test(
 ; CHECKPTX71:       {
-; CHECKPTX71-NEXT:  	.reg .pred 	%p<5>;
-; CHECKPTX71-NEXT:  	.reg .b16 	%rs<34>;
-; CHECKPTX71-NEXT:  	.reg .b32 	%r<4>;
-; CHECKPTX71-NEXT:  	.reg .f32 	%f<12>;
+; CHECKPTX71-NEXT:    .reg .pred %p<5>;
+; CHECKPTX71-NEXT:    .reg .b16 %rs<34>;
+; CHECKPTX71-NEXT:    .reg .b32 %r<4>;
+; CHECKPTX71-NEXT:    .reg .f32 %f<12>;
 ; CHECKPTX71-EMPTY:
 ; CHECKPTX71-NEXT:  // %bb.0:
-; CHECKPTX71-NEXT:  	ld.param.b16 	%rs13, [test_param_3];
-; CHECKPTX71-NEXT:  	ld.param.u32 	%r3, [test_param_2];
-; CHECKPTX71-NEXT:  	ld.param.u32 	%r2, [test_param_1];
-; CHECKPTX71-NEXT:  	ld.param.u32 	%r1, [test_param_0];
-; CHECKPTX71-NEXT:  	ld.b16 	%rs30, [%r1];
-; CHECKPTX71-NEXT:  	cvt.f32.bf16 	%f1, %rs13;
-; CHECKPTX71-NEXT:  $L__BB0_1:                              // %atomicrmw.start
+; CHECKPTX71-NEXT:    ld.param.b16 %rs13, [test_param_3];
+; CHECKPTX71-NEXT:    ld.param.u32 %r3, [test_param_2];
+; CHECKPTX71-NEXT:    ld.param.u32 %r2, [test_param_1];
+; CHECKPTX71-NEXT:    ld.param.u32 %r1, [test_param_0];
+; CHECKPTX71-NEXT:    ld.b16 %rs30, [%r1];
+; CHECKPTX71-NEXT:    cvt.f32.bf16 %f1, %rs13;
+; CHECKPTX71-NEXT:  $L__BB0_1: // %atomicrmw.start14
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX71-NEXT:  	cvt.f32.bf16 	%f2, %rs30;
-; CHECKPTX71-NEXT:  	add.rn.f32 	%f3, %f2, %f1;
-; CHECKPTX71-NEXT:  	cvt.rn.bf16.f32 	%rs14, %f3;
-; CHECKPTX71-NEXT:  	atom.cas.b16 	%rs17, [%r1], %rs30, %rs14;
-; CHECKPTX71-NEXT:  	setp.ne.s16 	%p1, %rs17, %rs30;
-; CHECKPTX71-NEXT:  	mov.u16 	%rs30, %rs17;
-; CHECKPTX71-NEXT:  	@%p1 bra 	$L__BB0_1;
-; CHECKPTX71-NEXT:  // %bb.2:                               // %atomicrmw.end
-; CHECKPTX71-NEXT:  	ld.b16 	%rs31, [%r1];
-; CHECKPTX71-NEXT:  $L__BB0_3:                              // %atomicrmw.start2
+; CHECKPTX71-NEXT:    cvt.f32.bf16 %f2, %rs30;
+; CHECKPTX71-NEXT:    add.rn.f32 %f3, %f2, %f1;
+; CHECKPTX71-NEXT:    cvt.rn.bf16.f32 %rs14, %f3;
+; CHECKPTX71-NEXT:    atom.cas.b16 %rs17, [%r1], %rs30, %rs14;
+; CHECKPTX71-NEXT:    setp.ne.s16 %p1, %rs17, %rs30;
+; CHECKPTX71-NEXT:    mov.u16 %rs30, %rs17;
+; CHECKPTX71-NEXT:    @%p1 bra $L__BB0_1;
+; CHECKPTX71-NEXT:  // %bb.2: // %atomicrmw.end13
+; CHECKPTX71-NEXT:    ld.b16 %rs31, [%r1];
+; CHECKPTX71-NEXT:  $L__BB0_3: // %atomicrmw.start8
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX71-NEXT:  	cvt.f32.bf16 	%f4, %rs31;
-; CHECKPTX71-NEXT:  	add.rn.f32 	%f5, %f4, 0f3F800000;
-; CHECKPTX71-NEXT:  	cvt.rn.bf16.f32 	%rs18, %f5;
-; CHECKPTX71-NEXT:  	atom.cas.b16 	%rs21, [%r1], %rs31, %rs18;
-; CHECKPTX71-NEXT:  	setp.ne.s16 	%p2, %rs21, %rs31;
-; CHECKPTX71-NEXT:  	mov.u16 	%rs31, %rs21;
-; CHECKPTX71-NEXT:  	@%p2 bra 	$L__BB0_3;
-; CHECKPTX71-NEXT:  // %bb.4:                               // %atomicrmw.end1
-; CHECKPTX71-NEXT:  	ld.global.b16 	%rs32, [%r2];
-; CHECKPTX71-NEXT:  $L__BB0_5:                              // %atomicrmw.start8
+; CHECKPTX71-NEXT:    cvt.f32.bf16 %f4, %rs31;
+; CHECKPTX71-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
+; CHECKPTX71-NEXT:    cvt.rn.bf16.f32 %rs18, %f5;
+; CHECKPTX71-NEXT:    atom.cas.b16 %rs21, [%r1], %rs31, %rs18;
+; CHECKPTX71-NEXT:    setp.ne.s16 %p2, %rs21, %rs31;
+; CHECKPTX71-NEXT:    mov.u16 %rs31, %rs21;
+; CHECKPTX71-NEXT:    @%p2 bra $L__BB0_3;
+; CHECKPTX71-NEXT:  // %bb.4: // %atomicrmw.end7
+; CHECKPTX71-NEXT:    ld.global.b16 %rs32, [%r2];
+; CHECKPTX71-NEXT:  $L__BB0_5: // %atomicrmw.start2
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX71-NEXT:  	cvt.f32.bf16 	%f7, %rs32;
-; CHECKPTX71-NEXT:  	add.rn.f32 	%f8, %f7, %f1;
-; CHECKPTX71-NEXT:  	cvt.rn.bf16.f32 	%rs22, %f8;
-; CHECKPTX71-NEXT:  	atom.global.cas.b16 	%rs25, [%r2], %rs32, %rs22;
-; CHECKPTX71-NEXT:  	setp.ne.s16 	%p3, %rs25, %rs32;
-; CHECKPTX71-NEXT:  	mov.u16 	%rs32, %rs25;
-; CHECKPTX71-NEXT:  	@%p3 bra 	$L__BB0_5;
-; CHECKPTX71-NEXT:  // %bb.6:                               // %atomicrmw.end7
-; CHECKPTX71-NEXT:  	ld.shared.b16 	%rs33, [%r3];
-; CHECKPTX71-NEXT:  $L__BB0_7:                              // %atomicrmw.start14
+; CHECKPTX71-NEXT:    cvt.f32.bf16 %f7, %rs32;
+; CHECKPTX71-NEXT:    add.rn.f32 %f8, %f7, %f1;
+; CHECKPTX71-NEXT:    cvt.rn.bf16.f32 %rs22, %f8;
+; CHECKPTX71-NEXT:    atom.global.cas.b16 %rs25, [%r2], %rs32, %rs22;
+; CHECKPTX71-NEXT:    setp.ne.s16 %p3, %rs25, %rs32;
+; CHECKPTX71-NEXT:    mov.u16 %rs32, %rs25;
+; CHECKPTX71-NEXT:    @%p3 bra $L__BB0_5;
+; CHECKPTX71-NEXT:  // %bb.6: // %atomicrmw.end1
+; CHECKPTX71-NEXT:    ld.shared.b16 %rs33, [%r3];
+; CHECKPTX71-NEXT:  $L__BB0_7: // %atomicrmw.start
 ; CHECKPTX71-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECKPTX71-NEXT:  	cvt.f32.bf16 	%f10, %rs33;
-; CHECKPTX71-NEXT:  	add.rn.f32 	%f11, %f10, %f1;
-; CHECKPTX71-NEXT:  	cvt.rn.bf16.f32 	%rs26, %f11;
-; CHECKPTX71-NEXT:  	atom.shared.cas.b16 	%rs29, [%r3], %rs33, %rs26;
-; CHECKPTX71-NEXT:  	setp.ne.s16 	%p4, %rs29, %rs33;
-; CHECKPTX71-NEXT:  	mov.u16 	%rs33, %rs29;
-; CHECKPTX71-NEXT:  	@%p4 bra 	$L__BB0_7;
-; CHECKPTX71-NEXT:  // %bb.8:                               // %atomicrmw.end13
-; CHECKPTX71-NEXT:  	ret;
+; CHECKPTX71-NEXT:    cvt.f32.bf16 %f10, %rs33;
+; CHECKPTX71-NEXT:    add.rn.f32 %f11, %f10, %f1;
+; CHECKPTX71-NEXT:    cvt.rn.bf16.f32 %rs26, %f11;
+; CHECKPTX71-NEXT:    atom.shared.cas.b16 %rs29, [%r3], %rs33, %rs26;
+; CHECKPTX71-NEXT:    setp.ne.s16 %p4, %rs29, %rs33;
+; CHECKPTX71-NEXT:    mov.u16 %rs33, %rs29;
+; CHECKPTX71-NEXT:    @%p4 bra $L__BB0_7;
+; CHECKPTX71-NEXT:  // %bb.8: // %atomicrmw.end
+; CHECKPTX71-NEXT:    ret;
   %r1 = atomicrmw fadd ptr %dp0, bfloat %val seq_cst
   %r2 = atomicrmw fadd ptr %dp0, bfloat 1.0 seq_cst
   %r3 = atomicrmw fadd ptr addrspace(1) %dp1, bfloat %val seq_cst

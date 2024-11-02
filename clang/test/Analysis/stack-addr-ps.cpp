@@ -137,7 +137,7 @@ namespace rdar13296133 {
     ConvertsToPointer obj;
     return obj; // no-warning
   }
-}
+} // namespace rdar13296133
 
 void write_stack_address_to(char **q) {
   char local;
@@ -791,3 +791,58 @@ void global_ptr_to_ptr() {
   *global_pp = nullptr;
 }
 } // namespace leaking_via_indirect_global_invalidated
+
+namespace not_leaking_via_simple_ptr {
+void simple_ptr(const char *p) {
+  char tmp;
+  p = &tmp; // no-warning
+}
+
+void ref_ptr(const char *&p) {
+  char tmp;
+  p = &tmp; // expected-warning{{variable 'tmp' is still referred to by the caller variable 'p'}}
+}
+
+struct S {
+  const char *p;
+};
+
+void struct_ptr(S s) {
+  char tmp;
+  s.p = &tmp; // no-warning
+}
+
+void array(const char arr[2]) {
+  char tmp;
+  arr = &tmp; // no-warning
+}
+
+extern void copy(char *output, const char *input, unsigned size);
+extern bool foo(const char *input);
+extern void bar(char *output, unsigned count);
+extern bool baz(char *output, const char *input);
+
+void repo(const char *input, char *output) {
+  char temp[64];
+  copy(temp, input, sizeof(temp));
+
+  char result[64];
+  input = temp;
+  if (foo(temp)) {
+    bar(result, sizeof(result));
+    input = result;
+  }
+  if (!baz(output, input)) {
+    copy(output, input, sizeof(result));
+  }
+}
+} // namespace not_leaking_via_simple_ptr
+
+namespace early_reclaim_dead_limitation {
+void foo();
+void top(char **p) {
+  char local;
+  *p = &local;
+  foo(); // no-warning FIXME: p binding is reclaimed before the function end
+}
+} // namespace early_reclaim_dead_limitation

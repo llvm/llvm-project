@@ -4255,6 +4255,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShlSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
+  case G_FABS:
+    return lowerFAbs(MI);
   case G_SELECT:
     return lowerSelect(MI);
   case G_IS_FPCLASS:
@@ -8757,6 +8759,22 @@ LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
   auto Sub = MIRBuilder.buildSub(Ty, Zero, SrcReg).getReg(0);
   auto ICmp = MIRBuilder.buildICmp(CmpInst::ICMP_SGT, IType, SrcReg, Zero);
   MIRBuilder.buildSelect(DestReg, ICmp, SrcReg, Sub);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
+
+  LLT Ty = MRI.getType(DstReg);
+
+  // Reset sign bit
+  MIRBuilder.buildAnd(
+      DstReg, SrcReg,
+      MIRBuilder.buildConstant(
+          Ty, APInt::getSignedMaxValue(Ty.getScalarSizeInBits())));
+
   MI.eraseFromParent();
   return Legalized;
 }

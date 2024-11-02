@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -46,6 +47,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
@@ -71,6 +73,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -2114,6 +2117,240 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       Builder.CreateCall(IFn, RetOpnd, "");
     }
   }
+}
+
+// In contextual profiling, when an inline succeeds, we want to remap the
+// indices of the callee into the index space of the caller. We can't just leave
+// them as-is because the same callee may appear in other places in this caller
+// (other callsites), and its (callee's) counters and sub-contextual profile
+// tree would be potentially different.
+// Not all BBs of the callee may survive the opportunistic DCE InlineFunction
+// does (same goes for callsites in the callee).
+// We will return a pair of vectors, one for basic block IDs and one for
+// callsites. For such a vector V, V[Idx] will be -1 if the callee
+// instrumentation with index Idx did not survive inlining, and a new value
+// otherwise.
+// This function will update the caller's instrumentation intrinsics
+// accordingly, mapping indices as described above. We also replace the "name"
+// operand because we use it to distinguish between "own" instrumentation and
+// "from callee" instrumentation when performing the traversal of the CFG of the
+// caller. We traverse depth-first from the callsite's BB and up to the point we
+// hit BBs owned by the caller.
+// The return values will be then used to update the contextual
+// profile. Note: we only update the "name" and "index" operands in the
+// instrumentation intrinsics, we leave the hash and total nr of indices as-is,
+// it's not worth updating those.
+static const std::pair<std::vector<int64_t>, std::vector<int64_t>>
+remapIndices(Function &Caller, BasicBlock *StartBB,
+             PGOContextualProfile &CtxProf, uint32_t CalleeCounters,
+             uint32_t CalleeCallsites) {
+  // We'll allocate a new ID to imported callsite counters and callsites. We're
+  // using -1 to indicate a counter we delete. Most likely the entry ID, for
+  // example, will be deleted - we don't want 2 IDs in the same BB, and the
+  // entry would have been cloned in the callsite's old BB.
+  std::vector<int64_t> CalleeCounterMap;
+  std::vector<int64_t> CalleeCallsiteMap;
+  CalleeCounterMap.resize(CalleeCounters, -1);
+  CalleeCallsiteMap.resize(CalleeCallsites, -1);
+
+  auto RewriteInstrIfNeeded = [&](InstrProfIncrementInst &Ins) -> bool {
+    if (Ins.getNameValue() == &Caller)
+      return false;
+    const auto OldID = static_cast<uint32_t>(Ins.getIndex()->getZExtValue());
+    if (CalleeCounterMap[OldID] == -1)
+      CalleeCounterMap[OldID] = CtxProf.allocateNextCounterIndex(Caller);
+    const auto NewID = static_cast<uint32_t>(CalleeCounterMap[OldID]);
+
+    Ins.setNameValue(&Caller);
+    Ins.setIndex(NewID);
+    return true;
+  };
+
+  auto RewriteCallsiteInsIfNeeded = [&](InstrProfCallsite &Ins) -> bool {
+    if (Ins.getNameValue() == &Caller)
+      return false;
+    const auto OldID = static_cast<uint32_t>(Ins.getIndex()->getZExtValue());
+    if (CalleeCallsiteMap[OldID] == -1)
+      CalleeCallsiteMap[OldID] = CtxProf.allocateNextCallsiteIndex(Caller);
+    const auto NewID = static_cast<uint32_t>(CalleeCallsiteMap[OldID]);
+
+    Ins.setNameValue(&Caller);
+    Ins.setIndex(NewID);
+    return true;
+  };
+
+  std::deque<BasicBlock *> Worklist;
+  DenseSet<const BasicBlock *> Seen;
+  // We will traverse the BBs starting from the callsite BB. The callsite BB
+  // will have at least a BB ID - maybe its own, and in any case the one coming
+  // from the cloned function's entry BB. The other BBs we'll start seeing from
+  // there on may or may not have BB IDs. BBs with IDs belonging to our caller
+  // are definitely not coming from the imported function and form a boundary
+  // past which we don't need to traverse anymore. BBs may have no
+  // instrumentation (because we originally inserted instrumentation as per
+  // MST), in which case we'll traverse past them. An invariant we'll keep is
+  // that a BB will have at most 1 BB ID. For example, in the callsite BB, we
+  // will delete the callee BB's instrumentation. This doesn't result in
+  // information loss: the entry BB of the callee will have the same count as
+  // the callsite's BB. At the end of this traversal, all the callee's
+  // instrumentation would be mapped into the caller's instrumentation index
+  // space. Some of the callee's counters may be deleted (as mentioned, this
+  // should result in no loss of information).
+  Worklist.push_back(StartBB);
+  while (!Worklist.empty()) {
+    auto *BB = Worklist.front();
+    Worklist.pop_front();
+    bool Changed = false;
+    auto *BBID = CtxProfAnalysis::getBBInstrumentation(*BB);
+    if (BBID) {
+      Changed |= RewriteInstrIfNeeded(*BBID);
+      // this may be the entryblock from the inlined callee, coming into a BB
+      // that didn't have instrumentation because of MST decisions. Let's make
+      // sure it's placed accordingly. This is a noop elsewhere.
+      BBID->moveBefore(&*BB->getFirstInsertionPt());
+    }
+    for (auto &I : llvm::make_early_inc_range(*BB)) {
+      if (auto *Inc = dyn_cast<InstrProfIncrementInst>(&I)) {
+        if (Inc != BBID) {
+          // If we're here it means that the BB had more than 1 IDs, presumably
+          // some coming from the callee. We "made up our mind" to keep the
+          // first one (which may or may not have been originally the caller's).
+          // All the others are superfluous and we delete them.
+          Inc->eraseFromParent();
+          Changed = true;
+        }
+      } else if (auto *CS = dyn_cast<InstrProfCallsite>(&I)) {
+        Changed |= RewriteCallsiteInsIfNeeded(*CS);
+      }
+    }
+    if (!BBID || Changed)
+      for (auto *Succ : successors(BB))
+        if (Seen.insert(Succ).second)
+          Worklist.push_back(Succ);
+  }
+
+  assert(
+      llvm::all_of(CalleeCounterMap, [&](const auto &V) { return V != 0; }) &&
+      "Counter index mapping should be either to -1 or to non-zero index, "
+      "because the 0 "
+      "index corresponds to the entry BB of the caller");
+  assert(
+      llvm::all_of(CalleeCallsiteMap, [&](const auto &V) { return V != 0; }) &&
+      "Callsite index mapping should be either to -1 or to non-zero index, "
+      "because there should have been at least a callsite - the inlined one "
+      "- which would have had a 0 index.");
+
+  return {std::move(CalleeCounterMap), std::move(CalleeCallsiteMap)};
+}
+
+// Inline. If successful, update the contextual profile (if a valid one is
+// given).
+// The contextual profile data is organized in trees, as follows:
+//  - each node corresponds to a function
+//  - the root of each tree corresponds to an "entrypoint" - e.g.
+//    RPC handler for server side
+//  - the path from the root to a node is a particular call path
+//  - the counters stored in a node are counter values observed in that
+//    particular call path ("context")
+//  - the edges between nodes are annotated with callsite IDs.
+//
+// Updating the contextual profile after an inlining means, at a high level,
+// copying over the data of the callee, **intentionally without any value
+// scaling**, and copying over the callees of the inlined callee.
+llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                                        PGOContextualProfile &CtxProf,
+                                        bool MergeAttributes,
+                                        AAResults *CalleeAAR,
+                                        bool InsertLifetime,
+                                        Function *ForwardVarArgsTo) {
+  if (!CtxProf)
+    return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
+                          ForwardVarArgsTo);
+
+  auto &Caller = *CB.getCaller();
+  auto &Callee = *CB.getCalledFunction();
+  auto *StartBB = CB.getParent();
+
+  // Get some preliminary data about the callsite before it might get inlined.
+  // Inlining shouldn't delete the callee, but it's cleaner (and low-cost) to
+  // get this data upfront and rely less on InlineFunction's behavior.
+  const auto CalleeGUID = AssignGUIDPass::getGUID(Callee);
+  auto *CallsiteIDIns = CtxProfAnalysis::getCallsiteInstrumentation(CB);
+  const auto CallsiteID =
+      static_cast<uint32_t>(CallsiteIDIns->getIndex()->getZExtValue());
+
+  const auto NumCalleeCounters = CtxProf.getNumCounters(Callee);
+  const auto NumCalleeCallsites = CtxProf.getNumCallsites(Callee);
+
+  auto Ret = InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
+                            ForwardVarArgsTo);
+  if (!Ret.isSuccess())
+    return Ret;
+
+  // Inlining succeeded, we don't need the instrumentation of the inlined
+  // callsite.
+  CallsiteIDIns->eraseFromParent();
+
+  // Assinging Maps and then capturing references into it in the lambda because
+  // captured structured bindings are a C++20 extension. We do also need a
+  // capture here, though.
+  const auto IndicesMaps = remapIndices(Caller, StartBB, CtxProf,
+                                        NumCalleeCounters, NumCalleeCallsites);
+  const uint32_t NewCountersSize = CtxProf.getNumCounters(Caller);
+
+  auto Updater = [&](PGOCtxProfContext &Ctx) {
+    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
+    const auto &[CalleeCounterMap, CalleeCallsiteMap] = IndicesMaps;
+    assert(
+        (Ctx.counters().size() +
+             llvm::count_if(CalleeCounterMap, [](auto V) { return V != -1; }) ==
+         NewCountersSize) &&
+        "The caller's counters size should have grown by the number of new "
+        "distinct counters inherited from the inlined callee.");
+    Ctx.resizeCounters(NewCountersSize);
+    // If the callsite wasn't exercised in this context, the value of the
+    // counters coming from it is 0 - which it is right now, after resizing them
+    // - and so we're done.
+    auto CSIt = Ctx.callsites().find(CallsiteID);
+    if (CSIt == Ctx.callsites().end())
+      return;
+    auto CalleeCtxIt = CSIt->second.find(CalleeGUID);
+    // The callsite was exercised, but not with this callee (so presumably this
+    // is an indirect callsite). Again, we're done here.
+    if (CalleeCtxIt == CSIt->second.end())
+      return;
+
+    // Let's pull in the counter values and the subcontexts coming from the
+    // inlined callee.
+    auto &CalleeCtx = CalleeCtxIt->second;
+    assert(CalleeCtx.guid() == CalleeGUID);
+
+    for (auto I = 0U; I < CalleeCtx.counters().size(); ++I) {
+      const int64_t NewIndex = CalleeCounterMap[I];
+      if (NewIndex >= 0) {
+        assert(NewIndex != 0 && "counter index mapping shouldn't happen to a 0 "
+                                "index, that's the caller's entry BB");
+        Ctx.counters()[NewIndex] = CalleeCtx.counters()[I];
+      }
+    }
+    for (auto &[I, OtherSet] : CalleeCtx.callsites()) {
+      const int64_t NewCSIdx = CalleeCallsiteMap[I];
+      if (NewCSIdx >= 0) {
+        assert(NewCSIdx != 0 &&
+               "callsite index mapping shouldn't happen to a 0 index, the "
+               "caller must've had at least one callsite (with such an index)");
+        Ctx.ingestAllContexts(NewCSIdx, std::move(OtherSet));
+      }
+    }
+    // We know the traversal is preorder, so it wouldn't have yet looked at the
+    // sub-contexts of this context that it's currently visiting. Meaning, the
+    // erase below invalidates no iterators.
+    auto Deleted = Ctx.callsites().erase(CallsiteID);
+    assert(Deleted);
+    (void)Deleted;
+  };
+  CtxProf.update(Updater, &Caller);
+  return Ret;
 }
 
 /// This function inlines the called function into the basic block of the

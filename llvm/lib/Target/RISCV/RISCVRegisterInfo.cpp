@@ -145,7 +145,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::FFLAGS);
 
   // SiFive VCIX state registers.
-  markSuperRegs(Reserved, RISCV::VCIX_STATE);
+  markSuperRegs(Reserved, RISCV::SF_VCIX_STATE);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     if (Subtarget.hasStdExtE())

@@ -1844,6 +1844,44 @@ static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
   return TheCall;
 }
 
+static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return ExprError();
+
+  ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return ExprError();
+  QualType ParamTy = Arg.get()->getType();
+  TheCall->setArg(0, Arg.get());
+  TheCall->setType(S.Context.BoolTy);
+
+  // Only accept pointers to objects as arguments, which should have object
+  // pointer or void pointer types.
+  if (const auto *PT = ParamTy->getAs<PointerType>()) {
+    // LWG4138: Function pointer types not allowed
+    if (PT->getPointeeType()->isFunctionType()) {
+      S.Diag(TheCall->getArg(0)->getExprLoc(),
+             diag::err_builtin_is_within_lifetime_invalid_arg)
+          << 1;
+      return ExprError();
+    }
+    // Disallow VLAs too since those shouldn't be able to
+    // be a template parameter for `std::is_within_lifetime`
+    if (PT->getPointeeType()->isVariableArrayType()) {
+      S.Diag(TheCall->getArg(0)->getExprLoc(), diag::err_vla_unsupported)
+          << 1 << "__builtin_is_within_lifetime";
+      return ExprError();
+    }
+  } else {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_is_within_lifetime_invalid_arg)
+        << 0;
+    return ExprError();
+  }
+
+  return TheCall;
+}
+
 // Emit an error and return true if the current object format type is in the
 // list of unsupported types.
 static bool CheckBuiltinTargetNotInUnsupported(
@@ -2276,6 +2314,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_launder:
     return BuiltinLaunder(*this, TheCall);
+  case Builtin::BI__builtin_is_within_lifetime:
+    return BuiltinIsWithinLifetime(*this, TheCall);
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
@@ -4896,10 +4936,19 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   // Usual Unary Conversions will convert half to float, which we want for
   // machines that use fp16 conversion intrinsics. Else, we wnat to leave the
   // type how it is, but do normal L->Rvalue conversions.
-  if (Context.getTargetInfo().useFP16ConversionIntrinsics())
-    OrigArg = UsualUnaryConversions(OrigArg).get();
-  else
-    OrigArg = DefaultFunctionArrayLvalueConversion(OrigArg).get();
+  if (Context.getTargetInfo().useFP16ConversionIntrinsics()) {
+    ExprResult Res = UsualUnaryConversions(OrigArg);
+
+    if (!Res.isUsable())
+      return true;
+    OrigArg = Res.get();
+  } else {
+    ExprResult Res = DefaultFunctionArrayLvalueConversion(OrigArg);
+
+    if (!Res.isUsable())
+      return true;
+    OrigArg = Res.get();
+  }
   TheCall->setArg(FPArgNo, OrigArg);
 
   QualType VectorResultTy;
@@ -11425,6 +11474,18 @@ static void AnalyzeImplicitConversions(
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
     WorkList.push_back({E, CC, IsListInit});
+    return;
+  }
+
+  if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
+    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit});
+    // The base expression is only used to initialize the parameter for
+    // arguments to `inout` parameters, so we only traverse down the base
+    // expression for `inout` cases.
+    if (OutArgE->isInOut())
+      WorkList.push_back(
+          {OutArgE->getCastedTemporary()->getSourceExpr(), CC, IsListInit});
+    WorkList.push_back({OutArgE->getWritebackCast(), CC, IsListInit});
     return;
   }
 

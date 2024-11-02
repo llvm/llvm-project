@@ -359,6 +359,7 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     sectionPriorities = runBalancedPartitioning(
         highestAvailablePriority, config->irpgoProfileSortProfilePath,
         config->functionOrderForCompression, config->dataOrderForCompression,
+        config->compressionSortStartupFunctions,
         config->verboseBpSectionOrderer);
   } else if (config->callGraphProfileSort) {
     // Sort sections by the profile data provided by __LLVM,__cg_profile

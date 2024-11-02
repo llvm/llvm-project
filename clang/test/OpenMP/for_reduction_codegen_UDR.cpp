@@ -1074,14 +1074,14 @@ int main() {
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP5:%.*]] = mul nsw i64 1, [[TMP1]]
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[TMP5]]
-// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX]], i64 0
 // CHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP3]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
 // CHECK1-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, [[TMP7]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = mul nsw i64 1, [[TMP1]]
 // CHECK1-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[TMP8]]
-// CHECK1-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX5]], i64 [[LB_ADD_LEN]]
+// CHECK1-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX5]], i64 [[LB_ADD_LEN]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[ARRAYIDX6]] to i64
 // CHECK1-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[ARRAYIDX3]] to i64
 // CHECK1-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP9]], [[TMP10]]
@@ -1109,16 +1109,16 @@ int main() {
 // CHECK1-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP17]], [[TMP18]]
 // CHECK1-NEXT:    [[TMP20:%.*]] = sdiv exact i64 [[TMP19]], ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[VLA7]], i64 [[TMP20]]
-// CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], ptr [[TMP4]], i64 0, i64 1
+// CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw [10 x [4 x %struct.S.0]], ptr [[TMP4]], i64 0, i64 1
 // CHECK1-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x %struct.S.0], ptr [[ARRAYIDX9]], i64 0, i64 0
-// CHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[ARRAYDECAY]], i64 1
+// CHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[ARRAYDECAY]], i64 1
 // CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP3]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX11]], align 4
 // CHECK1-NEXT:    [[TMP23:%.*]] = sext i32 [[TMP22]] to i64
 // CHECK1-NEXT:    [[LB_ADD_LEN12:%.*]] = add nsw i64 0, [[TMP23]]
-// CHECK1-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], ptr [[TMP4]], i64 0, i64 [[LB_ADD_LEN12]]
+// CHECK1-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw [10 x [4 x %struct.S.0]], ptr [[TMP4]], i64 0, i64 [[LB_ADD_LEN12]]
 // CHECK1-NEXT:    [[ARRAYDECAY14:%.*]] = getelementptr inbounds [4 x %struct.S.0], ptr [[ARRAYIDX13]], i64 0, i64 0
-// CHECK1-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDECAY14]], i64 2
+// CHECK1-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[ARRAYDECAY14]], i64 2
 // CHECK1-NEXT:    [[TMP24:%.*]] = ptrtoint ptr [[ARRAYIDX15]] to i64
 // CHECK1-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[ARRAYIDX10]] to i64
 // CHECK1-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP24]], [[TMP25]]
@@ -1669,13 +1669,13 @@ int main() {
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP1]], i64 0
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP1]], i64 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[TMP2]], i64 1
+// CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[TMP2]], i64 1
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds ptr, ptr [[TMP3]], i64 4
+// CHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP3]], i64 4
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARRAYIDX2]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[TMP4]], i64 6
+// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP4]], i64 6
 // CHECK1-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[ARRAYIDX3]] to i64
 // CHECK1-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[ARRAYIDX1]] to i64
 // CHECK1-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
@@ -1877,8 +1877,8 @@ int main() {
 // CHECK1-NEXT:    store i32 9, ptr [[DOTOMP_UB]], align 4
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x %struct.S.0], ptr [[TMP0]], i64 0, i64 0
-// CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [5 x %struct.S.0], ptr [[TMP0]], i64 0, i64 4
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [5 x %struct.S.0], ptr [[TMP0]], i64 0, i64 0
+// CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [5 x %struct.S.0], ptr [[TMP0]], i64 0, i64 4
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [5 x %struct.S.0], ptr [[VVAR22]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_S_0:%.*]], ptr [[ARRAY_BEGIN]], i64 5
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP1]]
@@ -2066,9 +2066,9 @@ int main() {
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP1]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x %struct.S.0], ptr [[TMP2]], i64 0, i64 1
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x %struct.S.0], ptr [[TMP2]], i64 0, i64 1
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[_TMP1]], align 8
-// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x %struct.S.0], ptr [[TMP3]], i64 0, i64 2
+// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw [4 x %struct.S.0], ptr [[TMP3]], i64 0, i64 2
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[VAR34]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_S_0:%.*]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP4]]
@@ -2979,8 +2979,8 @@ int main() {
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [42 x %struct.S], ptr [[TMP0]], i64 0, i64 1
-// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [42 x %struct.S], ptr [[TMP0]], i64 0, i64 40
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [42 x %struct.S], ptr [[TMP0]], i64 0, i64 1
+// CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw [42 x %struct.S], ptr [[TMP0]], i64 0, i64 40
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [40 x %struct.S], ptr [[ARR4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S:%.*]], ptr [[ARRAY_BEGIN]], i64 40
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP6]]

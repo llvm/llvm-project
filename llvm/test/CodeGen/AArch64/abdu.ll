@@ -346,31 +346,31 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub x8, x1, x0
 ; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    csel x0, x8, x9, hs
+; CHECK-NEXT:    csel x0, x9, x8, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp uge i64 %a, %b
   %ab = sub i64 %a, %b
   %ba = sub i64 %b, %a
-  %sel = select i1 %cmp, i64 %ba, i64 %ab
+  %sel = select i1 %cmp, i64 %ab, i64 %ba
   ret i64 %sel
 }
 
 define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    sbc x8, x1, x3
-; CHECK-NEXT:    subs x9, x2, x0
-; CHECK-NEXT:    sbc x10, x3, x1
-; CHECK-NEXT:    subs x11, x0, x2
-; CHECK-NEXT:    sbcs xzr, x1, x3
-; CHECK-NEXT:    csel x0, x9, x11, hs
-; CHECK-NEXT:    csel x1, x10, x8, hs
+; CHECK-NEXT:    subs x8, x0, x2
+; CHECK-NEXT:    sbcs x9, x1, x3
+; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    sbfx x10, x10, #0, #1
+; CHECK-NEXT:    eor x8, x8, x10
+; CHECK-NEXT:    eor x9, x9, x10
+; CHECK-NEXT:    subs x0, x8, x10
+; CHECK-NEXT:    sbc x1, x9, x10
 ; CHECK-NEXT:    ret
   %cmp = icmp uge i128 %a, %b
   %ab = sub i128 %a, %b
   %ba = sub i128 %b, %a
-  %sel = select i1 %cmp, i128 %ba, i128 %ab
+  %sel = select i1 %cmp, i128 %ab, i128 %ba
   ret i128 %sel
 }
 

@@ -713,7 +713,7 @@ public:
   Baserel(uint32_t v, uint8_t ty) : rva(v), type(ty) {}
   explicit Baserel(uint32_t v, llvm::COFF::MachineTypes machine)
       : Baserel(v, getDefaultType(machine)) {}
-  uint8_t getDefaultType(llvm::COFF::MachineTypes machine);
+  static uint8_t getDefaultType(llvm::COFF::MachineTypes machine);
 
   uint32_t rva;
   uint8_t type;

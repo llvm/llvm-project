@@ -6797,6 +6797,18 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeSBufferPrefetch(LegalizerHelper &Helper,
+                                                  MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
+  Observer.changingInstr(MI);
+  MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_S_BUFFER_PREFETCH));
+  MI.removeOperand(0); // Remove intrinsic ID
+  castBufferRsrcArgToV4I32(MI, B, 0);
+  Observer.changedInstr(MI);
+  return true;
+}
+
 // TODO: Move to selection
 bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
                                        MachineRegisterInfo &MRI,
@@ -7485,6 +7497,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_permlanex16:
   case Intrinsic::amdgcn_permlane64:
     return legalizeLaneOp(Helper, MI, IntrID);
+  case Intrinsic::amdgcn_s_buffer_prefetch_data:
+    return legalizeSBufferPrefetch(Helper, MI);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

@@ -400,9 +400,9 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   if (Mandatory)
     return getMandatoryAdvice(CB, true);
 
-  auto NrCtantParams = 0;
+  auto NumCtantParams = 0;
   for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
-    NrCtantParams += (isa<Constant>(*I));
+    NumCtantParams += (isa<Constant>(*I));
   }
 
   auto &CallerBefore = getCachedFPI(Caller);
@@ -414,7 +414,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
       getInitialFunctionLevel(Caller);
   *ModelRunner->getTensor<int64_t>(FeatureIndex::node_count) = NodeCount;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::nr_ctant_params) =
-      NrCtantParams;
+      NumCtantParams;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::edge_count) = EdgeCount;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_users) =
       CallerBefore.Uses;

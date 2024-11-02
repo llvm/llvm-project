@@ -1,15 +1,16 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
 // CHECK: -ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> class RWBuffer definition implicit_instantiation
-// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'float *'
-// CHECK: -HLSLResourceClassAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit UAV
+// CHECK: -TemplateArgument type 'float'
+// CHECK: `-BuiltinType 0x{{[0-9a-f]+}} 'float'
+// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'float * {{\[\[}}hlsl::resource_class(UAV)]]':'float *'
 // CHECK: -HLSLResourceAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit TypedBuffer
 RWBuffer<float> Buffer1;
 
-// CHECK: -ClassTemplateDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit RasterizerOrderedBuffer
-// CHECK: -CXXRecordDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit class RasterizerOrderedBuffer definition
-// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'element_type *'
-// CHECK: -HLSLResourceClassAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit UAV
+// CHECK: -ClassTemplateSpecializationDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> class RasterizerOrderedBuffer definition implicit_instantiation
+// CHECK: -TemplateArgument type 'vector<float, 4>'
+// CHECK: `-ExtVectorType 0x{{[0-9a-f]+}} 'vector<float, 4>' 4
+// CHECK: `-BuiltinType 0x{{[0-9a-f]+}} 'float'
+// CHECK: -FieldDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> implicit referenced h 'vector<float *, 4> {{\[\[}}hlsl::resource_class(UAV)]] {{\[\[}}hlsl::is_rov()]]':'vector<float *, 4>'
 // CHECK: -HLSLResourceAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit TypedBuffer
-// CHECK: -HLSLROVAttr 0x{{[0-9a-f]+}} <<invalid sloc>> Implicit
-RasterizerOrderedBuffer<vector<float, 4> > BufferArray3[4] : register(u4, space1);
+RasterizerOrderedBuffer<vector<float, 4> > BufferArray3[4];

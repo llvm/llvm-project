@@ -177,8 +177,7 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
       Register TmpInitSubReg = MRI->createVirtualRegister(SubRegClass);
       LLVM_DEBUG(dbgs() << "Register Class ID" << SubRegClass->getID() << "\n");
       BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
-              TII->get(TII->getUndefInitOpcode(SubRegClass->getID())),
-              TmpInitSubReg);
+              TII->get(TargetOpcode::INIT_UNDEF), TmpInitSubReg);
       Register NewReg = MRI->createVirtualRegister(TargetRegClass);
       BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
               TII->get(TargetOpcode::INSERT_SUBREG), NewReg)
@@ -198,14 +197,14 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
 
   LLVM_DEBUG(
       dbgs() << "Emitting PseudoInitUndef Instruction for implicit register "
-             << MO.getReg() << '\n');
+             << printReg(MO.getReg()) << '\n');
 
   const TargetRegisterClass *TargetRegClass =
       TRI->getLargestSuperClass(MRI->getRegClass(MO.getReg()));
   LLVM_DEBUG(dbgs() << "Register Class ID" << TargetRegClass->getID() << "\n");
-  unsigned Opcode = TII->getUndefInitOpcode(TargetRegClass->getID());
   Register NewReg = MRI->createVirtualRegister(TargetRegClass);
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(Opcode), NewReg);
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(TargetOpcode::INIT_UNDEF), NewReg);
   MO.setReg(NewReg);
   if (MO.isUndef())
     MO.setIsUndef(false);

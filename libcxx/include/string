@@ -609,6 +609,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/construct_at.h>
+#include <__memory/noexcept_move_assign_container.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory_resource/polymorphic_allocator.h>
@@ -620,6 +621,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_convertible.h>
@@ -629,7 +631,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>
 #include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/auto_cast.h>
@@ -2014,11 +2015,11 @@ private:
     (void)__old_mid;
     (void)__new_mid;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-  #if defined(__APPLE__)
+#  if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
-    if(!__is_long())
+    if (!__is_long())
       return;
-  #endif
+#  endif
     std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
 #endif
   }

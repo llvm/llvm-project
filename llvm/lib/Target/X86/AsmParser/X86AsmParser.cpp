@@ -3305,11 +3305,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   if ((PatchedName.starts_with("cmp") || PatchedName.starts_with("vcmp")) &&
       (PatchedName.ends_with("ss") || PatchedName.ends_with("sd") ||
        PatchedName.ends_with("sh") || PatchedName.ends_with("ph") ||
-       PatchedName.ends_with("ps") || PatchedName.ends_with("pd"))) {
+       PatchedName.ends_with("pbf16") || PatchedName.ends_with("ps") ||
+       PatchedName.ends_with("pd"))) {
     bool IsVCMP = PatchedName[0] == 'v';
     unsigned CCIdx = IsVCMP ? 4 : 3;
+    unsigned suffixLength = PatchedName.ends_with("pbf16") ? 5 : 2;
     unsigned CC = StringSwitch<unsigned>(
-      PatchedName.slice(CCIdx, PatchedName.size() - 2))
+      PatchedName.slice(CCIdx, PatchedName.size() - suffixLength))
       .Case("eq",       0x00)
       .Case("eq_oq",    0x00)
       .Case("lt",       0x01)
@@ -3372,6 +3374,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         PatchedName = "vcmpsh";
       else if (PatchedName.ends_with("ph"))
         PatchedName = "vcmpph";
+      else if (PatchedName.ends_with("pbf16"))
+        PatchedName = "vcmppbf16";
       else
         llvm_unreachable("Unexpected suffix!");
 

@@ -177,9 +177,8 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
 static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
   SmallDenseSet<const VPBlockBase *, 8> VPBlockSet;
   for (const auto *Block : VPBlockVec) {
-    if (VPBlockSet.count(Block))
+    if (!VPBlockSet.insert(Block).second)
       return true;
-    VPBlockSet.insert(Block);
   }
   return false;
 }

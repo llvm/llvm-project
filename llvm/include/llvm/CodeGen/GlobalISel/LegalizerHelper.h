@@ -437,6 +437,7 @@ public:
   LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
   LegalizeResult lowerAbsToCNeg(MachineInstr &MI);
+  LegalizeResult lowerFAbs(MachineInstr &MI);
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);

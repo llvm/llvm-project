@@ -26,7 +26,7 @@ static std::optional<AlignStyle> translateLocChar(char C) {
 }
 
 static bool consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
-                               size_t &Align, char &Pad) {
+                               unsigned &Align, char &Pad) {
   Where = AlignStyle::Right;
   Align = 0;
   Pad = ' ';
@@ -60,14 +60,14 @@ static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
   // If the replacement sequence does not start with a non-negative integer,
   // this is an error.
   char Pad = ' ';
-  std::size_t Align = 0;
+  unsigned Align = 0;
   AlignStyle Where = AlignStyle::Right;
   StringRef Options;
-  size_t Index = 0;
+  unsigned Index = 0;
   RepString = RepString.trim();
   if (RepString.consumeInteger(0, Index)) {
     assert(false && "Invalid replacement sequence index!");
-    return ReplacementItem{};
+    return std::nullopt;
   }
   RepString = RepString.trim();
   if (RepString.consume_front(",")) {
@@ -83,61 +83,50 @@ static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
   assert(RepString.empty() &&
          "Unexpected characters found in replacement string!");
 
-  return ReplacementItem{Spec, Index, Align, Where, Pad, Options};
+  return ReplacementItem(Spec, Index, Align, Where, Pad, Options);
 }
 
-static std::pair<ReplacementItem, StringRef>
+static std::pair<std::optional<ReplacementItem>, StringRef>
 splitLiteralAndReplacement(StringRef Fmt) {
-  while (!Fmt.empty()) {
-    // Everything up until the first brace is a literal.
-    if (Fmt.front() != '{') {
-      std::size_t BO = Fmt.find_first_of('{');
-      return std::make_pair(ReplacementItem{Fmt.substr(0, BO)}, Fmt.substr(BO));
-    }
-
-    StringRef Braces = Fmt.take_while([](char C) { return C == '{'; });
-    // If there is more than one brace, then some of them are escaped.  Treat
-    // these as replacements.
-    if (Braces.size() > 1) {
-      size_t NumEscapedBraces = Braces.size() / 2;
-      StringRef Middle = Fmt.take_front(NumEscapedBraces);
-      StringRef Right = Fmt.drop_front(NumEscapedBraces * 2);
-      return std::make_pair(ReplacementItem{Middle}, Right);
-    }
-    // An unterminated open brace is undefined. Assert to indicate that this is
-    // undefined and that we consider it an error. When asserts are disabled,
-    // build a replacement item with an error message.
-    std::size_t BC = Fmt.find_first_of('}');
-    if (BC == StringRef::npos) {
-      assert(
-          false &&
-          "Unterminated brace sequence. Escape with {{ for a literal brace.");
-      return std::make_pair(
-          ReplacementItem{"Unterminated brace sequence. Escape with {{ for a "
-                          "literal brace."},
-          StringRef());
-    }
-
-    // Even if there is a closing brace, if there is another open brace before
-    // this closing brace, treat this portion as literal, and try again with the
-    // next one.
-    std::size_t BO2 = Fmt.find_first_of('{', 1);
-    if (BO2 < BC)
-      return std::make_pair(ReplacementItem{Fmt.substr(0, BO2)},
-                            Fmt.substr(BO2));
-
-    StringRef Spec = Fmt.slice(1, BC);
-    StringRef Right = Fmt.substr(BC + 1);
-
-    auto RI = parseReplacementItem(Spec);
-    if (RI)
-      return std::make_pair(*RI, Right);
-
-    // If there was an error parsing the replacement item, treat it as an
-    // invalid replacement spec, and just continue.
-    Fmt = Fmt.drop_front(BC + 1);
+  assert(!Fmt.empty());
+  // Everything up until the first brace is a literal.
+  if (Fmt.front() != '{') {
+    size_t BO = Fmt.find_first_of('{');
+    return {ReplacementItem{Fmt.substr(0, BO)}, Fmt.substr(BO)};
   }
-  return std::make_pair(ReplacementItem{Fmt}, StringRef());
+
+  StringRef Braces = Fmt.take_while([](char C) { return C == '{'; });
+  // If there is more than one brace, then some of them are escaped.  Treat
+  // these as replacements.
+  if (Braces.size() > 1) {
+    size_t NumEscapedBraces = Braces.size() / 2;
+    StringRef Middle = Fmt.take_front(NumEscapedBraces);
+    StringRef Right = Fmt.drop_front(NumEscapedBraces * 2);
+    return {ReplacementItem(Middle), Right};
+  }
+  // An unterminated open brace is undefined. Assert to indicate that this is
+  // undefined and that we consider it an error. When asserts are disabled,
+  // build a replacement item with an error message.
+  size_t BC = Fmt.find_first_of('}');
+  if (BC == StringRef::npos) {
+    assert(false &&
+           "Unterminated brace sequence. Escape with {{ for a literal brace.");
+    return {ReplacementItem("Unterminated brace sequence. Escape with {{ for a "
+                            "literal brace."),
+            StringRef()};
+  }
+
+  // Even if there is a closing brace, if there is another open brace before
+  // this closing brace, treat this portion as literal, and try again with the
+  // next one.
+  size_t BO2 = Fmt.find_first_of('{', 1);
+  if (BO2 < BC)
+    return {ReplacementItem(Fmt.substr(0, BO2)), Fmt.substr(BO2)};
+
+  StringRef Spec = Fmt.slice(1, BC);
+  StringRef Right = Fmt.substr(BC + 1);
+
+  return {parseReplacementItem(Spec), Right};
 }
 
 #ifndef NDEBUG
@@ -153,17 +142,18 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
 
 #if ENABLE_VALIDATION
   const StringRef SavedFmtStr = Fmt;
-  size_t NumExpectedArgs = 0;
+  unsigned NumExpectedArgs = 0;
 #endif
 
   while (!Fmt.empty()) {
-    ReplacementItem I;
+    std::optional<ReplacementItem> I;
     std::tie(I, Fmt) = splitLiteralAndReplacement(Fmt);
-    if (I.Type != ReplacementType::Empty)
-      Replacements.push_back(I);
+    if (!I)
+      continue;
+    Replacements.emplace_back(*I);
 #if ENABLE_VALIDATION
-    if (I.Type == ReplacementType::Format)
-      NumExpectedArgs = std::max(NumExpectedArgs, I.Index + 1);
+    if (I->Type == ReplacementType::Format)
+      NumExpectedArgs = std::max(NumExpectedArgs, I->Index + 1);
 #endif
   }
 
@@ -195,7 +185,7 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
   // Find the number of unique indices seen. All replacement indices
   // are < NumExpectedArgs.
   SmallVector<bool> Indices(NumExpectedArgs);
-  size_t Count = 0;
+  unsigned Count = 0;
   for (const ReplacementItem &I : Replacements) {
     if (I.Type != ReplacementType::Format || Indices[I.Index])
       continue;

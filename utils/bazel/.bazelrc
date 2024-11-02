@@ -209,6 +209,10 @@ build:ci --test_output=errors
 # Only show failing tests to reduce output
 build:ci --test_summary=terse
 
+# Attempt to work around intermittent issue while trying to fetch remote blob.
+# See e.g. https://github.com/bazelbuild/bazel/issues/18694.
+build:ci --remote_default_exec_properties=cache-silo-key=CleverPeafowl
+
 ###############################################################################
 
 # The user.bazelrc file is not checked in but available for local mods.

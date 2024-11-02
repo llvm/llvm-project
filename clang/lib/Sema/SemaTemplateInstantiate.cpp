@@ -1226,8 +1226,7 @@ void Sema::PrintInstantiationStack() {
     case CodeSynthesisContext::ConstraintNormalization:
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_constraint_normalization_here)
-          << cast<NamedDecl>(Active->Entity)->getName()
-          << Active->InstantiationRange;
+          << cast<NamedDecl>(Active->Entity) << Active->InstantiationRange;
       break;
     case CodeSynthesisContext::ParameterMappingSubstitution:
       Diags.Report(Active->PointOfInstantiation,

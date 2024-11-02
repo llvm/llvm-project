@@ -32,7 +32,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
-#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -174,51 +173,33 @@ std::string llvm::computeLTOCacheKey(
   for (auto GUID : ExportsGUID)
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
 
-  // Include the hash for every module we import functions from. The set of
-  // imported symbols for each module may affect code generation and is
-  // sensitive to link order, so include that as well.
-  using ImportMapIteratorTy =
-      FunctionImporter::ImportMapTy::ImportMapTyImpl::const_iterator;
-  struct ImportModule {
-    ImportMapIteratorTy ModIt;
-    const ModuleSummaryIndex::ModuleInfo *ModInfo;
-
-    StringRef getIdentifier() const { return ModIt->getFirst(); }
-    const FunctionImporter::FunctionsToImportTy &getFunctions() const {
-      return ModIt->second;
-    }
-
-    const ModuleHash &getHash() const { return ModInfo->second; }
-  };
-
-  std::vector<ImportModule> ImportModulesVector;
-  ImportModulesVector.reserve(ImportList.getImportMap().size());
-
-  for (ImportMapIteratorTy It = ImportList.getImportMap().begin();
-       It != ImportList.getImportMap().end(); ++It) {
-    ImportModulesVector.push_back({It, Index.getModule(It->getFirst())});
-  }
   // Order using module hash, to be both independent of module name and
   // module order.
-  llvm::sort(ImportModulesVector,
-             [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
-               return Lhs.getHash() < Rhs.getHash();
-             });
-  std::vector<std::pair<uint64_t, uint8_t>> ImportedGUIDs;
-  for (const ImportModule &Entry : ImportModulesVector) {
-    auto ModHash = Entry.getHash();
-    Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+  auto Comp = [&](const std::pair<StringRef, GlobalValue::GUID> &L,
+                  const std::pair<StringRef, GlobalValue::GUID> &R) {
+    return std::make_pair(Index.getModule(L.first)->second, L.second) <
+           std::make_pair(Index.getModule(R.first)->second, R.second);
+  };
+  FunctionImporter::SortedImportList SortedImportList(ImportList, Comp);
 
-    AddUint64(Entry.getFunctions().size());
+  // Count the number of imports for each source module.
+  DenseMap<StringRef, unsigned> ModuleToNumImports;
+  for (const auto &[FromModule, GUID, Type] : SortedImportList)
+    ++ModuleToNumImports[FromModule];
 
-    ImportedGUIDs.clear();
-    for (auto &[Fn, ImportType] : Entry.getFunctions())
-      ImportedGUIDs.push_back(std::make_pair(Fn, ImportType));
-    llvm::sort(ImportedGUIDs);
-    for (auto &[GUID, Type] : ImportedGUIDs) {
-      AddUint64(GUID);
-      AddUint8(Type);
+  std::optional<StringRef> LastModule;
+  for (const auto &[FromModule, GUID, Type] : SortedImportList) {
+    if (LastModule != FromModule) {
+      // Include the hash for every module we import functions from. The set of
+      // imported symbols for each module may affect code generation and is
+      // sensitive to link order, so include that as well.
+      LastModule = FromModule;
+      auto ModHash = Index.getModule(FromModule)->second;
+      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+      AddUint64(ModuleToNumImports[FromModule]);
     }
+    AddUint64(GUID);
+    AddUint8(Type);
   }
 
   // Include the hash for the resolved ODR.
@@ -287,16 +268,14 @@ std::string llvm::computeLTOCacheKey(
 
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
-  for (const ImportModule &ImpM : ImportModulesVector)
-    for (auto &[GUID, UnusedImportType] : ImpM.getFunctions()) {
-      GlobalValueSummary *S =
-          Index.findSummaryInModule(GUID, ImpM.getIdentifier());
-      AddUsedThings(S);
-      // If this is an alias, we also care about any types/etc. that the aliasee
-      // may reference.
-      if (auto *AS = dyn_cast_or_null<AliasSummary>(S))
-        AddUsedThings(AS->getBaseObject());
-    }
+  for (const auto &[FromModule, GUID, Type] : SortedImportList) {
+    GlobalValueSummary *S = Index.findSummaryInModule(GUID, FromModule);
+    AddUsedThings(S);
+    // If this is an alias, we also care about any types/etc. that the aliasee
+    // may reference.
+    if (auto *AS = dyn_cast_or_null<AliasSummary>(S))
+      AddUsedThings(AS->getBaseObject());
+  }
 
   auto AddTypeIdSummary = [&](StringRef TId, const TypeIdSummary &S) {
     AddString(TId);
@@ -1078,8 +1057,8 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     for (const std::string &Name : Conf.ThinLTOModulesToCompile) {
       if (BM.getModuleIdentifier().contains(Name)) {
         ThinLTO.ModulesToCompile->insert({BM.getModuleIdentifier(), BM});
-        llvm::errs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
-                     << " to compile\n";
+        LLVM_DEBUG(dbgs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
+                          << " to compile\n");
       }
     }
   }
@@ -1712,9 +1691,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   for (auto &Mod : ThinLTO.ModuleMap)
     if (!ModuleToDefinedGVSummaries.count(Mod.first))
       ModuleToDefinedGVSummaries.try_emplace(Mod.first);
-
-  // Synthesize entry counts for functions in the CombinedIndex.
-  computeSyntheticCounts(ThinLTO.CombinedIndex);
 
   FunctionImporter::ImportListsTy ImportLists(ThinLTO.ModuleMap.size());
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(

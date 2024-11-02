@@ -33,7 +33,7 @@ template <int KIND>
 static void testBesselJn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, KIND> x,
     const std::vector<CppTypeFor<TypeCategory::Real, KIND>> &expected) {
-  StaticDescriptor<1> desc;
+  StaticDescriptor desc;
   Descriptor &result{desc.descriptor()};
   unsigned len = expected.size();
 
@@ -60,7 +60,7 @@ static void testBesselJn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,
 template <int KIND>
 static void testBesselJnX0(
     BesselX0FuncType<KIND> rtFunc, int32_t n1, int32_t n2) {
-  StaticDescriptor<1> desc;
+  StaticDescriptor desc;
   Descriptor &result{desc.descriptor()};
 
   rtFunc(result, n1, n2, __FILE__, __LINE__);
@@ -131,7 +131,7 @@ template <int KIND>
 static void testBesselYn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,
     CppTypeFor<TypeCategory::Real, KIND> x,
     const std::vector<CppTypeFor<TypeCategory::Real, KIND>> &expected) {
-  StaticDescriptor<1> desc;
+  StaticDescriptor desc;
   Descriptor &result{desc.descriptor()};
   unsigned len = expected.size();
 
@@ -158,7 +158,7 @@ static void testBesselYn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,
 template <int KIND>
 static void testBesselYnX0(
     BesselX0FuncType<KIND> rtFunc, int32_t n1, int32_t n2) {
-  StaticDescriptor<1> desc;
+  StaticDescriptor<2> desc;
   Descriptor &result{desc.descriptor()};
 
   rtFunc(result, n1, n2, __FILE__, __LINE__);
@@ -383,7 +383,7 @@ TEST(Transformational, Pack) {
       std::vector<std::uint8_t>{false, true, true, false, false, true})};
   mask->GetDimension(0).SetLowerBound(0); // shouldn't matter
   mask->GetDimension(1).SetLowerBound(2);
-  StaticDescriptor<1, true> statDesc;
+  StaticDescriptor<maxRank, true> statDesc;
   Descriptor &result{statDesc.descriptor()};
 
   RTNAME(Pack)(result, *array, *mask, nullptr, __FILE__, __LINE__);

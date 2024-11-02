@@ -1540,9 +1540,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                 bool ListInitialization) {
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
-
-  assert((!ListInitialization || Exprs.size() == 1) &&
-         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -5111,6 +5108,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsDestructible:
   case UTT_IsNothrowDestructible:
   case UTT_IsTriviallyDestructible:
+  case UTT_IsIntangibleType:
     if (ArgTy->isIncompleteArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -5696,6 +5694,16 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         return true;
     return false;
   }
+  case UTT_IsIntangibleType:
+    assert(Self.getLangOpts().HLSL && "intangible types are HLSL-only feature");
+    if (!T->isVoidType() && !T->isIncompleteArrayType())
+      if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
+                                   diag::err_incomplete_type))
+        return false;
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo,
+                                  tok::kw___builtin_hlsl_is_intangible))
+      return false;
+    return Self.HLSL().IsIntangibleType(T);
   }
 }
 

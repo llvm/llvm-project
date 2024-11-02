@@ -799,8 +799,6 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_dispatch:
     case OMPD_distribute:
     case OMPD_for:
-    case OMPD_masked:
-    case OMPD_master:
     case OMPD_ordered:
     case OMPD_scope:
     case OMPD_sections:
@@ -813,6 +811,9 @@ void clang::getOpenMPCaptureRegions(
       // leafs from that directive have specific regions, then these directives
       // add no additional regions.
       return true;
+    case OMPD_masked:
+    case OMPD_master:
+      return false;
     default:
       llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
       llvm_unreachable("Unexpected directive");

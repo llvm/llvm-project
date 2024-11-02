@@ -2478,6 +2478,7 @@ multiclass VPseudoUnaryVMV_V_X_I {
         def "_X_" # mx : VPseudoUnaryNoMask<m.vrclass, GPR>,
                          SchedUnary<"WriteVIMovX", "ReadVIMovX", mx,
                                     forcePassthruRead=true>;
+        let isReMaterializable = 1 in
         def "_I_" # mx : VPseudoUnaryNoMask<m.vrclass, simm5>,
                          SchedNullary<"WriteVIMovI", mx,
                                       forcePassthruRead=true>;
@@ -6114,15 +6115,6 @@ foreach lmul = MxList in {
         Pseudo<(outs vreg:$rs1), (ins GPR:$rs2), []>;
     }
   }
-}
-
-/// Empty pseudo for RISCVInitUndefPass
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 0,
-    isCodeGenOnly = 1 in {
-  def PseudoRVVInitUndefM1 : Pseudo<(outs VR:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM2 : Pseudo<(outs VRM2:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM4 : Pseudo<(outs VRM4:$vd), (ins), [], "">;
-  def PseudoRVVInitUndefM8 : Pseudo<(outs VRM8:$vd), (ins), [], "">;
 }
 
 //===----------------------------------------------------------------------===//

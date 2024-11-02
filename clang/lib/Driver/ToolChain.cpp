@@ -126,7 +126,7 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
                                      "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
                                      "an integer, got '" +
                                          *Str + "'");
-    SecondsToWait = std::min(SecondsToWait, 0); // infinite
+    SecondsToWait = std::max(SecondsToWait, 0); // infinite
   }
   if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
                                 /*MemoryLimit=*/0, &ErrorMessage))
@@ -843,8 +843,8 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   llvm::sys::path::append(P, "lib");
   if (auto Ret = getTargetSubDirPath(P))
     return Ret;
-  // Darwin does not use per-target runtime directory.
-  if (Triple.isOSDarwin())
+  // Darwin and AIX does not use per-target runtime directory.
+  if (Triple.isOSDarwin() || Triple.isOSAIX())
     return {};
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
