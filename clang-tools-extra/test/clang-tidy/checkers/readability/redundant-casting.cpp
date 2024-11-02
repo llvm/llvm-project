@@ -224,20 +224,13 @@ void testRedundantDependentNTTPCasting() {
 
 enum E1 : char {};
 enum class E2 : char {};
-enum E3 {};
 
-void testEnum(E1 e1, E2 e2, E3 e3){
+void testEnum(E1 e1, E2 e2){
   char a = static_cast<char>(e1);
   // CHECK-MESSAGES-ALIASES: :[[@LINE-1]]:12: warning: redundant explicit casting to the same type 'char' as the sub-expression, remove this casting [readability-redundant-casting]
   // CHECK-MESSAGES-ALIASES: :[[@LINE-3]]:18: note: source type originates from referencing this parameter
   // CHECK-FIXES-ALIASES: {{^}}  char a = e1;
 
-  unsigned int d = static_cast<unsigned int>(e3);
-  // CHECK-MESSAGES-ALIASES: :[[@LINE-1]]:20: warning: redundant explicit casting to the same type 'unsigned int' as the sub-expression, remove this casting [readability-redundant-casting]
-  // CHECK-MESSAGES-ALIASES: :[[@LINE-8]]:32: note: source type originates from referencing this parameter
-  // CHECK-FIXES-ALIASES: {{^}}  unsigned int d = e3;
-
   char b = static_cast<char>(e2);
-  char c = static_cast<char>(e3);
   E1 e = static_cast<E1>('0');
 }

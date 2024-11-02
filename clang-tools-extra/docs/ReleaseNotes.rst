@@ -224,8 +224,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-redundant-casting
   <clang-tidy/checks/readability/redundant-casting>` check by fixing
-  false negatives related to ``enum`` when setting ``IgnoreTypeAliases``
-  to true.
+  false negatives related to ``enum`` when setting `IgnoreTypeAliases`
+  to `true`.
 
 
 - Improved :doc:`readability-redundant-smartptr-get
