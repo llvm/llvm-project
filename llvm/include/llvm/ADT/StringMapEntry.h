@@ -17,7 +17,7 @@
 #define LLVM_ADT_STRINGMAPENTRY_H
 
 #include "llvm/ADT/StringRef.h"
-#include <optional>
+#include <utility>
 
 namespace llvm {
 
@@ -147,25 +147,57 @@ public:
 };
 
 // Allow structured bindings on StringMapEntry.
+
+namespace detail {
+template <std::size_t Index> struct StringMapEntryGet;
+
+template <> struct StringMapEntryGet<0> {
+  template <typename ValueTy> static StringRef get(StringMapEntry<ValueTy> &E) {
+    return E.getKey();
+  }
+
+  template <typename ValueTy>
+  static StringRef get(const StringMapEntry<ValueTy> &E) {
+    return E.getKey();
+  }
+};
+
+template <> struct StringMapEntryGet<1> {
+  template <typename ValueTy> static ValueTy &get(StringMapEntry<ValueTy> &E) {
+    return E.getValue();
+  }
+
+  template <typename ValueTy>
+  static const ValueTy &get(const StringMapEntry<ValueTy> &E) {
+    return E.getValue();
+  }
+};
+} // namespace detail
+
+template <std::size_t Index, typename ValueTy>
+decltype(auto) get(StringMapEntry<ValueTy> &E) {
+  return detail::StringMapEntryGet<Index>::get(E);
+}
+
 template <std::size_t Index, typename ValueTy>
 decltype(auto) get(const StringMapEntry<ValueTy> &E) {
-  static_assert(Index < 2);
-  if constexpr (Index == 0)
-    return E.first();
-  else
-    return E.second;
+  return detail::StringMapEntryGet<Index>::get(E);
 }
 
 } // end namespace llvm
 
-namespace std {
 template <typename ValueTy>
-struct tuple_size<llvm::StringMapEntry<ValueTy>>
+struct std::tuple_size<llvm::StringMapEntry<ValueTy>>
     : std::integral_constant<std::size_t, 2> {};
 
-template <std::size_t I, typename ValueTy>
-struct tuple_element<I, llvm::StringMapEntry<ValueTy>>
-    : std::conditional<I == 0, llvm::StringRef, ValueTy> {};
-} // namespace std
+template <typename ValueTy>
+struct std::tuple_element<0, llvm::StringMapEntry<ValueTy>> {
+  using type = llvm::StringRef;
+};
+
+template <typename ValueTy>
+struct std::tuple_element<1, llvm::StringMapEntry<ValueTy>> {
+  using type = ValueTy;
+};
 
 #endif // LLVM_ADT_STRINGMAPENTRY_H
