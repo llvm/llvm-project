@@ -7490,59 +7490,45 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
       return LHS == RHS;
 
-    auto IsBranchEq = [](BranchInst *A, BranchInst *B) {
-      assert(A->isUnconditional() && B->isUnconditional() &&
-             "Only supporting unconditional branches for now");
-      assert(A->getNumSuccessors() == 1 && B->getNumSuccessors() == 1 &&
-             "Expected unconditional branches to have one successor");
+    BasicBlock *A = LHS->Case.getCaseSuccessor();
+    BasicBlock *B = RHS->Case.getCaseSuccessor();
 
-      if (A->getSuccessor(0) != B->getSuccessor(0))
+    // FIXME: we checked that the size of A and B are both 1 in
+    // simplifyDuplicateSwitchArms to make the Case list smaller to
+    // improve performance. If we decide to support BasicBlocks with more
+    // than just a single instruction, we need to check that A.size() ==
+    // B.size() here, and we need to check more than just the BranchInsts
+    // for equality.
+
+    BranchInst *ABI = cast<BranchInst>(A->getTerminator());
+    BranchInst *BBI = cast<BranchInst>(B->getTerminator());
+    assert(ABI->isUnconditional() && BBI->isUnconditional() &&
+           "Only supporting unconditional branches for now");
+    assert(ABI->getNumSuccessors() == 1 &&
+           "Expected unconditional branches to have one successor");
+    if (ABI->getSuccessor(0) != BBI->getSuccessor(0))
+      return false;
+
+    // Need to check that PHIs in successor have matching values
+    BasicBlock *Succ = ABI->getSuccessor(0);
+    for (PHINode &Phi : Succ->phis()) {
+      auto &PredIVs = LHS->PhiPredIVs[&Phi];
+      if (PredIVs[A] != PredIVs[B])
         return false;
+    }
 
-      return true;
-    };
-
-    auto IsBBEq =
-        [&IsBranchEq](
-            BasicBlock *A, BasicBlock *B,
-            DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> &PhiPredIVs) {
-          // FIXME: we checked that the size of A and B are both 1 in
-          // simplifyDuplicateSwitchArms to make the Case list smaller to
-          // improve performance. If we decide to support BasicBlocks with more
-          // than just a single instruction, we need to check that A.size() ==
-          // B.size() here, and we need to check more than just the BranchInsts
-          // for equality.
-
-          BranchInst *ABI = cast<BranchInst>(A->getTerminator());
-          if (!IsBranchEq(ABI, cast<BranchInst>(B->getTerminator())))
-            return false;
-
-          // Need to check that PHIs in successor have matching values
-          assert(ABI->getNumSuccessors() == 1 &&
-                 "Expected unconditional branches to have one successor");
-          BasicBlock *Succ = ABI->getSuccessor(0);
-          for (PHINode &Phi : Succ->phis()) {
-            auto &PredIVs = PhiPredIVs[&Phi];
-            if (PredIVs[A] != PredIVs[B])
-              return false;
-          }
-
-          return true;
-        };
-
-    return IsBBEq(LHS->Case.getCaseSuccessor(), RHS->Case.getCaseSuccessor(),
-                  LHS->PhiPredIVs);
+    return true;
   }
 };
 } // namespace llvm
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
-
   // Build Cases. Skip BBs that are not candidates for simplification. Mark
   // PHINodes which need to be processed into PhiPredIVs. We decide to process
   // an entire PHI at once opposed to calling getIncomingValueForBlock, since
   // each call to getIncomingValueForBlock is O(|Preds|).
   SmallPtrSet<PHINode *, 8> Phis;
+  SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
   SmallVector<CaseHandleWrapper> Cases;
   for (auto Case : SI->cases()) {
@@ -7569,11 +7555,13 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (!BI || BI->isConditional())
       continue;
 
-    // Keep track of which PHIs we need as keys in PhiPredIVs below.
-    for (BasicBlock *Succ : BI->successors())
-      for (PHINode &Phi : Succ->phis())
-        Phis.insert(&Phi);
-
+    if (!Seen.contains(BB)) {
+      Seen.insert(BB);
+      // Keep track of which PHIs we need as keys in PhiPredIVs below.
+      for (BasicBlock *Succ : BI->successors())
+        for (PHINode &Phi : Succ->phis())
+          Phis.insert(&Phi);
+    }
     Cases.emplace_back(CaseHandleWrapper{Case, PhiPredIVs});
   }
 
