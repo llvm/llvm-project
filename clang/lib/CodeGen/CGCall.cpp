@@ -1672,9 +1672,11 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
 
   // Add type for sret argument.
   if (IRFunctionArgs.hasSRetArg()) {
-    unsigned AddressSpace = CGM.getDataLayout().getAllocaAddrSpace();
+    auto AddressSpace = CGM.getTarget().getIndirectArgAddressSpace();
+    if (!AddressSpace)
+      AddressSpace = getDataLayout().getAllocaAddrSpace();
     ArgTypes[IRFunctionArgs.getSRetArgNo()] =
-        llvm::PointerType::get(getLLVMContext(), AddressSpace);
+        llvm::PointerType::get(getLLVMContext(), *AddressSpace);
   }
 
   // Add type for inalloca argument.

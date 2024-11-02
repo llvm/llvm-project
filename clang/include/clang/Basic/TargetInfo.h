@@ -1780,6 +1780,14 @@ public:
     return 0;
   }
 
+  /// \returns Target specific address space for indirect (e.g. sret) arguments.
+  /// If such an address space exists, it must be convertible to and from the
+  /// alloca address space. If it does not, std::nullopt is returned and the
+  /// alloca address space will be used.
+  virtual std::optional<unsigned> getIndirectArgAddressSpace() const {
+    return std::nullopt;
+  }
+
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
