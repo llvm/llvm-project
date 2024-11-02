@@ -266,8 +266,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
   Expected<DILineInfo> LI = Symbolizer.symbolizeCode(
       MMap->Mod->BuildID, {MMap->getModuleRelativeAddr(*Addr)});
   if (!LI) {
-    WithColor::defaultErrorHandler(LI.takeError());
-    printRawElement(Node);
+    symbolizeFailure(Node, MMap->Mod, LI.takeError());
     return true;
   }
   if (!*LI) {
@@ -323,8 +322,7 @@ bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
   Expected<DIInliningInfo> II =
       Symbolizer.symbolizeInlinedCode(MMap->Mod->BuildID, {MRA});
   if (!II) {
-    WithColor::defaultErrorHandler(II.takeError());
-    printRawElement(Node);
+    symbolizeFailure(Node, MMap->Mod, II.takeError());
     return true;
   }
 
@@ -386,8 +384,7 @@ bool MarkupFilter::tryData(const MarkupNode &Node) {
   Expected<DIGlobal> Symbol = Symbolizer.symbolizeData(
       MMap->Mod->BuildID, {MMap->getModuleRelativeAddr(*Addr)});
   if (!Symbol) {
-    WithColor::defaultErrorHandler(Symbol.takeError());
-    printRawElement(Node);
+    symbolizeFailure(Node, MMap->Mod, Symbol.takeError());
     return true;
   }
 
@@ -696,6 +693,24 @@ void MarkupFilter::reportLocation(StringRef::iterator Loc) const {
             HighlightColor::String)
       << '^';
   errs() << '\n';
+}
+
+void MarkupFilter::symbolizeFailure(const MarkupNode &Node, const Module *Mod,
+                                    Error SymbolizeError) {
+  if (Mod) {
+    auto add_module_info = [Mod](std::unique_ptr<StringError> SE) -> Error {
+      return createStringError(
+          SE->getMessage() +
+              formatv(" for ELF module #{0:x} \"{1}\"; BuildID=", Mod->ID,
+                      Mod->Name)
+                  .str() +
+              toHex(Mod->BuildID, /*LowerCase=*/true),
+          SE->convertToErrorCode());
+    };
+    SymbolizeError = handleErrors(std::move(SymbolizeError), add_module_info);
+  }
+  WithColor::defaultErrorHandler(std::move(SymbolizeError));
+  printRawElement(Node);
 }
 
 // Checks for an existing mmap that overlaps the given one and returns a
