@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cuf-implicit-device-global %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-device-global %s | FileCheck %s
 
 // Test that global used in device function are flagged with the correct
 // attribute.
@@ -25,6 +25,9 @@ fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a constant : !fir.char
 // CHECK: fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %[[CONV]], %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK: fir.global linkonce @_QQcl[[SYMBOL]] {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,32>
 
+// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK: fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a
+
 // -----
 
 func.func @_QMdataPsetvalue() {
@@ -47,3 +50,6 @@ fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a constant : !fir.char
 // CHECK: %[[CONV:.*]] = fir.convert %[[GLOBAL]] : (!fir.ref<!fir.char<1,32>>) -> !fir.ref<i8>
 // CHECK: fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %[[CONV]], %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 // CHECK: fir.global linkonce @_QQcl[[SYMBOL]] constant : !fir.char<1,32>
+
+// CHECK-LABEL: gpu.module @cuda_device_mod [#nvvm.target]
+// CHECK-NOT: fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a

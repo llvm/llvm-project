@@ -92,7 +92,7 @@ public:
   /// dialect.
   bool usePropertiesForAttributes() const;
 
-  llvm::DagInit *getDiscardableAttributes() const;
+  const llvm::DagInit *getDiscardableAttributes() const;
 
   const llvm::Record *getDef() const { return def; }
 

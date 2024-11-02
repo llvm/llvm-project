@@ -7237,6 +7237,7 @@ class APValueToBufferConverter {
 
     case APValue::ComplexInt:
     case APValue::ComplexFloat:
+      return visitComplex(Val, Ty, Offset);
     case APValue::FixedPoint:
       // FIXME: We should support these.
 
@@ -7318,6 +7319,31 @@ class APValueToBufferConverter {
         if (!visit(Filler, CAT->getElementType(), Offset + I * ElemWidth))
           return false;
       }
+    }
+
+    return true;
+  }
+
+  bool visitComplex(const APValue &Val, QualType Ty, CharUnits Offset) {
+    const ComplexType *ComplexTy = Ty->castAs<ComplexType>();
+    QualType EltTy = ComplexTy->getElementType();
+    CharUnits EltSizeChars = Info.Ctx.getTypeSizeInChars(EltTy);
+    bool IsInt = Val.isComplexInt();
+
+    if (IsInt) {
+      if (!visitInt(Val.getComplexIntReal(), EltTy,
+                    Offset + (0 * EltSizeChars)))
+        return false;
+      if (!visitInt(Val.getComplexIntImag(), EltTy,
+                    Offset + (1 * EltSizeChars)))
+        return false;
+    } else {
+      if (!visitFloat(Val.getComplexFloatReal(), EltTy,
+                      Offset + (0 * EltSizeChars)))
+        return false;
+      if (!visitFloat(Val.getComplexFloatImag(), EltTy,
+                      Offset + (1 * EltSizeChars)))
+        return false;
     }
 
     return true;
@@ -7593,6 +7619,23 @@ class BufferToAPValueConverter {
     }
 
     return ArrayValue;
+  }
+
+  std::optional<APValue> visit(const ComplexType *Ty, CharUnits Offset) {
+    QualType ElementType = Ty->getElementType();
+    CharUnits ElementWidth = Info.Ctx.getTypeSizeInChars(ElementType);
+    bool IsInt = ElementType->isIntegerType();
+
+    std::optional<APValue> Values[2];
+    for (unsigned I = 0; I != 2; ++I) {
+      Values[I] = visitType(Ty->getElementType(), Offset + I * ElementWidth);
+      if (!Values[I])
+        return std::nullopt;
+    }
+
+    if (IsInt)
+      return APValue(Values[0]->getInt(), Values[1]->getInt());
+    return APValue(Values[0]->getFloat(), Values[1]->getFloat());
   }
 
   std::optional<APValue> visit(const VectorType *VTy, CharUnits Offset) {
@@ -9620,7 +9663,7 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
   return ExprEvaluatorBaseTy::VisitCastExpr(E);
 }
 
-static CharUnits GetAlignOfType(EvalInfo &Info, QualType T,
+static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
                                 UnaryExprOrTypeTrait ExprKind) {
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
@@ -9631,23 +9674,22 @@ static CharUnits GetAlignOfType(EvalInfo &Info, QualType T,
     return CharUnits::One();
 
   const bool AlignOfReturnsPreferred =
-      Info.Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and _Alignof
   // as well.
   if (ExprKind == UETT_PreferredAlignOf || AlignOfReturnsPreferred)
-    return Info.Ctx.toCharUnitsFromBits(
-      Info.Ctx.getPreferredTypeAlign(T.getTypePtr()));
+    return Ctx.toCharUnitsFromBits(Ctx.getPreferredTypeAlign(T.getTypePtr()));
   // alignof and _Alignof are defined to return the ABI alignment.
   else if (ExprKind == UETT_AlignOf)
-    return Info.Ctx.getTypeAlignInChars(T.getTypePtr());
+    return Ctx.getTypeAlignInChars(T.getTypePtr());
   else
     llvm_unreachable("GetAlignOfType on a non-alignment ExprKind");
 }
 
-static CharUnits GetAlignOfExpr(EvalInfo &Info, const Expr *E,
-                                UnaryExprOrTypeTrait ExprKind) {
+CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
+                         UnaryExprOrTypeTrait ExprKind) {
   E = E->IgnoreParens();
 
   // The kinds of expressions that we have special-case logic here for
@@ -9657,22 +9699,22 @@ static CharUnits GetAlignOfExpr(EvalInfo &Info, const Expr *E,
   // alignof decl is always accepted, even if it doesn't make sense: we default
   // to 1 in those cases.
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
-    return Info.Ctx.getDeclAlign(DRE->getDecl(),
-                                 /*RefAsPointee*/true);
+    return Ctx.getDeclAlign(DRE->getDecl(),
+                            /*RefAsPointee*/ true);
 
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(E))
-    return Info.Ctx.getDeclAlign(ME->getMemberDecl(),
-                                 /*RefAsPointee*/true);
+    return Ctx.getDeclAlign(ME->getMemberDecl(),
+                            /*RefAsPointee*/ true);
 
-  return GetAlignOfType(Info, E->getType(), ExprKind);
+  return GetAlignOfType(Ctx, E->getType(), ExprKind);
 }
 
 static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
   if (const auto *VD = Value.Base.dyn_cast<const ValueDecl *>())
     return Info.Ctx.getDeclAlign(VD);
   if (const auto *E = Value.Base.dyn_cast<const Expr *>())
-    return GetAlignOfExpr(Info, E, UETT_AlignOf);
-  return GetAlignOfType(Info, Value.Base.getTypeInfoType(), UETT_AlignOf);
+    return GetAlignOfExpr(Info.Ctx, E, UETT_AlignOf);
+  return GetAlignOfType(Info.Ctx, Value.Base.getTypeInfoType(), UETT_AlignOf);
 }
 
 /// Evaluate the value of the alignment argument to __builtin_align_{up,down},
@@ -9768,11 +9810,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
       if (BaseAlignment < Align) {
         Result.Designator.setInvalid();
-        // FIXME: Add support to Diagnostic for long / long long.
-        CCEDiag(E->getArg(0),
-                diag::note_constexpr_baa_insufficient_alignment) << 0
-          << (unsigned)BaseAlignment.getQuantity()
-          << (unsigned)Align.getQuantity();
+        CCEDiag(E->getArg(0), diag::note_constexpr_baa_insufficient_alignment)
+            << 0 << BaseAlignment.getQuantity() << Align.getQuantity();
         return false;
       }
     }
@@ -9783,11 +9822,11 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
       (OffsetResult.Base
            ? CCEDiag(E->getArg(0),
-                     diag::note_constexpr_baa_insufficient_alignment) << 1
+                     diag::note_constexpr_baa_insufficient_alignment)
+                 << 1
            : CCEDiag(E->getArg(0),
                      diag::note_constexpr_baa_value_insufficient_alignment))
-        << (int)OffsetResult.Offset.getQuantity()
-        << (unsigned)Align.getQuantity();
+          << OffsetResult.Offset.getQuantity() << Align.getQuantity();
       return false;
     }
 
@@ -11540,6 +11579,9 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   LValue Subobject = This;
   Subobject.addArray(Info, ExprToVisit, CAT);
   auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
+    if (Init->isValueDependent())
+      return EvaluateDependentExpr(Init, Info);
+
     if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
                          Subobject, Init) ||
         !HandleLValueArrayAdjustment(Info, Init, Subobject,
@@ -12171,6 +12213,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
+  case Type::HLSLAttributedResource:
     // Classify all other types that don't fit into the regular
     // classification the same way.
     return GCCTypeClass::None;
@@ -13056,6 +13099,20 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     return Success(Val.popcount() % 2, E);
+  }
+
+  case Builtin::BI__builtin_abs:
+  case Builtin::BI__builtin_labs:
+  case Builtin::BI__builtin_llabs: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    if (Val == APSInt(APInt::getSignedMinValue(Val.getBitWidth()),
+                      /*IsUnsigned=*/false))
+      return false;
+    if (Val.isNegative())
+      Val.negate();
+    return Success(Val, E);
   }
 
   case Builtin::BI__builtin_popcount:
@@ -14478,11 +14535,11 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
   case UETT_PreferredAlignOf:
   case UETT_AlignOf: {
     if (E->isArgumentType())
-      return Success(GetAlignOfType(Info, E->getArgumentType(), E->getKind()),
-                     E);
+      return Success(
+          GetAlignOfType(Info.Ctx, E->getArgumentType(), E->getKind()), E);
     else
-      return Success(GetAlignOfExpr(Info, E->getArgumentExpr(), E->getKind()),
-                     E);
+      return Success(
+          GetAlignOfExpr(Info.Ctx, E->getArgumentExpr(), E->getKind()), E);
   }
 
   case UETT_PtrAuthTypeDiscriminator: {
@@ -15312,6 +15369,32 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       Result = RHS;
     else if (Result.isNaN() || RHS < Result)
       Result = RHS;
+    return true;
+  }
+
+  case Builtin::BI__builtin_fmaximum_num:
+  case Builtin::BI__builtin_fmaximum_numf:
+  case Builtin::BI__builtin_fmaximum_numl:
+  case Builtin::BI__builtin_fmaximum_numf16:
+  case Builtin::BI__builtin_fmaximum_numf128: {
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+    Result = maximumnum(Result, RHS);
+    return true;
+  }
+
+  case Builtin::BI__builtin_fminimum_num:
+  case Builtin::BI__builtin_fminimum_numf:
+  case Builtin::BI__builtin_fminimum_numl:
+  case Builtin::BI__builtin_fminimum_numf16:
+  case Builtin::BI__builtin_fminimum_numf128: {
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+    Result = minimumnum(Result, RHS);
     return true;
   }
   }

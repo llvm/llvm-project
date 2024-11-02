@@ -255,23 +255,23 @@ RelType AArch64::getDynRel(RelType type) const {
 int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_AARCH64_TLSDESC:
-    return read64(buf + 8);
+    return read64(ctx, buf + 8);
   case R_AARCH64_NONE:
   case R_AARCH64_GLOB_DAT:
   case R_AARCH64_JUMP_SLOT:
     return 0;
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
-    return SignExtend64<16>(read16(buf));
+    return SignExtend64<16>(read16(ctx, buf));
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
-    return SignExtend64<32>(read32(buf));
+    return SignExtend64<32>(read32(ctx, buf));
   case R_AARCH64_ABS64:
   case R_AARCH64_PREL64:
   case R_AARCH64_RELATIVE:
   case R_AARCH64_IRELATIVE:
   case R_AARCH64_TLS_TPREL64:
-    return read64(buf);
+    return read64(ctx, buf);
 
     // The following relocation types all point at instructions, and
     // relocate an immediate field in the instruction.
@@ -355,12 +355,12 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write64(buf, ctx.in.plt->getVA());
+  write64(ctx, buf, ctx.in.plt->getVA());
 }
 
 void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends)
-    write64(buf, s.getVA());
+    write64(ctx, buf, s.getVA(ctx));
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
@@ -416,7 +416,7 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
       type != R_AARCH64_PLT32)
     return false;
-  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(a);
+  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(ctx, a);
   return !inBranchRange(type, branchAddr, dst);
 }
 
@@ -484,18 +484,18 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
-    checkIntUInt(loc, val, 16, rel);
-    write16(loc, val);
+    checkIntUInt(ctx, loc, val, 16, rel);
+    write16(ctx, loc, val);
     break;
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
-    checkIntUInt(loc, val, 32, rel);
-    write32(loc, val);
+    checkIntUInt(ctx, loc, val, 32, rel);
+    write32(ctx, loc, val);
     break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:
-    checkInt(loc, val, 32, rel);
-    write32(loc, val);
+    checkInt(ctx, loc, val, 32, rel);
+    write32(ctx, loc, val);
     break;
   case R_AARCH64_ABS64:
     // AArch64 relocations to tagged symbols have extended semantics, as
@@ -508,12 +508,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     if (rel.sym && rel.sym->isTagged() &&
         (rel.addend < 0 ||
          rel.addend >= static_cast<int64_t>(rel.sym->getSize())))
-      write64(loc, -rel.addend);
+      write64(ctx, loc, -rel.addend);
     else
-      write64(loc, val);
+      write64(ctx, loc, val);
     break;
   case R_AARCH64_PREL64:
-    write64(loc, val);
+    write64(ctx, loc, val);
     break;
   case R_AARCH64_AUTH_ABS64:
     // If val is wider than 32 bits, the relocation must have been moved from
@@ -526,7 +526,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     //   finalizeAddressDependentContent(). Writing the value is harmless
     //   because dynamic linking ignores it.
     if (isInt<32>(val))
-      write32(loc, val);
+      write32(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
     write32Imm12(loc, val);
@@ -535,13 +535,13 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
-    checkInt(loc, val, 33, rel);
+    checkInt(ctx, loc, val, 33, rel);
     [[fallthrough]];
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
     write32AArch64Addr(loc, val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
-    checkInt(loc, val, 21, rel);
+    checkInt(ctx, loc, val, 21, rel);
     write32AArch64Addr(loc, val);
     break;
   case R_AARCH64_JUMP26:
@@ -555,14 +555,14 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32le(loc, 0x14000000);
     [[fallthrough]];
   case R_AARCH64_CALL26:
-    checkInt(loc, val, 28, rel);
+    checkInt(ctx, loc, val, 28, rel);
     writeMaskedBits32le(loc, (val & 0x0FFFFFFC) >> 2, 0x0FFFFFFC >> 2);
     break;
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
   case R_AARCH64_GOT_LD_PREL19:
-    checkAlignment(loc, val, 4, rel);
-    checkInt(loc, val, 21, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
+    checkInt(ctx, loc, val, 21, rel);
     writeMaskedBits32le(loc, (val & 0x1FFFFC) << 3, 0x1FFFFC << 3);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
@@ -571,12 +571,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
-    checkAlignment(loc, val, 2, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     write32Imm12(loc, getBits(val, 1, 11));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
-    checkAlignment(loc, val, 4, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32Imm12(loc, getBits(val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
@@ -584,32 +584,32 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_LD64_LO12:
-    checkAlignment(loc, val, 8, rel);
+    checkAlignment(ctx, loc, val, 8, rel);
     write32Imm12(loc, getBits(val, 3, 11));
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
-    checkAlignment(loc, val, 16, rel);
+    checkAlignment(ctx, loc, val, 16, rel);
     write32Imm12(loc, getBits(val, 4, 11));
     break;
   case R_AARCH64_LD64_GOTPAGE_LO15:
-    checkAlignment(loc, val, 8, rel);
+    checkAlignment(ctx, loc, val, 8, rel);
     write32Imm12(loc, getBits(val, 3, 14));
     break;
   case R_AARCH64_MOVW_UABS_G0:
-    checkUInt(loc, val, 16, rel);
+    checkUInt(ctx, loc, val, 16, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G0_NC:
     writeMaskedBits32le(loc, (val & 0xFFFF) << 5, 0xFFFF << 5);
     break;
   case R_AARCH64_MOVW_UABS_G1:
-    checkUInt(loc, val, 32, rel);
+    checkUInt(ctx, loc, val, 32, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G1_NC:
     writeMaskedBits32le(loc, (val & 0xFFFF0000) >> 11, 0xFFFF0000 >> 11);
     break;
   case R_AARCH64_MOVW_UABS_G2:
-    checkUInt(loc, val, 48, rel);
+    checkUInt(ctx, loc, val, 48, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G2_NC:
     writeMaskedBits32le(loc, (val & 0xFFFF00000000) >> 27,
@@ -622,7 +622,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_PREL_G0:
   case R_AARCH64_MOVW_SABS_G0:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0:
-    checkInt(loc, val, 17, rel);
+    checkInt(ctx, loc, val, 17, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G0_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
@@ -631,7 +631,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_PREL_G1:
   case R_AARCH64_MOVW_SABS_G1:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1:
-    checkInt(loc, val, 33, rel);
+    checkInt(ctx, loc, val, 33, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G1_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
@@ -640,7 +640,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_PREL_G2:
   case R_AARCH64_MOVW_SABS_G2:
   case R_AARCH64_TLSLE_MOVW_TPREL_G2:
-    checkInt(loc, val, 49, rel);
+    checkInt(ctx, loc, val, 49, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G2_NC:
     writeSMovWImm(loc, val >> 32);
@@ -649,11 +649,11 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     writeSMovWImm(loc, val >> 48);
     break;
   case R_AARCH64_TSTBR14:
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     writeMaskedBits32le(loc, (val & 0xFFFC) << 3, 0xFFFC << 3);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
-    checkUInt(loc, val, 24, rel);
+    checkUInt(ctx, loc, val, 24, rel);
     write32Imm12(loc, val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
@@ -662,7 +662,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_TLSDESC:
     // For R_AARCH64_TLSDESC the addend is stored in the second 64-bit word.
-    write64(loc + 8, val);
+    write64(ctx, loc + 8, val);
     break;
   default:
     llvm_unreachable("unknown relocation");
@@ -682,7 +682,7 @@ void AArch64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
   //   movk    x0, #0x10
   //   nop
   //   nop
-  checkUInt(loc, val, 32, rel);
+  checkUInt(ctx, loc, val, 32, rel);
 
   switch (rel.type) {
   case R_AARCH64_TLSDESC_ADD_LO12:
@@ -734,7 +734,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
 
 void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                              uint64_t val) const {
-  checkUInt(loc, val, 32, rel);
+  checkUInt(ctx, loc, val, 32, rel);
 
   if (rel.type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) {
     // Generate MOVZ.
@@ -808,7 +808,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
 
   Symbol &sym = *adrpRel.sym;
   // Check if the address difference is within 1MiB range.
-  int64_t val = sym.getVA() - (secAddr + addRel.offset);
+  int64_t val = sym.getVA(ctx) - (secAddr + addRel.offset);
   if (val < -1024 * 1024 || val >= 1024 * 1024)
     return false;
 
@@ -874,7 +874,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
     return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
-      getAArch64Page(sym.getVA()) - getAArch64Page(secAddr + adrpRel.offset);
+      getAArch64Page(sym.getVA(ctx)) - getAArch64Page(secAddr + adrpRel.offset);
   if (val != llvm::SignExtend64(val, 33))
     return false;
 
@@ -890,11 +890,11 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
 
   ctx.target->relocate(
       buf + adrpSymRel.offset, adrpSymRel,
-      SignExtend64(getAArch64Page(sym.getVA()) -
+      SignExtend64(getAArch64Page(sym.getVA(ctx)) -
                        getAArch64Page(secAddr + adrpSymRel.offset),
                    64));
   ctx.target->relocate(buf + addRel.offset, addRel,
-                       SignExtend64(sym.getVA(), 64));
+                       SignExtend64(sym.getVA(ctx), 64));
   tryRelaxAdrpAdd(adrpSymRel, addRel, secAddr, buf);
   return true;
 }
@@ -1048,7 +1048,7 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   memcpy(buf, pltData, sizeof(pltData));
 
   relocateNoSym(buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
-                getAArch64Page(got + 16) - getAArch64Page(plt + 8));
+                getAArch64Page(got + 16) - getAArch64Page(plt + 4));
   relocateNoSym(buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, got + 16);
   relocateNoSym(buf + 12, R_AARCH64_ADD_ABS_LO12_NC, got + 16);
   if (!btiHeader)
@@ -1150,7 +1150,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
 void elf::createTaggedSymbols(Ctx &ctx) {
-  assert(hasMemtag());
+  assert(hasMemtag(ctx));
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.

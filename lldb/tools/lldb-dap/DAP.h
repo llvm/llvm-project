@@ -9,16 +9,10 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAP_H
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
-#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
-
-#include <atomic>
-#include <condition_variable>
 #include <cstdio>
-#include <future>
 #include <iosfwd>
 #include <map>
 #include <optional>
-#include <set>
 #include <thread>
 
 #include "llvm/ADT/DenseMap.h"
@@ -30,24 +24,12 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "lldb/API/SBAttachInfo.h"
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBCommunication.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFormat.h"
-#include "lldb/API/SBHostOS.h"
-#include "lldb/API/SBInstruction.h"
-#include "lldb/API/SBInstructionList.h"
-#include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBLaunchInfo.h"
-#include "lldb/API/SBLineEntry.h"
-#include "lldb/API/SBListener.h"
-#include "lldb/API/SBProcess.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/API/SBStringList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 
@@ -56,7 +38,6 @@
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "ProgressEvent.h"
-#include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
 
 #define VARREF_LOCALS (int64_t)1
@@ -140,6 +121,11 @@ struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
+  bool DoExecute(lldb::SBDebugger debugger, char **command,
+                 lldb::SBCommandReturnObject &result) override;
+};
+
+struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };

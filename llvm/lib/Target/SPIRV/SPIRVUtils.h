@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
+#include <queue>
 #include <string>
 #include <unordered_set>
 
@@ -62,7 +63,9 @@ class SPIRVSubtarget;
 class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
-  std::unordered_set<BasicBlock *> Visited = {};
+
+  std::unordered_set<BasicBlock *> Queued = {};
+  std::queue<BasicBlock *> ToVisit = {};
 
   struct OrderInfo {
     size_t Rank;
@@ -79,6 +82,9 @@ class PartialOrderingVisitor {
   // Internal function used to determine the partial ordering.
   // Visits |BB| with the current rank being |Rank|.
   size_t visit(BasicBlock *BB, size_t Rank);
+
+  size_t GetNodeRank(BasicBlock *BB) const;
+  bool CanBeVisited(BasicBlock *BB) const;
 
 public:
   // Build the visitor to operate on the function F.
@@ -340,6 +346,9 @@ inline const Type *unifyPtrType(const Type *Ty) {
 }
 
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
+
+#define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
+bool getVacantFunctionName(Module &M, std::string &Name);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

@@ -474,6 +474,9 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
+  NODE(parser, OmpIteratorSpecifier)
+  NODE(parser, OmpIteratorModifier)
+  NODE(parser, OmpAffinityClause)
   NODE(parser, OmpAlignedClause)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)
@@ -510,10 +513,11 @@ public:
   NODE(OmpDependClause, InOut)
   NODE(OmpDependClause, Sink)
   NODE(OmpDependClause, Source)
-  NODE(parser, OmpDependenceType)
-  NODE_ENUM(OmpDependenceType, Type)
+  NODE(parser, OmpTaskDependenceType)
+  NODE_ENUM(OmpTaskDependenceType, Type)
   NODE(parser, OmpDependSinkVec)
   NODE(parser, OmpDependSinkVecLength)
+  NODE(parser, OmpDestroyClause)
   NODE(parser, OmpEndAllocators)
   NODE(parser, OmpEndAtomic)
   NODE(parser, OmpEndBlockDirective)
@@ -531,9 +535,8 @@ public:
   NODE_ENUM(OmpLinearModifier, Type)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
-  NODE(parser, OmpMapType)
-  NODE(OmpMapType, Always)
-  NODE_ENUM(OmpMapType, Type)
+  NODE_ENUM(OmpMapClause, TypeModifier)
+  NODE_ENUM(OmpMapClause, Type)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
@@ -545,6 +548,10 @@ public:
   NODE_ENUM(OmpOrderClause, Type)
   NODE(parser, OmpOrderModifier)
   NODE_ENUM(OmpOrderModifier, Kind)
+  NODE(parser, OmpGrainsizeClause)
+  NODE_ENUM(OmpGrainsizeClause, Prescriptiveness)
+  NODE(parser, OmpNumTasksClause)
+  NODE_ENUM(OmpNumTasksClause, Prescriptiveness)
   NODE(parser, OmpProcBindClause)
   NODE_ENUM(OmpProcBindClause, Type)
   NODE_ENUM(OmpReductionClause, ReductionModifier)
@@ -565,6 +572,7 @@ public:
   NODE_ENUM(OmpDeviceClause, DeviceModifier)
   NODE(parser, OmpDeviceTypeClause)
   NODE_ENUM(OmpDeviceTypeClause, Type)
+  NODE(parser, OmpUpdateClause)
   NODE(parser, OmpScheduleModifier)
   NODE(OmpScheduleModifier, Modifier1)
   NODE(OmpScheduleModifier, Modifier2)
@@ -603,6 +611,7 @@ public:
   NODE(parser, OmpAtomicClauseList)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
+  NODE(parser, OpenMPDepobjConstruct)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
@@ -885,8 +894,10 @@ protected:
     } else if constexpr (HasSource<T>::value) {
       return x.source.ToString();
 #endif
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      return x;
+    } else if constexpr (std::is_same_v<T, int>) {
+      return std::to_string(x);
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return x ? "true" : "false";
     } else {
       return "";
     }

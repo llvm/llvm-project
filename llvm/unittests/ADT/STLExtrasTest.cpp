@@ -504,6 +504,43 @@ TEST(STLExtrasTest, ConcatRange) {
   EXPECT_EQ(Expected, Test);
 }
 
+template <typename T> struct Iterator {
+  int i = 0;
+  T operator*() const { return i; }
+  Iterator &operator++() {
+    ++i;
+    return *this;
+  }
+  bool operator==(Iterator RHS) const { return i == RHS.i; }
+};
+
+template <typename T> struct RangeWithValueType {
+  int i;
+  RangeWithValueType(int i) : i(i) {}
+  Iterator<T> begin() { return Iterator<T>{0}; }
+  Iterator<T> end() { return Iterator<T>{i}; }
+};
+
+TEST(STLExtrasTest, ValueReturn) {
+  RangeWithValueType<int> R(1);
+  auto C = concat<int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), int>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
+TEST(STLExtrasTest, ReferenceReturn) {
+  RangeWithValueType<const int&> R(1);
+  auto C = concat<const int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), const int &>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
 TEST(STLExtrasTest, PartitionAdaptor) {
   std::vector<int> V = {1, 2, 3, 4, 5, 6, 7, 8};
 

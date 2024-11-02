@@ -20,7 +20,6 @@
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -356,12 +355,12 @@ struct _LIBCPP_TEMPLATE_VIS hash<unsigned char> : public __unary_function<unsign
   _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned char __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char8_t> : public __unary_function<char8_t, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(char8_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
-#endif // !_LIBCPP_HAS_NO_CHAR8_T
+#endif // _LIBCPP_HAS_CHAR8_T
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char16_t> : public __unary_function<char16_t, size_t> {
@@ -407,7 +406,11 @@ struct _LIBCPP_TEMPLATE_VIS hash<long> : public __unary_function<long, size_t> {
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned long> : public __unary_function<unsigned long, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT {
+    static_assert(sizeof(size_t) >= sizeof(unsigned long),
+                  "This would be a terrible hash function on a platform where size_t is smaller than unsigned long");
+    return static_cast<size_t>(__v);
+  }
 };
 
 template <>
@@ -416,7 +419,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<long long> : public __scalar_hash<long long> {}
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned long long> : public __scalar_hash<unsigned long long> {};
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<__int128_t> : public __scalar_hash<__int128_t> {};

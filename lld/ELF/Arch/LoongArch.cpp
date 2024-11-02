@@ -159,7 +159,7 @@ static bool isJirl(uint32_t insn) {
   return (insn & 0xfc000000) == JIRL;
 }
 
-static void handleUleb128(uint8_t *loc, uint64_t val) {
+static void handleUleb128(Ctx &ctx, uint8_t *loc, uint64_t val) {
   const uint32_t maxcount = 1 + 64 / 7;
   uint32_t count;
   const char *error = nullptr;
@@ -316,9 +316,9 @@ void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void LoongArch::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
     if (ctx.arg.is64)
-      write64le(buf, s.getVA());
+      write64le(buf, s.getVA(ctx));
     else
-      write32le(buf, s.getVA());
+      write32le(buf, s.getVA(ctx));
   }
 }
 
@@ -552,7 +552,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
                          uint64_t val) const {
   switch (rel.type) {
   case R_LARCH_32_PCREL:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     [[fallthrough]];
   case R_LARCH_32:
   case R_LARCH_TLS_DTPREL32:
@@ -569,26 +569,26 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LD_PCREL20_S2:
   case R_LARCH_TLS_GD_PCREL20_S2:
   case R_LARCH_TLS_DESC_PCREL20_S2:
-    checkInt(loc, val, 22, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 22, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setJ20(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B16:
-    checkInt(loc, val, 18, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 18, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setK16(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B21:
-    checkInt(loc, val, 23, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 23, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setD5k16(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B26:
-    checkInt(loc, val, 28, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 28, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
 
@@ -600,7 +600,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     if (((int64_t)val + 0x20000) != llvm::SignExtend64(val + 0x20000, 38))
       reportRangeError(ctx, loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
                        llvm::maxIntN(38) - 0x20000);
-    checkAlignment(loc, val, 4, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     // Since jirl performs sign extension on the offset immediate, adds (1<<17)
     // to original val to get the correct hi20.
     uint32_t hi20 = extractBits(val + (1 << 17), 37, 18);
@@ -620,7 +620,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     // In this case, process like an R_LARCH_B16, but without overflow checking
     // and only taking the value's lowest 12 bits.
     if (isJirl(read32le(loc))) {
-      checkAlignment(loc, val, 4, rel);
+      checkAlignment(ctx, loc, val, 4, rel);
       val = SignExtend64<12>(val);
       write32le(loc, setK16(read32le(loc), val >> 2));
       return;
@@ -700,7 +700,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, read64le(loc) + val);
     return;
   case R_LARCH_ADD_ULEB128:
-    handleUleb128(loc, val);
+    handleUleb128(ctx, loc, val);
     return;
   case R_LARCH_SUB6:
     *loc = (*loc & 0xc0) | ((*loc - val) & 0x3f);
@@ -718,7 +718,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, read64le(loc) - val);
     return;
   case R_LARCH_SUB_ULEB128:
-    handleUleb128(loc, -val);
+    handleUleb128(ctx, loc, -val);
     return;
 
   case R_LARCH_MARK_LA:
@@ -744,7 +744,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-static bool relax(InputSection &sec) {
+static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -833,7 +833,7 @@ bool LoongArch::relaxOnce(int pass) const {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
-      changed |= relax(*sec);
+      changed |= relax(ctx, *sec);
   }
   return changed;
 }

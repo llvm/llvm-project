@@ -4876,6 +4876,7 @@ cc_library(
         ":NVGPUTransformOps",
         ":NVVMTarget",
         ":NVVMToLLVM",
+        ":OpenMPToLLVM",
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
         ":SCFTransformOps",
@@ -7838,6 +7839,7 @@ cc_library(
         "include/mlir/Transforms/LoopInvariantCodeMotionUtils.h",
         "include/mlir/Transforms/OneToNTypeConversion.h",
         "include/mlir/Transforms/RegionUtils.h",
+        "include/mlir/Transforms/WalkPatternRewriteDriver.h",
     ],
     includes = ["include"],
     deps = [
@@ -9740,6 +9742,28 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "mlir-rewrite",
+    srcs = ["tools/mlir-rewrite/mlir-rewrite.cpp"],
+    deps = [
+        ":AffineAnalysis",
+        ":AllExtensions",
+        ":AllPassesAndDialects",
+        ":Analysis",
+        ":AsmParser",
+        ":CastInterfaces",
+        ":Dialect",
+        ":IR",
+        ":ParseUtilities",
+        ":Parser",
+        ":Pass",
+        ":Support",
+        ":TransformUtils",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "MlirJitRunner",
     srcs = ["lib/ExecutionEngine/JitRunner.cpp"],
@@ -10429,6 +10453,7 @@ cc_library(
         ":OpenACCPassIncGen",
         ":Pass",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -10603,6 +10628,7 @@ cc_library(
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",
         ":ControlFlowInterfaces",
+        ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":IR",
         ":LLVMDialect",
@@ -10650,6 +10676,7 @@ cc_library(
         ":ArithToLLVM",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
         ":FuncToLLVM",
         ":LLVMCommonConversion",
         ":LLVMDialect",

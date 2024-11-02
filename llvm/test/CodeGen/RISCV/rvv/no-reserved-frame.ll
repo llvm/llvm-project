@@ -27,15 +27,15 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    lw a6, 24(s1)
 ; CHECK-NEXT:    lw a7, 20(s1)
 ; CHECK-NEXT:    lw t1, 16(s1)
-; CHECK-NEXT:    lw a1, 12(s1)
-; CHECK-NEXT:    lw t2, 8(s1)
+; CHECK-NEXT:    lw t2, 12(s1)
+; CHECK-NEXT:    lw t3, 8(s1)
 ; CHECK-NEXT:    sw a0, 52(s1)
 ; CHECK-NEXT:    sw a0, 48(s1)
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd t2, 16(sp)
-; CHECK-NEXT:    sd a1, 8(sp)
 ; CHECK-NEXT:    addi a1, s1, 48
 ; CHECK-NEXT:    sd t1, 0(sp)
+; CHECK-NEXT:    sd t2, 8(sp)
+; CHECK-NEXT:    sd t3, 16(sp)
 ; CHECK-NEXT:    mv a0, t0
 ; CHECK-NEXT:    call gfunc
 ; CHECK-NEXT:    addi sp, sp, 32

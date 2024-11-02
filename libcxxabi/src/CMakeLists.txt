@@ -184,78 +184,78 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
 endif()
 target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
-  add_library(cxxabi_shared SHARED)
-  set_target_properties(cxxabi_shared
-    PROPERTIES
-      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_SHARED}>,FALSE,TRUE>"
-      LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
-      SOVERSION "1"
-      VERSION "${LIBCXXABI_LIBRARY_VERSION}"
+add_library(cxxabi_shared SHARED)
+set_target_properties(cxxabi_shared
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_SHARED}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
+    OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
+    SOVERSION "1"
+    VERSION "${LIBCXXABI_LIBRARY_VERSION}"
+)
+
+if (ZOS)
+  add_custom_command(TARGET cxxabi_shared POST_BUILD
+    COMMAND
+      ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
+      $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
+    COMMENT "Rename dll name inside the side deck file"
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
   )
+endif ()
 
-  if (ZOS)
-    add_custom_command(TARGET cxxabi_shared POST_BUILD
-      COMMAND
-        ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
-        $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
-      COMMENT "Rename dll name inside the side deck file"
-      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
-    )
-  endif ()
-
-  target_link_libraries(cxxabi_shared
-    PUBLIC cxxabi_shared_objects
-    PRIVATE ${LIBCXXABI_LIBRARIES})
+target_link_libraries(cxxabi_shared
+  PUBLIC cxxabi_shared_objects
+  PRIVATE ${LIBCXXABI_LIBRARIES})
 
 if (LIBCXXABI_ENABLE_SHARED)
-  list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
+list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
 endif()
 if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
-  list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
+list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
 endif()
 
-  # TODO: Move this to libc++'s HandleLibCXXABI.cmake since this is effectively trying to control
-  #       what libc++ re-exports.
-  add_library(cxxabi-reexports INTERFACE)
-  function(export_symbols file)
-    # -exported_symbols_list is only available on Apple platforms
-    if (APPLE)
-      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
-    endif()
-  endfunction()
-
-  function(reexport_symbols file)
-    export_symbols("${file}")
-    # -reexported_symbols_list is only available on Apple platforms
-    if (APPLE)
-      target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
-    endif()
-  endfunction()
-
-  export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/symbols-not-reexported.exp")
-  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxxabiv1.exp")
-  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/fundamental-types.exp")
-  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
-  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-misc.exp")
-
-  if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+# TODO: Move this to libc++'s HandleLibCXXABI.cmake since this is effectively trying to control
+#       what libc++ re-exports.
+add_library(cxxabi-reexports INTERFACE)
+function(export_symbols file)
+  # -exported_symbols_list is only available on Apple platforms
+  if (APPLE)
+    target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
   endif()
+endfunction()
 
-  # Note that std:: exception types are always defined by the library regardless of
-  # whether the exception runtime machinery is provided.
-  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
-
-  if (LIBCXXABI_ENABLE_EXCEPTIONS)
-    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-exceptions.exp")
-
-    if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
-    else()
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
-    endif()
+function(reexport_symbols file)
+  export_symbols("${file}")
+  # -reexported_symbols_list is only available on Apple platforms
+  if (APPLE)
+    target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
   endif()
+endfunction()
+
+export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/symbols-not-reexported.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxxabiv1.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/fundamental-types.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-misc.exp")
+
+if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+endif()
+
+# Note that std:: exception types are always defined by the library regardless of
+# whether the exception runtime machinery is provided.
+reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
+
+if (LIBCXXABI_ENABLE_EXCEPTIONS)
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-exceptions.exp")
+
+  if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
+  else()
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
+  endif()
+endif()
 
 # Build the static library.
 add_library(cxxabi_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
@@ -295,19 +295,19 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
       _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
 endif()
 
-  add_library(cxxabi_static STATIC)
-  if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
-    target_link_libraries(cxxabi_static PUBLIC unwind_static)
-  endif()
-  set_target_properties(cxxabi_static
-    PROPERTIES
-      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_STATIC}>,FALSE,TRUE>"
-      LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
-    )
-  target_link_libraries(cxxabi_static
-    PUBLIC cxxabi_static_objects
-    PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+add_library(cxxabi_static STATIC)
+if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
+  target_link_libraries(cxxabi_static PUBLIC unwind_static)
+endif()
+set_target_properties(cxxabi_static
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_STATIC}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
+    OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
+  )
+target_link_libraries(cxxabi_static
+  PUBLIC cxxabi_static_objects
+  PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 
 if (LIBCXXABI_ENABLE_STATIC)
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")

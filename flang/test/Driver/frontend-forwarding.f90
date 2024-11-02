@@ -14,6 +14,7 @@
 ! RUN:     -fno-signed-zeros \
 ! RUN:     -fassociative-math \
 ! RUN:     -freciprocal-math \
+! RUN:     -fno-strict-overflow \
 ! RUN:     -fomit-frame-pointer \
 ! RUN:     -fpass-plugin=Bye%pluginext \
 ! RUN:     -fversion-loops-for-stride \
@@ -63,4 +64,5 @@
 ! CHECK: "-Rpass=inline"
 ! CHECK: "-mframe-pointer=none"
 ! CHECK: "-mllvm" "-print-before-all"
+! CHECK: "-fwrapv"
 ! CHECK: "-save-temps=obj"

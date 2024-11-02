@@ -1218,11 +1218,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     return;
   }
 
-  // Handle --version
-  if (args.hasArg(OPT_version) || args.hasArg(OPT_v)) {
+  // Handle -v or -version.
+  if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
     lld::outs() << getLLDVersion() << "\n";
-    return;
-  }
 
   // Handle --reproduce
   if (const char *path = getReproduceOption(args)) {
@@ -1247,6 +1245,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   readConfigs(args);
   setConfigs();
+
+  // The behavior of -v or --version is a bit strange, but this is
+  // needed for compatibility with GNU linkers.
+  if (args.hasArg(OPT_v) && !args.hasArg(OPT_INPUT))
+    return;
+  if (args.hasArg(OPT_version))
+    return;
 
   createFiles(args);
   if (errorCount())

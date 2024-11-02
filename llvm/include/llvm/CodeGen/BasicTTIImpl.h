@@ -1986,6 +1986,9 @@ public:
     case Intrinsic::cos:
       ISD = ISD::FCOS;
       break;
+    case Intrinsic::sincos:
+      ISD = ISD::FSINCOS;
+      break;
     case Intrinsic::tan:
       ISD = ISD::FTAN;
       break;
@@ -1997,6 +2000,9 @@ public:
       break;
     case Intrinsic::atan:
       ISD = ISD::FATAN;
+      break;
+    case Intrinsic::atan2:
+      ISD = ISD::FATAN2;
       break;
     case Intrinsic::sinh:
       ISD = ISD::FSINH;

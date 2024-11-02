@@ -37,7 +37,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT: <x1> vector loop: {
 ; IF-EVL-INLOOP-NEXT:  vector.body:
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
-; IF-EVL-INLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%[0-9]+]]>
+; IF-EVL-INLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -48,7 +48,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + vp.reduce.add (ir<[[LD1]]>, vp<[[EVL]]>)
 ; IF-EVL-INLOOP-NEXT:    SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
-; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%[0-9]+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
+; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
 ; IF-EVL-INLOOP-NEXT:  No successors
 ; IF-EVL-INLOOP-NEXT: }
@@ -66,9 +66,12 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT: scalar.ph:
 ; IF-EVL-INLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
-; IF-EVL-INLOOP-NEXT: No successors
+; IF-EVL-INLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; IF-EVL-INLOOP-EMPTY:
-; IF-EVL-INLOOP-NEXT: Live-out i32 %rdx = vp<[[RED_RESUME]]>
+; IF-EVL-INLOOP-NEXT: ir-bb<for.body>:
+; IF-EVL-INLOOP-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+; IF-EVL-INLOOP-NEXT:   IR   %rdx = phi i32 [ %start, %entry ], [ %add, %for.body ]
+; IF-EVL-INLOOP:        IR   %exitcond.not = icmp eq i64 %iv.next, %n
 ; IF-EVL-INLOOP-NEXT: }
 ;
 
@@ -89,7 +92,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD1]]>, ir<[[RDX_PHI]]>
-; NO-VP-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%[0-9]+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
+; NO-VP-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
 ; NO-VP-OUTLOOP-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
 ; NO-VP-OUTLOOP-NEXT:  No successors
 ; NO-VP-OUTLOOP-NEXT: }
@@ -108,9 +111,13 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: scalar.ph:
 ; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
-; NO-VP-OUTLOOP-NEXT: No successors
+; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; NO-VP-OUTLOOP-EMPTY:
-; NO-VP-OUTLOOP-NEXT: Live-out i32 %rdx = vp<[[RED_RESUME]]>
+; NO-VP-OUTLOOP-NEXT: ir-bb<for.body>:
+; NO-VP-OUTLOOP-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+; NO-VP-OUTLOOP-NEXT:   IR   %rdx = phi i32 [ %start, %entry ], [ %add, %for.body ]
+; NO-VP-OUTLOOP:        IR   %exitcond.not = icmp eq i64 %iv.next, %n
+; NO-VP-OUTLOOP-NEXT: No successors
 ; NO-VP-OUTLOOP-NEXT: }
 ;
 
@@ -131,7 +138,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; NO-VP-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + reduce.add (ir<[[LD1]]>)
-; NO-VP-INLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%[0-9]+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
+; NO-VP-INLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
 ; NO-VP-INLOOP-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
 ; NO-VP-INLOOP-NEXT:  No successors
 ; NO-VP-INLOOP-NEXT: }
@@ -150,9 +157,13 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: scalar.ph:
 ; NO-VP-INLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
-; NO-VP-INLOOP-NEXT: No successors
+; NO-VP-INLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; NO-VP-INLOOP-EMPTY:
-; NO-VP-INLOOP-NEXT: Live-out i32 %rdx = vp<[[RED_RESUME]]>
+; NO-VP-INLOOP-NEXT: ir-bb<for.body>:
+; NO-VP-INLOOP-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+; NO-VP-INLOOP-NEXT:   IR   %rdx = phi i32 [ %start, %entry ], [ %add, %for.body ]
+; NO-VP-INLOOP:        IR   %exitcond.not = icmp eq i64 %iv.next, %n
+; NO-VP-INLOOP-NEXT: No successors
 ; NO-VP-INLOOP-NEXT: }
 ;
 entry:

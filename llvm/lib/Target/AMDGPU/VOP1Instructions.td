@@ -503,7 +503,7 @@ let FPDPRounding = 1 in {
 defm V_FRACT_F16 : VOP1Inst_t16 <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
 } // End FPDPRounding = 1
 
-let OtherPredicates = [Has16BitInsts, NotHasTrue16BitInsts] in {
+let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
 def : GCNPat<
     (f32 (f16_to_fp i16:$src)),
     (V_CVT_F32_F16_e32 $src)
@@ -513,7 +513,7 @@ def : GCNPat<
     (V_CVT_F16_F32_e32 $src)
 >;
 }
-let OtherPredicates = [HasTrue16BitInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
     (f32 (f16_to_fp i16:$src)),
     (V_CVT_F32_F16_t16_e32 $src)
@@ -521,6 +521,16 @@ def : GCNPat<
 def : GCNPat<
     (i16 (AMDGPUfp_to_f16 f32:$src)),
     (V_CVT_F16_F32_t16_e32 $src)
+>;
+}
+let True16Predicate = UseFakeTrue16Insts in {
+def : GCNPat<
+    (f32 (f16_to_fp i16:$src)),
+    (V_CVT_F32_F16_fake16_e32 $src)
+>;
+def : GCNPat<
+    (i16 (AMDGPUfp_to_f16 f32:$src)),
+    (V_CVT_F16_F32_fake16_e32 $src)
 >;
 }
 
@@ -1417,15 +1427,14 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus, p]
 
-let OtherPredicates = [UseFakeTrue16Insts] in {
+let True16Predicate = UseFakeTrue16Insts in {
 def : GCNPat<
   (i32 (DivergentUnaryFrag<anyext> i16:$src)),
   (COPY $src)
 >;
-} // End OtherPredicates = [UseFakeTrue16Insts]
+} // End True16Predicate = UseFakeTrue16Insts
 
-
-let OtherPredicates = [UseRealTrue16Insts] in {
+let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
   (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
   (COPY $src)
@@ -1499,12 +1508,14 @@ defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
-class MovDPP8Pattern<Predicate Pred, Instruction Inst> : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
+class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
+  (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),
   (Inst VGPR_32:$src, VGPR_32:$src, (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))> {
   let OtherPredicates = [Pred];
 }
 
-def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10>;
-def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11>;
-def : MovDPP8Pattern<isGFX12Only, V_MOV_B32_dpp8_gfx12>;
+foreach vt = Reg32Types.types in {
+  def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10, vt>;
+  def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11, vt>;
+  def : MovDPP8Pattern<isGFX12Only, V_MOV_B32_dpp8_gfx12, vt>;
+}

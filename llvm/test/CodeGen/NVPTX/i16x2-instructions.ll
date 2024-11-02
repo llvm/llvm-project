@@ -21,7 +21,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; COMMON-LABEL: test_ret_const(
 ; COMMON:     mov.b32         [[R:%r[0-9+]]], 131073;
-; COMMON:     st.param.b32    [func_retval0+0], [[R]];
+; COMMON:     st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_ret_const() #0 {
   ret <2 x i16> <i16 1, i16 2>
@@ -31,7 +31,7 @@ define <2 x i16> @test_ret_const() #0 {
 ; COMMON:      ld.param.u32   [[A:%r[0-9]+]], [test_extract_0_param_0];
 ; COMMON:      mov.b32        {[[RS:%rs[0-9]+]], tmp}, [[A]];
 ; COMMON:      cvt.u32.u16    [[R:%r[0-9]+]], [[RS]];
-; COMMON:      st.param.b32    [func_retval0+0], [[R]];
+; COMMON:      st.param.b32    [func_retval0], [[R]];
 ; COMMON:      ret;
 define i16 @test_extract_0(<2 x i16> %a) #0 {
   %e = extractelement <2 x i16> %a, i32 0
@@ -42,7 +42,7 @@ define i16 @test_extract_0(<2 x i16> %a) #0 {
 ; COMMON:      ld.param.u32   [[A:%r[0-9]+]], [test_extract_1_param_0];
 ; COMMON:      mov.b32        {tmp, [[RS:%rs[0-9]+]]}, [[A]];
 ; COMMON:      cvt.u32.u16    [[R:%r[0-9]+]], [[RS]];
-; COMMON:      st.param.b32    [func_retval0+0], [[R]];
+; COMMON:      st.param.b32    [func_retval0], [[R]];
 ; COMMON:      ret;
 define i16 @test_extract_1(<2 x i16> %a) #0 {
   %e = extractelement <2 x i16> %a, i32 1
@@ -56,7 +56,7 @@ define i16 @test_extract_1(<2 x i16> %a) #0 {
 ; COMMON-DAG:  mov.b32         {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[A]];
 ; COMMON:      selp.b16        [[RS:%rs[0-9]+]], [[E0]], [[E1]], [[PRED]];
 ; COMMON:      cvt.u32.u16     [[R:%r[0-9]+]], [[RS]];
-; COMMON:      st.param.b32    [func_retval0+0], [[R]];
+; COMMON:      st.param.b32    [func_retval0], [[R]];
 ; COMMON:      ret;
 define i16 @test_extract_i(<2 x i16> %a, i64 %idx) #0 {
   %e = extractelement <2 x i16> %a, i64 %idx
@@ -75,7 +75,7 @@ define i16 @test_extract_i(<2 x i16> %a, i64 %idx) #0 {
 ; NO-I16x2-DAG: add.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ; NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_add(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = add <2 x i16> %a, %b
@@ -94,7 +94,7 @@ define <2 x i16> @test_add(<2 x i16> %a, <2 x i16> %b) #0 {
 ;	NO-I16x2-DAG: add.s16 	[[RS3:%rs[0-9]+]], [[RS1]], 2;
 ;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS2]], [[RS3]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_add_imm_0(<2 x i16> %a) #0 {
   %r = add <2 x i16> <i16 1, i16 2>, %a
@@ -112,7 +112,7 @@ define <2 x i16> @test_add_imm_0(<2 x i16> %a) #0 {
 ;	NO-I16x2-DAG: add.s16 	[[RS3:%rs[0-9]+]], [[RS1]], 2;
 ;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS2]], [[RS3]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_add_imm_1(<2 x i16> %a) #0 {
   %r = add <2 x i16> %a, <i16 1, i16 2>
@@ -130,7 +130,7 @@ define <2 x i16> @test_add_imm_1(<2 x i16> %a) #0 {
 ; COMMON-DAG:  sub.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ; COMMON-DAG:  mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_sub(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = sub <2 x i16> %a, %b
@@ -149,7 +149,7 @@ define <2 x i16> @test_sub(<2 x i16> %a, <2 x i16> %b) #0 {
 ;	NO-I16x2-DAG: max.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_smax(<2 x i16> %a, <2 x i16> %b) #0 {
   %cmp = icmp sgt <2 x i16> %a, %b
@@ -169,7 +169,7 @@ define <2 x i16> @test_smax(<2 x i16> %a, <2 x i16> %b) #0 {
 ;	NO-I16x2-DAG: max.u16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_umax(<2 x i16> %a, <2 x i16> %b) #0 {
   %cmp = icmp ugt <2 x i16> %a, %b
@@ -189,7 +189,7 @@ define <2 x i16> @test_umax(<2 x i16> %a, <2 x i16> %b) #0 {
 ;	NO-I16x2-DAG: min.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_smin(<2 x i16> %a, <2 x i16> %b) #0 {
   %cmp = icmp sle <2 x i16> %a, %b
@@ -209,7 +209,7 @@ define <2 x i16> @test_smin(<2 x i16> %a, <2 x i16> %b) #0 {
 ;	NO-I16x2-DAG: min.u16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	NO-I16x2-DAG: mov.b32 	[[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_umin(<2 x i16> %a, <2 x i16> %b) #0 {
   %cmp = icmp ule <2 x i16> %a, %b
@@ -227,7 +227,7 @@ define <2 x i16> @test_umin(<2 x i16> %a, <2 x i16> %b) #0 {
 ;	COMMON-DAG: mul.lo.s16 	[[RS5:%rs[0-9]+]], [[RS1]], [[RS3]];
 ;	COMMON-DAG: mov.b32 	    [[R:%r[0-9]+]], {[[RS4]], [[RS5]]};
 ;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_mul(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = mul <2 x i16> %a, %b
@@ -239,7 +239,7 @@ define <2 x i16> @test_mul(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_or_param_0];
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_or_param_1];
 ; COMMON-NEXT: or.b32          [[R:%r[0-9]+]], [[A]], [[B]];
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_or(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = or <2 x i16> %a, %b
@@ -255,7 +255,7 @@ define <2 x i16> @test_or(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-DAG:    mov.u16         [[C5:%rs[0-9]+]], 5;
 ; COMMON-DAG:    mov.b32         [[R2:%r[0-9]+]], {[[A]], [[C5]]};
 ; COMMON:        or.b32          [[R:%r[0-9]+]], [[R2]], [[R1]];
-; COMMON-NEXT:   st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT:   st.param.b32    [func_retval0], [[R]];
 define <2 x i16> @test_or_computed(i16 %a) {
   %ins.0 = insertelement <2 x i16> zeroinitializer, i16 %a, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
@@ -267,7 +267,7 @@ define <2 x i16> @test_or_computed(i16 %a) {
 ; COMMON-LABEL: test_or_imm_0(
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_or_imm_0_param_0];
 ; COMMON-NEXT: or.b32          [[R:%r[0-9]+]], [[A]], 131073;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_or_imm_0(<2 x i16> %a) #0 {
   %r = or <2 x i16> <i16 1, i16 2>, %a
@@ -277,7 +277,7 @@ define <2 x i16> @test_or_imm_0(<2 x i16> %a) #0 {
 ; COMMON-LABEL: test_or_imm_1(
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_or_imm_1_param_0];
 ; COMMON-NEXT: or.b32          [[R:%r[0-9]+]], [[A]], 131073;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_or_imm_1(<2 x i16> %a) #0 {
   %r = or <2 x i16> %a, <i16 1, i16 2>
@@ -288,7 +288,7 @@ define <2 x i16> @test_or_imm_1(<2 x i16> %a) #0 {
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_xor_param_0];
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_xor_param_1];
 ; COMMON-NEXT: xor.b32         [[R:%r[0-9]+]], [[A]], [[B]];
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_xor(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = xor <2 x i16> %a, %b
@@ -302,7 +302,7 @@ define <2 x i16> @test_xor(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-DAG:    mov.u16         [[C5:%rs[0-9]+]], 5;
 ; COMMON-DAG:    mov.b32         [[R2:%r[0-9]+]], {[[A]], [[C5]]};
 ; COMMON:        xor.b32         [[R:%r[0-9]+]], [[R2]], [[R1]];
-; COMMON-NEXT:   st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT:   st.param.b32    [func_retval0], [[R]];
 define <2 x i16> @test_xor_computed(i16 %a) {
   %ins.0 = insertelement <2 x i16> zeroinitializer, i16 %a, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
@@ -314,7 +314,7 @@ define <2 x i16> @test_xor_computed(i16 %a) {
 ; COMMON-LABEL: test_xor_imm_0(
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_xor_imm_0_param_0];
 ; COMMON-NEXT: xor.b32         [[R:%r[0-9]+]], [[A]], 131073;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_xor_imm_0(<2 x i16> %a) #0 {
   %r = xor <2 x i16> <i16 1, i16 2>, %a
@@ -324,7 +324,7 @@ define <2 x i16> @test_xor_imm_0(<2 x i16> %a) #0 {
 ; COMMON-LABEL: test_xor_imm_1(
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_xor_imm_1_param_0];
 ; COMMON-NEXT: xor.b32         [[R:%r[0-9]+]], [[A]], 131073;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_xor_imm_1(<2 x i16> %a) #0 {
   %r = xor <2 x i16> %a, <i16 1, i16 2>
@@ -335,7 +335,7 @@ define <2 x i16> @test_xor_imm_1(<2 x i16> %a) #0 {
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_and_param_0];
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_and_param_1];
 ; COMMON-NEXT: and.b32          [[R:%r[0-9]+]], [[A]], [[B]];
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_and(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = and <2 x i16> %a, %b
@@ -351,7 +351,7 @@ define <2 x i16> @test_and(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-DAG:    mov.u16         [[C5:%rs[0-9]+]], 5;
 ; COMMON-DAG:    mov.b32         [[R2:%r[0-9]+]], {[[A]], [[C5]]};
 ; COMMON:        and.b32          [[R:%r[0-9]+]], [[R2]], [[R1]];
-; COMMON-NEXT:   st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT:   st.param.b32    [func_retval0], [[R]];
 define <2 x i16> @test_and_computed(i16 %a) {
   %ins.0 = insertelement <2 x i16> zeroinitializer, i16 %a, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
@@ -363,7 +363,7 @@ define <2 x i16> @test_and_computed(i16 %a) {
 ; COMMON-LABEL: test_and_imm_0(
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_and_imm_0_param_0];
 ; COMMON-NEXT: and.b32          [[R:%r[0-9]+]], [[A]], 131073;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_and_imm_0(<2 x i16> %a) #0 {
   %r = and <2 x i16> <i16 1, i16 2>, %a
@@ -373,7 +373,7 @@ define <2 x i16> @test_and_imm_0(<2 x i16> %a) #0 {
 ; COMMON-LABEL: test_and_imm_1(
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_and_imm_1_param_0];
 ; COMMON-NEXT: and.b32          [[R:%r[0-9]+]], [[A]], 131073;
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_and_imm_1(<2 x i16> %a) #0 {
   %r = and <2 x i16> %a, <i16 1, i16 2>
@@ -441,15 +441,15 @@ declare <2 x i16> @test_callee(<2 x i16> %a, <2 x i16> %b) #0
 ; COMMON:      {
 ; COMMON-DAG:  .param .align 4 .b8 param0[4];
 ; COMMON-DAG:  .param .align 4 .b8 param1[4];
-; COMMON-DAG:  st.param.b32    [param0+0], [[A]];
-; COMMON-DAG:  st.param.b32    [param1+0], [[B]];
+; COMMON-DAG:  st.param.b32    [param0], [[A]];
+; COMMON-DAG:  st.param.b32    [param1], [[B]];
 ; COMMON-DAG:  .param .align 4 .b8 retval0[4];
 ; COMMON:      call.uni (retval0),
 ; COMMON-NEXT:        test_callee,
 ; COMMON:      );
-; COMMON-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
+; COMMON-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; COMMON-NEXT: }
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = call <2 x i16> @test_callee(<2 x i16> %a, <2 x i16> %b)
@@ -462,15 +462,15 @@ define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON:      {
 ; COMMON-DAG:  .param .align 4 .b8 param0[4];
 ; COMMON-DAG:  .param .align 4 .b8 param1[4];
-; COMMON-DAG:  st.param.b32    [param0+0], [[B]];
-; COMMON-DAG:  st.param.b32    [param1+0], [[A]];
+; COMMON-DAG:  st.param.b32    [param0], [[B]];
+; COMMON-DAG:  st.param.b32    [param1], [[A]];
 ; COMMON-DAG:  .param .align 4 .b8 retval0[4];
 ; COMMON:      call.uni (retval0),
 ; COMMON-NEXT:        test_callee,
 ; COMMON:      );
-; COMMON-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
+; COMMON-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; COMMON-NEXT: }
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = call <2 x i16> @test_callee(<2 x i16> %b, <2 x i16> %a)
@@ -483,15 +483,15 @@ define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON:      {
 ; COMMON-DAG:  .param .align 4 .b8 param0[4];
 ; COMMON-DAG:  .param .align 4 .b8 param1[4];
-; COMMON-DAG:  st.param.b32    [param0+0], [[B]];
-; COMMON-DAG:  st.param.b32    [param1+0], [[A]];
+; COMMON-DAG:  st.param.b32    [param0], [[B]];
+; COMMON-DAG:  st.param.b32    [param1], [[A]];
 ; COMMON-DAG:  .param .align 4 .b8 retval0[4];
 ; COMMON:      call.uni (retval0),
 ; COMMON-NEXT:        test_callee,
 ; COMMON:      );
-; COMMON-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
+; COMMON-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0];
 ; COMMON-NEXT: }
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_tailcall_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
   %r = tail call <2 x i16> @test_callee(<2 x i16> %b, <2 x i16> %a)
@@ -504,7 +504,7 @@ define <2 x i16> @test_tailcall_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-DAG:  ld.param.u8     [[C:%rs[0-9]+]], [test_select_param_2]
 ; COMMON-DAG:  setp.eq.b16     [[PRED:%p[0-9]+]], %rs{{.*}}, 1;
 ; COMMON-NEXT: selp.b32        [[R:%r[0-9]+]], [[A]], [[B]], [[PRED]];
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_select(<2 x i16> %a, <2 x i16> %b, i1 zeroext %c) #0 {
   %r = select i1 %c, <2 x i16> %a, <2 x i16> %b
@@ -525,7 +525,7 @@ define <2 x i16> @test_select(<2 x i16> %a, <2 x i16> %b, i1 zeroext %c) #0 {
 ; COMMON-DAG:  selp.b16        [[R0:%rs[0-9]+]], [[A0]], [[B0]], [[P0]];
 ; COMMON-DAG:  selp.b16        [[R1:%rs[0-9]+]], [[A1]], [[B1]], [[P1]];
 ; COMMON:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_select_cc(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) #0 {
   %cc = icmp ne <2 x i16> %c, %d
@@ -544,7 +544,7 @@ define <2 x i16> @test_select_cc(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x 
 ; COMMON-DAG: setp.ne.s16    [[P1:%p[0-9]+]], [[C1]], [[D1]]
 ; COMMON-DAG: selp.b32        [[R0:%r[0-9]+]], [[A0]], [[B0]], [[P0]];
 ; COMMON-DAG: selp.b32        [[R1:%r[0-9]+]], [[A1]], [[B1]], [[P1]];
-; COMMON-NEXT: st.param.v2.b32    [func_retval0+0], {[[R0]], [[R1]]};
+; COMMON-NEXT: st.param.v2.b32    [func_retval0], {[[R0]], [[R1]]};
 ; COMMON-NEXT: ret;
 define <2 x i32> @test_select_cc_i32_i16(<2 x i32> %a, <2 x i32> %b,
                                            <2 x i16> %c, <2 x i16> %d) #0 {
@@ -565,7 +565,7 @@ define <2 x i32> @test_select_cc_i32_i16(<2 x i32> %a, <2 x i32> %b,
 ; COMMON-DAG:  selp.b16        [[R0:%rs[0-9]+]], [[A0]], [[B0]], [[P0]];
 ; COMMON-DAG:  selp.b16        [[R1:%rs[0-9]+]], [[A1]], [[B1]], [[P1]];
 ; COMMON:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: st.param.b32    [func_retval0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_select_cc_i16_i32(<2 x i16> %a, <2 x i16> %b,
                                           <2 x i32> %c, <2 x i32> %d) #0 {
@@ -580,7 +580,7 @@ define <2 x i16> @test_select_cc_i16_i32(<2 x i16> %a, <2 x i16> %b,
 ; COMMON-DAG:  cvt.u16.u32  [[R0:%rs[0-9]+]], [[A0]];
 ; COMMON-DAG:  cvt.u16.u32  [[R1:%rs[0-9]+]], [[A1]];
 ; COMMON:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; COMMON:      st.param.b32    [func_retval0+0], [[R]];
+; COMMON:      st.param.b32    [func_retval0], [[R]];
 ; COMMON:      ret;
 define <2 x i16> @test_trunc_2xi32(<2 x i32> %a) #0 {
   %r = trunc <2 x i32> %a to <2 x i16>
@@ -592,7 +592,7 @@ define <2 x i16> @test_trunc_2xi32(<2 x i32> %a) #0 {
 ; COMMON-DAG:  cvt.u16.u64  [[R0:%rs[0-9]+]], [[A0]];
 ; COMMON-DAG:  cvt.u16.u64  [[R1:%rs[0-9]+]], [[A1]];
 ; COMMON:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; COMMON:      st.param.b32    [func_retval0+0], [[R]];
+; COMMON:      st.param.b32    [func_retval0], [[R]];
 ; COMMON:      ret;
 define <2 x i16> @test_trunc_2xi64(<2 x i64> %a) #0 {
   %r = trunc <2 x i64> %a to <2 x i16>
@@ -604,7 +604,7 @@ define <2 x i16> @test_trunc_2xi64(<2 x i64> %a) #0 {
 ; COMMON:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; COMMON-DAG:  cvt.u32.u16     [[R0:%r[0-9]+]], [[A0]];
 ; COMMON-DAG:  cvt.u32.u16     [[R1:%r[0-9]+]], [[A1]];
-; COMMON-NEXT: st.param.v2.b32 [func_retval0+0], {[[R0]], [[R1]]};
+; COMMON-NEXT: st.param.v2.b32 [func_retval0], {[[R0]], [[R1]]};
 ; COMMON:      ret;
 define <2 x i32> @test_zext_2xi32(<2 x i16> %a) #0 {
   %r = zext <2 x i16> %a to <2 x i32>
@@ -616,7 +616,7 @@ define <2 x i32> @test_zext_2xi32(<2 x i16> %a) #0 {
 ; COMMON:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; COMMON-DAG:  cvt.u64.u16     [[R0:%rd[0-9]+]], [[A0]];
 ; COMMON-DAG:  cvt.u64.u16     [[R1:%rd[0-9]+]], [[A1]];
-; COMMON-NEXT: st.param.v2.b64 [func_retval0+0], {[[R0]], [[R1]]};
+; COMMON-NEXT: st.param.v2.b64 [func_retval0], {[[R0]], [[R1]]};
 ; COMMON:      ret;
 define <2 x i64> @test_zext_2xi64(<2 x i16> %a) #0 {
   %r = zext <2 x i16> %a to <2 x i64>
@@ -625,7 +625,7 @@ define <2 x i64> @test_zext_2xi64(<2 x i16> %a) #0 {
 
 ; COMMON-LABEL: test_bitcast_i32_to_2xi16(
 ; COMMON: ld.param.u32 	[[R:%r[0-9]+]], [test_bitcast_i32_to_2xi16_param_0];
-; COMMON: st.param.b32 	[func_retval0+0], [[R]];
+; COMMON: st.param.b32 	[func_retval0], [[R]];
 ; COMMON: ret;
 define <2 x i16> @test_bitcast_i32_to_2xi16(i32 %a) #0 {
   %r = bitcast i32 %a to <2 x i16>
@@ -634,7 +634,7 @@ define <2 x i16> @test_bitcast_i32_to_2xi16(i32 %a) #0 {
 
 ; COMMON-LABEL: test_bitcast_2xi16_to_i32(
 ; COMMON: ld.param.u32 	[[R:%r[0-9]+]], [test_bitcast_2xi16_to_i32_param_0];
-; COMMON: st.param.b32 	[func_retval0+0], [[R]];
+; COMMON: st.param.b32 	[func_retval0], [[R]];
 ; COMMON: ret;
 define i32 @test_bitcast_2xi16_to_i32(<2 x i16> %a) #0 {
   %r = bitcast <2 x i16> %a to i32
@@ -645,7 +645,7 @@ define i32 @test_bitcast_2xi16_to_i32(<2 x i16> %a) #0 {
 ; COMMON: ld.param.u16 	[[RS1:%rs[0-9]+]], [test_bitcast_2xi16_to_2xhalf_param_0];
 ; COMMON:	mov.u16 	[[RS2:%rs[0-9]+]], 5;
 ; COMMON:	mov.b32 	[[R:%r[0-9]+]], {[[RS1]], [[RS2]]};
-; COMMON: st.param.b32 	[func_retval0+0], [[R]];
+; COMMON: st.param.b32 	[func_retval0], [[R]];
 ; COMMON: ret;
 define <2 x half> @test_bitcast_2xi16_to_2xhalf(i16 %a) #0 {
   %ins.0 = insertelement <2 x i16> undef, i16 %a, i32 0
@@ -659,7 +659,7 @@ define <2 x half> @test_bitcast_2xi16_to_2xhalf(i16 %a) #0 {
 ; COMMON:	ld.param.u32 	[[R:%r[0-9]+]], [test_shufflevector_param_0];
 ; COMMON:	mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[R]];
 ; COMMON:	mov.b32 	[[R1:%r[0-9]+]], {[[RS1]], [[RS0]]};
-; COMMON:	st.param.b32 	[func_retval0+0], [[R1]];
+; COMMON:	st.param.b32 	[func_retval0], [[R1]];
 ; COMMON:	ret;
 define <2 x i16> @test_shufflevector(<2 x i16> %a) #0 {
   %s = shufflevector <2 x i16> %a, <2 x i16> undef, <2 x i32> <i32 1, i32 0>
@@ -671,7 +671,7 @@ define <2 x i16> @test_shufflevector(<2 x i16> %a) #0 {
 ; COMMON:	ld.param.u32 	[[A:%r[0-9]+]], [test_insertelement_param_0];
 ; COMMON:	{ .reg .b16 tmp; mov.b32 {[[R0:%rs[0-9]+]], tmp}, [[A]]; }
 ; COMMON:	mov.b32 	[[R1:%r[0-9]+]], {[[R0]], [[B]]};
-; COMMON:	st.param.b32 	[func_retval0+0], [[R1]];
+; COMMON:	st.param.b32 	[func_retval0], [[R1]];
 ; COMMON:	ret;
 define <2 x i16> @test_insertelement(<2 x i16> %a, i16 %x) #0 {
   %i = insertelement <2 x i16> %a, i16 %x, i64 1

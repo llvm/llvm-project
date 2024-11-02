@@ -880,6 +880,18 @@ static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
 static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                              MachineIRBuilder &MIRBuilder,
                              SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  const auto *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if ((Opcode == SPIRV::OpControlBarrierArriveINTEL ||
+       Opcode == SPIRV::OpControlBarrierWaitINTEL) &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_split_barrier)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_INTEL_split_barrier";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+
   if (Call->isSpirvOp())
     return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 
@@ -896,13 +908,16 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   if (MemFlags & SPIRV::CLK_IMAGE_MEM_FENCE)
     MemSemantics |= SPIRV::MemorySemantics::ImageMemory;
 
-  if (Opcode == SPIRV::OpMemoryBarrier) {
-    std::memory_order MemOrder =
-        static_cast<std::memory_order>(getIConstVal(Call->Arguments[1], MRI));
-    MemSemantics = getSPIRVMemSemantics(MemOrder) | MemSemantics;
-  } else {
+  if (Opcode == SPIRV::OpMemoryBarrier)
+    MemSemantics = getSPIRVMemSemantics(static_cast<std::memory_order>(
+                       getIConstVal(Call->Arguments[1], MRI))) |
+                   MemSemantics;
+  else if (Opcode == SPIRV::OpControlBarrierArriveINTEL)
+    MemSemantics |= SPIRV::MemorySemantics::Release;
+  else if (Opcode == SPIRV::OpControlBarrierWaitINTEL)
+    MemSemantics |= SPIRV::MemorySemantics::Acquire;
+  else
     MemSemantics |= SPIRV::MemorySemantics::SequentiallyConsistent;
-  }
 
   Register MemSemanticsReg =
       MemFlags == MemSemantics

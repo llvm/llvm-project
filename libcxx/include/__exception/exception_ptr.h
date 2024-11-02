@@ -14,7 +14,6 @@
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
-#include <cstddef>
 #include <cstdlib>
 #include <new>
 #include <typeinfo>
@@ -92,7 +91,7 @@ public:
 
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201103L
   using _Ep2 = __decay_t<_Ep>;
 

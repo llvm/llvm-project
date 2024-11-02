@@ -301,14 +301,17 @@ def CSR_ATPCS_SplitPush_SwiftError : CalleeSavedRegs<(sub CSR_ATPCS_SplitPush,
 def CSR_ATPCS_SplitPush_SwiftTail : CalleeSavedRegs<(sub CSR_ATPCS_SplitPush,
                                                      R10)>;
 
-// When enforcing an AAPCS compliant frame chain, R11 is used as the frame
-// pointer even for Thumb targets, where split pushes are necessary.
-// This AAPCS alternative makes sure the frame index slots match the push
-// order in that case.
-def CSR_AAPCS_SplitPush : CalleeSavedRegs<(add LR, R11,
-                                               R7, R6, R5, R4,
-                                               R10, R9, R8,
-                                               (sequence "D%u", 15, 8))>;
+// Sometimes we need to split the push of the callee-saved GPRs into two
+// regions, to ensure that the frame chain record is set up correctly. These
+// list the callee-saved registers in the order they end up on the stack, which
+// depends on whether the frame pointer is r7 or r11.
+def CSR_AAPCS_SplitPush_R11 : CalleeSavedRegs<(add R10, R9, R8, R7, R6, R5, R4,
+                                                   LR, R11,
+                                                   (sequence "D%u", 15, 8))>;
+def CSR_AAPCS_SplitPush_R7 : CalleeSavedRegs<(add LR, R11,
+                                                  R7, R6, R5, R4,
+                                                  R10, R9, R8,
+                                                  (sequence "D%u", 15, 8))>;
 
 // Constructors and destructors return 'this' in the ARM C++ ABI; since 'this'
 // and the pointer return value are both passed in R0 in these cases, this can

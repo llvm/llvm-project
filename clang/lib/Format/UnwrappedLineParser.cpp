@@ -1568,6 +1568,11 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     parseCaseLabel();
     return;
+  case tok::kw_goto:
+    nextToken();
+    if (FormatTok->is(tok::kw_case))
+      nextToken();
+    break;
   case tok::kw_try:
   case tok::kw___try:
     if (Style.isJavaScript() && Line->MustBeDeclaration) {
@@ -2148,7 +2153,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   if (!Style.isCSharp())
     return false;
   // See if it's a property accessor.
-  if (FormatTok->Previous->isNot(tok::identifier))
+  if (!FormatTok->Previous || FormatTok->Previous->isNot(tok::identifier))
     return false;
 
   // See if we are inside a property accessor.
@@ -2504,6 +2509,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       // Assume there are no blocks inside a braced init list apart
       // from the ones we explicitly parse out (like lambdas).
       FormatTok->setBlockKind(BK_BracedInit);
+      if (!IsAngleBracket) {
+        auto *Prev = FormatTok->Previous;
+        if (Prev && Prev->is(tok::greater))
+          Prev->setFinalizedType(TT_TemplateCloser);
+      }
       nextToken();
       parseBracedList();
       break;
@@ -3479,10 +3489,10 @@ bool UnwrappedLineParser::parseRequires() {
   case tok::r_paren:
   case tok::kw_noexcept:
   case tok::kw_const:
+  case tok::amp:
     // This is a requires clause.
     parseRequiresClause(RequiresToken);
     return true;
-  case tok::amp:
   case tok::ampamp: {
     // This can be either:
     // if (... && requires (T t) ...)
@@ -4623,9 +4633,9 @@ bool UnwrappedLineParser::isOnNewLine(const FormatToken &FormatTok) {
 // section on \p Line.
 static bool
 continuesLineCommentSection(const FormatToken &FormatTok,
-                            const UnwrappedLine &Line,
+                            const UnwrappedLine &Line, const FormatStyle &Style,
                             const llvm::Regex &CommentPragmasRegex) {
-  if (Line.Tokens.empty())
+  if (Line.Tokens.empty() || Style.ReflowComments != FormatStyle::RCS_Always)
     return false;
 
   StringRef IndentContent = FormatTok.TokenText;
@@ -4738,7 +4748,7 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
     // FIXME: Consider putting separate line comment sections as children to the
     // unwrapped line instead.
     Tok->ContinuesLineCommentSection =
-        continuesLineCommentSection(*Tok, *Line, CommentPragmasRegex);
+        continuesLineCommentSection(*Tok, *Line, Style, CommentPragmasRegex);
     if (isOnNewLine(*Tok) && JustComments && !Tok->ContinuesLineCommentSection)
       addUnwrappedLine();
     pushToken(Tok);
@@ -4811,8 +4821,8 @@ void UnwrappedLineParser::distributeComments(
     if (HasTrailAlignedWithNextToken && i == StartOfTrailAlignedWithNextToken) {
       FormatTok->ContinuesLineCommentSection = false;
     } else {
-      FormatTok->ContinuesLineCommentSection =
-          continuesLineCommentSection(*FormatTok, *Line, CommentPragmasRegex);
+      FormatTok->ContinuesLineCommentSection = continuesLineCommentSection(
+          *FormatTok, *Line, Style, CommentPragmasRegex);
     }
     if (!FormatTok->ContinuesLineCommentSection &&
         (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {

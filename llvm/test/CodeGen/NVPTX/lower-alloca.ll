@@ -26,7 +26,7 @@ define void @alloca_in_explicit_local_as() {
 ; PTX-LABEL: .visible .func alloca_in_explicit_local_as(
   %A = alloca i32, addrspace(5)
 ; CHECK: store i32 0, ptr addrspace(5) {{%.+}}
-; PTX: st.local.u32 [%SP+0], {{%r[0-9]+}}
+; PTX: st.local.u32 [%SP], {{%r[0-9]+}}
 ; LOWERALLOCAONLY: [[V1:%.*]] = addrspacecast ptr addrspace(5) %A to ptr
 ; LOWERALLOCAONLY: store i32 0, ptr [[V1]], align 4
   store i32 0, ptr addrspace(5) %A

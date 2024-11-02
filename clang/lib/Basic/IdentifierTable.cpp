@@ -406,6 +406,9 @@ ReservedLiteralSuffixIdStatus
 IdentifierInfo::isReservedLiteralSuffixId() const {
   StringRef Name = getName();
 
+  // Note: the diag::warn_deprecated_literal_operator_id diagnostic depends on
+  // this being the first check we do, so if this order changes, we have to fix
+  // that as well.
   if (Name[0] != '_')
     return ReservedLiteralSuffixIdStatus::NotStartsWithUnderscore;
 

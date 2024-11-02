@@ -153,17 +153,17 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
   set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
 
-  add_library(unwind_shared SHARED)
-  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
-  set_target_properties(unwind_shared
-    PROPERTIES
-      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
-      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-      LINKER_LANGUAGE C
-      OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
-      VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
-      SOVERSION   "1"
-  )
+add_library(unwind_shared SHARED)
+target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
+set_target_properties(unwind_shared
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+    LINKER_LANGUAGE C
+    OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
+    VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
+    SOVERSION   "1"
+)
 
 if (LIBUNWIND_ENABLE_SHARED)
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_shared")
@@ -200,15 +200,15 @@ if(LIBUNWIND_HIDE_SYMBOLS)
   target_compile_definitions(unwind_static_objects PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
-  add_library(unwind_static STATIC)
-  target_link_libraries(unwind_static PUBLIC unwind_static_objects)
-  set_target_properties(unwind_static
-    PROPERTIES
-      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"
-      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-      LINKER_LANGUAGE C
-      OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
-  )
+add_library(unwind_static STATIC)
+target_link_libraries(unwind_static PUBLIC unwind_static_objects)
+set_target_properties(unwind_static
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+    LINKER_LANGUAGE C
+    OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
+)
 
 if (LIBUNWIND_ENABLE_STATIC)
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")

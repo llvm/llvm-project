@@ -672,7 +672,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
 #  define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS __attribute__((__no_sanitize__("address")))
 // This macro disables AddressSanitizer (ASan) instrumentation for a specific function,
 // allowing memory accesses that would normally trigger ASan errors to proceed without crashing.
@@ -785,7 +785,7 @@ public:
   //
   // This string implementation doesn't contain any references into itself. It only contains a bit that says whether
   // it is in small or large string mode, so the entire structure is trivially relocatable if its members are.
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
   // When compiling with AddressSanitizer (ASan), basic_string cannot be trivially
   // relocatable. Because the object's memory might be poisoned when its content
   // is kept inside objects memory (short string optimization), instead of in allocated
@@ -799,7 +799,8 @@ public:
       basic_string,
       void>;
 #endif
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
     if (__libcpp_is_constant_evaluated())
       return __ptr;
@@ -2018,7 +2019,7 @@ private:
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
 #  if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
     if (!__is_long())
@@ -2030,14 +2031,14 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void)__current_size;
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
 #endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
 #endif
@@ -2045,7 +2046,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
     (void)__n;
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
 #endif
@@ -2053,7 +2054,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
     (void)__old_size;
-#if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
+#if _LIBCPP_HAS_ASAN && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated())
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
 #endif
@@ -2416,19 +2417,19 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_sentinel(_InputIterator _
   __rep_ = __rep();
   __annotate_new(0);
 
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     for (; __first != __last; ++__first)
       push_back(*__first);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __annotate_delete();
     if (__is_long())
       __alloc_traits::deallocate(__alloc_, __get_long_pointer(), __get_long_cap());
     throw;
   }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2463,18 +2464,18 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __fir
     __set_long_size(__sz);
   }
 
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__p));
     traits_type::assign(*__end, value_type());
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     if (__is_long())
       __alloc_traits::deallocate(__alloc_, __get_long_pointer(), __get_long_cap());
     throw;
   }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   __annotate_new(__sz);
 }
 
@@ -3376,9 +3377,9 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
       // Shrink
       // - called from shrink_to_fit should not throw.
       // - called from reserve may throw but is not required to.
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
       try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
         auto __allocation = std::__allocate_at_least(__alloc_, __target_capacity + 1);
 
         // The Standard mandates shrink_to_fit() does not increase the capacity.
@@ -3391,11 +3392,11 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
         }
         __new_data        = __allocation.ptr;
         __target_capacity = __allocation.count - 1;
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
       } catch (...) {
         return;
       }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     }
     __begin_lifetime(__new_data, __target_capacity + 1);
     __now_long = true;
@@ -4234,7 +4235,7 @@ struct __string_hash : public __unary_function<basic_string<_CharT, char_traits<
 template <class _Allocator>
 struct hash<basic_string<char, char_traits<char>, _Allocator> > : __string_hash<char, _Allocator> {};
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 template <class _Allocator>
 struct hash<basic_string<char8_t, char_traits<char8_t>, _Allocator> > : __string_hash<char8_t, _Allocator> {};
 #endif
@@ -4308,7 +4309,7 @@ operator""s(const wchar_t* __str, size_t __len) {
 }
 #  endif
 
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
 inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string<char8_t> operator""s(const char8_t* __str, size_t __len) {
   return basic_string<char8_t>(__str, __len);
 }

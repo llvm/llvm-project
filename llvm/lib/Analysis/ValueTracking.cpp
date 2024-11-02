@@ -4241,6 +4241,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_exp2f:
   case LibFunc_exp2l:
     return Intrinsic::exp2;
+  case LibFunc_exp10:
+  case LibFunc_exp10f:
+  case LibFunc_exp10l:
+    return Intrinsic::exp10;
   case LibFunc_log:
   case LibFunc_logf:
   case LibFunc_logl:
@@ -5999,14 +6003,32 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (IncValue == P)
           continue;
 
+        Instruction *CxtI = P->getIncomingBlock(U)->getTerminator();
+
+        // If the Use is a select of this phi, use the fp class of the other
+        // operand to break the recursion. Same around 2-operand phi nodes
+        Value *V;
+        if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
+            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
+          IncValue = V;
+        } else if (auto *IncPhi = dyn_cast<PHINode>(IncValue);
+                   IncPhi && IncPhi->getNumIncomingValues() == 2) {
+          for (int Idx = 0; Idx < 2; ++Idx) {
+            if (IncPhi->getIncomingValue(Idx) == P) {
+              IncValue = IncPhi->getIncomingValue(1 - Idx);
+              CxtI = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
+              break;
+            }
+          }
+        }
+
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want
         // to waste time spinning around in loops. We need at least depth 2 to
         // detect known sign bits.
         computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
                             PhiRecursionLimit,
-                            Q.getWithoutCondContext().getWithInstruction(
-                                P->getIncomingBlock(U)->getTerminator()));
+                            Q.getWithoutCondContext().getWithInstruction(CxtI));
 
         if (First) {
           Known = KnownSrc;
@@ -6945,6 +6967,14 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
 bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
   return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
       V, /* AllowLifetime */ true, /* AllowDroppable */ true);
+}
+
+bool llvm::isNotCrossLaneOperation(const Instruction *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return isTriviallyVectorizable(II->getIntrinsicID());
+  auto *Shuffle = dyn_cast<ShuffleVectorInst>(I);
+  return (!Shuffle || Shuffle->isSelect()) &&
+         !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
@@ -8240,9 +8270,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   case CmpInst::FCMP_OLE:
   case CmpInst::FCMP_ULT:
   case CmpInst::FCMP_ULE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMin(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMin(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+    if (match(FalseVal, m_OrdOrUnordFMin(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 < *FC2)
       return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
     break;
@@ -8250,9 +8278,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   case CmpInst::FCMP_OGE:
   case CmpInst::FCMP_UGT:
   case CmpInst::FCMP_UGE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMax(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMax(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+    if (match(FalseVal, m_OrdOrUnordFMax(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 > *FC2)
       return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
     break;
@@ -8518,12 +8544,21 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
       !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
     return false;
 
+  // They must both have samesign flag or not.
+  if (cast<ICmpInst>(X)->hasSameSign() != cast<ICmpInst>(Y)->hasSameSign())
+    return false;
+
   if (B == C)
     return Pred1 == ICmpInst::getInversePredicate(Pred2);
 
   // Try to infer the relationship from constant ranges.
   const APInt *RHSC1, *RHSC2;
   if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
+    return false;
+
+  // Sign bits of two RHSCs should match.
+  if (cast<ICmpInst>(X)->hasSameSign() &&
+      RHSC1->isNonNegative() != RHSC2->isNonNegative())
     return false;
 
   const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);

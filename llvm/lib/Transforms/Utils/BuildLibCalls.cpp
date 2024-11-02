@@ -1179,6 +1179,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_erf:
   case LibFunc_erff:
   case LibFunc_erfl:
+  case LibFunc_tgamma:
+  case LibFunc_tgammaf:
+  case LibFunc_tgammal:
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -1212,6 +1215,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fmod:
   case LibFunc_fmodf:
   case LibFunc_fmodl:
+  case LibFunc_hypot:
+  case LibFunc_hypotf:
+  case LibFunc_hypotl:
   case LibFunc_isascii:
   case LibFunc_isdigit:
   case LibFunc_labs:
@@ -1229,6 +1235,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_logb:
   case LibFunc_logbf:
   case LibFunc_logbl:
+  case LibFunc_ilogb:
+  case LibFunc_ilogbf:
+  case LibFunc_ilogbl:
   case LibFunc_logf:
   case LibFunc_logl:
   case LibFunc_nearbyint:
@@ -1246,6 +1255,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_round:
   case LibFunc_roundf:
   case LibFunc_roundl:
+  case LibFunc_scalbln:
+  case LibFunc_scalblnf:
+  case LibFunc_scalblnl:
+  case LibFunc_scalbn:
+  case LibFunc_scalbnf:
+  case LibFunc_scalbnl:
   case LibFunc_sin:
   case LibFunc_sincospif_stret:
   case LibFunc_sinf:

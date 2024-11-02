@@ -925,11 +925,6 @@ class Sema;
 
     bool TookAddressOfOverload : 1;
 
-    /// Have we matched any packs on the parameter side, versus any non-packs on
-    /// the argument side, in a context where the opposite matching is also
-    /// allowed?
-    bool HasMatchedPackOnParmToNonPackOnArg : 1;
-
     /// True if the candidate was found using ADL.
     CallExpr::ADLCallKind IsADLCandidate : 1;
 
@@ -1004,9 +999,8 @@ class Sema;
     friend class OverloadCandidateSet;
     OverloadCandidate()
         : IsSurrogate(false), IgnoreObjectArgument(false),
-          TookAddressOfOverload(false),
-          HasMatchedPackOnParmToNonPackOnArg(false),
-          IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
+          TookAddressOfOverload(false), IsADLCandidate(CallExpr::NotADL),
+          RewriteKind(CRK_None) {}
   };
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
@@ -1212,9 +1206,8 @@ class Sema;
 
     /// Add a new candidate with NumConversions conversion sequence slots
     /// to the overload set.
-    OverloadCandidate &
-    addCandidate(unsigned NumConversions = 0,
-                 ConversionSequenceList Conversions = std::nullopt) {
+    OverloadCandidate &addCandidate(unsigned NumConversions = 0,
+                                    ConversionSequenceList Conversions = {}) {
       assert((Conversions.empty() || Conversions.size() == NumConversions) &&
              "preallocated conversion sequence has wrong length");
 

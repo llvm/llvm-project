@@ -733,7 +733,8 @@ def HasStdExtZfhOrZvfh
 
 def FeatureStdExtZvkb
     : RISCVExtension<"zvkb", 1, 0,
-                     "'Zvkb' (Vector Bit-manipulation used in Cryptography)">,
+                     "'Zvkb' (Vector Bit-manipulation used in Cryptography)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 52>;
 def HasStdExtZvkb : Predicate<"Subtarget->hasStdExtZvkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvkb),
@@ -750,7 +751,8 @@ def HasStdExtZvbb : Predicate<"Subtarget->hasStdExtZvbb()">,
 
 def FeatureStdExtZvbc
     : RISCVExtension<"zvbc", 1, 0,
-                     "'Zvbc' (Vector Carryless Multiplication)">,
+                     "'Zvbc' (Vector Carryless Multiplication)",
+                     [FeatureStdExtZve64x]>,
       RISCVExtensionBitmask<0, 49>;
 def HasStdExtZvbc : Predicate<"Subtarget->hasStdExtZvbc()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvbc),
@@ -758,7 +760,8 @@ def HasStdExtZvbc : Predicate<"Subtarget->hasStdExtZvbc()">,
 
 def FeatureStdExtZvbc32e
     : RISCVExperimentalExtension<"zvbc32e", 0, 7,
-                                 "'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)">;
+                                 "'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)",
+                                 [FeatureStdExtZve32x]>;
 
 def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget->hasStdExtZvbc32e()">,
                              AssemblerPredicate<(any_of FeatureStdExtZvbc, FeatureStdExtZvbc32e),
@@ -766,7 +769,8 @@ def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget-
 
 def FeatureStdExtZvkg
     : RISCVExtension<"zvkg", 1, 0,
-                     "'Zvkg' (Vector GCM instructions for Cryptography)">,
+                     "'Zvkg' (Vector GCM instructions for Cryptography)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 53>;
 def HasStdExtZvkg : Predicate<"Subtarget->hasStdExtZvkg()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvkg),
@@ -782,7 +786,8 @@ def HasStdExtZvkgs : Predicate<"Subtarget->hasStdExtZvkgs()">,
 
 def FeatureStdExtZvkned
     : RISCVExtension<"zvkned", 1, 0,
-                     "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">,
+                     "'Zvkned' (Vector AES Encryption & Decryption (Single Round))",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 54>;
 def HasStdExtZvkned : Predicate<"Subtarget->hasStdExtZvkned()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvkned),
@@ -790,7 +795,8 @@ def HasStdExtZvkned : Predicate<"Subtarget->hasStdExtZvkned()">,
 
 def FeatureStdExtZvknha
     : RISCVExtension<"zvknha", 1, 0,
-                     "'Zvknha' (Vector SHA-2 (SHA-256 only))">,
+                     "'Zvknha' (Vector SHA-2 (SHA-256 only))",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 55>;
 def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvknha),
@@ -798,7 +804,8 @@ def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
 
 def FeatureStdExtZvknhb
     : RISCVExtension<"zvknhb", 1, 0,
-                     "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))">,
+                     "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))",
+                     [FeatureStdExtZve64x]>,
       RISCVExtensionBitmask<0, 56>;
 def HasStdExtZvknhb : Predicate<"Subtarget->hasStdExtZvknhb()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvknhb),
@@ -810,7 +817,8 @@ def HasStdExtZvknhaOrZvknhb : Predicate<"Subtarget->hasStdExtZvknha() || Subtarg
 
 def FeatureStdExtZvksed
     : RISCVExtension<"zvksed", 1, 0,
-                     "'Zvksed' (SM4 Block Cipher Instructions)">,
+                     "'Zvksed' (SM4 Block Cipher Instructions)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 57>;
 def HasStdExtZvksed : Predicate<"Subtarget->hasStdExtZvksed()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvksed),
@@ -818,7 +826,8 @@ def HasStdExtZvksed : Predicate<"Subtarget->hasStdExtZvksed()">,
 
 def FeatureStdExtZvksh
     : RISCVExtension<"zvksh", 1, 0,
-                     "'Zvksh' (SM3 Hash Function Instructions)">,
+                     "'Zvksh' (SM3 Hash Function Instructions)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 58>;
 def HasStdExtZvksh : Predicate<"Subtarget->hasStdExtZvksh()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvksh),
@@ -931,6 +940,13 @@ def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
 
+def FeatureStdExtSmrnmi
+    : RISCVExtension<"smrnmi", 1, 0,
+                     "'Smrnmi' (Resumable Non-Maskable Interrupts)">;
+def HasStdExtSmrnmi : Predicate<"Subtarget->hasStdExtSmrnmi()">,
+                       AssemblerPredicate<(all_of FeatureStdExtSmrnmi),
+                           "'Smrnmi' (Resumable Non-Maskable Interrupts)">; 
+
 def FeatureStdExtSmcdeleg
     : RISCVExtension<"smcdeleg", 1, 0,
                      "'Smcdeleg' (Counter Delegation Machine Level)">;
@@ -1022,39 +1038,50 @@ def FeatureStdExtSvpbmt
     : RISCVExtension<"svpbmt", 1, 0,
                      "'Svpbmt' (Page-Based Memory Types)">;
 
+def FeatureStdExtSvvptc
+    : RISCVExtension<"svvptc", 1, 0,
+                     "'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)">;
+
+def FeatureStdExtSha
+    : RISCVExtension<"sha", 1, 0,
+                     "'Sha' (Augmented Hypervisor)",
+                     [FeatureStdExtH, FeatureStdExtSsstateen, FeatureStdExtShcounterenw,
+                      FeatureStdExtShvstvala, FeatureStdExtShtvala, FeatureStdExtShvstvecd,
+                      FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
+
 // Pointer Masking extensions
 
 // A supervisor-level extension that provides pointer masking for the next lower
 // privilege mode (U-mode), and for VS- and VU-modes if the H extension is
 // present.
 def FeatureStdExtSsnpm
-    : RISCVExperimentalExtension<"ssnpm", 1, 0,
-                                 "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"ssnpm", 1, 0,
+                     "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for the next lower
 // privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
 def FeatureStdExtSmnpm
-    : RISCVExperimentalExtension<"smnpm", 1, 0,
-                                 "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"smnpm", 1, 0,
+                     "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for M-mode.
 def FeatureStdExtSmmpm
-    : RISCVExperimentalExtension<"smmpm", 1, 0,
-                                 "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
+    : RISCVExtension<"smmpm", 1, 0,
+                     "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in supervisor mode, with some facility provided in the supervisor execution
 // environment to control pointer masking.
 def FeatureStdExtSspm
-    : RISCVExperimentalExtension<"sspm", 1, 0,
-                                 "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
+    : RISCVExtension<"sspm", 1, 0,
+                     "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in user mode, with some facility provided in the application execution
 // environment to control pointer masking.
 def FeatureStdExtSupm
-    : RISCVExperimentalExtension<"supm", 1, 0,
-                                 "'Supm' (Indicates User-mode Pointer Masking)">;
+    : RISCVExtension<"supm", 1, 0,
+                     "'Supm' (Indicates User-mode Pointer Masking)">;
 
 def FeatureStdExtSmctr
     : RISCVExperimentalExtension<"smctr", 1, 0,

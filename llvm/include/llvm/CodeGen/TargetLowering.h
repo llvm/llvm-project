@@ -3223,6 +3223,9 @@ public:
   /// not legal, but should return true if those types will eventually legalize
   /// to types that support FMAs. After legalization, it will only be called on
   /// types that support FMAs (via Legal or Custom actions)
+  ///
+  /// Targets that care about soft float support should return false when soft
+  /// float code is being generated (i.e. use-soft-float).
   virtual bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                           EVT) const {
     return false;
@@ -5567,9 +5570,7 @@ public:
 
   /// If this function returns true, SelectionDAGBuilder emits a
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
-  virtual bool useLoadStackGuardNode() const {
-    return false;
-  }
+  virtual bool useLoadStackGuardNode(const Module &M) const { return false; }
 
   virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
                                       const SDLoc &DL) const {

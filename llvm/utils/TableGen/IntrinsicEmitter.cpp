@@ -29,7 +29,6 @@
 #include <array>
 #include <cassert>
 #include <cctype>
-#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -155,7 +154,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
 
   OS << "// Enum values for intrinsics.\n";
   bool First = true;
-  for (const auto &Int : ArrayRef(&Ints[Set->Offset], Set->Count)) {
+  for (const auto &Int : Ints[*Set]) {
     OS << "    " << Int.EnumName;
 
     // Assign a value to the first intrinsic in this target set so that all

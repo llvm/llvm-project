@@ -19,8 +19,8 @@ define void @extracted_values(ptr %ret_struct, ptr addrspace(3) %arg0, ptr addrs
 ; CHECK-NEXT:    v_sub_f16_sdwa v2, v5, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; CHECK-NEXT:    v_add_f16_e32 v4, v6, v7
 ; CHECK-NEXT:    v_add_f16_e32 v2, v3, v2
-; CHECK-NEXT:    flat_store_short v[0:1], v4
-; CHECK-NEXT:    flat_store_short v[0:1], v2 offset:2
+; CHECK-NEXT:    v_pack_b32_f16 v2, v4, v2
+; CHECK-NEXT:    flat_store_dword v[0:1], v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:

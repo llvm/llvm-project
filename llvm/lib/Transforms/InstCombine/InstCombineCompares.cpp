@@ -870,8 +870,7 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
       if (ICmp && ICmp->isEquality() && getUnderlyingObject(*U) == Alloca) {
         // Collect equality icmps of the alloca, and don't treat them as
         // captures.
-        auto Res = ICmps.insert({ICmp, 0});
-        Res.first->second |= 1u << U->getOperandNo();
+        ICmps[ICmp] |= 1u << U->getOperandNo();
         return false;
       }
 
@@ -1125,7 +1124,7 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   // use the sadd_with_overflow intrinsic to efficiently compute both the
   // result and the overflow bit.
   Type *NewType = IntegerType::get(OrigAdd->getContext(), NewWidth);
-  Function *F = Intrinsic::getDeclaration(
+  Function *F = Intrinsic::getOrInsertDeclaration(
       I.getModule(), Intrinsic::sadd_with_overflow, NewType);
 
   InstCombiner::BuilderTy &Builder = IC.Builder;
@@ -1738,7 +1737,7 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
 
     // Compute X & (C2 << Y).
     Value *NewAnd = Builder.CreateAnd(Shift->getOperand(0), NewShift);
-    return replaceOperand(Cmp, 0, NewAnd);
+    return new ICmpInst(Cmp.getPredicate(), NewAnd, Cmp.getOperand(1));
   }
 
   return nullptr;
@@ -1844,7 +1843,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                /*HasNUW=*/true),
                              One, Or->getName());
         Value *NewAnd = Builder.CreateAnd(A, NewOr, And->getName());
-        return replaceOperand(Cmp, 0, NewAnd);
+        return new ICmpInst(Cmp.getPredicate(), NewAnd, Cmp.getOperand(1));
       }
     }
   }
@@ -1975,6 +1974,22 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
                                   m_Value(Y))))) {
     Value *LShr = Builder.CreateLShr(Y, X);
     return new ICmpInst(Pred, LShr, Constant::getNullValue(LShr->getType()));
+  }
+
+  // (icmp eq/ne (and (add A, Addend), Msk), C)
+  //    -> (icmp eq/ne (and A, Msk), (and (sub C, Addend), Msk))
+  {
+    Value *A;
+    const APInt *Addend, *Msk;
+    if (match(And, m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
+                         m_APInt(Msk))) &&
+        Msk->isMask() && C.ule(*Msk)) {
+      APInt NewComperand = (C - *Addend) & *Msk;
+      Value* MaskA = Builder.CreateAnd(A, ConstantInt::get(A->getType(), *Msk));
+      return new ICmpInst(
+          Pred, MaskA,
+          Constant::getIntegerValue(MaskA->getType(), NewComperand));
+    }
   }
 
   return nullptr;
@@ -4790,12 +4805,10 @@ Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
   if (MulHadOtherUses)
     Builder.SetInsertPoint(Mul);
 
-  Function *F = Intrinsic::getDeclaration(I.getModule(),
-                                          Div->getOpcode() == Instruction::UDiv
-                                              ? Intrinsic::umul_with_overflow
-                                              : Intrinsic::smul_with_overflow,
-                                          X->getType());
-  CallInst *Call = Builder.CreateCall(F, {X, Y}, "mul");
+  CallInst *Call = Builder.CreateIntrinsic(
+      Div->getOpcode() == Instruction::UDiv ? Intrinsic::umul_with_overflow
+                                            : Intrinsic::smul_with_overflow,
+      X->getType(), {X, Y}, /*FMFSource=*/nullptr, "mul");
 
   // If the multiplication was used elsewhere, to ensure that we don't leave
   // "duplicate" instructions, replace uses of that original multiplication
@@ -5014,6 +5027,18 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       Constant *C2 = ConstantExpr::getNot(C);
       return new ICmpInst(Pred, Op0, Builder.CreateSub(C2, X));
     }
+  }
+
+  // (icmp eq/ne (X, -P2), INT_MIN)
+  //	-> (icmp slt/sge X, INT_MIN + P2)
+  if (ICmpInst::isEquality(Pred) && BO0 &&
+      match(I.getOperand(1), m_SignMask()) &&
+      match(BO0, m_And(m_Value(), m_NegatedPower2OrZero()))) {
+    // Will Constant fold.
+    Value *NewC = Builder.CreateSub(I.getOperand(1), BO0->getOperand(1));
+    return new ICmpInst(Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_SLT
+                                                  : ICmpInst::ICMP_SGE,
+                        BO0->getOperand(0), NewC);
   }
 
   {
@@ -6334,9 +6359,9 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
     MulA = Builder.CreateZExt(A, MulType);
   if (WidthB < MulWidth)
     MulB = Builder.CreateZExt(B, MulType);
-  Function *F = Intrinsic::getDeclaration(
-      I.getModule(), Intrinsic::umul_with_overflow, MulType);
-  CallInst *Call = Builder.CreateCall(F, {MulA, MulB}, "umul");
+  CallInst *Call =
+      Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, MulType,
+                              {MulA, MulB}, /*FMFSource=*/nullptr, "umul");
   IC.addToWorklist(MulInstr);
 
   // If there are uses of mul result other than the comparison, we know that
@@ -6771,11 +6796,15 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   }
 
   // Turn a signed comparison into an unsigned one if both operands are known to
-  // have the same sign.
-  if (I.isSigned() &&
+  // have the same sign. Set samesign if possible (except for equality
+  // predicates).
+  if ((I.isSigned() || (I.isUnsigned() && !I.hasSameSign())) &&
       ((Op0Known.Zero.isNegative() && Op1Known.Zero.isNegative()) ||
-       (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
-    return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
+       (Op0Known.One.isNegative() && Op1Known.One.isNegative()))) {
+    I.setPredicate(I.getUnsignedPredicate());
+    I.setSameSign();
+    return &I;
+  }
 
   return nullptr;
 }
@@ -7121,8 +7150,8 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
     if (auto *I = dyn_cast<Instruction>(V))
       I->copyIRFlags(&Cmp);
     Module *M = Cmp.getModule();
-    Function *F =
-        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 

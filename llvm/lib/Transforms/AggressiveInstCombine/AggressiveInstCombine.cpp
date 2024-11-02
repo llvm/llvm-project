@@ -172,8 +172,8 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   //   %cond = phi i32 [ %fsh, %FunnelBB ], [ %ShVal0, %GuardBB ]
   // -->
   // llvm.fshl.i32(i32 %ShVal0, i32 %ShVal1, i32 %ShAmt)
-  Function *F = Intrinsic::getDeclaration(Phi.getModule(), IID, Phi.getType());
-  Phi.replaceAllUsesWith(Builder.CreateCall(F, {ShVal0, ShVal1, ShAmt}));
+  Phi.replaceAllUsesWith(
+      Builder.CreateIntrinsic(IID, Phi.getType(), {ShVal0, ShVal1, ShAmt}));
   return true;
 }
 
@@ -331,9 +331,8 @@ static bool tryToRecognizePopCount(Instruction &I) {
                                 m_SpecificInt(Mask55)))) {
           LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
           IRBuilder<> Builder(&I);
-          Function *Func = Intrinsic::getDeclaration(
-              I.getModule(), Intrinsic::ctpop, I.getType());
-          I.replaceAllUsesWith(Builder.CreateCall(Func, {Root}));
+          I.replaceAllUsesWith(
+              Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
           ++NumPopCountRecognized;
           return true;
         }
@@ -398,9 +397,8 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
     return false;
 
   IRBuilder<> Builder(&I);
-  Function *Fn = Intrinsic::getDeclaration(I.getModule(), Intrinsic::fptosi_sat,
-                                           {SatTy, FpTy});
-  Value *Sat = Builder.CreateCall(Fn, In);
+  Value *Sat =
+      Builder.CreateIntrinsic(Intrinsic::fptosi_sat, {SatTy, FpTy}, In);
   I.replaceAllUsesWith(Builder.CreateSExt(Sat, IntTy));
   return true;
 }
@@ -411,9 +409,6 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
 static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
                      TargetLibraryInfo &TLI, AssumptionCache &AC,
                      DominatorTree &DT) {
-
-  Module *M = Call->getModule();
-
   // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
   // (because NNAN or the operand arg must not be less than -0.0) and (2) we
   // would not end up lowering to a libcall anyway (which could change the value
@@ -431,8 +426,8 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
 
-    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
-    Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
+    Value *NewSqrt = Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg,
+                                             /*FMFSource=*/nullptr, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not

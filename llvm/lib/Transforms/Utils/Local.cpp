@@ -3508,6 +3508,17 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   else if (!isa<LoadInst>(I))
     ReplInst->andIRFlags(I);
 
+  // Handle attributes.
+  if (auto *CB1 = dyn_cast<CallBase>(ReplInst)) {
+    if (auto *CB2 = dyn_cast<CallBase>(I)) {
+      bool Success = CB1->tryIntersectAttributes(CB2);
+      assert(Success && "We should not be trying to sink callbases "
+                        "with non-intersectable attributes");
+      // For NDEBUG Compile.
+      (void)Success;
+    }
+  }
+
   // FIXME: If both the original and replacement value are part of the
   // same control-flow region (meaning that the execution of one
   // guarantees the execution of the other), then we can combine the
@@ -3840,11 +3851,11 @@ static const std::optional<BitPart> &
 collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
                 std::map<Value *, std::optional<BitPart>> &BPS, int Depth,
                 bool &FoundRoot) {
-  auto I = BPS.find(V);
-  if (I != BPS.end())
+  auto [I, Inserted] = BPS.try_emplace(V);
+  if (!Inserted)
     return I->second;
 
-  auto &Result = BPS[V] = std::nullopt;
+  auto &Result = I->second;
   auto BitWidth = V->getType()->getScalarSizeInBits();
 
   // Can't do integer/elements > 128 bits.
@@ -4141,7 +4152,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   else
     return false;
 
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(I->getModule(), Intrin, DemandedTy);
   Value *Provider = Res->Provider;
 
   // We may need to truncate the provider.

@@ -215,7 +215,7 @@ template <class charT> class messages_byname;
 #  include <streambuf>
 #  include <version>
 
-// TODO: Fix __bsd_locale_defaults.h
+// TODO: Properly qualify calls now that __bsd_locale_defaults.h defines functions instead of macros
 // NOLINTBEGIN(libcpp-robust-against-adl)
 
 #  if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
@@ -223,17 +223,11 @@ template <class charT> class messages_byname;
 #    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
 #      define _LIBCPP_HAS_CATOPEN 1
 #      include <nl_types.h>
+#    else
+#      define _LIBCPP_HAS_CATOPEN 0
 #    endif
-#  endif
-
-#  ifdef _LIBCPP_LOCALE__L_EXTENSIONS
-#    include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
 #  else
-#    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
-#  endif
-
-#  if defined(__APPLE__) || defined(__FreeBSD__)
-#    include <xlocale.h>
+#    define _LIBCPP_HAS_CATOPEN 0
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -3074,7 +3068,7 @@ locale::id messages<_CharT>::id;
 
 template <class _CharT>
 typename messages<_CharT>::catalog messages<_CharT>::do_open(const basic_string<char>& __nm, const locale&) const {
-#  ifdef _LIBCPP_HAS_CATOPEN
+#  if _LIBCPP_HAS_CATOPEN
   return (catalog)catopen(__nm.c_str(), NL_CAT_LOCALE);
 #  else  // !_LIBCPP_HAS_CATOPEN
   (void)__nm;
@@ -3085,7 +3079,7 @@ typename messages<_CharT>::catalog messages<_CharT>::do_open(const basic_string<
 template <class _CharT>
 typename messages<_CharT>::string_type
 messages<_CharT>::do_get(catalog __c, int __set, int __msgid, const string_type& __dflt) const {
-#  ifdef _LIBCPP_HAS_CATOPEN
+#  if _LIBCPP_HAS_CATOPEN
   string __ndflt;
   __narrow_to_utf8<sizeof(char_type) * __CHAR_BIT__>()(
       std::back_inserter(__ndflt), __dflt.c_str(), __dflt.c_str() + __dflt.size());
@@ -3105,7 +3099,7 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid, const string_type&
 
 template <class _CharT>
 void messages<_CharT>::do_close(catalog __c) const {
-#  ifdef _LIBCPP_HAS_CATOPEN
+#  if _LIBCPP_HAS_CATOPEN
   catclose((nl_catd)__c);
 #  else  // !_LIBCPP_HAS_CATOPEN
   (void)__c;

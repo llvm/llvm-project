@@ -35,7 +35,7 @@ using __make_32_64_or_128_bit_t =
     __copy_unsigned_t<_Tp,
         __conditional_t<sizeof(_Tp) <= sizeof(int32_t),    int32_t,
         __conditional_t<sizeof(_Tp) <= sizeof(int64_t),    int64_t,
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
         __conditional_t<sizeof(_Tp) <= sizeof(__int128_t), __int128_t,
         /* else */                                         void>
 #else

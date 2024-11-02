@@ -64,6 +64,29 @@ static cl::opt<bool> UseShortPointersOpt(
         "Use 32-bit pointers for accessing const/local/shared address spaces."),
     cl::init(false), cl::Hidden);
 
+// byval arguments in NVPTX are special. We're only allowed to read from them
+// using a special instruction, and if we ever need to write to them or take an
+// address, we must make a local copy and use it, instead.
+//
+// The problem is that local copies are very expensive, and we create them very
+// late in the compilation pipeline, so LLVM does not have much of a chance to
+// eliminate them, if they turn out to be unnecessary.
+//
+// One way around that is to create such copies early on, and let them percolate
+// through the optimizations. The copying itself will never trigger creation of
+// another copy later on, as the reads are allowed. If LLVM can eliminate it,
+// it's a win. It the full optimization pipeline can't remove the copy, that's
+// as good as it gets in terms of the effort we could've done, and it's
+// certainly a much better effort than what we do now.
+//
+// This early injection of the copies has potential to create undesireable
+// side-effects, so it's disabled by default, for now, until it sees more
+// testing.
+static cl::opt<bool> EarlyByValArgsCopy(
+    "nvptx-early-byval-copy",
+    cl::desc("Create a copy of byval function arguments early."),
+    cl::init(false), cl::Hidden);
+
 namespace llvm {
 
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
@@ -236,6 +259,8 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // Note: NVVMIntrRangePass was causing numerical discrepancies at one
         // point, if issues crop up, consider disabling.
         FPM.addPass(NVVMIntrRangePass());
+        if (EarlyByValArgsCopy)
+          FPM.addPass(NVPTXCopyByValArgsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 }
@@ -307,7 +332,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&PrologEpilogCodeInserterID);
   disablePass(&MachineLateInstrsCleanupID);
   disablePass(&MachineCopyPropagationID);
-  disablePass(&TailDuplicateID);
+  disablePass(&TailDuplicateLegacyID);
   disablePass(&StackMapLivenessID);
   disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);
@@ -367,9 +392,13 @@ void NVPTXPassConfig::addIRPasses() {
     addPass(createSROAPass());
   }
 
-  const auto &Options = getNVPTXTargetMachine().Options;
-  addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
-                                          Options.NoTrapAfterNoreturn));
+  if (ST.hasPTXASUnreachableBug()) {
+    // Run LowerUnreachable to WAR a ptxas bug. See the commit description of
+    // 1ee4d880e8760256c606fe55b7af85a4f70d006d for more details.
+    const auto &Options = getNVPTXTargetMachine().Options;
+    addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
+                                            Options.NoTrapAfterNoreturn));
+  }
 }
 
 bool NVPTXPassConfig::addInstSelector() {
@@ -432,16 +461,16 @@ void NVPTXPassConfig::addOptimizedRegAlloc() {
 
 void NVPTXPassConfig::addMachineSSAOptimization() {
   // Pre-ra tail duplication.
-  if (addPass(&EarlyTailDuplicateID))
+  if (addPass(&EarlyTailDuplicateLegacyID))
     printAndVerify("After Pre-RegAlloc TailDuplicate");
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more
   // instructions dead.
-  addPass(&OptimizePHIsID);
+  addPass(&OptimizePHIsLegacyID);
 
   // This pass merges large allocas. StackSlotColoring is a different pass
   // which merges spill slots.
-  addPass(&StackColoringID);
+  addPass(&StackColoringLegacyID);
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.

@@ -29,7 +29,7 @@ static std::string getPackageFullName(const Record *R, StringRef Sep = ".");
 static std::string getParentPackageFullName(const Record *R,
                                             StringRef Sep = ".") {
   std::string name;
-  if (DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
+  if (const DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
     name = getPackageFullName(DI->getDef(), Sep);
   return name;
 }
@@ -53,7 +53,7 @@ static std::string getCheckerFullName(const Record *R, StringRef Sep = ".") {
 }
 
 static std::string getStringValue(const Record &R, StringRef field) {
-  if (StringInit *SI = dyn_cast<StringInit>(R.getValueInit(field)))
+  if (const StringInit *SI = dyn_cast<StringInit>(R.getValueInit(field)))
     return std::string(SI->getValue());
   return std::string();
 }
@@ -94,7 +94,7 @@ static std::string getCheckerDocs(const Record &R) {
 /// the class itself has to be modified for adding a new option type in
 /// CheckerBase.td.
 static std::string getCheckerOptionType(const Record &R) {
-  if (BitsInit *BI = R.getValueAsBitsInit("Type")) {
+  if (const BitsInit *BI = R.getValueAsBitsInit("Type")) {
     switch(getValueFromBitsInit(BI, R)) {
     case 0:
       return "int";
@@ -111,7 +111,7 @@ static std::string getCheckerOptionType(const Record &R) {
 }
 
 static std::string getDevelopmentStage(const Record &R) {
-  if (BitsInit *BI = R.getValueAsBitsInit("DevelopmentStage")) {
+  if (const BitsInit *BI = R.getValueAsBitsInit("DevelopmentStage")) {
     switch(getValueFromBitsInit(BI, R)) {
     case 0:
       return "alpha";
@@ -131,7 +131,7 @@ static bool isHidden(const Record *R) {
     return true;
 
   // Not declared as hidden, check the parent package if it is hidden.
-  if (DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
+  if (const DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
     return isHidden(DI->getDef());
 
   return false;

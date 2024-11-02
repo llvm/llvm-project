@@ -2856,6 +2856,13 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       return false;
   }
 
+  // The stack frame of the caller cannot be replaced by the tail-callee one's
+  // if the function is required to preserve all the registers. Conservatively
+  // prevent tail optimization even if hypothetically all the registers are used
+  // for passing formal parameters or returning values.
+  if (CallerF.hasFnAttribute("no_caller_saved_registers"))
+    return false;
+
   unsigned StackArgsSize = CCInfo.getStackSize();
 
   // If the callee takes no arguments then go on to check the results of the

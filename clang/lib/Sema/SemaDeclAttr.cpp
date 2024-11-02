@@ -3072,7 +3072,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
         if (HasPriority)
           DuplicateAttr = true;
         HasPriority = true;
-        int Digit;
+        unsigned Digit;
         if (AttrStr.getAsInteger(0, Digit))
           return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                  << Unsupported << None << AttrStr << TargetVersion;
@@ -3226,7 +3226,7 @@ bool Sema::checkTargetClonesAttrString(
           HasDefault = true;
         } else if (AttrStr.consume_front("priority=")) {
           IsPriority = true;
-          int Digit;
+          unsigned Digit;
           if (AttrStr.getAsInteger(0, Digit))
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                    << Unsupported << None << Str << TargetClones;
@@ -3958,30 +3958,11 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   RD->addAttr(::new (S.Context) TransparentUnionAttr(S.Context, AL));
 }
 
-void Sema::AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
-                             StringRef Str, MutableArrayRef<Expr *> Args) {
-  auto *Attr = AnnotateAttr::Create(Context, Str, Args.data(), Args.size(), CI);
-  if (ConstantFoldAttrArgs(
-          CI, MutableArrayRef<Expr *>(Attr->args_begin(), Attr->args_end()))) {
+static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *Attr = S.CreateAnnotationAttr(AL);
+  if (Attr) {
     D->addAttr(Attr);
   }
-}
-
-static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  // Make sure that there is a string literal as the annotation's first
-  // argument.
-  StringRef Str;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
-    return;
-
-  llvm::SmallVector<Expr *, 4> Args;
-  Args.reserve(AL.getNumArgs() - 1);
-  for (unsigned Idx = 1; Idx < AL.getNumArgs(); Idx++) {
-    assert(!AL.isArgIdent(Idx));
-    Args.push_back(AL.getArgAsExpr(Idx));
-  }
-
-  S.AddAnnotationAttr(D, AL, Str, Args);
 }
 
 static void handleAlignValueAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

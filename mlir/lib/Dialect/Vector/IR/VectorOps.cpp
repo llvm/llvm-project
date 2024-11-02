@@ -2951,11 +2951,11 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
               InsertOpConstantFolder>(context);
 }
 
-// Eliminates insert operations that produce values identical to their source
-// value. This happens when the source and destination vectors have identical
-// sizes.
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
-  if (getNumIndices() == 0)
+  // Fold "vector.insert %v, %dest [] : vector<2x2xf32> from vector<2x2xf32>" to
+  // %v. Note: Do not fold "vector.insert %v, %dest [] : f32 into vector<f32>"
+  // (type mismatch).
+  if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
   return {};
 }
@@ -4977,8 +4977,8 @@ LogicalResult MaskedLoadOp::verify() {
     return emitOpError("base and result element type should match");
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected result dim to match mask dim");
+  if (resVType.getShape() != maskVType.getShape())
+    return emitOpError("expected result shape to match mask shape");
   if (resVType != passVType)
     return emitOpError("expected pass_thru of same type as result type");
   return success();
@@ -5030,8 +5030,8 @@ LogicalResult MaskedStoreOp::verify() {
     return emitOpError("base and valueToStore element type should match");
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected valueToStore dim to match mask dim");
+  if (valueVType.getShape() != maskVType.getShape())
+    return emitOpError("expected valueToStore shape to match mask shape");
   return success();
 }
 
@@ -6421,20 +6421,6 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.
   return SplatElementsAttr::get(getType(), {constOperand});
-}
-
-//===----------------------------------------------------------------------===//
-// StepOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult StepOp::fold(FoldAdaptor adaptor) {
-  auto resultType = cast<VectorType>(getType());
-  if (resultType.isScalable())
-    return nullptr;
-  SmallVector<APInt> indices;
-  for (unsigned i = 0; i < resultType.getNumElements(); i++)
-    indices.push_back(APInt(/*width=*/64, i));
-  return DenseElementsAttr::get(resultType, indices);
 }
 
 //===----------------------------------------------------------------------===//

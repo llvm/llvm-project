@@ -1697,12 +1697,9 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
     SignBit = DAG.getNode(ISD::TRUNCATE, DL, MagVT, SignBit);
   }
 
-  SDNodeFlags Flags;
-  Flags.setDisjoint(true);
-
   // Store the part with the modified sign and convert back to float.
-  SDValue CopiedSign =
-      DAG.getNode(ISD::OR, DL, MagVT, ClearedSign, SignBit, Flags);
+  SDValue CopiedSign = DAG.getNode(ISD::OR, DL, MagVT, ClearedSign, SignBit,
+                                   SDNodeFlags::Disjoint);
 
   return modifySignAsInt(MagAsInt, DL, CopiedSign);
 }
@@ -1773,7 +1770,7 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   Tmp1 = DAG.getNode(Opc, dl, VT, SP, Size);       // Value
   if (Alignment > StackAlign)
     Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
-                       DAG.getConstant(-Alignment.value(), dl, VT));
+                       DAG.getSignedConstant(-Alignment.value(), dl, VT));
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1);     // Output chain
 
   Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
@@ -2346,75 +2343,6 @@ static bool useSinCos(SDNode *Node) {
       return true;
   }
   return false;
-}
-
-/// Issue libcalls to sincos to compute sin / cos pairs.
-void SelectionDAGLegalize::ExpandSinCosLibCall(
-    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
-  EVT VT = Node->getValueType(0);
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-  RTLIB::Libcall LC = RTLIB::getFSINCOS(VT);
-
-  // Find users of the node that store the results (and share input chains). The
-  // destination pointers can be used instead of creating stack allocations.
-  SDValue StoresInChain{};
-  std::array<StoreSDNode *, 2> ResultStores = {nullptr};
-  for (SDNode *User : Node->uses()) {
-    if (!ISD::isNormalStore(User))
-      continue;
-    auto *ST = cast<StoreSDNode>(User);
-    if (!ST->isSimple() || ST->getAddressSpace() != 0 ||
-        ST->getAlign() < DAG.getDataLayout().getABITypeAlign(Ty) ||
-        (StoresInChain && ST->getChain() != StoresInChain) ||
-        Node->isPredecessorOf(ST->getChain().getNode()))
-      continue;
-    ResultStores[ST->getValue().getResNo()] = ST;
-    StoresInChain = ST->getChain();
-  }
-
-  TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry{};
-
-  // Pass the argument.
-  Entry.Node = Node->getOperand(0);
-  Entry.Ty = Ty;
-  Args.push_back(Entry);
-
-  // Pass the output pointers for sin and cos.
-  SmallVector<SDValue, 2> ResultPtrs{};
-  for (StoreSDNode *ST : ResultStores) {
-    SDValue ResultPtr = ST ? ST->getBasePtr() : DAG.CreateStackTemporary(VT);
-    Entry.Node = ResultPtr;
-    Entry.Ty = PointerType::getUnqual(Ty->getContext());
-    Args.push_back(Entry);
-    ResultPtrs.push_back(ResultPtr);
-  }
-
-  SDLoc DL(Node);
-  SDValue InChain = StoresInChain ? StoresInChain : DAG.getEntryNode();
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      TLI.getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()), Callee,
-      std::move(Args));
-
-  auto [Call, OutChain] = TLI.LowerCallTo(CLI);
-
-  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
-    MachinePointerInfo PtrInfo;
-    if (StoreSDNode *ST = ResultStores[ResNo]) {
-      // Replace store with the library call.
-      DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
-      PtrInfo = ST->getPointerInfo();
-    } else {
-      PtrInfo = MachinePointerInfo::getFixedStack(
-          DAG.getMachineFunction(),
-          cast<FrameIndexSDNode>(ResultPtr)->getIndex());
-    }
-    SDValue LoadResult = DAG.getLoad(VT, DL, OutChain, ResultPtr, PtrInfo);
-    Results.push_back(LoadResult);
-  }
 }
 
 SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
@@ -3714,6 +3642,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
+  case ISD::FSINCOS: {
+    if (isSinCosLibcallAvailable(Node, TLI))
+      break;
+    EVT VT = Node->getValueType(0);
+    SDValue Op = Node->getOperand(0);
+    SDNodeFlags Flags = Node->getFlags();
+    Tmp1 = DAG.getNode(ISD::FSIN, dl, VT, Op, Flags);
+    Tmp2 = DAG.getNode(ISD::FCOS, dl, VT, Op, Flags);
+    Results.append({Tmp1, Tmp2});
+    break;
+  }
   case ISD::FMAD:
     llvm_unreachable("Illegal fmad should never be formed");
 
@@ -4364,6 +4303,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
     break;
   }
+  case ISD::ADDRSPACECAST:
+    Results.push_back(DAG.UnrollVectorOp(Node));
+    break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:
@@ -4600,6 +4542,11 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::ATAN_F32, RTLIB::ATAN_F64, RTLIB::ATAN_F80,
                     RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128, Results);
     break;
+  case ISD::FATAN2:
+  case ISD::STRICT_FATAN2:
+    ExpandFPLibCall(Node, RTLIB::ATAN2_F32, RTLIB::ATAN2_F64, RTLIB::ATAN2_F80,
+                    RTLIB::ATAN2_F128, RTLIB::ATAN2_PPCF128, Results);
+    break;
   case ISD::FSINH:
   case ISD::STRICT_FSINH:
     ExpandFPLibCall(Node, RTLIB::SINH_F32, RTLIB::SINH_F64, RTLIB::SINH_F80,
@@ -4617,7 +4564,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FSINCOS:
     // Expand into sincos libcall.
-    ExpandSinCosLibCall(Node, Results);
+    (void)DAG.expandFSINCOS(Node, Results);
     break;
   case ISD::FLOG:
   case ISD::STRICT_FLOG:
@@ -5486,6 +5433,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
   case ISD::FPOW:
+  case ISD::FATAN2:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2,
@@ -5502,6 +5450,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FREM:
   case ISD::STRICT_FPOW:
+  case ISD::STRICT_FATAN2:
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
                        {Node->getOperand(0), Node->getOperand(1)});
     Tmp2 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
@@ -5577,6 +5526,16 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
 
     Results.push_back(Tmp2.getValue(1));
+    break;
+  }
+  case ISD::FSINCOS: {
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::FSINCOS, dl, DAG.getVTList(NVT, NVT), Tmp1,
+                       Node->getFlags());
+    Tmp3 = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
+    for (unsigned ResNum = 0; ResNum < Node->getNumValues(); ResNum++)
+      Results.push_back(
+          DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2.getValue(ResNum), Tmp3));
     break;
   }
   case ISD::FFLOOR:

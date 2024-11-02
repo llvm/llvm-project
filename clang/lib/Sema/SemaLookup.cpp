@@ -1200,7 +1200,7 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
     EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_C);
     EPI.ExceptionSpec = EST_None;
     QualType ExpectedType = R.getSema().Context.getFunctionType(
-        R.getLookupName().getCXXNameType(), std::nullopt, EPI);
+        R.getLookupName().getCXXNameType(), {}, EPI);
 
     // Perform template argument deduction against the type that we would
     // expect the function to have.
@@ -3215,6 +3215,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // Array parameter types are treated as fundamental types.
     case Type::ArrayParameter:
       break;
+
+    case Type::HLSLAttributedResource:
+      T = cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr();
     }
 
     if (Queue.empty())
@@ -3666,9 +3669,7 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
           TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
-                  0, SugaredChecked, CanonicalChecked, CTAK_Specified,
-                  /*PartialOrdering=*/false,
-                  /*MatchedPackOnParmToNonPackOnArg=*/nullptr) ||
+                  0, SugaredChecked, CanonicalChecked, CTAK_Specified) ||
               Trap.hasErrorOccurred())
             IsTemplate = false;
         }

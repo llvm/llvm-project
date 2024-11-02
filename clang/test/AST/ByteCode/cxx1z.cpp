@@ -10,3 +10,10 @@ namespace Temp {
   A<int &, addr({}).n> c; // both-error {{reference to subobject of temporary object}}
   A<int *, &addr({}).n> d; // both-error {{pointer to subobject of temporary object}}
 }
+
+char arr[3];
+A<const char*, &arr[1]> d; // both-error {{refers to subobject '&arr[1]'}}
+
+void Func() {
+  A<const char*, __func__> a; // both-error {{pointer to subobject of predefined '__func__' variable}}
+}

@@ -54,6 +54,12 @@ typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #include "profile/InstrProfData.inc"
 } VTableProfData;
 
+typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
+    __llvm_gcov_init_func_struct {
+#define COVINIT_FUNC(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} __llvm_gcov_init_func_struct;
+
 /*!
  * \brief Return 1 if profile counters are continuously synced to the raw
  * profile via an mmap(). This is in contrast to the default mode, in which
@@ -208,6 +214,9 @@ void __llvm_profile_initialize_file(void);
 /*! \brief Initialize the profile runtime. */
 void __llvm_profile_initialize(void);
 
+/*! \brief Initialize the gcov profile runtime. */
+void __llvm_profile_gcov_initialize(void);
+
 /*!
  * \brief Return path prefix (excluding the base filename) of the profile data.
  * This is useful for users using \c -fprofile-generate=./path_prefix who do
@@ -324,4 +333,6 @@ COMPILER_RT_VISIBILITY extern uint64_t
  */
 extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
 
+const __llvm_gcov_init_func_struct *__llvm_profile_begin_covinit();
+const __llvm_gcov_init_func_struct *__llvm_profile_end_covinit();
 #endif /* PROFILE_INSTRPROFILING_H_ */

@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=thumbv7m-none-eabi -mcpu=cortex-m33 -run-pass=thumb2-reduce-size %s -o - | FileCheck %s --check-prefix=MUL
+# RUN: llc -mtriple=thumbv7m-none-eabi --run-pass=thumb2-reduce-size %s -o - | FileCheck %s --check-prefix=MULS
+
+---
+name:            test
+body:             |
+  bb.0:
+    $r2 = tMOVr $r0, 14, _
+    $r0 = t2MOVi 1, 14, _, _
+    $r0 = t2MUL $r2, killed $r0, 14, _
+    tBX_RET 14, _, implicit $r0
+
+...
+# MUL-LABEL: test
+# MUL: t2MUL
+# MUL-NOT: tMUL
+
+# MULS-LABEL: test
+# MULS: tMUL
+# MULS-NOT: t2MUL

@@ -14,5 +14,6 @@ entry:
 ; Function Attrs: noreturn
 declare void @exit(i32 signext)
 
-; CHECK: move $gp, ${{[0-9]+}}
-
+; CHECK: addu $gp, ${{[0-9]+}}, ${{[0-9]+}}
+; CHECK: lw ${{[0-9]+}}, %got(g)($gp)
+; CHECK: lw ${{[0-9]+}}, %call16(exit)($gp)

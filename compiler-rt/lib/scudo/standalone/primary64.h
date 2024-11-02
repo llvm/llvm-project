@@ -1492,6 +1492,11 @@ private:
       }
 
       const uptr PushedBytesDelta = BytesInBG - BG->BytesInBGAtLastCheckpoint;
+      if (PushedBytesDelta < getMinReleaseAttemptSize(BlockSize)) {
+        Prev = BG;
+        BG = BG->Next;
+        continue;
+      }
 
       // Given the randomness property, we try to release the pages only if the
       // bytes used by free blocks exceed certain proportion of group size. Note

@@ -351,7 +351,6 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
         llvm.store %3, %4 : f32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
       // CHECK: call void @__kmpc_for_static_fini(ptr @[[$loc_struct]],
     }) : () -> ()
     omp.terminator
@@ -374,7 +373,6 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }) : () -> ()
   llvm.return
 }
@@ -394,7 +392,6 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr) {
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }) : () -> ()
   llvm.return
 }
@@ -412,7 +409,6 @@ llvm.func @test_omp_wsloop_static_defchunk(%lb : i32, %ub : i32, %step : i32) ->
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -431,7 +427,6 @@ llvm.func @test_omp_wsloop_static_1(%lb : i32, %ub : i32, %step : i32) -> () {
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -450,7 +445,6 @@ llvm.func @test_omp_wsloop_static_2(%lb : i32, %ub : i32, %step : i32) -> () {
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -469,7 +463,6 @@ llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -489,7 +482,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_const(%lb : i64, %ub : i64, %step : i64
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -512,7 +504,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_var(%lb : i32, %ub : i32, %step : i32) 
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -535,7 +526,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_var2(%lb : i32, %ub : i32, %step : i32)
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -554,7 +544,6 @@ llvm.func @test_omp_wsloop_dynamic_chunk_var3(%lb : i32, %ub : i32, %step : i32,
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -573,7 +562,6 @@ llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -592,7 +580,6 @@ llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -611,7 +598,6 @@ llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -630,7 +616,6 @@ llvm.func @test_omp_wsloop_dynamic_nonmonotonic(%lb : i64, %ub : i64, %step : i6
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -649,7 +634,6 @@ llvm.func @test_omp_wsloop_dynamic_monotonic(%lb : i64, %ub : i64, %step : i64) 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -668,7 +652,6 @@ llvm.func @test_omp_wsloop_runtime_simd(%lb : i64, %ub : i64, %step : i64) -> ()
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -687,7 +670,6 @@ llvm.func @test_omp_wsloop_guided_simd(%lb : i64, %ub : i64, %step : i64) -> () 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -706,7 +688,6 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
     }
-    "omp.terminator"() : () -> ()
   }) : () -> ()
 
   llvm.return
@@ -746,7 +727,6 @@ llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -770,7 +750,6 @@ llvm.func @simd_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -791,7 +770,6 @@ llvm.func @simd_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %l
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -811,7 +789,6 @@ llvm.func @simd_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 :
       llvm.store %3, %5 : f32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -840,7 +817,6 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
       llvm.store %arg2, %1 : i32, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -861,7 +837,6 @@ llvm.func @simd_order() {
       llvm.store %arg0, %2 : i64, !llvm.ptr
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -885,7 +860,6 @@ llvm.func @test_omp_wsloop_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -905,7 +879,6 @@ llvm.func @test_omp_wsloop_static_ordered(%lb : i64, %ub : i64, %step : i64) -> 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -926,7 +899,6 @@ llvm.func @test_omp_wsloop_static_chunk_ordered(%lb : i32, %ub : i32, %step : i3
       llvm.call @body(%iv) : (i32) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -946,7 +918,6 @@ llvm.func @test_omp_wsloop_dynamic_ordered(%lb : i64, %ub : i64, %step : i64) ->
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -966,7 +937,6 @@ llvm.func @test_omp_wsloop_auto_ordered(%lb : i64, %ub : i64, %step : i64) -> ()
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -986,7 +956,6 @@ llvm.func @test_omp_wsloop_runtime_ordered(%lb : i64, %ub : i64, %step : i64) ->
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -1006,7 +975,6 @@ llvm.func @test_omp_wsloop_guided_ordered(%lb : i64, %ub : i64, %step : i64) -> 
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -1026,7 +994,6 @@ llvm.func @test_omp_wsloop_dynamic_nonmonotonic_ordered(%lb : i64, %ub : i64, %s
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -1046,7 +1013,6 @@ llvm.func @test_omp_wsloop_dynamic_monotonic_ordered(%lb : i64, %ub : i64, %step
       llvm.call @body(%iv) : (i64) -> ()
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }
@@ -1223,7 +1189,6 @@ llvm.func @collapse_wsloop(
         llvm.store %34, %20 : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -1286,7 +1251,6 @@ llvm.func @collapse_wsloop_dynamic(
         llvm.store %34, %20 : i32, !llvm.ptr
         omp.yield
       }
-      omp.terminator
     }
     omp.terminator
   }
@@ -1320,7 +1284,6 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       }
       omp.yield
     }
-    omp.terminator
   }
 
   omp.wsloop ordered(1) {
@@ -1341,7 +1304,6 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
       omp.yield
     }
-    omp.terminator
   }
 
   omp.wsloop ordered(2) {
@@ -1373,7 +1335,6 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
       omp.yield
     }
-    omp.terminator
   }
 
   llvm.return
@@ -1559,6 +1520,28 @@ llvm.func @_QPomp_atomic_capture_complex() {
       }
       omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.struct<(f32, f32)>
     }
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: define void @omp_atomic_read_complex() {
+llvm.func @omp_atomic_read_complex(){
+
+// CHECK: %[[a:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[b:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+// CHECK: call void @__atomic_load(i64 8, ptr %[[b]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+// CHECK: %[[LOADED_VAL:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
+// CHECK: store { float, float } %[[LOADED_VAL]], ptr %[[a]], align 4
+// CHECK: ret void
+// CHECK: }
+
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "ib"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "ia"} : (i64) -> !llvm.ptr
+    omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.struct<(f32, f32)>
     llvm.return
 }
 
@@ -2387,7 +2370,6 @@ llvm.func @repeated_successor(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
     ^bb1(%0: i64):  // 2 preds: ^bb0, ^bb0
       omp.yield
     }
-    omp.terminator
   }
   llvm.return
 }

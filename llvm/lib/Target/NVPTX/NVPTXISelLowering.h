@@ -70,8 +70,6 @@ enum NodeType : unsigned {
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LoadV4,
-  LDGV2, // LDG.v2
-  LDGV4, // LDG.v4
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,
@@ -617,6 +615,8 @@ public:
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
+
+  SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;

@@ -20,6 +20,7 @@
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
+#include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -162,6 +163,8 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
+bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
+                  bool TargetIsUCharOrByte);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -273,8 +276,14 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
       *NumElements > MaxElements) {
     if (!IsNoThrow) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-          << NumElements->toDiagnosticString(S.getASTContext());
+
+      if (NumElements->isSigned() && NumElements->isNegative()) {
+        S.FFDiag(Loc, diag::note_constexpr_new_negative)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      } else {
+        S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      }
     }
     return false;
   }
@@ -1841,6 +1850,7 @@ bool Init(InterpState &S, CodePtr OpPC) {
     assert(false);
     return false;
   }
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1852,6 +1862,7 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
+  Ptr.activate();
   Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
@@ -1863,13 +1874,24 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.peek<Pointer>().atIndex(Idx);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
   if (Ptr.isUnknownSizeArray())
     return false;
-  if (!CheckInit(S, OpPC, Ptr))
+
+  // In the unlikely event that we're initializing the first item of
+  // a non-array, skip the atIndex().
+  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+    Ptr.initialize();
+    new (&Ptr.deref<T>()) T(Value);
+    return true;
+  }
+
+  const Pointer &ElemPtr = Ptr.atIndex(Idx);
+  if (!CheckInit(S, OpPC, ElemPtr))
     return false;
-  Ptr.initialize();
-  new (&Ptr.deref<T>()) T(Value);
+  ElemPtr.initialize();
+  new (&ElemPtr.deref<T>()) T(Value);
   return true;
 }
 
@@ -1877,13 +1899,23 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>().atIndex(Idx);
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isUnknownSizeArray())
     return false;
-  if (!CheckInit(S, OpPC, Ptr))
+
+  // In the unlikely event that we're initializing the first item of
+  // a non-array, skip the atIndex().
+  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+    Ptr.initialize();
+    new (&Ptr.deref<T>()) T(Value);
+    return true;
+  }
+
+  const Pointer &ElemPtr = Ptr.atIndex(Idx);
+  if (!CheckInit(S, OpPC, ElemPtr))
     return false;
-  Ptr.initialize();
-  new (&Ptr.deref<T>()) T(Value);
+  ElemPtr.initialize();
+  new (&ElemPtr.deref<T>()) T(Value);
   return true;
 }
 
@@ -1921,14 +1953,14 @@ inline bool CastMemberPtrPtr(InterpState &S, CodePtr OpPC) {
 
 template <class T, ArithOp Op>
 bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
-                  const Pointer &Ptr) {
+                  const Pointer &Ptr, bool IsPointerArith = false) {
   // A zero offset does not change the pointer.
   if (Offset.isZero()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
 
-  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex)) {
+  if (IsPointerArith && !CheckNull(S, OpPC, Ptr, CSK_ArrayIndex)) {
     // The CheckNull will have emitted a note already, but we only
     // abort in C++, since this is fine in C.
     if (S.getLangOpts().CPlusPlus)
@@ -2040,14 +2072,16 @@ bool AddOffset(InterpState &S, CodePtr OpPC) {
   Pointer Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isBlockPointer())
     Ptr = Ptr.expand();
-  return OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr);
+  return OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr,
+                                       /*IsPointerArith=*/true);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool SubOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  return OffsetHelper<T, ArithOp::Sub>(S, OpPC, Offset, Ptr);
+  return OffsetHelper<T, ArithOp::Sub>(S, OpPC, Offset, Ptr,
+                                       /*IsPointerArith=*/true);
 }
 
 template <ArithOp Op>
@@ -2067,7 +2101,7 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
 
   // Now the current Ptr again and a constant 1.
   OneT One = OneT::from(1);
-  if (!OffsetHelper<OneT, Op>(S, OpPC, One, P))
+  if (!OffsetHelper<OneT, Op>(S, OpPC, One, P, /*IsPointerArith=*/true))
     return false;
 
   // Store the new value.
@@ -2793,9 +2827,18 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
   return false;
 }
 
-inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
-                           const DeclRefExpr *DR) {
+inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
+                           bool InitializerFailed) {
   assert(DR);
+
+  if (InitializerFailed) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    const auto *VD = cast<VarDecl>(DR->getDecl());
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+    return false;
+  }
+
   return CheckDeclRef(S, OpPC, DR);
 }
 
@@ -2984,6 +3027,10 @@ static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool CheckAllocations(InterpState &S, CodePtr OpPC) {
+  return S.maybeDiagnoseDanglingAllocations();
+}
+
 /// Check if the initializer and storage types of a placement-new expression
 /// match.
 bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
@@ -2995,6 +3042,35 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
   return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
+                    uint32_t ResultBitWidth, const llvm::fltSemantics *Sem) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+
+  if (!CheckLoad(S, OpPC, FromPtr))
+    return false;
+
+  size_t BuffSize = ResultBitWidth / 8;
+  llvm::SmallVector<std::byte> Buff(BuffSize);
+  bool HasIndeterminateBits = false;
+
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, HasIndeterminateBits))
+    return false;
+
+  if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
+    return false;
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    assert(Sem);
+    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+  } else {
+    assert(!Sem);
+    S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

@@ -1193,10 +1193,10 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
 
   // There is nothing to do if the module doesn't use guards
   auto *GuardDecl =
-      M->getFunction(Intrinsic::getName(Intrinsic::experimental_guard));
+      Intrinsic::getDeclarationIfExists(M, Intrinsic::experimental_guard);
   bool HasIntrinsicGuards = GuardDecl && !GuardDecl->use_empty();
-  auto *WCDecl = M->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  auto *WCDecl = Intrinsic::getDeclarationIfExists(
+      M, Intrinsic::experimental_widenable_condition);
   bool HasWidenableConditions =
       PredicateWidenableBranchGuards && WCDecl && !WCDecl->use_empty();
   if (!HasIntrinsicGuards && !HasWidenableConditions)

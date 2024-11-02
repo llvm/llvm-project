@@ -699,7 +699,6 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
             Log << "    [" << Idx << "]: " << gii.Name << " @ " << gii.Dir
                 << '/' << gii.Base << ':' << gii.Line << '\n';
           }
-          DwarfInlineInfos = DICtx.getInliningInfoForAddress(SectAddr, DLIS);
           Gsym->dump(Log, *FI);
         }
         continue;
