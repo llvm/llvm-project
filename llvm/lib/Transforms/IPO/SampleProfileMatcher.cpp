@@ -199,7 +199,10 @@ SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
   llvm::longestCommonSequence<LineLocation, FunctionId>(
       AnchorList1, AnchorList2,
       [&](const FunctionId &A, const FunctionId &B) {
-        return functionMatchesProfile(A, B, !MatchUnusedFunction);
+        return functionMatchesProfile(
+            A, B,
+            !MatchUnusedFunction // Find matched function only
+        );
       },
       [&](LineLocation A, LineLocation B) {
         MatchedAnchors.try_emplace(A, B);
