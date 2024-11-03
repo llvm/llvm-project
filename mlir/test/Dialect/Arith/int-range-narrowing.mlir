@@ -88,6 +88,27 @@ func.func @test_cmpi_vec() -> vector<4xi1> {
   return %2 : vector<4xi1>
 }
 
+// CHECK-LABEL: func @test_add_cmpi
+//       CHECK:  %[[A:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
+//       CHECK:  %[[B:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
+//       CHECK:  %[[C:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
+//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] : index to i8
+//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] : index to i8
+//       CHECK:  %[[RES1:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : i8
+//       CHECK:  %[[RES1_CASTED1:.*]] = arith.index_castui %[[RES1]] : i8 to index
+//       CHECK:  %[[C_CASTED:.*]] = arith.index_castui %[[C]] : index to i8
+//       CHECK:  %[[RES1_CASTED2:.*]] = arith.index_castui %[[RES1_CASTED1]] : index to i8
+//       CHECK:  %[[RES2:.*]] = arith.cmpi slt, %[[C_CASTED]], %[[RES1_CASTED2]] : i8
+//       CHECK:  return %[[RES2]] : i1
+func.func @test_add_cmpi() -> i1 {
+  %0 = test.with_bounds { umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index } : index
+  %1 = test.with_bounds { umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index } : index
+  %3 = test.with_bounds { umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index } : index
+  %4 = arith.addi %0, %1 : index
+  %5 = arith.cmpi slt, %3, %4 : index
+  return %5 : i1
+}
+
 //===----------------------------------------------------------------------===//
 // arith.addi
 //===----------------------------------------------------------------------===//
