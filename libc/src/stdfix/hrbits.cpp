@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(short fract, hrbits, (int_hr_t x)) {
-    return fixed_point::fxbits(x);
+    return fixed_point::fxbits<short fract, int_hr_t>(x);
 }
 
 }
