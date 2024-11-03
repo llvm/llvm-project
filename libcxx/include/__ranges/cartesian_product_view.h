@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__iterator/access.h> // begin
+#include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/next.h>
@@ -111,6 +112,8 @@ public:
     constexpr bool is_const = true;
     return end_impl<is_const>();
   }
+
+  constexpr default_sentinel_t end() const noexcept { return {}; }
 
   constexpr auto size()
     requires(sized_range<First> && ... && sized_range<Vs>)
