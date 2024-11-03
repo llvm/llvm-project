@@ -166,12 +166,11 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
 // (u)?int_fx_t --> Fixed point
 template <typename T, typename XType> LIBC_INLINE constexpr T fxbits(XType x) {
   using FXRep = FXRep<T>;
-
   // Shift number by FX_IBITS so the bits are in the right spot.
   // If the number is negative we need to make it positive, shift it and then
   // renegate it to get the correct value.
   if (cpp::is_signed_v<XType> && 
-      ((1 << (FXRep::TOTAL_LEN - 1)) & x)) {
+      (x >> (FXRep::TOTAL_LEN - FXRep::SIGN_LEN))) {
     x = -x;
     x >>= FXRep::INTEGRAL_LEN;
     x = -x;
