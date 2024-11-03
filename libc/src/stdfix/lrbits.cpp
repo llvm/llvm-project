@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lrbits.h" 
+#include "lrbits.h"
 
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"
@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long fract, lrbits, (int_lr_t x)) {
-    return fixed_point::fxbits<long fract, int_lr_t>(x);
+  return fixed_point::fxbits<long fract, int_lr_t>(x);
 }
 
-}
+} // namespace LIBC_NAMESPACE_DECL

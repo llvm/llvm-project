@@ -13,7 +13,7 @@
 #include "src/__support/macros/config.h"
 namespace LIBC_NAMESPACE_DECL {
 
-long fract lrbits(int_lr_t x); 
+long fract lrbits(int_lr_t x);
 
 }
-#endif 
+#endif

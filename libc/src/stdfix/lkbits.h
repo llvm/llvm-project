@@ -13,7 +13,7 @@
 #include "src/__support/macros/config.h"
 namespace LIBC_NAMESPACE_DECL {
 
-long accum lkbits(int_lk_t x); 
+long accum lkbits(int_lk_t x);
 
 }
-#endif 
+#endif

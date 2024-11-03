@@ -8,13 +8,13 @@
 
 #ifndef LLVM_LIBC_SRC_STDFIX_URBITS_H
 #define LLVM_LIBC_SRC_STDFIX_URBITS_H
-    
+
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/macros/config.h"
 namespace LIBC_NAMESPACE_DECL {
 
-unsigned fract urbits(uint_ur_t x); 
+unsigned fract urbits(uint_ur_t x);
 
 }
 
-#endif 
+#endif

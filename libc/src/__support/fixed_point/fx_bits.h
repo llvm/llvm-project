@@ -169,8 +169,7 @@ template <typename T, typename XType> LIBC_INLINE constexpr T fxbits(XType x) {
   // Shift number by FX_IBITS so the bits are in the right spot.
   // If the number is negative we need to make it positive, shift it and then
   // renegate it to get the correct value.
-  if (cpp::is_signed_v<XType> && 
-      (x >> (FXRep::TOTAL_LEN - FXRep::SIGN_LEN))) {
+  if (cpp::is_signed_v<XType> && (x >> (FXRep::TOTAL_LEN - FXRep::SIGN_LEN))) {
     x = -x;
     x >>= FXRep::INTEGRAL_LEN;
     x = -x;

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "kbits.h" 
+#include "kbits.h"
 
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"
@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(accum, kbits, (int_k_t x)) {
-    return fixed_point::fxbits<accum, int_k_t>(x);
+  return fixed_point::fxbits<accum, int_k_t>(x);
 }
 
-}
+} // namespace LIBC_NAMESPACE_DECL

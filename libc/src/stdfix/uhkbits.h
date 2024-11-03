@@ -8,13 +8,13 @@
 
 #ifndef LLVM_LIBC_SRC_STDFIX_UHKBITS_H
 #define LLVM_LIBC_SRC_STDFIX_UHKBITS_H
-    
+
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/macros/config.h"
 namespace LIBC_NAMESPACE_DECL {
 
-unsigned short accum uhkbits(uint_uhk_t x); 
+unsigned short accum uhkbits(uint_uhk_t x);
 
 }
 
-#endif 
+#endif

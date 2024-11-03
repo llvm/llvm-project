@@ -8,13 +8,13 @@
 
 #ifndef LLVM_LIBC_SRC_STDFIX_UKBITS_H
 #define LLVM_LIBC_SRC_STDFIX_UKBITS_H
-    
+
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/macros/config.h"
 namespace LIBC_NAMESPACE_DECL {
 
-unsigned accum ukbits(uint_uk_t x); 
+unsigned accum ukbits(uint_uk_t x);
 
 }
 
-#endif 
+#endif
