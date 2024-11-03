@@ -2374,18 +2374,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantFP::get(Ty->getContext(), U);
       }
       break;
-    case LibFunc_ldexp:
-    case LibFunc_ldexpf:
-    case LibFunc_ldexpl:
-    case LibFunc_scalbn:
-    case LibFunc_scalbnf:
-    case LibFunc_scalbnl:
-    case LibFunc_scalbln:
-    case LibFunc_scalblnf:
-    case LibFunc_scalblnl:
-      if (TLI->has(Func))
-        return ConstantFoldBinaryFP(ldexp, APF, Ty);
-      break;
     case LibFunc_log:
     case LibFunc_logf:
     case LibFunc_log_finite:
@@ -2634,6 +2622,18 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
 
   switch (Func) {
   default:
+    break;
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
+  case LibFunc_scalbn:
+  case LibFunc_scalbnf:
+  case LibFunc_scalbnl:
+  case LibFunc_scalbln:
+  case LibFunc_scalblnf:
+  case LibFunc_scalblnl:
+    if (TLI->has(Func))
+      return ConstantFoldBinaryFP(ldexp, Op1V, Op2V, Ty);
     break;
   case LibFunc_pow:
   case LibFunc_powf:
