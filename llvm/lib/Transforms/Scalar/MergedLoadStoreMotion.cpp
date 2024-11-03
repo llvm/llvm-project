@@ -217,8 +217,8 @@ PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
   if (Opd1 == Opd2)
     return nullptr;
 
-  auto *NewPN = PHINode::Create(Opd1->getType(), 2, Opd2->getName() + ".sink",
-                                &BB->front());
+  auto *NewPN = PHINode::Create(Opd1->getType(), 2, Opd2->getName() + ".sink");
+  NewPN->insertBefore(BB->begin());
   NewPN->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   NewPN->addIncoming(Opd1, S0->getParent());
   NewPN->addIncoming(Opd2, S1->getParent());
@@ -269,7 +269,7 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
 
   // Create the new store to be inserted at the join point.
   StoreInst *SNew = cast<StoreInst>(S0->clone());
-  SNew->insertBefore(&*InsertPt);
+  SNew->insertBefore(InsertPt);
   // New PHI operand? Use it.
   if (PHINode *NewPN = getPHIOperand(BB, S0, S1))
     SNew->setOperand(0, NewPN);

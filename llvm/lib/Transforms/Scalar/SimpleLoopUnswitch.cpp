@@ -368,10 +368,11 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
                                                       bool FullUnswitch) {
   assert(&ExitBB != &UnswitchedBB &&
          "Must have different loop exit and unswitched blocks!");
-  Instruction *InsertPt = &*UnswitchedBB.begin();
+  BasicBlock::iterator InsertPt = UnswitchedBB.begin();
   for (PHINode &PN : ExitBB.phis()) {
     auto *NewPN = PHINode::Create(PN.getType(), /*NumReservedValues*/ 2,
-                                  PN.getName() + ".split", InsertPt);
+                                  PN.getName() + ".split");
+    NewPN->insertBefore(InsertPt);
 
     // Walk backwards over the old PHI node's inputs to minimize the cost of
     // removing each one. We have to do this weird loop manually so that we
@@ -623,7 +624,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // If fully unswitching, we can use the existing branch instruction.
     // Splice it into the old PH to gate reaching the new preheader and re-point
     // its successors.
-    OldPH->splice(OldPH->end(), BI.getParent(), BI.getIterator());
+    BI.moveBefore(*OldPH, OldPH->end());
     BI.setCondition(Cond);
     if (MSSAU) {
       // Temporarily clone the terminator, to make MSSA update cheaper by
@@ -1246,8 +1247,8 @@ static BasicBlock *buildClonedLoopBlocks(
         SE->forgetValue(&I);
 
       auto *MergePN =
-          PHINode::Create(I.getType(), /*NumReservedValues*/ 2, ".us-phi",
-                          &*MergeBB->getFirstInsertionPt());
+          PHINode::Create(I.getType(), /*NumReservedValues*/ 2, ".us-phi");
+      MergePN->insertBefore(MergeBB->getFirstInsertionPt());
       I.replaceAllUsesWith(MergePN);
       MergePN->addIncoming(&I, ExitBB);
       MergePN->addIncoming(&ClonedI, ClonedExitBB);
@@ -2295,7 +2296,7 @@ static void unswitchNontrivialInvariants(
   if (FullUnswitch) {
     // Splice the terminator from the original loop and rewrite its
     // successors.
-    SplitBB->splice(SplitBB->end(), ParentBB, TI.getIterator());
+    TI.moveBefore(*SplitBB, SplitBB->end());
 
     // Keep a clone of the terminator for MSSA updates.
     Instruction *NewTI = TI.clone();

@@ -190,20 +190,21 @@ BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
   const unsigned PHICapacity = 2;
 
   // Create corresponding new PHIs for all the PHIs in the outer landing pad.
-  Instruction *InsertPoint = &InnerResumeDest->front();
+  BasicBlock::iterator InsertPoint = InnerResumeDest->begin();
   BasicBlock::iterator I = OuterResumeDest->begin();
   for (unsigned i = 0, e = UnwindDestPHIValues.size(); i != e; ++i, ++I) {
     PHINode *OuterPHI = cast<PHINode>(I);
     PHINode *InnerPHI = PHINode::Create(OuterPHI->getType(), PHICapacity,
-                                        OuterPHI->getName() + ".lpad-body",
-                                        InsertPoint);
+                                        OuterPHI->getName() + ".lpad-body");
+    InnerPHI->insertBefore(InsertPoint);
     OuterPHI->replaceAllUsesWith(InnerPHI);
     InnerPHI->addIncoming(OuterPHI, OuterResumeDest);
   }
 
   // Create a PHI for the exception values.
-  InnerEHValuesPHI = PHINode::Create(CallerLPad->getType(), PHICapacity,
-                                     "eh.lpad-body", InsertPoint);
+  InnerEHValuesPHI =
+      PHINode::Create(CallerLPad->getType(), PHICapacity, "eh.lpad-body");
+  InnerEHValuesPHI->insertBefore(InsertPoint);
   CallerLPad->replaceAllUsesWith(InnerEHValuesPHI);
   InnerEHValuesPHI->addIncoming(CallerLPad, OuterResumeDest);
 
@@ -1514,10 +1515,10 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   if (ByValAlignment)
     Alignment = std::max(Alignment, *ByValAlignment);
 
-  Value *NewAlloca =
-      new AllocaInst(ByValType, DL.getAllocaAddrSpace(), nullptr, Alignment,
-                     Arg->getName(), &*Caller->begin()->begin());
-  IFI.StaticAllocas.push_back(cast<AllocaInst>(NewAlloca));
+  AllocaInst *NewAlloca = new AllocaInst(ByValType, DL.getAllocaAddrSpace(),
+                                         nullptr, Alignment, Arg->getName());
+  NewAlloca->insertBefore(Caller->begin()->begin());
+  IFI.StaticAllocas.push_back(NewAlloca);
 
   // Uses of the argument in the function should use our new alloca
   // instead.
@@ -2767,8 +2768,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // The PHI node should go at the front of the new basic block to merge all
     // possible incoming values.
     if (!CB.use_empty()) {
-      PHI = PHINode::Create(RTy, Returns.size(), CB.getName(),
-                            &AfterCallBB->front());
+      PHI = PHINode::Create(RTy, Returns.size(), CB.getName());
+      PHI->insertBefore(AfterCallBB->begin());
       // Anything that used the result of the function call should now use the
       // PHI node as their operand.
       CB.replaceAllUsesWith(PHI);
