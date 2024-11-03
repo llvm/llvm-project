@@ -227,7 +227,6 @@ Changes in existing checks
   false negatives related to ``enum`` when setting `IgnoreTypeAliases`
   to `true`.
 
-
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
