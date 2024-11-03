@@ -2085,7 +2085,7 @@ public:
         IsParen(IsParen_) {}
 
   template <typename Fn> void match(Fn F) const {
-    F(Callee, Args, getPrecedence());
+    F(Callee, Args, IsParen, getPrecedence());
   }
 
   void printLeft(OutputBuffer &OB) const override {
