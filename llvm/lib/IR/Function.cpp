@@ -229,6 +229,10 @@ uint64_t Argument::getDereferenceableOrNullBytes() const {
   return getParent()->getParamDereferenceableOrNullBytes(getArgNo());
 }
 
+FPClassTest Argument::getNoFPClass() const {
+  return getParent()->getParamNoFPClass(getArgNo());
+}
+
 bool Argument::hasNestAttr() const {
   if (!getType()->isPointerTy()) return false;
   return hasAttribute(Attribute::Nest);

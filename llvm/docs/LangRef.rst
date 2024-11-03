@@ -1396,6 +1396,79 @@ Currently, only the following parameter attributes are defined:
     undefined. Note that this does not refer to padding introduced by the
     type's storage representation.
 
+.. _nofpclass:
+
+``nofpclass(<test mask>)``
+    This attribute applies to parameters and return values with
+    floating-point and vector of floating-point types, as well as
+    arrays of such types. The test mask has the same format as the
+    second argument to the :ref:`llvm.is.fpclass <llvm.is.fpclass>`,
+    and indicates which classes of floating-point values are not
+    permitted for the value. For example a bitmask of 3 indicates
+    the parameter may not be a NaN.
+
+    If the value is a floating-point class indicated by the
+    ``nofpclass`` test mask, a :ref:`poison value <poisonvalues>` is
+    passed or returned instead.
+
+.. code-block:: text
+  :caption: The following invariants hold
+
+       @llvm.is.fpclass(nofpclass(test_mask) %x, test_mask) => false
+       @llvm.is.fpclass(nofpclass(test_mask) %x, ~test_mask) => true
+       nofpclass(all) => poison
+..
+
+   In textual IR, various string names are supported for readability
+   and can be combined. For example ``nofpclass(nan pinf nzero)``
+   evaluates to a mask of 547.
+
+   This does not depend on the floating-point environment. For
+   example, a function parameter marked ``nofpclass(zero)`` indicates
+   no zero inputs. If this is applied to an argument in a function
+   marked with :ref:`\"denormal-fp-math\" <denormal_fp_math>`
+   indicating zero treatment of input denormals, it does not imply the
+   value cannot be a denormal value which would compare equal to 0.
+
+.. table:: Recognized test mask names
+
+    +-------+----------------------+---------------+
+    | Name  | floating-point class | Bitmask value |
+    +=======+======================+===============+
+    |  nan  | Any NaN              |       3       |
+    +-------+----------------------+---------------+
+    |  inf  | +/- infinity         |      516      |
+    +-------+----------------------+---------------+
+    |  norm | +/- normal           |       26      |
+    +-------+----------------------+---------------+
+    |  sub  | +/- subnormal        |      144      |
+    +-------+----------------------+---------------+
+    |  zero | +/- 0                |       96      |
+    +-------+----------------------+---------------+
+    |  all  | All values           |     1023      |
+    +-------+----------------------+---------------+
+    | snan  | Signaling NaN        |       1       |
+    +-------+----------------------+---------------+
+    | qnan  | Quiet NaN            |       2       |
+    +-------+----------------------+---------------+
+    | ninf  | Negative infinity    |       4       |
+    +-------+----------------------+---------------+
+    | nnorm | Negative normal      |       8       |
+    +-------+----------------------+---------------+
+    | nsub  | Negative subnormal   |       16      |
+    +-------+----------------------+---------------+
+    | nzero | Negative zero        |       32      |
+    +-------+----------------------+---------------+
+    | pzero | Positive zero        |       64      |
+    +-------+----------------------+---------------+
+    | psub  | Positive subnormal   |       128     |
+    +-------+----------------------+---------------+
+    | pnorm | Positive normal      |       256     |
+    +-------+----------------------+---------------+
+    | pinf  | Positive infinity    |       512     |
+    +-------+----------------------+---------------+
+
+
 ``alignstack(<n>)``
     This indicates the alignment that should be considered by the backend when
     assigning this parameter to a stack slot during calling convention
@@ -2146,6 +2219,8 @@ example:
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
     not introduce any new floating-point instructions that may trap.
+
+.. _denormal_fp_math:
 
 ``"denormal-fp-math"``
     This indicates the denormal (subnormal) handling that may be
@@ -24983,6 +25058,8 @@ Floating-Point Test Intrinsics
 
 These functions get properties of floating-point values.
 
+
+.. _llvm.is.fpclass:
 
 '``llvm.is.fpclass``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
