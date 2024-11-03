@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_MALLOC_H
-#define LLVM_LIBC_HDR_MALLOC_H
+#ifndef LLVM_LIBC_HDR_FUNC_MALLOC_H
+#define LLVM_LIBC_HDR_FUNC_MALLOC_H
 
 #ifdef LIBC_FULL_BUILD
 #include "hdr/types/size_t.h"

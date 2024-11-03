@@ -387,6 +387,7 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
       libc.src.__support.CPP.array
+      libc.hdr.func._Exit 
   )
 
   add_libc_test(
@@ -401,6 +402,7 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.quick_exit
       libc.src.stdlib.at_quick_exit
       libc.src.__support.CPP.array
+      libc.hdr.func._Exit 
   )
 
   add_libc_test(

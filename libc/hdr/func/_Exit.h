@@ -1,4 +1,4 @@
-//===-- Definition of the realloc.h proxy ---------------------------------===//
+//===-- Definition of the _Exit proxy -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_FUNC_REALLOC_H
-#define LLVM_LIBC_HDR_FUNC_REALLOC_H
+#ifndef LLVM_LIBC_HDR_FUNC_EXIT_H
+#define LLVM_LIBC_HDR_FUNC_EXIT_H
 
 #ifdef LIBC_FULL_BUILD
-#include "hdr/types/size_t.h"
-extern "C" void *realloc(void *ptr, size_t new_size);
+extern "C" void _Exit(int);
 
 #else // Overlay mode
 
@@ -19,4 +18,4 @@ extern "C" void *realloc(void *ptr, size_t new_size);
 
 #endif
 
-#endif
+#endif // LLVM_LIBC_HDR_EXIT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_ALIGNED_ALLOC_H
-#define LLVM_LIBC_HDR_ALIGNED_ALLOC_H
+#ifndef LLVM_LIBC_HDR_FUNC_ALIGNED_ALLOC_H
+#define LLVM_LIBC_HDR_FUNC_ALIGNED_ALLOC_H
 
 #ifdef LIBC_FULL_BUILD
 #include "hdr/types/size_t.h"
