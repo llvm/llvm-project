@@ -464,6 +464,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Clang now diagnoses misused reasoned ``delete("reason")`` warnings only in pedantic mode. (#GH109311).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

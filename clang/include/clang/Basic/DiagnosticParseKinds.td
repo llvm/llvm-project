@@ -971,7 +971,7 @@ def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
-def ext_delete_with_message : ExtWarn<
+def ext_delete_with_message : Extension<
   "'= delete' with a message is a C++2c extension">, InGroup<CXX26>;
 def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,

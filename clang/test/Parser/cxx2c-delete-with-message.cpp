@@ -1,7 +1,17 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,pre26 -pedantic %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=expected -DTEST_NON_PEDANTIC %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=expected,pre26 -pedantic %s
 // RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=expected,compat -Wpre-c++26-compat %s
 // RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify %s
 
+#ifdef DTEST_NON_PEDANTIC
+namespace GH109311 {
+void f() = delete
+#if __cpp_deleted_function >= 202403L
+    ("reason") // ok
+#endif
+;
+}
+#else
 struct S {
   void a() = delete;
   void b() = delete(; // expected-error {{expected string literal}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -49,3 +59,4 @@ struct C {
   U f = delete ("hello"); // expected-error {{cannot delete expression of type 'const char[6]'}}
 };
 }
+#endif
