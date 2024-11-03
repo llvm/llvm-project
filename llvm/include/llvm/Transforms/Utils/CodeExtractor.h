@@ -120,6 +120,10 @@ public:
     // label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
+    // If true, the outlined function has aggregate argument in zero address
+    // space.
+    bool ArgsInZeroAddressSpace;
+
   public:
     /// Create a code extractor for a sequence of blocks.
     ///
@@ -134,6 +138,9 @@ public:
     /// Any new allocations will be placed in the AllocationBlock, unless
     /// it is null, in which case it will be placed in the entry block of
     /// the function from which the code is being extracted.
+    /// If ArgsInZeroAddressSpace param is set to true, then the aggregate
+    /// param pointer of the outlined function is declared in zero address
+    /// space.
     ///
     /// If KeepOldBlocks is true, the original instances of the extracted region
     /// remains in the original function so they can still be branched to from
@@ -142,10 +149,10 @@ public:
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                  AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
-                  bool AllowAlloca = false,
-                  BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "", bool KeepOldBlocks = false);
+                        AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
+                        bool AllowAlloca = false,
+                        BasicBlock *AllocationBlock = nullptr,
+                        std::string Suffix = "", bool ArgsInZeroAddressSpace = false, bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///

@@ -251,15 +251,14 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
-                             bool AllowVarArgs, bool AllowAlloca,
-                             BasicBlock *AllocationBlock, std::string Suffix,
-                             bool KeepOldBlocks)
-    : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
-      AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
-      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca,
-                                     KeepOldBlocks)),
-      Suffix(Suffix) {}
+                                   bool AllowVarArgs, bool AllowAlloca,
+                                   BasicBlock *AllocationBlock, std::string Suffix, bool KeepOldBlocks,
+                                   bool ArgsInZeroAddressSpace)
+        : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
+          BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
+          AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
+          Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca,KeepOldBlocks)),
+          Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
@@ -866,7 +865,8 @@ Function *CodeExtractor::constructFunctionDeclaration(
   // Concatenate scalar and aggregate params in ParamTy.
   if (!AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
-    ParamTy.push_back(PointerType::get(StructTy, DL.getAllocaAddrSpace()));
+    ParamTy.push_back(PointerType::get(
+        StructTy, ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
   Type *RetTy = getSwitchType();
@@ -1869,7 +1869,15 @@ CallInst *CodeExtractor::emitReplacerCall(
   if (!StructValues.empty()) {
     Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
                             "structArg", &*AllocaBlock->getFirstInsertionPt());
-    params.push_back(Struct);
+
+          if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+            auto *StructSpaceCast = new AddrSpaceCastInst(
+                Struct, PointerType ::get(Context, 0), "structArg.ascast");
+            StructSpaceCast->insertAfter(Struct);
+            params.push_back(StructSpaceCast);
+          } else {
+            params.push_back(Struct);
+          }
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {
