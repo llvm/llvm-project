@@ -47,7 +47,7 @@ Operation *MeshDialect::materializeConstant(OpBuilder &builder, Attribute value,
 
 LogicalResult ClusterOp::verify() {
   ArrayRef<int64_t> dimSizes = getDimSizes();
-  uint8_t rank = getRank();
+  uint64_t rank = getRank();
 
   if (rank == 0)
     return emitOpError("rank of cluster is expected to be a positive integer");
@@ -71,15 +71,15 @@ LogicalResult ClusterOp::verify() {
 
 LogicalResult
 MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                         SymbolRefAttr, ArrayRef<DenseI8ArrayAttr> splitAxes,
-                         ArrayRef<int8_t> partialAxes, Partial) {
+                         SymbolRefAttr, ArrayRef<DenseI32ArrayAttr> splitAxes,
+                         ArrayRef<int32_t> partialAxes, Partial) {
   // TODO: At present cluster symbol ref is not verified. This is due to the
   // difficulty in fetching the corresponding symbol op based on an attribute.
 
-  llvm::SmallSet<int8_t, 4> visitedAxes;
+  llvm::SmallSet<int32_t, 4> visitedAxes;
 
-  auto checkMeshAxis = [&](ArrayRef<int8_t> axesArray) -> LogicalResult {
-    for (int8_t axis : axesArray) {
+  auto checkMeshAxis = [&](ArrayRef<int32_t> axesArray) -> LogicalResult {
+    for (int32_t axis : axesArray) {
       if (axis < 0)
         return emitError() << "mesh axis is expected to be non-negative";
       if (!visitedAxes.insert(axis).second)
@@ -88,8 +88,8 @@ MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return success();
   };
 
-  for (DenseI8ArrayAttr subAxes : splitAxes) {
-    ArrayRef<int8_t> subAxesArray = subAxes.asArrayRef();
+  for (DenseI32ArrayAttr subAxes : splitAxes) {
+    ArrayRef<int32_t> subAxesArray = subAxes.asArrayRef();
     if (failed(checkMeshAxis(subAxesArray)))
       return failure();
   }

@@ -922,7 +922,7 @@ HopperBuilder::buildAndInitBarrierInSharedMemory(OpFoldResult numThreads) {
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   rewriter.create<nvgpu::MBarrierInitOp>(
       loc, barrier, getValueOrCreateConstantIndexOp(rewriter, loc, numThreads),
-      zero);
+      zero, Value());
   rewriter.create<gpu::BarrierOp>(loc);
   return cast<TypedValue<nvgpu::MBarrierGroupType>>(barrier);
 }
@@ -964,7 +964,8 @@ OpFoldResult HopperBuilder::buildTmaAsyncLoad(
   MLIRContext *ctx = rewriter.getContext();
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   Operation *loadOp = rewriter.create<nvgpu::TmaAsyncLoadOp>(
-      loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero);
+      loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero,
+      Value());
   loadOps.push_back(loadOp);
   auto mixedSizes = memref::getMixedSizes(rewriter, loc, sharedMemref);
   SmallVector<AffineExpr> symbols(mixedSizes.size());
@@ -989,7 +990,8 @@ void HopperBuilder::buildBarrierArriveTx(
       affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, mixedSizes);
   Value sizeVal = getValueOrCreateConstantIndexOp(rewriter, loc, size);
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  rewriter.create<nvgpu::MBarrierArriveExpectTxOp>(loc, barrier, sizeVal, zero);
+  rewriter.create<nvgpu::MBarrierArriveExpectTxOp>(loc, barrier, sizeVal, zero,
+                                                   Value());
 }
 
 void HopperBuilder::buildTryWaitParity(

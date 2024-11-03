@@ -49,6 +49,24 @@ bool isColumnMajorMatmul(ArrayAttr indexingMaps);
 /// the reduction.
 bool isRowMajorBatchMatmul(ArrayAttr indexingMaps);
 
+/// Tests whether the given maps describe a vector matrix multiplication. The
+/// test is permutation-invariant. Note that this only checks the affine maps
+/// from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isVecmat(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a matrix vector multiplication. The
+/// test is permutation-invariant. Note that this only checks the affine maps
+/// from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isMatvec(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a batch matrix vector multiplication.
+/// The test is permutation-invariant. Note that this only checks the affine
+/// maps from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isBatchMatvec(ArrayAttr indexingMaps);
+
 /// Return positions in `iteratorTypes` that match `iteratorTypeName`.
 inline void findPositionsOfType(ArrayRef<utils::IteratorType> iteratorTypes,
                                 utils::IteratorType iteratorTypeName,
