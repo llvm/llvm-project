@@ -11,11 +11,7 @@
 
 #include <__config>
 #include <__type_traits/copy_cv.h>
-#include <__type_traits/is_enum.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/nat.h>
 #include <__type_traits/remove_cv.h>
-#include <__type_traits/type_list.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,43 +25,22 @@ template <class _Tp>
 using __make_signed_t = __make_signed(_Tp);
 
 #else
-// clang-format off
-typedef __type_list<signed char,
-        __type_list<signed short,
-        __type_list<signed int,
-        __type_list<signed long,
-        __type_list<signed long long,
-#  if _LIBCPP_HAS_INT128
-        __type_list<__int128_t,
-#  endif
-        __nat
-#  if _LIBCPP_HAS_INT128
-        >
-#  endif
-        > > > > > __signed_types;
-// clang-format on
-
-template <class _Tp, bool = is_integral<_Tp>::value || is_enum<_Tp>::value>
+template <class _Tp>
 struct __make_signed{};
 
-template <class _Tp>
-struct __make_signed<_Tp, true> {
-  typedef typename __find_first<__signed_types, sizeof(_Tp)>::type type;
-};
-
 // clang-format off
-template <> struct __make_signed<bool,               true> {};
-template <> struct __make_signed<  signed short,     true> {typedef short     type;};
-template <> struct __make_signed<unsigned short,     true> {typedef short     type;};
-template <> struct __make_signed<  signed int,       true> {typedef int       type;};
-template <> struct __make_signed<unsigned int,       true> {typedef int       type;};
-template <> struct __make_signed<  signed long,      true> {typedef long      type;};
-template <> struct __make_signed<unsigned long,      true> {typedef long      type;};
-template <> struct __make_signed<  signed long long, true> {typedef long long type;};
-template <> struct __make_signed<unsigned long long, true> {typedef long long type;};
+template <> struct __make_signed<bool              > {};
+template <> struct __make_signed<  signed short    > {typedef short     type;};
+template <> struct __make_signed<unsigned short    > {typedef short     type;};
+template <> struct __make_signed<  signed int      > {typedef int       type;};
+template <> struct __make_signed<unsigned int      > {typedef int       type;};
+template <> struct __make_signed<  signed long     > {typedef long      type;};
+template <> struct __make_signed<unsigned long     > {typedef long      type;};
+template <> struct __make_signed<  signed long long> {typedef long long type;};
+template <> struct __make_signed<unsigned long long> {typedef long long type;};
 #  if _LIBCPP_HAS_INT128
-template <> struct __make_signed<__int128_t,         true> {typedef __int128_t type;};
-template <> struct __make_signed<__uint128_t,        true> {typedef __int128_t type;};
+template <> struct __make_signed<__int128_t        > {typedef __int128_t type;};
+template <> struct __make_signed<__uint128_t       > {typedef __int128_t type;};
 #  endif
 // clang-format on
 
