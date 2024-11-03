@@ -2384,7 +2384,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_scalblnf:
     case LibFunc_scalblnl:
       if (TLI->has(Func))
-        return ConstantFoldFP(ldexp, APF, Ty);
+        return ConstantFoldBinaryFP(ldexp, APF, Ty);
       break;
     case LibFunc_log:
     case LibFunc_logf:
