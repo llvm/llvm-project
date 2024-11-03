@@ -382,12 +382,11 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       atexit_test.cpp
     DEPENDS
-      libc.include.stdlib
+      libc.hdr.func._Exit 
       libc.src.stdlib._Exit
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
       libc.src.__support.CPP.array
-      libc.hdr.func._Exit 
   )
 
   add_libc_test(
@@ -399,10 +398,10 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       at_quick_exit_test.cpp
     DEPENDS
+      libc.hdr.func._Exit 
       libc.src.stdlib.quick_exit
       libc.src.stdlib.at_quick_exit
       libc.src.__support.CPP.array
-      libc.hdr.func._Exit 
   )
 
   add_libc_test(

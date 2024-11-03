@@ -10,7 +10,6 @@
 #define LLVM_LIBC_HDR_FUNC_FREE_H
 
 #ifdef LIBC_FULL_BUILD
-#include "hdr/types/size_t.h"
 extern "C" void free(void *);
 
 #else // Overlay mode
