@@ -174,8 +174,6 @@ struct std::tuple_size<llvm::StringMapEntry<ValueTy>>
 
 template <std::size_t Index, typename ValueTy>
 struct std::tuple_element<Index, llvm::StringMapEntry<ValueTy>>
-    : std::conditional<Index == 0, llvm::StringRef, ValueTy> {
-  static_assert(Index == 0 || Index == 1);
-};
+    : std::tuple_element<Index, std::pair<llvm::StringRef, ValueTy>> {};
 
 #endif // LLVM_ADT_STRINGMAPENTRY_H
