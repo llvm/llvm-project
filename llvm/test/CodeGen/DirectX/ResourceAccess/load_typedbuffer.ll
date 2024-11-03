@@ -20,8 +20,8 @@ define void @load_float4(i32 %index, i32 %elemindex) {
   call void @use_float4(<4 x float> %vec_data)
 
   ; CHECK: %[[VALUE:.*]] = call <4 x float> @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %buffer, i32 %index)
-  ; CHECK: extractelement <4 x float> %[[VALUE]], i32 4
-  %y_ptr = getelementptr inbounds <4 x float>, ptr %ptr, i32 0, i32 4
+  ; CHECK: extractelement <4 x float> %[[VALUE]], i32 1
+  %y_ptr = getelementptr inbounds <4 x float>, ptr %ptr, i32 0, i32 1
   %y_data = load float, ptr %y_ptr
   call void @use_float(float %y_data)
 
