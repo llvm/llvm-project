@@ -695,6 +695,22 @@ void CodeGenAction::lowerHLFIRToFIR() {
   }
 }
 
+// TODO: We should get this from TargetInfo. However, that depends on
+// too much of clang, so for now, replicate the functionality.
+static std::optional<std::pair<unsigned, unsigned>>
+getVScaleRange(CompilerInstance &ci,
+               const Fortran::frontend::LangOptions &langOpts) {
+  if (langOpts.VScaleMin || langOpts.VScaleMax)
+    return std::pair<unsigned, unsigned>(
+        langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
+
+  std::string featuresStr = getTargetFeatures(ci);
+  if (featuresStr.find("+sve") != std::string::npos)
+    return std::pair<unsigned, unsigned>(1, 16);
+
+  return std::nullopt;
+}
+
 // Lower the previously generated MLIR module into an LLVM IR module
 void CodeGenAction::generateLLVMIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
@@ -714,6 +730,18 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts);
+
+  const auto targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  // Only get the vscale range if AArch64.
+  if (triple.isAArch64()) {
+    auto langOpts = ci.getInvocation().getLangOpts();
+    if (auto vsr = getVScaleRange(ci, langOpts)) {
+      config.VScaleMin = vsr->first;
+      config.VScaleMax = vsr->second;
+    }
+  }
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config);

@@ -129,20 +129,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     exit(1);
   }
 
-  Triple TheTriple = Triple(Triple::normalize(TargetTriple));
-
-  // Get the target specific parser.
-  std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
-  if (!TheTarget) {
-    errs() << argv[0] << ": " << Error;
-    return 1;
-  }
-
   // Set up the pipeline like llc does.
-  std::string CPUStr = codegen::getCPUStr(),
-              FeaturesStr = codegen::getFeaturesStr();
 
   CodeGenOptLevel OLvl;
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
@@ -151,11 +138,9 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     errs() << argv[0] << ": invalid optimization level.\n";
     return 1;
   }
-
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
-  TM.reset(TheTarget->createTargetMachine(
-      TheTriple.getTriple(), CPUStr, FeaturesStr, Options,
-      codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(), OLvl));
+  ExitOnError ExitOnErr(std::string(*argv[0]) + ": error:");
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(
+      Triple::normalize(TargetTriple), OLvl));
   assert(TM && "Could not allocate target machine!");
 
   // Make sure we print the summary and the current unit when LLVM errors out.

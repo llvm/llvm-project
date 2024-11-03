@@ -125,7 +125,7 @@ struct SimpleStruct {
 };
 
 template <typename HasherT, llvm::support::endianness Endianness>
-void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
              const SimpleStruct &Value) {
   HBuilder.add(Value.C);
   HBuilder.add(Value.I);
@@ -139,7 +139,7 @@ struct StructWithoutCopyOrMove {
   StructWithoutCopyOrMove &operator=(const StructWithoutCopyOrMove &) = delete;
 
   template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithoutCopyOrMove &Value) {
     HBuilder.add(Value.I);
   }
@@ -154,9 +154,9 @@ struct /* __attribute__((packed)) */ StructWithFastHash {
   // If possible, we want to hash both `I` and `C` in a single `update`
   // call for performance concerns.
   template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithFastHash &Value) {
-    if (Endianness == llvm::support::endian::system_endianness()) {
+    if (Endianness == llvm::endianness::native) {
       HBuilder.update(llvm::ArrayRef(reinterpret_cast<const uint8_t *>(&Value),
                                      sizeof(Value)));
     } else {
@@ -178,9 +178,9 @@ public:
       Elements[I] = I;
   }
   template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const CustomContainer &Value) {
-    if (Endianness == llvm::support::endian::system_endianness()) {
+    if (Endianness == llvm::endianness::native) {
       HBuilder.update(llvm::ArrayRef(
           reinterpret_cast<const uint8_t *>(&Value.Size),
           sizeof(Value.Size) + Value.Size * sizeof(Value.Elements[0])));

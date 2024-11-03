@@ -40,7 +40,7 @@ _LIBCPP_HIDE_FROM_ABI void
 generate(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_generate),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_generate, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _ForwardIterator __g_last, _Generator __g_gen) {
         std::for_each(
             __policy, std::move(__g_first), std::move(__g_last), [&](__iter_reference<_ForwardIterator> __element) {
@@ -65,7 +65,7 @@ _LIBCPP_HIDE_FROM_ABI void
 generate_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __n, _Generator __gen) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_generate_n),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_generate_n, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _Size __g_n, _Generator __g_gen) {
         std::for_each_n(__policy, std::move(__g_first), __g_n, [&](__iter_reference<_ForwardIterator> __element) {
           __element = __g_gen();

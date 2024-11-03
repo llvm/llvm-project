@@ -1,88 +1,10 @@
 # Allow Location Descriptions on the DWARF Expression Stack <!-- omit in toc -->
 
-- [1. Extension](#extension)
-- [2. Heterogeneous Computing Devices](#heterogeneous-computing-devices)
-- [3. DWARF 5](#dwarf-5)
-  - [3.1 How DWARF Maps Source Language To Hardware](#how-dwarf-maps-source-language-to-hardware)
-  - [3.2 Examples](#examples)
-    - [3.2.1 Dynamic Array Size](#dynamic-array-size)
-    - [3.2.2 Variable Location in Register](#variable-location-in-register)
-    - [3.2.3 Variable Location in Memory](#variable-location-in-memory)
-    - [3.2.4 Variable Spread Across Different Locations](#variable-spread-across-different-locations)
-    - [3.2.5 Offsetting a Composite Location](#offsetting-a-composite-location)
-    - [3.2.6 Pointer to Member](#pointer-to-member)
-    - [3.2.7 Virtual Base Class](#virtual-base-class)
-  - [3.3 Limitations](#limitations)
-- [4. Extension Solution](#extension-solution)
-  - [4.1 Location Description](#location-description)
-  - [4.2 Stack Location Description Operations](#stack-location-description-operations)
-  - [4.3 Examples](#examples-1)
-    - [4.3.1 Source Language Variable Spilled to Part of a Vector Register](#source-language-variable-spilled-to-part-of-a-vector-register)
-    - [4.3.2 Source Language Variable Spread Across Multiple Vector Registers](#source-language-variable-spread-across-multiple-vector-registers)
-    - [4.3.3 Source Language Variable Spread Across Multiple Kinds of Locations](#source-language-variable-spread-across-multiple-kinds-of-locations)
-    - [4.3.4 Address Spaces](#address-spaces)
-    - [4.3.5 Bit Offsets](#bit-offsets)
-  - [4.4 Call Frame Information (CFI)](#call-frame-information-cfi)
-  - [4.5 Objects Not In Byte Aligned Global Memory](#objects-not-in-byte-aligned-global-memory)
-  - [4.6 Higher Order Operations](#higher-order-operations)
-  - [4.7 Objects In Multiple Places](#objects-in-multiple-places)
-- [5. Conclusion](#conclusion)
-- [A. Changes to DWARF Debugging Information Format Version 5](#a-changes-to-dwarf-debugging-information-format-version-5)
-  - [A.2 General Description](#a-2-general-description)
-    - [A.2.5 DWARF Expressions](#a-2-5-dwarf-expressions)
-      - [A.2.5.1 DWARF Expression Evaluation Context](#a-2-5-1-dwarf-expression-evaluation-context)
-      - [A.2.5.2 DWARF Expression Value](#a-2-5-2-dwarf-expression-value)
-      - [A.2.5.3 DWARF Location Description](#a-2-5-3-dwarf-location-description)
-      - [A.2.5.4 DWARF Operation Expressions](#a-2-5-4-dwarf-operation-expressions)
-        - [A.2.5.4.1 Stack Operations](#a-2-5-4-1-stack-operations)
-        - [A.2.5.4.2 Control Flow Operations](#a-2-5-4-2-control-flow-operations)
-        - [A.2.5.4.3 Value Operations](#a-2-5-4-3-value-operations)
-          - [A.2.5.4.3.1 Literal Operations](#a-2-5-4-3-1-literal-operations)
-          - [A.2.5.4.3.2 Arithmetic and Logical Operations](#a-2-5-4-3-2-arithmetic-and-logical-operations)
-          - [A.2.5.4.3.3 Type Conversion Operations](#a-2-5-4-3-3-type-conversion-operations)
-          - [A.2.5.4.3.4 Special Value Operations](#a-2-5-4-3-4-special-value-operations)
-        - [A.2.5.4.4 Location Description Operations](#a-2-5-4-4-location-description-operations)
-          - [A.2.5.4.4.1 General Location Description Operations](#a-2-5-4-4-1-general-location-description-operations)
-          - [A.2.5.4.4.2 Undefined Location Description Operations](#a-2-5-4-4-2-undefined-location-description-operations)
-          - [A.2.5.4.4.3 Memory Location Description Operations](#a-2-5-4-4-3-memory-location-description-operations)
-          - [A.2.5.4.4.4 Register Location Description Operations](#a-2-5-4-4-4-register-location-description-operations)
-          - [A.2.5.4.4.5 Implicit Location Description Operations](#a-2-5-4-4-5-implicit-location-description-operations)
-          - [A.2.5.4.4.6 Composite Location Description Operations](#a-2-5-4-4-6-composite-location-description-operations)
-      - [A.2.5.5 DWARF Location List Expressions](#a-2-5-5-dwarf-location-list-expressions)
-  - [A.3 Program Scope Entries](#a-3-program-scope-entries)
-    - [A.3.3 Subroutine and Entry Point Entries](#a-3-3-subroutine-and-entry-point-entries)
-      - [A.3.3.5 Low-Level Information](#a-3-3-5-low-level-information)
-    - [A.3.4 Call Site Entries and Parameters](#a-3-4-call-site-entries-and-parameters)
-      - [A.3.4.2 Call Site Parameters](#a-3-4-2-call-site-parameters)
-    - [A.3.5 Lexical Block Entries](#a-3-5-lexical-block-entries)
-  - [A.4 Data Object and Object List Entries](#a-4-data-object-and-object-list-entries)
-    - [A.4.1 Data Object Entries](#a-4-1-data-object-entries)
-  - [A.5 Type Entries](#a-5-type-entries)
-    - [A.5.7 Structure, Union, Class and Interface Type Entries](#a-5-7-structure-union-class-and-interface-type-entries)
-      - [A.5.7.3 Derived or Extended Structures, Classes and Interfaces](#a-5-7-3-derived-or-extended-structures-classes-and-interfaces)
-      - [A.5.7.8 Member Function Entries](#a-5-7-8-member-function-entries)
-    - [A.5.14 Pointer to Member Type Entries](#a-5-14-pointer-to-member-type-entries)
-    - [A.5.16 Dynamic Type Entries](#a-5-16-dynamic-type-entries)
-  - [A.6 Other Debugging Information](#a-6-other-debugging-information)
-    - [A.6.2 Line Number Information](#a-6-2-line-number-information)
-    - [A.6.4 Call Frame Information](#a-6-4-call-frame-information)
-      - [A.6.4.1 Structure of Call Frame Information](#a-6-4-1-structure-of-call-frame-information)
-      - [A.6.4.2 Call Frame Instructions](#a-6-4-2-call-frame-instructions)
-        - [A.6.4.2.1 Row Creation Instructions](#a-6-4-2-1-row-creation-instructions)
-        - [A.6.4.2.2 CFA Definition Instructions](#a-6-4-2-2-cfa-definition-instructions)
-        - [A.6.4.2.3 Register Rule Instructions](#a-6-4-2-3-register-rule-instructions)
-        - [A.6.4.2.4 Row State Instructions](#a-6-4-2-4-row-state-instructions)
-        - [A.6.4.2.5 Padding Instruction](#a-6-4-2-5-padding-instruction)
-      - [A.6.4.3 Call Frame Instruction Usage](#a-6-4-3-call-frame-instruction-usage)
-      - [A.6.4.4 Call Frame Calling Address](#a-6-4-4-call-frame-calling-address)
-  - [A.7 Data Representation](#a-7-data-representation)
-    - [A.7.4 32-Bit and 64-Bit DWARF Formats](#a-7-4-32-bit-and-64-bit-dwarf-formats)
-    - [A.7.5 Format of Debugging Information](#a-7-5-format-of-debugging-information)
-      - [A.7.5.5 Classes and Forms](#a-7-5-5-classes-and-forms)
-    - [A.7.7 DWARF Expressions](#a-7-7-dwarf-expressions)
-      - [A.7.7.1 Operation Expressions](#a-7-7-1-operation-expressions)
-      - [A.7.7.3 Location List Expressions](#a-7-7-3-location-list-expressions)
-- [B. Further Information](#b-further-information)
+```{contents}
+---
+local:
+---
+```
 
 # 1. Extension
 
@@ -111,20 +33,18 @@ specialized context sensitive operations are harder for both producers and
 consumers than a smaller number of general composable operations that have
 consistent semantics regardless of context.
 
-First, section [2. Heterogeneous Computing
-Devices](#heterogeneous-computing-devices) describes heterogeneous devices and
-the features they have that are not addressed by DWARF 5. Then section [3. DWARF
-5](#dwarf-5) presents a brief simplified overview of the DWARF 5 expression
+First, section [2. Heterogeneous Computing Devices](#heterogeneous-computing-devices)
+describes heterogeneous devices and the features they have that are not addressed by DWARF 5.
+Then section [3. DWARF5](#dwarf-5) presents a brief simplified overview of the DWARF 5 expression
 evaluation model that highlights the difficulties for supporting the
 heterogeneous features. Next, section [4. Extension
 Solution](#extension-solution) provides an overview of the proposal, using
 simplified examples to illustrate how it can address the issues of heterogeneous
 devices and also benefit non-heterogeneous devices. Then overall conclusions are
-covered in section [5. Conclusion](#conclusion). Appendix [A. Changes to DWARF
-Debugging Information Format Version
-5](#a-changes-to-dwarf-debugging-information-format-version-5) gives changes
-relative to the DWARF Version 5 standard. Finally, appendix [B. Further
-Information](#b-further-information) has references to further information.
+covered in section [5. Conclusion](#conclusion).
+Appendix [A. Changes to DWARF Debugging Information Format Version 5](#changes-to-dwarf-debugging-information-format-version-5) gives changes
+relative to the DWARF Version 5 standard. Finally, appendix
+[B. Further Information](#further-information) has references to further information.
 
 # 2. Heterogeneous Computing Devices
 
@@ -625,7 +545,7 @@ Address requested for identifier "x" which is in register $rdi
 
 With location descriptions on the stack, the definition of `DW_OP_use_location`
 can be modified by replacing every instance of "address" with "location
-description", as is described in [A.5 Type Entries](#a-5-type-entries).
+description", as is described in [Type Entries](#type-entries).
 
 To implement the fully generalized version of this attribute, GCC would only
 need to change the expression from `DW_OP_plus` to `DW_OP_swap,
@@ -811,8 +731,7 @@ $2 = {<A> = <invalid address>, _vptr.B = <optimized out>}
 
 With location descriptions on the stack, the definition of
 `DW_OP_data_member_location` can be modified by replacing every instance of
-"address" with "location description", as is described in [A.5 Type
-Entries](#a-5-type-entries).
+"address" with "location description", as is described in [A.5 Type Entries](#type-entries).
 
 To implement the fully generalized version of this attribute, GCC would only
 need to change the last operation in the expression from `DW_OP_plus` to
@@ -1406,10 +1325,9 @@ is evaluated, it may be specified whether a value or location description is
 required as the result kind.
 
 If a result kind is specified, and the result of the evaluation does not match
-the specified result kind, then the implicit conversions described in [2.5.4.4.3
-Memory Location Description
-Operations](#memory-location-description-operations) are performed if
-valid. Otherwise, the DWARF expression is ill-formed.
+the specified result kind, then the implicit conversions described in
+[2.5.4.4.3 Memory Location Description Operations](#memory-location-description-operations)
+are performed if valid. Otherwise, the DWARF expression is ill-formed.
 
 If the evaluation of a DWARF expression encounters an evaluation error, then the
 result is an evaluation error.
@@ -1794,9 +1712,9 @@ Operations represent a postfix operation on a simple stack machine. Each stack
 entry can hold either a value or a location description. Operations can act on
 entries on the stack, including adding entries and removing entries. If the kind
 of a stack entry does not match the kind required by the operation and is not
-implicitly convertible to the required kind (see [2.5.4.4.3 Memory Location
-Description Operations](#memory-location-description-operations)), then
-the DWARF operation expression is ill-formed.
+implicitly convertible to the required kind
+(see [2.5.4.4.3 Memory Location Description Operations](#memory-location-description-operations)),
+then the DWARF operation expression is ill-formed.
 
 Evaluation of an operation expression starts with an empty stack on which the
 entries from the initial stack provided by the context are pushed in the order
@@ -1817,9 +1735,8 @@ The result of the evaluation is:
     an empty operation expression for this purpose.</i>
 
   - If the top stack entry is a location description, or can be converted to one
-    (see [2.5.4.4.3 Memory Location Description
-    Operations](#memory-location-description-operations)), then the result
-    is that, possibly converted, location description. Any other entries on the
+    (see [2.5.4.4.3 Memory Location Description Operations](#memory-location-description-operations)),
+    then the result is that, possibly converted, location description. Any other entries on the
     stack are discarded.
   - Otherwise the DWARF expression is ill-formed.
 
@@ -1828,9 +1745,8 @@ The result of the evaluation is:
 
 - If the current result kind specifies a value, then:
   - If the top stack entry is a value, or can be converted to one (see
-    [2.5.4.4.3 Memory Location Description
-    Operations](#memory-location-description-operations)), then the result is
-    that, possibly converted, value. Any other entries on the stack are
+    [2.5.4.4.3 Memory Location Description Operations](#memory-location-description-operations)),
+    then the result is that, possibly converted, value. Any other entries on the stack are
     discarded.
   - Otherwise the DWARF expression is ill-formed.
 - If the current result kind is not specified, then:
@@ -1867,9 +1783,8 @@ stack assume that the top of the stack (most recently added entry) has index 0.
 They allow the stack entries to be either a value or location description.
 
 If any stack entry accessed by a stack operation is an incomplete composite
-location description (see [2.5.4.4.6 Composite Location Description
-Operations](#composite-location-description-operations)), then the DWARF
-expression is ill-formed.
+location description (see [2.5.4.4.6 Composite Location Description Operations]
+(#composite-location-description-operations)), then the DWARF expression is ill-formed.
 
 > NOTE: These operations now support stack entries that are values and location
 > descriptions.
@@ -2346,9 +2261,8 @@ There are these special value operations currently defined:
     undefined location storage or the offset of any bit exceeds the size of the
     location storage LS specified by any single location description SL of L.
 
-    See [2.5.4.4.5 Implicit Location Description
-    Operations](#implicit-location-description-operations) for special
-    rules concerning implicit location descriptions created by the
+    See [2.5.4.4.5 Implicit Location Description Operations](#implicit-location-description-operations)
+    for special rules concerning implicit location descriptions created by the
     `DW_OP_implicit_pointer` operation.
 
 5.  `DW_OP_xderef`
@@ -2606,8 +2520,8 @@ bit offset equal to V scaled by 8 (the byte size).
 If a stack entry is required to be a location description, but it is an implicit
 pointer value IPV with the target architecture default address space, then it is
 implicitly converted to a location description with one single location
-description specified by IPV. See [2.5.4.4.5 Implicit Location Description
-Operations](#implicit-location-description-operations).
+description specified by IPV. See
+[2.5.4.4.5 Implicit Location Description Operations](#implicit-location-description-operations).
 
 If a stack entry is required to be a value, but it is a location description L
 with one memory location description SL in the target architecture default
@@ -3699,8 +3613,7 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     value of length must be an integral multiple of the address size specified
     in the `address_size` field.
 
-2.  `CIE_id` (4 or 8 bytes, see [7.4 32-Bit and 64-Bit DWARF
-    Formats](#32-bit-and-64-bit-dwarf-formats))
+2.  `CIE_id` (4 or 8 bytes, see [7.4 32-Bit and 64-Bit DWARF Formats](#bit-and-64-bit-dwarf-formats))
 
     A constant that is used to distinguish CIEs from FDEs.
 
@@ -3796,8 +3709,7 @@ An FDE contains the following fields, in order:
     of the length field plus the value of length must be an integral multiple of
     the address size.
 
-2.  `CIE_pointer` (4 or 8 bytes, see [7.4 32-Bit and 64-Bit DWARF
-    Formats](#32-bit-and-64-bit-dwarf-formats))
+2.  `CIE_pointer` (4 or 8 bytes, see [7.4 32-Bit and 64-Bit DWARF Formats](#bit-and-64-bit-dwarf-formats))
 
     A constant offset into the `.debug_frame` section that denotes the CIE that
     is associated with this FDE.

@@ -326,4 +326,18 @@ def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
   ];
 }
 
+def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
+  let summary = "Add vscale_range attribute to functions";
+  let description = [{
+     Set an attribute for the vscale range on functions, to allow scalable
+     vector operations to be used on processors with variable vector length.
+  }];
+  let options = [
+    Option<"vscaleRange", "vscale-range",
+           "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
+           "vector scale range">,
+  ];
+  let constructor = "::fir::createVScaleAttrPass()";
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

@@ -287,14 +287,17 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 /// Checks that the elemental type is present in either the pointer type or
-/// the attribute, but not both.
+/// the attribute, but not in none or both.
 static LogicalResult verifyOpaquePtr(Operation *op, LLVMPointerType ptrType,
                                      std::optional<Type> ptrElementType) {
-  if (ptrType.isOpaque() && !ptrElementType.has_value()) {
+  bool typePresentInPointerType = !ptrType.isOpaque();
+  bool typePresentInAttribute = ptrElementType.has_value();
+
+  if (!typePresentInPointerType && !typePresentInAttribute) {
     return op->emitOpError() << "expected '" << kElemTypeAttrName
                              << "' attribute if opaque pointer type is used";
   }
-  if (!ptrType.isOpaque() && ptrElementType.has_value()) {
+  if (typePresentInPointerType && typePresentInAttribute) {
     return op->emitOpError()
            << "unexpected '" << kElemTypeAttrName
            << "' attribute when non-opaque pointer type is used";

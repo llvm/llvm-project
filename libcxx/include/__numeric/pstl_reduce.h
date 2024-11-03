@@ -40,7 +40,7 @@ reduce(_ExecutionPolicy&& __policy,
        _Tp __init,
        _BinaryOperation __op = {}) {
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_reduce),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_reduce, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _ForwardIterator __g_last, _Tp __g_init, _BinaryOperation __g_op) {
         return std::transform_reduce(
             __policy, std::move(__g_first), std::move(__g_last), std::move(__g_init), std::move(__g_op), __identity{});
@@ -58,7 +58,7 @@ template <class _ExecutionPolicy,
 _LIBCPP_HIDE_FROM_ABI __iter_value_type<_ForwardIterator>
 reduce(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last) {
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_reduce),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_reduce, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _ForwardIterator __g_last) {
         return std::reduce(__policy, __g_first, __g_last, __iter_value_type<_ForwardIterator>());
       },

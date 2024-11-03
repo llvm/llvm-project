@@ -3,8 +3,8 @@
 ; Test that the ffs library call simplifier works correctly even for
 ; targets with 16-bit int.
 ;
-; RUN: opt < %s -mtriple=avr-linux -passes=instcombine -S | FileCheck %s
-; RUN: opt < %s -mtriple=msp430-linux -passes=instcombine -S | FileCheck %s
+; RUN: opt < %s -mtriple=avr-linux -passes=instcombine -S | FileCheck %s --check-prefix=AVR
+; RUN: opt < %s -mtriple=msp430-linux -passes=instcombine -S | FileCheck %s --check-prefix=MSP430
 
 declare i16 @ffs(i16)
 
@@ -12,15 +12,25 @@ declare void @sink(i16)
 
 
 define void @fold_ffs(i16 %x) {
-; CHECK-LABEL: @fold_ffs(
-; CHECK-NEXT:    call void @sink(i16 0)
-; CHECK-NEXT:    call void @sink(i16 1)
-; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[CTTZ]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X]], 0
-; CHECK-NEXT:    [[NX:%.*]] = select i1 [[DOTNOT]], i16 0, i16 [[TMP1]]
-; CHECK-NEXT:    call void @sink(i16 [[NX]])
-; CHECK-NEXT:    ret void
+; AVR-LABEL: @fold_ffs(
+; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call void @sink(i16 1)
+; AVR-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; AVR-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[CTTZ]], 1
+; AVR-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X]], 0
+; AVR-NEXT:    [[NX:%.*]] = select i1 [[DOTNOT]], i16 0, i16 [[TMP1]]
+; AVR-NEXT:    call void @sink(i16 [[NX]])
+; AVR-NEXT:    ret void
+;
+; MSP430-LABEL: @fold_ffs(
+; MSP430-NEXT:    call void @sink(i16 0)
+; MSP430-NEXT:    call void @sink(i16 1)
+; MSP430-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; MSP430-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[CTTZ]], 1
+; MSP430-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X]], 0
+; MSP430-NEXT:    [[NX:%.*]] = select i1 [[DOTNOT]], i16 0, i16 [[TMP1]]
+; MSP430-NEXT:    call void @sink(i16 [[NX]])
+; MSP430-NEXT:    ret void
 ;
   %n0 = call i16 @ffs(i16 0)
   call void @sink(i16 %n0)

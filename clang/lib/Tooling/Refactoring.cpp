@@ -78,10 +78,7 @@ bool formatAndApplyAllReplacements(
     const std::string &FilePath = FileAndReplaces.first;
     auto &CurReplaces = FileAndReplaces.second;
 
-    const FileEntry *Entry = nullptr;
-    if (auto File = Files.getFile(FilePath))
-      Entry = *File;
-
+    FileEntryRef Entry = llvm::cantFail(Files.getFileRef(FilePath));
     FileID ID = SM.getOrCreateFileID(Entry, SrcMgr::C_User);
     StringRef Code = SM.getBufferData(ID);
 

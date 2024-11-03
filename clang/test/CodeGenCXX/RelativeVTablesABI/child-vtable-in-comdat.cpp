@@ -8,7 +8,6 @@
 // CHECK-DAG: $_ZTS1B = comdat any
 // CHECK-DAG: $_ZTI1B = comdat any
 // CHECK-DAG: $_ZTI1B.rtti_proxy = comdat any
-// CHECK-DAG: $_ZTI1A.rtti_proxy = comdat any
 
 // VTable for B is emitted here since we access it when creating an instance of B. The VTable is also linkonce_odr and in its own comdat.
 // CHECK-DAG: @_ZTV1B.local = linkonce_odr hidden unnamed_addr constant { [3 x i32] } { [3 x i32] [i32 0, i32 trunc (i64 sub (i64 ptrtoint (ptr @_ZTI1B.rtti_proxy to i64), i64 ptrtoint (ptr getelementptr inbounds ({ [3 x i32] }, ptr @_ZTV1B.local, i32 0, i32 0, i32 2) to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @_ZN1B3fooEv to i64), i64 ptrtoint (ptr getelementptr inbounds ({ [3 x i32] }, ptr @_ZTV1B.local, i32 0, i32 0, i32 2) to i64)) to i32)] }, comdat($_ZTV1B), align 4
@@ -18,7 +17,7 @@
 // CHECK-DAG: @_ZTS1B =
 // CHECK-DAG: @_ZTI1A =
 // CHECK-DAG: @_ZTI1B =
-// CHECK-DAG: @_ZTI1B.rtti_proxy = hidden unnamed_addr constant ptr @_ZTI1B, comdat
+// CHECK-DAG: @_ZTI1B.rtti_proxy = linkonce_odr hidden unnamed_addr constant ptr @_ZTI1B, comdat
 
 // We will emit a vtable for B here, so it does have an alias, but we will not
 // emit one for A.

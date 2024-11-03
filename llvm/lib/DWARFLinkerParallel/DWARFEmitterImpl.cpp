@@ -230,10 +230,20 @@ void DwarfEmitterImpl::emitDebugNames(
     return;
 
   Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
-  emitDWARF5AccelTable(Asm.get(), Table, CUOffsets,
-                       [&CUidToIdx](const DWARF5AccelTableStaticData &Entry) {
-                         return CUidToIdx[Entry.getCUIndex()];
-                       });
+  dwarf::Form Form =
+      DIEInteger::BestForm(/*IsSigned*/ false, (uint64_t)CUidToIdx.size() - 1);
+  /// DWARFLinker doesn't support type units + .debug_names right now anyway,
+  /// so just keeping current behavior.
+  emitDWARF5AccelTable(
+      Asm.get(), Table, CUOffsets,
+      [&CUidToIdx, &Form](const DWARF5AccelTableStaticData &Entry)
+          -> GetIndexForEntryReturnType {
+        GetIndexForEntryReturnType Index = std::nullopt;
+        if (CUidToIdx.size() > 1)
+          Index = {CUidToIdx[Entry.getCUIndex()],
+                   {dwarf::DW_IDX_compile_unit, Form}};
+        return Index;
+      });
 }
 
 void DwarfEmitterImpl::emitAppleNamespaces(

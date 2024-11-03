@@ -1398,11 +1398,11 @@ private:
 };
 
 /// Sparse rewriting rule for the sort_coo operator.
-struct SortCooRewriter : public OpRewritePattern<SortCooOp> {
+struct SortRewriter : public OpRewritePattern<SortOp> {
 public:
-  using OpRewritePattern<SortCooOp>::OpRewritePattern;
+  using OpRewritePattern<SortOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(SortCooOp op,
+  LogicalResult matchAndRewrite(SortOp op,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> xys;
     xys.push_back(op.getXy());
@@ -1427,5 +1427,5 @@ void mlir::populateSparseBufferRewriting(RewritePatternSet &patterns,
                                          bool enableBufferInitialization) {
   patterns.add<PushBackRewriter>(patterns.getContext(),
                                  enableBufferInitialization);
-  patterns.add<SortCooRewriter>(patterns.getContext());
+  patterns.add<SortRewriter>(patterns.getContext());
 }

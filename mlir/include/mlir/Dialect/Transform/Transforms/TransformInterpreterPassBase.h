@@ -98,6 +98,7 @@ public:
 
   TransformInterpreterPassBase(const TransformInterpreterPassBase &pass) {
     sharedTransformModule = pass.sharedTransformModule;
+    transformLibraryModule = pass.transformLibraryModule;
     options = pass.options;
   }
 

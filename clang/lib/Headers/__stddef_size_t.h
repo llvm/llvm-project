@@ -7,10 +7,9 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(_SIZE_T) || __has_feature(modules)
-/* Always define size_t when modules are available. */
-#if !__has_feature(modules)
+#ifndef _SIZE_T
 #define _SIZE_T
-#endif
+
 typedef __SIZE_TYPE__ size_t;
+
 #endif

@@ -7,23 +7,41 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(__STDDEF_H) || defined(__need_ptrdiff_t) ||                       \
-    defined(__need_size_t) || defined(__need_rsize_t) ||                       \
-    defined(__need_wchar_t) || defined(__need_NULL) ||                         \
-    defined(__need_nullptr_t) || defined(__need_unreachable) ||                \
-    defined(__need_max_align_t) || defined(__need_offsetof) ||                 \
-    defined(__need_wint_t) ||                                                  \
-    (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1)
+/*
+ * This header is designed to be included multiple times. If any of the __need_
+ * macros are defined, then only that subset of interfaces are provided. This
+ * can be useful for POSIX headers that need to not expose all of stddef.h, but
+ * need to use some of its interfaces. Otherwise this header provides all of
+ * the expected interfaces.
+ *
+ * When clang modules are enabled, this header is a textual header. It ignores
+ * its header guard so that multiple submodules can export its interfaces.
+ * Take module SM with submodules A and B, whose headers both include stddef.h
+ * When SM.A builds, __STDDEF_H will be defined. When SM.B builds, the
+ * definition from SM.A will leak when building without local submodule
+ * visibility. stddef.h wouldn't include any of its implementation headers, and
+ * SM.B wouldn't import any of the stddef modules, and SM.B's `export *`
+ * wouldn't export any stddef interfaces as expected. However, since stddef.h
+ * ignores its header guard when building with modules, it all works as
+ * expected.
+ *
+ * When clang modules are not enabled, the header guards can function in the
+ * normal simple fashion.
+ */
+#if !defined(__STDDEF_H) || __has_feature(modules) ||                          \
+    (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1) ||        \
+    defined(__need_ptrdiff_t) || defined(__need_size_t) ||                     \
+    defined(__need_rsize_t) || defined(__need_wchar_t) ||                      \
+    defined(__need_NULL) || defined(__need_nullptr_t) ||                       \
+    defined(__need_unreachable) || defined(__need_max_align_t) ||              \
+    defined(__need_offsetof) || defined(__need_wint_t)
 
 #if !defined(__need_ptrdiff_t) && !defined(__need_size_t) &&                   \
     !defined(__need_rsize_t) && !defined(__need_wchar_t) &&                    \
     !defined(__need_NULL) && !defined(__need_nullptr_t) &&                     \
     !defined(__need_unreachable) && !defined(__need_max_align_t) &&            \
     !defined(__need_offsetof) && !defined(__need_wint_t)
-/* Always define miscellaneous pieces when modules are available. */
-#if !__has_feature(modules)
 #define __STDDEF_H
-#endif
 #define __need_ptrdiff_t
 #define __need_size_t
 /* ISO9899:2011 7.20 (C11 Annex K): Define rsize_t if __STDC_WANT_LIB_EXT1__ is

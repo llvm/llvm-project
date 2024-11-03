@@ -15,13 +15,13 @@ define amdgpu_kernel void @s_test_srem(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-NEXT:    s_sub_u32 s0, 0, s12
 ; GCN-NEXT:    s_subb_u32 s1, 0, s13
 ; GCN-NEXT:    s_mov_b32 s4, s8
-; GCN-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; GCN-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; GCN-NEXT:    v_rcp_f32_e32 v0, v0
 ; GCN-NEXT:    s_mov_b32 s5, s9
 ; GCN-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GCN-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GCN-NEXT:    v_trunc_f32_e32 v1, v1
-; GCN-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; GCN-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GCN-NEXT:    v_mul_lo_u32 v2, s0, v1
@@ -226,12 +226,12 @@ define i64 @v_test_srem(i64 %x, i64 %y) {
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v5, v2
 ; GCN-NEXT:    v_sub_i32_e32 v6, vcc, 0, v3
 ; GCN-NEXT:    v_subb_u32_e32 v7, vcc, 0, v2, vcc
-; GCN-NEXT:    v_mac_f32_e32 v4, 0x4f800000, v5
+; GCN-NEXT:    v_madmk_f32 v4, v5, 0x4f800000, v4
 ; GCN-NEXT:    v_rcp_f32_e32 v4, v4
 ; GCN-NEXT:    v_mul_f32_e32 v4, 0x5f7ffffc, v4
 ; GCN-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v4
 ; GCN-NEXT:    v_trunc_f32_e32 v5, v5
-; GCN-NEXT:    v_mac_f32_e32 v4, 0xcf800000, v5
+; GCN-NEXT:    v_madmk_f32 v4, v5, 0xcf800000, v4
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v4, v4
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v5, v5
 ; GCN-NEXT:    v_mul_hi_u32 v8, v6, v4
@@ -894,7 +894,7 @@ define amdgpu_kernel void @s_test_srem33_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_sub_u32 s0, 0, s12
 ; GCN-NEXT:    s_subb_u32 s1, 0, s13
 ; GCN-NEXT:    s_ashr_i32 s6, s7, 31
-; GCN-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; GCN-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; GCN-NEXT:    v_rcp_f32_e32 v0, v0
 ; GCN-NEXT:    s_mov_b32 s7, s6
 ; GCN-NEXT:    s_mov_b32 s8, s4
@@ -902,7 +902,7 @@ define amdgpu_kernel void @s_test_srem33_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GCN-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GCN-NEXT:    v_trunc_f32_e32 v1, v1
-; GCN-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; GCN-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GCN-NEXT:    v_mul_lo_u32 v2, s0, v1
@@ -1290,13 +1290,13 @@ define amdgpu_kernel void @s_test_srem_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-NEXT:    s_sub_u32 s2, 0, s8
 ; GCN-NEXT:    s_subb_u32 s3, 0, s9
 ; GCN-NEXT:    s_mov_b32 s4, s0
-; GCN-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; GCN-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; GCN-NEXT:    v_rcp_f32_e32 v0, v0
 ; GCN-NEXT:    s_mov_b32 s5, s1
 ; GCN-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GCN-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GCN-NEXT:    v_trunc_f32_e32 v1, v1
-; GCN-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; GCN-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GCN-NEXT:    v_mul_lo_u32 v2, s2, v1
@@ -1481,12 +1481,12 @@ define i64 @v_test_srem_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v3, v1
 ; GCN-NEXT:    v_sub_i32_e32 v4, vcc, 0, v0
 ; GCN-NEXT:    v_subb_u32_e32 v5, vcc, 0, v1, vcc
-; GCN-NEXT:    v_mac_f32_e32 v2, 0x4f800000, v3
+; GCN-NEXT:    v_madmk_f32 v2, v3, 0x4f800000, v2
 ; GCN-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; GCN-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; GCN-NEXT:    v_trunc_f32_e32 v3, v3
-; GCN-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; GCN-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GCN-NEXT:    v_mul_hi_u32 v6, v4, v2
@@ -1676,12 +1676,12 @@ define i64 @v_test_srem_pow2_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v3, v1
 ; GCN-NEXT:    v_sub_i32_e32 v4, vcc, 0, v0
 ; GCN-NEXT:    v_subb_u32_e32 v5, vcc, 0, v1, vcc
-; GCN-NEXT:    v_mac_f32_e32 v2, 0x4f800000, v3
+; GCN-NEXT:    v_madmk_f32 v2, v3, 0x4f800000, v2
 ; GCN-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; GCN-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; GCN-NEXT:    v_trunc_f32_e32 v3, v3
-; GCN-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; GCN-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GCN-NEXT:    v_mul_hi_u32 v6, v4, v2

@@ -574,11 +574,11 @@ class MUBUF_Store_Pseudo <string opName,
 
 multiclass MUBUF_Pseudo_Store_Pats<string BaseInst, ValueType store_vt = i32, SDPatternOperator st = null_frag> {
 
-  def _OFFSET : GCNPat <
+  def : GCNPat <
     (st store_vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset)),
     (!cast<MUBUF_Pseudo>(BaseInst # _OFFSET) store_vt:$vdata, v4i32:$srsrc, i32:$soffset, i32:$offset)>;
 
-  def _ADDR64 : GCNPat <
+  def : GCNPat <
     (st store_vt:$vdata, (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset)),
     (!cast<MUBUF_Pseudo>(BaseInst # _ADDR64) store_vt:$vdata, i64:$vaddr, v4i32:$srsrc, i32:$soffset, i32:$offset)>;
 }
@@ -912,10 +912,22 @@ defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, sextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, extloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, zextloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SSHORT", i32, sextloadi16_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORD", i32, load_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX2", v2i32, load_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX3", v3i32, load_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX4", v4i32, load_global>;
+
+foreach vt = Reg32Types.types in {
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORD", vt, load_global>;
+}
+
+foreach vt = VReg_64.RegTypes in {
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX2", vt, load_global>;
+}
+
+foreach vt = VReg_96.RegTypes in {
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX3", vt, load_global>;
+}
+
+foreach vt = VReg_128.RegTypes in {
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX4", vt, load_global>;
+}
 
 defm BUFFER_STORE_BYTE : MUBUF_Pseudo_Stores <
   "buffer_store_byte", i32
@@ -938,10 +950,22 @@ defm BUFFER_STORE_DWORDX4 : MUBUF_Pseudo_Stores <
 
 defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_BYTE", i32, truncstorei8_global>;
 defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_SHORT", i32, truncstorei16_global>;
-defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORD", i32, store_global>;
-defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORDX2", v2i32, store_global>;
-defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORDX3", v3i32, store_global>;
-defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORDX4", v4i32, store_global>;
+
+foreach vt = Reg32Types.types in {
+defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORD", vt, store_global>;
+}
+
+foreach vt = VReg_64.RegTypes in {
+defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORDX2", vt, store_global>;
+}
+
+foreach vt = VReg_96.RegTypes in {
+defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORDX3", vt, store_global>;
+}
+
+foreach vt = VReg_128.RegTypes in {
+defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORDX4", vt, store_global>;
+}
 
 defm BUFFER_ATOMIC_SWAP : MUBUF_Pseudo_Atomics <
   "buffer_atomic_swap", VGPR_32, i32

@@ -131,9 +131,10 @@ define amdgpu_kernel void @fptrunc(
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, s2
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, s3
+; GISEL-NEXT:    s_mov_b32 s2, -1
+; GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
+; GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GISEL-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {

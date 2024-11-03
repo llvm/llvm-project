@@ -48,7 +48,7 @@ enum class ExportSource {
   ModuleDefinition,
 };
 
-enum class EmitKind { Obj, LLVM };
+enum class EmitKind { Obj, LLVM, ASM };
 
 // Represents an /export option.
 struct Export {
@@ -72,7 +72,7 @@ struct Export {
   StringRef symbolName;
   StringRef exportName; // Name in DLL
 
-  bool operator==(const Export &e) {
+  bool operator==(const Export &e) const {
     return (name == e.name && extName == e.extName &&
             aliasTarget == e.aliasTarget &&
             ordinal == e.ordinal && noname == e.noname &&

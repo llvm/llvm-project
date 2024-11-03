@@ -45,7 +45,7 @@ _LIBCPP_HIDE_FROM_ABI __iter_diff_t<_ForwardIterator>
 count_if(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   using __diff_t = __iter_diff_t<_ForwardIterator>;
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_count_if),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_count_if, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, _Predicate __g_pred) {
         return std::transform_reduce(
             __policy,
@@ -71,7 +71,7 @@ template <class _ExecutionPolicy,
 _LIBCPP_HIDE_FROM_ABI __iter_diff_t<_ForwardIterator>
 count(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_count),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_count, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, const _Tp& __g_value) {
         return std::count_if(__policy, __g_first, __g_last, [&](__iter_reference<_ForwardIterator> __v) {
           return __v == __g_value;
