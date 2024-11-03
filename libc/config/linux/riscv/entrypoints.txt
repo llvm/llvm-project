@@ -355,6 +355,14 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # complex.h entrypoints
+    libc.src.complex.creal
+    libc.src.complex.crealf
+    libc.src.complex.creall
+    libc.src.complex.cimag
+    libc.src.complex.cimagf
+    libc.src.complex.cimagl
+
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept
@@ -606,6 +614,10 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # complex.h C23 _Complex _Float128 entrypoints
+    libc.src.complex.crealf128
+    libc.src.complex.cimagf128
+    
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
