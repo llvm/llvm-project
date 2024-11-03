@@ -465,6 +465,9 @@ struct IntRangeNarrowingPass final
     populateIntRangeNarrowingPatterns(patterns, solver, bitwidthsSupported);
 
     GreedyRewriteConfig config;
+    // We specifically need bottom-up traversal as cmpi pattern needs range
+    // data, attched to it's original arguments.
+    config.useTopDownTraversal = false;
     config.listener = &listener;
 
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
