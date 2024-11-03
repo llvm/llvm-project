@@ -204,11 +204,12 @@ M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
   return M68k::D1;
 }
 
-unsigned
+InlineAsm::ConstraintCode
 M68kTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
-  return StringSwitch<unsigned>(ConstraintCode)
-      .Case("Q", InlineAsm::Constraint_Q)
-      .Case("U", InlineAsm::Constraint_Um) // We borrow Constraint_Um for 'U'.
+  return StringSwitch<InlineAsm::ConstraintCode>(ConstraintCode)
+      .Case("Q", InlineAsm::ConstraintCode::Q)
+      // We borrow ConstraintCode::Um for 'U'.
+      .Case("U", InlineAsm::ConstraintCode::Um)
       .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
 }
 
@@ -2896,7 +2897,7 @@ M68kTargetLowering::getConstraintType(StringRef Constraint) const {
 }
 
 void M68kTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                      std::string &Constraint,
+                                                      StringRef Constraint,
                                                       std::vector<SDValue> &Ops,
                                                       SelectionDAG &DAG) const {
   SDValue Result;

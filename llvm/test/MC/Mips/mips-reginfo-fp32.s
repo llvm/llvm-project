@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -filetype=obj -o - | \
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -filetype=obj -o - | \
 # RUN:   llvm-readobj -S --section-data - | \
 # RUN:     FileCheck %s
 

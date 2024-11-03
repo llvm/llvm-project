@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_H
 
 #include "src/__support/CPP/utility/declval.h"
 #include "src/__support/CPP/utility/forward.h"
@@ -15,4 +15,4 @@
 #include "src/__support/CPP/utility/integer_sequence.h"
 #include "src/__support/CPP/utility/move.h"
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_H

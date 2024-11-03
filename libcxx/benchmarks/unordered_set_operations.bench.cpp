@@ -216,7 +216,6 @@ BENCHMARK_CAPTURE(BM_FindRehash,
     ->Arg(TestNumInputs);
 
 // Sorted //
-#if 1
 BENCHMARK_CAPTURE(BM_Find,
                   unordered_set_sorted_uint128,
                   std::unordered_set<__uint128_t, UInt128Hash>{},
@@ -228,7 +227,6 @@ BENCHMARK_CAPTURE(BM_FindRehash,
                   std::unordered_set<__uint128_t, UInt128Hash>{},
                   getSortedTopBitsIntegerInputs<__uint128_t>)
     ->Arg(TestNumInputs);
-#endif
 
 // Sorted //
 BENCHMARK_CAPTURE(
@@ -290,6 +288,25 @@ BENCHMARK_CAPTURE(BM_Rehash,
     ->Arg(TestNumInputs);
 
 BENCHMARK_CAPTURE(BM_Rehash, unordered_set_int_arg, std::unordered_set<int>{}, getRandomIntegerInputs<int>)
+    ->Arg(TestNumInputs);
+
+//----------------------------------------------------------------------------//
+//                         BM_Compare
+// ---------------------------------------------------------------------------//
+
+BENCHMARK_CAPTURE(
+    BM_Compare_same_container, unordered_set_string, std::unordered_set<std::string>{}, getRandomStringInputs)
+    ->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_Compare_same_container, unordered_set_int, std::unordered_set<int>{}, getRandomIntegerInputs<int>)
+    ->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(
+    BM_Compare_different_containers, unordered_set_string, std::unordered_set<std::string>{}, getRandomStringInputs)
+    ->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(
+    BM_Compare_different_containers, unordered_set_int, std::unordered_set<int>{}, getRandomIntegerInputs<int>)
     ->Arg(TestNumInputs);
 
 ///////////////////////////////////////////////////////////////////////////////

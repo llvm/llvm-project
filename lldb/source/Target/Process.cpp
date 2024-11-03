@@ -5911,12 +5911,12 @@ size_t Process::AddImageToken(lldb::addr_t image_ptr) {
 lldb::addr_t Process::GetImagePtrFromToken(size_t token) const {
   if (token < m_image_tokens.size())
     return m_image_tokens[token];
-  return LLDB_INVALID_ADDRESS;
+  return LLDB_INVALID_IMAGE_TOKEN;
 }
 
 void Process::ResetImageToken(size_t token) {
   if (token < m_image_tokens.size())
-    m_image_tokens[token] = LLDB_INVALID_ADDRESS;
+    m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
 }
 
 Address

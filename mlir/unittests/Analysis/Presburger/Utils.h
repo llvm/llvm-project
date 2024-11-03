@@ -17,6 +17,7 @@
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 
@@ -26,9 +27,22 @@
 namespace mlir {
 namespace presburger {
 
-inline Matrix makeMatrix(unsigned numRow, unsigned numColumns,
-                         ArrayRef<SmallVector<int64_t, 8>> matrix) {
-  Matrix results(numRow, numColumns);
+inline IntMatrix makeIntMatrix(unsigned numRow, unsigned numColumns,
+                         ArrayRef<SmallVector<int, 8>> matrix) {
+  IntMatrix results(numRow, numColumns);
+  assert(matrix.size() == numRow);
+  for (unsigned i = 0; i < numRow; ++i) {
+    assert(matrix[i].size() == numColumns &&
+           "Output expression has incorrect dimensionality!");
+    for (unsigned j = 0; j < numColumns; ++j)
+      results(i, j) = MPInt(matrix[i][j]);
+  }
+  return results;
+}
+
+inline Matrix<Fraction> makeFracMatrix(unsigned numRow, unsigned numColumns,
+                         ArrayRef<SmallVector<Fraction, 8>> matrix) {
+  Matrix<Fraction> results(numRow, numColumns);
   assert(matrix.size() == numRow);
   for (unsigned i = 0; i < numRow; ++i) {
     assert(matrix[i].size() == numColumns &&

@@ -18,7 +18,7 @@
 
 #include <math.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
@@ -60,10 +60,10 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 }
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
-  using FPBits = __llvm_libc::fputil::FPBits<T>;                               \
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
   using UIntType = typename FPBits::UIntType;                                  \
   const T zero = T(FPBits::zero());                                            \
   const T neg_zero = T(FPBits::neg_zero());                                    \
@@ -72,35 +72,27 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   const T neg_inf = T(FPBits::neg_inf());
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
-  EXPECT_THAT(                                                                 \
-      actual,                                                                  \
-      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(    \
-          expected))
+  EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
+                          LIBC_NAMESPACE::testing::TestCond::EQ>(expected))
 
 #define TEST_FP_EQ(expected, actual)                                           \
-  __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(        \
+  LIBC_NAMESPACE::testing::getMatcher<LIBC_NAMESPACE::testing::TestCond::EQ>(  \
       expected)                                                                \
       .match(actual)
 
 #define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
 
 #define ASSERT_FP_EQ(expected, actual)                                         \
-  ASSERT_THAT(                                                                 \
-      actual,                                                                  \
-      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(    \
-          expected))
+  ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
+                          LIBC_NAMESPACE::testing::TestCond::EQ>(expected))
 
 #define EXPECT_FP_NE(expected, actual)                                         \
-  EXPECT_THAT(                                                                 \
-      actual,                                                                  \
-      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::NE>(    \
-          expected))
+  EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
+                          LIBC_NAMESPACE::testing::TestCond::NE>(expected))
 
 #define ASSERT_FP_NE(expected, actual)                                         \
-  ASSERT_THAT(                                                                 \
-      actual,                                                                  \
-      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::NE>(    \
-          expected))
+  ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
+                          LIBC_NAMESPACE::testing::TestCond::NE>(expected))
 
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
@@ -123,7 +115,7 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & expected,    \
+      EXPECT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) & expected, \
                 expected);                                                     \
     }                                                                          \
   } while (0)
@@ -131,38 +123,38 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & expected,    \
+      ASSERT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) & expected, \
                 expected);                                                     \
     }                                                                          \
   } while (0)
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
   do {                                                                         \
-    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     EXPECT_FP_EQ(expected_val, actual_val);                                    \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) &              \
+      EXPECT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
                     expected_except,                                           \
                 expected_except);                                              \
-      __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
+      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
     }                                                                          \
   } while (0)
 
 #define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
   do {                                                                         \
-    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     EXPECT_FP_IS_NAN(actual_val);                                              \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) &              \
+      EXPECT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
                     expected_except,                                           \
                 expected_except);                                              \
-      __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
+      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
     }                                                                          \
   } while (0)
 
 #define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
   do {                                                                         \
-    using namespace __llvm_libc::fputil::testing;                              \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
     ForceRoundingMode __r1(RoundingMode::Nearest);                             \
     if (__r1.success)                                                          \
       EXPECT_FP_EQ((expected), (actual));                                      \

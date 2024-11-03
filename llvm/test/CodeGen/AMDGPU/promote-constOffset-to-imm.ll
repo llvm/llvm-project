@@ -821,12 +821,12 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:  .LBB1_2: ; %for.body
 ; GFX90A-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX90A-NEXT:    ; => This Inner Loop Header: Depth=2
-; GFX90A-NEXT:    v_add_co_u32_e32 v8, vcc, 0xffffb000, v6
-; GFX90A-NEXT:    v_addc_co_u32_e32 v9, vcc, -1, v7, vcc
-; GFX90A-NEXT:    global_load_dwordx2 v[10:11], v[6:7], off offset:-4096
-; GFX90A-NEXT:    global_load_dwordx2 v[12:13], v[6:7], off offset:-2048
+; GFX90A-NEXT:    v_add_co_u32_e32 v12, vcc, 0xffffb000, v6
+; GFX90A-NEXT:    v_addc_co_u32_e32 v13, vcc, -1, v7, vcc
+; GFX90A-NEXT:    global_load_dwordx2 v[8:9], v[6:7], off offset:-4096
+; GFX90A-NEXT:    global_load_dwordx2 v[10:11], v[6:7], off offset:-2048
 ; GFX90A-NEXT:    v_add_co_u32_e32 v14, vcc, 0xffffc000, v6
-; GFX90A-NEXT:    global_load_dwordx2 v[8:9], v[8:9], off
+; GFX90A-NEXT:    global_load_dwordx2 v[12:13], v[12:13], off
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v15, vcc, -1, v7, vcc
 ; GFX90A-NEXT:    global_load_dwordx2 v[18:19], v[14:15], off offset:-2048
 ; GFX90A-NEXT:    v_add_co_u32_e32 v16, vcc, s0, v6
@@ -847,8 +847,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    s_addk_i32 s4, 0x2000
 ; GFX90A-NEXT:    s_cmp_gt_u32 s4, 0x3fffff
 ; GFX90A-NEXT:    s_waitcnt vmcnt(8)
-; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v8, v4
-; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v9, v5, vcc
+; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v12, v4
+; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v13, v5, vcc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(7)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v18, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v19, v4, vcc
@@ -869,10 +869,10 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(1)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v20, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v21, v4, vcc
+; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v8, v1
+; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v9, v4, vcc
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v10, v1
-; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v11, v4, vcc
-; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v12, v1
-; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, v13, v4, vcc
+; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, v11, v4, vcc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, v30, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, v31, v5, vcc

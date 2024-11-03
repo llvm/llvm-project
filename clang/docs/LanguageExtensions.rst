@@ -1621,6 +1621,10 @@ The following type trait primitives are supported by Clang. Those traits marked
   materialized temporary object. If ``T`` is not a reference type the result
   is false. Note this trait will also return false when the initialization of
   ``T`` from ``U`` is ill-formed.
+  Deprecated, use ``__reference_constructs_from_temporary``.
+* ``__reference_constructs_from_temporary(T, U)`` (C++)
+  Returns true if a reference ``T`` can be constructed from a temporary of type
+  a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
 
 In addition, the following expression traits are supported:

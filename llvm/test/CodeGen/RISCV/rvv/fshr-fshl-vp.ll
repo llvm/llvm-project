@@ -1037,14 +1037,14 @@ define <vscale x 16 x i64> @fshr_v16i64(<vscale x 16 x i64> %a, <vscale x 16 x i
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
-; CHECK-NEXT:    vand.vx v8, v8, a3, v0.t
+; CHECK-NEXT:    vand.vx v16, v8, a3, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsll.vi v16, v16, 1, v0.t
-; CHECK-NEXT:    vsll.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
@@ -1214,15 +1214,15 @@ define <vscale x 16 x i64> @fshl_v16i64(<vscale x 16 x i64> %a, <vscale x 16 x i
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
-; CHECK-NEXT:    vand.vx v8, v8, a3, v0.t
+; CHECK-NEXT:    vand.vx v16, v8, a3, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsrl.vi v16, v16, 1, v0.t
-; CHECK-NEXT:    vsrl.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsrl.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsrl.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0

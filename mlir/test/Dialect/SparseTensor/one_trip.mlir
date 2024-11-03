@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -sparsification -cse | FileCheck %s
 
 #Dense = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense" , "dense" ]
+  map = (d0, d1) -> (d0 : dense, d1 : dense)
 }>
 
 #trait_scale = {
@@ -13,15 +13,15 @@
 }
 
 // CHECK-LABEL: func.func @sparse_scale(
-// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x1xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ] }>>)
+// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x1xf32, #sparse_tensor.encoding<{{{.*}}}>>)
 // CHECK-DAG:     %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 2.000000e+00 : f32
-// CHECK:         %[[VAL_3:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<1x1xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ] }>> to memref<?xf32>
+// CHECK:         %[[VAL_3:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<1x1xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf32>
 // CHECK:         %[[VAL_4:.*]] = memref.load %[[VAL_3]]{{\[}}%[[VAL_1]]] : memref<?xf32>
 // CHECK:         %[[VAL_5:.*]] = arith.mulf %[[VAL_4]], %[[VAL_2]] : f32
 // CHECK:         memref.store %[[VAL_5]], %[[VAL_3]]{{\[}}%[[VAL_1]]] : memref<?xf32>
-// CHECK:         %[[VAL_6:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<1x1xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ] }>>
-// CHECK:         return %[[VAL_6]] : tensor<1x1xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ] }>>
+// CHECK:         %[[VAL_6:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<1x1xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:         return %[[VAL_6]] : tensor<1x1xf32, #sparse_tensor.encoding<{{{.*}}}>>
 func.func @sparse_scale(%argx: tensor<1x1xf32, #Dense>) -> tensor<1x1xf32, #Dense> {
   %c = arith.constant 2.0 : f32
   %0 = linalg.generic #trait_scale

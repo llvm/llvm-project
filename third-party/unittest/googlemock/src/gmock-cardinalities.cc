@@ -27,7 +27,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 // Google Mock - a framework for writing C++ mock classes.
 //
 // This file implements cardinalities.
@@ -35,9 +34,11 @@
 #include "gmock/gmock-cardinalities.h"
 
 #include <limits.h>
+
 #include <ostream>  // NOLINT
 #include <sstream>
 #include <string>
+
 #include "gmock/internal/gmock-internal-utils.h"
 #include "gtest/gtest.h"
 
@@ -49,8 +50,7 @@ namespace {
 class BetweenCardinalityImpl : public CardinalityInterface {
  public:
   BetweenCardinalityImpl(int min, int max)
-      : min_(min >= 0 ? min : 0),
-        max_(max >= min_ ? max : min_) {
+      : min_(min >= 0 ? min : 0), max_(max >= min_ ? max : min_) {
     std::stringstream ss;
     if (min < 0) {
       ss << "The invocation lower bound must be >= 0, "
@@ -62,8 +62,7 @@ class BetweenCardinalityImpl : public CardinalityInterface {
       internal::Expect(false, __FILE__, __LINE__, ss.str());
     } else if (min > max) {
       ss << "The invocation upper bound (" << max
-         << ") must be >= the invocation lower bound (" << min
-         << ").";
+         << ") must be >= the invocation lower bound (" << min << ").";
       internal::Expect(false, __FILE__, __LINE__, ss.str());
     }
   }
@@ -87,7 +86,8 @@ class BetweenCardinalityImpl : public CardinalityInterface {
   const int min_;
   const int max_;
 
-  GTEST_DISALLOW_COPY_AND_ASSIGN_(BetweenCardinalityImpl);
+  BetweenCardinalityImpl(const BetweenCardinalityImpl&) = delete;
+  BetweenCardinalityImpl& operator=(const BetweenCardinalityImpl&) = delete;
 };
 
 // Formats "n times" in a human-friendly way.

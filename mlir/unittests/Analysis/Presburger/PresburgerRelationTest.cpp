@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "Parser.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 
 #include <gmock/gmock.h>
@@ -15,22 +16,6 @@
 
 using namespace mlir;
 using namespace presburger;
-
-static PresburgerRelation
-parsePresburgerRelationFromPresburgerSet(ArrayRef<StringRef> strs,
-                                         unsigned numDomain) {
-  assert(!strs.empty() && "strs should not be empty");
-
-  IntegerRelation rel = parseIntegerPolyhedron(strs[0]);
-  rel.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain);
-  PresburgerRelation result(rel);
-  for (unsigned i = 1, e = strs.size(); i < e; ++i) {
-    rel = parseIntegerPolyhedron(strs[i]);
-    rel.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain);
-    result.unionInPlace(rel);
-  }
-  return result;
-}
 
 TEST(PresburgerRelationTest, intersectDomainAndRange) {
   {
@@ -290,4 +275,44 @@ TEST(PresburgerRelationTest, getDomainAndRangeSet) {
       {"(x, y)[N] : (x >= 0, 2 * N - x >= 0, y >= 0, 2 * N - y >= 0)"});
 
   EXPECT_TRUE(rangeSet.isEqual(expectedRangeSet));
+}
+
+TEST(PresburgerRelationTest, convertVarKind) {
+  PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3, 0);
+
+  IntegerRelation disj1 = parseRelationFromSet(
+                      "(x, y, a)[U, V, W] : (x - U == 0, y + a - W == 0,"
+                      "U - V >= 0, y - a >= 0)",
+                      2),
+                  disj2 = parseRelationFromSet(
+                      "(x, y, a)[U, V, W] : (x + y - U == 0, x - a + V == 0,"
+                      "V - U >= 0, y + a >= 0)",
+                      2);
+
+  PresburgerRelation rel(disj1);
+  rel.unionInPlace(disj2);
+
+  // Make a few kind conversions.
+  rel.convertVarKind(VarKind::Domain, 0, 1, VarKind::Range, 0);
+  rel.convertVarKind(VarKind::Symbol, 1, 2, VarKind::Domain, 1);
+  rel.convertVarKind(VarKind::Symbol, 0, 1, VarKind::Range, 1);
+
+  // Expected rel.
+  disj1.convertVarKind(VarKind::Domain, 0, 1, VarKind::Range, 0);
+  disj1.convertVarKind(VarKind::Symbol, 1, 3, VarKind::Domain, 1);
+  disj1.convertVarKind(VarKind::Symbol, 0, 1, VarKind::Range, 1);
+  disj2.convertVarKind(VarKind::Domain, 0, 1, VarKind::Range, 0);
+  disj2.convertVarKind(VarKind::Symbol, 1, 3, VarKind::Domain, 1);
+  disj2.convertVarKind(VarKind::Symbol, 0, 1, VarKind::Range, 1);
+
+  PresburgerRelation expectedRel(disj1);
+  expectedRel.unionInPlace(disj2);
+
+  // Check if var counts are correct.
+  EXPECT_EQ(rel.getNumDomainVars(), 3u);
+  EXPECT_EQ(rel.getNumRangeVars(), 3u);
+  EXPECT_EQ(rel.getNumSymbolVars(), 0u);
+
+  // Check if identifiers are transferred correctly.
+  EXPECT_TRUE(expectedRel.isEqual(rel));
 }

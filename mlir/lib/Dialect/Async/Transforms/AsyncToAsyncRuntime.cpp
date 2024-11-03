@@ -94,8 +94,30 @@ struct CoroMachinery {
   Value coroHandle; // coroutine handle (!async.coro.getHandle value)
   Block *entry;     // coroutine entry block
   std::optional<Block *> setError; // set returned values to error state
-  Block *cleanup;   // coroutine cleanup block
-  Block *suspend;   // coroutine suspension block
+  Block *cleanup;                  // coroutine cleanup block
+
+  // Coroutine cleanup block for destroy after the coroutine is resumed,
+  //   e.g. async.coro.suspend state, [suspend], [resume], [destroy]
+  //
+  // This cleanup block is a duplicate of the cleanup block followed by the
+  // resume block. The purpose of having a duplicate cleanup block for destroy
+  // is to make the CFG clear so that the control flow analysis won't confuse.
+  //
+  // The overall structure of the lowered CFG can be the following,
+  //
+  //     Entry (calling async.coro.suspend)
+  //       |                \
+  //     Resume           Destroy (duplicate of Cleanup)
+  //       |                 |
+  //     Cleanup             |
+  //       |                 /
+  //      End (ends the corontine)
+  //
+  // If there is resume-specific cleanup logic, it can go into the Cleanup
+  // block but not the destroy block. Otherwise, it can fail block dominance
+  // check.
+  Block *cleanupForDestroy;
+  Block *suspend; // coroutine suspension block
 };
 } // namespace
 
@@ -183,16 +205,21 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   builder.create<cf::BranchOp>(originalEntryBlock);
 
   Block *cleanupBlock = func.addBlock();
+  Block *cleanupBlockForDestroy = func.addBlock();
   Block *suspendBlock = func.addBlock();
 
   // ------------------------------------------------------------------------ //
-  // Coroutine cleanup block: deallocate coroutine frame, free the memory.
+  // Coroutine cleanup blocks: deallocate coroutine frame, free the memory.
   // ------------------------------------------------------------------------ //
-  builder.setInsertionPointToStart(cleanupBlock);
-  builder.create<CoroFreeOp>(coroIdOp.getId(), coroHdlOp.getHandle());
+  auto buildCleanupBlock = [&](Block *cb) {
+    builder.setInsertionPointToStart(cb);
+    builder.create<CoroFreeOp>(coroIdOp.getId(), coroHdlOp.getHandle());
 
-  // Branch into the suspend block.
-  builder.create<cf::BranchOp>(suspendBlock);
+    // Branch into the suspend block.
+    builder.create<cf::BranchOp>(suspendBlock);
+  };
+  buildCleanupBlock(cleanupBlock);
+  buildCleanupBlock(cleanupBlockForDestroy);
 
   // ------------------------------------------------------------------------ //
   // Coroutine suspend block: mark the end of a coroutine and return allocated
@@ -227,6 +254,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   machinery.entry = entryBlock;
   machinery.setError = std::nullopt; // created lazily only if needed
   machinery.cleanup = cleanupBlock;
+  machinery.cleanupForDestroy = cleanupBlockForDestroy;
   machinery.suspend = suspendBlock;
   return machinery;
 }
@@ -348,7 +376,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
     // Add async.coro.suspend as a suspended block terminator.
     builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend,
-                                  branch.getDest(), coro.cleanup);
+                                  branch.getDest(), coro.cleanupForDestroy);
 
     branch.erase();
   }
@@ -588,7 +616,7 @@ public:
       // Add async.coro.suspend as a suspended block terminator.
       builder.setInsertionPointToEnd(suspended);
       builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend, resume,
-                                    coro.cleanup);
+                                    coro.cleanupForDestroy);
 
       // Split the resume block into error checking and continuation.
       Block *continuation = rewriter.splitBlock(resume, Block::iterator(op));

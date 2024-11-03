@@ -16,13 +16,13 @@
 #include <signal.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, sigprocmask,
                    (int how, const sigset_t *__restrict set,
                     sigset_t *__restrict oldset)) {
-  int ret = __llvm_libc::syscall_impl<int>(SYS_rt_sigprocmask, how, set, oldset,
-                                           sizeof(sigset_t));
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, how, set,
+                                              oldset, sizeof(sigset_t));
   if (!ret)
     return 0;
 
@@ -30,4 +30,4 @@ LLVM_LIBC_FUNCTION(int, sigprocmask,
   return -1;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 
 int test__compiler_rt_scalbnl(const char *mode, fp_t x, int y) {
 #if defined(__ve__)
@@ -67,7 +67,7 @@ int iterate_cases(const char *mode) {
 #endif
 
 int main() {
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
   if (iterate_cases("default")) return 1;
 
   // Skip rounding mode tests (fesetround) because compiler-rt's quad-precision

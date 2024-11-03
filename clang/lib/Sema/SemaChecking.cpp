@@ -126,7 +126,7 @@ static bool checkArgCountAtLeast(Sema &S, CallExpr *Call,
 
   return S.Diag(Call->getEndLoc(), diag::err_typecheck_call_too_few_args)
          << 0 /*function call*/ << MinArgCount << ArgCount
-         << Call->getSourceRange();
+         << /*is non object*/ 0 << Call->getSourceRange();
 }
 
 /// Checks that a call expression's argument count is at most the desired
@@ -139,7 +139,7 @@ static bool checkArgCountAtMost(Sema &S, CallExpr *Call, unsigned MaxArgCount) {
   return S.Diag(Call->getEndLoc(),
                 diag::err_typecheck_call_too_many_args_at_most)
          << 0 /*function call*/ << MaxArgCount << ArgCount
-         << Call->getSourceRange();
+         << /*is non object*/ 0 << Call->getSourceRange();
 }
 
 /// Checks that a call expression's argument count is in the desired range. This
@@ -168,7 +168,7 @@ static bool checkArgCount(Sema &S, CallExpr *Call, unsigned DesiredArgCount) {
 
   return S.Diag(Range.getBegin(), diag::err_typecheck_call_too_many_args)
          << 0 /*function call*/ << DesiredArgCount << ArgCount
-         << Call->getArg(1)->getSourceRange();
+         << /*is non object*/ 0 << Call->getArg(1)->getSourceRange();
 }
 
 static bool convertArgumentToType(Sema &S, Expr *&Value, QualType Ty) {
@@ -217,7 +217,7 @@ static bool SemaBuiltinMSVCAnnotation(Sema &S, CallExpr *TheCall) {
   // We need at least one argument.
   if (TheCall->getNumArgs() < 1) {
     S.Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args_at_least)
-        << 0 << 1 << TheCall->getNumArgs()
+        << 0 << 1 << TheCall->getNumArgs() << /*is non object*/ 0
         << TheCall->getCallee()->getSourceRange();
     return true;
   }
@@ -854,6 +854,9 @@ public:
 class EstimateSizeFormatHandler
     : public analyze_format_string::FormatStringHandler {
   size_t Size;
+  /// Whether the format string contains Linux kernel's format specifier
+  /// extension.
+  bool IsKernelCompatible = true;
 
 public:
   EstimateSizeFormatHandler(StringRef Format)
@@ -890,6 +893,8 @@ public:
     // %g style conversion switches between %f or %e style dynamically.
     // %g removes trailing zeros, and does not print decimal point if there are
     // no digits that follow it. Thus %g can print a single digit.
+    // FIXME: If it is alternative form:
+    // For g and G conversions, trailing zeros are not removed from the result.
     case analyze_format_string::ConversionSpecifier::gArg:
     case analyze_format_string::ConversionSpecifier::GArg:
       Size += 1;
@@ -931,6 +936,10 @@ public:
 
     // Just a pointer in the form '0xddd'.
     case analyze_format_string::ConversionSpecifier::pArg:
+      // Linux kernel has its own extesion for `%p` specifier.
+      // Kernel Document:
+      // https://docs.kernel.org/core-api/printk-formats.html#pointer-types
+      IsKernelCompatible = false;
       Size += std::max(FieldWidth, 2 /* leading 0x */ + Precision);
       break;
 
@@ -947,18 +956,26 @@ public:
 
     if (FS.hasAlternativeForm()) {
       switch (FS.getConversionSpecifier().getKind()) {
-      default:
-        break;
-      // Force a leading '0'.
+      // For o conversion, it increases the precision, if and only if necessary,
+      // to force the first digit of the result to be a zero
+      // (if the value and precision are both 0, a single 0 is printed)
       case analyze_format_string::ConversionSpecifier::oArg:
-        Size += 1;
-        break;
-      // Force a leading '0x'.
+      // For b conversion, a nonzero result has 0b prefixed to it.
+      case analyze_format_string::ConversionSpecifier::bArg:
+      // For x (or X) conversion, a nonzero result has 0x (or 0X) prefixed to
+      // it.
       case analyze_format_string::ConversionSpecifier::xArg:
       case analyze_format_string::ConversionSpecifier::XArg:
-        Size += 2;
+        // Note: even when the prefix is added, if
+        // (prefix_width <= FieldWidth - formatted_length) holds,
+        // the prefix does not increase the format
+        // size. e.g.(("%#3x", 0xf) is "0xf")
+
+        // If the result is zero, o, b, x, X adds nothing.
         break;
-      // Force a period '.' before decimal, even if precision is 0.
+      // For a, A, e, E, f, F, g, and G conversions,
+      // the result of converting a floating-point number always contains a
+      // decimal-point
       case analyze_format_string::ConversionSpecifier::aArg:
       case analyze_format_string::ConversionSpecifier::AArg:
       case analyze_format_string::ConversionSpecifier::eArg:
@@ -969,6 +986,9 @@ public:
       case analyze_format_string::ConversionSpecifier::GArg:
         Size += (Precision ? 0 : 1);
         break;
+      // For other conversions, the behavior is undefined.
+      default:
+        break;
       }
     }
     assert(SpecifierLen <= Size && "no underflow");
@@ -977,6 +997,7 @@ public:
   }
 
   size_t getSizeLowerBound() const { return Size; }
+  bool isKernelCompatible() const { return IsKernelCompatible; }
 
 private:
   static size_t computeFieldWidth(const analyze_printf::PrintfSpecifier &FS) {
@@ -1246,7 +1267,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       if (!analyze_format_string::ParsePrintfString(
               H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
               Context.getTargetInfo(), false)) {
-        DiagID = diag::warn_fortify_source_format_overflow;
+        DiagID = H.isKernelCompatible()
+                     ? diag::warn_format_overflow
+                     : diag::warn_format_overflow_non_kprintf;
         SourceSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                          .extOrTrunc(SizeTypeWidth);
         if (BuiltinID == Builtin::BI__builtin___sprintf_chk) {
@@ -1337,10 +1360,17 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
             llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                 .extOrTrunc(SizeTypeWidth);
         if (FormatSize > *SourceSize && *SourceSize != 0) {
-          DiagID = diag::warn_fortify_source_format_truncation;
-          DestinationSize = SourceSize;
-          SourceSize = FormatSize;
-          break;
+          unsigned TruncationDiagID =
+              H.isKernelCompatible() ? diag::warn_format_truncation
+                                     : diag::warn_format_truncation_non_kprintf;
+          SmallString<16> SpecifiedSizeStr;
+          SmallString<16> FormatSizeStr;
+          SourceSize->toString(SpecifiedSizeStr, /*Radix=*/10);
+          FormatSize.toString(FormatSizeStr, /*Radix=*/10);
+          DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                              PDiag(TruncationDiagID)
+                                  << GetFunctionName() << SpecifiedSizeStr
+                                  << FormatSizeStr);
         }
       }
     }
@@ -1548,7 +1578,7 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
   if (NumArgs < 4) {
     S.Diag(TheCall->getBeginLoc(),
            diag::err_typecheck_call_too_few_args_at_least)
-        << 0 << 4 << NumArgs;
+        << 0 << 4 << NumArgs << /*is non object*/ 0;
     return true;
   }
 
@@ -6246,6 +6276,10 @@ bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmppd:
   case X86::BI__builtin_ia32_cmpsd:
+    i = 2;
+    l = 0;
+    u = TI.hasFeature("avx") ? 31 : 7;
+    break;
   case X86::BI__builtin_ia32_cmpps256:
   case X86::BI__builtin_ia32_cmppd256:
   case X86::BI__builtin_ia32_cmpps128_mask:
@@ -6890,8 +6924,9 @@ void Sema::CheckConstructorCall(FunctionDecl *FDecl, QualType ThisType,
       Proto->isVariadic() ? VariadicConstructor : VariadicDoesNotApply;
 
   auto *Ctor = cast<CXXConstructorDecl>(FDecl);
-  CheckArgAlignment(Loc, FDecl, "'this'", Context.getPointerType(ThisType),
-                    Context.getPointerType(Ctor->getThisObjectType()));
+  CheckArgAlignment(
+      Loc, FDecl, "'this'", Context.getPointerType(ThisType),
+      Context.getPointerType(Ctor->getFunctionObjectParameterType()));
 
   checkCall(FDecl, Proto, /*ThisArg=*/nullptr, Args, /*IsMemberFunction=*/true,
             Loc, SourceRange(), CallType);
@@ -6911,14 +6946,16 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   unsigned NumArgs = TheCall->getNumArgs();
 
   Expr *ImplicitThis = nullptr;
-  if (IsMemberOperatorCall && !FDecl->isStatic()) {
+  if (IsMemberOperatorCall && !FDecl->isStatic() &&
+      !FDecl->hasCXXExplicitFunctionObjectParameter()) {
     // If this is a call to a non-static member operator, hide the first
     // argument from checkCall.
     // FIXME: Our choice of AST representation here is less than ideal.
     ImplicitThis = Args[0];
     ++Args;
     --NumArgs;
-  } else if (IsMemberFunction && !FDecl->isStatic())
+  } else if (IsMemberFunction && !FDecl->isStatic() &&
+             !FDecl->hasCXXExplicitFunctionObjectParameter())
     ImplicitThis =
         cast<CXXMemberCallExpr>(TheCall)->getImplicitObjectArgument();
 
@@ -6931,8 +6968,8 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
       ThisType = Context.getPointerType(ThisType);
     }
 
-    QualType ThisTypeFromDecl =
-        Context.getPointerType(cast<CXXMethodDecl>(FDecl)->getThisObjectType());
+    QualType ThisTypeFromDecl = Context.getPointerType(
+        cast<CXXMethodDecl>(FDecl)->getFunctionObjectParameterType());
 
     CheckArgAlignment(TheCall->getRParenLoc(), FDecl, "'this'", ThisType,
                       ThisTypeFromDecl);
@@ -7259,13 +7296,13 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if (Args.size() < AdjustedNumArgs) {
     Diag(CallRange.getEnd(), diag::err_typecheck_call_too_few_args)
         << 0 << AdjustedNumArgs << static_cast<unsigned>(Args.size())
-        << ExprRange;
+        << /*is non object*/ 0 << ExprRange;
     return ExprError();
   } else if (Args.size() > AdjustedNumArgs) {
     Diag(Args[AdjustedNumArgs]->getBeginLoc(),
          diag::err_typecheck_call_too_many_args)
         << 0 << AdjustedNumArgs << static_cast<unsigned>(Args.size())
-        << ExprRange;
+        << /*is non object*/ 0 << ExprRange;
     return ExprError();
   }
 
@@ -7628,7 +7665,8 @@ bool Sema::BuiltinWasmRefNullExtern(CallExpr *TheCall) {
 bool Sema::BuiltinWasmRefNullFunc(CallExpr *TheCall) {
   if (TheCall->getNumArgs() != 0) {
     Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_too_many_args)
-         << 0 /*function call*/ << 0 << TheCall->getNumArgs();
+        << 0 /*function call*/ << /*expected*/ 0 << TheCall->getNumArgs()
+        << /*is non object*/ 0;
     return true;
   }
 
@@ -7661,7 +7699,8 @@ Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
   // Ensure that we have at least one argument to do type inference from.
   if (TheCall->getNumArgs() < 1) {
     Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args_at_least)
-        << 0 << 1 << TheCall->getNumArgs() << Callee->getSourceRange();
+        << 0 << 1 << TheCall->getNumArgs() << /*is non object*/ 0
+        << Callee->getSourceRange();
     return ExprError();
   }
 
@@ -7937,7 +7976,7 @@ Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
   // have at least that many.
   if (TheCall->getNumArgs() < 1+NumFixed) {
     Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args_at_least)
-        << 0 << 1 + NumFixed << TheCall->getNumArgs()
+        << 0 << 1 + NumFixed << TheCall->getNumArgs() << /*is non object*/ 0
         << Callee->getSourceRange();
     return ExprError();
   }
@@ -8327,7 +8366,8 @@ bool Sema::SemaBuiltinVAStartARMMicrosoft(CallExpr *Call) {
   if (Call->getNumArgs() < 3)
     return Diag(Call->getEndLoc(),
                 diag::err_typecheck_call_too_few_args_at_least)
-           << 0 /*function call*/ << 3 << Call->getNumArgs();
+           << 0 /*function call*/ << 3 << Call->getNumArgs()
+           << /*is non object*/ 0;
 
   // Type-check the first argument normally.
   if (checkBuiltinArgument(*this, Call, 0))
@@ -8588,7 +8628,7 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
     return ExprError(Diag(TheCall->getEndLoc(),
                           diag::err_typecheck_call_too_few_args_at_least)
                      << 0 /*function call*/ << 2 << TheCall->getNumArgs()
-                     << TheCall->getSourceRange());
+                     << /*is non object*/ 0 << TheCall->getSourceRange());
 
   // Determine which of the following types of shufflevector we're checking:
   // 1) unary, vector mask: (lhs, mask)
@@ -8708,7 +8748,8 @@ bool Sema::SemaBuiltinPrefetch(CallExpr *TheCall) {
   if (NumArgs > 3)
     return Diag(TheCall->getEndLoc(),
                 diag::err_typecheck_call_too_many_args_at_most)
-           << 0 /*function call*/ << 3 << NumArgs << TheCall->getSourceRange();
+           << 0 /*function call*/ << 3 << NumArgs << /*is non object*/ 0
+           << TheCall->getSourceRange();
 
   // Argument 0 is checked for us and the remaining arguments must be
   // constant integers.
@@ -8847,13 +8888,13 @@ bool Sema::SemaBuiltinOSLogFormat(CallExpr *TheCall) {
   if (NumArgs < NumRequiredArgs) {
     return Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args)
            << 0 /* function call */ << NumRequiredArgs << NumArgs
-           << TheCall->getSourceRange();
+           << /*is non object*/ 0 << TheCall->getSourceRange();
   }
   if (NumArgs >= NumRequiredArgs + 0x100) {
     return Diag(TheCall->getEndLoc(),
                 diag::err_typecheck_call_too_many_args_at_most)
            << 0 /* function call */ << (NumRequiredArgs + 0xff) << NumArgs
-           << TheCall->getSourceRange();
+           << /*is non object*/ 0 << TheCall->getSourceRange();
   }
   unsigned i = 0;
 
@@ -11315,12 +11356,15 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       ImplicitMatch == ArgType::NoMatchTypeConfusion)
     Match = ImplicitMatch;
   assert(Match != ArgType::MatchPromotion);
+
   // Look through unscoped enums to their underlying type.
   bool IsEnum = false;
   bool IsScopedEnum = false;
+  QualType IntendedTy = ExprTy;
   if (auto EnumTy = ExprTy->getAs<EnumType>()) {
+    IntendedTy = EnumTy->getDecl()->getIntegerType();
     if (EnumTy->isUnscopedEnumerationType()) {
-      ExprTy = EnumTy->getDecl()->getIntegerType();
+      ExprTy = IntendedTy;
       // This controls whether we're talking about the underlying type or not,
       // which we only want to do when it's an unscoped enum.
       IsEnum = true;
@@ -11332,7 +11376,6 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
   // %C in an Objective-C context prints a unichar, not a wchar_t.
   // If the argument is an integer of some kind, believe the %C and suggest
   // a cast instead of changing the conversion specifier.
-  QualType IntendedTy = ExprTy;
   if (isObjCContext() &&
       FS.getConversionSpecifier().getKind() == ConversionSpecifier::CArg) {
     if (ExprTy->isIntegralOrUnscopedEnumerationType() &&
@@ -11368,8 +11411,10 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     std::tie(CastTy, CastTyName) = shouldNotPrintDirectly(S.Context, IntendedTy, E);
     if (!CastTy.isNull()) {
       // %zi/%zu and %td/%tu are OK to use for NSInteger/NSUInteger of type int
-      // (long in ASTContext). Only complain to pedants.
-      if ((CastTyName == "NSInteger" || CastTyName == "NSUInteger") &&
+      // (long in ASTContext). Only complain to pedants or when they're the
+      // underlying type of a scoped enum (which always needs a cast).
+      if (!IsScopedEnum &&
+          (CastTyName == "NSInteger" || CastTyName == "NSUInteger") &&
           (AT.isSizeT() || AT.isPtrdiffT()) &&
           AT.matchesType(S.Context, CastTy))
         Match = ArgType::NoMatchPedantic;
@@ -11424,20 +11469,15 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       // should be printed as 'long' for 64-bit compatibility.)
       // Rather than emitting a normal format/argument mismatch, we want to
       // add a cast to the recommended type (and correct the format string
-      // if necessary).
+      // if necessary). We should also do so for scoped enumerations.
       SmallString<16> CastBuf;
       llvm::raw_svector_ostream CastFix(CastBuf);
       CastFix << (S.LangOpts.CPlusPlus ? "static_cast<" : "(");
-      if (IsScopedEnum) {
-        CastFix << AT.getRepresentativeType(S.Context).getAsString(
-            S.Context.getPrintingPolicy());
-      } else {
-        IntendedTy.print(CastFix, S.Context.getPrintingPolicy());
-      }
+      IntendedTy.print(CastFix, S.Context.getPrintingPolicy());
       CastFix << (S.LangOpts.CPlusPlus ? ">" : ")");
 
       SmallVector<FixItHint,4> Hints;
-      if ((!AT.matchesType(S.Context, IntendedTy) && !IsScopedEnum) ||
+      if (AT.matchesType(S.Context, IntendedTy) != ArgType::Match ||
           ShouldNotPrintDirectly)
         Hints.push_back(FixItHint::CreateReplacement(SpecRange, os.str()));
 
@@ -11457,11 +11497,15 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         Hints.push_back(
             FixItHint::CreateInsertion(E->getBeginLoc(), CastFix.str()));
 
-        SourceLocation After = S.getLocForEndOfToken(E->getEndLoc());
+        // We don't use getLocForEndOfToken because it returns invalid source
+        // locations for macro expansions (by design).
+        SourceLocation EndLoc = S.SourceMgr.getSpellingLoc(E->getEndLoc());
+        SourceLocation After = EndLoc.getLocWithOffset(
+            Lexer::MeasureTokenLength(EndLoc, S.SourceMgr, S.LangOpts));
         Hints.push_back(FixItHint::CreateInsertion(After, ")"));
       }
 
-      if (ShouldNotPrintDirectly) {
+      if (ShouldNotPrintDirectly && !IsScopedEnum) {
         // The expression has a type that should not be printed directly.
         // We extract the name from the typedef because we don't want to show
         // the underlying type in the diagnostic.

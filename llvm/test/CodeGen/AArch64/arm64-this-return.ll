@@ -148,7 +148,7 @@ define ptr @E_ctor_base(ptr %this, i32 %x) {
   ; GISEL-MIR:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; GISEL-MIR:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; GISEL-MIR:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; GISEL-MIR:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; GISEL-MIR:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s64)
   ; GISEL-MIR:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; GISEL-MIR:   $x0 = COPY [[PTR_ADD]](p0)
   ; GISEL-MIR:   $w1 = COPY [[COPY1]](s32)

@@ -1901,8 +1901,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
         auto Overrides = MD->overridden_methods();
         OS << "Overrides: [ ";
         dumpOverride(*Overrides.begin());
-        for (const auto *Override :
-             llvm::make_range(Overrides.begin() + 1, Overrides.end())) {
+        for (const auto *Override : llvm::drop_begin(Overrides)) {
           OS << ", ";
           dumpOverride(Override);
         }
@@ -1950,6 +1949,10 @@ void TextNodeDumper::VisitFieldDecl(const FieldDecl *D) {
 void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   dumpNestedNameSpecifier(D->getQualifier());
   dumpName(D);
+  if (const auto *P = dyn_cast<ParmVarDecl>(D);
+      P && P->isExplicitObjectParameter())
+    OS << " this";
+
   dumpType(D->getType());
   dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
   StorageClass SC = D->getStorageClass();

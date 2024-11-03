@@ -38,6 +38,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PagedVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -487,7 +488,7 @@ private:
   ///
   /// When the pointer at index I is non-NULL, the type with
   /// ID = (I + 1) << FastQual::Width has already been loaded
-  std::vector<QualType> TypesLoaded;
+  llvm::PagedVector<QualType> TypesLoaded;
 
   using GlobalTypeMapType =
       ContinuousRangeMap<serialization::TypeID, ModuleFile *, 4>;
@@ -501,7 +502,7 @@ private:
   ///
   /// When the pointer at index I is non-NULL, the declaration with ID
   /// = I + 1 has already been loaded.
-  std::vector<Decl *> DeclsLoaded;
+  llvm::PagedVector<Decl *> DeclsLoaded;
 
   using GlobalDeclMapType =
       ContinuousRangeMap<serialization::DeclID, ModuleFile *, 4>;
@@ -1821,7 +1822,7 @@ public:
   SourceRange ReadSkippedRange(unsigned Index) override;
 
   /// Read the header file information for the given file entry.
-  HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) override;
+  HeaderFileInfo GetHeaderFileInfo(FileEntryRef FE) override;
 
   void ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag);
 

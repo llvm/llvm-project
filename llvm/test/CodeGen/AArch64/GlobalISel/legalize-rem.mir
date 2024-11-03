@@ -203,11 +203,9 @@ body:             |
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
     ; CHECK-NEXT: [[SDIV:%[0-9]+]]:_(s64) = G_SDIV [[UV]], [[UV2]]
     ; CHECK-NEXT: [[SDIV1:%[0-9]+]]:_(s64) = G_SDIV [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SDIV]], [[UV4]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SDIV1]], [[UV5]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MUL]](s64), [[MUL1]](s64)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<2 x s64>) = G_SUB [[COPY]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SDIV]](s64), [[SDIV1]](s64)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR]], [[COPY1]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<2 x s64>) = G_SUB [[COPY]], [[MUL]]
     ; CHECK-NEXT: $q0 = COPY [[SUB]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1

@@ -161,13 +161,13 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    tbz w3, #0, .LBB8_3
 ; CHECK-NEXT:  // %bb.1: // %t
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    mov x23, x0
+; CHECK-NEXT:    mov x22, x0
 ; CHECK-NEXT:    mov x20, x2
 ; CHECK-NEXT:    cset w21, lo
-; CHECK-NEXT:    mov x22, x1
+; CHECK-NEXT:    mov x23, x1
 ; CHECK-NEXT:    mov w0, w21
 ; CHECK-NEXT:    bl call
-; CHECK-NEXT:    subs x8, x23, x22
+; CHECK-NEXT:    subs x8, x22, x23
 ; CHECK-NEXT:    b.hs .LBB8_3
 ; CHECK-NEXT:  // %bb.2: // %end
 ; CHECK-NEXT:    mov w19, w21

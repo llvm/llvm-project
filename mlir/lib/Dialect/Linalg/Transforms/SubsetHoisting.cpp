@@ -303,7 +303,7 @@ static Operation *isTensorChunkAccessedByUnknownOp(Operation *writeOp,
       // pass-through tensor arguments left from previous level of
       // hoisting.
       if (auto forUser = dyn_cast<scf::ForOp>(user)) {
-        Value arg = forUser.getLoopBody().getArgument(
+        Value arg = forUser.getBody()->getArgument(
             use.getOperandNumber() - forUser.getNumControlOperands() +
             /*iv value*/ 1);
         uses.push_back(arg.getUses());
@@ -363,13 +363,13 @@ static scf::ForOp hoistTransferReadWrite(
 
   // 2. Rewrite `loop` with an additional yield. This is the quantity that is
   // computed iteratively but whose storage has become loop-invariant.
-  NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
-                                ArrayRef<BlockArgument> newBBArgs) {
+  NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
+                                 ArrayRef<BlockArgument> newBBArgs) {
     return SmallVector<Value>{transferWriteOp.getVector()};
   };
-  auto newForOp = replaceLoopWithNewYields(
-      rewriter, forOp, {transferReadOp.getVector()}, yieldFn);
-  rewriter.eraseOp(forOp);
+  auto newForOp = cast<scf::ForOp>(*forOp.replaceWithAdditionalYields(
+      rewriter, {transferReadOp.getVector()},
+      /*replaceInitOperandUsesInLoop=*/true, yieldFn));
 
   // 3. Update the yield. Invariant: initArgNumber is the destination tensor.
   auto yieldOp =
@@ -425,13 +425,13 @@ static scf::ForOp hoistExtractInsertSlice(RewriterBase &rewriter,
 
   // 2. Rewrite `loop` with an additional yield. This is the quantity that is
   // computed iteratively but whose storage has become loop-invariant.
-  NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
-                                ArrayRef<BlockArgument> newBBArgs) {
+  NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
+                                 ArrayRef<BlockArgument> newBBArgs) {
     return SmallVector<Value>{insertSliceOp.getSource()};
   };
-  auto newForOp = replaceLoopWithNewYields(rewriter, forOp,
-                                           extractSliceOp.getResult(), yieldFn);
-  rewriter.eraseOp(forOp);
+  auto newForOp = cast<scf::ForOp>(*forOp.replaceWithAdditionalYields(
+      rewriter, extractSliceOp.getResult(),
+      /*replaceInitOperandUsesInLoop=*/true, yieldFn));
 
   // 3. Update the yield. Invariant: initArgNumber is the destination tensor.
   auto yieldOp =

@@ -14,13 +14,13 @@
 #include "src/errno/libc_errno.h"
 #include <stdarg.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(long, __llvm_libc_syscall,
+LLVM_LIBC_FUNCTION(long, LIBC_NAMESPACE_syscall,
                    (long number, long arg1, long arg2, long arg3, long arg4,
                     long arg5, long arg6)) {
-  long ret = __llvm_libc::syscall_impl<long>(number, arg1, arg2, arg3, arg4,
-                                             arg5, arg6);
+  long ret = LIBC_NAMESPACE::syscall_impl<long>(number, arg1, arg2, arg3, arg4,
+                                                arg5, arg6);
   // Syscalls may return large positive values that overflow, but will never
   // return values between -4096 and -1
   if (static_cast<unsigned long>(ret) > -4096UL) {
@@ -30,4 +30,4 @@ LLVM_LIBC_FUNCTION(long, __llvm_libc_syscall,
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

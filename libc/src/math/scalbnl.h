@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_SCALBNL_H
 #define LLVM_LIBC_SRC_MATH_SCALBNL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long double scalbnl(long double x, int n);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_SCALBNL_H

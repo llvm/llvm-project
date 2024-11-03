@@ -217,13 +217,14 @@
 ; CHECK-NEXT:       AArch64 load / store optimization pass
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
-; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:     Machine Outliner
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       AArch64 Pointer Authentication
+; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       AArch64 Compress Jump Tables
 ; CHECK-NEXT:       Insert CFI remember/restore state instructions

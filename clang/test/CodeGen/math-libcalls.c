@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm              %s | FileCheck %s --check-prefix=NO__ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -disable-llvm-passes -O2              %s | FileCheck %s --check-prefix=NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefix=HAS_MAYTRAP
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN

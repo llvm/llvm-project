@@ -2584,69 +2584,6 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
   return OutputDebugInfoSize - StartOutputDebugInfoSize;
 }
 
-bool DWARFLinker::emitPaperTrailWarnings(const DWARFFile &File,
-                                         OffsetsStringPool &StringPool) {
-
-  if (File.Warnings.empty())
-    return false;
-
-  DIE *CUDie = DIE::get(DIEAlloc, dwarf::DW_TAG_compile_unit);
-  CUDie->setOffset(11);
-  StringRef Producer;
-  StringRef WarningHeader;
-
-  switch (DwarfLinkerClientID) {
-  case DwarfLinkerClient::Dsymutil:
-    Producer = StringPool.internString("dsymutil");
-    WarningHeader = "dsymutil_warning";
-    break;
-
-  default:
-    Producer = StringPool.internString("dwarfopt");
-    WarningHeader = "dwarfopt_warning";
-    break;
-  }
-
-  StringRef FileName = StringPool.internString(File.FileName);
-  CUDie->addValue(DIEAlloc, dwarf::DW_AT_producer, dwarf::DW_FORM_strp,
-                  DIEInteger(StringPool.getStringOffset(Producer)));
-  DIEBlock *String = new (DIEAlloc) DIEBlock();
-  DIEBlocks.push_back(String);
-  for (auto &C : FileName)
-    String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
-                     DIEInteger(C));
-  String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
-                   DIEInteger(0));
-
-  CUDie->addValue(DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_string, String);
-  for (const auto &Warning : File.Warnings) {
-    DIE &ConstDie = CUDie->addChild(DIE::get(DIEAlloc, dwarf::DW_TAG_constant));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_strp,
-                      DIEInteger(StringPool.getStringOffset(WarningHeader)));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_artificial, dwarf::DW_FORM_flag,
-                      DIEInteger(1));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_const_value, dwarf::DW_FORM_strp,
-                      DIEInteger(StringPool.getStringOffset(Warning)));
-  }
-  unsigned Size = 4 /* FORM_strp */ + FileName.size() + 1 +
-                  File.Warnings.size() * (4 + 1 + 4) + 1 /* End of children */;
-  DIEAbbrev Abbrev = CUDie->generateAbbrev();
-  assignAbbrev(Abbrev);
-  CUDie->setAbbrevNumber(Abbrev.getNumber());
-  Size += getULEB128Size(Abbrev.getNumber());
-  // Abbreviation ordering needed for classic compatibility.
-  for (auto &Child : CUDie->children()) {
-    Abbrev = Child.generateAbbrev();
-    assignAbbrev(Abbrev);
-    Child.setAbbrevNumber(Abbrev.getNumber());
-    Size += getULEB128Size(Abbrev.getNumber());
-  }
-  CUDie->setSize(Size);
-  TheDwarfEmitter->emitPaperTrailWarningsDie(*CUDie);
-
-  return true;
-}
-
 void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getLocSection().Data,
                                        "debug_loc");
@@ -2710,9 +2647,6 @@ Error DWARFLinker::link() {
       else
         outs() << "OBJECT FILE: " << OptContext.File.FileName << "\n";
     }
-
-    if (emitPaperTrailWarnings(OptContext.File, DebugStrPool))
-      continue;
 
     if (!OptContext.File.Dwarf)
       continue;

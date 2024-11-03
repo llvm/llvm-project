@@ -33,6 +33,7 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    lwz r3, 0(r3)
 ; CHECK-NEXT:    std r29, 40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, 48(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    crxor 4*cr2+eq, 4*cr2+eq, 4*cr2+eq
 ; CHECK-NEXT:    paddi r29, 0, .LJTI0_0@PCREL, 1
 ; CHECK-NEXT:    srwi r4, r3, 4
 ; CHECK-NEXT:    srwi r3, r3, 5
@@ -40,15 +41,14 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    crmove 4*cr2+gt, gt
 ; CHECK-NEXT:    andi. r3, r3, 1
-; CHECK-NEXT:    crmove 4*cr2+lt, gt
-; CHECK-NEXT:    cmplwi cr3, r3, 336
 ; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    crmove 4*cr2+lt, gt
 ; CHECK-NEXT:    sldi r30, r3, 2
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: # %bb43
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    bl call_1@notoc
-; CHECK-NEXT:    setnbc r3, 4*cr4+eq
+; CHECK-NEXT:    setnbc r3, 4*cr3+eq
 ; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    stb r4, 0(r3)
 ; CHECK-NEXT:    li r4, 0
@@ -58,13 +58,13 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    bc 12, 4*cr2+gt, .LBB0_31
 ; CHECK-NEXT:  # %bb.3: # %bb10
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    bgt cr3, .LBB0_5
+; CHECK-NEXT:    bc 12, 4*cr2+eq, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %bb10
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    lwz r5, 0(r3)
 ; CHECK-NEXT:    rlwinm r4, r5, 0, 21, 22
-; CHECK-NEXT:    cmpwi cr4, r4, 512
+; CHECK-NEXT:    cmpwi cr3, r4, 512
 ; CHECK-NEXT:    lwax r4, r30, r29
 ; CHECK-NEXT:    add r4, r4, r29
 ; CHECK-NEXT:    mtctr r4
@@ -186,7 +186,7 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    mtocrf 8, r12
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_32: # %bb29
-; CHECK-NEXT:    crmove eq, 4*cr4+eq
+; CHECK-NEXT:    crmove eq, 4*cr3+eq
 ; CHECK-NEXT:    cmpwi cr3, r5, 366
 ; CHECK-NEXT:    cmpwi cr4, r3, 0
 ; CHECK-NEXT:    li r29, 0
@@ -224,15 +224,15 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    lwz r3, 0(r3)
 ; CHECK-BE-NEXT:    std r29, 120(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    crxor 4*cr2+eq, 4*cr2+eq, 4*cr2+eq
 ; CHECK-BE-NEXT:    srwi r4, r3, 4
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
 ; CHECK-BE-NEXT:    andi. r4, r4, 1
 ; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    crmove 4*cr2+gt, gt
 ; CHECK-BE-NEXT:    andi. r3, r3, 1
-; CHECK-BE-NEXT:    crmove 4*cr2+lt, gt
-; CHECK-BE-NEXT:    cmplwi cr3, r3, 336
 ; CHECK-BE-NEXT:    li r3, 0
+; CHECK-BE-NEXT:    crmove 4*cr2+lt, gt
 ; CHECK-BE-NEXT:    sldi r30, r3, 2
 ; CHECK-BE-NEXT:    addis r3, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    ld r29, .LC0@toc@l(r3)
@@ -241,7 +241,7 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    bl call_1
 ; CHECK-BE-NEXT:    nop
-; CHECK-BE-NEXT:    setnbc r3, 4*cr4+eq
+; CHECK-BE-NEXT:    setnbc r3, 4*cr3+eq
 ; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    stb r4, 0(r3)
 ; CHECK-BE-NEXT:    li r4, 0
@@ -251,13 +251,13 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    bc 12, 4*cr2+gt, .LBB0_31
 ; CHECK-BE-NEXT:  # %bb.3: # %bb10
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    bgt cr3, .LBB0_5
+; CHECK-BE-NEXT:    bc 12, 4*cr2+eq, .LBB0_5
 ; CHECK-BE-NEXT:  # %bb.4: # %bb10
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    mr r3, r4
 ; CHECK-BE-NEXT:    lwz r5, 0(r3)
 ; CHECK-BE-NEXT:    rlwinm r4, r5, 0, 21, 22
-; CHECK-BE-NEXT:    cmpwi cr4, r4, 512
+; CHECK-BE-NEXT:    cmpwi cr3, r4, 512
 ; CHECK-BE-NEXT:    lwax r4, r30, r29
 ; CHECK-BE-NEXT:    add r4, r4, r29
 ; CHECK-BE-NEXT:    mtctr r4
@@ -379,7 +379,7 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    mtocrf 8, r12
 ; CHECK-BE-NEXT:    blr
 ; CHECK-BE-NEXT:  .LBB0_32: # %bb29
-; CHECK-BE-NEXT:    crmove eq, 4*cr4+eq
+; CHECK-BE-NEXT:    crmove eq, 4*cr3+eq
 ; CHECK-BE-NEXT:    cmpwi cr3, r5, 366
 ; CHECK-BE-NEXT:    cmpwi cr4, r3, 0
 ; CHECK-BE-NEXT:    li r29, 0

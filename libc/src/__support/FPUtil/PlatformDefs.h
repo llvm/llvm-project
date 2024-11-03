@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_PLATFORMDEFS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_PLATFORMDEFS_H
 
 #include "src/__support/macros/properties/architectures.h"
 
@@ -27,4 +27,4 @@
 #define SPECIAL_X86_LONG_DOUBLE
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_PLATFORMDEFS_H

@@ -585,6 +585,11 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_WORKGROUP", "3");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_AGENT", "4");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
+    if (LangOpts.HIPStdPar) {
+      Builder.defineMacro("__HIPSTDPAR__");
+      if (LangOpts.HIPStdParInterposeAlloc)
+        Builder.defineMacro("__HIPSTDPAR_INTERPOSE_ALLOC__");
+    }
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
       if (!TI.hasHIPImageSupport()) {
@@ -1076,6 +1081,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFloatMacros(Builder, "FLT", &TI.getFloatFormat(), "F");
   DefineFloatMacros(Builder, "DBL", &TI.getDoubleFormat(), "");
   DefineFloatMacros(Builder, "LDBL", &TI.getLongDoubleFormat(), "L");
+  if (TI.hasFloat128Type())
+    DefineFloatMacros(Builder, "FLT128", &TI.getFloat128Format(), "Q");
 
   // Define a __POINTER_WIDTH__ macro for stdint.h.
   Builder.defineMacro("__POINTER_WIDTH__",

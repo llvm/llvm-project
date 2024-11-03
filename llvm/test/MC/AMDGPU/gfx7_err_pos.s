@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
 // cache policy is not supported for SMRD instructions

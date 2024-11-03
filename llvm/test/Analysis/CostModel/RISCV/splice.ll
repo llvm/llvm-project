@@ -52,7 +52,7 @@ define void @vector_splice() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %splice.nxv16f64 = call <vscale x 16 x double> @llvm.experimental.vector.splice.nxv16f64(<vscale x 16 x double> zeroinitializer, <vscale x 16 x double> zeroinitializer, i32 -1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %splice.nxv32f64 = call <vscale x 32 x double> @llvm.experimental.vector.splice.nxv32f64(<vscale x 32 x double> zeroinitializer, <vscale x 32 x double> zeroinitializer, i32 -1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %splice.nxv64f64 = call <vscale x 64 x double> @llvm.experimental.vector.splice.nxv64f64(<vscale x 64 x double> zeroinitializer, <vscale x 64 x double> zeroinitializer, i32 -1)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %splice.nxv1i8 = call <vscale x 1 x i8> @llvm.experimental.vector.splice.nxv1i8(<vscale x 1 x i8> zeroinitializer, <vscale x 1 x i8> zeroinitializer, i32 -1)
   %splice.nxv2i8 = call <vscale x 2 x i8> @llvm.experimental.vector.splice.nxv2i8(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x i8> zeroinitializer, i32 -1)

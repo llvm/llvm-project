@@ -547,7 +547,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   Manager.setStatCache(std::move(Cache));
 
   // Set up a virtual file with a different size than FakeStatCache uses.
-  const FileEntry *File = Manager.getVirtualFile("/tmp/test", /*Size=*/10, 0);
+  FileEntryRef File = Manager.getVirtualFileRef("/tmp/test", /*Size=*/10, 0);
   ASSERT_TRUE(File);
   const FileEntry &FE = *File;
   EXPECT_EQ(FE.getSize(), 10);
@@ -562,7 +562,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   EXPECT_EQ(FE.getSize(), 10);
 
   // Bypass the file.
-  OptionalFileEntryRef BypassRef = Manager.getBypassFile(File->getLastRef());
+  OptionalFileEntryRef BypassRef = Manager.getBypassFile(File);
   ASSERT_TRUE(BypassRef);
   EXPECT_EQ("/tmp/test", BypassRef->getName());
 

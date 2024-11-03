@@ -4963,15 +4963,15 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, ptr %y) nounwind {
 ; SKX-NEXT:    vpextrd $1, %xmm1, %r9d
 ; SKX-NEXT:    movw %r9w, 27(%rdi)
 ; SKX-NEXT:    vmovd %xmm1, %r8d
-; SKX-NEXT:    vpextrd $3, %xmm0, %esi
+; SKX-NEXT:    vpextrd $3, %xmm0, %edx
 ; SKX-NEXT:    movw %r8w, 24(%rdi)
-; SKX-NEXT:    movw %si, 9(%rdi)
-; SKX-NEXT:    vpextrd $2, %xmm0, %edx
-; SKX-NEXT:    vpextrd $1, %xmm0, %ecx
-; SKX-NEXT:    movw %dx, 6(%rdi)
-; SKX-NEXT:    movw %cx, 3(%rdi)
-; SKX-NEXT:    vmovd %xmm0, %eax
-; SKX-NEXT:    movw %ax, (%rdi)
+; SKX-NEXT:    movw %dx, 9(%rdi)
+; SKX-NEXT:    vpextrd $2, %xmm0, %esi
+; SKX-NEXT:    vpextrd $1, %xmm0, %eax
+; SKX-NEXT:    movw %si, 6(%rdi)
+; SKX-NEXT:    movw %ax, 3(%rdi)
+; SKX-NEXT:    vmovd %xmm0, %ecx
+; SKX-NEXT:    movw %cx, (%rdi)
 ; SKX-NEXT:    shrl $16, %r15d
 ; SKX-NEXT:    movb %r15b, 47(%rdi)
 ; SKX-NEXT:    shrl $16, %r14d
@@ -4997,14 +4997,14 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, ptr %y) nounwind {
 ; SKX-NEXT:    movw %r9w, 15(%rdi)
 ; SKX-NEXT:    vmovd %xmm0, %r8d
 ; SKX-NEXT:    movw %r8w, 12(%rdi)
-; SKX-NEXT:    shrl $16, %esi
-; SKX-NEXT:    movb %sil, 11(%rdi)
 ; SKX-NEXT:    shrl $16, %edx
-; SKX-NEXT:    movb %dl, 8(%rdi)
-; SKX-NEXT:    shrl $16, %ecx
-; SKX-NEXT:    movb %cl, 5(%rdi)
+; SKX-NEXT:    movb %dl, 11(%rdi)
+; SKX-NEXT:    shrl $16, %esi
+; SKX-NEXT:    movb %sil, 8(%rdi)
 ; SKX-NEXT:    shrl $16, %eax
-; SKX-NEXT:    movb %al, 2(%rdi)
+; SKX-NEXT:    movb %al, 5(%rdi)
+; SKX-NEXT:    shrl $16, %ecx
+; SKX-NEXT:    movb %cl, 2(%rdi)
 ; SKX-NEXT:    shrl $16, %r11d
 ; SKX-NEXT:    movb %r11b, 23(%rdi)
 ; SKX-NEXT:    shrl $16, %r10d

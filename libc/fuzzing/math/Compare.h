@@ -13,10 +13,11 @@
 #include "src/__support/FPUtil/FPBits.h"
 
 template <typename T>
-__llvm_libc::cpp::enable_if_t<__llvm_libc::cpp::is_floating_point_v<T>, bool>
+LIBC_NAMESPACE::cpp::enable_if_t<LIBC_NAMESPACE::cpp::is_floating_point_v<T>,
+                                 bool>
 ValuesEqual(T x1, T x2) {
-  __llvm_libc::fputil::FPBits<T> bits1(x1);
-  __llvm_libc::fputil::FPBits<T> bits2(x2);
+  LIBC_NAMESPACE::fputil::FPBits<T> bits1(x1);
+  LIBC_NAMESPACE::fputil::FPBits<T> bits2(x2);
   // If either is NaN, we want both to be NaN.
   if (bits1.is_nan() || bits2.is_nan())
     return bits2.is_nan() && bits2.is_nan();
@@ -26,7 +27,7 @@ ValuesEqual(T x1, T x2) {
 }
 
 template <typename T>
-__llvm_libc::cpp::enable_if_t<__llvm_libc::cpp::is_integral_v<T>, bool>
+LIBC_NAMESPACE::cpp::enable_if_t<LIBC_NAMESPACE::cpp::is_integral_v<T>, bool>
 ValuesEqual(T x1, T x2) {
   return x1 == x2;
 }

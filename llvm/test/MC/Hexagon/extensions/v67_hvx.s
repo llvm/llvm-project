@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv67 -mhvx -filetype=obj %s | llvm-objdump --no-print-imm-hex --mcpu=hexagonv67 --mattr=+hvx -d - | FileCheck --implicit-check-not='{' %s
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv67 -mhvx -filetype=obj %s | llvm-objdump --no-print-imm-hex --mcpu=hexagonv67 --mattr=+hvx -d - | FileCheck --implicit-check-not='{' %s
 
 
 

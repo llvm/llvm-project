@@ -34,9 +34,6 @@
 ; INL-MOD-NEXT:   call void @bar()
 ; INL-MOD: define void @bar()
 ; INL-MOD-NEXT:  call void @foo()
-; INL-MOD: IR Dump After
-; INL-MOD-NEXT: ModuleID =
-; INL-MOD-NEXT: source_filename =
 ; INL-MOD-NOT: Printing <null> Function
 
 define void @tester() noinline {

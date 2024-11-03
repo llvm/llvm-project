@@ -11,10 +11,10 @@
 
 #include <string.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 char *strndup(const char *src, size_t size);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRNDUP_H

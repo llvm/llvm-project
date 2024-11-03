@@ -114,6 +114,7 @@ public:
   MCOperand createRegOperand(unsigned int RegId) const;
   MCOperand createRegOperand(unsigned RegClassID, unsigned Val) const;
   MCOperand createSRegOperand(unsigned SRegClassID, unsigned Val) const;
+  MCOperand createVGPR16Operand(unsigned RegIdx, bool IsHi) const;
 
   MCOperand errOperand(unsigned V, const Twine& ErrMsg) const;
 
@@ -141,6 +142,17 @@ public:
       return MCDisassembler::Success;
     }
     Bytes = SavedBytes;
+    return MCDisassembler::Fail;
+  }
+
+  template <typename InsnType>
+  DecodeStatus tryDecodeInst(const uint8_t *Table1, const uint8_t *Table2,
+                             MCInst &MI, InsnType Inst, uint64_t Address,
+                             raw_ostream &Comments) const {
+    for (const uint8_t *T : {Table1, Table2}) {
+      if (DecodeStatus Res = tryDecodeInst(T, MI, Inst, Address, Comments))
+        return Res;
+    }
     return MCDisassembler::Fail;
   }
 
@@ -223,6 +235,10 @@ public:
                         bool MandatoryLiteral = false,
                         unsigned ImmWidth = 0) const;
 
+  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
+                               bool MandatoryLiteral = false,
+                               unsigned ImmWidth = 0) const;
+
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
@@ -249,6 +265,7 @@ public:
   bool isGFX11Plus() const;
 
   bool hasArchitectedFlatScratch() const;
+  bool hasKernargPreload() const;
 
   bool isMacDPP(MCInst &MI) const;
 };

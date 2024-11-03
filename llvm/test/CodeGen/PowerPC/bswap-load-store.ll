@@ -127,10 +127,10 @@ define i16 @LHBRX(ptr %ptr, i32 %off) {
 define void @STDBRX(i64 %i, ptr %ptr, i64 %off) {
 ; PWR7_32-LABEL: STDBRX:
 ; PWR7_32:       # %bb.0:
-; PWR7_32-NEXT:    li r6, 4
-; PWR7_32-NEXT:    add r7, r5, r8
+; PWR7_32-NEXT:    add r6, r5, r8
 ; PWR7_32-NEXT:    stwbrx r4, r5, r8
-; PWR7_32-NEXT:    stwbrx r3, r7, r6
+; PWR7_32-NEXT:    li r4, 4
+; PWR7_32-NEXT:    stwbrx r3, r6, r4
 ; PWR7_32-NEXT:    blr
 ;
 ; X64-LABEL: STDBRX:
@@ -168,10 +168,10 @@ define void @STDBRX(i64 %i, ptr %ptr, i64 %off) {
 define i64 @LDBRX(ptr %ptr, i64 %off) {
 ; PWR7_32-LABEL: LDBRX:
 ; PWR7_32:       # %bb.0:
-; PWR7_32-NEXT:    li r5, 4
-; PWR7_32-NEXT:    add r7, r3, r6
+; PWR7_32-NEXT:    add r5, r3, r6
 ; PWR7_32-NEXT:    lwbrx r4, r3, r6
-; PWR7_32-NEXT:    lwbrx r3, r7, r5
+; PWR7_32-NEXT:    li r3, 4
+; PWR7_32-NEXT:    lwbrx r3, r5, r3
 ; PWR7_32-NEXT:    blr
 ;
 ; X64-LABEL: LDBRX:

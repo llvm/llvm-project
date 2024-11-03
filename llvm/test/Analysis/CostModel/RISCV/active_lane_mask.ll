@@ -25,7 +25,7 @@ define void @get_lane_mask() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %mask_nxv16i1_i64 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 undef, i64 undef)
   %mask_nxv8i1_i64 = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 undef, i64 undef)

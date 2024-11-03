@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=obj %s | llvm-objdump -t - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -filetype=obj %s | llvm-objdump -t - | FileCheck %s
 #
 
 sym_a:

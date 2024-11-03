@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'Zfa'
-// additional floating-point extension, version 0.1.
-// This version is still experimental as the 'Zfa' extension hasn't been
-// ratified yet.
+// additional floating-point extension, version 1.0.
+// This version is still experimental.
 //
 //===----------------------------------------------------------------------===//
 

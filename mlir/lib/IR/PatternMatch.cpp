@@ -8,6 +8,8 @@
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Iterators.h"
+#include "mlir/IR/RegionKindInterface.h"
 
 using namespace mlir;
 
@@ -275,7 +277,7 @@ void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   for (auto it : llvm::zip(op->getResults(), newValues))
     replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
 
-  // Erase the op.
+  // Erase op and notify listener.
   eraseOp(op);
 }
 
@@ -295,7 +297,7 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
   for (auto it : llvm::zip(op->getResults(), newOp->getResults()))
     replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
 
-  // Erase the old op.
+  // Erase op and notify listener.
   eraseOp(op);
 }
 
@@ -303,9 +305,71 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
 /// the given operation *must* be known to be dead.
 void RewriterBase::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
-  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+  auto *rewriteListener = dyn_cast_if_present<Listener>(listener);
+
+  // Fast path: If no listener is attached, the op can be dropped in one go.
+  if (!rewriteListener) {
+    op->erase();
+    return;
+  }
+
+  // Helper function that erases a single op.
+  auto eraseSingleOp = [&](Operation *op) {
+#ifndef NDEBUG
+    // All nested ops should have been erased already.
+    assert(
+        llvm::all_of(op->getRegions(), [&](Region &r) { return r.empty(); }) &&
+        "expected empty regions");
+    // All users should have been erased already if the op is in a region with
+    // SSA dominance.
+    if (!op->use_empty() && op->getParentOp())
+      assert(mayBeGraphRegion(*op->getParentRegion()) &&
+             "expected that op has no uses");
+#endif // NDEBUG
     rewriteListener->notifyOperationRemoved(op);
-  op->erase();
+
+    // Explicitly drop all uses in case the op is in a graph region.
+    op->dropAllUses();
+    op->erase();
+  };
+
+  // Nested ops must be erased one-by-one, so that listeners have a consistent
+  // view of the IR every time a notification is triggered. Users must be
+  // erased before definitions. I.e., post-order, reverse dominance.
+  std::function<void(Operation *)> eraseTree = [&](Operation *op) {
+    // Erase nested ops.
+    for (Region &r : llvm::reverse(op->getRegions())) {
+      // Erase all blocks in the right order. Successors should be erased
+      // before predecessors because successor blocks may use values defined
+      // in predecessor blocks. A post-order traversal of blocks within a
+      // region visits successors before predecessors. Repeat the traversal
+      // until the region is empty. (The block graph could be disconnected.)
+      while (!r.empty()) {
+        SmallVector<Block *> erasedBlocks;
+        for (Block *b : llvm::post_order(&r.front())) {
+          // Visit ops in reverse order.
+          for (Operation &op :
+               llvm::make_early_inc_range(ReverseIterator::makeIterable(*b)))
+            eraseTree(&op);
+          // Do not erase the block immediately. This is not supprted by the
+          // post_order iterator.
+          erasedBlocks.push_back(b);
+        }
+        for (Block *b : erasedBlocks) {
+          // Explicitly drop all uses in case there is a cycle in the block
+          // graph.
+          for (BlockArgument bbArg : b->getArguments())
+            bbArg.dropAllUses();
+          b->dropAllUses();
+          b->erase();
+        }
+      }
+    }
+    // Then erase the enclosing op.
+    eraseSingleOp(op);
+  };
+
+  eraseTree(op);
 }
 
 void RewriterBase::eraseBlock(Block *block) {

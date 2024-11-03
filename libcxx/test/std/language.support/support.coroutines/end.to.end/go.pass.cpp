@@ -29,6 +29,9 @@ struct goroutine
     rh = nullptr;
   }
 
+  goroutine() = default;
+  goroutine(const goroutine&) = default;
+  goroutine& operator=(const goroutine&) = default;
   ~goroutine() {}
 
   static void run_one()

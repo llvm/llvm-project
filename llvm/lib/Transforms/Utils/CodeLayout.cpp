@@ -48,6 +48,8 @@
 #include <set>
 
 using namespace llvm;
+using namespace llvm::codelayout;
+
 #define DEBUG_TYPE "code-layout"
 
 namespace llvm {
@@ -318,8 +320,8 @@ struct ChainT {
     Edges.push_back(std::make_pair(Other, Edge));
   }
 
-  void merge(ChainT *Other, const std::vector<NodeT *> &MergedBlocks) {
-    Nodes = MergedBlocks;
+  void merge(ChainT *Other, std::vector<NodeT *> MergedBlocks) {
+    Nodes = std::move(MergedBlocks);
     // Update the chain's data.
     ExecutionCount += Other->ExecutionCount;
     Size += Other->Size;
@@ -549,15 +551,14 @@ MergedChain mergeNodes(const std::vector<NodeT *> &X,
 /// The implementation of the ExtTSP algorithm.
 class ExtTSPImpl {
 public:
-  ExtTSPImpl(const std::vector<uint64_t> &NodeSizes,
-             const std::vector<uint64_t> &NodeCounts,
-             const std::vector<EdgeCountT> &EdgeCounts)
+  ExtTSPImpl(ArrayRef<uint64_t> NodeSizes, ArrayRef<uint64_t> NodeCounts,
+             ArrayRef<EdgeCount> EdgeCounts)
       : NumNodes(NodeSizes.size()) {
     initialize(NodeSizes, NodeCounts, EdgeCounts);
   }
 
   /// Run the algorithm and return an optimized ordering of nodes.
-  void run(std::vector<uint64_t> &Result) {
+  std::vector<uint64_t> run() {
     // Pass 1: Merge nodes with their mutually forced successors
     mergeForcedPairs();
 
@@ -568,14 +569,14 @@ public:
     mergeColdChains();
 
     // Collect nodes from all chains
-    concatChains(Result);
+    return concatChains();
   }
 
 private:
   /// Initialize the algorithm's data structures.
-  void initialize(const std::vector<uint64_t> &NodeSizes,
-                  const std::vector<uint64_t> &NodeCounts,
-                  const std::vector<EdgeCountT> &EdgeCounts) {
+  void initialize(const ArrayRef<uint64_t> &NodeSizes,
+                  const ArrayRef<uint64_t> &NodeCounts,
+                  const ArrayRef<EdgeCount> &EdgeCounts) {
     // Initialize nodes
     AllNodes.reserve(NumNodes);
     for (uint64_t Idx = 0; Idx < NumNodes; Idx++) {
@@ -592,21 +593,18 @@ private:
     PredNodes.resize(NumNodes);
     std::vector<uint64_t> OutDegree(NumNodes, 0);
     AllJumps.reserve(EdgeCounts.size());
-    for (auto It : EdgeCounts) {
-      uint64_t Pred = It.first.first;
-      uint64_t Succ = It.first.second;
-      OutDegree[Pred]++;
+    for (auto Edge : EdgeCounts) {
+      ++OutDegree[Edge.src];
       // Ignore self-edges.
-      if (Pred == Succ)
+      if (Edge.src == Edge.dst)
         continue;
 
-      SuccNodes[Pred].push_back(Succ);
-      PredNodes[Succ].push_back(Pred);
-      uint64_t ExecutionCount = It.second;
-      if (ExecutionCount > 0) {
-        NodeT &PredNode = AllNodes[Pred];
-        NodeT &SuccNode = AllNodes[Succ];
-        AllJumps.emplace_back(&PredNode, &SuccNode, ExecutionCount);
+      SuccNodes[Edge.src].push_back(Edge.dst);
+      PredNodes[Edge.dst].push_back(Edge.src);
+      if (Edge.count > 0) {
+        NodeT &PredNode = AllNodes[Edge.src];
+        NodeT &SuccNode = AllNodes[Edge.dst];
+        AllJumps.emplace_back(&PredNode, &SuccNode, Edge.count);
         SuccNode.InJumps.push_back(&AllJumps.back());
         PredNode.OutJumps.push_back(&AllJumps.back());
       }
@@ -850,7 +848,7 @@ private:
 
       // Attach (a part of) ChainPred after the last node of ChainSucc.
       for (JumpT *Jump : ChainSucc->Nodes.back()->OutJumps) {
-        const NodeT *DstBlock = Jump->Source;
+        const NodeT *DstBlock = Jump->Target;
         if (DstBlock->CurChain != ChainPred)
           continue;
         size_t Offset = DstBlock->CurIndex;
@@ -923,7 +921,7 @@ private:
   }
 
   /// Concatenate all chains into the final order.
-  void concatChains(std::vector<uint64_t> &Order) {
+  std::vector<uint64_t> concatChains() {
     // Collect chains and calculate density stats for their sorting.
     std::vector<const ChainT *> SortedChains;
     DenseMap<const ChainT *, double> ChainDensity;
@@ -957,12 +955,12 @@ private:
               });
 
     // Collect the nodes in the order specified by their chains.
+    std::vector<uint64_t> Order;
     Order.reserve(NumNodes);
-    for (const ChainT *Chain : SortedChains) {
-      for (NodeT *Node : Chain->Nodes) {
+    for (const ChainT *Chain : SortedChains)
+      for (NodeT *Node : Chain->Nodes)
         Order.push_back(Node->Index);
-      }
-    }
+    return Order;
   }
 
 private:
@@ -995,16 +993,15 @@ private:
 /// functions represented by a call graph.
 class CDSortImpl {
 public:
-  CDSortImpl(const CDSortConfig &Config, const std::vector<uint64_t> &NodeSizes,
-             const std::vector<uint64_t> &NodeCounts,
-             const std::vector<EdgeCountT> &EdgeCounts,
-             const std::vector<uint64_t> &EdgeOffsets)
+  CDSortImpl(const CDSortConfig &Config, ArrayRef<uint64_t> NodeSizes,
+             ArrayRef<uint64_t> NodeCounts, ArrayRef<EdgeCount> EdgeCounts,
+             ArrayRef<uint64_t> EdgeOffsets)
       : Config(Config), NumNodes(NodeSizes.size()) {
     initialize(NodeSizes, NodeCounts, EdgeCounts, EdgeOffsets);
   }
 
   /// Run the algorithm and return an ordered set of function clusters.
-  void run(std::vector<uint64_t> &Result) {
+  std::vector<uint64_t> run() {
     // Merge pairs of chains while improving the objective.
     mergeChainPairs();
 
@@ -1013,15 +1010,15 @@ public:
                       << HotChains.size() << "\n");
 
     // Collect nodes from all the chains.
-    concatChains(Result);
+    return concatChains();
   }
 
 private:
   /// Initialize the algorithm's data structures.
-  void initialize(const std::vector<uint64_t> &NodeSizes,
-                  const std::vector<uint64_t> &NodeCounts,
-                  const std::vector<EdgeCountT> &EdgeCounts,
-                  const std::vector<uint64_t> &EdgeOffsets) {
+  void initialize(const ArrayRef<uint64_t> &NodeSizes,
+                  const ArrayRef<uint64_t> &NodeCounts,
+                  const ArrayRef<EdgeCount> &EdgeCounts,
+                  const ArrayRef<uint64_t> &EdgeOffsets) {
     // Initialize nodes.
     AllNodes.reserve(NumNodes);
     for (uint64_t Node = 0; Node < NumNodes; Node++) {
@@ -1038,20 +1035,17 @@ private:
     PredNodes.resize(NumNodes);
     AllJumps.reserve(EdgeCounts.size());
     for (size_t I = 0; I < EdgeCounts.size(); I++) {
-      auto It = EdgeCounts[I];
-      uint64_t Pred = It.first.first;
-      uint64_t Succ = It.first.second;
+      auto [Pred, Succ, Count] = EdgeCounts[I];
       // Ignore recursive calls.
       if (Pred == Succ)
         continue;
 
       SuccNodes[Pred].push_back(Succ);
       PredNodes[Succ].push_back(Pred);
-      uint64_t ExecutionCount = It.second;
-      if (ExecutionCount > 0) {
+      if (Count > 0) {
         NodeT &PredNode = AllNodes[Pred];
         NodeT &SuccNode = AllNodes[Succ];
-        AllJumps.emplace_back(&PredNode, &SuccNode, ExecutionCount);
+        AllJumps.emplace_back(&PredNode, &SuccNode, Count);
         AllJumps.back().Offset = EdgeOffsets[I];
         SuccNode.InJumps.push_back(&AllJumps.back());
         PredNode.OutJumps.push_back(&AllJumps.back());
@@ -1302,7 +1296,7 @@ private:
   }
 
   /// Concatenate all chains into the final order.
-  void concatChains(std::vector<uint64_t> &Order) {
+  std::vector<uint64_t> concatChains() {
     // Collect chains and calculate density stats for their sorting.
     std::vector<const ChainT *> SortedChains;
     DenseMap<const ChainT *, double> ChainDensity;
@@ -1332,10 +1326,12 @@ private:
               });
 
     // Collect the nodes in the order specified by their chains.
+    std::vector<uint64_t> Order;
     Order.reserve(NumNodes);
     for (const ChainT *Chain : SortedChains)
       for (NodeT *Node : Chain->Nodes)
         Order.push_back(Node->Index);
+    return Order;
   }
 
 private:
@@ -1376,17 +1372,16 @@ private:
 } // end of anonymous namespace
 
 std::vector<uint64_t>
-llvm::applyExtTspLayout(const std::vector<uint64_t> &NodeSizes,
-                        const std::vector<uint64_t> &NodeCounts,
-                        const std::vector<EdgeCountT> &EdgeCounts) {
+codelayout::computeExtTspLayout(ArrayRef<uint64_t> NodeSizes,
+                                ArrayRef<uint64_t> NodeCounts,
+                                ArrayRef<EdgeCount> EdgeCounts) {
   // Verify correctness of the input data.
   assert(NodeCounts.size() == NodeSizes.size() && "Incorrect input");
   assert(NodeSizes.size() > 2 && "Incorrect input");
 
   // Apply the reordering algorithm.
   ExtTSPImpl Alg(NodeSizes, NodeCounts, EdgeCounts);
-  std::vector<uint64_t> Result;
-  Alg.run(Result);
+  std::vector<uint64_t> Result = Alg.run();
 
   // Verify correctness of the output.
   assert(Result.front() == 0 && "Original entry point is not preserved");
@@ -1394,37 +1389,32 @@ llvm::applyExtTspLayout(const std::vector<uint64_t> &NodeSizes,
   return Result;
 }
 
-double llvm::calcExtTspScore(const std::vector<uint64_t> &Order,
-                             const std::vector<uint64_t> &NodeSizes,
-                             const std::vector<uint64_t> &NodeCounts,
-                             const std::vector<EdgeCountT> &EdgeCounts) {
+double codelayout::calcExtTspScore(ArrayRef<uint64_t> Order,
+                                   ArrayRef<uint64_t> NodeSizes,
+                                   ArrayRef<uint64_t> NodeCounts,
+                                   ArrayRef<EdgeCount> EdgeCounts) {
   // Estimate addresses of the blocks in memory.
   std::vector<uint64_t> Addr(NodeSizes.size(), 0);
   for (size_t Idx = 1; Idx < Order.size(); Idx++) {
     Addr[Order[Idx]] = Addr[Order[Idx - 1]] + NodeSizes[Order[Idx - 1]];
   }
   std::vector<uint64_t> OutDegree(NodeSizes.size(), 0);
-  for (auto It : EdgeCounts) {
-    uint64_t Pred = It.first.first;
-    OutDegree[Pred]++;
-  }
+  for (auto Edge : EdgeCounts)
+    ++OutDegree[Edge.src];
 
   // Increase the score for each jump.
   double Score = 0;
-  for (auto It : EdgeCounts) {
-    uint64_t Pred = It.first.first;
-    uint64_t Succ = It.first.second;
-    uint64_t Count = It.second;
-    bool IsConditional = OutDegree[Pred] > 1;
-    Score += ::extTSPScore(Addr[Pred], NodeSizes[Pred], Addr[Succ], Count,
-                           IsConditional);
+  for (auto Edge : EdgeCounts) {
+    bool IsConditional = OutDegree[Edge.src] > 1;
+    Score += ::extTSPScore(Addr[Edge.src], NodeSizes[Edge.src], Addr[Edge.dst],
+                           Edge.count, IsConditional);
   }
   return Score;
 }
 
-double llvm::calcExtTspScore(const std::vector<uint64_t> &NodeSizes,
-                             const std::vector<uint64_t> &NodeCounts,
-                             const std::vector<EdgeCountT> &EdgeCounts) {
+double codelayout::calcExtTspScore(ArrayRef<uint64_t> NodeSizes,
+                                   ArrayRef<uint64_t> NodeCounts,
+                                   ArrayRef<EdgeCount> EdgeCounts) {
   std::vector<uint64_t> Order(NodeSizes.size());
   for (size_t Idx = 0; Idx < NodeSizes.size(); Idx++) {
     Order[Idx] = Idx;
@@ -1432,30 +1422,23 @@ double llvm::calcExtTspScore(const std::vector<uint64_t> &NodeSizes,
   return calcExtTspScore(Order, NodeSizes, NodeCounts, EdgeCounts);
 }
 
-std::vector<uint64_t>
-llvm::applyCDSLayout(const CDSortConfig &Config,
-                     const std::vector<uint64_t> &FuncSizes,
-                     const std::vector<uint64_t> &FuncCounts,
-                     const std::vector<EdgeCountT> &CallCounts,
-                     const std::vector<uint64_t> &CallOffsets) {
+std::vector<uint64_t> codelayout::computeCacheDirectedLayout(
+    const CDSortConfig &Config, ArrayRef<uint64_t> FuncSizes,
+    ArrayRef<uint64_t> FuncCounts, ArrayRef<EdgeCount> CallCounts,
+    ArrayRef<uint64_t> CallOffsets) {
   // Verify correctness of the input data.
   assert(FuncCounts.size() == FuncSizes.size() && "Incorrect input");
 
   // Apply the reordering algorithm.
   CDSortImpl Alg(Config, FuncSizes, FuncCounts, CallCounts, CallOffsets);
-  std::vector<uint64_t> Result;
-  Alg.run(Result);
-
-  // Verify correctness of the output.
+  std::vector<uint64_t> Result = Alg.run();
   assert(Result.size() == FuncSizes.size() && "Incorrect size of layout");
   return Result;
 }
 
-std::vector<uint64_t>
-llvm::applyCDSLayout(const std::vector<uint64_t> &FuncSizes,
-                     const std::vector<uint64_t> &FuncCounts,
-                     const std::vector<EdgeCountT> &CallCounts,
-                     const std::vector<uint64_t> &CallOffsets) {
+std::vector<uint64_t> codelayout::computeCacheDirectedLayout(
+    ArrayRef<uint64_t> FuncSizes, ArrayRef<uint64_t> FuncCounts,
+    ArrayRef<EdgeCount> CallCounts, ArrayRef<uint64_t> CallOffsets) {
   CDSortConfig Config;
   // Populate the config from the command-line options.
   if (CacheEntries.getNumOccurrences() > 0)
@@ -1466,5 +1449,6 @@ llvm::applyCDSLayout(const std::vector<uint64_t> &FuncSizes,
     Config.DistancePower = DistancePower;
   if (FrequencyScale.getNumOccurrences() > 0)
     Config.FrequencyScale = FrequencyScale;
-  return applyCDSLayout(Config, FuncSizes, FuncCounts, CallCounts, CallOffsets);
+  return computeCacheDirectedLayout(Config, FuncSizes, FuncCounts, CallCounts,
+                                    CallOffsets);
 }

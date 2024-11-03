@@ -3842,7 +3842,7 @@ bool X86InstrInfo::verifyInstruction(const MachineInstr &MI,
     return true;
 
   ExtAddrMode AM = *AMOrNone;
-
+  assert(AM.Form == ExtAddrMode::Formula::Basic);
   if (AM.ScaledReg != X86::NoRegister) {
     switch (AM.Scale) {
     case 1:
@@ -9794,6 +9794,60 @@ X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
   }
 
   return It;
+}
+
+void X86InstrInfo::buildClearRegister(Register Reg,
+                                      MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator Iter,
+                                      DebugLoc &DL) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+
+  if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
+    // FIXME: Ignore MMX registers?
+    return;
+
+  if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+    BuildMI(MBB, Iter, DL, get(X86::XOR32rr), Reg)
+      .addReg(Reg, RegState::Undef)
+      .addReg(Reg, RegState::Undef);
+  } else if (X86::VR128RegClass.contains(Reg)) {
+    // XMM#
+    if (!ST.hasSSE1())
+      return;
+
+    BuildMI(MBB, Iter, DL, get(X86::PXORrr), Reg)
+      .addReg(Reg, RegState::Undef)
+      .addReg(Reg, RegState::Undef);
+  } else if (X86::VR256RegClass.contains(Reg)) {
+    // YMM#
+    if (!ST.hasAVX())
+      return;
+
+    BuildMI(MBB, Iter, DL, get(X86::VPXORrr), Reg)
+      .addReg(Reg, RegState::Undef)
+      .addReg(Reg, RegState::Undef);
+  } else if (X86::VR512RegClass.contains(Reg)) {
+    // ZMM#
+    if (!ST.hasAVX512())
+      return;
+
+    BuildMI(MBB, Iter, DL, get(X86::VPXORYrr), Reg)
+      .addReg(Reg, RegState::Undef)
+      .addReg(Reg, RegState::Undef);
+  } else if (X86::VK1RegClass.contains(Reg) ||
+             X86::VK2RegClass.contains(Reg) ||
+             X86::VK4RegClass.contains(Reg) ||
+             X86::VK8RegClass.contains(Reg) ||
+             X86::VK16RegClass.contains(Reg)) {
+    if (!ST.hasVLX())
+      return;
+
+    BuildMI(MBB, Iter, DL, get(ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr), Reg)
+      .addReg(Reg, RegState::Undef)
+      .addReg(Reg, RegState::Undef);
+  }
 }
 
 bool X86InstrInfo::getMachineCombinerPatterns(

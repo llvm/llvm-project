@@ -88,27 +88,11 @@ public:
     return out;
   }
 
-  // NOTE: This form of the method is required by `toMLIRSparseTensor`,
-  // so it can reuse the `out` buffer for each iteration of a loop.
   template <typename T>
   inline void pushforward(uint64_t size, const T *values, T *out) const {
     assert(size == permSize && "size mismatch");
     for (uint64_t i = 0; i < permSize; ++i)
       out[perm[i]] = values[i];
-  }
-
-  // NOTE: this is only needed by `toMLIRSparseTensor`, which in
-  // turn only needs it as a vector to hand off to `newSparseTensor`.
-  // Otherwise we would want the result to be an owning-permutation,
-  // to retain the knowledge that `isPermutation` is true.
-  //
-  /// Constructs the inverse permutation.  This is equivalent to calling
-  /// `pushforward` with `std::iota` for the values.
-  inline std::vector<uint64_t> inverse() const {
-    std::vector<uint64_t> out(permSize);
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[perm[i]] = i;
-    return out;
   }
 
   /// Constructs a permuted array of values.  This method is the inverse
@@ -799,8 +783,11 @@ private:
     for (uint64_t l = 0; l < lvlRank; ++l) {
       const auto crd = lvlCoords[l];
       const auto cur = lvlCursor[l];
-      if (crd > cur || (crd == cur && !isUniqueLvl(l)))
+      if (crd > cur || (crd == cur && !isUniqueLvl(l)) ||
+          (crd < cur && !isOrderedLvl(l))) {
         return l;
+      }
+
       if (crd < cur) {
         assert(false && "non-lexicographic insertion");
         return -1u;
@@ -916,8 +903,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 template <typename P, typename C, typename V>
-class SparseTensorEnumerator final
-    : public SparseTensorEnumeratorBase<V> {
+class SparseTensorEnumerator final : public SparseTensorEnumeratorBase<V> {
   using Base = SparseTensorEnumeratorBase<V>;
   using StorageImpl = SparseTensorStorage<P, C, V>;
 

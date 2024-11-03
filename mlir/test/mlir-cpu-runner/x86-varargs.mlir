@@ -10,7 +10,7 @@ llvm.func @caller() -> i32 {
   %0 = llvm.mlir.constant(3 : i32) : i32
   %1 = llvm.mlir.constant(2 : i32) : i32
   %2 = llvm.mlir.constant(1 : i32) : i32
-  %3 = llvm.call @foo(%2, %1, %0) : (i32, i32, i32) -> i32
+  %3 = llvm.call @foo(%2, %1, %0) vararg(!llvm.func<i32 (i32, ...)>) : (i32, i32, i32) -> i32
   llvm.return %3 : i32
 }
 

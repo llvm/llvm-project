@@ -1330,6 +1330,9 @@ public:
   /// supported.
   static bool isSupportedBinOp(unsigned Opcode);
 
+  /// Whether creating a constant expression for this cast is desirable.
+  static bool isDesirableCastOp(unsigned Opcode);
+
   /// Whether creating a constant expression for this getelementptr type is
   /// supported.
   static bool isSupportedGetElementPtr(const Type *SrcElemTy) {

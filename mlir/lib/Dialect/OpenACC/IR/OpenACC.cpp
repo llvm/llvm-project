@@ -299,6 +299,19 @@ LogicalResult acc::UseDeviceOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// CacheOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::CacheOp::verify() {
+  // Test for all clauses this operation can be decomposed from:
+  if (getDataClause() != acc::DataClause::acc_cache &&
+      getDataClause() != acc::DataClause::acc_cache_readonly)
+    return emitError(
+        "data clause associated with cache operation must match its intent"
+        " or specify original clause this operation was decomposed from");
+  return success();
+}
+
 template <typename StructureOp>
 static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
                                 unsigned nRegions = 1) {
@@ -606,7 +619,7 @@ Value ParallelOp::getDataOperand(unsigned i) {
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
           *this, getPrivatizations(), getGangPrivateOperands(), "private",
-          "privatizations")))
+          "privatizations", false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
@@ -847,7 +860,7 @@ LogicalResult acc::LoopOp::verify() {
 
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
           *this, getPrivatizations(), getPrivateOperands(), "private",
-          "privatizations")))
+          "privatizations", false)))
     return failure();
 
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(

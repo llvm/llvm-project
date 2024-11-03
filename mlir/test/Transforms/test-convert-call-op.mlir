@@ -9,6 +9,6 @@ func.func @caller() -> i32 {
   %out = call @callee(%arg) : (!test.test_type) -> i32
   return %out : i32
 }
-// CHECK-NEXT: [[ARG:%.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK-NEXT: [[ARG:%.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK-NEXT: [[OUT:%.*]] = llvm.call @callee([[ARG]])
 // CHECK-SAME:     : (!llvm.ptr<i8>) -> i32

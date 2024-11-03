@@ -1036,8 +1036,8 @@ void CodeGenRegisterClass::computeSubClasses(CodeGenRegBank &RegBank) {
 std::optional<std::pair<CodeGenRegisterClass *, CodeGenRegisterClass *>>
 CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     CodeGenRegBank &RegBank, const CodeGenSubRegIndex *SubIdx) const {
-  auto SizeOrder = [this](const CodeGenRegisterClass *A,
-                      const CodeGenRegisterClass *B) {
+  auto WeakSizeOrder = [this](const CodeGenRegisterClass *A,
+                              const CodeGenRegisterClass *B) {
     // If there are multiple, identical register classes, prefer the original
     // register class.
     if (A == B)
@@ -1059,7 +1059,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   for (auto &RC : RegClasses)
     if (SuperRegRCsBV[RC.EnumValue])
       SuperRegRCs.emplace_back(&RC);
-  llvm::stable_sort(SuperRegRCs, SizeOrder);
+  llvm::stable_sort(SuperRegRCs, WeakSizeOrder);
 
   assert(SuperRegRCs.front() == BiggestSuperRegRC &&
          "Biggest class wasn't first");
@@ -1072,11 +1072,11 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     if (SuperRegClassesBV.any())
       SuperRegClasses.push_back(std::make_pair(&RC, SuperRegClassesBV));
   }
-  llvm::sort(SuperRegClasses,
-             [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
-                 const std::pair<CodeGenRegisterClass *, BitVector> &B) {
-               return SizeOrder(A.first, B.first);
-             });
+  llvm::stable_sort(SuperRegClasses,
+                    [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
+                        const std::pair<CodeGenRegisterClass *, BitVector> &B) {
+                      return WeakSizeOrder(A.first, B.first);
+                    });
 
   // Find the biggest subclass and subreg class such that R:subidx is in the
   // subreg class for all R in subclass.
@@ -2297,8 +2297,8 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
 
 void CodeGenRegBank::inferMatchingSuperRegClass(CodeGenRegisterClass *RC,
                                                 std::list<CodeGenRegisterClass>::iterator FirstSubRegRC) {
-  SmallVector<std::pair<const CodeGenRegister*,
-                        const CodeGenRegister*>, 16> SSPairs;
+  DenseMap<const CodeGenRegister *, std::vector<const CodeGenRegister *>>
+      SubToSuperRegs;
   BitVector TopoSigs(getNumTopoSigs());
 
   // Iterate in SubRegIndex numerical order to visit synthetic indices last.
@@ -2310,12 +2310,12 @@ void CodeGenRegBank::inferMatchingSuperRegClass(CodeGenRegisterClass *RC,
       continue;
 
     // Build list of (Super, Sub) pairs for this SubIdx.
-    SSPairs.clear();
+    SubToSuperRegs.clear();
     TopoSigs.reset();
     for (const auto Super : RC->getMembers()) {
       const CodeGenRegister *Sub = Super->getSubRegs().find(&SubIdx)->second;
       assert(Sub && "Missing sub-register");
-      SSPairs.push_back(std::make_pair(Super, Sub));
+      SubToSuperRegs[Sub].push_back(Super);
       TopoSigs.set(Sub->getTopoSig());
     }
 
@@ -2334,16 +2334,20 @@ void CodeGenRegBank::inferMatchingSuperRegClass(CodeGenRegisterClass *RC,
         continue;
       // Compute the subset of RC that maps into SubRC.
       CodeGenRegister::Vec SubSetVec;
-      for (unsigned i = 0, e = SSPairs.size(); i != e; ++i)
-        if (SubRC.contains(SSPairs[i].second))
-          SubSetVec.push_back(SSPairs[i].first);
+      for (const CodeGenRegister *R : SubRC.getMembers()) {
+        auto It = SubToSuperRegs.find(R);
+        if (It != SubToSuperRegs.end()) {
+          const std::vector<const CodeGenRegister *> &SuperRegs = It->second;
+          SubSetVec.insert(SubSetVec.end(), SuperRegs.begin(), SuperRegs.end());
+        }
+      }
 
       if (SubSetVec.empty())
         continue;
 
       // RC injects completely into SubRC.
       sortAndUniqueRegisters(SubSetVec);
-      if (SubSetVec.size() == SSPairs.size()) {
+      if (SubSetVec.size() == RC->getMembers().size()) {
         SubRC.addSuperRegClass(&SubIdx, RC);
         continue;
       }

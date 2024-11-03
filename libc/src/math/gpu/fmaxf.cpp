@@ -9,10 +9,10 @@
 #include "src/math/fmaxf.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, fmaxf, (float x, float y)) {
   return __builtin_fmaxf(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

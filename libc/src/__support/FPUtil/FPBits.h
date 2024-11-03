@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
 #include "PlatformDefs.h"
 
@@ -19,7 +19,7 @@
 #include "FloatProperties.h"
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T> struct MantissaWidth {
@@ -116,7 +116,7 @@ template <typename T> struct FPBits {
 
   FPBits() : bits(0) {}
 
-  LIBC_INLINE T get_val() const { return cpp::bit_cast<T>(bits); }
+  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
   LIBC_INLINE void set_val(T value) { bits = cpp::bit_cast<UIntType>(value); }
 
@@ -185,6 +185,10 @@ template <typename T> struct FPBits {
     return bits;
   }
 
+  LIBC_INLINE static constexpr FPBits<T> min_normal() {
+    return FPBits<T>(MIN_NORMAL);
+  }
+
   LIBC_INLINE static constexpr T build_nan(UIntType v) {
     FPBits<T> bits = inf();
     bits.set_mantissa(v);
@@ -233,10 +237,10 @@ template <typename T> struct FPBits {
 };
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
 #include "x86_64/LongDoubleBits.h"
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H

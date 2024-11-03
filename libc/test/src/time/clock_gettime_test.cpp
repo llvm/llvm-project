@@ -14,7 +14,7 @@
 TEST(LlvmLibcClockGetTime, RealTime) {
   struct timespec tp;
   int result;
-  result = __llvm_libc::clock_gettime(CLOCK_REALTIME, &tp);
+  result = LIBC_NAMESPACE::clock_gettime(CLOCK_REALTIME, &tp);
   ASSERT_EQ(result, 0);
   ASSERT_GT(tp.tv_sec, time_t(0));
 }
@@ -23,10 +23,10 @@ TEST(LlvmLibcClockGetTime, RealTime) {
 TEST(LlvmLibcClockGetTime, MonotonicTime) {
   struct timespec tp1, tp2;
   int result;
-  result = __llvm_libc::clock_gettime(CLOCK_MONOTONIC, &tp1);
+  result = LIBC_NAMESPACE::clock_gettime(CLOCK_MONOTONIC, &tp1);
   ASSERT_EQ(result, 0);
   ASSERT_GT(tp1.tv_sec, time_t(0));
-  result = __llvm_libc::clock_gettime(CLOCK_MONOTONIC, &tp2);
+  result = LIBC_NAMESPACE::clock_gettime(CLOCK_MONOTONIC, &tp2);
   ASSERT_EQ(result, 0);
   ASSERT_GE(tp2.tv_sec, tp1.tv_sec); // The monotonic clock should increase.
   if (tp2.tv_sec == tp1.tv_sec) {

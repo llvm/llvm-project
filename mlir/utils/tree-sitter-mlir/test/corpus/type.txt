@@ -1239,7 +1239,7 @@ inf value_use
 func.func @test_maxf(%arg0 : f32) -> f32 {
   %c0 = arith.constant 0.0 : f32
   %-inf = arith.constant 0xFF800000 : f32
-  %0 = arith.maxf %-inf, %arg0 : f32
+  %0 = arith.maximumf %-inf, %arg0 : f32
   return %0 : f32
 }
 --------------------------------------------------------------------------------

@@ -102,14 +102,14 @@ constexpr int f(T t) {
 
 namespace forward_declare_consteval{
 template <typename T>
-constexpr int f(T t);  // expected-note {{'f<int>' defined here}}
+constexpr int f(T t);
 
 auto a = &f<char>;
 auto b = &f<int>; // expected-error {{immediate function 'f<int>' used before it is defined}} \
                   // expected-note {{in instantiation of function template specialization}}
 
 template <typename T>
-constexpr int f(T t) {
+constexpr int f(T t) { // expected-note {{'f<int>' defined here}}
     return id(t); // expected-note {{'f<int>' is an immediate function because its body contains a call to a consteval function 'id' and that call is not a constant expression}}
 }
 }
@@ -328,5 +328,43 @@ struct S {
 };
 
 S s(0); // expected-note {{in the default initializer of 'j'}}
+
+}
+
+namespace GH65985 {
+consteval int invalid(); // expected-note 2{{declared here}}
+constexpr int escalating(auto) {
+    return invalid();
+    // expected-note@-1 {{'escalating<int>' is an immediate function because its body contains a call to a consteval function 'invalid' and that call is not a constant expression}}
+    // expected-note@-2 2{{undefined function 'invalid' cannot be used in a constant expression}}
+}
+struct S {
+    static constexpr int a = escalating(0); // expected-note 2{{in call to}}
+    // expected-error@-1 {{call to immediate function 'GH65985::escalating<int>' is not a constant expression}}
+    // expected-error@-2 {{constexpr variable 'a' must be initialized by a constant expression}}
+};
+
+}
+
+namespace GH66324 {
+
+consteval int allocate();  // expected-note  2{{declared here}}
+
+struct _Vector_base {
+  int b =  allocate(); // expected-note 2{{undefined function 'allocate' cannot be used in a constant expression}} \
+  // expected-error {{call to consteval function 'GH66324::allocate' is not a constant expression}} \
+  // expected-note  {{declared here}}
+};
+
+template <typename>
+struct vector : _Vector_base {
+  constexpr vector()
+  // expected-note@-1 {{'vector' is an immediate constructor because its body contains a call to a consteval function 'allocate' and that call is not a constant expression}}
+  : _Vector_base{} {} // expected-note {{in the default initializer of 'b'}}
+};
+
+vector<void> v{};
+// expected-error@-1 {{call to immediate function 'GH66324::vector<void>::vector' is not a constant expression}}
+// expected-note@-2 {{in call to 'vector()'}}
 
 }

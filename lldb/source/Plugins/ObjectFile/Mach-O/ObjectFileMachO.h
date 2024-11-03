@@ -120,6 +120,9 @@ public:
 
   uint32_t GetNumThreadContexts() override;
 
+  std::vector<std::tuple<lldb::offset_t, lldb::offset_t>>
+  FindLC_NOTEByName(std::string name);
+
   std::string GetIdentifierString() override;
 
   lldb_private::AddressableBits GetAddressableBits() override;
@@ -127,6 +130,8 @@ public:
   bool GetCorefileMainBinaryInfo(lldb::addr_t &value, bool &value_is_offset,
                                  lldb_private::UUID &uuid,
                                  ObjectFile::BinaryType &type) override;
+
+  bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) override;
 
   bool LoadCoreFileImages(lldb_private::Process &process) override;
 

@@ -16,21 +16,52 @@ define amdgpu_kernel void @noop_sqrt_fpmath(ptr addrspace(1) %out, float %x) #0 
 }
 
 define amdgpu_kernel void @sqrt_fpmath_f32(ptr addrspace(1) %out, float %x) {
-; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; CHECK-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; CHECK-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !4
-; CHECK-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    ret void
+; IEEE-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP2]])
+; IEEE-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
+; IEEE-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP4]], i32 [[TMP5]])
+; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP7]])
+; IEEE-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP8]])
+; IEEE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP9]], i32 [[TMP10]])
+; IEEE-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP11:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP13:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP12]])
+; IEEE-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP13]])
+; IEEE-NEXT:    [[TMP15:%.*]] = select i1 [[TMP11]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP14]], i32 [[TMP15]])
+; IEEE-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
 ;
   %no.md = call float @llvm.sqrt.f32(float %x)
   store volatile float %no.md, ptr addrspace(1) %out, align 4
@@ -53,21 +84,102 @@ define amdgpu_kernel void @sqrt_fpmath_f32(ptr addrspace(1) %out, float %x) {
 }
 
 define amdgpu_kernel void @sqrt_fpmath_v2f32(ptr addrspace(1) %out, <2 x float> %x) {
-; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_v2f32
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[NO_MD:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !1
-; CHECK-NEXT:    store volatile <2 x float> [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
-; CHECK-NEXT:    store volatile <2 x float> [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !3
-; CHECK-NEXT:    store volatile <2 x float> [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !0
-; CHECK-NEXT:    store volatile <2 x float> [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !4
-; CHECK-NEXT:    store volatile <2 x float> [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    ret void
+; IEEE-LABEL: define amdgpu_kernel void @sqrt_fpmath_v2f32
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
+; IEEE-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !1
+; IEEE-NEXT:    store volatile <2 x float> [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
+; IEEE-NEXT:    store volatile <2 x float> [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
+; IEEE-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
+; IEEE-NEXT:    [[TMP3:%.*]] = fcmp olt float [[TMP1]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP5:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[TMP4]])
+; IEEE-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP5]])
+; IEEE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP3]], i32 -16, i32 0
+; IEEE-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP6]], i32 [[TMP7]])
+; IEEE-NEXT:    [[TMP9:%.*]] = fcmp olt float [[TMP2]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP11:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP2]], i32 [[TMP10]])
+; IEEE-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP11]])
+; IEEE-NEXT:    [[TMP13:%.*]] = select i1 [[TMP9]], i32 -16, i32 0
+; IEEE-NEXT:    [[TMP14:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP12]], i32 [[TMP13]])
+; IEEE-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP8]], i64 0
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP14]], i64 1
+; IEEE-NEXT:    store volatile <2 x float> [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[X]], i64 0
+; IEEE-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[X]], i64 1
+; IEEE-NEXT:    [[TMP18:%.*]] = fcmp olt float [[TMP16]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP20:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP16]], i32 [[TMP19]])
+; IEEE-NEXT:    [[TMP21:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP20]])
+; IEEE-NEXT:    [[TMP22:%.*]] = select i1 [[TMP18]], i32 -16, i32 0
+; IEEE-NEXT:    [[TMP23:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP21]], i32 [[TMP22]])
+; IEEE-NEXT:    [[TMP24:%.*]] = fcmp olt float [[TMP17]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP25:%.*]] = select i1 [[TMP24]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP26:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP17]], i32 [[TMP25]])
+; IEEE-NEXT:    [[TMP27:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP26]])
+; IEEE-NEXT:    [[TMP28:%.*]] = select i1 [[TMP24]], i32 -16, i32 0
+; IEEE-NEXT:    [[TMP29:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP27]], i32 [[TMP28]])
+; IEEE-NEXT:    [[TMP30:%.*]] = insertelement <2 x float> poison, float [[TMP23]], i64 0
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = insertelement <2 x float> [[TMP30]], float [[TMP29]], i64 1
+; IEEE-NEXT:    store volatile <2 x float> [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP31:%.*]] = extractelement <2 x float> [[X]], i64 0
+; IEEE-NEXT:    [[TMP32:%.*]] = extractelement <2 x float> [[X]], i64 1
+; IEEE-NEXT:    [[TMP33:%.*]] = fcmp olt float [[TMP31]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP34:%.*]] = select i1 [[TMP33]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP35:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP31]], i32 [[TMP34]])
+; IEEE-NEXT:    [[TMP36:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP35]])
+; IEEE-NEXT:    [[TMP37:%.*]] = select i1 [[TMP33]], i32 -16, i32 0
+; IEEE-NEXT:    [[TMP38:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP36]], i32 [[TMP37]])
+; IEEE-NEXT:    [[TMP39:%.*]] = fcmp olt float [[TMP32]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP40:%.*]] = select i1 [[TMP39]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP41:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP32]], i32 [[TMP40]])
+; IEEE-NEXT:    [[TMP42:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP41]])
+; IEEE-NEXT:    [[TMP43:%.*]] = select i1 [[TMP39]], i32 -16, i32 0
+; IEEE-NEXT:    [[TMP44:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP42]], i32 [[TMP43]])
+; IEEE-NEXT:    [[TMP45:%.*]] = insertelement <2 x float> poison, float [[TMP38]], i64 0
+; IEEE-NEXT:    [[MD_2ULP:%.*]] = insertelement <2 x float> [[TMP45]], float [[TMP44]], i64 1
+; IEEE-NEXT:    store volatile <2 x float> [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @sqrt_fpmath_v2f32
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
+; DAZ-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !1
+; DAZ-NEXT:    store volatile <2 x float> [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
+; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[X]], i64 1
+; DAZ-NEXT:    [[TMP3:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP1]])
+; DAZ-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP2]])
+; DAZ-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP4]], i64 1
+; DAZ-NEXT:    store volatile <2 x float> [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[X]], i64 0
+; DAZ-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[X]], i64 1
+; DAZ-NEXT:    [[TMP8:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP6]])
+; DAZ-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP7]])
+; DAZ-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[TMP8]], i64 0
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = insertelement <2 x float> [[TMP10]], float [[TMP9]], i64 1
+; DAZ-NEXT:    store volatile <2 x float> [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[X]], i64 0
+; DAZ-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[X]], i64 1
+; DAZ-NEXT:    [[TMP13:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP11]])
+; DAZ-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP12]])
+; DAZ-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP13]], i64 0
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP14]], i64 1
+; DAZ-NEXT:    store volatile <2 x float> [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[X]], i64 0
+; DAZ-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[X]], i64 1
+; DAZ-NEXT:    [[TMP18:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP16]])
+; DAZ-NEXT:    [[TMP19:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP17]])
+; DAZ-NEXT:    [[TMP20:%.*]] = insertelement <2 x float> poison, float [[TMP18]], i64 0
+; DAZ-NEXT:    [[MD_2ULP:%.*]] = insertelement <2 x float> [[TMP20]], float [[TMP19]], i64 1
+; DAZ-NEXT:    store volatile <2 x float> [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
 ;
   %no.md = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
   store volatile <2 x float> %no.md, ptr addrspace(1) %out, align 4
@@ -91,18 +203,18 @@ define amdgpu_kernel void @sqrt_fpmath_v2f32(ptr addrspace(1) %out, <2 x float> 
 
 define amdgpu_kernel void @sqrt_fpmath_f32_known_nosub(ptr addrspace(1) %out, float nofpclass(sub) %x) {
 ; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nosub
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
 ; CHECK-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
+; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !4
+; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -127,21 +239,52 @@ define amdgpu_kernel void @sqrt_fpmath_f32_known_nosub(ptr addrspace(1) %out, fl
 }
 
 define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero(ptr addrspace(1) %out, float nofpclass(nzero) %x) {
-; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nzero) [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; CHECK-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; CHECK-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !4
-; CHECK-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    ret void
+; IEEE-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nzero) [[X:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP2]])
+; IEEE-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
+; IEEE-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP4]], i32 [[TMP5]])
+; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP7]])
+; IEEE-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP8]])
+; IEEE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP9]], i32 [[TMP10]])
+; IEEE-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP11:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP13:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP12]])
+; IEEE-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP13]])
+; IEEE-NEXT:    [[TMP15:%.*]] = select i1 [[TMP11]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP14]], i32 [[TMP15]])
+; IEEE-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nzero) [[X:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
 ;
   %no.md = call float @llvm.sqrt.f32(float %x)
   store volatile float %no.md, ptr addrspace(1) %out, align 4
@@ -164,21 +307,52 @@ define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero(ptr addrspace(1) %out, 
 }
 
 define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub(ptr addrspace(1) %out, float nofpclass(nzero nsub) %x) {
-; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nzero nsub) [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; CHECK-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; CHECK-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !4
-; CHECK-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    ret void
+; IEEE-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nzero nsub) [[X:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP2]])
+; IEEE-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
+; IEEE-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP4]], i32 [[TMP5]])
+; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP7]])
+; IEEE-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP8]])
+; IEEE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP9]], i32 [[TMP10]])
+; IEEE-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP11:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP13:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP12]])
+; IEEE-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP13]])
+; IEEE-NEXT:    [[TMP15:%.*]] = select i1 [[TMP11]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP14]], i32 [[TMP15]])
+; IEEE-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nzero nsub) [[X:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
 ;
   %no.md = call float @llvm.sqrt.f32(float %x)
   store volatile float %no.md, ptr addrspace(1) %out, align 4
@@ -201,21 +375,52 @@ define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub(ptr addrspace(1)
 }
 
 define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub_noinf(ptr addrspace(1) %out, float nofpclass(nzero nsub inf) %x) {
-; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub_noinf
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(inf nzero nsub) [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; CHECK-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; CHECK-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !4
-; CHECK-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    ret void
+; IEEE-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub_noinf
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(inf nzero nsub) [[X:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP2]])
+; IEEE-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
+; IEEE-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP4]], i32 [[TMP5]])
+; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP7]])
+; IEEE-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP8]])
+; IEEE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP9]], i32 [[TMP10]])
+; IEEE-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP11:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP13:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP12]])
+; IEEE-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP13]])
+; IEEE-NEXT:    [[TMP15:%.*]] = select i1 [[TMP11]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP14]], i32 [[TMP15]])
+; IEEE-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub_noinf
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(inf nzero nsub) [[X:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
 ;
   %no.md = call float @llvm.sqrt.f32(float %x)
   store volatile float %no.md, ptr addrspace(1) %out, align 4
@@ -238,21 +443,52 @@ define amdgpu_kernel void @sqrt_fpmath_f32_known_nonzero_nonsub_noinf(ptr addrsp
 }
 
 define amdgpu_kernel void @sqrt_fpmath_f32_known_nopsub(ptr addrspace(1) %out, float nofpclass(psub) %x) {
-; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nopsub
-; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(psub) [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; CHECK-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; CHECK-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !4
-; CHECK-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    ret void
+; IEEE-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nopsub
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(psub) [[X:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP3:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP2]])
+; IEEE-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP3]])
+; IEEE-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP4]], i32 [[TMP5]])
+; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP6:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP8:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP7]])
+; IEEE-NEXT:    [[TMP9:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP8]])
+; IEEE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP9]], i32 [[TMP10]])
+; IEEE-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP11:%.*]] = fcmp olt float [[X]], 0x3810000000000000
+; IEEE-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 32, i32 0
+; IEEE-NEXT:    [[TMP13:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[TMP12]])
+; IEEE-NEXT:    [[TMP14:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[TMP13]])
+; IEEE-NEXT:    [[TMP15:%.*]] = select i1 [[TMP11]], i32 -16, i32 0
+; IEEE-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP14]], i32 [[TMP15]])
+; IEEE-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @sqrt_fpmath_f32_known_nopsub
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(psub) [[X:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
+; DAZ-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
 ;
   %no.md = call float @llvm.sqrt.f32(float %x)
   store volatile float %no.md, ptr addrspace(1) %out, align 4
@@ -321,13 +557,13 @@ define amdgpu_kernel void @sqrt_fpmath_f32_assume_nosub(ptr addrspace(1) %out, f
 ; CHECK-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
 ; CHECK-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; CHECK-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; CHECK-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
+; CHECK-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !4
+; CHECK-NEXT:    [[MD_2ULP:%.*]] = call float @llvm.amdgcn.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    store volatile float [[MD_2ULP]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[MD_3ULP_AFN:%.*]] = call afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
 ; CHECK-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
@@ -378,6 +614,3 @@ attributes #0 = { optnone noinline }
 !2 = !{float 1.000000e+00}
 !3 = !{float 3.000000e+00}
 !4 = !{float 2.000000e+00}
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; DAZ: {{.*}}
-; IEEE: {{.*}}

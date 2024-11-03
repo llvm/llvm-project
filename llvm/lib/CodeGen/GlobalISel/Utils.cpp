@@ -1173,7 +1173,7 @@ llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
   if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
     return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
-  if (any_of(make_range(MI.operands_begin() + 2, MI.operands_end()),
+  if (any_of(drop_begin(MI.operands(), 2),
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return std::nullopt;
   return RegOrConstant(Reg);

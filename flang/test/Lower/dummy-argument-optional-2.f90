@@ -64,8 +64,7 @@ subroutine pass_pointer_scalar_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> index
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
-! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -77,8 +76,7 @@ subroutine pass_allocatable_scalar_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 

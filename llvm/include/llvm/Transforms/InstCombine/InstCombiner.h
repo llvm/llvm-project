@@ -86,6 +86,9 @@ protected:
   /// Edges that are known to never be taken.
   SmallDenseSet<std::pair<BasicBlock *, BasicBlock *>, 8> DeadEdges;
 
+  /// Order of predecessors to canonicalize phi nodes towards.
+  SmallDenseMap<BasicBlock *, SmallVector<BasicBlock *>, 8> PredOrder;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
@@ -398,18 +401,17 @@ public:
   ///
   /// Also adds the new instruction to the worklist and returns \p New so that
   /// it is suitable for use as the return from the visitation patterns.
-  Instruction *InsertNewInstBefore(Instruction *New, Instruction &Old) {
+  Instruction *InsertNewInstBefore(Instruction *New, BasicBlock::iterator Old) {
     assert(New && !New->getParent() &&
            "New instruction already inserted into a basic block!");
-    BasicBlock *BB = Old.getParent();
-    New->insertInto(BB, Old.getIterator()); // Insert inst
+    New->insertBefore(Old); // Insert inst
     Worklist.add(New);
     return New;
   }
 
   /// Same as InsertNewInstBefore, but also sets the debug loc.
-  Instruction *InsertNewInstWith(Instruction *New, Instruction &Old) {
-    New->setDebugLoc(Old.getDebugLoc());
+  Instruction *InsertNewInstWith(Instruction *New, BasicBlock::iterator Old) {
+    New->setDebugLoc(Old->getDebugLoc());
     return InsertNewInstBefore(New, Old);
   }
 

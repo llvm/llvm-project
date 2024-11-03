@@ -69,14 +69,14 @@ entry:
 ; RELOC-NEXT:       Length: 16
 ; RELOC-NEXT:       Type: R_TOCL (0x31)
 ; RELOC-NEXT:     }
-; RELOC:       Virtual Address: 0x36
+; RELOC:       Virtual Address: 0x42
 ; RELOC-NEXT:       Symbol: IThreadLocalVarUninit2 (25)
 ; RELOC-NEXT:       IsSigned: No
 ; RELOC-NEXT:       FixupBitValue: 0
 ; RELOC-NEXT:       Length: 16
 ; RELOC-NEXT:       Type: R_TOCU (0x30)
 ; RELOC-NEXT:     }
-; RELOC:       Virtual Address: 0x42
+; RELOC:       Virtual Address: 0x46
 ; RELOC-NEXT:       Symbol: IThreadLocalVarUninit2 (25)
 ; RELOC-NEXT:       IsSigned: No
 ; RELOC-NEXT:       FixupBitValue: 0
@@ -243,15 +243,15 @@ entry:
 ; DIS:      0000000000000030 (idx: 7) .loadTLUninit:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU       (idx: 19) IThreadLocalVarUninit[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 4, 2, 0
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU       (idx: 25) IThreadLocalVarUninit2[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 5, 1
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 3, 0(3)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL       (idx: 19) IThreadLocalVarUninit[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 4, 24(4)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stdx 4, 13, 3
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU       (idx: 25) IThreadLocalVarUninit2[TE]
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 3, 24(3)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL       (idx: 25) IThreadLocalVarUninit2[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stdx 5, 13, 3
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ldx 3, 13, 4
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ldx 3, 13, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 3, 3, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                blr
 

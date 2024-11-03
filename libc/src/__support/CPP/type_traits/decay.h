@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_DECAY_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_DECAY_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_DECAY_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_DECAY_H
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -19,7 +19,7 @@
 #include "src/__support/CPP/type_traits/remove_extent.h"
 #include "src/__support/CPP/type_traits/remove_reference.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // decay
 template <class T> class decay {
@@ -33,6 +33,6 @@ public:
 };
 template <class T> using decay_t = typename decay<T>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_DECAY_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_DECAY_H

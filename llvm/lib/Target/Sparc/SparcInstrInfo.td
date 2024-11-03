@@ -117,7 +117,7 @@ def SETHIimm_not : PatLeaf<(i32 imm), [{
 
 // Addressing modes.
 def ADDRrr : ComplexPattern<iPTR, 2, "SelectADDRrr", [], []>;
-def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [frameindex], []>;
+def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [], []>;
 
 // Constrained operands for the shift operations.
 class ShiftAmtImmAsmOperand<int Bits> : AsmOperandClass {
@@ -221,7 +221,7 @@ def calltarget : Operand<i32> {
   let ParserMatchClass = SparcCallTargetAsmOperand;
 }
 
-def simm13Op : Operand<i32> {
+def simm13Op : Operand<iPTR> {
   let DecoderMethod = "DecodeSIMM13";
   let EncoderMethod = "getSImm13OpValue";
 }
@@ -814,13 +814,6 @@ defm SRA : F3_S<"sra", 0b100111, 0, sra, i32, shift_imm5, IntRegs>;
 
 // Section B.13 - Add Instructions, p. 108
 defm ADD   : F3_12<"add", 0b000000, add, IntRegs, i32, simm13Op>;
-
-// "LEA" forms of add (patterns to make tblgen happy)
-let Predicates = [Is32Bit], isCodeGenOnly = 1 in
-  def LEA_ADDri   : F3_2<2, 0b000000,
-                     (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
-                     "add ${addr:arith}, $rd",
-                     [(set iPTR:$rd, ADDRri:$addr)]>;
 
 let Defs = [ICC] in
   defm ADDCC  : F3_12<"addcc", 0b010000, addc, IntRegs, i32, simm13Op>;
@@ -1831,6 +1824,12 @@ def : Pat<(i32 simm13:$val),
 def : Pat<(i32 imm:$val),
           (ORri (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 
+// Frame index.
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
+def : Pat<(i32 (frameindex:$ptr)), (ADDri (i32 (to_tframeindex $ptr)), (i32 0))>;
+def : Pat<(i64 (frameindex:$ptr)), (ADDri (i64 (to_tframeindex $ptr)), (i64 0))>;
 
 // Global addresses, constant pool entries
 let Predicates = [Is32Bit] in {

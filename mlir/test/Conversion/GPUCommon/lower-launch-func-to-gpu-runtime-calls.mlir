@@ -34,8 +34,9 @@ module attributes {gpu.container_module} {
   // CHECK: [[ADDRESSOF:%.*]] = llvm.mlir.addressof @[[GLOBAL]]
   // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}0, 0]
   // CHECK-SAME: -> !llvm.ptr
-
-  // CHECK: [[MODULE:%.*]] = llvm.call @mgpuModuleLoad([[BINARY]])
+  // CHECK: [[BINARYSIZE:%.*]] = llvm.mlir.constant
+  // CHECK: [[MODULE:%.*]] = llvm.call @mgpuModuleLoad([[BINARY]], [[BINARYSIZE]])
+  // CHECK: [[PARAMSCOUNT:%.*]] = llvm.mlir.constant
   // CHECK: [[FUNC:%.*]] = llvm.call @mgpuModuleGetFunction([[MODULE]], {{.*}})
 
   // CHECK: [[STREAM:%.*]] = llvm.call @mgpuStreamCreate
@@ -52,11 +53,11 @@ module attributes {gpu.container_module} {
   // CHECK: llvm.getelementptr %[[MEMREF]][0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct[[STRUCT_BODY:<.*>]]
   // CHECK: llvm.getelementptr %[[MEMREF]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct[[STRUCT_BODY:<.*>]]
 
-  // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.null : !llvm.ptr
+  // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.zero : !llvm.ptr
 
   // CHECK: llvm.call @mgpuLaunchKernel([[FUNC]], [[C8]], [[C8]], [[C8]],
   // CHECK-SAME: [[C8]], [[C8]], [[C8]], [[C256]], [[STREAM]],
-  // CHECK-SAME: [[PARAMS]], [[EXTRA_PARAMS]])
+  // CHECK-SAME: [[PARAMS]], [[EXTRA_PARAMS]], [[PARAMSCOUNT]])
   // CHECK: llvm.call @mgpuStreamSynchronize
   // CHECK: llvm.call @mgpuStreamDestroy
   // CHECK: llvm.call @mgpuModuleUnload

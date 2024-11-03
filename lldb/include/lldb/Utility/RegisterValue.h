@@ -33,7 +33,9 @@ public:
     // byte AArch64 SVE.
     kTypicalRegisterByteSize = 256u,
     // Anything else we'll heap allocate storage for it.
-    kMaxRegisterByteSize = kTypicalRegisterByteSize,
+    // 256x256 to support 256 byte AArch64 SME's array storage (ZA) register.
+    // Which is a square of vector length x vector length.
+    kMaxRegisterByteSize = 256u * 256u,
   };
 
   typedef llvm::SmallVector<uint8_t, kTypicalRegisterByteSize> BytesContainer;

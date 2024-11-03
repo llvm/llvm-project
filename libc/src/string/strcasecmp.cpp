@@ -12,14 +12,14 @@
 #include "src/__support/ctype_utils.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, strcasecmp, (const char *left, const char *right)) {
   auto case_cmp = [](char a, char b) {
-    return __llvm_libc::internal::tolower(a) -
-           __llvm_libc::internal::tolower(b);
+    return LIBC_NAMESPACE::internal::tolower(a) -
+           LIBC_NAMESPACE::internal::tolower(b);
   };
   return inline_strcmp(left, right, case_cmp);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

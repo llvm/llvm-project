@@ -1245,6 +1245,28 @@ void Sema::ActOnEndOfTranslationUnit() {
       }
     }
 
+    // Now we can decide whether the modules we're building need an initializer.
+    if (Module *CurrentModule = getCurrentModule();
+        CurrentModule && CurrentModule->isInterfaceOrPartition()) {
+      auto DoesModNeedInit = [this](Module *M) {
+        if (!getASTContext().getModuleInitializers(M).empty())
+          return true;
+        for (auto [Exported, _] : M->Exports)
+          if (Exported->isNamedModuleInterfaceHasInit())
+            return true;
+        for (Module *I : M->Imports)
+          if (I->isNamedModuleInterfaceHasInit())
+            return true;
+
+        return false;
+      };
+
+      CurrentModule->NamedModuleHasInit =
+          DoesModNeedInit(CurrentModule) ||
+          llvm::any_of(CurrentModule->submodules(),
+                       [&](auto *SubM) { return DoesModNeedInit(SubM); });
+    }
+
     // Warnings emitted in ActOnEndOfTranslationUnit() should be emitted for
     // modules when they are built, not every time they are used.
     emitAndClearUnusedLocalTypedefWarnings();

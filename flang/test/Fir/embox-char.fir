@@ -40,7 +40,7 @@
 // CHECK:           %[[VAL_30_ST0:.*]] = llvm.load %[[VAL_29]] : !llvm.ptr<i64>
 // CHECK:           %[[VAL_31_LEN:.*]] = llvm.sdiv %[[VAL_16_BYTESIZE]], %[[VAL_13_WIDTH]]  : i64
 // CHECK:           %[[VAL_32:.*]] = llvm.mlir.constant(44 : i32) : i32
-// CHECK:           %[[VAL_33:.*]] = llvm.mlir.null : !llvm.ptr<i32>
+// CHECK:           %[[VAL_33:.*]] = llvm.mlir.zero : !llvm.ptr<i32>
 // CHECK:           %[[VAL_34:.*]] = llvm.getelementptr %[[VAL_33]][1] : (!llvm.ptr<i32>) -> !llvm.ptr<i32>
 // CHECK:           %[[VAL_35:.*]] = llvm.ptrtoint %[[VAL_34]] : !llvm.ptr<i32> to i64
 // CHECK:           %[[VAL_36_BYTESIZE:.*]] = llvm.mul %[[VAL_35]], %[[VAL_31_LEN]]  : i64
@@ -137,7 +137,7 @@ func.func @test_char4(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.cha
 // CHECK:           %[[VAL_29:.*]] = llvm.getelementptr %[[VAL_10]][0, 7, %[[VAL_11]], 2] : (!llvm.ptr<struct<(ptr<i8>, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>>, i64) -> !llvm.ptr<i64>
 // CHECK:           %[[VAL_30_ST0:.*]] = llvm.load %[[VAL_29]] : !llvm.ptr<i64>
 // CHECK:           %[[VAL_32:.*]] = llvm.mlir.constant(40 : i32) : i32
-// CHECK:           %[[VAL_33:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK:           %[[VAL_33:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK:           %[[VAL_34:.*]] = llvm.getelementptr %[[VAL_33]][1] : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
 // CHECK:           %[[VAL_35:.*]] = llvm.ptrtoint %[[VAL_34]] : !llvm.ptr<i8> to i64
 // CHECK:           %[[VAL_36_BYTESIZE:.*]] = llvm.mul %[[VAL_35]], %[[VAL_16_BYTESIZE]]  : i64

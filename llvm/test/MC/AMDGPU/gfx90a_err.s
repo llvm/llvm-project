@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefix=GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefix=GFX90A --implicit-check-not=error: %s
 
 ds_add_src2_u32 v1
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

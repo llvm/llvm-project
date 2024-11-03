@@ -29,34 +29,34 @@ class CommandLineExprCompletionTestCase(TestBase):
         )
 
         # Completing member functions
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooNoArgs", "expr some_expr.FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooWithArgs", "expr some_expr.FooWithArgsBar("
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooWithMultipleArgs",
             "expr some_expr.FooWithMultipleArgsBar(",
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooUnderscore", "expr some_expr.FooUnderscoreBar_()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooNumbers", "expr some_expr.FooNumbersBar1()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.StaticMemberMethod",
             "expr some_expr.StaticMemberMethodBar()",
         )
 
         # Completing static functions
-        self.complete_exactly(
+        self.complete_from_to(
             "expr Expr::StaticMemberMethod", "expr Expr::StaticMemberMethodBar()"
         )
 
         # Completing member variables
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.MemberVariab", "expr some_expr.MemberVariableBar"
         )
 
@@ -94,43 +94,43 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.completions_contain("expr 1+", ["1+some_expr", "1+static_cast"])
 
         # Test with spaces
-        self.complete_exactly(
+        self.complete_from_to(
             "expr   some_expr .FooNoArgs", "expr   some_expr .FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr  some_expr .FooNoArgs", "expr  some_expr .FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr .FooNoArgs", "expr some_expr .FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr. FooNoArgs", "expr some_expr. FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr . FooNoArgs", "expr some_expr . FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr Expr :: StaticMemberMethod", "expr Expr :: StaticMemberMethodBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr Expr ::StaticMemberMethod", "expr Expr ::StaticMemberMethodBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr Expr:: StaticMemberMethod", "expr Expr:: StaticMemberMethodBar()"
         )
 
         # Test that string literals don't break our parsing logic.
-        self.complete_exactly(
+        self.complete_from_to(
             'expr const char *cstr = "some_e"; char c = *cst',
             'expr const char *cstr = "some_e"; char c = *cstr',
         )
-        self.complete_exactly(
+        self.complete_from_to(
             'expr const char *cstr = "some_e" ; char c = *cst',
             'expr const char *cstr = "some_e" ; char c = *cstr',
         )
         # Requesting completions inside an incomplete string doesn't provide any
         # completions.
-        self.complete_exactly(
+        self.complete_from_to(
             'expr const char *cstr = "some_e', 'expr const char *cstr = "some_e'
         )
 
@@ -139,110 +139,110 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.assume_no_completions("expr -i0 -- some_expr.", 11)
 
         # Test with expr arguments
-        self.complete_exactly(
+        self.complete_from_to(
             "expr -i0 -- some_expr .FooNoArgs", "expr -i0 -- some_expr .FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr  -i0 -- some_expr .FooNoArgs",
             "expr  -i0 -- some_expr .FooNoArgsBar()",
         )
 
         # Addrof and deref
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (*(&some_expr)).FooNoArgs", "expr (*(&some_expr)).FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (*(&some_expr)) .FooNoArgs", "expr (*(&some_expr)) .FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (* (&some_expr)) .FooNoArgs", "expr (* (&some_expr)) .FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (* (& some_expr)) .FooNoArgs",
             "expr (* (& some_expr)) .FooNoArgsBar()",
         )
 
         # Addrof and deref (part 2)
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (&some_expr)->FooNoArgs", "expr (&some_expr)->FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (&some_expr) ->FooNoArgs", "expr (&some_expr) ->FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (&some_expr) -> FooNoArgs", "expr (&some_expr) -> FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr (&some_expr)-> FooNoArgs", "expr (&some_expr)-> FooNoArgsBar()"
         )
 
         # Builtin arg
-        self.complete_exactly("expr static_ca", "expr static_cast")
+        self.complete_from_to("expr static_ca", "expr static_cast")
 
         # From other files
-        self.complete_exactly(
+        self.complete_from_to(
             "expr fwd_decl_ptr->Hidden", "expr fwd_decl_ptr->HiddenMember"
         )
 
         # Types
-        self.complete_exactly("expr LongClassNa", "expr LongClassName")
-        self.complete_exactly(
+        self.complete_from_to("expr LongClassNa", "expr LongClassName")
+        self.complete_from_to(
             "expr LongNamespaceName::NestedCla", "expr LongNamespaceName::NestedClass"
         )
 
         # Namespaces
-        self.complete_exactly("expr LongNamespaceNa", "expr LongNamespaceName::")
+        self.complete_from_to("expr LongNamespaceNa", "expr LongNamespaceName::")
 
         # Multiple arguments
-        self.complete_exactly(
+        self.complete_from_to(
             "expr &some_expr + &some_e", "expr &some_expr + &some_expr"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr SomeLongVarNameWithCapitals + SomeLongVarName",
             "expr SomeLongVarNameWithCapitals + SomeLongVarNameWithCapitals",
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr SomeIntVar + SomeIntV", "expr SomeIntVar + SomeIntVar"
         )
 
         # Multiple statements
-        self.complete_exactly(
+        self.complete_from_to(
             "expr long LocalVariable = 0; LocalVaria",
             "expr long LocalVariable = 0; LocalVariable",
         )
 
         # Custom Decls
-        self.complete_exactly(
+        self.complete_from_to(
             "expr auto l = [](int LeftHandSide, int bx){ return LeftHandS",
             "expr auto l = [](int LeftHandSide, int bx){ return LeftHandSide",
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr struct LocalStruct { long MemberName; } ; LocalStruct S; S.Mem",
             "expr struct LocalStruct { long MemberName; } ; LocalStruct S; S.MemberName",
         )
 
         # Completing function call arguments
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooWithArgsBar(some_exp",
             "expr some_expr.FooWithArgsBar(some_expr",
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooWithArgsBar(SomeIntV",
             "expr some_expr.FooWithArgsBar(SomeIntVar",
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.FooWithMultipleArgsBar(SomeIntVar, SomeIntVa",
             "expr some_expr.FooWithMultipleArgsBar(SomeIntVar, SomeIntVar",
         )
 
         # Function return values
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.Self().FooNoArgs", "expr some_expr.Self().FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.Self() .FooNoArgs", "expr some_expr.Self() .FooNoArgsBar()"
         )
-        self.complete_exactly(
+        self.complete_from_to(
             "expr some_expr.Self(). FooNoArgs", "expr some_expr.Self(). FooNoArgsBar()"
         )
 

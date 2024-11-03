@@ -85,23 +85,23 @@ TEST_CONSTEXPR_CXX20 void test(S s1, const typename S::allocator_type& a) {
   assert(s2.get_allocator() == a);
 }
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef test_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(), A(3));
-    test(S("1"), A(5));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A(7));
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef min_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(), A());
-    test(S("1"), A());
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
-  }
+template <class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string(const Alloc& a) {
+  typedef std::basic_string<char, std::char_traits<char>, Alloc> S;
+  test(S(), Alloc(a));
+  test(S("1"), Alloc(a));
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), Alloc(a));
+}
 
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string(std::allocator<char>());
+  test_string(test_allocator<char>());
+  test_string(test_allocator<char>(3));
+#if TEST_STD_VER >= 11
+  test_string(min_allocator<char>());
+#endif
+
+#if TEST_STD_VER >= 11
 #  ifndef TEST_HAS_NO_EXCEPTIONS
   if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef poca_alloc<char> A;

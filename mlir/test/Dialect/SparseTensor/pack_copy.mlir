@@ -1,8 +1,7 @@
 // RUN: mlir-opt %s --sparsification-and-bufferization | FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = ["dense","compressed"],
-  dimToLvl = affine_map<(i,j) -> (i,j)>,
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   crdWidth = 32,
   posWidth = 32
 }>
@@ -36,7 +35,7 @@ func.func @foo(%arg0: tensor<3xf64>  {bufferization.writable = false},
     //
     // Pack the buffers into a sparse tensors.
     //
-    %pack = sparse_tensor.pack %arg0, %arg2, %arg1
+    %pack = sparse_tensor.assemble %arg0, %arg2, %arg1
       : tensor<3xf64>,
         tensor<11xi32>,
         tensor<3xi32> to tensor<10x10xf64, #CSR>
@@ -77,7 +76,7 @@ func.func @bar(%arg0: tensor<3xf64>  {bufferization.writable = true},
     //
     // Pack the buffers into a sparse tensors.
     //
-    %pack = sparse_tensor.pack %arg0, %arg2, %arg1
+    %pack = sparse_tensor.assemble %arg0, %arg2, %arg1
       : tensor<3xf64>,
         tensor<11xi32>,
         tensor<3xi32> to tensor<10x10xf64, #CSR>

@@ -42,9 +42,9 @@ define dso_local void @test_weak() nounwind readnone {
 define dso_local void @test_indirect(ptr nocapture %fp) nounwind {
 ; CHECK-LABEL: test_indirect:
   tail call void %fp() nounwind
-; CHECK: ld [[FP:[0-9]+]], 0(3)
-; CHECK: ld 11, 16(3)
 ; CHECK: ld 2, 8(3)
+; CHECK: ld 11, 16(3)
+; CHECK: ld [[FP:[0-9]+]], 0(3)
 ; CHECK-NEXT: mtctr [[FP]]
 ; CHECK-NEXT: bctrl
 ; CHECK-NEXT: ld 2, 40(1)
@@ -59,8 +59,8 @@ define dso_local void @test_abs() nounwind {
   tail call void inttoptr (i64 1024 to ptr)() nounwind
 ; CHECK: ld [[FP:[0-9]+]], 1024(0)
 ; CHECK: ld 11, 1040(0)
-; CHECK: ld 2, 1032(0)
 ; CHECK-NEXT: mtctr [[FP]]
+; CHECK: ld 2, 1032(0)
 ; CHECK-NEXT: bctrl
 ; CHECK-NEXT: ld 2, 40(1)
   ret void

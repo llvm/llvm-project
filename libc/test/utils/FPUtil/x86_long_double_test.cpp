@@ -11,7 +11,7 @@
 
 #include <math.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<long double>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
 
 TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   // In the nan checks below, we use the macro isnan from math.h to ensure that

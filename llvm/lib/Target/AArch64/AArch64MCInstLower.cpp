@@ -100,8 +100,8 @@ AArch64MCInstLower::GetExternalSymbolSymbol(const MachineOperand &MO) const {
   return Printer.GetExternalSymbolSymbol(MO.getSymbolName());
 }
 
-MCOperand AArch64MCInstLower::lowerSymbolOperandDarwin(const MachineOperand &MO,
-                                                       MCSymbol *Sym) const {
+MCOperand AArch64MCInstLower::lowerSymbolOperandMachO(const MachineOperand &MO,
+                                                      MCSymbol *Sym) const {
   // FIXME: We would like an efficient form for this, so we don't have to do a
   // lot of extra uniquing.
   MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
@@ -270,8 +270,8 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
 
 MCOperand AArch64MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                  MCSymbol *Sym) const {
-  if (Printer.TM.getTargetTriple().isOSDarwin())
-    return lowerSymbolOperandDarwin(MO, Sym);
+  if (Printer.TM.getTargetTriple().isOSBinFormatMachO())
+    return lowerSymbolOperandMachO(MO, Sym);
   if (Printer.TM.getTargetTriple().isOSBinFormatCOFF())
     return lowerSymbolOperandCOFF(MO, Sym);
 

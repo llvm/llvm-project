@@ -300,6 +300,82 @@ llvm.func @rocdl.wmma(%arg0 : vector<8xf32>, %arg1 : vector<16 x f16>, %arg2 : v
   llvm.return %r0 : vector<8xf32>
 }
 
+llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
+                                  %stride : i16,
+                                  %numRecords : i32,
+                                  %flags : i32) -> !llvm.ptr<8> {
+  // CHECK-LABEL: rocdl.make.buffer.rsrc
+  // CHECK: %[[rsrc:.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %{{.*}}, i16 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // CHECK: ret ptr addrspace(8) %[[rsrc]]
+  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr to !llvm.ptr<8>
+  llvm.return %rsrc : !llvm.ptr<8>
+}
+
+llvm.func @rocdl.raw.ptr.buffer(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %vdata1 : i32,
+                        %vdata2 : vector<2xi32>,
+                        %vdata4 : vector<4xi32>) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer
+  // CHECK: call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  %r1 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : i32
+  %r2 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : vector<2xi32>
+  %r4 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : vector<4xi32>
+
+  rocdl.raw.ptr.buffer.store %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.ptr.buffer.store %vdata2, %rsrc, %offset, %soffset, %aux : vector<2xi32>
+  rocdl.raw.ptr.buffer.store %vdata4, %rsrc, %offset, %soffset, %aux : vector<4xi32>
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.atomic.f32(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %vdata1 : f32) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.atomic.f32
+  // CHECK: call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  rocdl.raw.ptr.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  rocdl.raw.ptr.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.atomic.i32(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %vdata1 : i32) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.atomic.i32
+  // CHECK: call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smax.i32(i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umin.i32(i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  rocdl.raw.ptr.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.ptr.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.atomic.cmpswap(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %src : i32, %cmp : i32) -> i32 {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.atomic.cmpswap
+  // CHECK: [[val:%.+]] = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %{{.*}}, i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: ret i32 [[val]]
+
+  %val = rocdl.raw.ptr.buffer.atomic.cmpswap %src, %cmp, %rsrc, %offset, %soffset, %aux : i32
+  llvm.return %val : i32
+}
 
 llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
                        %offset : i32, %vdata1 : vector<1xf32>,
@@ -390,6 +466,27 @@ llvm.func @rocdl.raw.buffer.atomic.cmpswap(%rsrc : vector<4xi32>,
 
   %val = rocdl.raw.buffer.atomic.cmpswap(%src, %cmp, %rsrc, %offset, %soffset, %aux) : i32, vector<4xi32>
   llvm.return %val : i32
+}
+
+llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
+// CHECK-LABEL: @rocdl_8bit_floats
+// CHECK: call float @llvm.amdgcn.cvt.f32.bf8(i32 %{{.+}}, i32 0)
+// CHECK: call float @llvm.amdgcn.cvt.f32.fp8(i32 %{{.+}}, i32 0)
+// CHECK: call i32 @llvm.amdgcn.cvt.pk.bf8.f32(float %{{.+}}, float %{{.+}}, i32 %{{.+}}, i1 false)
+// CHECK: call i32 @llvm.amdgcn.cvt.pk.fp8.f32(float %{{.+}}, float %{{.+}}, i32 %{{.+}}, i1 false)
+// CHECK: call i32 @llvm.amdgcn.cvt.sr.bf8.f32(float %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, i32 2)
+// CHECK: call i32 @llvm.amdgcn.cvt.sr.fp8.f32(float %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, i32 3)
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  %c2 = llvm.mlir.constant(2 : i32) : i32
+  %c3 = llvm.mlir.constant(3 : i32) : i32
+  %false = llvm.mlir.constant(false) : i1
+  %v1 = rocdl.cvt.f32.bf8 %source[%c0] : f32
+  %v2 = rocdl.cvt.f32.fp8 %source[%c0] : f32
+  %source2 = rocdl.cvt.pk.bf8.f32 %v1, %v2 -> %source[%false] : i32
+  %source3 = rocdl.cvt.pk.fp8.f32 %v1, %v2 -> %source2[%false] : i32
+  %source4 = rocdl.cvt.sr.bf8.f32 %v1, %stoch -> %source3[%c2] : i32
+  %source5 = rocdl.cvt.sr.fp8.f32 %v2, %stoch -> %source4[%c3] : i32
+  llvm.return %source5 : i32
 }
 
 // CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" }

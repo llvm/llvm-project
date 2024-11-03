@@ -8,9 +8,10 @@
 
 # Bijective Internal Name Uniquing
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 FIR has a flat namespace. No two objects may have the same name at the module

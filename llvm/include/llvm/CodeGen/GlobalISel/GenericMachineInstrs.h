@@ -36,13 +36,9 @@ public:
   }
 };
 
-/// Represents any type of generic load or store.
-/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD.
-class GLoadStore : public GenericMachineInstr {
+/// Provides common memory operand functionality.
+class GMemOperation : public GenericMachineInstr {
 public:
-  /// Get the source register of the pointer value.
-  Register getPointerReg() const { return getOperand(1).getReg(); }
-
   /// Get the MachineMemOperand on this instruction.
   MachineMemOperand &getMMO() const { return **memoperands_begin(); }
 
@@ -63,6 +59,18 @@ public:
   uint64_t getMemSizeInBits() const { return getMMO().getSizeInBits(); }
 
   static bool classof(const MachineInstr *MI) {
+    return GenericMachineInstr::classof(MI) && MI->hasOneMemOperand();
+  }
+};
+
+/// Represents any type of generic load or store.
+/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD.
+class GLoadStore : public GMemOperation {
+public:
+  /// Get the source register of the pointer value.
+  Register getPointerReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_STORE:
@@ -72,6 +80,73 @@ public:
     default:
       return false;
     }
+  }
+};
+
+/// Represents indexed loads. These are different enough from regular loads
+/// that they get their own class. Including them in GAnyLoad would probably
+/// make a footgun for someone.
+class GIndexedLoad : public GMemOperation {
+public:
+  /// Get the definition register of the loaded value.
+  Register getDstReg() const { return getOperand(0).getReg(); }
+  /// Get the def register of the writeback value.
+  Register getWritebackReg() const { return getOperand(1).getReg(); }
+  /// Get the base register of the pointer value.
+  Register getBaseReg() const { return getOperand(2).getReg(); }
+  /// Get the offset register of the pointer value.
+  Register getOffsetReg() const { return getOperand(3).getReg(); }
+
+  bool isPre() const { return getOperand(5).getImm() == 1; }
+  bool isPost() const { return !isPre(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_LOAD;
+  }
+};
+
+/// Represents a G_INDEX_ZEXTLOAD/G_INDEXED_SEXTLOAD.
+class GIndexedExtLoad : public GIndexedLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_SEXTLOAD ||
+           MI->getOpcode() == TargetOpcode::G_INDEXED_ZEXTLOAD;
+  }
+};
+
+/// Represents a G_ZEXTLOAD.
+class GIndexedZExtLoad : GIndexedExtLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_ZEXTLOAD;
+  }
+};
+
+/// Represents a G_SEXTLOAD.
+class GIndexedSExtLoad : GIndexedExtLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_SEXTLOAD;
+  }
+};
+
+/// Represents indexed stores.
+class GIndexedStore : public GMemOperation {
+public:
+  /// Get the def register of the writeback value.
+  Register getWritebackReg() const { return getOperand(0).getReg(); }
+  /// Get the stored value register.
+  Register getValueReg() const { return getOperand(1).getReg(); }
+  /// Get the base register of the pointer value.
+  Register getBaseReg() const { return getOperand(2).getReg(); }
+  /// Get the offset register of the pointer value.
+  Register getOffsetReg() const { return getOperand(3).getReg(); }
+
+  bool isPre() const { return getOperand(4).getImm() == 1; }
+  bool isPost() const { return !isPre(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INDEXED_STORE;
   }
 };
 

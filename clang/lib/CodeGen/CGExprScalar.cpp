@@ -2225,7 +2225,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Visit(const_cast<Expr*>(E));
 
   case CK_NoOp: {
-    llvm::Value *V = Visit(const_cast<Expr *>(E));
+    llvm::Value *V = CE->changesVolatileQualification()
+                         ? EmitLoadOfLValue(CE)
+                         : Visit(const_cast<Expr *>(E));
     if (V) {
       // CK_NoOp can model a pointer qualification conversion, which can remove
       // an array bound and change the IR type.

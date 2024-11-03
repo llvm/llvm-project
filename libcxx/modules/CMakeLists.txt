@@ -128,8 +128,10 @@ if ("${LIBCXX_GENERATED_INCLUDE_DIR}" STREQUAL "${LIBCXX_GENERATED_INCLUDE_TARGE
   # This typically happens when the target is not installed.
   set(LIBCXX_CONFIGURED_INCLUDE_DIRS "${LIBCXX_GENERATED_INCLUDE_DIR}")
 else()
+  # It's important that the arch directory be included first so that its header files
+  # which interpose on the default include dir be included instead of the default ones.
   set(LIBCXX_CONFIGURED_INCLUDE_DIRS
-    "${LIBCXX_GENERATED_INCLUDE_DIR};${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}"
+    "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR};${LIBCXX_GENERATED_INCLUDE_DIR}"
   )
 endif()
 configure_file(

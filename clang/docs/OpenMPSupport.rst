@@ -13,18 +13,16 @@
 .. contents::
    :local:
 
+==============
 OpenMP Support
 ==============
 
-Clang fully supports OpenMP 4.5. Clang supports offloading to X86_64, AArch64,
-PPC64[LE] and has `basic support for Cuda devices`_.
-
-* #pragma omp declare simd: :part:`Partial`.  We support parsing/semantic
-  analysis + generation of special attributes for X86 target, but still
-  missing the LLVM pass for vectorization.
+Clang fully supports OpenMP 4.5, almost all of 5.0 and most of 5.1/2.
+Clang supports offloading to X86_64, AArch64, PPC64[LE], NVIDIA GPUs (all models) and AMD GPUs (all models).
 
 In addition, the LLVM OpenMP runtime `libomp` supports the OpenMP Tools
 Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS.
+OMPT is also supported for NVIDIA and AMD GPUs.
 
 For the list of supported features from OpenMP 5.0 and 5.1
 see `OpenMP implementation details`_ and `OpenMP 51 implementation details`_.
@@ -36,17 +34,6 @@ General improvements
   collapse clause by replacing the expensive remainder operation with
   multiplications and additions.
 
-- The default schedules for the `distribute` and `for` constructs in a
-  parallel region and in SPMD mode have changed to ensure coalesced
-  accesses. For the `distribute` construct, a static schedule is used
-  with a chunk size equal to the number of threads per team (default
-  value of threads or as specified by the `thread_limit` clause if
-  present). For the `for` construct, the schedule is static with chunk
-  size of one.
-
-- Simplified SPMD code generation for `distribute parallel for` when
-  the new default schedules are applicable.
-
 - When using the collapse clause on a loop nest the default behavior
   is to automatically extend the representation of the loop counter to
   64 bits for the cases where the sizes of the collapsed loops are not
@@ -54,24 +41,9 @@ General improvements
   at most 32 bits, compile your program with the
   `-fopenmp-optimistic-collapse`.
 
-.. _basic support for Cuda devices:
 
-Cuda devices support
-====================
-
-Directives execution modes
---------------------------
-
-Clang code generation for target regions supports two modes: the SPMD and
-non-SPMD modes. Clang chooses one of these two modes automatically based on the
-way directives and clauses on those directives are used. The SPMD mode uses a
-simplified set of runtime functions thus increasing performance at the cost of
-supporting some OpenMP features. The non-SPMD mode is the most generic mode and
-supports all currently available OpenMP features. The compiler will always
-attempt to use the SPMD mode wherever possible. SPMD mode will not be used if:
-
-   - The target region contains user code (other than OpenMP-specific
-     directives) in between the `target` and the `parallel` directives.
+GPU devices support
+===================
 
 Data-sharing modes
 ------------------
@@ -82,8 +54,9 @@ performance and can be activated using the `-fopenmp-cuda-mode` flag. In
 `Generic` mode all local variables that can be shared in the parallel regions
 are stored in the global memory. In `Cuda` mode local variables are not shared
 between the threads and it is user responsibility to share the required data
-between the threads in the parallel regions.
-
+between the threads in the parallel regions. Often, the optimizer is able to
+reduce the cost of `Generic` mode to the level of `Cuda` mode, but the flag,
+as well as other assumption flags, can be used for tuning.
 
 Features not supported or with limited support for Cuda devices
 ---------------------------------------------------------------
@@ -95,9 +68,6 @@ Features not supported or with limited support for Cuda devices
 - User-defined reductions are supported only for trivial types.
 
 - Nested parallelism: inner parallel regions are executed sequentially.
-
-- Automatic translation of math functions in target regions to device-specific
-  math functions is not implemented yet.
 
 - Debug information for OpenMP target regions is supported, but sometimes it may
   be required to manually specify the address class of the inspected variables.
@@ -139,7 +109,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | memory management            | allocate directive and allocate clause                       | :good:`done`             | r355614,r335952                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| OMPD                         | OMPD interfaces                                              | :part:`done`             | https://reviews.llvm.org/D99914   (Supports only HOST(CPU) and Linux  |
+| OMPD                         | OMPD interfaces                                              | :good:`done`             | https://reviews.llvm.org/D99914   (Supports only HOST(CPU) and Linux  |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | OMPT                         | OMPT interfaces (callback support)                           | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -171,7 +141,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | infer target functions from initializers                     | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device                       | infer target variables from initializers                     | :part:`done`             | D146418                                                               |
+| device                       | infer target variables from initializers                     | :good:`done`             | D146418                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | OMP_TARGET_OFFLOAD environment variable                      | :good:`done`             | D50522                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -217,7 +187,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | support close modifier on map clause                         | :good:`done`             | D55719,D55892                                                         |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device                       | teams construct on the host device                           | :part:`done`             | r371553                                                               |
+| device                       | teams construct on the host device                           | :good:`done`             | r371553                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | support non-contiguous array sections for target update      | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -235,7 +205,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | misc                         | library shutdown (omp_pause_resource[_all])                  | :good:`done`             | D55078                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc                         | metadirectives                                               | :part:`worked on`        | D91944                                                                |
+| misc                         | metadirectives                                               | :part:`mostly done`      | D91944                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | misc                         | conditional modifier for lastprivate clause                  | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -243,7 +213,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | misc                         | depobj directive and depobj dependency kind                  | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| misc                         | user-defined function variants                               | :part:`worked on`        | D67294, D64095, D71847, D71830, D109635                               |
+| misc                         | user-defined function variants                               | :good:`done`.            | D67294, D64095, D71847, D71830, D109635                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | misc                         | pointer/reference to pointer based array reductions          | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -298,7 +268,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | indirect clause on declare target directive                  | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device                       | allow virtual functions calls for mapped object on device    | :none:`unclaimed`        |                                                                       |
+| device                       | allow virtual functions calls for mapped object on device    | :part:`partial`          |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | interop construct                                            | :part:`partial`          | parsing/sema done: D98558, D98834, D98815                             |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+

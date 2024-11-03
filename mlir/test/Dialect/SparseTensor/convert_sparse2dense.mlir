@@ -4,16 +4,15 @@
 // RUN: --canonicalize --cse | FileCheck %s --check-prefix=CHECK-RWT
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #SparseTensor = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed", "compressed"],
-  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
+  map = (d0, d1, d2) -> (d2 : dense, d0 : compressed, d1 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_convert_1d(
@@ -145,7 +144,7 @@ func.func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<
 //       CHECK: return %[[T]] : tensor<2x4xf64>
 
 // CHECK-RWT-LABEL: func.func @sparse_convert_2d(
-//  CHECK-RWT-SAME: %[[A:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>) -> tensor<2x4xf64> {
+//  CHECK-RWT-SAME: %[[A:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<2x4xf64> {
 //       CHECK-RWT: %[[F0:.*]] = arith.constant 0.000000e+00 : f64
 //       CHECK-RWT: %[[B:.*]] = memref.alloc() : memref<2x4xf64>
 //       CHECK-RWT: linalg.fill ins(%[[F0]] : f64) outs(%[[B]]
@@ -301,7 +300,7 @@ func.func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tens
 //       CHECK: return %[[T]] : tensor<?x?xf64>
 
 // CHECK-RWT-LABEL: func.func @sparse_convert_2d_dyn2(
-//  CHECK-RWT-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>) -> tensor<?x?xf64> {
+//  CHECK-RWT-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<?x?xf64> {
 //   CHECK-RWT-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-RWT-DAG: %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-RWT-DAG: %[[F0:.*]] = arith.constant 0.000000e+00 : f64

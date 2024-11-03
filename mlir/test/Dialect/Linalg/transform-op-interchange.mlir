@@ -38,3 +38,25 @@ transform.sequence failures(propagate) {
   // expected-error @below {{transform applied to the wrong op kind}}
   transform.structured.interchange %0 iterator_interchange = [1, 0] : (!transform.any_op) -> !transform.any_op
 }
+
+// -----
+
+func.func @too_many_iters(%0: tensor<?x?xf32>, %1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%0: tensor<?x?xf32>) outs(%1: tensor<?x?xf32>) {
+  ^bb0(%2: f32, %3: f32):
+    %4 = arith.mulf %2, %2 : f32
+    linalg.yield %4 : f32
+  } -> tensor<?x?xf32>
+  return %r : tensor<?x?xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // expected-error @below {{"iterator_interchange" has length (3) different from the number of loops in the target operation (2)}}
+  transform.structured.interchange %0 iterator_interchange = [2,1,0] : (!transform.any_op) -> !transform.any_op
+  transform.yield
+}

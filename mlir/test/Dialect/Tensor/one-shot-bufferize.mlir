@@ -1,12 +1,12 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // CHECK-LABEL: func @insert_slice_fun
 //  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
@@ -213,41 +213,6 @@ func.func @rank_reducing_parallel_insert_slice(%in: tensor<100xf32>, %out: tenso
 
 // -----
 
-// CHECK-LABEL: func @dealloc_generate_buffer
-func.func @dealloc_generate_buffer(%arg: tensor<*xf32>, %sz: index, %idx: index)
-  -> index
-{
-  // CHECK: memref.alloc
-  // CHECK: linalg.map
-  // CHECK: memref.dealloc
-  %0 = tensor.generate %sz {
-  ^bb0(%i : index):
-    %elem = tensor.dim %arg, %i : tensor<*xf32>
-    tensor.yield %elem : index
-  } : tensor<?xindex>
-  %r = tensor.extract %0[%idx] : tensor<?xindex>
-  return %r : index
-}
-
-// -----
-
-// CHECK-LABEL: func @dealloc_pad_buffer
-func.func @dealloc_pad_buffer(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
-                              %h2: index, %idx: index) -> index {
-  // CHECK: memref.alloc
-  // CHECK: linalg.map
-  // CHECK: memref.dealloc
-  %0 = tensor.pad %t1 low[5, %l2] high[%h1, %h2] {
-  ^bb0(%arg0: index, %arg1: index):
-    %m = arith.muli %arg0, %arg1 : index
-    tensor.yield %m : index
-  } : tensor<?x10xindex> to tensor<?x?xindex>
-  %r = tensor.extract %0[%idx, %idx] : tensor<?x?xindex>
-  return %r : index
-}
-
-// -----
-
 // This test case could bufferize in-place with a better analysis. However, it
 // is simpler to let the canonicalizer fold away the tensor.insert_slice.
 
@@ -285,8 +250,6 @@ func.func @pad_memory_space(%t: tensor<?xf32>, %h1: index, %f: f32, %pos: index)
   } : tensor<?xf32> to tensor<15xf32>
   // CHECK: memref.load {{.*}} : memref<15xf32, 3>
   %2 = tensor.extract %1[%pos] : tensor<15xf32>
-  // CHECK-DAG: memref.dealloc %[[alloc_tensor]]
-  // CHECK-DAG: memref.dealloc %[[padded_alloc]]
   return %2 : f32
 }
 
@@ -391,7 +354,6 @@ func.func @parallel_insert_slice_source_out_of_place(%in: tensor<1xf32>, %out: t
       vector.print %r : f32
 
       // CHECK: memref.copy
-      // CHECK: memref.dealloc
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %insert into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
@@ -417,4 +379,25 @@ func.func @tensor.reshape() -> tensor<2x2x5xf32> {
 
   // CHECK: return %[[RESHAPED]]
   return %reshaped : tensor<2x2x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @reshape_with_non_identity_layout(
+// CHECK-SAME:    %[[INPUT:[a-zA-Z0-9]*]]: memref<2x2xf32, strided<[?, ?], offset: ?>>,
+// CHECK-SAME:    %[[LAYOUT:[a-zA-Z0-9]*]]: memref<2xi32, strided<[?], offset: ?>>)
+func.func @reshape_with_non_identity_layout(%arg0: tensor<2x2xf32>, %arg1: tensor<2xi32>) -> tensor<1x2xf32> {
+
+  // CHECK: %[[SUBVIEW:.+]] = memref.subview %[[INPUT]][1, 0] [1, 2] [1, 1] : memref<2x2xf32, strided<[?, ?], offset: ?>> to memref<2xf32, strided<[?], offset: ?>>
+  %extracted_slice = tensor.extract_slice %arg0[1, 0] [1, 2] [1, 1] : tensor<2x2xf32> to tensor<2xf32>
+
+  // To satisify the constraints of memref.reshape, the subview must be cloned into
+  // a buffer with an identity layout.
+  // CHECK: %[[CLONED:.+]] = bufferization.clone %[[SUBVIEW]] : memref<2xf32, strided<[?], offset: ?>> to memref<2xf32>
+  // CHECK: %[[RESHAPED:.+]] = memref.reshape %[[CLONED]](%[[LAYOUT]]) : (memref<2xf32>, memref<2xi32, strided<[?], offset: ?>>) -> memref<1x2xf32>
+
+  %reshape = tensor.reshape %extracted_slice(%arg1) : (tensor<2xf32>, tensor<2xi32>) -> tensor<1x2xf32>
+
+  // CHECK: return %[[RESHAPED]] : memref<1x2xf32>
+  return %reshape : tensor<1x2xf32>
 }

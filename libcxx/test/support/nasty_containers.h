@@ -43,6 +43,8 @@ public:
 #if TEST_STD_VER >= 11
     nasty_vector(std::initializer_list<value_type> il) : v_(il) {}
 #endif
+    nasty_vector(const nasty_vector&) = default;
+    nasty_vector& operator=(const nasty_vector&) = default;
     ~nasty_vector() {}
 
     template <class InputIterator>
@@ -174,7 +176,8 @@ public:
 #if TEST_STD_VER >= 11
     nasty_list(std::initializer_list<value_type> il) : l_(il) {}
 #endif
-
+    nasty_list(const nasty_list&) = default;
+    nasty_list& operator=(const nasty_list&) = default;
     ~nasty_list() {}
 
 #if TEST_STD_VER >= 11

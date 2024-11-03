@@ -160,13 +160,6 @@ function(create_header_library fq_target_name)
     message(FATAL_ERROR "'add_header_library' target requires a HDRS list of .h files.")
   endif()
 
-  set(FULL_HDR_PATHS "")
-  # TODO: Remove this foreach block when we can switch to the new
-  # version of the CMake policy CMP0076.
-  foreach(hdr IN LISTS ADD_HEADER_HDRS)
-    list(APPEND FULL_HDR_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
-  endforeach()
-
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding header library ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
@@ -175,27 +168,20 @@ function(create_header_library fq_target_name)
       endforeach()
     endif()
   endif()
-  set(interface_target_name "${fq_target_name}.__header_library__")
 
-  add_library(${interface_target_name} INTERFACE)
-  target_sources(${interface_target_name} INTERFACE ${FULL_HDR_PATHS})
+  add_library(${fq_target_name} INTERFACE)
+  target_sources(${fq_target_name} INTERFACE ${ADD_HEADER_HDRS})
   if(ADD_HEADER_DEPENDS)
-    add_dependencies(${interface_target_name} ${ADD_HEADER_DEPENDS})
+    add_dependencies(${fq_target_name} ${ADD_HEADER_DEPENDS})
+    target_link_libraries(${fq_target_name} INTERFACE ${ADD_HEADER_DEPENDS})
   endif()
-  set_target_properties(
-    ${interface_target_name}
-    PROPERTIES
-      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
-  )
   if(ADD_HEADER_COMPILE_OPTIONS)
-    target_compile_options(${interface_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})
+    target_compile_options(${fq_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})
   endif()
-
-  add_custom_target(${fq_target_name})
-  add_dependencies(${fq_target_name} ${interface_target_name})
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
       TARGET_TYPE "${HDR_LIBRARY_TARGET_TYPE}"
       DEPS "${ADD_HEADER_DEPENDS}"
       FLAGS "${ADD_HEADER_FLAGS}"

@@ -32,7 +32,7 @@ FPClassTest llvm::fneg(FPClassTest Mask) {
   return NewMask;
 }
 
-FPClassTest llvm::fabs(FPClassTest Mask) {
+FPClassTest llvm::inverse_fabs(FPClassTest Mask) {
   FPClassTest NewMask = Mask & fcNan;
   if (Mask & fcPosZero)
     NewMask |= fcZero;
@@ -41,6 +41,19 @@ FPClassTest llvm::fabs(FPClassTest Mask) {
   if (Mask & fcPosNormal)
     NewMask |= fcNormal;
   if (Mask & fcPosInf)
+    NewMask |= fcInf;
+  return NewMask;
+}
+
+FPClassTest llvm::unknown_sign(FPClassTest Mask) {
+  FPClassTest NewMask = Mask & fcNan;
+  if (Mask & fcZero)
+    NewMask |= fcZero;
+  if (Mask & fcSubnormal)
+    NewMask |= fcSubnormal;
+  if (Mask & fcNormal)
+    NewMask |= fcNormal;
+  if (Mask & fcInf)
     NewMask |= fcInf;
   return NewMask;
 }

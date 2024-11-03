@@ -9,8 +9,8 @@
 #include "src/stdlib/labs.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcLabsTest, Zero) { EXPECT_EQ(__llvm_libc::labs(0l), 0l); }
+TEST(LlvmLibcLabsTest, Zero) { EXPECT_EQ(LIBC_NAMESPACE::labs(0l), 0l); }
 
-TEST(LlvmLibcLabsTest, Positive) { EXPECT_EQ(__llvm_libc::labs(1l), 1l); }
+TEST(LlvmLibcLabsTest, Positive) { EXPECT_EQ(LIBC_NAMESPACE::labs(1l), 1l); }
 
-TEST(LlvmLibcLabsTest, Negative) { EXPECT_EQ(__llvm_libc::labs(-1l), 1l); }
+TEST(LlvmLibcLabsTest, Negative) { EXPECT_EQ(LIBC_NAMESPACE::labs(-1l), 1l); }

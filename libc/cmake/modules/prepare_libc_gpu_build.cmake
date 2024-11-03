@@ -115,3 +115,13 @@ if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     get_filename_component(LIBC_CUDA_ROOT "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
   endif()
 endif()
+
+if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
+  # The AMDGPU environment uses different code objects to encode the ABI for
+  # kernel calls and intrinsic functions. We want to specify this manually to
+  # conform to whatever the test suite was built to handle.
+  # FIXME: The test suite currently hangs when compiled targeting version five.
+  # This occurrs during traversal of the callback array in the startup code. We
+  # deliberately use version four until this can be addressed.
+  set(LIBC_GPU_CODE_OBJECT_VERSION 4)
+endif()

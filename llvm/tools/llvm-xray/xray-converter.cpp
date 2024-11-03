@@ -190,7 +190,7 @@ findSiblings(StackTrieNode *parent, int32_t FnId, uint32_t TId,
   SmallVector<StackTrieNode *, 4> Siblings{};
 
   if (parent == nullptr) {
-    for (auto map_iter : StackRootsByThreadId) {
+    for (const auto &map_iter : StackRootsByThreadId) {
       // Only look for siblings in other threads.
       if (map_iter.first != TId)
         for (auto node_iter : map_iter.second) {

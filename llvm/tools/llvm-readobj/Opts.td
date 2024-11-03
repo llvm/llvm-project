@@ -25,6 +25,7 @@ def dependent_libraries : FF<"dependent-libraries", "Display the dependent libra
 def dyn_relocations : FF<"dyn-relocations", "Display the dynamic relocation entries in the file">;
 def dyn_syms : FF<"dyn-syms", "Display the dynamic symbol table">;
 def expand_relocs : FF<"expand-relocs", "Expand each shown relocation to multiple lines">;
+def extra_sym_info : FF<"extra-sym-info", "Display extra information when showing symbols">;
 def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
@@ -135,5 +136,6 @@ def : F<"S", "Alias for --section-headers">, Alias<section_headers>;
 def : F<"s", "Alias for --symbols">, Alias<symbols>;
 def : F<"t", "Alias for --section-details">, Alias<section_details>;
 def : F<"u", "Alias for --unwind">, Alias<unwind>;
+def : F<"X", "Alias for --extra-sym-info">, Alias<extra_sym_info>, Group<grp_elf>;
 def : F<"V", "Alias for --version-info">, Alias<version_info>, Group<grp_elf>;
 def : JoinedOrSeparate<["-"], "x">, Alias<hex_dump_EQ>, HelpText<"Alias for --hex-dump">, MetaVarName<"<name or index>">;

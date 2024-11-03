@@ -13,7 +13,7 @@
 // A helper function that calls memrchr and abstracts away the explicit cast for
 // readability purposes.
 const char *call_memrchr(const void *src, int c, size_t size) {
-  return reinterpret_cast<const char *>(__llvm_libc::memrchr(src, c, size));
+  return reinterpret_cast<const char *>(LIBC_NAMESPACE::memrchr(src, c, size));
 }
 
 TEST(LlvmLibcMemRChrTest, FindsCharacterAfterNullTerminator) {

@@ -1053,11 +1053,9 @@ bool AArch64ExpandPseudo::expandMultiVecPseudo(
   auto ContiguousRange = ContiguousClass.getRegisters();
   auto StridedRange = StridedClass.getRegisters();
   unsigned Opc;
-  if ((std::find(ContiguousRange.begin(), ContiguousRange.end(),
-                 Tuple.asMCReg()) != std::end(ContiguousRange))) {
+  if (llvm::is_contained(ContiguousRange, Tuple.asMCReg())) {
     Opc = ContiguousOp;
-  } else if ((std::find(StridedRange.begin(), StridedRange.end(),
-                        Tuple.asMCReg()) != std::end(StridedRange))) {
+  } else if (llvm::is_contained(StridedRange, Tuple.asMCReg())) {
     Opc = StridedOpc;
   } else
     llvm_unreachable("Cannot expand Multi-Vector pseudo");

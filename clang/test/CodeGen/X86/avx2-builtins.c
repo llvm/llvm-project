@@ -1223,6 +1223,12 @@ __m256i test_mm256_stream_load_si256(__m256i const *a) {
   return _mm256_stream_load_si256(a);
 }
 
+__m256i test_mm256_stream_load_si256_void(const void *a) {
+  // CHECK-LABEL: test_mm256_stream_load_si256_void
+  // CHECK: load <4 x i64>, ptr %{{.*}}, align 32, !nontemporal
+  return _mm256_stream_load_si256(a);
+}
+
 __m256i test_mm256_sub_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_sub_epi8
   // CHECK: sub <32 x i8>

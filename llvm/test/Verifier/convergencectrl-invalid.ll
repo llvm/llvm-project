@@ -109,10 +109,11 @@ B:
   br label %B
 }
 
-; CHECK: Entry intrinsic can occur only at the start of the basic block.
+; CHECK: Entry intrinsic cannot be preceded by a convergent operation in the same basic block.
 ; CHECK:   %t60_tok1
 define void @entry_at_start(i32 %x, i32 %y) convergent {
   %z = add i32 %x, %y
+  call void @f()
   %t60_tok1 = call token @llvm.experimental.convergence.entry()
   ret void
 }
@@ -124,14 +125,20 @@ define void @entry_in_convergent(i32 %x, i32 %y) {
   ret void
 }
 
-; CHECK: Loop intrinsic can occur only at the start of the basic block.
-; CHECK:   %t60_tok3
+; CHECK: Loop intrinsic cannot be preceded by a convergent operation in the same basic block.
+; CHECK-NEXT: %h1
+; CHECK-SAME: %t60_tok3
 define void @loop_at_start(i32 %x, i32 %y) convergent {
 A:
   %t60_tok3 = call token @llvm.experimental.convergence.entry()
   br label %B
 B:
   %z = add i32 %x, %y
+  ; This is not an error
+  %h2 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %t60_tok3) ]
+  br label %C
+C:
+  call void @f()
   %h1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %t60_tok3) ]
   ret void
 }

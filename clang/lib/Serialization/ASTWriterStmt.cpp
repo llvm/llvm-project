@@ -507,6 +507,8 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
       }
     }
   }
+  Record.AddSourceLocation(E->getLParenLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
   Record.AddSourceLocation(E->getEndLoc());
 
   Code = serialization::EXPR_REQUIRES;

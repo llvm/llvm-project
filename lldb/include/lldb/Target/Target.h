@@ -167,6 +167,8 @@ public:
 
   bool GetEnableSyntheticValue() const;
 
+  bool ShowHexVariableValuesWithLeadingZeroes() const;
+
   uint32_t GetMaxZeroPaddingInFloatFormat() const;
 
   uint32_t GetMaximumNumberOfChildrenToDisplay() const;

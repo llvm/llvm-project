@@ -18,15 +18,16 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK-NEXT: %4:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %4
+    ; CHECK-NEXT: [[V_MAX_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_MAX_F16_e64_]]
+    ;
     ; GFX11-LABEL: name: fmaxnum_f16_vv
     ; GFX11: liveins: $vgpr0, $vgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11-NEXT: %4:vgpr_32 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: S_ENDPGM 0, implicit %4
+    ; GFX11-NEXT: [[V_MAX_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F16_fake16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit [[V_MAX_F16_fake16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
@@ -49,15 +50,16 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK-NEXT: %5:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %5
+    ; CHECK-NEXT: [[V_MAX_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_MAX_F16_e64_]]
+    ;
     ; GFX11-LABEL: name: fmaxnum_f16_v_fneg_v
     ; GFX11: liveins: $vgpr0, $vgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX11-NEXT: %5:vgpr_32 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: S_ENDPGM 0, implicit %5
+    ; GFX11-NEXT: [[V_MAX_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F16_fake16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit [[V_MAX_F16_fake16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0

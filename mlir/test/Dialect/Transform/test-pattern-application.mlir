@@ -37,12 +37,14 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{tracking listener failed to find replacement op}}
+  // expected-error @below {{tracking listener failed to find replacement op during application of this transform op}}
+  // expected-note @below {{ran out of suitable replacement values}}
   transform.apply_patterns to %0 {
     transform.apply_patterns.transform.test_patterns
   } : !transform.any_op
   // %1 must be used in some way. If no replacement payload op could be found,
   // an error is thrown only if the handle is not dead.
+  // expected-note @below {{replacement is required because alive handle(s) exist (first use in this op as operand number 0)}}
   transform.annotate %1 "annotated" : !transform.any_op
 }
 

@@ -528,7 +528,7 @@ std::unique_ptr<lto::LTO> createLTO(
 
   StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
   Conf.MAttrs = Features;
-  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+  std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(OptLevel[1]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
   Conf.CGOptLevel = *CGOptLevelOrNone;
@@ -569,8 +569,9 @@ std::unique_ptr<lto::LTO> createLTO(
     };
   }
   Conf.PostOptModuleHook = Hook;
-  Conf.CGFileType =
-      (Triple.isNVPTX() || SaveTemps) ? CGFT_AssemblyFile : CGFT_ObjectFile;
+  Conf.CGFileType = (Triple.isNVPTX() || SaveTemps)
+                        ? CodeGenFileType::AssemblyFile
+                        : CodeGenFileType::ObjectFile;
 
   // TODO: Handle remark files
   Conf.HasWholeProgramVisibility = Args.hasArg(OPT_whole_program);
@@ -809,7 +810,7 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
-Expected<StringRef> compileModule(Module &M) {
+Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Compile module");
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
@@ -828,8 +829,10 @@ Expected<StringRef> compileModule(Module &M) {
     M.setDataLayout(TM->createDataLayout());
 
   int FD = -1;
-  auto TempFileOrErr = createOutputFile(
-      sys::path::filename(ExecutableName) + ".image.wrapper", "o");
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           getOffloadKindName(Kind) + ".image.wrapper",
+                       "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
   if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
@@ -840,7 +843,8 @@ Expected<StringRef> compileModule(Module &M) {
   legacy::PassManager CodeGenPasses;
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-  if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr, CGFT_ObjectFile))
+  if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
+                              CodeGenFileType::ObjectFile))
     return createStringError(inconvertibleErrorCode(),
                              "Failed to execute host backend");
   CodeGenPasses.run(M);
@@ -900,7 +904,7 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
     WriteBitcodeToFile(M, OS);
   }
 
-  auto FileOrErr = compileModule(M);
+  auto FileOrErr = compileModule(M, Kind);
   if (!FileOrErr)
     return FileOrErr.takeError();
   return *FileOrErr;

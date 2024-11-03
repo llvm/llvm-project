@@ -1,8 +1,8 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI,SICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,GFX10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // sendmsg

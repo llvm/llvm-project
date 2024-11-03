@@ -13,14 +13,14 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class SqrtTest : public __llvm_libc::testing::Test {
+template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+      UIntType(1) << LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*SqrtFunc)(T);
@@ -48,7 +48,7 @@ public:
     constexpr UIntType COUNT = 200'001;
     constexpr UIntType STEP = HIDDEN_BIT / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = __llvm_libc::cpp::bit_cast<T>(v);
+      T x = LIBC_NAMESPACE::cpp::bit_cast<T>(v);
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
@@ -57,7 +57,7 @@ public:
     constexpr UIntType COUNT = 200'001;
     constexpr UIntType STEP = UIntType(-1) / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = __llvm_libc::cpp::bit_cast<T>(v);
+      T x = LIBC_NAMESPACE::cpp::bit_cast<T>(v);
       if (isnan(x) || (x < 0)) {
         continue;
       }

@@ -239,6 +239,12 @@ struct TestPatternDriver
       llvm::cl::init(GreedyRewriteConfig().maxIterations)};
 };
 
+struct DumpNotifications : public RewriterBase::Listener {
+  void notifyOperationRemoved(Operation *op) override {
+    llvm::outs() << "notifyOperationRemoved: " << op->getName() << "\n";
+  }
+};
+
 struct TestStrictPatternDriver
     : public PassWrapper<TestStrictPatternDriver, OperationPass<func::FuncOp>> {
 public:
@@ -275,7 +281,9 @@ public:
       }
     });
 
+    DumpNotifications dumpNotifications;
     GreedyRewriteConfig config;
+    config.listener = &dumpNotifications;
     if (strictMode == "AnyOp") {
       config.strictMode = GreedyRewriteStrictness::AnyOp;
     } else if (strictMode == "ExistingAndNewOps") {
@@ -551,12 +559,12 @@ struct TestRegionRewriteBlockMovement : public ConversionPattern {
     // Inline this region into the parent region.
     auto &parentRegion = *op->getParentRegion();
     auto &opRegion = op->getRegion(0);
-    if (op->getAttr("legalizer.should_clone"))
+    if (op->getDiscardableAttr("legalizer.should_clone"))
       rewriter.cloneRegionBefore(opRegion, parentRegion, parentRegion.end());
     else
       rewriter.inlineRegionBefore(opRegion, parentRegion, parentRegion.end());
 
-    if (op->getAttr("legalizer.erase_old_blocks")) {
+    if (op->getDiscardableAttr("legalizer.erase_old_blocks")) {
       while (!opRegion.empty())
         rewriter.eraseBlock(&opRegion.front());
     }

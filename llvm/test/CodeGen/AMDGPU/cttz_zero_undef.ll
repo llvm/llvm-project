@@ -876,16 +876,16 @@ define amdgpu_kernel void @v_cttz_zero_undef_i32_with_select(ptr addrspace(1) no
 define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(ptr addrspace(1) noalias %out, ptr addrspace(1) nocapture readonly %arrayidx) nounwind {
 ; SI-LABEL: v_cttz_zero_undef_i64_with_select:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_mov_b32 s10, s6
-; SI-NEXT:    s_mov_b32 s11, s7
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b32 s10, s2
+; SI-NEXT:    s_mov_b32 s11, s3
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    s_mov_b32 s8, s2
-; SI-NEXT:    s_mov_b32 s9, s3
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_mov_b32 s1, s5
+; SI-NEXT:    s_mov_b32 s8, s6
+; SI-NEXT:    s_mov_b32 s9, s7
 ; SI-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0
 ; SI-NEXT:    buffer_load_ubyte v1, off, s[8:11], 0 offset:1
 ; SI-NEXT:    buffer_load_ubyte v2, off, s[8:11], 0 offset:2
@@ -916,7 +916,7 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 32, v1
 ; SI-NEXT:    v_min3_u32 v0, v0, v1, 64
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_cttz_zero_undef_i64_with_select:

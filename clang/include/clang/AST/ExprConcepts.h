@@ -511,6 +511,8 @@ class RequiresExpr final : public Expr,
   unsigned NumLocalParameters;
   unsigned NumRequirements;
   RequiresExprBodyDecl *Body;
+  SourceLocation LParenLoc;
+  SourceLocation RParenLoc;
   SourceLocation RBraceLoc;
 
   unsigned numTrailingObjects(OverloadToken<ParmVarDecl *>) const {
@@ -522,19 +524,22 @@ class RequiresExpr final : public Expr,
   }
 
   RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
-               RequiresExprBodyDecl *Body,
+               RequiresExprBodyDecl *Body, SourceLocation LParenLoc,
                ArrayRef<ParmVarDecl *> LocalParameters,
+               SourceLocation RParenLoc,
                ArrayRef<concepts::Requirement *> Requirements,
                SourceLocation RBraceLoc);
   RequiresExpr(ASTContext &C, EmptyShell Empty, unsigned NumLocalParameters,
                unsigned NumRequirements);
 
 public:
-  static RequiresExpr *
-  Create(ASTContext &C, SourceLocation RequiresKWLoc,
-         RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> LocalParameters,
-         ArrayRef<concepts::Requirement *> Requirements,
-         SourceLocation RBraceLoc);
+  static RequiresExpr *Create(ASTContext &C, SourceLocation RequiresKWLoc,
+                              RequiresExprBodyDecl *Body,
+                              SourceLocation LParenLoc,
+                              ArrayRef<ParmVarDecl *> LocalParameters,
+                              SourceLocation RParenLoc,
+                              ArrayRef<concepts::Requirement *> Requirements,
+                              SourceLocation RBraceLoc);
   static RequiresExpr *
   Create(ASTContext &C, EmptyShell Empty, unsigned NumLocalParameters,
          unsigned NumRequirements);
@@ -567,6 +572,8 @@ public:
     return RequiresExprBits.RequiresKWLoc;
   }
 
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
 
   static bool classof(const Stmt *T) {

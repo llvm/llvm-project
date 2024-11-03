@@ -136,8 +136,14 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 /// first children, so that the user can get a glimpse of its contents at a
 /// glance.
 static std::optional<std::string>
-GetSyntheticSummaryForContainer(lldb::SBValue &v) {
-  if (v.TypeIsPointerType() || !v.MightHaveChildren())
+TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
+  // We gate this feature because it performs GetNumChildren(), which can
+  // cause performance issues because LLDB needs to complete possibly huge
+  // types.
+  if (!g_vsc.enable_auto_variable_summaries)
+    return std::nullopt;
+
+  if (!v.MightHaveChildren())
     return std::nullopt;
   /// As this operation can be potentially slow, we limit the total time spent
   /// fetching children to a few ms.
@@ -188,26 +194,18 @@ GetSyntheticSummaryForContainer(lldb::SBValue &v) {
   return summary;
 }
 
-/// Return whether we should dereference an SBValue in order to generate a more
-/// meaningful summary string.
-static bool ShouldBeDereferencedForSummary(lldb::SBValue &v) {
-  if (!v.GetType().IsPointerType() && !v.GetType().IsReferenceType())
-    return false;
+/// Try to create a summary string for the given value that doesn't have a
+/// summary of its own.
+static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
+  if (!g_vsc.enable_auto_variable_summaries)
+    return std::nullopt;
 
-  // If it's a pointer to a pointer, we don't dereference to avoid confusing
-  // the user with the addresses that could shown in the summary.
-  if (v.GetType().IsPointerType() &&
-      v.GetType().GetDereferencedType().IsPointerType())
-    return false;
+  // We use the dereferenced value for generating the summary.
+  if (value.GetType().IsPointerType() || value.GetType().IsReferenceType())
+    value = value.Dereference();
 
-  // If it's synthetic or a pointer to a basic type that provides a summary, we
-  // don't dereference.
-  if ((v.IsSynthetic() || v.GetType().GetPointeeType().GetBasicType() !=
-                              lldb::eBasicTypeInvalid) &&
-      !llvm::StringRef(v.GetSummary()).empty()) {
-    return false;
-  }
-  return true;
+  // We only support auto summaries for containers.
+  return TryCreateAutoSummaryForContainer(value);
 }
 
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
@@ -219,36 +217,20 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
   if (!error.Success()) {
     strm << "<error: " << error.GetCString() << ">";
   } else {
-    auto tryDumpSummaryAndValue = [&strm](lldb::SBValue value) {
-      llvm::StringRef val = value.GetValue();
-      llvm::StringRef summary = value.GetSummary();
-      if (!val.empty()) {
-        strm << val;
-        if (!summary.empty())
-          strm << ' ' << summary;
-        return true;
-      }
-      if (!summary.empty()) {
-        strm << ' ' << summary;
-        return true;
-      }
-      if (auto container_summary = GetSyntheticSummaryForContainer(value)) {
-        strm << *container_summary;
-        return true;
-      }
-      return false;
-    };
+    llvm::StringRef value = v.GetValue();
+    llvm::StringRef nonAutoSummary = v.GetSummary();
+    std::optional<std::string> summary = !nonAutoSummary.empty()
+                                             ? nonAutoSummary.str()
+                                             : TryCreateAutoSummary(v);
+    if (!value.empty()) {
+      strm << value;
+      if (summary)
+        strm << ' ' << *summary;
+    } else if (summary) {
+      strm << *summary;
 
-    // We first try to get the summary from its dereferenced value.
-    bool done = ShouldBeDereferencedForSummary(v) &&
-                tryDumpSummaryAndValue(v.Dereference());
-
-    // We then try to get it from the current value itself.
-    if (!done)
-      done = tryDumpSummaryAndValue(v);
-
-    // As last resort, we print its type and address if available.
-    if (!done) {
+      // As last resort, we print its type and address if available.
+    } else {
       if (llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
           !type_name.empty()) {
         strm << type_name;
@@ -1137,7 +1119,8 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
     // We create a "[raw]" fake child for each synthetic type, so we have to
     // account for it when returning indexed variables. We don't need to do this
     // for non-indexed ones.
-    int actual_num_children = num_children + (is_synthetic ? 1 : 0);
+    bool has_raw_child = is_synthetic && g_vsc.enable_synthetic_child_debugging;
+    int actual_num_children = num_children + (has_raw_child ? 1 : 0);
     if (is_array) {
       object.try_emplace("indexedVariables", actual_num_children);
     } else if (num_children > 0) {

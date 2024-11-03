@@ -16,13 +16,13 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
-class HypotTestTemplate : public __llvm_libc::testing::Test {
+class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T);
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
   const T nan = T(FPBits::build_quiet_nan(1));
   const T inf = T(FPBits::inf());

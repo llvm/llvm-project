@@ -110,7 +110,7 @@ public:
 
 private:
   StringRef getSymbolName(uint32_t Index);
-  void printSymbols() override;
+  void printSymbols(bool ExtraSymInfo) override;
   void printDynamicSymbols() override;
   void printSymbol(const SymbolRef &Sym);
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc,
@@ -1609,7 +1609,7 @@ void COFFDumper::printRelocation(const SectionRef &Section,
   }
 }
 
-void COFFDumper::printSymbols() {
+void COFFDumper::printSymbols(bool /*ExtraSymInfo*/) {
   ListScope Group(W, "Symbols");
 
   for (const SymbolRef &Symbol : Obj->symbols())

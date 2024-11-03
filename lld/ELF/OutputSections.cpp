@@ -744,6 +744,12 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       int64_t addend = rel.addend;
       const OutputSection *relOsec = rel.inputSec->getOutputSection();
       assert(relOsec != nullptr && "missing output section for relocation");
+      // Some targets have NOBITS synthetic sections with dynamic relocations
+      // with non-zero addends. Skip such sections.
+      if (is_contained({EM_PPC, EM_PPC64}, config->emachine) &&
+          (rel.inputSec == in.ppc64LongBranchTarget.get() ||
+           rel.inputSec == in.igotPlt.get()))
+        continue;
       const uint8_t *relocTarget =
           bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
       // For SHT_NOBITS the written addend is always zero.

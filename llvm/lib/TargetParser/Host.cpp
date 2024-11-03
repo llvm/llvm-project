@@ -913,6 +913,9 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Type = X86::INTEL_GOLDMONT_PLUS;
       break;
     case 0x86:
+    case 0x8a: // Lakefield
+    case 0x96: // Elkhart Lake
+    case 0x9c: // Jasper Lake
       CPU = "tremont";
       *Type = X86::INTEL_TREMONT;
       break;
@@ -1932,6 +1935,9 @@ static Triple withHostArch(Triple T) {
 #elif defined(__x86_64__)
   T.setArch(Triple::x86_64);
   T.setArchName("x86_64");
+#elif defined(__i386__)
+  T.setArch(Triple::x86);
+  T.setArchName("i386");
 #elif defined(__powerpc__)
   T.setArch(Triple::ppc);
   T.setArchName("powerpc");

@@ -2783,20 +2783,20 @@ the configuration (without a prefix: ``Auto``).
      const char* x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
-  In C#, Java, and JavaScript:
+  In C# and Java:
 
   .. code-block:: c++
 
      true:
-     var x = "veryVeryVeryVeryVeryVe" +
-             "ryVeryVeryVeryVeryVery" +
-             "VeryLongString";
+     string x = "veryVeryVeryVeryVeryVe" +
+                "ryVeryVeryVeryVeryVery" +
+                "VeryLongString";
 
      false:
-     var x =
+     string x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
-  C# and JavaScript interpolated strings are not broken.
+  C# interpolated strings are not broken.
 
   In Verilog:
 
@@ -3788,8 +3788,8 @@ the configuration (without a prefix: ``Auto``).
            });
 
   * ``LBI_OuterScope`` (in configuration: ``OuterScope``)
-    Align lambda body relative to the indentation level of the outer scope
-    the lambda signature resides in.
+    For statements within block scope, align lambda body relative to the
+    indentation level of the outer scope the lambda signature resides in.
 
     .. code-block:: c++
 

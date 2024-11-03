@@ -2,7 +2,7 @@
 ! operations.
 
 ! RUN: bbc -fopenacc -emit-fir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
-
+! RUN: bbc -fopenacc -emit-hlfir --mlir-print-debuginfo --mlir-print-local-scope %s -o - | FileCheck %s
 module acc_locations
   implicit none
 
