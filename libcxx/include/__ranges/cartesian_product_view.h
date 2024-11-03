@@ -107,7 +107,7 @@ public:
   }
 
   constexpr iterator<true> end() const
-    requires(cartesian_product_is_common<const First, const Vs...>)
+    requires cartesian_product_is_common<const First, const Vs...>
   {
     constexpr bool is_const = true;
     return end_impl<is_const>();
@@ -116,13 +116,13 @@ public:
   constexpr default_sentinel_t end() const noexcept { return {}; }
 
   constexpr auto size()
-    requires(sized_range<First> && ... && sized_range<Vs>)
+    requires cartesian_product_is_sized<First, Vs...>
   {
     return size_impl();
   }
 
   constexpr auto size() const
-    requires(sized_range<const First> && ... && sized_range<const Vs>)
+    requires cartesian_product_is_sized<const First, const Vs...>
   {
     return size_impl();
   }
