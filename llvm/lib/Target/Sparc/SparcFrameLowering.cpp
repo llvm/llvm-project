@@ -223,8 +223,6 @@ bool SparcFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 // frame pointer register.  This is true if the function has variable sized
 // allocas or if frame pointer elimination is disabled.
 bool SparcFrameLowering::hasFPImpl(const MachineFunction &MF) const {
-  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
